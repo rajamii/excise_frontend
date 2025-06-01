@@ -1,0 +1,605 @@
+<form [formGroup]="siteEnquiryForm" class="dialog-container">
+    <mat-card-header class = "dialog-header">
+        <h5 class = "application-id">Application Id: {{ data.applicationId }}</h5>
+        <div class = "dialog-title">Site Enquiry Form</div>
+    </mat-card-header>
+    <mat-dialog-content>
+        <mat-card class = "section">
+            <mat-card-header>
+                <h5>Location Restrictions</h5>
+            </mat-card-header>
+            <mat-card-content>
+            <div class = "field-container">
+                <label class = "fw-medium">1. Whether there is any traditional place of Public Worship like Mandir, Gumpa, Church etc?</label>
+                <mat-radio-group formControlName="hasTraditionalPlace" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasTraditionalPlace'].invalid">
+                        {{ getErrorMessage('hasTraditionalPlace') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>a. Distance of the nearest traditional place of Public Worship like Mandir, Gumpa, Church etc from the proposed site(in ft.)</label>
+                <mat-form-field appearance="outline" class="small-input">
+                <input matInput type="number" formControlName="traditionalPlaceDistance" placeholder="Enter distance in feet"/>
+
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>b. Name of the place of Worship</label>
+                <mat-form-field appearance="outline" class="small-input">
+                <textarea matInput
+                            placeholder="Enter Name of the place of worship, if any (max 1000 characters)"
+                            formControlName="traditionalPlaceName"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>c. Nature of the place of Worship</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Nature of the place of worship, if any (max 1000 characters)"
+                            formControlName="traditionalPlaceNature"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>d. Nature of Construction</label>
+                <mat-radio-group formControlName="traditionalPlaceConstruction" required>
+                    <mat-radio-button value="rcc">RCC</mat-radio-button>
+                    <mat-radio-button value="wooden_structure">Wooden Structure</mat-radio-button>
+                    <mat-radio-button value="temporary">Temporary</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['traditionalPlaceConstruction'].invalid">
+                        {{ getErrorMessage('traditionalPlaceConstruction') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">2. Whether there is any educational institution?</label>
+                <mat-radio-group formControlName="hasEducationalInstitution" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasEducationalInstitution'].invalid">
+                        {{ getErrorMessage('hasEducationalInstitution') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>a. Distance of the nearest educational institution recognized by State Govt. or Central Govt established by law from the proposed site (in ft)</label>
+                <mat-form-field appearance="outline">
+                <input matInput type="number" formControlName="educationalInstitutionDistance"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['educationalInstitutionDistance'].invalid">
+                    {{ getErrorMessage('educationalInstitutionDistance') }}
+                </mat-error>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>b. Name of the institution</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Institution Name, if any (max 1000 characters)"
+                            formControlName="educationalInstitutionName"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>c. Nature of the institution</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Institution Nature, if any (max 1000 characters)"
+                            formControlName="educationalInstitutionNature"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">3. Whether there is any Hospital ?</label>
+                <mat-radio-group formControlName="hasHospitalNearby" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasHospitalNearby'].invalid">
+                        {{ getErrorMessage('hasHospitalNearby') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>a. Distance of the nearest Hospital for the public use from the proposed site (in ft)</label>
+                <mat-form-field appearance="outline">
+                <input matInput type="number" formControlName="hospitalDistance"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['hospitalDistance'].invalid">
+                    {{ getErrorMessage('hospitalDistance') }}
+                </mat-error>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>b. Name of the Hospital</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Hospital Name, if any (max 1000 characters)"
+                            formControlName="hospitalName"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">4. Whether there is any Taxi Stand ?</label>
+                <mat-radio-group formControlName="hasTaxiStandNearby" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasTaxiStandNearby'].invalid">
+                        {{ getErrorMessage('hasTaxiStandNearby') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>a. Distance of the nearest Taxi Stand from the proposed site (in ft.)</label>
+                <mat-form-field appearance="outline">
+                <input matInput type="number" formControlName="taxiStandDistance"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['taxiStandDistance'].invalid">
+                    {{ getErrorMessage('taxiStandDistance') }}
+                </mat-error>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>b. Name of the Nearest Taxi Stand</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Taxi Stand Name, if any (max 1000 characters)"
+                            formControlName="taxiStandName"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">5. Whether the proposed site is inter-connected with Grocery Shop, Pan Shop, Vegetable Shop & Residency ?</label>
+                <mat-radio-group formControlName="isInterconnectedWithShops" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['isInterconnectedWithShops'].invalid">
+                        {{ getErrorMessage('isInterconnectedWithShops') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Remarks, if any (max 1000 characters)"
+                            formControlName="interconnectedRemarks"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">6. Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Comments, if any (max 2000 characters)"
+                            formControlName="enquiryOfficerComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            </mat-card-content>
+        </mat-card>
+
+        <mat-card class = "section">
+            <mat-card-header>
+                <h5>Other Enquiry Points</h5>
+            </mat-card-header>
+            <mat-card-content>
+
+            <div class = "field-container">
+                <label class = "fw-medium">1. Type of construction of proposed shop</label>
+                <mat-radio-group formControlName="shopConstructionType" required>
+                    <mat-radio-button value="rcc">RCC</mat-radio-button>
+                    <mat-radio-button value="wooden_structure">Wooden Structure</mat-radio-button>
+                    <mat-radio-button value="temporary">Temporary</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['shopConstructionType'].invalid">
+                        {{ getErrorMessage('shopConstructionType') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">2. Whether there is any FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m</label>
+                <mat-radio-group formControlName="hasNearbyExciseShops" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasNearbyExciseShops'].invalid">
+                        {{ getErrorMessage('hasNearbyExciseShops') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>a. Numbers of FLR shop, FLB shop and other Excise licensee within a radius of approximately, 100 m</label>
+                <mat-form-field appearance="outline">
+                <input matInput type="number" formControlName="numberOfNearbyExciseShops"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['numberOfNearbyExciseShops'].invalid">
+                    {{ getErrorMessage('numberOfNearbyExciseShops') }}
+                </mat-error>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Remarks, if any (max 2000 characters)"
+                            formControlName="nearbyExciseShopsRemarks"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">3. Whether the proposed site falls on the State Highway/National Highway</label>
+                <mat-radio-group formControlName="isOnHighway" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['isOnHighway'].invalid">
+                        {{ getErrorMessage('isOnHighway') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Name of the State Highway/National Highway (max 2000 characters)"
+                            formControlName="highwayName"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label for="photoUpload" class = "fw-medium">4. Upload Shop Image<span>(pdf)</span></label>
+                <div class = "photo-upload-container">
+                    <input
+                        type="file"
+                        id="photoUpload"
+                        (change)="onPhotoSelect($event)"
+                        accept=".pdf"/>
+                    
+                    <button mat-icon-button *ngIf="photo.fileUrl" (click)="viewPhoto()" aria-label="View Uploaded Photo">
+                        <mat-icon>visibility</mat-icon>
+                    </button>
+                </div>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">5. Latitute - Longitude</label>
+                <mat-form-field appearance="outline">
+                <input matInput type="number" placeholder="Latitute" formControlName="latitude"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['latitude'].invalid">
+                    {{ getErrorMessage('latitude') }}
+                </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                <input matInput type="number" placeholder="Longitude" formControlName="longitude"/>
+                <mat-error *ngIf="siteEnquiryForm.controls['longitude'].invalid">
+                    {{ getErrorMessage('longitude') }}
+                </mat-error>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">6. Whether the size of the shop premises provided by the applicant is correct or not (remarks if any)</label>
+                <mat-radio-group formControlName="isShopSizeCorrect" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['isShopSizeCorrect'].invalid">
+                        {{ getErrorMessage('isShopSizeCorrect') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Remarks, if any (max 2000 characters)"
+                            formControlName="shopSizeRemarks"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 2000 characters)"
+                            formControlName="additionalOfficerComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            </mat-card-content>
+        </mat-card>
+
+        <mat-card class = "section">
+            <mat-card-header>
+                <h5>Whether the following documents have duly been verified and found in order:</h5>
+            </mat-card-header>
+            <mat-card-content>
+            <div class = "field-container">
+                <label class = "fw-medium">1. Document like Certificate of Identification/ Sikkim Subject / RC is furnished and duly verified by concern authority</label>
+                <mat-radio-group formControlName="hasIdentityProof" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasIdentityProof'].invalid">
+                        {{ getErrorMessage('hasIdentityProof') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="identityProofComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">2. Proof of age of the applicant, in case when the applicant is an individual or individual(s).</label>
+                <mat-radio-group formControlName="hasAgeProof" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasAgeProof'].invalid">
+                        {{ getErrorMessage('hasAgeProof') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="ageProofComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">3. NOC from the Landlord regarding the use of premises for a period of 4 years to run the excise license applied for, if the premises is rented or leased or sub leased.</label>
+                <mat-radio-group formControlName="hasNOCFromLandlord" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasNOCFromLandlord'].invalid">
+                        {{ getErrorMessage('hasNOCFromLandlord') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="nocComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">4. Parcha/Allotment Paper/ Sale deed, if the premises is owned by the applicant.</label>
+                <mat-radio-group formControlName="hasOwnershipProof" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasOwnershipProof'].invalid">
+                        {{ getErrorMessage('hasOwnershipProof') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="ownershipProofComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">5. Whether Trade License is furnished and duly verified by concern authority.</label>
+                <mat-radio-group formControlName="hasTradeLicense" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['hasTradeLicense'].invalid">
+                        {{ getErrorMessage('hasTradeLicense') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="tradeLicenseComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">6. Whether the applicant has proposed to appoint Barman/Salesman for running the shop.</label>
+                <mat-radio-group formControlName="proposesBarmanOrSalesman" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['proposesBarmanOrSalesman'].invalid">
+                        {{ getErrorMessage('proposesBarmanOrSalesman') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="barmanProposalComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">7. Whether the document submitted by applicant for Salesman/Barman are found to be in order.</label>
+                <mat-radio-group formControlName="barmanDocumentsValid" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['barmanDocumentsValid'].invalid">
+                        {{ getErrorMessage('barmanDocumentsValid') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="barmanDocsComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+
+            <div class = "field-container">
+                <label class = "fw-medium">8. Whether the proposal for grant of license is recommended:</label>
+                <mat-radio-group formControlName="licenseRecommendation" required>
+                    <mat-radio-button [value]="true">Yes</mat-radio-button>
+                    <mat-radio-button [value]="false">No</mat-radio-button>
+                    <mat-error *ngIf="siteEnquiryForm.controls['licenseRecommendation'].invalid">
+                        {{ getErrorMessage('licenseRecommendation') }}
+                    </mat-error>
+                </mat-radio-group>
+            </div>
+
+            <div class = "field-container ps-3">
+                <label>Any other comments from the enquiry officer</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter other Comments, if any (max 1000 characters)"
+                            formControlName="recommendationComments"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+            </mat-card-content>
+        </mat-card>
+
+        <mat-card class = "section">
+            <mat-card-header>
+                <h5>Special Remarks</h5>
+            </mat-card-header>
+            <mat-card-content>
+                <div class = "field-container">
+                    <label>Special Remarks, if any :</label>
+                    <mat-form-field appearance="outline">
+                    <textarea matInput
+                                placeholder="Enter Special Remarks, if any (max 2000 characters)"
+                                formControlName="specialRemarks"
+                                cdkTextareaAutosize
+                                cdkAutosizeMinRows="1"
+                                cdkAutosizeMaxRows="5">
+                    </textarea>
+                    </mat-form-field>
+                </div>
+
+                <div class = "field-container">
+                <label>Reporting Place :</label>
+                <mat-form-field appearance="outline">
+                <textarea matInput
+                            placeholder="Enter Reporting Place (max 250 characters)"
+                            formControlName="reportingPlace"
+                            cdkTextareaAutosize
+                            cdkAutosizeMinRows="1"
+                            cdkAutosizeMaxRows="5">
+                </textarea>
+                </mat-form-field>
+            </div>
+            </mat-card-content>
+        </mat-card>
+
+    </mat-dialog-content>
+    <mat-dialog-actions>
+        <button mat-flat-button>Attach</button>
+        <button mat-button>Basic</button>
+    </mat-dialog-actions>
+</form>

@@ -37,8 +37,8 @@
           <span class="nav-header-cus">Dashboard</span>
         </mat-list-item>
 
-        <!-- Apply License link -->
-        <mat-list-item routerLink="apply-license" routerLinkActive="active-link">
+        <!-- Apply License link with dialog trigger -->
+        <mat-list-item (click)="openLicenseInfo()" class="nav-header-cus">
           <span class="nav-header-cus">Apply For License</span>
         </mat-list-item>
 

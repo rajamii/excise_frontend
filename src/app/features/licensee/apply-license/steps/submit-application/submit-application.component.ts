@@ -19,6 +19,7 @@ import Swal from 'sweetalert2';
 })
 export class SubmitApplicationComponent {
   fileUrls: string[] = []
+  licenseApplicationDocs: { key: keyof LicenseApplicationDocuments; file: File; fileUrl: string }[] = [];
 
   readonly licenseApplicationLabels: Partial<Record<keyof LicenseApplication, string>> = {
     exciseDistrict: 'Excise District',
@@ -73,6 +74,23 @@ export class SubmitApplicationComponent {
   @Output() back = new EventEmitter<void>();
 
   constructor(private licenseeService: LicenseeService, private router: Router) {}
+  
+
+  ngOnInit(): void {
+    // Get uploaded document metadata (filename) for preview display
+    const docs = this.licenseeService.getLicenseApplicationDocuments();
+    this.fileUrls = [];
+
+    this.licenseApplicationDocs = Object.entries(docs).map(([key, file]) => {
+      const url = URL.createObjectURL(file!);
+      this.fileUrls.push(url);
+      return {
+        key: key as keyof LicenseApplicationDocuments,
+        file: file!,
+        fileUrl: url
+      };
+    });
+  }
 
   ngOnDestroy(): void {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
@@ -107,22 +125,6 @@ export class SubmitApplicationComponent {
   get licenseType() {
     const storedData = sessionStorage.getItem('keyInfoData');
     return storedData ? JSON.parse(storedData).licenseType : null;
-  }
-
-  // Get uploaded document metadata (filename) for preview display
-  get licenseApplicationDocuments(): { key: keyof LicenseApplicationDocuments; file: File; fileUrl: string }[] {
-    const docs = this.licenseeService.getLicenseApplicationDocuments();
-    this.fileUrls = [];
-  
-    return Object.entries(docs).map(([key, file]) => {
-      const url = URL.createObjectURL(file!);
-      this.fileUrls.push(url);
-      return {
-        key: key as keyof LicenseApplicationDocuments,
-        file: file!,
-        fileUrl: url
-      };
-    });
   }
 
   // Utility to convert sessionStorage data into label-value pairs for display

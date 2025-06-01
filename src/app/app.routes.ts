@@ -45,7 +45,7 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.SITE_ADMIN, Authority.COMMISSIONER, Authority.JOINT_COMMISSIONER, Authority.PERMIT_SECTION]
+      authorities: [Authority.SITE_ADMIN, Authority.LEVEL_1, Authority.LEVEL_2]
     },
     loadChildren: () => import('./features/site-admin/site-admin-routes')
   },

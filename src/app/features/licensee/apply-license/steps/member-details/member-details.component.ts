@@ -1,5 +1,5 @@
 // Angular core imports
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -51,7 +51,11 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     fileUrl: ''
   };
 
-  constructor(private fb: FormBuilder, private licenseeService: LicenseeService) {
+  constructor(
+    private fb: FormBuilder, 
+    private licenseeService: LicenseeService,
+    private cdr: ChangeDetectorRef
+  ){
     // Load saved form data from sessionStorage (if available)
     const storedValues = this.getFromSessionStorage();
 
@@ -103,12 +107,14 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   onPhotoSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-  
+
     if (file) {
       this.photo.file = file;
       this.photo.fileUrl = URL.createObjectURL(file);
-  
-      // Store the file in the service
+
+      // ✅ Tell Angular to check again
+      this.cdr.detectChanges();
+
       this.licenseeService.setLicenseApplicationDocuments({
         photo: file
       });

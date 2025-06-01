@@ -1,0 +1,39 @@
+.dialog-header{
+    display: flex;
+    justify-content: space-between;
+    margin-right: 25px;
+    .application-id{
+        color: #1C2B78;  
+    }  
+}
+.section{
+    margin-bottom: 20px;
+    mat-card-header{
+        padding-bottom: 15px;
+    }
+    mat-card-content{
+        display: flex;
+        flex-direction: column;
+         
+    }
+    .field-container{
+        display: flex;
+        flex-direction: column;
+        label{
+            margin-bottom: 4px;
+        }
+        mat-form-field{
+            font-size: 14px;
+        } 
+        .photo-upload-container{
+            display: flex;
+            align-items: center;
+            margin-bottom: 17px;
+        }
+    }
+}
+
+mat-dialog-actions{
+    justify-content: center;
+    gap: 10px
+}

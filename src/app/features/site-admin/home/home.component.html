@@ -32,7 +32,7 @@
       <!-- Navigation Links -->
       <mat-nav-list>
         <!-- Static Navigation Links -->
-        <ng-container *ngIf="accountService.hasAnyRole(['site_admin', 'commissioner', 'joint_commissioner', 'permit_section'])">
+        <ng-container *ngIf="accountService.hasAnyRole(['site_admin', 'level_1', 'level_2'])">
           <mat-list-item routerLink="dashboard" routerLinkActive="active-link">
             <span class="nav-header-cus">Home</span>
           </mat-list-item>

@@ -84,8 +84,8 @@ export class LoginComponent extends BaseComponent {
     this.apiService.sendOtp(formData).subscribe({
       next: (response) => {
         console.log('✅ OTP API Response:', response);
+        
         this.otpSent = true;
-        // Optionally capture response.otpIndex if returned from backend.
       },
       error: (err) => {
         console.error('❌ Error sending OTP:', err);
@@ -197,17 +197,14 @@ export class LoginComponent extends BaseComponent {
       case 'site_admin':
         this.router.navigate(['admin/dashboard']);
         break;
-      case 'commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'joint_commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'permit_section':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
       case 'licensee':
         this.router.navigate(['licensee/dashboard']);
+        break;
+      case 'level_1':
+        this.router.navigate(['admin/dashboard']);
+        break;
+      case 'level_2':
+        this.router.navigate(['admin/dashboard']); 
         break;
     }
   }

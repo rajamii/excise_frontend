@@ -13,8 +13,8 @@ const routes: Routes = [
         loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.SITE_ADMIN, Authority.COMMISSIONER, Authority.JOINT_COMMISSIONER, Authority.PERMIT_SECTION]
-        },
+          authorities: [Authority.SITE_ADMIN, Authority.LEVEL_1, Authority.LEVEL_2]
+        }, 
       },
       {
         path: 'district/new',

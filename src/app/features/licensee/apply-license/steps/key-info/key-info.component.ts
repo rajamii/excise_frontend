@@ -79,9 +79,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.pattern(PatternConstants.CODE),
         Validators.maxLength(50)
       ]),
-      initialGrantDate: new FormControl(storedValues.initialGrantDate),
-      renewedFrom: new FormControl(storedValues.renewedFrom),
-      validUpTo: new FormControl(storedValues.validUpTo),
+      initialGrantDate: new FormControl(storedValues?.initialGrantDate ?? null),
+      renewedFrom: new FormControl(storedValues?.renewedFrom ?? null),
+      validUpTo: new FormControl(storedValues?.validUpTo ?? null),
       yearlyLicenseFee: new FormControl(storedValues.yearlyLicenseFee, [
         Validators.pattern(PatternConstants.NUMBER)
       ]),
@@ -131,22 +131,28 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   // Save form values to session storage on change
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.keyInfoForm.getRawValue();
-    const rawInitialGrantDate = new Date(formData.initialGrantDate as string);
-    const rawRenewedFrom = new Date(formData.renewedFrom as string);
-    const rawValidUpTo = new Date(formData.validUpTo as string);
 
-    if (!isNaN(rawInitialGrantDate.getTime())) {
-      formData.initialGrantDate = this.datePipe.transform(rawInitialGrantDate, 'yyyy-MM-dd')!;
-    }
-    if (!isNaN(rawRenewedFrom.getTime())) {
-      formData.renewedFrom = this.datePipe.transform(rawRenewedFrom, 'yyyy-MM-dd')!;
-    }
-    if (!isNaN(rawValidUpTo.getTime())) {
-      formData.validUpTo = this.datePipe.transform(rawValidUpTo, 'yyyy-MM-dd')!;
-    }
-    
-    sessionStorage.setItem('keyInfoData', JSON.stringify(formData));
+    const parsedDates = {
+      initialGrantDate: this.transformValidDate(formData.initialGrantDate),
+      renewedFrom: this.transformValidDate(formData.renewedFrom),
+      validUpTo: this.transformValidDate(formData.validUpTo),
+    };
+
+    sessionStorage.setItem(
+      'keyInfoData',
+      JSON.stringify({
+        ...formData,
+        ...parsedDates
+      })
+    );
   }
+
+  private transformValidDate(dateValue: unknown): string | null {
+    if (!dateValue) return null;
+    const date = new Date(dateValue as string);
+    return isNaN(date.getTime()) ? null : this.datePipe.transform(date, 'yyyy-MM-dd');
+  }
+
 
   // Update the error message of a specific form control
   private updateErrorMessage(field: keyof typeof this.errorMessages) {

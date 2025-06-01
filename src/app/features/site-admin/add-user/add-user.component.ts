@@ -65,7 +65,7 @@ export class AddUserComponent extends BaseComponent implements OnInit {
   // Method to handle form submission
   submit(): void {
     // Check if password and confirm password match
-    if (this.user.password !== this.user.confirmPassword) {
+    if (this.user.password !== this.user.confirm_password) {
       this.toastrService.error('Passwords do not match!'); // Show error if passwords do not match
       return;
     }

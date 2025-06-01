@@ -17,15 +17,15 @@
     <div class="section-title">Member Details</div>
     <div class="details-with-photo">
       <div class="left-section">
-      <div class="row" *ngFor="let item of memberDetailsData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
+        <div class="row" *ngFor="let item of memberDetailsData">
+          <div class="key">{{ item.key }}</div>
+          <div class="value">{{ item.value }}</div>
+        </div>
       </div>
-      </div>
-      <div class="photo-section" *ngIf="licenseApplicationDocuments.length > 0">
+      <div class="photo-section" *ngIf="licenseApplicationDocs.length > 0">
         <img
           class="profile-photo"
-          [src]="licenseApplicationDocuments[0].fileUrl"
+          [src]="licenseApplicationDocs[0].fileUrl"
           alt="Applicant Photo"
         />
       </div>

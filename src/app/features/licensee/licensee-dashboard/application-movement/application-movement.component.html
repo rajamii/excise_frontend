@@ -1,0 +1,53 @@
+<div class="dialog-container" align="center">
+    <h2 mat-dialog-title>Application Movement</h2>
+
+    <mat-dialog-content>
+        <mat-table [dataSource]="movementDataSource" class="mat-elevation-z8">
+
+        <!-- Sl. No Column -->
+        <ng-container matColumnDef="slNo">
+            <mat-header-cell *matHeaderCellDef> Sl. No </mat-header-cell>
+            <mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </mat-cell>
+        </ng-container>
+
+        <!-- Date Column -->
+        <ng-container matColumnDef="date">
+            <mat-header-cell *matHeaderCellDef> Date </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{ element.timestamp | date: 'dd-MM-yyyy' }} </mat-cell>
+        </ng-container>
+
+        <!-- Forwarded By -->
+        <ng-container matColumnDef="forwardedBy">
+            <mat-header-cell *matHeaderCellDef> Forwarded By </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{ roleDisplayMapping[element.performed_by.role] }} </mat-cell>
+        </ng-container>
+
+        <!-- Forwarded To -->
+        <ng-container matColumnDef="forwardedTo">
+            <mat-header-cell *matHeaderCellDef> Forwarded To </mat-header-cell>
+            <mat-cell *matCellDef="let element">
+                {{ roleDisplayMapping[element.stage] }}
+        <!--    {{ roleDisplayMapping[movementDataSource.data[i - 1]?.performed_by.role] || 'N/A' }} -->
+            </mat-cell>
+        </ng-container>
+
+        <!-- Remarks -->
+        <ng-container matColumnDef="remarks">
+            <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{ element.remarks }} </mat-cell>
+        </ng-container>
+
+        <!-- Header Row -->
+        <mat-header-row *matHeaderRowDef="movementColumns"></mat-header-row>
+        <!-- Data Row -->
+        <mat-row *matRowDef="let row; columns: movementColumns;"></mat-row>
+
+        </mat-table>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+    <button mat-button [mat-dialog-close]="false" style="color: #fff; background-color: #6c757d;">
+        Close
+    </button>
+    </mat-dialog-actions>
+</div>

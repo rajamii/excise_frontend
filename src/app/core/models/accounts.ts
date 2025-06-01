@@ -6,7 +6,7 @@ export class Account {
   phoneNumber!: string;
   email!: string;
   password!: string;
-  confirmPassword?: string;
+  confirm_password?: string;
   role!: string;
   district!: string;  
   subDivision!: string;

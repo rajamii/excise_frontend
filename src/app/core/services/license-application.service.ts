@@ -4,12 +4,14 @@ import { environment } from '../../../environments/environment';
 import { ApplicationsByStage, DashboardCount } from '../models/dashboard.model';
 import { Observable } from 'rxjs';
 import { LicenseApplication } from '../models/license-application.model';
+import { OtherEnquiryPoints } from '../models/site-enquiry.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LicenseApplicationService {
   private readonly baseUrl = environment.apiBaseUrl;
+  private shopImage: Partial<Record<keyof OtherEnquiryPoints, File>> = {};
 
   constructor(private http: HttpClient) { }
     
@@ -50,5 +52,22 @@ export class LicenseApplicationService {
       remarks: remarks
     });
     // Sends a POST request to advance the application to a new stage, with the given action and remarks
+  }
+
+  printLicense(applicationId: number): Observable<any> {
+    return this.http.get(`${this.baseUrl}/licenseapplication/${applicationId}/print/`, { responseType: 'blob' });
+    // Sends a GET request to print the license for the specified application ID
+  }
+
+  setShopImage(docs: Partial<Record<keyof OtherEnquiryPoints, File>>) {
+    this.shopImage = { ...this.shopImage, ...docs };
+  }
+
+  getShopImage(): Partial<Record<keyof OtherEnquiryPoints, File>> {
+    return this.shopImage;
+  }
+
+  clearShopImage(): void {
+    this.shopImage = {};
   }
 }

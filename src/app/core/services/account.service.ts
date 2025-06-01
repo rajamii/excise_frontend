@@ -110,7 +110,7 @@ export class AccountService {
     return this.accountCache$.pipe(catchError(() => of(null)));
   }
 
-  // Checks if the user is authenticated
+  // Checks if the user is authenticateda
   isAuthenticated(): boolean {
     return this.userIdentity !== null;
   }
