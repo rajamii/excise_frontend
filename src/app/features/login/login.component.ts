@@ -83,9 +83,9 @@ export class LoginComponent extends BaseComponent {
 
     this.apiService.sendOtp(formData).subscribe({
       next: (response) => {
-        console.log('✅ OTP API Response:', response);
         this.otpSent = true;
-        // Optionally capture response.otpIndex if returned from backend.
+        this.otpIndex = response.otp_id; // Capture OTP index
+        console.log('🔹 OTP sent successfully:', this.otpIndex);
       },
       error: (err) => {
         console.error('❌ Error sending OTP:', err);
@@ -148,7 +148,7 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.otpIndex === undefined) {
+    if (!this.otpIndex) {
       alert('OTP index missing. Please request OTP again.');
       return;
     }
@@ -156,11 +156,14 @@ export class LoginComponent extends BaseComponent {
     const requestData = {
       phonenumber: this.loginForm.value.phonenumber,
       otp: this.loginForm.value.otp,
-      index: Number(this.otpIndex)
+      otp_id: this.otpIndex ?? ''
     };
 
-    this.apiService.verifyOtp(requestData.phonenumber, requestData.otp, requestData.index).subscribe({
+    console.log('🔹 Verifying OTP:', requestData);
+
+    this.apiService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
+        console.log('🔹 OTP verification response:', res);
         this.handleAuthResponse(res);
       },
       error: (err) => {
@@ -209,6 +212,11 @@ export class LoginComponent extends BaseComponent {
       case 'licensee':
         this.router.navigate(['licensee/dashboard']);
         break;
+      case 'dev':
+        this.router.navigate(['admin/dashboard']);
+        break;
+      default:
+        console.warn('Unknown role:', role);
     }
   }
 
