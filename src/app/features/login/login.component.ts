@@ -84,9 +84,9 @@ export class LoginComponent extends BaseComponent {
 
     this.apiService.sendOtp(formData).subscribe({
       next: (response) => {
-        console.log('✅ OTP API Response:', response);
-        
         this.otpSent = true;
+        this.otpIndex = response.otp_id; // Capture OTP index
+        console.log('🔹 OTP sent successfully:', this.otpIndex);
       },
       error: (err) => {
         console.error('❌ Error sending OTP:', err);
@@ -127,7 +127,7 @@ export class LoginComponent extends BaseComponent {
 
     this.apiService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
-        console.log(res); // 👈 Print the token
+        console.log(res); 
         this.handleAuthResponse(res);
       },
       error: (err) => {
@@ -154,7 +154,7 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.otpIndex === undefined) {
+    if (!this.otpIndex) {
       alert('OTP index missing. Please request OTP again.');
       return;
     }
@@ -162,11 +162,14 @@ export class LoginComponent extends BaseComponent {
     const requestData = {
       phonenumber: this.loginForm.value.phonenumber,
       otp: this.loginForm.value.otp,
-      index: Number(this.otpIndex)
+      otp_id: this.otpIndex ?? ''
     };
 
-    this.apiService.verifyOtp(requestData.phonenumber, requestData.otp, requestData.index).subscribe({
+    console.log('🔹 Verifying OTP:', requestData);
+
+    this.apiService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
+        console.log('🔹 OTP verification response:', res);
         this.handleAuthResponse(res);
       },
       error: (err) => {
@@ -199,19 +202,27 @@ export class LoginComponent extends BaseComponent {
 
   /** Redirects user to appropriate dashboard based on their role */
   private redirectBasedOnRole(role: string): void {
-    const roleRouteMap: { [key: string]: string } = {
-      site_admin: 'admin/dashboard',
-      licensee: 'licensee/dashboard',
-      level_1: 'admin/dashboard',
-      level_2: 'admin/dashboard',
-      level_3: 'admin/dashboard',
-      level_4: 'admin/dashboard',
-      level_5: 'admin/dashboard'
-    };
-
-    const route = roleRouteMap[role];
-    if (route) {
-      this.router.navigate([route]);
+    switch (role) {
+      case 'site_admin':
+        this.router.navigate(['admin/dashboard']);
+        break;
+      case 'commissioner':
+        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
+        break;
+      case 'joint_commissioner':
+        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
+        break;
+      case 'permit_section':
+        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
+        break;
+      case 'licensee':
+        this.router.navigate(['licensee/dashboard']);
+        break;
+      case 'dev':
+        this.router.navigate(['admin/dashboard']);
+        break;
+      default:
+        console.warn('Unknown role:', role);
     }
   }
 

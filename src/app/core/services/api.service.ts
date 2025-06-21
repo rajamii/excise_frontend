@@ -36,7 +36,7 @@ export class ApiService {
 
   // Send OTP to user's registered contact (email/phone)
   sendOtp(formData: FormData): Observable<any> {
-    return this.http.post<any>(`${this.baseUrl}/user/otp/get/`, formData).pipe(
+    return this.http.post<any>(`${this.baseUrl}/user/otp/`, formData).pipe(
       catchError((error) => {
         console.error('Error sending OTP:', error);
         return throwError(() => error);
@@ -45,13 +45,8 @@ export class ApiService {
   }
 
   // Verify the received OTP for login
-  verifyOtp(phonenumber: string, otp: string, index: number): Observable<any> {
-    const formData = new FormData();
-    formData.append('phonenumber', phonenumber);
-    formData.append('otp', otp);
-    formData.append('index', index.toString()); // Ensure index is sent as a string
-
-    return this.http.post(`${this.baseUrl}/user/otp/login/`, formData).pipe(
+  verifyOtp(data:{phonenumber: string, otp: string, otp_id: string}): Observable<any> {
+      return this.http.post(`${this.baseUrl}/user/otp/login/`, data).pipe(
       catchError((error) => {
         console.error('❌ OTP verification error:', error);
         return throwError(() => new Error('Failed to verify OTP.'));
