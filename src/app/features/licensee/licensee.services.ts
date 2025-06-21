@@ -6,8 +6,8 @@ import { PoliceStation } from '../../core/models/policestation.model';
 import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
 import { environment } from '../../../environments/environment';
-import { Observable } from 'rxjs';
-import { LicenseApplication, LicenseApplicationDocuments } from '../../core/models/license-application.model';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { LicenseApplication } from '../../core/models/license-application.model';
 import { SalesmanBarmanDocuments } from '../../core/models/salesman-barman.model';
 import { CompanyDocuments } from '../../core/models/company.model';
 
@@ -16,8 +16,8 @@ export class LicenseeService {
   private readonly baseUrl = environment.apiBaseUrl; // Base URL for the API
   private readonly mastersUrl = `${this.baseUrl}/masters`; // API URL for master data (district, subdivisions, etc.)
 
-  // Stores uploaded files for the License Application form, mapped by document field keys
-  private licenseApplicationDocuments: Partial<Record<keyof LicenseApplicationDocuments, File>> = {};
+  // Stores the uploaded passport photo for the License Application form
+  private passPhotoSubject = new BehaviorSubject<File | null>(null);
 
   // Stores uploaded files for the Salesman/Barman form, mapped by document field keys
   private salesmanBarmanDocs: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
@@ -60,16 +60,23 @@ export class LicenseeService {
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/licenseapplication/apply/`, data);
   } 
 
-  setLicenseApplicationDocuments(docs: Partial<Record<keyof LicenseApplicationDocuments, File>>) {
-    this.licenseApplicationDocuments = { ...this.licenseApplicationDocuments, ...docs };
+  // Set the uploaded photo
+  setPassPhoto(file: File) {
+    this.passPhotoSubject.next(file);
   }
 
-  getLicenseApplicationDocuments(): Partial<Record<keyof LicenseApplicationDocuments, File>> {
-    return this.licenseApplicationDocuments;
+  // Get the uploaded photo
+  getPassPhoto(): File | null {
+    return this.passPhotoSubject.value;
   }
 
-  clearLicenseApplicationDocuments(): void {
-    this.licenseApplicationDocuments = {};
+  getPassPhotoObservable() {
+    return this.passPhotoSubject.asObservable();
+  }
+
+  // Clear the stored photo by setting it to null
+  clearPassPhoto() {
+    this.passPhotoSubject.next(null);
   }
 
   // ========================== SALESMAN / BARMAN REGISTRATION ==========================

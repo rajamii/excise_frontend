@@ -95,9 +95,10 @@
             type="file"
             id="photoUpload"
             (change)="onPhotoSelect($event)"
-            accept=".png,.jpg,.jpeg"/>
-        
-          <button mat-icon-button *ngIf="photo.fileUrl" (click)="viewPhoto()" aria-label="View Uploaded Photo">
+            accept=".png,.jpg,.jpeg"
+          />
+
+          <button mat-icon-button *ngIf="passPhoto.fileUrl" (click)="viewPhoto()" aria-label="View Uploaded Photo">
             <mat-icon>visibility</mat-icon>
           </button>
         </div>

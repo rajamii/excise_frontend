@@ -1,16 +1,18 @@
-<mat-table [dataSource]="dataSource" class="mat-elevation-z2" *ngIf="dataSource?.data?.length">
+<mat-table [dataSource]="dataSource" class="mat-elevation-z2" *ngIf="hasData(); else noData">
+
   <!-- Sl No Column -->
   <ng-container matColumnDef="slNo">
-    <mat-header-cell *matHeaderCellDef> Sl No </mat-header-cell>
-    <mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </mat-cell>
+    <mat-header-cell *matHeaderCellDef class="sl-no"> Sl No </mat-header-cell>
+    <mat-cell *matCellDef="let element; let i = index" class="sl-no"> {{ i + 1 }} </mat-cell>
   </ng-container>
 
   <!-- ID Column -->
   <ng-container matColumnDef="id">
-    <mat-header-cell *matHeaderCellDef> Application ID </mat-header-cell>
-    <mat-cell *matCellDef="let element">
-        <div class="fw-semibold text-primary" style="font-size: 1.2rem;">
-            {{ element?.id }}
+    <mat-header-cell *matHeaderCellDef class="app-id"> Application ID </mat-header-cell>
+    <mat-cell *matCellDef="let element" class="app-id">
+        <div class="application-id" [ngClass]="{ 'objection-text': element.hasUnresolvedObjection }">
+            {{ element?.application_id }}
+            <mat-icon *ngIf="element.hasUnresolvedObjection" color="warn" matTooltip="Objection pending">error</mat-icon>
         </div>
         <div class="text-secondary">Date: {{ element?.transactions[0]?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}</div>
     </mat-cell>
@@ -19,21 +21,27 @@
   <!-- Current Stage -->
   <ng-container matColumnDef="currentStage">
     <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
-    <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.current_stage] }} </mat-cell>
+    <mat-cell *matCellDef="let element">
+      {{ stageDisplayMapping[element.current_stage] || 'N/A' }}
+    </mat-cell>
   </ng-container>
 
-  <!-- Status -->
+  <!-- Remarks -->
   <ng-container matColumnDef="remarks">
     <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
-    <mat-cell *matCellDef="let element"> {{element.latest_transaction?.remarks}} </mat-cell>
+    <mat-cell *matCellDef="let element">
+      {{ element.latest_transaction?.remarks || '-' }}
+    </mat-cell>
   </ng-container>
 
-  <!-- Submitted On -->
+  <!-- Performed By -->
   <ng-container matColumnDef="performedBy">
     <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
     <mat-cell *matCellDef="let element">
-        {{ roleDisplayMapping[element.latest_transaction?.performed_by?.role] }}
-        <div class="text-secondary"> Date: {{element.latest_transaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }} </div> 
+      {{ roleDisplayMapping[element.latest_transaction?.performed_by?.role] || 'Unknown' }}
+      <div class="text-secondary">
+        Date: {{ element.latest_transaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
+      </div>
     </mat-cell>
   </ng-container>
 
@@ -41,18 +49,12 @@
   <ng-container matColumnDef="actions">
     <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
     <mat-cell *matCellDef="let element">
-    <button mat-icon-button (click)="onView(element)">
-        <mat-icon style="color: #1976d2;">visibility</mat-icon>
-    </button>
-    <button mat-icon-button (click)="onView(element)">
-        <mat-icon style="color: #1976d2;">gavel</mat-icon>
-    </button>
-    <button mat-icon-button (click)="viewMovement(element)">
-        <mat-icon style="color: #1976d2;">timeline</mat-icon>
-    </button>
-    <button mat-icon-button (click)="siteEnquiryForm(element)">
-        <mat-icon style="color: #1976d2;">description</mat-icon>
-    </button>
+      <button mat-icon-button color="primary" (click)="onView(element)">
+        <mat-icon>visibility</mat-icon>
+      </button>
+      <button mat-icon-button color="primary" (click)="viewMovement(element)">
+        <mat-icon>timeline</mat-icon>
+      </button>
     </mat-cell>
   </ng-container>
 
@@ -60,6 +62,6 @@
   <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
 </mat-table>
 
-<div *ngIf="dataSource?.data?.length === 0" class="p-4 text-center">
-  No applications found.
-</div>
+<ng-template #noData>
+  <div class="p-4 text-center text-muted">No applications found.</div>
+</ng-template>

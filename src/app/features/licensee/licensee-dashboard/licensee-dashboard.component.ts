@@ -79,7 +79,6 @@ export class LicenseeDashboardComponent extends BaseComponent{
       this.pendingDataSource.data = res.pending;
       this.approvedDataSource.data = res.approved;
       this.rejectedDataSource.data = res.rejected;
-      console.log(this.approvedDataSource.data); 
     }, error => {
       console.error('Error fetching applications:', error);
     });

@@ -20,14 +20,14 @@
 		  <ng-container *ngIf="isPasswordMode">
 			<!-- Username field -->
 			<mat-form-field appearance="outline">
-			  <mat-label>Username</mat-label>
-			  <input matInput formControlName="username" placeholder="Enter your Username" />
+			  <mat-icon>person</mat-icon>
+			  <input matInput formControlName="username" placeholder="Username" />
 			</mat-form-field>
   
 			<!-- Password field with toggle visibility -->
 			<mat-form-field appearance="outline">
-			  <mat-label>Password</mat-label>
-			  <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Enter your password" />
+			  <mat-icon>lock</mat-icon>
+			  <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Password" />
 			  <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
 				<mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
 			  </button>
@@ -75,19 +75,19 @@
 					<p>OTP sent to {{ loginForm.controls['phonenumber'].value }}.<br> Not your number? <a (click)="resetPhoneNumber()">Go Back</a></p>
 				</div>
 
-			  <!-- OTP input using ng-otp-input -->
-			  <ng-otp-input
-				[formControl]="otpControl"
-				[config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
-				(onInputChange)="onOtpChange($event)">
-			  </ng-otp-input>										
+				<!-- OTP input using ng-otp-input -->
+				<ng-otp-input
+					[formControl]="otpControl"
+					[config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
+					(onInputChange)="onOtpChange($event)">
+				</ng-otp-input>										
   
-			  <!-- Verify OTP button -->
-			  <div class="mt-3">
+			  	<!-- Verify OTP button -->
+				<div class="mt-3" *ngIf="!otpAutoSubmitted">
 				<button mat-flat-button class="verify-otp-button" type="submit" [disabled]="loginForm.controls['otp'].invalid">
-				  Verify
+					Verify
 				</button>
-			  </div>
+				</div>
 			</div>
 		  </ng-container>
 		</form>

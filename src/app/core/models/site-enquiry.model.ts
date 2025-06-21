@@ -1,86 +1,72 @@
-export interface SiteEnquiryFormModel {
-  locationRestrictions: LocationRestrictions;
-  otherEnquiryPoints: OtherEnquiryPoints;
-  documentVerification: DocumentVerification;
-  metaInfo: MetaInfo;
-}
+export class SiteEnquiryFormModel {
 
-export interface LocationRestrictions {
-  hasTraditionalPlace: boolean;
-  traditionalPlaceDistance: number; // in feet
-  traditionalPlaceName: string;
-  traditionalPlaceNature: string;
-  traditionalPlaceConstruction: 'RCC' | 'Wooden Structure' | 'Temporary';
+  hasTraditionalPlace!: boolean;
+  traditionalPlaceDistance?: number; // in feet
+  traditionalPlaceName?: string;
+  traditionalPlaceNature?: string;
+  traditionalPlaceConstruction?: 'RCC' | 'Wooden Structure' | 'Temporary';
 
-  hasEducationalInstitution: boolean;
-  educationalInstitutionDistance: number; // in feet
-  educationalInstitutionName: string;
-  educationalInstitutionNature: string;
+  hasEducationalInstitution!: boolean;
+  educationalInstitutionDistance?: number; // in feet
+  educationalInstitutionName?: string;
+  educationalInstitutionNature?: string;
 
-  hasHospitalNearby: boolean;
-  hospitalDistance: number; // in feet
-  hospitalName: string;
+  hasHospital!: boolean;
+  hospitalDistance?: number; // in feet
+  hospitalName?: string;
 
-  hasTaxiStandNearby: boolean;
-  taxiStandName: string;
-  taxiStandDistance: number; // in feet
+  hasTaxiStand!: boolean;
+  taxiStandDistance?: number; // in feet
+  taxiStandName?: string;
 
-  isInterconnectedWithShops: boolean;
-  interconnectedRemarks: string;
+  isInterconnectedWithShops!: boolean;
+  interconnectivityRemarks?: string;
 
-  enquiryOfficerComments: string;
-}
+  enquiryOfficerComments?: string;
 
-export interface OtherEnquiryPoints {
-  shopConstructionType: 'RCC' | 'Wooden Structure' | 'Temporary';
+  shopConstructionType!: 'RCC' | 'Wooden Structure' | 'Temporary';
 
-  hasNearbyExciseShops: boolean;
-  numberOfNearbyExciseShops: number;
-  nearbyExciseShopsRemarks: string;
+  hasExciseShopsNearby!: boolean;
+  nearbyExciseShopCount?: number;
+  nearbyExciseShopsRemarks?: string;
 
-  isOnHighway: boolean;
-  highwayName: string;
+  isOnHighway!: boolean;
+  highwayName?: string;
 
-  shopImage?: File;
+  shopImageDocument!: File;
 
-  geoCoordinates: {
-    latitude: string;
-    longitude: string;
-  };
+  latitude?: string;
+  longitude?: string;
 
-  isShopSizeCorrect: boolean;
-  shopSizeRemarks: string;
+  isShopSizeCorrect!: boolean;
+  shopSizeRemarks?: string;
 
-  additionalOfficerComments: string;
-}
+  additionalEnquiryOfficerComments?: string;
 
-export interface DocumentVerification {
-  hasIdentityProof: boolean;
-  identityProofComments: string;
+  hasIdProof!: boolean;
+  idProofComments?: string;
 
-  hasAgeProof: boolean;
-  ageProofComments: string;
+  hasAgeProof!: boolean;
+  ageProofComments?: string;
 
-  hasNOCFromLandlord: boolean;
-  nocComments: string;
+  hasNocFromLandlord!: boolean;
+  nocComments?: string;
 
-  hasOwnershipProof: boolean;
-  ownershipProofComments: string;
+  hasOwnershipProof!: boolean;
+  ownershipProofComments?: string;
 
-  hasTradeLicense: boolean;
-  tradeLicenseComments: string;
+  hasTradeLicense!: boolean;
+  tradeLicenseComments?: string;
 
-  proposesBarmanOrSalesman: boolean;
-  barmanProposalComments: string;
+  proposesBarmanOrSalesman!: boolean;
+  workerProposalComments?: string;
 
-  barmanDocumentsValid: boolean;
-  barmanDocsComments: string;
+  workerDocsValid!: boolean;
+  workerDocsComments?: string;
 
-  licenseRecommendation: boolean;
-  recommendationComments: string;
-}
+  licenseRecommendation!: boolean;
+  recommendationComments?: string;
 
-export interface MetaInfo {
-  specialRemarks: string;
-  reportingPlace: string;
+  specialRemarks!: string;
+  reportingPlace?: string;
 }

@@ -4,14 +4,14 @@ import { environment } from '../../../environments/environment';
 import { ApplicationsByStage, DashboardCount } from '../models/dashboard.model';
 import { Observable } from 'rxjs';
 import { LicenseApplication } from '../models/license-application.model';
-import { OtherEnquiryPoints } from '../models/site-enquiry.model';
+import { LocationFee } from '../models/location-fee.model';
+import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LicenseApplicationService {
   private readonly baseUrl = environment.apiBaseUrl;
-  private shopImage: Partial<Record<keyof OtherEnquiryPoints, File>> = {};
 
   constructor(private http: HttpClient) { }
     
@@ -36,6 +36,11 @@ export class LicenseApplicationService {
     // Sends a GET request to fetch counts for the dashboard statistics
   }
 
+  getLocationFee(): Observable<LocationFee[]> {
+    return this.http.get<LocationFee[]>(`${this.baseUrl}/licenseapplication/location-fee/`);
+    // Sends a GET request to fetch counts for the dashboard statistics
+  }
+
   // Retrieves a list of license applications, categorized by their current status (applied, accepted, pending or rejected)
   getApplicationsByStatus(): Observable<ApplicationsByStage> {
     return this.http.get<ApplicationsByStage>(
@@ -45,29 +50,55 @@ export class LicenseApplicationService {
   }
 
   // Advances the license application to the next stage, including an action and remarks to describe the transition
-  advanceApplication(applicationId: number, action: string, remarks: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/licenseapplication/${applicationId}/advance/`, {
-      id: applicationId,
-      action: action,
-      remarks: remarks
-    });
-    // Sends a POST request to advance the application to a new stage, with the given action and remarks
+  advanceApplication(
+    applicationId: string,
+    remarks: string | undefined,
+    feeAmount: number | undefined,
+    action: 'approve' | 'reject' | 'raise_objection',
+    newLicenseCategoryId?: number,
+    objections?: { field: string; remarks: string }[]
+  ): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    const body: any = {
+      remarks,
+      feeAmount,
+      action,
+    };
+
+    if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
+      body.new_license_category = newLicenseCategoryId;
+    }
+
+    if (action === 'raise_objection' && objections) {
+      body.objections = objections;
+    }
+    return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/advance/`, body);
   }
+
+  getObjections(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.baseUrl}/licenseapplication/${encodedId}/objections/`);
+  }
+
+  resolveObjections(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post<any>(
+      `${this.baseUrl}/licenseapplication/${encodedId}/resolve-objections/`,
+      formData
+    );
+  }
+  
+  submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/site-enquiry/`, formData);
+  }
+
+   submitLicenseApplication(data: any): Observable<any> {
+    return this.http.post<LicenseApplication[]>(`${this.baseUrl}/licenseapplication/apply/`, data);
+  } 
 
   printLicense(applicationId: number): Observable<any> {
     return this.http.get(`${this.baseUrl}/licenseapplication/${applicationId}/print/`, { responseType: 'blob' });
     // Sends a GET request to print the license for the specified application ID
-  }
-
-  setShopImage(docs: Partial<Record<keyof OtherEnquiryPoints, File>>) {
-    this.shopImage = { ...this.shopImage, ...docs };
-  }
-
-  getShopImage(): Partial<Record<keyof OtherEnquiryPoints, File>> {
-    return this.shopImage;
-  }
-
-  clearShopImage(): void {
-    this.shopImage = {};
   }
 }

@@ -22,6 +22,11 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   // Reactive form instance
   memberDetailsForm: FormGroup;
 
+  passPhoto = {
+    file: null as File | null,
+    fileUrl: ''
+  };
+
   // Static dropdown values
   statuses: string[] = ['Single', 'Married', 'Divorced'];
   nationalities: string[] = ['Indian', 'Foreign'];
@@ -44,11 +49,6 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     memberMobileNumber: signal(''),
     memberEmailId: signal(''),
     photo: signal('')
-  };
-  
-  photo = {
-    file: null as File | null,
-    fileUrl: ''
   };
 
   constructor(
@@ -83,6 +83,13 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   // Initialize PAN formatting utility on component load
   ngOnInit() {
     FormUtils.capitalize(this.memberDetailsForm.get('pan')!, this.destroy$);
+
+    // Restore photo from service
+    const storedPhoto = this.licenseeService.getPassPhoto();
+    if (storedPhoto) {
+      this.passPhoto.file = storedPhoto;
+      this.passPhoto.fileUrl = URL.createObjectURL(storedPhoto);
+    }
   }
 
   // Clean up observables on component destroy
@@ -109,33 +116,29 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     const file = input.files?.[0];
 
     if (file) {
-      this.photo.file = file;
-      this.photo.fileUrl = URL.createObjectURL(file);
+      this.passPhoto.file = file;
+      this.passPhoto.fileUrl = URL.createObjectURL(file);
 
-      // ✅ Tell Angular to check again
-      this.cdr.detectChanges();
-
-      this.licenseeService.setLicenseApplicationDocuments({
-        photo: file
-      });
+      this.cdr.detectChanges(); // Trigger change detection
+      this.licenseeService.setPassPhoto(file); // Save to service
     }
   }
 
   viewPhoto() {
-    if (this.photo.fileUrl) {
-      window.open(this.photo.fileUrl, '_blank');
+    if (this.passPhoto.fileUrl) {
+      window.open(this.passPhoto.fileUrl, '_blank');
     }
   }
 
-  // Check if required documents are uploaded
+  // Check if photo is uploaded
   isPhotoUploaded(): boolean {
-    return !!this.photo.file;
+    return !!this.passPhoto.file;
   }
 
   clearPhotoUrl() {
-    if (this.photo.fileUrl) {
-      URL.revokeObjectURL(this.photo.fileUrl);
-      this.photo.fileUrl = '';
+    if (this.passPhoto.fileUrl) {
+      URL.revokeObjectURL(this.passPhoto.fileUrl);
+      this.passPhoto.fileUrl = '';
     }
   }
 

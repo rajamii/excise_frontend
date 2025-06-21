@@ -22,10 +22,10 @@
           <div class="value">{{ item.value }}</div>
         </div>
       </div>
-      <div class="photo-section" *ngIf="licenseApplicationDocs.length > 0">
+      <div class="photo-section" *ngIf="passPhotoUrl">
         <img
           class="profile-photo"
-          [src]="licenseApplicationDocs[0].fileUrl"
+          [src]="passPhotoUrl"
           alt="Applicant Photo"
         />
       </div>

@@ -19,6 +19,7 @@ export class LoginComponent extends BaseComponent {
   hidePassword = true;               // Toggles password visibility
   otpSent: boolean = false;          // Tracks whether OTP has been sent
   otpIndex: string | null = null;    // Placeholder for OTP index if backend returns it
+  otpAutoSubmitted = false;
 
   constructor(
     protected override baseDependency: BaseDependency,
@@ -139,6 +140,11 @@ export class LoginComponent extends BaseComponent {
   /** Updates OTP value as user types into the OTP input */
   onOtpChange(otp: string): void {
     this.loginForm.controls['otp'].setValue(otp);
+
+    if (otp.length === 4 && !this.otpAutoSubmitted) {
+      this.otpAutoSubmitted = true;
+      this.verifyOtp();
+    }
   }
 
   /** Verifies the entered OTP with the backend */
@@ -193,19 +199,19 @@ export class LoginComponent extends BaseComponent {
 
   /** Redirects user to appropriate dashboard based on their role */
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'site_admin':
-        this.router.navigate(['admin/dashboard']);
-        break;
-      case 'licensee':
-        this.router.navigate(['licensee/dashboard']);
-        break;
-      case 'level_1':
-        this.router.navigate(['admin/dashboard']);
-        break;
-      case 'level_2':
-        this.router.navigate(['admin/dashboard']); 
-        break;
+    const roleRouteMap: { [key: string]: string } = {
+      site_admin: 'admin/dashboard',
+      licensee: 'licensee/dashboard',
+      level_1: 'admin/dashboard',
+      level_2: 'admin/dashboard',
+      level_3: 'admin/dashboard',
+      level_4: 'admin/dashboard',
+      level_5: 'admin/dashboard'
+    };
+
+    const route = roleRouteMap[role];
+    if (route) {
+      this.router.navigate([route]);
     }
   }
 

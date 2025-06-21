@@ -1,26 +1,26 @@
 export class LicenseApplication {
-  //select license
+  // select license
   id!: number;
   exciseDistrict!: string;
   licenseCategory!: string;
   exciseSubDivision!: string;
   license!: string;
 
-  //key info
+  // key info
   licenseType!: string;  
   establishmentName!: string;
   mobileNumber!: number;
   emailId!: string;
-  licenseNo?: number;            //not required
-  initialGrantDate?: string;     //not required
-  renewedFrom?: string;          //not required
-  validUpTo?: string;            //not required
-  yearlyLicenseFee?: string;     //not required
+  licenseNo?: number;
+  initialGrantDate?: string;
+  renewedFrom?: string;
+  validUpTo?: string;
+  yearlyLicenseFee?: string;
   licenseNature!: string;
   functioningStatus!: string;
   modeofOperation!: string;  
 
-  //address
+  // address
   siteSubDivision!: string;
   policeStation!: string;
   locationCategory!: string;
@@ -29,10 +29,10 @@ export class LicenseApplication {
   businessAddress!: string;
   roadName!: string;
   pinCode!: number;
-  latitude?: string;            //not required
-  longitude?: string;           //not required
+  latitude?: string;
+  longitude?: string;
 
-  //unit details: only if licenseType = 'Company'
+  // unit details (only if licenseType = 'Company')
   companyName!: string;
   companyAddress!: string;
   companyPan!: string;
@@ -41,7 +41,7 @@ export class LicenseApplication {
   companyPhoneNumber!: number;
   companyEmailId!: string;
 
-  //member details
+  // member details
   status!: string;
   memberName!: string;
   fatherHusbandName!: string;
@@ -51,11 +51,10 @@ export class LicenseApplication {
   memberMobileNumber!: number;
   memberEmailId!: string;
 
+  // document
+  photo!: File;
+
+  // transactions
   current_stage!: string;
   is_approved!: boolean;
-}
-
-//documents
-export class LicenseApplicationDocuments {
-  photo!: File;
 }

@@ -1,35 +1,16 @@
 import { Component } from '@angular/core';
-
 import { MaterialModule } from '../../../shared/material.module';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependendency';
-import Swal from 'sweetalert2';
-import { SiteAdminService } from '../site-admin-service';
 import { ApplicationStage, DashboardCount } from '../../../core/models/dashboard.model';
 import { MatTableDataSource } from '@angular/material/table';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ApplicationTableComponent } from './application-table/application-table.component';
+import { LICENSE_DATA } from '../../../core/models/license-stats.model';
+import { of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
-// Interface for license statistics
-export interface LicenseStatistics {
-  slNo: number;           
-  serviceName: string;   
-  applied: string;       
-  rejected: number;
-  approved: number;       
-  executed: string;      
-  pending: number;        
-}
-
-// Sample data for LicenseStatistics, representing different services
-const LICENSE_DATA: LicenseStatistics[] = [
-  {slNo: 1, serviceName: 'New License Application', applied: '102', rejected: 0, approved: 14, executed: '9', pending: 88},
-  {slNo: 2, serviceName: 'Renewal of Excise License', applied: '3,372', rejected: 0, approved: 0, executed: '3,352', pending: 20},
-  {slNo: 3, serviceName: 'Label Registration of Packaged Liquor', applied: '0', rejected: 0, approved: 0, executed: '0', pending: 0},
-  {slNo: 4, serviceName: 'Import of Bulk Spirit', applied: '0', rejected: 0, approved: 0, executed: '0', pending: 88},
-  {slNo: 5, serviceName: 'Import of Packaged Foreign Liquor', applied: '0', rejected: 0, approved: 0, executed: '0', pending: 0},
-  {slNo: 6, serviceName: 'Import Packaged Foreign Liquor from Custom Station', applied: '0', rejected: 0, approved: 0, executed: '0', pending: 0},
-];
+type TableView = 'stats' | 'pending' | 'approved' | 'rejected';
 
 @Component({
   selector: 'app-dashboard', 
@@ -65,10 +46,10 @@ export class DashboardComponent extends BaseComponent {
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
 
   // Active table to display
-  activeTable: 'stats' | 'pending' | 'approved' | 'rejected' = 'stats';
+  activeTable: TableView = 'stats';
 
   // Method to switch to a specific table
-  showTable(table: 'pending' | 'approved' | 'rejected') {
+  showTable(table: Exclude<TableView, 'stats'>) {
     this.activeTable = table;
   }
 
@@ -80,14 +61,16 @@ export class DashboardComponent extends BaseComponent {
   // Lifecycle hook to initialize data
   ngOnInit(): void {
     // Fetch dashboard counts
-    this.licenseApplicationService.getDashboardCounts().subscribe({
-      next: (res) => {
-        this.dashboardCounts = res; // Update dashboard counts
-        console.log(res)
-      },
-      error: (err) => {
-        console.error('Failed to fetch dashboard counts', err); // Log error
-      }
+    this.licenseApplicationService.getDashboardCounts()
+    .pipe(
+      catchError(err => {
+        console.error('Failed to fetch dashboard counts:', err);
+        // Provide a fallback default value
+        return of({ pending: 0, approved: 0, rejected: 0 });
+      })
+    )
+    .subscribe(res => {
+      this.dashboardCounts = res;
     });
 
     // Fetch applications by stage
@@ -95,7 +78,6 @@ export class DashboardComponent extends BaseComponent {
       this.pendingDataSource.data = res.pending; 
       this.approvedDataSource.data = res.approved; 
       this.rejectedDataSource.data = res.rejected;
-      console.log(this.pendingDataSource.data);
     }, error => {
       console.error('Error fetching applications:', error); // Log error
     });

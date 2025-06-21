@@ -2,9 +2,10 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
-import { LicenseApplication, LicenseApplicationDocuments } from '../../../../../core/models/license-application.model';
+import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2'; 
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-submit-application',
@@ -18,8 +19,8 @@ import Swal from 'sweetalert2';
   styleUrl: './submit-application.component.scss'
 })
 export class SubmitApplicationComponent {
-  fileUrls: string[] = []
-  licenseApplicationDocs: { key: keyof LicenseApplicationDocuments; file: File; fileUrl: string }[] = [];
+  passPhotoUrl: string | null = null;
+  private photoSub?: Subscription;
 
   readonly licenseApplicationLabels: Partial<Record<keyof LicenseApplication, string>> = {
     exciseDistrict: 'Excise District',
@@ -62,11 +63,7 @@ export class SubmitApplicationComponent {
     gender: 'Gender',
     pan: 'PAN',
     memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email Id'
-  };
-
-  // Human-readable labels for uploaded documents
-  readonly documentLabels: Partial<Record<keyof LicenseApplicationDocuments, string>> = {
+    memberEmailId: 'Member Email Id',
     photo: 'Photo'
   };
 
@@ -74,26 +71,24 @@ export class SubmitApplicationComponent {
   @Output() back = new EventEmitter<void>();
 
   constructor(private licenseeService: LicenseeService, private router: Router) {}
-  
 
   ngOnInit(): void {
-    // Get uploaded document metadata (filename) for preview display
-    const docs = this.licenseeService.getLicenseApplicationDocuments();
-    this.fileUrls = [];
-
-    this.licenseApplicationDocs = Object.entries(docs).map(([key, file]) => {
-      const url = URL.createObjectURL(file!);
-      this.fileUrls.push(url);
-      return {
-        key: key as keyof LicenseApplicationDocuments,
-        file: file!,
-        fileUrl: url
-      };
+    this.photoSub = this.licenseeService.getPassPhotoObservable().subscribe(file => {
+      if (this.passPhotoUrl) {
+        URL.revokeObjectURL(this.passPhotoUrl);
+        this.passPhotoUrl = null;
+      }
+      if (file) {
+        this.passPhotoUrl = URL.createObjectURL(file);
+      }
     });
   }
 
   ngOnDestroy(): void {
-    this.fileUrls.forEach(url => URL.revokeObjectURL(url));
+    if (this.passPhotoUrl) {
+      URL.revokeObjectURL(this.passPhotoUrl);
+    }
+    this.photoSub?.unsubscribe();
   }
 
   // Getter for LICENSE DETAILS data from sessionStorage
@@ -169,11 +164,11 @@ export class SubmitApplicationComponent {
       const unitDetailsData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('unitDetailsData') || '{}');
       const memberDetailsData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('memberDetailsData') || '{}');
 
-      // Get uploaded files from service
-      const licenseApplicationDocuments = this.licenseeService.getLicenseApplicationDocuments();
+      // Get uploaded photo file from the service
+      const photoFile = this.licenseeService.getPassPhoto();
 
       // Ensure nothing is missing
-      if (!selectLicenseData || !keyInfoData || !addressData || !unitDetailsData || !memberDetailsData || !licenseApplicationDocuments) {
+      if (!selectLicenseData || !keyInfoData || !addressData || !unitDetailsData || !memberDetailsData || !photoFile) {
         alert('Missing application data. Please complete the form.');
         return;
       }
@@ -190,9 +185,7 @@ export class SubmitApplicationComponent {
       });
 
       // Append the photo file to FormData
-      if (licenseApplicationDocuments && licenseApplicationDocuments.photo) {
-        formData.append('photo', licenseApplicationDocuments.photo);
-      }
+      formData.append('photo', photoFile);
 
       // Make API call to submit form
       this.licenseeService.submitLicenseApplication(formData).subscribe({

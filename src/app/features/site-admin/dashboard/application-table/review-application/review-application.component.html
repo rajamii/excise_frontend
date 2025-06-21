@@ -1,0 +1,302 @@
+<mat-horizontal-stepper #stepper>
+  <!-- Step 1: Show Application Data -->
+    <mat-step label="Application Data">
+        <div class="step-header">
+            <h5>{{application.application_id}}</h5>
+        </div>
+        <div class="application-details">
+            <h6>License</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of licenseData"
+                [class.objection]="hasObjection(item.field)">
+                    <div class="key">
+                        {{ item.key }}
+                    </div>
+                    <div class="value">
+                        {{ item.value }}
+                        <mat-icon
+                        *ngIf="hasObjection(item.field)"
+                        matTooltip="{{ getObjectionRemarks(item.field) }}">
+                            error
+                        </mat-icon>
+                    </div>
+                </div>
+            </div>
+
+
+            <h6>Key Info</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of keyInfoData"
+                [class.objection]="hasObjection(item.field)">
+                    <div class="key">
+                        {{ item.key }}
+                    </div>
+                    <div class="value">
+                        {{ item.value }}
+                        <mat-icon
+                        *ngIf="hasObjection(item.field)"
+                        matTooltip="{{ getObjectionRemarks(item.field) }}">
+                            error
+                        </mat-icon>
+                    </div>
+                </div>
+            </div>
+
+            <h6>Address</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of addressData"
+                [class.objection]="hasObjection(item.field)">
+                    <div class="key">
+                        {{ item.key }}
+                    </div>
+                    <div class="value">
+                        {{ item.value }}
+                        <mat-icon
+                        *ngIf="hasObjection(item.field)"
+                        matTooltip="{{ getObjectionRemarks(item.field) }}">
+                            error
+                        </mat-icon>
+                    </div>
+                </div>
+            </div>
+
+            <h6>Unit Details</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of unitDetailsData"
+                [class.objection]="hasObjection(item.field)">
+                    <div class="key">
+                        {{ item.key }}
+                    </div>
+                    <div class="value">
+                        {{ item.value }}
+                        <mat-icon
+                        *ngIf="hasObjection(item.field)"
+                        matTooltip="{{ getObjectionRemarks(item.field) }}">
+                            error
+                        </mat-icon>
+                    </div>
+                </div>
+            </div>
+
+            <h6>Member Details</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of memberDetailsData"
+                [class.objection]="hasObjection(item.field)">
+                    <div class="key">
+                        {{ item.key }}
+                    </div>
+                    <div class="value">
+                        <ng-container *ngIf="item.field === 'photo' && photoUrl; else normalValue">
+                            <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                        </ng-container>
+                        <ng-template #normalValue>
+                            {{ item.value }}
+                        </ng-template>
+                        <mat-icon
+                        *ngIf="hasObjection(item.field)"
+                        matTooltip="{{ getObjectionRemarks(item.field) }}">
+                            error
+                        </mat-icon>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="step-buttons">
+            <button mat-flat-button class="accept-button" (click)="onApprove(stepper)" *ngIf="['pending', 'rejected'].includes(tableType)">
+                <mat-icon>check_circle</mat-icon>
+                Approve
+            </button>
+
+            <button mat-flat-button class="objection-button" (click)="onRaiseObjection(stepper)" *ngIf="tableType==='pending'">
+                <mat-icon>flag</mat-icon>
+                Raise Objection
+            </button>
+
+            <button mat-flat-button class="reject-button" (click)="onReject(stepper)" *ngIf="tableType==='pending'">
+                <mat-icon>cancel</mat-icon>
+                Reject
+            </button>
+        </div>
+    </mat-step>
+    
+    <mat-step *ngIf="isObjection" label="Raise Objection">
+        <form [formGroup]="objectionForm">
+            <div class="step-header">
+                <h5>{{application.application_id}}</h5>
+            </div>
+            <div class="objection-form-content">
+                <div *ngFor="let field of objectionFields" class="objection-field">
+                    <mat-checkbox [formControlName]="field.key">{{ field.label }}</mat-checkbox>
+                    <mat-form-field *ngIf="objectionForm.get(field.key)?.value" appearance="outline">
+                        <textarea matInput [formControlName]="field.key + '_remarks'" placeholder="Write Remarks"></textarea>
+                    </mat-form-field>
+                </div>
+            </div>
+            <div class="step-buttons">
+                <button mat-stroked-button matStepperPrevious>Back</button>
+                <button mat-raised-button color="primary" (click)="onSubmitObjection()">Submit Objection</button>
+            </div>
+        </form>
+    </mat-step>
+
+    <!-- Calculate Fee (Level 1 only) -->
+    <mat-step *ngIf="accountService.hasAnyRole('level_1') && isApproveFlow" [stepControl]="feeForm"  label="Calculate Fee">
+        <form  [formGroup]="feeForm" label="Calculate Fee">
+            <div class="step-header">
+                <h5>{{application.application_id}}</h5>
+            </div>
+            <div class="step-content">
+                <div>
+                    <mat-form-field appearance="outline" class="w-full">
+                        <mat-label>Select Location</mat-label>
+                        <mat-select formControlName="location" (selectionChange)="onLocationChange($event.value)">
+                        <mat-option *ngFor="let loc of locationFees" [value]="loc">{{ loc.location_name }}</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                    
+                    <mat-form-field appearance="outline" class="w-full">
+                        <mat-label>License Fee</mat-label>
+                        <input matInput [value]="selectedLocation?.fee_amount" disabled>
+                    </mat-form-field>
+                </div>
+
+                <div class="step-buttons">
+                    <button mat-stroked-button matStepperPrevious>Back</button>
+                    <button mat-flat-button [disabled]="!feeForm.valid" matStepperNext>Next</button>
+                </div>
+            </div>
+        </form>  
+    </mat-step>
+
+    <!-- Site Enquiry (Level 2 only) -->
+    <mat-step *ngIf="accountService.hasAnyRole('level_2') && isApproveFlow" label="Site Enquiry">
+        <div class="step-body">
+            <div class="step-header justify-content-between px-1">
+                <h5 class = "application-id">{{ application.application_id }}</h5>
+                <div class = "dialog-title">Site Enquiry Form</div>
+            </div>
+            <div class="form-container">
+                <app-site-enquiry-form (formStatus)="onFormValidityChange($event)"></app-site-enquiry-form>
+            </div>
+            <div class="step-buttons">
+                <button mat-stroked-button matStepperPrevious>Back</button>
+                <button mat-flat-button matStepperNext [disabled]="!siteEnquiryFormValid">Next</button>
+            </div>
+        </div>
+    </mat-step>
+
+    <!-- License Category Selection (Level 2 only) -->
+    <mat-step *ngIf="accountService.hasAnyRole('level_2') && isApproveFlow && !isRejected" [stepControl]="licenseCategoryForm" label="License Category">
+        <form [formGroup]="licenseCategoryForm">
+            <div class="step-header">
+                <h5>{{application.application_id}}</h5>
+            </div>
+            <div class="step-content">
+                <div>
+                    <mat-form-field appearance="outline">
+                        <mat-label>Select License Category</mat-label>
+                        <mat-select formControlName="licenseCategory">
+                        <mat-option *ngFor="let category of licenseCategories" [value]="category">
+                            {{ category.licenseCategoryDescription }}
+                        </mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </div>
+                <div class="step-buttons">
+                    <button mat-stroked-button matStepperPrevious>Back</button>
+                    <button mat-flat-button matStepperNext>Next</button>
+                </div>
+            </div>
+        </form>
+    </mat-step>
+
+    <!-- Step 2: Review Remarks -->
+    <mat-step [stepControl]="remarksForm" label="Review Remarks">
+        <form [formGroup]="remarksForm">
+            <div class="step-header">
+                <h5>{{application.application_id}}</h5>
+            </div>
+            <div class="step-content">
+                <mat-form-field appearance="outline">
+                    <mat-label>Review Remarks</mat-label>
+                    <textarea matInput formControlName="remarks" required></textarea>
+                    <mat-error *ngIf="remarksForm.controls['remarks'].hasError('required')">
+                        Remarks are required
+                    </mat-error>
+                </mat-form-field>
+            
+                <div class="step-buttons">
+                    <button mat-stroked-button matStepperPrevious>Back</button>
+                    <button mat-flat-button matStepperNext [disabled]="!remarksForm.valid">Next</button>
+                </div>
+            </div>
+        </form>
+    </mat-step>
+
+    <!-- Confirm -->
+    <mat-step label="Confirm">
+    <div class="step-content">
+
+        <!-- ✅ Approve Confirmation -->
+        <ng-container *ngIf="isApproveFlow">
+        <h5>
+            <mat-icon color="primary">check_circle</mat-icon>
+            Confirm Approval
+        </h5>
+        <mat-card appearance="outlined">
+            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+            <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.fee_amount">
+            <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
+            </p>
+            <p *ngIf="accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory">
+            <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
+            </p>
+        </mat-card>
+        </ng-container>
+
+        <!-- ❌ Reject Confirmation -->
+        <ng-container *ngIf="isRejectFlow">
+        <h5>
+            <mat-icon color="warn">cancel</mat-icon>
+            Confirm Rejection
+        </h5>
+        <mat-card appearance="outlined">
+            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+        </mat-card>
+        </ng-container>
+
+        <!-- 🚩 Objection Confirmation -->
+        <ng-container *ngIf="isObjection">
+        <h5>
+            <mat-icon color="accent">flag</mat-icon>
+            Confirm Objection
+        </h5>
+        <mat-card appearance="outlined">
+            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+            <p *ngFor="let obj of objectionForm.value.objections">
+            <mat-icon color="warn">error_outline</mat-icon>
+            <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
+            </p>
+        </mat-card>
+        </ng-container>
+
+        <!-- Common Buttons -->
+        <div class="step-buttons">
+        <button mat-stroked-button color="warn" matStepperPrevious>Back</button>
+        <button mat-flat-button color="primary" (click)="onConfirm()">Confirm</button>
+        </div>
+
+    </div>
+    </mat-step>
+
+</mat-horizontal-stepper>

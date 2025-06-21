@@ -1,213 +1,272 @@
-import { Component, signal, Inject } from '@angular/core';
+import { Component, signal, Inject, Output, EventEmitter } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { SiteAdminService } from '../../../site-admin-service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-site-enquiry-form',
-  imports: [MaterialModule],  // ✅ contains MatInputModule, MatFormFieldModule, etc.
+  imports: [MaterialModule], 
   templateUrl: './site-enquiry-form.component.html',
   styleUrl: './site-enquiry-form.component.scss'
 })
 export class SiteEnquiryFormComponent {
+  @Output() formStatus = new EventEmitter<boolean>();
+
   siteEnquiryForm: FormGroup;
   
-  // Signal-based error messages for reactive display
-  errorMessages = {
-    // Location Restrictions
-    hasTraditionalPlace: signal(''),
-    traditionalPlaceDistance: signal(''),
-    traditionalPlaceName: signal(''),
-    traditionalPlaceNature: signal(''),
-    traditionalPlaceConstruction: signal(''),
+/*   readonly formControlNames = [
+    'hasTraditionalPlace', 'traditionalPlaceDistance', 'traditionalPlaceName', 'traditionalPlaceNature', 'traditionalPlaceConstruction',
+    'hasEducationalInstitution', 'educationalInstitutionDistance', 'educationalInstitutionName', 'educationalInstitutionNature',
+    'hasHospital', 'hospitalDistance', 'hospitalName',
+    'hasTaxiStand', 'taxiStandDistance', 'taxiStandName',
+    'isInterconnectedWithShops', 'interconnectivityRemarks',
+    'enquiryOfficerComments', 'shopConstructionType', 'hasExciseShopsNearby',
+    'nearbyExciseShopCount', 'nearbyExciseShopsRemarks',
+    'isOnHighway', 'highwayName', 'shopImageDocument',
+    'latitude', 'longitude', 'isShopSizeCorrect', 'shopSizeRemarks',
+    'additionalEnquiryOfficerComments',
+    'hasIdProof', 'idProofComments',
+    'hasAgeProof', 'ageProofComments',
+    'hasNocFromLandlord', 'nocComments',
+    'hasOwnershipProof', 'ownershipProofComments',
+    'hasTradeLicense', 'tradeLicenseComments',
+    'proposesBarmanOrSalesman', 'workerProposalComments',
+    'workerDocsValid', 'workerDocsComments',
+    'licenseRecommendation', 'recommendationComments',
+    'specialRemarks', 'reportingPlace'
+  ]; */
 
-    hasEducationalInstitution: signal(''),
-    educationalInstitutionDistance: signal(''),
-    educationalInstitutionName: signal(''),
-    educationalInstitutionNature: signal(''),
+  constructor(
+  private fb: FormBuilder,
+  @Inject(MAT_DIALOG_DATA) public data: any,
+  protected licenseAppplicationService: LicenseApplicationService
+  ) {
+    // Initialize reactive form with validation
+    this.siteEnquiryForm = this.fb.group({
+      
+      hasTraditionalPlace: [null, Validators.required],
+      traditionalPlaceDistance: [{ value: null, disabled: true }],
+      traditionalPlaceName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      traditionalPlaceNature: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      traditionalPlaceConstruction: [{ value: null, disabled: true }],
 
-    hasHospitalNearby: signal(''),
-    hospitalDistance: signal(''),
-    hospitalName: signal(''),
+      hasEducationalInstitution: [null, Validators.required],
+      educationalInstitutionDistance: [{ value: null, disabled: true }],
+      educationalInstitutionName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      educationalInstitutionNature: [{ value: '', disabled: true }, Validators.maxLength(1000)],
 
-    hasTaxiStandNearby: signal(''),
-    taxiStandDistance: signal(''),
-    taxiStandName: signal(''),
+      hasHospital: [null, Validators.required],
+      hospitalDistance: [{ value: null, disabled: true }],
+      hospitalName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
 
-    isInterconnectedWithShops: signal(''),
-    interconnectedRemarks: signal(''),
+      hasTaxiStand: [null, Validators.required],
+      taxiStandName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      taxiStandDistance: [{ value: null, disabled: true }],
 
-    enquiryOfficerComments: signal(''),
+      isInterconnectedWithShops: [null, Validators.required],
+      interconnectivityRemarks: ['', Validators.maxLength(1000)],
 
-    // Other Enquiry Points
-    shopConstructionType: signal(''),
-    hasNearbyExciseShops: signal(''),
-    numberOfNearbyExciseShops: signal(''),
-    nearbyExciseShopsRemarks: signal(''),
+      enquiryOfficerComments: ['', Validators.maxLength(2000)],
 
-    isOnHighway: signal(''),
-    highwayName: signal(''),
+      shopConstructionType: [null, Validators.required],
 
-    shopImage: signal(''),
+      hasExciseShopsNearby: [null, Validators.required],
+      nearbyExciseShopCount: [{ value: null, disabled: true }],
+      nearbyExciseShopsRemarks: ['', Validators.maxLength(2000)],
 
-    latitude: signal(''),
-    longitude: signal(''),
+      isOnHighway: [null, Validators.required],
+      highwayName: [{ value: '', disabled: true }, Validators.maxLength(2000)],
 
-    isShopSizeCorrect: signal(''),
-    shopSizeRemarks: signal(''),
-    additionalOfficerComments: signal(''),
+      shopImageDocument: [null, Validators.required],
 
-    // Document Verification
-    hasIdentityProof: signal(''),
-    identityProofComments: signal(''),
+      latitude: [null],
+      longitude: [null],
 
-    hasAgeProof: signal(''),
-    ageProofComments: signal(''),
+      isShopSizeCorrect: [null, Validators.required],
+      shopSizeRemarks: ['', Validators.maxLength(2000)],
 
-    hasNOCFromLandlord: signal(''),
-    nocComments: signal(''),
+      additionalEnquiryOfficerComments: ['', Validators.maxLength(2000)],
 
-    hasOwnershipProof: signal(''),
-    ownershipProofComments: signal(''),
+      hasIdProof: [null, Validators.required],
+      idProofComments: ['', Validators.maxLength(1000)],
 
-    hasTradeLicense: signal(''),
-    tradeLicenseComments: signal(''),
+      hasAgeProof: [null, Validators.required],
+      ageProofComments: ['', Validators.maxLength(1000)],
 
-    proposesBarmanOrSalesman: signal(''),
-    barmanProposalComments: signal(''),
+      hasNocFromLandlord: [null, Validators.required],
+      nocComments: ['', Validators.maxLength(1000)],
 
-    barmanDocumentsValid: signal(''),
-    barmanDocsComments: signal(''),
+      hasOwnershipProof: [null, Validators.required],
+      ownershipProofComments: ['', Validators.maxLength(1000)],
 
-    licenseRecommendation: signal(''),
-    recommendationComments: signal(''),
+      hasTradeLicense: [null, Validators.required],
+      tradeLicenseComments: ['', Validators.maxLength(1000)],
 
-    // Meta Info
-    specialRemarks: signal(''),
-    reportingPlace: signal('')
-  };
+      proposesBarmanOrSalesman: [null, Validators.required],
+      workerProposalComments: ['', Validators.maxLength(1000)],
 
-  photo = {
+      workerDocsValid: [null, Validators.required],
+      workerDocsComments: ['', Validators.maxLength(1000)],
+
+      licenseRecommendation: [null, Validators.required],
+      recommendationComments: ['', Validators.maxLength(1000)],
+
+      specialRemarks: ['', Validators.maxLength(2000)],
+      reportingPlace: ['', [Validators.required, Validators.maxLength(250)]],
+    });
+  }
+
+  ngOnInit() {
+    // Emit on form status change
+    this.siteEnquiryForm.statusChanges.subscribe(() => {
+      this.formStatus.emit(this.siteEnquiryForm.valid);
+
+/*       for (const name of this.formControlNames) {
+        const error = this.getErrorMessage(name as keyof typeof this.errorMessages);
+        this.errorMessages[name].set(error);
+      } */
+    });
+
+    this.bindConditionalEnabling('hasTraditionalPlace', [
+      'traditionalPlaceDistance',
+      'traditionalPlaceName',
+      'traditionalPlaceNature',
+      'traditionalPlaceConstruction'
+    ]);
+
+    this.bindConditionalEnabling('hasEducationalInstitution', [
+      'educationalInstitutionDistance',
+      'educationalInstitutionName',
+      'educationalInstitutionNature'
+    ]);
+
+    this.bindConditionalEnabling('hasHospital', [
+      'hospitalDistance',
+      'hospitalName'
+    ]);
+
+    this.bindConditionalEnabling('hasTaxiStand', [
+      'taxiStandDistance',
+      'taxiStandName'
+    ]);
+
+    this.bindConditionalEnabling('hasExciseShopsNearby', [
+      'nearbyExciseShopCount'
+    ]);
+
+    this.bindConditionalEnabling('isOnHighway', [
+      'highwayName'
+    ]);
+  }
+
+  ngAfterViewInit() {
+    this.formStatus.emit(this.siteEnquiryForm.valid);
+  }
+
+  private bindConditionalEnabling(
+    mainControlName: string,
+    dependentControlNames: string[]
+  ) {
+    const mainControl = this.siteEnquiryForm.get(mainControlName);
+    if (!mainControl) return;
+
+    mainControl.valueChanges.subscribe((value: boolean) => {
+      dependentControlNames.forEach(controlName => {
+        const control = this.siteEnquiryForm.get(controlName);
+        if (!control) return;
+
+        if (value === true) {
+          control.enable();
+        } else {
+          control.disable();
+          control.reset();
+        }
+      });
+    });
+  }
+
+/*   errorMessages = Object.fromEntries(
+    this.formControlNames.map(name => [name, signal('')])
+  ) as Record<string, ReturnType<typeof signal>>;
+ */
+  shopImageDocument = {
     file: null as File | null,
     fileUrl: ''
   };
 
-  constructor(
-    private fb: FormBuilder,
-    @Inject(MAT_DIALOG_DATA) public data: any,
-    protected licenseAppplicationService: LicenseApplicationService
-  ) {
-    // Initialize reactive form with validation
-    this.siteEnquiryForm = this.fb.group({
-        hasTraditionalPlace: [null, Validators.required],
-        traditionalPlaceDistance: [null],
-        traditionalPlaceName: ['', [Validators.required, Validators.maxLength(1000)]],
-        traditionalPlaceNature: [''],
-        traditionalPlaceConstruction: [null, Validators.required],
+  // Retrieve error message for a specific field
+/*   getErrorMessage(field: keyof typeof this.errorMessages): string {
+    const control = this.siteEnquiryForm.get(field as string);
+    if (!control || control.valid || !control.errors || !control.touched) {
+      return '';
+    }
 
-        hasEducationalInstitution: [null, Validators.required],
-        educationalInstitutionDistance: [null],
-        educationalInstitutionName: [''],
-        educationalInstitutionNature: [''],
+    if (control.errors['required']) return 'This field is required.';
+    if (control.errors['maxlength']) {
+      return `Maximum length is ${control.errors['maxlength'].requiredLength} characters.`;
+    }
+    if (control.errors['minlength']) {
+      return `Minimum length is ${control.errors['minlength'].requiredLength} characters.`;
+    }
+    if (control.errors['min']) return `Minimum value is ${control.errors['min'].min}.`;
+    if (control.errors['max']) return `Maximum value is ${control.errors['max'].max}.`;
+    if (control.errors['email']) return 'Please enter a valid email address.';
 
-        hasHospitalNearby: [null, Validators.required],
-        hospitalDistance: [null],
-        hospitalName: [''],
+    return 'Invalid field.';
+  } */
 
-        hasTaxiStandNearby: [null, Validators.required],
-        taxiStandName: [''],
-        taxiStandDistance: [null],
-
-        isInterconnectedWithShops: [null, Validators.required],
-        interconnectedRemarks: [''],
-
-        enquiryOfficerComments: [''],
-
-        shopConstructionType: [null, Validators.required],
-
-        hasNearbyExciseShops: [null, Validators.required],
-        numberOfNearbyExciseShops: [0],
-        nearbyExciseShopsRemarks: [''],
-
-        isOnHighway: [null, Validators.required],
-        highwayName: [''],
-
-        shopImage: [null],
-
-        latitude: [''],
-        longitude: [''],
-
-        isShopSizeCorrect: [null, Validators.required],
-        shopSizeRemarks: [''],
-
-        additionalOfficerComments: [''],
-
-        hasIdentityProof: [null, Validators.required],
-        identityProofComments: [''],
-
-        hasAgeProof: [null, Validators.required],
-        ageProofComments: [''],
-
-        hasNOCFromLandlord: [null, Validators.required],
-        nocComments: [''],
-
-        hasOwnershipProof: [null, Validators.required],
-        ownershipProofComments: [''],
-
-        hasTradeLicense: [null, Validators.required],
-        tradeLicenseComments: [''],
-
-        proposesBarmanOrSalesman: [null, Validators.required],
-        barmanProposalComments: [''],
-
-        barmanDocumentsValid: [null, Validators.required],
-        barmanDocsComments: [''],
-
-        licenseRecommendation: [null, Validators.required],
-        recommendationComments: [''],
-
-        specialRemarks: [''],
-        reportingPlace: [''],
-    });
-  }
-
-    // Retrieve error message for a specific field
-  getErrorMessage(field: keyof typeof this.errorMessages) {
-    return this.errorMessages[field]();
-  }
-
-  onPhotoSelect(event: Event) {
+  onDocSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-  
+
+    if (file && file.type !== 'application/pdf') {
+      Swal.fire('Invalid File', 'Only PDF files are allowed.', 'warning');
+      return;
+    }
+
     if (file) {
-      this.photo.file = file;
-      this.photo.fileUrl = URL.createObjectURL(file);
-  
-      // Store the file in the service
-      this.licenseAppplicationService.setShopImage({
-        shopImage: file
-      });
+      this.shopImageDocument.file = file;
+      this.shopImageDocument.fileUrl = URL.createObjectURL(file);
+
+      // ✅ THIS is what updates the control value to make the validator happy
+      this.siteEnquiryForm.get('shopImageDocument')?.setValue(file);
+      this.siteEnquiryForm.get('shopImageDocument')?.updateValueAndValidity();
     }
   }
 
-  viewPhoto() {
-    if (this.photo.fileUrl) {
-      window.open(this.photo.fileUrl, '_blank');
+  viewDoc() {
+    if (this.shopImageDocument.fileUrl) {
+      window.open(this.shopImageDocument.fileUrl, '_blank');
     }
   }
 
   // Check if required documents are uploaded
-  isPhotoUploaded(): boolean {
-    return !!this.photo.file;
+  isDocUploaded(): boolean {
+    return !!this.shopImageDocument.file;
   }
 
-  clearPhotoUrl() {
-    if (this.photo.fileUrl) {
-      URL.revokeObjectURL(this.photo.fileUrl);
-      this.photo.fileUrl = '';
+  clearDocUrl() {
+    if (this.shopImageDocument.fileUrl) {
+      URL.revokeObjectURL(this.shopImageDocument.fileUrl);
+      this.shopImageDocument.fileUrl = '';
     }
+  }
+
+  public getSiteEnquiryData(): any | null {
+    if (this.siteEnquiryForm.invalid) {
+      this.siteEnquiryForm.markAllAsTouched();
+      return null;
+    }
+
+    const formData = this.siteEnquiryForm.value;
+
+    // Include photo
+    if (this.shopImageDocument.file) {
+      formData.shopImageDocument = this.shopImageDocument.file; 
+    }
+
+    return formData;
   }
 }

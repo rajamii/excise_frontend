@@ -1,11 +1,7 @@
-.dialog-header{
-    display: flex;
-    justify-content: space-between;
-    margin-right: 25px;
-    .application-id{
-        color: #1C2B78;  
-    }  
+mat-dialog-content{
+    padding: 0 !important;
 }
+
 .section{
     margin-bottom: 20px;
     mat-card-header{
@@ -14,7 +10,6 @@
     mat-card-content{
         display: flex;
         flex-direction: column;
-         
     }
     .field-container{
         display: flex;
