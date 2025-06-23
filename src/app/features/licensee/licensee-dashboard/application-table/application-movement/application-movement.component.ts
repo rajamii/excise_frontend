@@ -12,9 +12,13 @@ import { MovementTransaction, ApplicationWithTransactions } from '../../../../..
   styleUrl: './application-movement.component.scss',
 })
 export class ApplicationMovementComponent {
+  // Input to allow setting the data source from outside if needed
   @Input() movementDataSource: MatTableDataSource<MovementTransaction>;
+
+  // Column definitions used by the mat-table in the template
   movementColumns: string[] = ['slNo', 'date', 'forwardedBy', 'forwardedTo', 'remarks'];
 
+  // Mapping of role identifiers to human-readable labels
   private readonly roleDisplayMapping: Record<string, string> = {
     licensee: 'Licensee',
     level_1: 'Level 1',
@@ -39,21 +43,28 @@ export class ApplicationMovementComponent {
     rejected: 'Application Rejected',
   };
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { movementDataSource: { data: ApplicationWithTransactions[] } }) {
+  constructor(
+    @Inject(MAT_DIALOG_DATA)
+    public data: { movementDataSource: { data: ApplicationWithTransactions[] } }
+  ) {
+    // Extract transactions from all applications passed in dialog data
     const apps = Array.isArray(data.movementDataSource?.data)
       ? data.movementDataSource.data
       : [];
 
+    // Flatten transactions from all applications and add the application ID to each
     const transactions: MovementTransaction[] = apps.flatMap(app =>
       (app.transactions || []).map(txn => ({
         ...txn,
         applicationId: app.application_id,
       }))
-    ).reverse();
+    ).reverse(); // Reverse to show latest transaction first
 
+    // Initialize data source for the mat-table
     this.movementDataSource = new MatTableDataSource(transactions);
   }
 
+  // Get human-readable role label from the mapping
   getRoleLabel(role: string): string {
     return this.roleDisplayMapping[role] || role || 'N/A';
   }

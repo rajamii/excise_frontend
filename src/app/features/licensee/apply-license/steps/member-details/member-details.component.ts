@@ -1,10 +1,7 @@
-// Angular core imports
 import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
-// Services and shared modules
 import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';

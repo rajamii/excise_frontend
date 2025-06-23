@@ -14,6 +14,7 @@ export interface Objection {
   resolved: boolean;
 }
 
+// Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
   key: string;
   field: string;
@@ -30,65 +31,12 @@ export class ViewApplicationComponent {
   resolveObjectionForm!: FormGroup;
   application: any;
   tableType: string = '';
+
   photoUrl: string | null = null;
+
   isObjectionLoaded = false;
   
   objections: Objection[] = [];
-
-  fieldLabelMap: { [key: string]: string } = {
-  // License details
-  exciseDistrict: 'Excise District',
-  licenseCategory: 'License Category',
-  exciseSubDivision: 'Excise Sub-Division',
-  license: 'License',
-
-  // Key Info
-  licenseType: 'License Type',
-  establishmentName: 'Establishment Name',
-  mobileNumber: 'Mobile Number',
-  emailId: 'Email ID',
-  licenseNo: 'License Number',
-  initialGrantDate: 'Initial Grant Date',
-  renewedFrom: 'Renewed From',
-  validUpTo: 'Valid Up To',
-  yearlyLicenseFee: 'Yearly License Fee',
-  licenseNature: 'License Nature',
-  functioningStatus: 'Functioning Status',
-  modeofOperation: 'Mode of Operation',
-
-  // Address
-  siteSubDivision: 'Site Sub-Division',
-  policeStation: 'Police Station',
-  locationCategory: 'Location Category',
-  locationName: 'Location Name',
-  wardName: 'Ward Name',
-  businessAddress: 'Business Address',
-  roadName: 'Road Name',
-  pinCode: 'PIN Code',
-  latitude: 'Latitude',
-  longitude: 'Longitude',
-
-  // Unit Details
-  companyName: 'Company Name',
-  companyAddress: 'Company Address',
-  companyPan: 'Company PAN',
-  companyCin: 'Company CIN',
-  incorporationDate: 'Incorporation Date',
-  companyPhoneNumber: 'Company Phone Number',
-  companyEmailId: 'Company Email ID',
-
-  // Member Details
-  status: 'Status',
-  memberName: 'Member Name',
-  fatherHusbandName: 'Father/Husband Name',
-  nationality: 'Nationality',
-  gender: 'Gender',
-  pan: 'PAN',
-  memberMobileNumber: 'Member Mobile Number',
-  memberEmailId: 'Member Email ID',
-
-  photo: 'Photo'
-};
 
   // Data arrays for display sections
   licenseData: FieldDisplay[] = [];
@@ -96,6 +44,62 @@ export class ViewApplicationComponent {
   addressData: FieldDisplay[] = [];
   unitDetailsData: FieldDisplay[] = [];
   memberDetailsData: FieldDisplay[] = [];
+
+  // Field label mapping for display and objections
+  fieldLabelMap: { [key: string]: string } = {
+    // License details
+    exciseDistrict: 'Excise District',
+    licenseCategory: 'License Category',
+    exciseSubDivision: 'Excise Sub-Division',
+    license: 'License',
+
+    // Key Info
+    licenseType: 'License Type',
+    establishmentName: 'Establishment Name',
+    mobileNumber: 'Mobile Number',
+    emailId: 'Email ID',
+    licenseNo: 'License Number',
+    initialGrantDate: 'Initial Grant Date',
+    renewedFrom: 'Renewed From',
+    validUpTo: 'Valid Up To',
+    yearlyLicenseFee: 'Yearly License Fee',
+    licenseNature: 'License Nature',
+    functioningStatus: 'Functioning Status',
+    modeofOperation: 'Mode of Operation',
+
+    // Address
+    siteSubDivision: 'Site Sub-Division',
+    policeStation: 'Police Station',
+    locationCategory: 'Location Category',
+    locationName: 'Location Name',
+    wardName: 'Ward Name',
+    businessAddress: 'Business Address',
+    roadName: 'Road Name',
+    pinCode: 'PIN Code',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+
+    // Unit Details
+    companyName: 'Company Name',
+    companyAddress: 'Company Address',
+    companyPan: 'Company PAN',
+    companyCin: 'Company CIN',
+    incorporationDate: 'Incorporation Date',
+    companyPhoneNumber: 'Company Phone Number',
+    companyEmailId: 'Company Email ID',
+
+    // Member Details
+    status: 'Status',
+    memberName: 'Member Name',
+    fatherHusbandName: 'Father/Husband Name',
+    nationality: 'Nationality',
+    gender: 'Gender',
+    pan: 'PAN',
+    memberMobileNumber: 'Member Mobile Number',
+    memberEmailId: 'Member Email ID',
+
+    photo: 'Photo'
+  };
 
   dropdownFields: { [key: string]: any[] } = {
     exciseDistrict: [],
@@ -131,10 +135,16 @@ export class ViewApplicationComponent {
   }
 
   ngOnInit(): void {
+    // Set photo URL if photo exists
     this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
-    this.fetchObjections();
+
+    // Load dropdown options
     this.loadDropdownOptions()
 
+    // Load existing objections if any
+    this.fetchObjections();
+
+    // Group application data into sections for display
     this.licenseData = this.getFieldDisplayList([
       'exciseDistrict', 'licenseCategory', 'exciseSubDivision', 'license'
     ]);
@@ -164,55 +174,62 @@ export class ViewApplicationComponent {
 
   getFieldDisplayList(fields: string[]): FieldDisplay[] {
     return fields.map(field => ({
-      key: this.fieldLabelMap[field] || field,
-      field,
+      key: this.fieldLabelMap[field] || field, // Friendly label
+      field, // Raw field name
       value: this.application[field] || 'N/A'
     }));
   }
 
-
   fetchObjections() {
-    const appId = this.application.application_id;
-    this.licenseApplicationService.getObjections(appId).subscribe({
+    // Fetch objections related to the application from backend
+    this.licenseApplicationService.getObjections(this.application.application_id).subscribe({
       next: (data) => {
         this.objections = data;
+        // Initialize the form for resolving objections
         this.initializeResolveForm();
-        this.isObjectionLoaded = true; 
+        this.isObjectionLoaded = true; // Mark objections as loaded
       },
       error: (err) => {
         console.error('Failed to fetch objections', err);
-        this.isObjectionLoaded = true;
+        this.isObjectionLoaded = true; // Still mark as loaded to avoid blocking UI
       }
     });
   }
   
+  // Initializes the form used to resolve objections
   initializeResolveForm(): void {
     const group: { [key: string]: FormControl } = {};
     for (const obj of this.objections) {
       group[obj.field_name] = obj.field_name === 'photo'
+        // Photo requires file input
         ? new FormControl(null, Validators.required)
+        // For other fields, pre-fill existing value from application
         : new FormControl(this.application[obj.field_name] || '', Validators.required);
     }
     this.resolveObjectionForm = new FormGroup(group);
   }
 
-  
+  // Checks if a specific field has an unresolved objection
   hasObjection(field: string): boolean {
     return this.objections.some(obj => obj.field_name === field && !obj.resolved);
   }
 
+  // Determines if there is at least one unresolved objection
   hasAnyObjections(): boolean {
     return this.objections.some(obj => this.hasObjection(obj.field_name));
   } 
   
+  // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
     return this.objections.find(obj => obj.field_name === field && !obj.resolved)?.remarks || '';
   }
 
+  // Returns only unresolved objections for iteration in the template
   get unresolvedObjections(): Objection[] {
     return this.objections.filter(obj => !obj.resolved);
   }
   
+  // Handles photo file selection and sets it into the form
   onPhotoSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -221,6 +238,7 @@ export class ViewApplicationComponent {
     }
   }
 
+  // Loads all dropdown values needed to populate dynamic form fields
   loadDropdownOptions(): void {
     this.licenseeService.getDistrict().subscribe(data => {
       this.dropdownFields['exciseDistrict'] = data;
@@ -244,6 +262,7 @@ export class ViewApplicationComponent {
     });
   }
 
+  // Submits corrected data to resolve objections
   submitResolvedData() {
     Swal.fire({
       title: 'Are you sure?',
@@ -257,12 +276,14 @@ export class ViewApplicationComponent {
         const formValue = this.resolveObjectionForm.value;
         const formData = new FormData();
 
+        // Append each form value to FormData object
         for (const key in formValue) {
           if (formValue.hasOwnProperty(key)) {
             formData.append(key, formValue[key]);
           }
         }
 
+        // Send resolved data to backend
         this.licenseApplicationService.resolveObjections(this.application.application_id, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => location.reload());
@@ -280,6 +301,7 @@ export class ViewApplicationComponent {
     });
   }
 
+  // Deletes the current application
   onDelete(application: any): void {
     Swal.fire({
       title: 'Are you sure?',

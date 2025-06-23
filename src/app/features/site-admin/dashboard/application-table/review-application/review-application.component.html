@@ -5,143 +5,191 @@
             <h5>{{application.application_id}}</h5>
         </div>
         <div class="application-details">
-            <h6>License</h6>
-            <div class="section-table">
-                <div
-                class="row"
-                *ngFor="let item of licenseData"
-                [class.objection]="hasObjection(item.field)">
-                    <div class="key">
-                        {{ item.key }}
-                    </div>
-                    <div class="value">
-                        {{ item.value }}
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                            error
-                        </mat-icon>
-                    </div>
-                </div>
-            </div>
-
-
-            <h6>Key Info</h6>
-            <div class="section-table">
-                <div
-                class="row"
-                *ngFor="let item of keyInfoData"
-                [class.objection]="hasObjection(item.field)">
-                    <div class="key">
-                        {{ item.key }}
-                    </div>
-                    <div class="value">
-                        {{ item.value }}
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                            error
-                        </mat-icon>
-                    </div>
-                </div>
-            </div>
-
-            <h6>Address</h6>
-            <div class="section-table">
-                <div
-                class="row"
-                *ngFor="let item of addressData"
-                [class.objection]="hasObjection(item.field)">
-                    <div class="key">
-                        {{ item.key }}
-                    </div>
-                    <div class="value">
-                        {{ item.value }}
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                            error
-                        </mat-icon>
-                    </div>
-                </div>
-            </div>
-
-            <h6>Unit Details</h6>
-            <div class="section-table">
-                <div
-                class="row"
-                *ngFor="let item of unitDetailsData"
-                [class.objection]="hasObjection(item.field)">
-                    <div class="key">
-                        {{ item.key }}
-                    </div>
-                    <div class="value">
-                        {{ item.value }}
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                            error
-                        </mat-icon>
-                    </div>
-                </div>
-            </div>
-
-            <h6>Member Details</h6>
-            <div class="section-table">
-                <div
-                class="row"
-                *ngFor="let item of memberDetailsData"
-                [class.objection]="hasObjection(item.field)">
-                    <div class="key">
-                        {{ item.key }}
-                    </div>
-                    <div class="value">
-                        <ng-container *ngIf="item.field === 'photo' && photoUrl; else normalValue">
-                            <img [src]="photoUrl" alt="Photo" class="photo-preview" />
-                        </ng-container>
-                        <ng-template #normalValue>
+            <!-- Section: License Info -->
+             <ng-container>
+                <h6>License</h6>
+                <div class="section-table">
+                    <div
+                    class="row"
+                    *ngFor="let item of licenseData"
+                    [class.objection]="hasObjection(item.field)">
+                        <div class="key">
+                            {{ item.key }}
+                        </div>
+                        <div class="value">
                             {{ item.value }}
-                        </ng-template>
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                            error
-                        </mat-icon>
+                            <!-- Objection icon with tooltip if objection exists -->
+                            <mat-icon
+                            *ngIf="hasObjection(item.field)"
+                            matTooltip="{{ getObjectionRemarks(item.field) }}">
+                                error
+                            </mat-icon>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </ng-container>
+
+            <!-- Section: Key Info -->
+            <ng-container>
+                <h6>Key Info</h6>
+                <div class="section-table">
+                    <div
+                    class="row"
+                    *ngFor="let item of keyInfoData"
+                    [class.objection]="hasObjection(item.field)">
+                        <div class="key">
+                            {{ item.key }}
+                        </div>
+                        <div class="value">
+                            {{ item.value }}
+                            <mat-icon
+                            *ngIf="hasObjection(item.field)"
+                            matTooltip="{{ getObjectionRemarks(item.field) }}">
+                                error
+                            </mat-icon>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Section: Address -->
+             <ng-container>
+                <h6>Address</h6>
+                <div class="section-table">
+                    <div
+                    class="row"
+                    *ngFor="let item of addressData"
+                    [class.objection]="hasObjection(item.field)">
+                        <div class="key">
+                            {{ item.key }}
+                        </div>
+                        <div class="value">
+                            {{ item.value }}
+                            <mat-icon
+                            *ngIf="hasObjection(item.field)"
+                            matTooltip="{{ getObjectionRemarks(item.field) }}">
+                                error
+                            </mat-icon>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Section: Unit Details (only if license type is Company)-->
+            <ng-container *ngIf="application.licenseType === 'Company'">
+                <h6>Unit Details</h6>
+                <div class="section-table">
+                    <div
+                    class="row"
+                    *ngFor="let item of unitDetailsData"
+                    [class.objection]="hasObjection(item.field)">
+                        <div class="key">
+                            {{ item.key }}
+                        </div>
+                        <div class="value">
+                            {{ item.value }}
+                            <mat-icon
+                            *ngIf="hasObjection(item.field)"
+                            matTooltip="{{ getObjectionRemarks(item.field) }}">
+                                error
+                            </mat-icon>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+
+            <!-- Section: Member Details (includes photo rendering) -->
+            <ng-container>
+                <h6>Member Details</h6>
+                <div class="section-table">
+                    <div
+                    class="row"
+                    *ngFor="let item of memberDetailsData"
+                    [class.objection]="hasObjection(item.field)">
+                        <div class="key">
+                            {{ item.key }}
+                        </div>
+                        <div class="value">
+                            <!-- Conditionally display photo if field is 'photo' -->
+                            <ng-container *ngIf="item.field === 'photo' && photoUrl; else normalValue">
+                                <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                            </ng-container>
+                            <ng-template #normalValue>
+                                {{ item.value }}
+                            </ng-template>
+
+                            <!-- Objection icon -->
+                            <mat-icon
+                            *ngIf="hasObjection(item.field)"
+                            matTooltip="{{ getObjectionRemarks(item.field) }}">
+                                error
+                            </mat-icon>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
         </div>
+
+        <!-- Action Buttons (conditional by role/status) -->
         <div class="step-buttons">
-            <button mat-flat-button class="accept-button" (click)="onApprove(stepper)" *ngIf="['pending', 'rejected'].includes(tableType)">
+            <!-- Approve -->
+            <button 
+            mat-flat-button 
+            class="accept-button" 
+            (click)="onApprove(stepper)" 
+            *ngIf="['pending', 'rejected'].includes(tableType)">
                 <mat-icon>check_circle</mat-icon>
                 Approve
             </button>
 
-            <button mat-flat-button class="objection-button" (click)="onRaiseObjection(stepper)" *ngIf="tableType==='pending'">
+            <!-- Raise Objection -->
+            <button 
+            mat-flat-button 
+            class="objection-button" 
+            (click)="onRaiseObjection(stepper)" 
+            *ngIf="tableType==='pending'">
                 <mat-icon>flag</mat-icon>
                 Raise Objection
             </button>
 
-            <button mat-flat-button class="reject-button" (click)="onReject(stepper)" *ngIf="tableType==='pending'">
+            <!-- Reject -->
+            <button 
+            mat-flat-button 
+            class="reject-button" 
+            (click)="onReject(stepper)" 
+            *ngIf="tableType==='pending'">
                 <mat-icon>cancel</mat-icon>
                 Reject
             </button>
         </div>
     </mat-step>
     
+    <!-- Raise Objection Form -->
     <mat-step *ngIf="isObjection" label="Raise Objection">
         <form [formGroup]="objectionForm">
             <div class="step-header">
                 <h5>{{application.application_id}}</h5>
             </div>
+
+            <!-- Objection Form -->
             <div class="objection-form-content">
                 <div *ngFor="let field of objectionFields" class="objection-field">
-                    <mat-checkbox [formControlName]="field.key">{{ field.label }}</mat-checkbox>
+
+                    <mat-checkbox [formControlName]="field.key">
+                        {{ field.label }}
+                    </mat-checkbox>
+
+                    <!-- Remarks field shown only if checkbox is selected -->
                     <mat-form-field *ngIf="objectionForm.get(field.key)?.value" appearance="outline">
-                        <textarea matInput [formControlName]="field.key + '_remarks'" placeholder="Write Remarks"></textarea>
+                        <textarea 
+                        matInput 
+                        [formControlName]="field.key + '_remarks'" 
+                        placeholder="Write Remarks"></textarea>
                     </mat-form-field>
                 </div>
             </div>
+
+            <!-- Objection Step Buttons -->
             <div class="step-buttons">
                 <button mat-stroked-button matStepperPrevious>Back</button>
                 <button mat-flat-button (click)="onSubmitObjection()">Submit Objection</button>
@@ -157,6 +205,7 @@
             </div>
             <div class="step-content">
                 <div>
+                    <!-- Location dropdown triggers fee update on change -->
                     <mat-form-field appearance="outline" class="w-full">
                         <mat-label>Select Location</mat-label>
                         <mat-select formControlName="location" (selectionChange)="onLocationChange($event.value)">
@@ -164,6 +213,7 @@
                         </mat-select>
                     </mat-form-field>
                     
+                    <!-- Fee amount auto-filled and non-editable -->
                     <mat-form-field appearance="outline" class="w-full">
                         <mat-label>License Fee</mat-label>
                         <input matInput [value]="selectedLocation?.fee_amount" disabled>
@@ -185,9 +235,12 @@
                 <h5 class = "application-id">{{ application.application_id }}</h5>
                 <div class = "dialog-title">Site Enquiry Form</div>
             </div>
+
+            <!-- Site enquiry form component emits form validity status -->
             <div class="form-container">
                 <app-site-enquiry-form (formStatus)="onFormValidityChange($event)"></app-site-enquiry-form>
             </div>
+
             <div class="step-buttons">
                 <button mat-stroked-button matStepperPrevious>Back</button>
                 <button mat-flat-button matStepperNext [disabled]="!siteEnquiryFormValid">Next</button>
@@ -220,7 +273,7 @@
         </form>
     </mat-step>
 
-    <!-- Step 2: Review Remarks -->
+    <!-- Common remarks form step (used in all flows: approve, reject, objection) -->
     <mat-step [stepControl]="remarksForm" label="Review Remarks">
         <form [formGroup]="remarksForm">
             <div class="step-header">
@@ -243,11 +296,11 @@
         </form>
     </mat-step>
 
-    <!-- Confirm -->
+    <!-- Final confirmation step -->
     <mat-step class="confirmation-step" label="Confirm">
         <div class="step-content">
 
-            <!-- Approve Confirmation -->
+            <!-- Shown in approval flow -->
             <ng-container *ngIf="isApproveFlow">
             <h5>
                 <mat-icon class="approve-icon">check_circle</mat-icon>
@@ -255,16 +308,20 @@
             </h5>
             <mat-card appearance="outlined">
                 <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+
+                <!-- Show fee only to Level 1 -->
                 <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.fee_amount">
-                <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
+                    <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
                 </p>
+
+                <!-- Show license category only to Level 2 -->
                 <p *ngIf="accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory">
-                <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
+                    <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
                 </p>
             </mat-card>
             </ng-container>
 
-            <!-- Reject Confirmation -->
+            <!-- Shown in rejection flow -->
             <ng-container *ngIf="isRejectFlow">
             <h5>
                 <mat-icon class="reject-icon">cancel</mat-icon>
@@ -275,7 +332,7 @@
             </mat-card>
             </ng-container>
 
-            <!-- Objection Confirmation -->
+            <!-- Shown in objection flow -->
             <ng-container *ngIf="isObjection">
             <h5>
                 <mat-icon class="objection-icon">flag</mat-icon>
@@ -283,6 +340,8 @@
             </h5>
             <mat-card appearance="outlined">
                 <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+
+                <!-- Show all objection details -->
                 <p *ngFor="let obj of objectionForm.value.objections">
                     <mat-icon>error_outline</mat-icon>
                     <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
@@ -290,7 +349,7 @@
             </mat-card>
             </ng-container>
 
-            <!-- Common Buttons -->
+            <!-- Buttons common to all confirmation cases -->
             <div class="step-buttons">
             <button mat-stroked-button matStepperPrevious>Back</button>
             <button mat-flat-button (click)="onConfirm()">Confirm</button>

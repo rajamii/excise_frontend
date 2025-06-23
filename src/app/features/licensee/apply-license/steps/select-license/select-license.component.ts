@@ -2,12 +2,8 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
-// Services and shared modules
 import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
-
-// Models
 import { District } from '../../../../../core/models/district.model';
 import { SubDivision } from '../../../../../core/models/subdivision.model';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';

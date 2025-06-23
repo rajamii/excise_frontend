@@ -1,12 +1,14 @@
 <mat-dialog-content class="print-dialog-content">
   <h2 class="title">Print License</h2>
 
+  <!-- Warning message about print limitations -->
   <p class="print-warning">
     The printing of license is limited to 5 nos, if lost a duplicate copy can be printed only after payment of Rs. 500/- per copy.
   </p>
 
   <p class="print-count">
     No. of times license printed by licensee:
+    <!-- Add conditional styling if print limit (5) is reached -->
     <strong [ngClass]="{ 'over-limit': application.print_count >= 5 }">
       {{ application.print_count }}
     </strong>
@@ -14,19 +16,24 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="center">
+  <!-- Triggers license printing -->
   <button mat-flat-button (click)="onPrint()">
     Print License
   </button>
+
+  <!-- Pay button enabled only if print count reaches 5 -->
   <button mat-flat-button color="primary" (click)="onPrint()"
   [disabled]="application.print_count < 5">
     Pay
   </button>
+
+  <!-- Closes the dialog -->
   <button mat-flat-button (click)="dialogRef.close()">
     Close
   </button>
 </mat-dialog-actions>
 
-<!-- Hidden Printable License -->
+<!-- Hidden section used for printing license layout -->
 <div id="licenseToPrint" class="license-container" style="display: none;">
   <div class="license-header">
     <img src="../../../../../../assets/images/header/Seal_of_Sikkim_greyscale.png">
@@ -38,6 +45,7 @@
 
   <div class="license-details-container">
     <table>
+      <!-- Application details displayed in key-value format -->
       <tr>
         <td class="key">License Number</td>
         <td class="colon">:</td>
@@ -66,6 +74,7 @@
       <tr>
         <td class="key">License Validity</td>
         <td class="colon">:</td>
+        <!-- Static date used – consider dynamic binding if this varies -->
         <td class="value">From 12/03/2022 to 20/03/2022</td>
       </tr>
     </table>
@@ -90,6 +99,7 @@
   </div>
 
   <div class="terms">
+    <!-- Terms and conditions of license -->
     <p>The aforesaid license has been granted as per the following terms and conditions: -</p>
     <ol type="I">
       <li>The licensee shall purchase foreign liquor (excluding draught 
@@ -125,4 +135,4 @@
         or cancelled by the Licensing Authority.</li>
     </ol>
   </div>
-</div>  
+</div>

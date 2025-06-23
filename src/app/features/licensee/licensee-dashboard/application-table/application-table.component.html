@@ -1,35 +1,39 @@
 <mat-table [dataSource]="dataSource.filteredData" class="mat-elevation-z2" *ngIf="dataSource?.data?.length">
-  <!-- Sl No Column -->
+  <!-- Serial Number Column -->
   <ng-container matColumnDef="slNo">
     <mat-header-cell *matHeaderCellDef class="sl-no"> Sl No </mat-header-cell>
     <mat-cell class="sl-no" *matCellDef="let element; let i = index"> {{ i + 1 }} </mat-cell>
   </ng-container>
 
-  <!-- ID Column -->
+  <!-- Application ID Column -->
   <ng-container matColumnDef="id">
     <mat-header-cell *matHeaderCellDef class="app-id"> Application ID </mat-header-cell>
     <mat-cell *matCellDef="let element" class="app-id">
         <div class="application-id" [ngClass]="{ 'objection-text': element.hasUnresolvedObjection }">
             {{ element?.application_id }}
+
+            <!-- Show warning icon if there is an unresolved objection -->
             <mat-icon *ngIf="element.hasUnresolvedObjection" color="warn" matTooltip="Objection pending">error</mat-icon>
         </div>
+
+        <!-- Shows the submission date from the first transaction -->
         <div class="text-secondary">Date: {{ element?.transactions[0]?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}</div>
     </mat-cell>
   </ng-container>
 
-  <!-- Current Stage -->
+  <!-- Current workflow stage of the application -->
   <ng-container matColumnDef="currentStage">
     <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
     <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.current_stage] }} </mat-cell>
   </ng-container>
 
-  <!-- Status -->
+  <!-- Most recent remarks on the application -->
   <ng-container matColumnDef="remarks">
     <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
     <mat-cell *matCellDef="let element"> {{element.latest_transaction?.remarks}} </mat-cell>
   </ng-container>
 
-  <!-- Submitted On -->
+  <!-- Performed By -->
   <ng-container matColumnDef="performedBy">
     <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
     <mat-cell *matCellDef="let element">
@@ -38,20 +42,35 @@
     </mat-cell>
   </ng-container>
  
-  <!-- Actions -->
+  <!-- Action buttons: view application or view movement timeline -->
   <ng-container matColumnDef="actions">
     <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
     <mat-cell *matCellDef="let element">
+
+    <!-- View application details --> 
     <button mat-icon-button (click)="onView(element)">
         <mat-icon style="color: #1976d2;">visibility</mat-icon>
     </button>
-    <button mat-icon-button *ngIf="tableType === 'approved'" (click)="onPrint(element)">
+
+    <!-- Print license (if approved) --> 
+    <button 
+    mat-icon-button 
+    *ngIf="tableType === 'approved'" 
+    (click)="onPrint(element)">
         <mat-icon style="color: #1976d2;">print</mat-icon>
     </button>
-    <button mat-icon-button (click)="viewMovement(element)">
+
+    <!-- View application movement history --> 
+    <button 
+    mat-icon-button 
+    (click)="viewMovement(element)">
         <mat-icon style="color: #1976d2;">timeline</mat-icon>
     </button>
-    <button mat-icon-button *ngIf="tableType === 'approved'" (click)="onView(element)">
+
+    <!-- Payment Interface --> 
+    <button 
+    mat-icon-button 
+    *ngIf="tableType === 'approved'">
         <mat-icon style="color: #1976d2;">payment</mat-icon>
     </button>
     </mat-cell>
@@ -61,6 +80,7 @@
   <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
 </mat-table>
 
+<!-- Displayed if there is no data to show -->
 <div *ngIf="dataSource?.data?.length === 0" class="p-4 text-center">
   No applications found.
 </div>

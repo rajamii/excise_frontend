@@ -12,12 +12,13 @@ import { LicenseCategory } from '../../../../../core/models/license-category.mod
 import { LocationFee } from '../../../../../core/models/location-fee.model';
 import { MaterialModule } from '../../../../../shared/material.module';
 
-interface Objection {
+export interface Objection {
   field_name: string;
   remarks: string;
   resolved: boolean;
 }
 
+// Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
   key: string;
   field: string;
@@ -43,24 +44,31 @@ export class ReviewApplicationComponent implements OnInit {
 
   objections: Objection[] = [];
   isObjectionLoaded = false;
+
+  // UI state flags to control which workflow is active
   isApproveFlow = false;
   isRejectFlow = false;
   isRejected = false;
   isObjection = false;
+
   siteEnquiryFormValid = false;
 
   photoUrl: string | null = null;
+
+  // Dropdown and selection data
   licenseCategories: LicenseCategory[] = [];
   selectedCategory: LicenseCategory | null = null;
   locationFees: LocationFee[] = [];
   selectedLocation: LocationFee | null = null;
 
-  licenseData: any[] = [];
-  keyInfoData: any[] = [];
-  addressData: any[] = [];
-  unitDetailsData: any[] = [];
-  memberDetailsData: any[] = [];
+  // Data arrays for display sections
+  licenseData: FieldDisplay[] = [];
+  keyInfoData: FieldDisplay[] = [];
+  addressData: FieldDisplay[] = [];
+  unitDetailsData: FieldDisplay[] = [];
+  memberDetailsData: FieldDisplay[] = [];
 
+  // Field label mapping for display and objections
   fieldLabelMap: { [key: string]: string } = {
     // License details
     exciseDistrict: 'Excise District',
@@ -116,6 +124,7 @@ export class ReviewApplicationComponent implements OnInit {
     photo: 'Photo'
   };
 
+  // Transformed field-label pairs used for objection checkboxes
   objectionFields = Object.entries(this.fieldLabelMap).map(([key, label]) => ({
     key,
     label
@@ -134,21 +143,28 @@ export class ReviewApplicationComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Set photo URL if photo exists
     this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
 
+    // Initialize all forms
     this.remarksForm = this.fb.group({ remarks: ['', Validators.required] });
     this.feeForm = this.fb.group({ location: [null, Validators.required] });
     this.licenseCategoryForm = this.fb.group({ licenseCategory: [null] });
 
     this.objectionForm = this.fb.group({});
+    // Dynamically add a checkbox and remark control for each objectionable field
     this.objectionFields.forEach(field => {
       this.objectionForm.addControl(field.key, new FormControl(false));
       this.objectionForm.addControl(field.key + '_remarks', new FormControl(''));
     });
 
+    // Load dropdown options
     this.loadDropdownData();
+
+    // Load existing objections if any
     this.fetchObjections();
     
+    // Group application data into sections for display
     this.licenseData = this.getFieldDisplayList([
       'exciseDistrict', 'licenseCategory', 'exciseSubDivision', 'license'
     ]);
@@ -174,6 +190,7 @@ export class ReviewApplicationComponent implements OnInit {
       'gender', 'pan', 'memberMobileNumber', 'memberEmailId'
     ]);
 
+    // Manually append photo field to member details
     this.memberDetailsData.push({
       key: 'Photo',
       field: 'photo',
@@ -183,23 +200,30 @@ export class ReviewApplicationComponent implements OnInit {
 
   getFieldDisplayList(fields: string[]): FieldDisplay[] {
   return fields.map(field => ({
-      key: this.fieldLabelMap[field] || field,
-      field,
+      key: this.fieldLabelMap[field] || field, // Friendly label
+      field, // Raw field name
+
       value: this.application[field] || 'N/A'
     }));
   }
 
   loadDropdownData() {
+    // Fetch location-based fee options (for Level 1)
     this.licenseAppService.getLocationFee().subscribe({
-      next: data => this.locationFees = data,
+      next: data => this.locationFees = data, 
       error: err => console.error('Location fee error', err)
     });
 
+    // Fetch license categories (for Level 2)
     this.licenseeService.getLicenseCategories().subscribe({
       next: data => {
         this.licenseCategories = data;
+
+        // Try to pre-select the category already associated with the application
         const currentId = this.application.licenseCategory?.id;
         this.selectedCategory = data.find(cat => cat.id === currentId) || null;
+
+        // Pre-fill the form control
         this.licenseCategoryForm.patchValue({ licenseCategory: this.selectedCategory });
       },
       error: err => console.error('Category fetch error', err)
@@ -207,41 +231,48 @@ export class ReviewApplicationComponent implements OnInit {
   }
 
   fetchObjections() {
+    // Fetch objections related to the application from backend
     this.licenseAppService.getObjections(this.application.application_id).subscribe({
       next: data => {
         this.objections = data;
-        this.isObjectionLoaded = true;
+        this.isObjectionLoaded = true; // Mark objections as loaded
       },
       error: err => {
         console.error('Objection fetch error', err);
-        this.isObjectionLoaded = true;
+        this.isObjectionLoaded = true; // Still mark as loaded to avoid blocking UI
       }
     });
   }
 
+  // Checks if a specific field has an unresolved objection
   hasObjection(field: string): boolean {
     return this.objections.some(obj => obj.field_name === field && !obj.resolved);
   }
 
+  // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
     const match = this.objections.find(obj => obj.field_name === field && !obj.resolved);
     return match?.remarks || '';
   }
 
+  // Track whether the embedded form (site enquiry) is valid
   onFormValidityChange(valid: boolean) {
     this.siteEnquiryFormValid = valid;
   }
 
+  // Capture the selected location and its associated fee
   onLocationChange(selected: LocationFee) {
     this.selectedLocation = selected;
   }
 
+  // Begin approve flow — navigate to next step and update flags
   onApprove(stepper: MatStepper) {
     this.isApproveFlow = true;
     this.isRejectFlow = this.isObjection = this.isRejected = false;
     stepper.next();
   }
 
+  // Begin reject flow — navigate to next step and update flags
   onReject(stepper: MatStepper) {
     this.isRejectFlow = true;
     this.isApproveFlow = this.isObjection = false;
@@ -249,6 +280,7 @@ export class ReviewApplicationComponent implements OnInit {
     stepper.next();
   }
 
+  // Begin objection-raising flow — navigate to next step and update flags
   onRaiseObjection(stepper: MatStepper) {
     this.isObjection = true;
     this.isRejected = this.isApproveFlow = this.isRejectFlow = false;
@@ -259,13 +291,17 @@ export class ReviewApplicationComponent implements OnInit {
     const applicationId = this.application.application_id;
     const remarks = this.remarksForm.value.remarks;
 
+    // Utility to show error alert
     const showError = (msg: string) => Swal.fire('Error', msg, 'error');
+
+    // Utility to show success alert and reload UI
     const reload = (msg: string) => {
       Swal.fire('Success', msg, 'success').then(() => location.reload());
       this.dialogRef.close(true);
     };
 
     if (this.isRejected) {
+      // Reject application flow
       this.licenseAppService.advanceApplication(
         applicationId, 
         remarks, 
@@ -279,6 +315,7 @@ export class ReviewApplicationComponent implements OnInit {
     }
 
     if (this.accountService.hasAnyRole('level_1')) {
+      // Level 1 approval requires fee amount from selected location
       const fee = this.selectedLocation?.fee_amount;
       if (!fee) {
         Swal.fire('Missing Fee', 'Select a location before proceeding.', 'warning');
@@ -297,12 +334,14 @@ export class ReviewApplicationComponent implements OnInit {
     }
 
     if (this.accountService.hasAnyRole('level_2')) {
+      // Level 2 approval requires complete site enquiry data
       const siteData = this.siteEnquiryFormComponent.getSiteEnquiryData();
       if (!siteData) {
         Swal.fire('Incomplete', 'Complete site enquiry.', 'warning');
         return;
       }
 
+      // Prepare form data for site enquiry submission
       const formData = new FormData();
       formData.append('application_id', applicationId);
       formData.append('remarks', remarks);
@@ -312,6 +351,8 @@ export class ReviewApplicationComponent implements OnInit {
       });
 
       const catId = this.licenseCategoryForm.value.licenseCategory?.id;
+
+      // First submit site enquiry data, then advance application
       this.licenseAppService.submitSiteEnquiryData(
         applicationId, 
         formData
@@ -330,6 +371,7 @@ export class ReviewApplicationComponent implements OnInit {
       return;
     }
 
+    // Default approve flow (for other roles or fallback)
     this.licenseAppService.advanceApplication(applicationId, 
       remarks, 
       undefined, 
@@ -342,6 +384,8 @@ export class ReviewApplicationComponent implements OnInit {
 
   onSubmitObjection() {
     const applicationId = this.application.application_id;
+
+    // Collect selected objection fields with remarks
     const selectedFields = this.objectionFields
       .filter(f => this.objectionForm.get(f.key)?.value && this.objectionForm.get(f.key + '_remarks')?.value)
       .map(f => ({
@@ -354,6 +398,7 @@ export class ReviewApplicationComponent implements OnInit {
       return;
     }
     
+    // Confirm with user before raising objection
     Swal.fire({
       title: 'Raise Objection?',
       text: 'Are you sure you want to raise an objection on selected fields?',

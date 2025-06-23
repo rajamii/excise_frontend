@@ -54,8 +54,5 @@ export class License {
   // document
   photo!: File;
 
-  // transactions
-  current_stage!: string;
-  is_approved!: boolean;
   print_count?: number;
 }

@@ -1,7 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
-import { ApplicationStage } from '../../../../core/models/dashboard.model';
 import Swal from 'sweetalert2';
 import { BaseDependency } from '../../../../base/dependency/base.dependendency';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
@@ -19,12 +18,15 @@ import { PrintApplicationComponent } from './print-application/print-application
   styleUrl: './application-table.component.scss'
 })
 export class ApplicationTableComponent extends BaseComponent{
+  // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
   @Input() dataSource!: MatTableDataSource<any>;
   @Input() tableType!: string;  // For conditional rendering of action buttons
+
   objections: any[] = [];
 
+  // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
   @Output() print = new EventEmitter<any>();
   @Output() payment = new EventEmitter<any>();
@@ -38,6 +40,7 @@ export class ApplicationTableComponent extends BaseComponent{
     super(baseDependancy); // Calling the parent class constructor
   }
 
+  // Mapping of internal application stages to user-friendly display strings
   stageDisplayMapping: { [key: string]: string } = {
     level_1: 'Under Review by Level 1',
     level_2: 'Under Review by Level 2',
@@ -62,7 +65,9 @@ export class ApplicationTableComponent extends BaseComponent{
     licensee: 'Licensee',
   };
 
+  // Angular lifecycle hook that runs when input properties change
   ngOnChanges() {
+    // For each application in the data source, check for unresolved objections
     this.dataSource?.data?.forEach(app => {
       this.licenseApplicationService.getObjections(app.application_id).subscribe((objections) => {
         const unresolved = objections?.some(obj => obj.resolved === false);
@@ -71,6 +76,7 @@ export class ApplicationTableComponent extends BaseComponent{
     });
   }
 
+  // Print the selected application
   onPrint(application: any) {
     this.dialog.open(PrintApplicationComponent, {
       width: '450px',
@@ -94,7 +100,8 @@ export class ApplicationTableComponent extends BaseComponent{
     });
   }
   
-  viewMovement(application: ApplicationStage): void {
+  // Opens a dialog to show the movement history of the selected application
+  viewMovement(application: any): void {
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',        
       maxWidth: '100%',

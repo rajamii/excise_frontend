@@ -50,7 +50,8 @@ export class LicenseApplicationService {
     // Sends a GET request to fetch a list of applications, organized by their current stage in the process
   }
 
-  // Advances the license application to the next stage, including an action and remarks to describe the transition
+  /* Advances the license application to the next stage, including an action and remarks to describe the transition
+  Depending on the action, it may include remarks, feeAmount, new license category, or objections. */
   advanceApplication(
     applicationId: string,
     remarks: string | undefined,
@@ -66,21 +67,26 @@ export class LicenseApplicationService {
       action,
     };
 
+    // Optional: include new license category during approval if changed
     if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
       body.new_license_category = newLicenseCategoryId;
     }
 
+    // Only include objections when action is 'raise_objection'
     if (action === 'raise_objection' && objections) {
       body.objections = objections;
     }
     return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/advance/`, body);
   }
 
+  // Retrieves all objections raised against a given application
   getObjections(applicationId: string): Observable<any[]> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get<any[]>(`${this.baseUrl}/licenseapplication/${encodedId}/objections/`);
   }
 
+  /* Resolves previously raised objections for a given application.
+  FormData contains only the corrected fields and possibly a photo. */
   resolveObjections(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post<any>(
@@ -89,15 +95,20 @@ export class LicenseApplicationService {
     );
   }
   
+  /* Submits the site enquiry report associated with the application.
+  Submitted by level 2 officer. */
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/site-enquiry/`, formData);
   }
 
-   submitLicenseApplication(data: any): Observable<any> {
+  // Final application submission by the licensee (includes all sections + photo).
+  submitLicenseApplication(data: any): Observable<any> {
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/licenseapplication/apply/`, data);
   } 
 
+  /* Initiates the license printing process for an approved application.
+  Responsible for incrementing print count. */
   printLicense(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/print/`, {});

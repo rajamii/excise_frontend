@@ -1,12 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
-import { ApplicationStage } from '../../../../core/models/dashboard.model';
 import { BaseDependency } from '../../../../base/dependency/base.dependendency';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
 import { MatDialog } from '@angular/material/dialog';
 import { BaseComponent } from '../../../../base/base.components';
-import { SiteEnquiryFormComponent } from './site-enquiry-form/site-enquiry-form.component';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ReviewApplicationComponent } from './review-application/review-application.component';
 
@@ -18,12 +16,15 @@ import { ReviewApplicationComponent } from './review-application/review-applicat
 })
 
 export class ApplicationTableComponent extends BaseComponent {
+  // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
   @Input() dataSource!: MatTableDataSource<any>;
-  @Input() tableType!: string;
+  @Input() tableType!: string; // For conditional rendering of action buttons
+
   objections: any[] = [];
 
+  // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
   @Output() print = new EventEmitter<any>();
   @Output() payment = new EventEmitter<any>();
@@ -37,6 +38,7 @@ export class ApplicationTableComponent extends BaseComponent {
     super(baseDependancy);
   }
 
+  // Mapping of internal application stages to user-friendly display strings
   stageDisplayMapping: Record<string, string> = {
     level_1: 'Under Review by Level 1',
     level_2: 'Under Review by Level 2',
@@ -60,6 +62,7 @@ export class ApplicationTableComponent extends BaseComponent {
     rejected: 'Application Rejected',
   };
 
+  // Mapping for displaying roles
   roleDisplayMapping: Record<string, string> = {
     level_1: 'Level 1',
     level_2: 'Level 2',
@@ -69,11 +72,14 @@ export class ApplicationTableComponent extends BaseComponent {
     licensee: 'Licensee',
   };
 
+  // Utility method to check if the table has any data to display
   hasData(): boolean {
     return !!this.dataSource?.data?.length;
   }
 
+  // Angular lifecycle hook that runs when input properties change
   ngOnChanges() {
+    // For each application in the data source, check for unresolved objections
     this.dataSource?.data?.forEach(app => {
       this.licenseApplicationService.getObjections(app.application_id).subscribe((objections) => {
         const unresolved = objections?.some(obj => obj.resolved === false);
@@ -82,7 +88,8 @@ export class ApplicationTableComponent extends BaseComponent {
     });
   }
 
-  onView(application: ApplicationStage): void {
+  // Method to view application details
+  onView(application: any): void {
     const dialogRef = this.dialog.open(ReviewApplicationComponent, {
       width: '800px',
       maxHeight: '100%',
@@ -91,13 +98,13 @@ export class ApplicationTableComponent extends BaseComponent {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
-        // Emit event instead of reloading
         this.view.emit(application);
       }
     });
   }
 
-  viewMovement(application: ApplicationStage): void {
+  // Opens a dialog to show the movement history of the selected application
+  viewMovement(application: any): void {
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',
       maxWidth: '100%',

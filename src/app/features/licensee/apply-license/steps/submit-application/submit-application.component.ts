@@ -19,9 +19,41 @@ import { Subscription } from 'rxjs';
   styleUrl: './submit-application.component.scss'
 })
 export class SubmitApplicationComponent {
+  // Emits event to move to the previous screen
+  @Output() back = new EventEmitter<void>();
+
+  // Stores the URL for previewing the uploaded photo
   passPhotoUrl: string | null = null;
+
+  // Holds the subscription to the photo observable for cleanup
   private photoSub?: Subscription;
 
+  constructor(
+    private licenseeService: LicenseeService,
+    private router: Router
+  ) {}
+
+  // On component init, subscribe to the photo observable
+  ngOnInit(): void {
+    this.photoSub = this.licenseeService.getPassPhotoObservable().subscribe(file => {
+      // Release previous object URL if exists
+      if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
+
+      // Create a new preview URL if file exists
+      this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
+    });
+  }
+
+  // Cleanup: revoke object URL and unsubscribe
+  ngOnDestroy(): void {
+    if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
+    this.photoSub?.unsubscribe();
+  }
+
+  /**
+   * Labels for displaying field names instead of raw keys
+   * This ensures readable display of keys from session storage
+   */
   readonly licenseApplicationLabels: Partial<Record<keyof LicenseApplication, string>> = {
     exciseDistrict: 'Excise District',
     licenseCategory: 'License Category',
@@ -67,84 +99,99 @@ export class SubmitApplicationComponent {
     photo: 'Photo'
   };
 
-  // Event emitter to go back to the previous step
-  @Output() back = new EventEmitter<void>();
-
-  constructor(private licenseeService: LicenseeService, private router: Router) {}
-
-  ngOnInit(): void {
-    this.photoSub = this.licenseeService.getPassPhotoObservable().subscribe(file => {
-      if (this.passPhotoUrl) {
-        URL.revokeObjectURL(this.passPhotoUrl);
-        this.passPhotoUrl = null;
-      }
-      if (file) {
-        this.passPhotoUrl = URL.createObjectURL(file);
-      }
-    });
-  }
-
-  ngOnDestroy(): void {
-    if (this.passPhotoUrl) {
-      URL.revokeObjectURL(this.passPhotoUrl);
-    }
-    this.photoSub?.unsubscribe();
-  }
-
-  // Getter for LICENSE DETAILS data from sessionStorage
-  get selectLicenseData() {
-    return this.getGroupedEntries<Partial<LicenseApplication>>('selectLicenseData', this.licenseApplicationLabels);
-  }
-
-  // Getter for KEY INFO data from sessionStorage
-  get keyInfoData() {
-    return this.getGroupedEntries<Partial<LicenseApplication>>('keyInfoData', this.licenseApplicationLabels);
-  }
-
-  // Getter for ADDRESS data from sessionStorage
-  get addressData() {
-    return this.getGroupedEntries<Partial<LicenseApplication>>('addressData', this.licenseApplicationLabels);
-  }
-
-  // Getter for UNIT DETAILS data from sessionStorage
-  get unitDetailsData() {
-    return this.getGroupedEntries<Partial<LicenseApplication>>('unitDetailsData', this.licenseApplicationLabels);
-  }
-
-  // Getter for MEMBER DETAILS data from sessionStorage
-  get memberDetailsData() {
-    return this.getGroupedEntries<Partial<LicenseApplication>>('memberDetailsData', this.licenseApplicationLabels);
-  }
-
-  // Retrieves the licenseType (e.g., "Company") to conditionally display unit details
+  // Returns license type to conditionally show unit details
   get licenseType() {
-    const storedData = sessionStorage.getItem('keyInfoData');
-    return storedData ? JSON.parse(storedData).licenseType : null;
+    return this.getParsedSession<Partial<LicenseApplication>>('keyInfoData')?.licenseType;
   }
 
-  // Utility to convert sessionStorage data into label-value pairs for display
-  private getGroupedEntries<T extends Record<string, any>>(
-    groupKey: string,
-    labels: Record<string, string>
-  ): { key: string; value: any }[] {
-    const storedData = sessionStorage.getItem(groupKey);
-    if (!storedData) return [];
+  // Convert each group into label-value array for template rendering
+  get selectLicenseData() {
+    return this.getDataForView('selectLicenseData');
+  }
 
+  get keyInfoData() {
+    return this.getDataForView('keyInfoData');
+  }
+
+  get addressData() {
+    return this.getDataForView('addressData');
+  }
+
+  get unitDetailsData() {
+    return this.getDataForView('unitDetailsData');
+  }
+
+  get memberDetailsData() {
+    return this.getDataForView('memberDetailsData');
+  }
+
+  /**
+   * Sections to display dynamically in the HTML template.
+   * Each section includes a title, data, and optional display condition.
+   */
+  get displaySections() {
+    return [
+      { title: 'License Details', data: this.selectLicenseData },
+      { title: 'Key Info', data: this.keyInfoData },
+      {
+        title: 'Unit Details',
+        data: this.unitDetailsData,
+        condition: () => this.licenseType === 'Company',
+      },
+      { title: 'Address Details', data: this.addressData }
+    ];
+  }
+
+  /**
+   * Parses JSON from sessionStorage and returns it as typed object.
+   */
+  private getParsedSession<T>(key: string): T | null {
     try {
-      const parsedData: T = JSON.parse(storedData);
-      return Object.keys(parsedData).map(key => ({
-        key: labels[key] || key,
-        value: parsedData[key]
-      }));
-    } catch (error) {
-      console.error(`Error parsing sessionStorage key "${groupKey}":`, error);
-      return [];
+      const data = sessionStorage.getItem(key);
+      return data ? JSON.parse(data) as T : null;
+    } catch (e) {
+      console.error(`❌ Failed to parse session key ${key}:`, e);
+      return null;
     }
   }
 
-  // Submit the full application: company, member, payment, and documents
+  /**
+   * Safely fetches the label for a given key.
+   * Ensures type safety using 'key in object' check.
+   */
+  private getSafeLabel(key: string): string {
+    return (key in this.licenseApplicationLabels)
+      ? this.licenseApplicationLabels[key as keyof LicenseApplication]!
+      : key;
+  }
+
+  /**
+   * Converts parsed object to a label-value array for display.
+   */
+  private getDataForView(key: string): { key: string; value: any }[] {
+    const data = this.getParsedSession<Partial<LicenseApplication>>(key);
+
+    return data
+      ? Object.entries(data).map(([k, v]) => {
+          const label = this.getSafeLabel(k);
+          return { key: label, value: v };
+        })
+      : [];
+  }
+
+  /**
+   * Emits the back event to navigate to the previous step
+   */
+  goBack() {
+    this.back.emit();
+  }
+
+  /**
+   * Final submission of the license application.
+   * Combines data from session storage, photo, and submits via API.
+   */
   async submit(): Promise<void> {
-    // Show confirmation dialog
+    // Confirmation popup before submission
     const confirm = await Swal.fire({
       title: 'Are you sure?',
       text: 'Do you want to submit this application?',
@@ -157,49 +204,48 @@ export class SubmitApplicationComponent {
     if (!confirm.isConfirmed) return;
 
     try {
-      // Parse all stored data from sessionStorage
-      const selectLicenseData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('selectLicenseData') || '{}');
-      const keyInfoData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('keyInfoData') || '{}');
-      const addressData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('addressData') || '{}');
-      const unitDetailsData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('unitDetailsData') || '{}');
-      const memberDetailsData: Partial<LicenseApplication> = JSON.parse(sessionStorage.getItem('memberDetailsData') || '{}');
+      // Gather all relevant stored session data
+      const keys = [
+        'selectLicenseData',
+        'keyInfoData',
+        'addressData',
+        'unitDetailsData',
+        'memberDetailsData',
+      ];
 
-      // Get uploaded photo file from the service
+      const formValues = keys.reduce((acc, key) => {
+        const data = this.getParsedSession<Partial<LicenseApplication>>(key);
+        return { ...acc, ...data };
+      }, {});
+
       const photoFile = this.licenseeService.getPassPhoto();
 
-      // Ensure nothing is missing
-      if (!selectLicenseData || !keyInfoData || !addressData || !unitDetailsData || !memberDetailsData || !photoFile) {
+      // Ensure all required data is present
+      if (!photoFile || Object.keys(formValues).length === 0) {
         alert('Missing application data. Please complete the form.');
         return;
       }
 
-      // Build the FormData object for the API
+      // Build multipart form data
       const formData = new FormData();
-      const combinedDetails = { ...selectLicenseData, ...keyInfoData, ...addressData, ...unitDetailsData, ...memberDetailsData };
-
-      // Append form fields to FormData
-      Object.entries(combinedDetails).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value.toString());
+      Object.entries(formValues).forEach(([key, val]) => {
+        if (val !== null && val !== undefined) {
+          formData.append(key, val.toString());
         }
       });
-
-      // Append the photo file to FormData
       formData.append('photo', photoFile);
 
-      // Make API call to submit form
+      // Make API call
       this.licenseeService.submitLicenseApplication(formData).subscribe({
         next: () => {
-          // On success: notify user, clear data, redirect
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
             sessionStorage.clear();
             this.router.navigate(['/licensee/dashboard']);
           });
         },
         error: (err) => {
-          // On failure: show error message
-          console.error('❌ Submission failed:', err.error);
           const message = err?.error?.detail || 'Failed to submit application.';
+          console.error('❌ Submission failed:', err);
           Swal.fire('Error', message, 'error');
         }
       });
@@ -208,10 +254,5 @@ export class SubmitApplicationComponent {
       console.error('Unexpected error during submission:', error);
       Swal.fire('Error', 'An unexpected error occurred.', 'error');
     }
-  }
-
-  // Emits the back event to navigate to the previous screen
-  goBack() {
-    this.back.emit();
   }
 }
