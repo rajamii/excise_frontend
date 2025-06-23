@@ -8,11 +8,17 @@ import { ApplyLicenseComponent } from '../../../apply-license/apply-license.comp
 import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2';
 
-type Objection = {
+export interface Objection {
   field_name: string;
   remarks: string;
   resolved: boolean;
-};
+}
+
+export interface FieldDisplay {
+  key: string;
+  field: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-view-application',
@@ -22,20 +28,74 @@ type Objection = {
 })
 export class ViewApplicationComponent {
   resolveObjectionForm!: FormGroup;
-
   application: any;
   tableType: string = '';
   photoUrl: string | null = null;
   isObjectionLoaded = false;
+  
+  objections: Objection[] = [];
+
+  fieldLabelMap: { [key: string]: string } = {
+  // License details
+  exciseDistrict: 'Excise District',
+  licenseCategory: 'License Category',
+  exciseSubDivision: 'Excise Sub-Division',
+  license: 'License',
+
+  // Key Info
+  licenseType: 'License Type',
+  establishmentName: 'Establishment Name',
+  mobileNumber: 'Mobile Number',
+  emailId: 'Email ID',
+  licenseNo: 'License Number',
+  initialGrantDate: 'Initial Grant Date',
+  renewedFrom: 'Renewed From',
+  validUpTo: 'Valid Up To',
+  yearlyLicenseFee: 'Yearly License Fee',
+  licenseNature: 'License Nature',
+  functioningStatus: 'Functioning Status',
+  modeofOperation: 'Mode of Operation',
+
+  // Address
+  siteSubDivision: 'Site Sub-Division',
+  policeStation: 'Police Station',
+  locationCategory: 'Location Category',
+  locationName: 'Location Name',
+  wardName: 'Ward Name',
+  businessAddress: 'Business Address',
+  roadName: 'Road Name',
+  pinCode: 'PIN Code',
+  latitude: 'Latitude',
+  longitude: 'Longitude',
+
+  // Unit Details
+  companyName: 'Company Name',
+  companyAddress: 'Company Address',
+  companyPan: 'Company PAN',
+  companyCin: 'Company CIN',
+  incorporationDate: 'Incorporation Date',
+  companyPhoneNumber: 'Company Phone Number',
+  companyEmailId: 'Company Email ID',
+
+  // Member Details
+  status: 'Status',
+  memberName: 'Member Name',
+  fatherHusbandName: 'Father/Husband Name',
+  nationality: 'Nationality',
+  gender: 'Gender',
+  pan: 'PAN',
+  memberMobileNumber: 'Member Mobile Number',
+  memberEmailId: 'Member Email ID',
+
+  photo: 'Photo'
+};
 
   // Data arrays for display sections
-  licenseData: { key: string; field: string; value: string }[] = [];
-  keyInfoData: { key: string; field: string; value: string }[] = [];
-  addressData: { key: string; field: string; value: string }[] = [];
-  unitDetailsData: { key: string; field: string; value: string }[] = [];
-  memberDetailsData: { key: string; field: string; value: string }[] = [];
-
-  objections: Objection[] = [];
+  licenseData: FieldDisplay[] = [];
+  keyInfoData: FieldDisplay[] = [];
+  addressData: FieldDisplay[] = [];
+  unitDetailsData: FieldDisplay[] = [];
+  memberDetailsData: FieldDisplay[] = [];
 
   dropdownFields: { [key: string]: any[] } = {
     exciseDistrict: [],
@@ -72,130 +132,44 @@ export class ViewApplicationComponent {
 
   ngOnInit(): void {
     this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
-
     this.fetchObjections();
-
     this.loadDropdownOptions()
 
-    // Initialize display arrays
-    this.licenseData = [
-      { key: 'Excise District', field: 'exciseDistrict', value: this.application.exciseDistrict || 'N/A' },
-      { key: 'License Category', field: 'licenseCategory', value: this.application.licenseCategory || 'N/A' },
-      { key: 'Excise Sub-Division', field: 'exciseSubDivision', value: this.application.exciseSubDivision || 'N/A' },
-      { key: 'License', field: 'license', value: this.application.license || 'N/A' }
-    ];
-
-    this.keyInfoData = [
-      { key: 'License Type', field: 'licenseType', value: this.application.licenseType || 'N/A' },
-      { key: 'Establishment Name', field: 'establishmentName', value: this.application.establishmentName || 'N/A' },
-      { key: 'Mobile Number', field: 'mobileNumber', value: this.application.mobileNumber || 'N/A' },
-      { key: 'Email ID', field: 'emailId', value: this.application.emailId || 'N/A' },
-      { key: 'License No', field: 'licenseNo', value: this.application.licenseNo || 'N/A' },
-      { key: 'Initial Grant Date', field: 'initialGrantDate', value: this.application.initialGrantDate || 'N/A' },
-      { key: 'Renewed From', field: 'renewedFrom', value: this.application.renewedFrom || 'N/A' },
-      { key: 'Valid Up To', field: 'validUpTo', value: this.application.validUpTo || 'N/A' },
-      { key: 'Yearly License Fee', field: 'yearlyLicenseFee', value: this.application.yearlyLicenseFee || 'N/A' },
-      { key: 'License Nature', field: 'licenseNature', value: this.application.licenseNature || 'N/A' },
-      { key: 'Functioning Status', field: 'functioningStatus', value: this.application.functioningStatus || 'N/A' },
-      { key: 'Mode of Operation', field: 'modeofOperation', value: this.application.modeofOperation || 'N/A' }
-    ];
-
-    this.addressData = [
-      { key: 'Site Sub-Division', field: 'siteSubDivision', value: this.application.siteSubDivision || 'N/A' },
-      { key: 'Police Station', field: 'policeStation', value: this.application.policeStation || 'N/A' },
-      { key: 'Location Category', field: 'locationCategory', value: this.application.locationCategory || 'N/A' },
-      { key: 'Location Name', field: 'locationName', value: this.application.locationName || 'N/A' },
-      { key: 'Ward Name', field: 'wardName', value: this.application.wardName || 'N/A' },
-      { key: 'Business Address', field: 'businessAddress', value: this.application.businessAddress || 'N/A' },
-      { key: 'Road Name', field: 'roadName', value: this.application.roadName || 'N/A' },
-      { key: 'Pin Code', field: 'pinCode', value: this.application.pinCode || 'N/A' },
-      { key: 'Latitude', field: 'latitude', value: this.application.latitude || 'N/A' },
-      { key: 'Longitude', field: 'longitude', value: this.application.longitude || 'N/A' }
-    ];
-
-    this.unitDetailsData = [
-      { key: 'Company Name', field: 'companyName', value: this.application.companyName || 'N/A' },
-      { key: 'Company Address', field: 'companyAddress', value: this.application.companyAddress || 'N/A' },
-      { key: 'Company PAN', field: 'companyPan', value: this.application.companyPan || 'N/A' },
-      { key: 'Company CIN', field: 'companyCin', value: this.application.companyCin || 'N/A' },
-      { key: 'Incorporation Date', field: 'incorporationDate', value: this.application.incorporationDate || 'N/A' },
-      { key: 'Company Phone Number', field: 'companyPhoneNumber', value: this.application.companyPhoneNumber || 'N/A' },
-      { key: 'Company Email ID', field: 'companyEmailId', value: this.application.companyEmailId || 'N/A' }
-    ];
-
-    this.memberDetailsData = [
-      { key: 'Status', field: 'status', value: this.application.status || 'N/A' },
-      { key: 'Member Name', field: 'memberName', value: this.application.memberName || 'N/A' },
-      { key: 'Father/Husband Name', field: 'fatherHusbandName', value: this.application.fatherHusbandName || 'N/A' },
-      { key: 'Nationality', field: 'nationality', value: this.application.nationality || 'N/A' },
-      { key: 'Gender', field: 'gender', value: this.application.gender || 'N/A' },
-      { key: 'PAN', field: 'pan', value: this.application.pan || 'N/A' },
-      { key: 'Member Mobile Number', field: 'memberMobileNumber', value: this.application.memberMobileNumber || 'N/A' },
-      { key: 'Member Email ID', field: 'memberEmailId', value: this.application.memberEmailId || 'N/A' }
-    ];
-
+    this.licenseData = this.getFieldDisplayList([
+      'exciseDistrict', 'licenseCategory', 'exciseSubDivision', 'license'
+    ]);
+    this.keyInfoData = this.getFieldDisplayList([
+      'licenseType', 'establishmentName', 'mobileNumber', 'emailId', 'licenseNo',
+      'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
+      'licenseNature', 'functioningStatus', 'modeofOperation'
+    ]);
+    this.addressData = this.getFieldDisplayList([
+      'siteSubDivision', 'policeStation', 'locationCategory', 'locationName',
+      'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
+    ]);
+    this.unitDetailsData = this.getFieldDisplayList([
+      'companyName', 'companyAddress', 'companyPan', 'companyCin',
+      'incorporationDate', 'companyPhoneNumber', 'companyEmailId'
+    ]);
+    this.memberDetailsData = this.getFieldDisplayList([
+      'status', 'memberName', 'fatherHusbandName', 'nationality',
+      'gender', 'pan', 'memberMobileNumber', 'memberEmailId'
+    ]);
     this.memberDetailsData.push({
       key: 'Photo',
       field: 'photo',
       value: this.photoUrl || 'N/A'
     });
-
   }
 
-  fieldLabelMap: { [key: string]: string } = {
-    // License details
-    exciseDistrict: 'Excise District',
-    licenseCategory: 'License Category',
-    exciseSubDivision: 'Excise Sub-Division',
-    license: 'License',
+  getFieldDisplayList(fields: string[]): FieldDisplay[] {
+    return fields.map(field => ({
+      key: this.fieldLabelMap[field] || field,
+      field,
+      value: this.application[field] || 'N/A'
+    }));
+  }
 
-    // Key Info
-    licenseType: 'License Type',
-    establishmentName: 'Establishment Name',
-    mobileNumber: 'Mobile Number',
-    emailId: 'Email ID',
-    licenseNo: 'License Number',
-    initialGrantDate: 'Initial Grant Date',
-    renewedFrom: 'Renewed From',
-    validUpTo: 'Valid Up To',
-    yearlyLicenseFee: 'Yearly License Fee',
-    licenseNature: 'License Nature',
-    functioningStatus: 'Functioning Status',
-    modeofOperation: 'Mode of Operation',
-
-    // Address
-    siteSubDivision: 'Site Sub-Division',
-    policeStation: 'Police Station',
-    locationCategory: 'Location Category',
-    locationName: 'Location Name',
-    wardName: 'Ward Name',
-    businessAddress: 'Business Address',
-    roadName: 'Road Name',
-    pinCode: 'PIN Code',
-    latitude: 'Latitude',
-    longitude: 'Longitude',
-
-    // Unit Details
-    companyName: 'Company Name',
-    companyAddress: 'Company Address',
-    companyPan: 'Company PAN',
-    companyCin: 'Company CIN',
-    incorporationDate: 'Incorporation Date',
-    companyPhoneNumber: 'Company Phone Number',
-    companyEmailId: 'Company Email ID',
-
-    // Member Details
-    status: 'Status',
-    memberName: 'Member Name',
-    fatherHusbandName: 'Father/Husband Name',
-    nationality: 'Nationality',
-    gender: 'Gender',
-    pan: 'PAN',
-    memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email ID',
-
-    photo: 'Upload Photo'
-  };
 
   fetchObjections() {
     const appId = this.application.application_id;
@@ -203,7 +177,7 @@ export class ViewApplicationComponent {
       next: (data) => {
         this.objections = data;
         this.initializeResolveForm();
-        this.isObjectionLoaded = true;  // ✅ mark as loaded
+        this.isObjectionLoaded = true; 
       },
       error: (err) => {
         console.error('Failed to fetch objections', err);
@@ -211,7 +185,18 @@ export class ViewApplicationComponent {
       }
     });
   }
+  
+  initializeResolveForm(): void {
+    const group: { [key: string]: FormControl } = {};
+    for (const obj of this.objections) {
+      group[obj.field_name] = obj.field_name === 'photo'
+        ? new FormControl(null, Validators.required)
+        : new FormControl(this.application[obj.field_name] || '', Validators.required);
+    }
+    this.resolveObjectionForm = new FormGroup(group);
+  }
 
+  
   hasObjection(field: string): boolean {
     return this.objections.some(obj => obj.field_name === field && !obj.resolved);
   }
@@ -221,12 +206,19 @@ export class ViewApplicationComponent {
   } 
   
   getObjectionRemarks(field: string): string {
-    const match = this.objections.find(obj => obj.field_name === field && !obj.resolved);
-    return match ? match.remarks : '';
+    return this.objections.find(obj => obj.field_name === field && !obj.resolved)?.remarks || '';
   }
 
-  get unresolvedObjections() {
-    return this.objections.filter(obj => obj.resolved === false);
+  get unresolvedObjections(): Objection[] {
+    return this.objections.filter(obj => !obj.resolved);
+  }
+  
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.resolveObjectionForm.get('photo')?.setValue(file);
+    }
   }
 
   loadDropdownOptions(): void {
@@ -250,26 +242,6 @@ export class ViewApplicationComponent {
     this.licenseeService.getLicenseTypes().subscribe(data => {
       this.dropdownFields['licenseType'] = data;
     });
-  }
-
-  initializeResolveForm() {
-    const group: { [key: string]: FormControl } = {};
-    this.objections.forEach(obj => {
-      if (obj.field_name === 'photo') {
-        group['photo'] = new FormControl(null, Validators.required); // initially null
-      } else {
-        group[obj.field_name] = new FormControl(this.application[obj.field_name] || '', Validators.required);
-      }
-    });
-    this.resolveObjectionForm = new FormGroup(group);
-  }
-
-  onPhotoSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files.length > 0) {
-      const file = input.files[0];
-      this.resolveObjectionForm.get('photo')?.setValue(file);
-    }
   }
 
   submitResolvedData() {
@@ -308,5 +280,25 @@ export class ViewApplicationComponent {
     });
   }
 
-  onDelete(application: any): void {}
+  onDelete(application: any): void {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.licenseApplicationService.deleteApplication(this.application.application_id).subscribe({
+          next: () => {
+            Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
+          },
+          error: (err) => {
+            Swal.fire('Error', err?.error?.detail, 'error');
+          }
+        });
+      }
+    });
+  }
+
 }

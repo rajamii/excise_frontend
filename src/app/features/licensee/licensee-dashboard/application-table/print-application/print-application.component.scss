@@ -1,0 +1,14 @@
+.print-dialog-content {
+  text-align: center;
+  .title {
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .print-warning {
+    color: red;
+  }
+  .print-count .over-limit {
+    color: red;
+  }
+}
+

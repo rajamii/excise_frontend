@@ -202,27 +202,21 @@ export class LoginComponent extends BaseComponent {
 
   /** Redirects user to appropriate dashboard based on their role */
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'site_admin':
-        this.router.navigate(['admin/dashboard']);
-        break;
-      case 'commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'joint_commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'permit_section':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'licensee':
-        this.router.navigate(['licensee/dashboard']);
-        break;
-      case 'dev':
-        this.router.navigate(['admin/dashboard']);
-        break;
-      default:
-        console.warn('Unknown role:', role);
+    const adminRoles = [
+      'level_1',
+      'level_2',
+      'level_3',
+      'level_4',
+      'level_5',
+      'dev'
+    ];
+
+    if (adminRoles.includes(role)) {
+      this.router.navigate(['admin/dashboard']);
+    } else if (role === 'licensee') {
+      this.router.navigate(['licensee/dashboard']);
+    } else {
+      console.warn('Unknown role:', role);
     }
   }
 

@@ -25,8 +25,9 @@ export class LicenseApplicationService {
   }
 
   // Deletes a license application by its ID
-  deleteApplication(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/licenseapplication/${id}/delete/`);
+  deleteApplication(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.delete(`${this.baseUrl}/licenseapplication/${encodedId}/delete/`);
     // Sends a DELETE request to remove a license application by its ID
   }
 
@@ -97,8 +98,8 @@ export class LicenseApplicationService {
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/licenseapplication/apply/`, data);
   } 
 
-  printLicense(applicationId: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/licenseapplication/${applicationId}/print/`, { responseType: 'blob' });
-    // Sends a GET request to print the license for the specified application ID
+  printLicense(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/print/`, {});
   }
 }

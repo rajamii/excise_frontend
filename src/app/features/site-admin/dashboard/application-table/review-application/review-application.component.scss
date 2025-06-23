@@ -96,6 +96,15 @@
   }
 }
 
+.confirmation-step .step-content ng-container{
+  h5{
+    margin:0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    justify-items: center
+  }
+}
 /* Scroll only the form */
 .form-container {
     overflow-y: auto;

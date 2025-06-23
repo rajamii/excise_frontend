@@ -144,7 +144,7 @@
             </div>
             <div class="step-buttons">
                 <button mat-stroked-button matStepperPrevious>Back</button>
-                <button mat-raised-button color="primary" (click)="onSubmitObjection()">Submit Objection</button>
+                <button mat-flat-button (click)="onSubmitObjection()">Submit Objection</button>
             </div>
         </form>
     </mat-step>
@@ -244,59 +244,59 @@
     </mat-step>
 
     <!-- Confirm -->
-    <mat-step label="Confirm">
-    <div class="step-content">
+    <mat-step class="confirmation-step" label="Confirm">
+        <div class="step-content">
 
-        <!-- ✅ Approve Confirmation -->
-        <ng-container *ngIf="isApproveFlow">
-        <h5>
-            <mat-icon color="primary">check_circle</mat-icon>
-            Confirm Approval
-        </h5>
-        <mat-card appearance="outlined">
-            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
-            <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.fee_amount">
-            <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
-            </p>
-            <p *ngIf="accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory">
-            <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
-            </p>
-        </mat-card>
-        </ng-container>
+            <!-- Approve Confirmation -->
+            <ng-container *ngIf="isApproveFlow">
+            <h5>
+                <mat-icon class="approve-icon">check_circle</mat-icon>
+                Confirm Approval
+            </h5>
+            <mat-card appearance="outlined">
+                <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+                <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.fee_amount">
+                <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
+                </p>
+                <p *ngIf="accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory">
+                <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
+                </p>
+            </mat-card>
+            </ng-container>
 
-        <!-- ❌ Reject Confirmation -->
-        <ng-container *ngIf="isRejectFlow">
-        <h5>
-            <mat-icon color="warn">cancel</mat-icon>
-            Confirm Rejection
-        </h5>
-        <mat-card appearance="outlined">
-            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
-        </mat-card>
-        </ng-container>
+            <!-- Reject Confirmation -->
+            <ng-container *ngIf="isRejectFlow">
+            <h5>
+                <mat-icon class="reject-icon">cancel</mat-icon>
+                Confirm Rejection
+            </h5>
+            <mat-card appearance="outlined">
+                <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+            </mat-card>
+            </ng-container>
 
-        <!-- 🚩 Objection Confirmation -->
-        <ng-container *ngIf="isObjection">
-        <h5>
-            <mat-icon color="accent">flag</mat-icon>
-            Confirm Objection
-        </h5>
-        <mat-card appearance="outlined">
-            <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
-            <p *ngFor="let obj of objectionForm.value.objections">
-            <mat-icon color="warn">error_outline</mat-icon>
-            <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
-            </p>
-        </mat-card>
-        </ng-container>
+            <!-- Objection Confirmation -->
+            <ng-container *ngIf="isObjection">
+            <h5>
+                <mat-icon class="objection-icon">flag</mat-icon>
+                Confirm Objection
+            </h5>
+            <mat-card appearance="outlined">
+                <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+                <p *ngFor="let obj of objectionForm.value.objections">
+                    <mat-icon>error_outline</mat-icon>
+                    <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
+                </p>
+            </mat-card>
+            </ng-container>
 
-        <!-- Common Buttons -->
-        <div class="step-buttons">
-        <button mat-stroked-button color="warn" matStepperPrevious>Back</button>
-        <button mat-flat-button color="primary" (click)="onConfirm()">Confirm</button>
+            <!-- Common Buttons -->
+            <div class="step-buttons">
+            <button mat-stroked-button matStepperPrevious>Back</button>
+            <button mat-flat-button (click)="onConfirm()">Confirm</button>
+            </div>
+
         </div>
-
-    </div>
     </mat-step>
 
 </mat-horizontal-stepper>

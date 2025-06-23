@@ -1,4 +1,4 @@
-export class LicenseApplication {
+export class License {
   // select license
   application_id!: string;
   exciseDistrict!: string;

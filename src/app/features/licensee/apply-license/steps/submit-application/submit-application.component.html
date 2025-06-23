@@ -41,7 +41,7 @@
     </div>
 
     <!-- Unit Details -->
-    <div class="section-title">Unit Details</div>
+    <div class="section-title" *ngIf="licenseType == 'Company'">Unit Details</div>
     <div class="section-table">
       <div class="row" *ngFor="let item of unitDetailsData">
         <div class="key">{{ item.key }}</div>

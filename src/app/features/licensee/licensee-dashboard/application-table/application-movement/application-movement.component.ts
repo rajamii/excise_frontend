@@ -6,9 +6,10 @@ import { MovementTransaction, ApplicationWithTransactions } from '../../../../..
 
 @Component({
   selector: 'app-application-movement',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './application-movement.component.html',
-  styleUrl: './application-movement.component.scss'
+  styleUrl: './application-movement.component.scss',
 })
 export class ApplicationMovementComponent {
   @Input() movementDataSource: MatTableDataSource<MovementTransaction>;

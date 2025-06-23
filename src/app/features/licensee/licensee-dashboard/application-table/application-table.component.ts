@@ -8,8 +8,9 @@ import { LicenseApplicationService } from '../../../../core/services/license-app
 import { MatDialog } from '@angular/material/dialog';
 import { BaseComponent } from '../../../../base/base.components';
 import { ApplyLicenseComponent } from '../../apply-license/apply-license.component';
-import { ApplicationMovementComponent } from '../application-movement/application-movement.component';
+import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ViewApplicationComponent } from './view-application/view-application.component';
+import { PrintApplicationComponent } from './print-application/print-application.component';
 
 @Component({
   selector: 'app-application-table',
@@ -70,39 +71,10 @@ export class ApplicationTableComponent extends BaseComponent{
     });
   }
 
-  onPrint(application: ApplicationStage): void {
-    Swal.fire({
-      title: '<span style="font-size: 23px;">Print License</span>',
-      html: `
-      <div style="margin-top: 10px; color: red; font-size: 16px;">
-      The printing of license is limited to 5 nos, if lost a duplicate copy can be printed only after payment of Rs. 500/- per copy.
-      </div>
-      <div style="margin-top: 20px; font-size: 16px;">
-      No. of times license printed by licensee : <!-- {application.print_count ?? 0}-->
-      </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Print License',
-      cancelButtonText: 'Close',
-      confirmButtonColor: '#007bff', // Bootstrap primary blue
-      cancelButtonColor: '#6c757d',   // Bootstrap secondary gray
-      focusConfirm: false,
-      showCloseButton: true,
-      customClass: {
-        popup: 'swal2-print-dialog'
-      }
-    }).then(result => {
-      if (result.isConfirmed) {
-        // Call your print logic here
-        this.licenseApplicationService.printLicense(application.id).subscribe({
-          next: () => {
-            Swal.fire('Printed!', 'License printed successfully.', 'success');
-          },
-          error: () => {
-            Swal.fire('Error', 'Failed to print the license.', 'error');
-          }
-        });
-      }
+  onPrint(application: any) {
+    this.dialog.open(PrintApplicationComponent, {
+      width: '450px',
+      data: { application }
     });
   }
   
