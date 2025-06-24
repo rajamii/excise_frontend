@@ -8,6 +8,7 @@ import { PoliceStation } from '../../core/models/policestation.model';
 import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
 import { Account } from '../../core/models/accounts';
+import { Role } from '../../core/models/role';
 
 @Injectable({ providedIn: 'root' })
 export class SiteAdminService {
@@ -161,5 +162,10 @@ export class SiteAdminService {
   // Deletes a license category by ID
   deleteLicenseCategory(id: number): Observable<any> {
     return this.http.delete(`${this.mastersUrl}/licensecategories/delete/${id}/`);
+  }
+
+  // Retrieves all police stations
+  getRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>(`${this.baseUrl}/user/roles`);
   }
 }

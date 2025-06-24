@@ -208,6 +208,7 @@ export class LoginComponent extends BaseComponent {
       'level_3',
       'level_4',
       'level_5',
+      'site_admin',
       'dev'
     ];
 

@@ -19,7 +19,7 @@ import { MatDialog } from '@angular/material/dialog';
 })
 export class ListSubdivisionComponent extends BaseComponent implements OnInit {
   // Define the columns for the MatTable (for displaying subdivisions)
-  displayedColumns: string[] = ['id', 'subdivisionName', 'subdivisionNameLL', 'subdivisionCode', 'district', 'districtCode', 'actions'];
+  displayedColumns: string[] = ['id', 'subdivisionName', 'subdivisionCode', 'district', 'districtCode', 'actions'];
 
   // Create MatTableDataSource to manage the subdivision data
   subdivisionDataSource = new MatTableDataSource<SubDivision>();

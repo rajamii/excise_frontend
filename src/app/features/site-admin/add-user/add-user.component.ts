@@ -2,10 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { Account } from '../../../core/models/accounts';
 import { District } from '../../../core/models/district.model';
 import { SubDivision } from '../../../core/models/subdivision.model';
+import { Role } from '../../../core/models/role';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependendency';
 import { SiteAdminService } from '../site-admin-service';
 import { MaterialModule } from '../../../shared/material.module';
+import { error } from 'console';
 
 @Component({
   selector: 'app-add-user',
@@ -18,11 +20,7 @@ export class AddUserComponent extends BaseComponent implements OnInit {
   districts: District[] = []; // Array to hold all districts
   subdivisons: SubDivision[] = []; // Array to hold all subdivisions
   filteredSubdivisions: SubDivision[] = []; // Array to hold filtered subdivisions based on district
-  roles = [
-    { key: 'site_admin', label: 'Site Admin' },
-    { key: 'officer', label: 'Officer' },
-    { key: 'licensee', label: 'Licensee' }
-  ];
+  roles: Role[] = [];
 
   constructor(base: BaseDependency, private siteAdminService: SiteAdminService) {
     super(base); // Call parent constructor
@@ -32,6 +30,7 @@ export class AddUserComponent extends BaseComponent implements OnInit {
     this.user.is_active = true; // Set default active status for user
     this.loadDistricts(); // Load the list of districts
     this.loadSubdivisions(); // Load all subdivisions initially
+    this.loadRoles(); // Load all roles initially
   }
 
   // Method to load all districts from the backend
@@ -51,6 +50,18 @@ export class AddUserComponent extends BaseComponent implements OnInit {
       },
       (error) => {
         this.toastrService.error('Failed to load subdivisions.'); // Show error if subdivisions loading fails
+      }
+    );
+  }
+
+  //Method to get the role label based on the role key
+  loadRoles(): void {
+    this.siteAdminService.getRoles().subscribe(
+      (data: Role[]) => {
+        this.roles = data; // Store the fetched roles
+      },
+      (error) => {
+        this.toastrService.error('Failed to load roles.'); // Show error if roles loading fails
       }
     );
   }

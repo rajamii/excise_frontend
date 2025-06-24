@@ -18,7 +18,7 @@
         <!-- First row: District Name, District Name LL, District Code -->
         <div class="row mb-3">
           <!-- District Name input field -->
-          <div class="col-xl-4 col-lg-4 col-md-4">
+          <div class="col-xl-5 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>District Name</mat-label>
               <input
@@ -53,7 +53,7 @@
           </div>
 
           <!-- District Name in Local Language input field -->
-          <div class="col-xl-4 col-lg-4 col-md-4">
+          <!-- <div class="col-xl-4 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>District Name in Local Language</mat-label>
               <input
@@ -64,10 +64,10 @@
                 [(ngModel)]="district.DistrictNameLL"
               />
             </mat-form-field>
-          </div>
+          </div> -->
 
           <!-- District Code input field -->
-          <div class="col-xl-4 col-lg-4 col-md-4">
+          <div class="col-xl-5 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label >District Code</mat-label>
               <input
@@ -91,12 +91,8 @@
               </mat-error>
             </div>
           </div>
-        </div>
-
-        <!-- Second row: State selection dropdown -->
-        <div class="row mb-3">
           <!-- State selection field -->
-          <div class="col-xl-4 col-lg-4 col-md-4">
+          <div class="col-xl-5 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>State</mat-label>
               <mat-select placeholder="Select State" name="statename" #statename="ngModel" [(ngModel)]="district.StateCode" required>
