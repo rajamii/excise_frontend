@@ -21,7 +21,7 @@ import Swal from 'sweetalert2';
 export class ListDistrictComponent extends BaseComponent implements OnInit {
 
   // Define columns for Angular Material table
-  displayedColumns: string[] = ['id', 'district', 'districtNameLL', 'districtCode', 'state', 'stateCode', 'actions'];
+  displayedColumns: string[] = ['id', 'district', 'districtCode', 'state', 'stateCode', 'actions'];
 
   // DataSource for the Material table, bound to list of districts
   districtDataSource = new MatTableDataSource<District>();

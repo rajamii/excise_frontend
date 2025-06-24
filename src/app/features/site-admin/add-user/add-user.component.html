@@ -86,8 +86,8 @@
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>Role</mat-label>
               <mat-select [(ngModel)]="user.role" name="role" required>
-                <mat-option *ngFor="let role of roles" [value]="role.key">
-                  {{ role.label }}
+                <mat-option *ngFor="let role of roles" [value]="role.id">
+                  {{ role.name }}
                 </mat-option>
               </mat-select>
             </mat-form-field>
