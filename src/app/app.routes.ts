@@ -4,7 +4,7 @@ import { Authority } from './shared/constants/authority.enum';
 import { UserRouteAccessService } from './core/config/user-route-access.service';
 import { HomeComponent } from './layouts/landing/home/home.component';
 import { HomeLinksComponent } from './layouts/landing/home/home-links/home-links.component';
-import { InfoPagesComponent } from './layouts/footer/info-pages/info-pages.component';
+import { InfoPagesComponent } from './layouts/info-pages/info-pages.component';
 
 export const routes: Routes = [
   // Landing layout with nested children

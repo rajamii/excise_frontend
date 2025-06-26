@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { MaterialModule } from '../../../shared/material.module';
+import { MaterialModule } from '../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
-import { InfoPagesService } from '../../../core/services/info-pages.service';
+import { InfoPagesService } from '../../core/services/info-pages.service';
 import {
   DirectorateAndDistrictOfficials,
   GrievanceRedressalOfficer,
   NodalOfficer,
   PublicInformationOfficer
-} from '../../../core/models/contact-us.model';
+} from '../../core/models/contact-us.model';
 
 export interface Commissioner {
   slNo: number;
@@ -45,11 +45,11 @@ export class InfoPagesComponent implements OnInit {
 
   nodalOfficer: NodalOfficer[] = [];
 
-  directorateAndDistrictOfficialsColumns: string[] = ['id', 'name', 'designation', 'phoneNumber', 'email'];
+  directorateAndDistrictOfficialsColumns: string[] = ['name', 'designation', 'phoneNumber', 'email'];
   directorateAndDistrictOfficialsData = new MatTableDataSource<DirectorateAndDistrictOfficials>();
 
   grievanceRedressalOfficerColumns: string[] = [
-    'id', 'officeLevel', 'officeSubLevel', 'name', 'designation', 'phoneNumber', 'email'
+    'officeLevel', 'officeSubLevel', 'name', 'designation', 'phoneNumber', 'email'
   ];
   grievanceRedressalOfficerFullData: GrievanceRedressalOfficer[] = [];
   grievanceRedressalOfficerData = new MatTableDataSource<GrievanceRedressalOfficer>();
@@ -70,21 +70,25 @@ export class InfoPagesComponent implements OnInit {
   }
 
   loadTableData(): void {
+    //Load Nodal Officers
     this.infoPagesService.getNodalOfficers().subscribe({
       next: (data) => {
         this.nodalOfficer = data;
       }
     });
 
+    // Load Directorate and District Officials
     this.infoPagesService.getDirectorateAndDistrictOfficials().subscribe(data => {
       this.directorateAndDistrictOfficialsData.data = data;
     });
 
+    // Load Grievance Redressal Officers
     this.infoPagesService.getGrievanceRedressalOfficers().subscribe(data => {
       this.grievanceRedressalOfficerFullData = data;
       this.applyFilters(); // Initialize filtered data
     });
 
+    // Load Public Information Officers
     this.infoPagesService.getPublicInformationOfficers().subscribe({
       next: (officers: PublicInformationOfficer[]) => {
         this.headquarterData = officers.filter(o => o.locationType === 'Headquarter');
