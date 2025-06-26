@@ -29,9 +29,9 @@ export class AccountService {
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
-  // Fetches all user details from the API
-  getUserDetails(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/user/list/`, {});
+  // Fetches user details from the API
+  getUserDetails(): Observable<Account> {
+    return this.http.get<Account>(`${this.baseUrl}/user/detail/me/`);
   }
 
   // Logs out the user and clears local storage
@@ -94,7 +94,7 @@ export class AccountService {
       this.accountCache$ = this.getUserDetails().pipe(
         tap((account: Account) => {
           // Save account data to local storage
-          localStorage.setItem('userName', account.username);
+          localStorage.setItem('username', account.username);
           localStorage.setItem('role', account.role);
           localStorage.setItem('firstName', account.firstName);
           localStorage.setItem('lastName', account.lastName);

@@ -7,7 +7,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { SiteAdminService } from '../site-admin-service';
 import Swal from 'sweetalert2';
 import { PoliceStation } from '../../../core/models/policestation.model';
-import { SubDivision } from '../../../core/models/subdivision.model';
+import { Subdivision } from '../../../core/models/subdivision.model';
 import { EditPolicestationComponent } from './edit-policestation/edit-policestation.component';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -19,19 +19,19 @@ import { MatDialog } from '@angular/material/dialog';
 })
 export class ListPolicestationComponent extends BaseComponent implements OnInit{
   // Columns for the police station table
-  displayedColumns: string[] = ['id', 'policeStationName', 'policeStationCode', 'subDivisionCode', 'actions'];
+  displayedColumns: string[] = ['id', 'policeStation', 'policeStationCode', 'subdivisionCode', 'actions'];
   
   // Data source for the table, which will hold all the police stations
   policeStationDataSource = new MatTableDataSource<PoliceStation>();
   
   // Holds the list of subdivisions (used for filtering police stations)
-  subdivisions: SubDivision[] = [];
+  subdivisions: Subdivision[] = [];
   
   // Holds the list of all police stations (used for filtering based on selected subdivision)
   allPoliceStations: PoliceStation[] = [];
   
   // Holds the currently selected subdivision code for filtering
-  selectedSubDivisionCode: number | null = null;
+  selectedSubdivisionCode: number | null = null;
 
   constructor(
     base: BaseDependency, 
@@ -49,7 +49,7 @@ export class ListPolicestationComponent extends BaseComponent implements OnInit{
 
   // Load subdivisions from the service to populate the subdivision dropdown
   loadSubdivisions(): void {
-    this.siteAdminService.getSubDivision().subscribe(data => {
+    this.siteAdminService.getSubdivision().subscribe(data => {
       this.subdivisions = data;
     });
   }
@@ -64,12 +64,12 @@ export class ListPolicestationComponent extends BaseComponent implements OnInit{
 
   // Handle the event when a subdivision is selected from the dropdown
   onSubdivisionSelect(): void {
-    if (this.selectedSubDivisionCode === null) {
+    if (this.selectedSubdivisionCode === null) {
       // If no subdivision is selected, show all police stations
       this.policeStationDataSource.data = this.allPoliceStations;
     } else {
       // Filter police stations based on the selected subdivision
-      this.policeStationDataSource.data = this.allPoliceStations.filter(ps => ps.SubDivisionCode === this.selectedSubDivisionCode);
+      this.policeStationDataSource.data = this.allPoliceStations.filter(ps => ps.subdivisionCode === this.selectedSubdivisionCode);
     }
   }
 

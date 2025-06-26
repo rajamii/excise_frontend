@@ -9,8 +9,8 @@
   <p class="print-count">
     No. of times license printed by licensee:
     <!-- Add conditional styling if print limit (5) is reached -->
-    <strong [ngClass]="{ 'over-limit': application.print_count >= 5 }">
-      {{ application.print_count }}
+    <strong [ngClass]="{ 'over-limit': application.printCount >= 5 }">
+      {{ application.printCount }}
     </strong>
   </p>
 </mat-dialog-content>
@@ -23,7 +23,7 @@
 
   <!-- Pay button enabled only if print count reaches 5 -->
   <button mat-flat-button color="primary" (click)="onPrint()"
-  [disabled]="application.print_count < 5">
+  [disabled]="application.printCount < 5">
     Pay
   </button>
 
@@ -49,7 +49,7 @@
       <tr>
         <td class="key">License Number</td>
         <td class="colon">:</td>
-        <td class="value">{{ application.application_id }}</td>
+        <td class="value">{{ application.applicationId }}</td>
       </tr>
       <tr>
         <td class="key">Name of the Licensee</td>
@@ -92,7 +92,7 @@
       <tbody>
         <tr>
           <td>{{ application.businessAddress }}</td>
-          <td>{{ application.locationName }}, {{ application.wardName }}, {{ application.siteSubDivision }}</td>
+          <td>{{ application.locationName }}, {{ application.wardName }}, {{ application.siteSubdivision }}</td>
         </tr>
       </tbody>
     </table>
@@ -127,8 +127,6 @@
         details about purchase, sales, balance etc. within 3 days of
         the expiry of the license.
       </li>
-      <li>The licensee shall be bound by General License Conditions except 
-        conditions II, XVI, XXVII, XXIX, and XXX.</li>
       <li>On breach of any condition of the license or provisions of the 
         Sikkim Excise Act, 1992 or rules made there under or orders 
         issued by the Excise Commissioner, this license 1 [shall] be suspended 

@@ -4,10 +4,11 @@ import { RouterModule } from '@angular/router';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependendency'; 
 import { MatTableDataSource } from '@angular/material/table';
-import { ApplicationStage, DashboardCount } from '../../../core/models/dashboard.model';
+import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ApplicationTableComponent } from './application-table/application-table.component';
+import { LicenseApplication } from '../../../core/models/license-application.model';
 
 @Component({
   selector: 'app-licensee-dashboard', 
@@ -26,10 +27,10 @@ export class LicenseeDashboardComponent extends BaseComponent{
   dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
 
   // Arrays to store applications
-  appliedApplications: ApplicationStage[] = [];
-  pendingApplications: ApplicationStage[] = [];
-  approvedApplications: ApplicationStage[] = [];
-  rejectedApplications: ApplicationStage[] = [];
+  appliedApplications: ApplicationStatus[] = [];
+  pendingApplications: ApplicationStatus[] = [];
+  approvedApplications: ApplicationStatus[] = [];
+  rejectedApplications: ApplicationStatus[] = [];
 
   constructor(
     public baseDependancy: BaseDependency,
@@ -40,10 +41,10 @@ export class LicenseeDashboardComponent extends BaseComponent{
   }
 
   // Table Data Sources
-  appliedDataSource = new MatTableDataSource<ApplicationStage>();
-  pendingDataSource = new MatTableDataSource<ApplicationStage>();
-  approvedDataSource = new MatTableDataSource<ApplicationStage>();
-  rejectedDataSource = new MatTableDataSource<ApplicationStage>();
+  appliedDataSource = new MatTableDataSource<LicenseApplication>();
+  pendingDataSource = new MatTableDataSource<LicenseApplication>();
+  approvedDataSource = new MatTableDataSource<LicenseApplication>();
+  rejectedDataSource = new MatTableDataSource<LicenseApplication>();
   
   // Columns to be displayed in the tables
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];

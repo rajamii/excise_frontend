@@ -43,12 +43,12 @@ export class AddDistrictComponent extends BaseComponent implements OnInit {
     // Set default state - hardcoded for now
     this.state = new State();
     this.state.stateCode = 11;
-    this.state.stateName = 'Sikkim';
+    this.state.state = 'Sikkim';
     this.states[0] = this.state;
 
     // Initialize district model and set default value
     this.district = new District();
-    this.district.IsActive = true;
+    this.district.isActive = true;
   }
 
   // Save function called when user clicks "Save"
@@ -78,7 +78,7 @@ export class AddDistrictComponent extends BaseComponent implements OnInit {
             confirmButtonText: 'OK'
           }).then(() => {
             // Redirect to list of districts
-            this.router.navigate(['/site-admin/list-district']);
+            this.router.navigate(['/admin/districts']);
           });
 
         }, error => {

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { District } from '../../core/models/district.model';
-import { SubDivision } from '../../core/models/subdivision.model';
+import { Subdivision } from '../../core/models/subdivision.model';
 import { PoliceStation } from '../../core/models/policestation.model';
 import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
@@ -35,8 +35,8 @@ export class LicenseeService {
   }
 
   // Fetch list of subdivisions
-  getSubDivision(): Observable<SubDivision[]> {
-    return this.http.get<SubDivision[]>(`${this.mastersUrl}/subdivisions/list`);
+  getSubdivision(): Observable<Subdivision[]> {
+    return this.http.get<Subdivision[]>(`${this.mastersUrl}/subdivisions/list`);
   }
 
   // Fetch list of police stations
@@ -56,7 +56,7 @@ export class LicenseeService {
 
   // ========================== LICENSE APPLICATION ==========================
   
-  submitLicenseApplication(data: any): Observable<any> {
+  submitLicenseApplication(data: any): Observable<LicenseApplication[]> {
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/licenseapplication/apply/`, data);
   } 
 

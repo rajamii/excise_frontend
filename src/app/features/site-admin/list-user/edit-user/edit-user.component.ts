@@ -1,7 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { SiteAdminService } from '../../site-admin-service';
-import { SubDivision } from '../../../../core/models/subdivision.model';
+import { Subdivision } from '../../../../core/models/subdivision.model';
 import Swal from 'sweetalert2';
 import { MaterialModule } from '../../../../shared/material.module';
 import { Account } from '../../../../core/models/accounts';

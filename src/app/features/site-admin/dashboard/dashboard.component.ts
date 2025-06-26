@@ -2,13 +2,14 @@ import { Component } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependendency';
-import { ApplicationStage, DashboardCount } from '../../../core/models/dashboard.model';
+import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
 import { MatTableDataSource } from '@angular/material/table';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { LICENSE_DATA } from '../../../core/models/license-stats.model';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { LicenseApplication } from '../../../core/models/license-application.model';
 
 type TableView = 'stats' | 'pending' | 'approved' | 'rejected';
 
@@ -24,9 +25,9 @@ export class DashboardComponent extends BaseComponent {
   dashboardCounts: DashboardCount = { pending: 0, approved: 0, rejected: 0 };
 
   // Arrays to store applications 
-  pendingApplications: ApplicationStage[] = [];
-  approvedApplications: ApplicationStage[] = [];
-  rejectedApplications: ApplicationStage[] = [];
+  pendingApplications: ApplicationStatus[] = [];
+  approvedApplications: ApplicationStatus[] = [];
+  rejectedApplications: ApplicationStatus[] = [];
 
   constructor(
     public baseDependancy: BaseDependency, 
@@ -37,9 +38,9 @@ export class DashboardComponent extends BaseComponent {
 
   // Table Data Sources
   statsDataSource = LICENSE_DATA; // Data source for license statistics
-  pendingDataSource = new MatTableDataSource<ApplicationStage>(); // Data source for pending applications
-  approvedDataSource = new MatTableDataSource<ApplicationStage>(); // Data source for approved applications
-  rejectedDataSource = new MatTableDataSource<ApplicationStage>(); // Data source for rejected applications
+  pendingDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for pending applications
+  approvedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for approved applications
+  rejectedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for rejected applications
   
   // Columns to be displayed in the tables
   statsColumns: string[] = ['slNo', 'serviceName', 'rejected', 'approved', 'executed', 'pending'];

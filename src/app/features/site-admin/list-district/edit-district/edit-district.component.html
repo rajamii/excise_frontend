@@ -6,23 +6,23 @@
 
   <!-- Dialog body content -->
   <mat-dialog-content>
+    
+    <!-- Input for District Name -->
+    <mat-form-field appearance="outline">
+      <mat-label>District</mat-label>
+      <input matInput [(ngModel)]="data.district"> <!-- Two-way binding -->
+    </mat-form-field>
 
     <!-- Input for District Name LL (Local Language) -->
     <mat-form-field appearance="outline">
       <mat-label>District Name LL</mat-label>
-      <input matInput [(ngModel)]="data.DistrictNameLL"> <!-- Two-way binding -->
-    </mat-form-field>
-
-    <!-- Input for District Name -->
-    <mat-form-field appearance="outline">
-      <mat-label>District Name</mat-label>
-      <input matInput [(ngModel)]="data.District"> <!-- Two-way binding -->
+      <input matInput [(ngModel)]="data.districtNameLl"> <!-- Two-way binding -->
     </mat-form-field>
 
     <!-- Input for District Code -->
     <mat-form-field appearance="outline">
       <mat-label>District Code</mat-label>
-      <input matInput [(ngModel)]="data.DistrictCode"> <!-- Two-way binding -->
+      <input matInput [(ngModel)]="data.districtCode"> <!-- Two-way binding -->
     </mat-form-field>
 
   </mat-dialog-content>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { ApplicationsByStage, DashboardCount } from '../models/dashboard.model';
+import { ApplicationStatus, DashboardCount } from '../models/dashboard.model';
 import { Observable } from 'rxjs';
 import { LicenseApplication } from '../models/license-application.model';
 import { LocationFee } from '../models/location-fee.model';
@@ -43,8 +43,8 @@ export class LicenseApplicationService {
   }
 
   // Retrieves a list of license applications, categorized by their current status (applied, accepted, pending or rejected)
-  getApplicationsByStatus(): Observable<ApplicationsByStage> {
-    return this.http.get<ApplicationsByStage>(
+  getApplicationsByStatus(): Observable<ApplicationStatus> {
+    return this.http.get<ApplicationStatus>(
       `${this.baseUrl}/licenseapplication/list-by-status/`
     );
     // Sends a GET request to fetch a list of applications, organized by their current stage in the process
@@ -69,7 +69,7 @@ export class LicenseApplicationService {
 
     // Optional: include new license category during approval if changed
     if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
-      body.new_license_category = newLicenseCategoryId;
+      body.newLicenseCategory = newLicenseCategoryId;
     }
 
     // Only include objections when action is 'raise_objection'
@@ -112,5 +112,10 @@ export class LicenseApplicationService {
   printLicense(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/licenseapplication/${encodedId}/print/`, {});
+  }
+
+  getSiteDetails(applicationId: string): Observable<SiteEnquiryFormModel> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<SiteEnquiryFormModel>(`${this.baseUrl}/licenseapplication/${encodedId}/site-detail/`);
   }
 }

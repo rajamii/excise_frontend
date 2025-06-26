@@ -70,12 +70,12 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
   private loadDropdownData(): void {
     this.licenseeService.getDistrict().subscribe(
-      (data) => (this.districts = data.map(d => d.District)),
+      (data) => (this.districts = data.map(d => d.district)),
       (error) => console.error('Error fetching districts:', error)
     );
 
     this.licenseeService.getLicenseCategories().subscribe(
-      (data) => (this.licenseCategories = data.map(category => category.licenseCategoryDescription)),
+      (data) => (this.licenseCategories = data.map(category => category.licenseCategory)),
       (error) => console.error('Error fetching license categories:', error)
     );
   }

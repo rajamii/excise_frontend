@@ -21,6 +21,9 @@ export class LoginComponent extends BaseComponent {
   otpIndex: string | null = null;    // Placeholder for OTP index if backend returns it
   otpAutoSubmitted = false;
 
+  loginError = false;
+  loginErrorMessages: string[] = [];
+
   constructor(
     protected override baseDependency: BaseDependency,
     protected override apiService: ApiService,
@@ -127,13 +130,28 @@ export class LoginComponent extends BaseComponent {
 
     this.apiService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
-        console.log(res); 
+        this.loginError = false;
+        this.loginErrorMessages = [];
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('Login error:', err);
-        alert('Incorrect username or password.');
+        this.loginError = true;
+
+        // Flatten and capture API errors for display
+        this.loginErrorMessages = this.extractErrorMessages(err.error);
       }
+    });
+  }
+
+  private extractErrorMessages(errorObj: any): string[] {
+    if (!errorObj || typeof errorObj !== 'object') return ['Unknown error'];
+
+    return Object.values(errorObj).flatMap((val) => {
+      if (Array.isArray(val)) {
+        return val.map(v => String(v));
+      }
+      return [String(val)];
     });
   }
 
@@ -181,9 +199,9 @@ export class LoginComponent extends BaseComponent {
 
   /** Stores tokens and navigates to the appropriate dashboard after successful login */
   private handleAuthResponse(res: any): void {
-    if (res.authenticated_user?.access && res.authenticated_user?.refresh) {
-      localStorage.setItem('access', res.authenticated_user.access);
-      localStorage.setItem('refresh', res.authenticated_user.refresh);
+    if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
+      localStorage.setItem('access', res.authenticatedUser.access);
+      localStorage.setItem('refresh', res.authenticatedUser.refresh);
       
       // Fetch user identity (which includes the role) and redirect based on role
       this.accountService.identity(true).subscribe({
@@ -208,6 +226,7 @@ export class LoginComponent extends BaseComponent {
       'level_3',
       'level_4',
       'level_5',
+      'site_admin',
       'dev'
     ];
 

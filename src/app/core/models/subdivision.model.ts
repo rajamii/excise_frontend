@@ -1,10 +1,10 @@
-export class SubDivision {
+export class Subdivision {
     id!: number;
-    SubDivisionCode!: number;
-    SubDivisionName!: string;
-    SubDivisionNameLL?: string;
-    DistrictCode!: number;
-    District!: string;
-    IsActive!: boolean;
+    subdivision!: string;
+    subdivisionCode!: number;
+    subdivisionNameLl?: string;
+    districtCode!: number;
+    district!: string;
+    isActive!: boolean;
   }
   

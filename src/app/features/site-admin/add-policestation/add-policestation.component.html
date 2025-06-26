@@ -17,7 +17,7 @@
               <mat-label>Police Station Name</mat-label>
               <input
                 matInput
-                [(ngModel)]="policeStation.PoliceStationName" 
+                [(ngModel)]="policeStation.policeStation" 
                 name="policeStationName"
                 #policeStationName="ngModel"
                 placeholder="Enter Police Station Name"
@@ -55,7 +55,7 @@
                 placeholder="Enter Police Station Code"
                 name="policeStationCode"
                 #policeStationCode="ngModel"
-                [(ngModel)]="policeStation.PoliceStationCode"
+                [(ngModel)]="policeStation.policeStationCode"
                 required
               />
             </mat-form-field>
@@ -77,11 +77,11 @@
           <div class="col-xl-4 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>Subdivision</mat-label>
-              <mat-select placeholder="Select Subdivision" name="subdivision" #subdivision="ngModel" [(ngModel)]="policeStation.SubDivisionCode" required>
+              <mat-select placeholder="Select Subdivision" name="subdivision" #subdivision="ngModel" [(ngModel)]="policeStation.subdivisionCode" required>
                 <mat-option>--</mat-option>
                 <!-- Loop through subdivisions and display each one as an option -->
-                <mat-option *ngFor="let sub of subdivisions" [value]="sub.SubDivisionCode">
-                  {{ sub.SubDivisionName }}
+                <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
+                  {{ sub.subdivision }}
                 </mat-option>
               </mat-select>
             </mat-form-field>

@@ -9,13 +9,21 @@
   <ng-container matColumnDef="id">
     <mat-header-cell *matHeaderCellDef class="app-id"> Application ID </mat-header-cell>
     <mat-cell *matCellDef="let element" class="app-id">
-        <div class="application-id" [ngClass]="{ 'objection-text': element.hasUnresolvedObjection }">
-            {{ element?.application_id }}
+    <div
+      class="application-id"
+      [ngClass]="{ 'objection-text': unresolvedObjectionAppIds.has(element.applicationId) }"
+    >
+      {{ element?.applicationId }}
 
-            <!-- Show warning icon if there is an unresolved objection -->
-            <mat-icon *ngIf="element.hasUnresolvedObjection" color="warn" matTooltip="Objection pending">error</mat-icon>
-        </div>
-
+      <!-- Show warning icon if there is an unresolved objection -->
+      <mat-icon
+        *ngIf="unresolvedObjectionAppIds.has(element.applicationId)"
+        color="warn"
+        matTooltip="Objection pending"
+      >
+        error
+      </mat-icon>
+    </div>
         <!-- Shows the submission date from the first transaction -->
         <div class="text-secondary">Date: {{ element?.transactions[0]?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}</div>
     </mat-cell>
@@ -24,21 +32,21 @@
   <!-- Current workflow stage of the application -->
   <ng-container matColumnDef="currentStage">
     <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
-    <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.current_stage] }} </mat-cell>
+    <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.currentStage] }} </mat-cell>
   </ng-container>
 
   <!-- Most recent remarks on the application -->
   <ng-container matColumnDef="remarks">
     <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
-    <mat-cell *matCellDef="let element"> {{element.latest_transaction?.remarks}} </mat-cell>
+    <mat-cell *matCellDef="let element"> {{element.latestTransaction?.remarks}} </mat-cell>
   </ng-container>
 
   <!-- Performed By -->
   <ng-container matColumnDef="performedBy">
     <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
     <mat-cell *matCellDef="let element">
-        {{ roleDisplayMapping[element.latest_transaction?.performed_by?.role] }}
-        <div class="text-secondary"> Date: {{element.latest_transaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }} </div> 
+        {{ roleDisplayMapping[element.latestTransaction?.performedBy?.role] }}
+        <div class="text-secondary"> Date: {{element.latestTransaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }} </div> 
     </mat-cell>
   </ng-container>
  

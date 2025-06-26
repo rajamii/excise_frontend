@@ -36,7 +36,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     companyCin: signal(''),
     incorporationDate: signal(''),
     companyPhoneNumber: signal(''),
-    companyEmailId: signal(''),
+    companyEmail: signal(''),
   };
 
   constructor(private fb: FormBuilder, private datePipe: DatePipe) {
@@ -49,9 +49,9 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       companyAddress: new FormControl(storedValues.companyAddress, [Validators.required]),
       companyPan: new FormControl(storedValues.companyPan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
       companyCin: new FormControl(storedValues.companyCin, [Validators.required, Validators.pattern(PatternConstants.CIN)]),
-      incorporationDate: new FormControl(storedValues.incorporationDate, [Validators.required]),
+      incorporationDate: new FormControl(storedValues.incorporationDate ?? null, [Validators.required]),
       companyPhoneNumber: new FormControl(storedValues.companyPhoneNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
-      companyEmailId: new FormControl(storedValues.companyEmailId, [Validators.required, Validators.pattern(PatternConstants.EMAIL)])
+      companyEmail: new FormControl(storedValues.companyEmail, [Validators.required, Validators.pattern(PatternConstants.EMAIL)])
     });
 
     // Save to session storage and update error messages on form change
@@ -83,10 +83,12 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   // Stores current form data into sessionStorage
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.unitDetailsForm.getRawValue(); 
-    const rawDate = new Date(formData.incorporationDate as string);
-
-    if (!isNaN(rawDate.getTime())) {
-      formData.incorporationDate = this.datePipe.transform(rawDate, 'yyyy-MM-dd')!;
+    
+    if (formData.incorporationDate) {
+      const date = new Date(formData.incorporationDate as string);
+      formData.incorporationDate = !isNaN(date.getTime())
+        ? this.datePipe.transform(date, 'yyyy-MM-dd') ?? undefined
+        : undefined;
     }
 
     sessionStorage.setItem('unitDetailsData', JSON.stringify(formData));

@@ -26,7 +26,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   licenseTypes: LicenseType[] = [];
   licenseNatures: string[] = ['Regular', 'Temporary', 'Seasonal', 'Special Event'];
   functioningStatuses: string[] = ['Yes', 'No'];
-  modeofOperations: string[] = ['Self', 'Salesman', 'Barman'];
+  modeOfOperations: string[] = ['Self', 'Salesman', 'Barman'];
 
   // Emit navigation events to parent component
   @Output() readonly next = new EventEmitter<void>();
@@ -40,7 +40,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     licenseType: signal(''),
     establishmentName: signal(''),
     mobileNumber: signal(''),
-    emailId: signal(''),
+    email: signal(''),
     licenseNo: signal(''),
     initialGrantDate: signal(''),
     renewedFrom: signal(''),
@@ -48,7 +48,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     yearlyLicenseFee: signal(''),
     licenseNature: signal(''),
     functioningStatus: signal(''),
-    modeofOperation: signal('')
+    modeOfOperation: signal('')
   };
 
   constructor(
@@ -71,7 +71,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.required,
         Validators.pattern(PatternConstants.MOBILE)
       ]),
-      emailId: new FormControl(storedValues.emailId, [
+      email: new FormControl(storedValues.email, [
         Validators.required,
         Validators.pattern(PatternConstants.EMAIL)
       ]),
@@ -87,7 +87,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       ]),
       licenseNature: new FormControl(storedValues.licenseNature, [Validators.required]),
       functioningStatus: new FormControl(storedValues.functioningStatus, [Validators.required]),
-      modeofOperation: new FormControl(storedValues.modeofOperation, [Validators.required])
+      modeOfOperation: new FormControl(storedValues.modeOfOperation, [Validators.required])
     });
 
     // Subscribe to form changes to update session storage and errors

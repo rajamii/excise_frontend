@@ -16,7 +16,7 @@
               <mat-label>Sub-Division Name</mat-label>
               <input
                 matInput
-                [(ngModel)]="subdivision.SubDivisionName"  
+                [(ngModel)]="subdivision.subdivision"  
                 name="subdivisionName"
                 #subdivisionName="ngModel"  
                 placeholder="Enter Sub-Division Name"
@@ -51,7 +51,7 @@
                 placeholder="Enter Sub-Division Name in Local Language"
                 name="subdivisionNameLocal"
                 #subdivisionNameLocal="ngModel" 
-                [(ngModel)]="subdivision.SubDivisionNameLL"  
+                [(ngModel)]="subdivision.subdivisionNameLl"  
               />
             </mat-form-field>
           </div>
@@ -65,7 +65,7 @@
                 placeholder="Enter Sub-Division Code"
                 name="subdivisionCode"
                 #subdivisionCode="ngModel" 
-                [(ngModel)]="subdivision.SubDivisionCode" 
+                [(ngModel)]="subdivision.subdivisionCode" 
                 required  
               />
             </mat-form-field>
@@ -87,12 +87,12 @@
             <!-- District Select Dropdown -->
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>District</mat-label>
-              <mat-select placeholder="Select District" name="district" #district="ngModel" [(ngModel)]="subdivision.DistrictCode" required>
+              <mat-select placeholder="Select District" name="district" #district="ngModel" [(ngModel)]="subdivision.districtCode" required>
                 <!-- Default Option -->
                 <mat-option>--</mat-option>
                 <!-- Loop through districts array to display options -->
-                <mat-option *ngFor="let dist of districts" [value]="dist.DistrictCode">
-                  {{ dist.District }}
+                <mat-option *ngFor="let dist of districts" [value]="dist.districtCode">
+                  {{ dist.district }}
                 </mat-option>
               </mat-select>
             </mat-form-field>

@@ -19,8 +19,8 @@
             (selectionChange)="onDistrictChange($event.value)" 
             required>
             <!-- Dynamically generated district options -->
-            <mat-option *ngFor="let district of districts" [value]="district.District">
-              {{ district.District }}
+            <mat-option *ngFor="let district of districts" [value]="district.district">
+              {{ district.district }}
             </mat-option>
           </mat-select>
           <!-- Error message for invalid district selection -->
@@ -34,8 +34,8 @@
           <mat-label>Select License Category</mat-label>
           <mat-select formControlName="licenseCategory" required>
             <!-- Dynamically generated license category options -->
-            <mat-option *ngFor="let category of licenseCategories" [value]="category.licenseCategoryDescription">
-              {{ category.licenseCategoryDescription }}
+            <mat-option *ngFor="let category of licenseCategories" [value]="category.licenseCategory">
+              {{ category.licenseCategory }}
             </mat-option>
           </mat-select>
           <!-- Error message for invalid license category -->
@@ -47,10 +47,10 @@
         <!-- Excise Sub Division Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Excise Sub Division</mat-label>
-          <mat-select formControlName="exciseSubDivision" required>
+          <mat-select formControlName="exciseSubdivision" required>
             <!-- Subdivision options filtered based on selected district -->
-            <mat-option *ngFor="let subDivision of filteredSubdivisions" [value]="subDivision.SubDivisionName">
-              {{ subDivision.SubDivisionName }}
+            <mat-option *ngFor="let subdivision of filteredSubdivisions" [value]="subdivision.subdivision">
+              {{ subdivision.subdivision }}
             </mat-option>
           </mat-select>
         </mat-form-field>        

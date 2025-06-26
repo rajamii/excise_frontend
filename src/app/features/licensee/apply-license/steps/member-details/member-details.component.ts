@@ -44,7 +44,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     gender: signal(''),
     pan: signal(''),
     memberMobileNumber: signal(''),
-    memberEmailId: signal(''),
+    memberEmail: signal(''),
     photo: signal('')
   };
 
@@ -65,7 +65,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       gender: new FormControl(storedValues.gender, [Validators.required]),
       pan: new FormControl(storedValues.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
       memberMobileNumber: new FormControl(storedValues.memberMobileNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
-      memberEmailId: new FormControl(storedValues.memberEmailId, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
+      memberEmail: new FormControl(storedValues.memberEmail, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
     });
 
     // Subscribe to form value changes to update error messages and save form data to sessionStorage

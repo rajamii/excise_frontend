@@ -52,9 +52,9 @@
         <!-- Email ID -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="emailId" required />
-          <mat-error *ngIf="keyInfoForm.controls['emailId'].invalid">
-            {{ getErrorMessage('emailId') }}
+          <input matInput placeholder="Enter Email" type="email" formControlName="email" required />
+          <mat-error *ngIf="keyInfoForm.controls['email'].invalid">
+            {{ getErrorMessage('email') }}
           </mat-error>
         </mat-form-field>
 
@@ -142,13 +142,13 @@
         <!-- Mode of Operation Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Mode Of Operation</mat-label>
-          <mat-select formControlName="modeofOperation" required>
-            <mat-option *ngFor="let modeofOperation of modeofOperations" [value]="modeofOperation">
-              {{ modeofOperation }}
+          <mat-select formControlName="modeOfOperation" required>
+            <mat-option *ngFor="let modeOfOperation of modeOfOperations" [value]="modeOfOperation">
+              {{ modeOfOperation }}
             </mat-option>
           </mat-select>
-          <mat-error *ngIf="keyInfoForm.controls['modeofOperation'].invalid">
-            {{ getErrorMessage('modeofOperation') }}
+          <mat-error *ngIf="keyInfoForm.controls['modeOfOperation'].invalid">
+            {{ getErrorMessage('modeOfOperation') }}
           </mat-error>
         </mat-form-field>
 

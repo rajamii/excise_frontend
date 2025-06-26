@@ -39,7 +39,7 @@ export class AddLicensetypeComponent implements OnInit {
             // Show success message on successful save
             Swal.fire('Success', 'License Type added successfully!', 'success');
             // Redirect to license type list page
-            this.router.navigate(['/site-admin/list-licensetype']);
+            this.router.navigate(['/admin/license-type']);
           },
           (error) => {
             // Log and show error if save fails

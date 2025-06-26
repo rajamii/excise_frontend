@@ -2,7 +2,7 @@ import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog'; // For dialog handling
 import { SiteAdminService } from '../../site-admin-service'; // Service for API calls
 import { District } from '../../../../core/models/district.model'; // District model
-import { SubDivision } from '../../../../core/models/subdivision.model'; // Subdivision model
+import { Subdivision } from '../../../../core/models/subdivision.model'; // Subdivision model
 import Swal from 'sweetalert2'; // For displaying alerts
 import { MaterialModule } from '../../../../shared/material.module'; // Material module import
 
@@ -18,7 +18,7 @@ export class EditSubdivisionComponent {
   // Constructor injection of dependencies
   constructor(
     public dialogRef: MatDialogRef<EditSubdivisionComponent>, // Dialog reference to manage the dialog box
-    @Inject(MAT_DIALOG_DATA) public data: SubDivision, // Injects the data passed to the dialog (subdivision data)
+    @Inject(MAT_DIALOG_DATA) public data: Subdivision, // Injects the data passed to the dialog (subdivision data)
     private siteAdminService: SiteAdminService // Service to interact with the backend API
   ) {}
 
@@ -43,8 +43,8 @@ export class EditSubdivisionComponent {
   onDistrictChange(selectedDistrict: District): void {
     if (selectedDistrict) {
       // If a district is selected, update the data with the selected district's details
-      this.data.District = selectedDistrict.District;
-      this.data.DistrictCode = selectedDistrict.DistrictCode;
+      this.data.district = selectedDistrict.district;
+      this.data.districtCode = selectedDistrict.districtCode;
     }
   }
 
@@ -52,11 +52,11 @@ export class EditSubdivisionComponent {
   onSave(): void {
     // Create an updatedData object with the changes made to the subdivision
     const updatedData = { 
-      SubDivisionName: this.data.SubDivisionName,
-      SubDivisionNameLL: this.data.SubDivisionNameLL,
-      SubDivisionCode: this.data.SubDivisionCode,
-      District: this.data.District,
-      DistrictCode: this.data.DistrictCode
+      subdivision: this.data.subdivision,
+      subdivisionNameLl: this.data.subdivisionNameLl,
+      subdivisionCode: this.data.subdivisionCode,
+      district: this.data.district,
+      districtCode: this.data.districtCode
     };
 
     // Make an API call to update the subdivision

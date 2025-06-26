@@ -72,7 +72,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'policestation/new',
+        path: 'police-station/new',
         loadComponent: () => import('./add-policestation/add-policestation.component').then(m => m.AddPolicestationComponent),
         canActivate: [UserRouteAccessService],
         data: {
@@ -80,7 +80,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'policestations',
+        path: 'police-stations',
         loadComponent: () => import('./list-policestation/list-policestation.component').then(m => m.ListPolicestationComponent),
         canActivate: [UserRouteAccessService],
         data: {
@@ -88,7 +88,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'licensetype/new',
+        path: 'license-type/new',
         loadComponent: () => import('./add-licensetype/add-licensetype.component').then(m => m.AddLicensetypeComponent),
         canActivate: [UserRouteAccessService],
         data: {
@@ -96,7 +96,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'licensetypes',
+        path: 'license-types',
         loadComponent: () => import('./list-licensetype/list-licensetype.component').then(m => m.ListLicensetypeComponent),
         canActivate: [UserRouteAccessService],
         data: {
@@ -104,7 +104,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'licensecategory/new',
+        path: 'license-category/new',
         loadComponent: () => import('./add-licensecategory/add-licensecategory.component').then(m => m.AddLicensecategoryComponent),
         canActivate: [UserRouteAccessService],
         data: {
@@ -112,7 +112,7 @@ const routes: Routes = [
         },
       },
       {
-        path: 'licensecategories',
+        path: 'license-categories',
         loadComponent: () => import('./list-licensecategory/list-licensecategory.component').then(m => m.ListLicensecategoryComponent),
         canActivate: [UserRouteAccessService],
         data: {

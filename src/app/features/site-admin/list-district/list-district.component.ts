@@ -21,7 +21,7 @@ import Swal from 'sweetalert2';
 export class ListDistrictComponent extends BaseComponent implements OnInit {
 
   // Define columns for Angular Material table
-  displayedColumns: string[] = ['id', 'district', 'districtNameLL', 'districtCode', 'state', 'stateCode', 'actions'];
+  displayedColumns: string[] = ['id', 'district', 'districtNameLl', 'districtCode', 'state', 'stateCode', 'actions'];
 
   // DataSource for the Material table, bound to list of districts
   districtDataSource = new MatTableDataSource<District>();
@@ -64,7 +64,7 @@ export class ListDistrictComponent extends BaseComponent implements OnInit {
     // Show SweetAlert confirmation dialog before deletion
     Swal.fire({
       title: 'Are you sure?',
-      text: `Do you really want to delete ${district.District}?`,
+      text: `Do you really want to delete ${district.district}?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it!',

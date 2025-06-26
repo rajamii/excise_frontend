@@ -1,16 +1,17 @@
+import { Account } from "./accounts";
 export class LicenseApplication {
   // select license
-  application_id!: string;
+  applicationId!: string;
   exciseDistrict!: string;
   licenseCategory!: string;
-  exciseSubDivision!: string;
+  exciseSubdivision!: string;
   license!: string;
 
   // key info
   licenseType!: string;  
   establishmentName!: string;
   mobileNumber!: number;
-  emailId!: string;
+  email!: string;
   licenseNo?: number;
   initialGrantDate?: string;
   renewedFrom?: string;
@@ -18,10 +19,10 @@ export class LicenseApplication {
   yearlyLicenseFee?: string;
   licenseNature!: string;
   functioningStatus!: string;
-  modeofOperation!: string;  
+  modeOfOperation!: string;  
 
   // address
-  siteSubDivision!: string;
+  siteSubdivision!: string;
   policeStation!: string;
   locationCategory!: string;
   locationName!: string;
@@ -39,7 +40,7 @@ export class LicenseApplication {
   companyCin!: string;
   incorporationDate!: string;
   companyPhoneNumber!: number;
-  companyEmailId!: string;
+  companyEmail!: string;
 
   // member details
   status!: string;
@@ -49,13 +50,38 @@ export class LicenseApplication {
   gender!: string;
   pan!: number;
   memberMobileNumber!: number;
-  memberEmailId!: string;
+  memberEmail!: string;
 
   // document
   photo!: File;
 
   // transactions
-  current_stage!: string;
-  is_approved!: boolean;
-  print_count?: number;
+  currentStage!: string;
+  isApproved!: boolean;
+  printCount: number = 0;
+  // Related models
+  objections?: Objection[];
+  transactions?: Transaction[];
+}
+
+export class Transaction {
+  id!: number;
+  licenseApplication!: string | LicenseApplication;
+  performedBy!: number | any;
+  forwardedBy!: number | any;
+  forwardedTo!: number | any;
+  stage!: string;
+  remarks?: string;
+  timestamp!: string; 
+}
+
+export class Objection {
+  id?: number;
+  application!: string; // or LicenseApplication if full object is returned
+  fieldName!: string;
+  remarks!: string;
+  raisedBy!: Account | null;
+  isResolved!: boolean;
+  raisedOn!: string;
+  resolvedOn?: string | null;
 }

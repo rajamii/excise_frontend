@@ -1,4 +1,4 @@
 export interface LocationFee {
-  location_name: string;
-  fee_amount: number;
+  locationName: string;
+  feeAmount: number;
 }

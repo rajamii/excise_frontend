@@ -9,24 +9,24 @@
       <mat-form-field appearance="outline">
         <mat-label>Police Station Name</mat-label>
         <!-- Two-way data binding using ngModel to bind the input value with the PoliceStationName property -->
-        <input matInput [(ngModel)]="data.PoliceStationName">
+        <input matInput [(ngModel)]="data.policeStation">
       </mat-form-field>
       
       <!-- Form field for editing the Police Station Code -->
       <mat-form-field appearance="outline">
         <mat-label>Police Station Code</mat-label>
         <!-- Two-way data binding for PoliceStationCode -->
-        <input matInput [(ngModel)]="data.PoliceStationCode">
+        <input matInput [(ngModel)]="data.policeStationCode">
       </mat-form-field>
       
       <!-- Form field for selecting Sub Division from a dropdown -->
       <mat-form-field appearance="outline">
         <mat-label>Sub Division</mat-label>
         <!-- Dropdown to select Sub Division, two-way binding with ngModel and handling selection change -->
-        <mat-select [(ngModel)]="data.SubDivisionName" (selectionChange)="onSubDivisionChange($event.value)">
+        <mat-select [(ngModel)]="data.subdivision" (selectionChange)="onSubDivisionChange($event.value)">
           <!-- Looping through the list of subDivisions and displaying each in the dropdown -->
-          <mat-option *ngFor="let subDivision of subDivisions" [value]="subDivision">
-            {{ subDivision.SubDivisionName }}
+          <mat-option *ngFor="let subdivision of subdivisions" [value]="subdivision">
+            {{ subdivision.subdivision }}
           </mat-option>
         </mat-select>          
       </mat-form-field>      
@@ -35,7 +35,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Sub Division Code</mat-label>
         <!-- The SubDivisionCode is disabled and displayed as a readonly field -->
-        <input matInput [(ngModel)]="data.SubDivisionCode" disabled>
+        <input matInput [(ngModel)]="data.subdivisionCode" disabled>
       </mat-form-field>
     </mat-dialog-content>
     

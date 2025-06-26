@@ -7,7 +7,7 @@ import { District } from '../../../core/models/district.model';
 import { SiteAdminService } from '../site-admin-service';
 import { State } from '../../../core/models/state.model';
 import { PatternConstants } from '../../../shared/constants/pattern.constants';
-import { SubDivision } from '../../../core/models/subdivision.model';
+import { Subdivision } from '../../../core/models/subdivision.model';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -25,7 +25,7 @@ export class AddSubdivisionComponent extends BaseComponent implements OnInit {
   // Objects to store selected state, district, and subdivision data
   state!: State;
   selectedDistrict!: District;
-  subdivision!: SubDivision;
+  subdivision!: Subdivision;
 
   constructor(base: BaseDependency, private siteAdminService: SiteAdminService) {
     super(base); // Call to the base constructor
@@ -35,18 +35,18 @@ export class AddSubdivisionComponent extends BaseComponent implements OnInit {
     // Initializing state and subdivision objects
     this.state = new State();
     this.state.stateCode = 11;
-    this.state.stateName = 'Sikkim';
+    this.state.state = 'Sikkim';
     this.states[0] = this.state; // Adding the state to the states array
-    this.subdivision = new SubDivision();
+    this.subdivision = new Subdivision();
     
     // Fetch active districts from the service
     this.siteAdminService.getDistrict().subscribe(res => {
       // Filter out inactive districts
-      this.districts = res.filter((district: District) => district.IsActive === true);
+      this.districts = res.filter((district: District) => district.isActive === true);
     });
     
     // Default value for IsActive in the subdivision
-    this.subdivision.IsActive = true;
+    this.subdivision.isActive = true;
   }
 
   // Method to save the subdivision
@@ -73,7 +73,7 @@ export class AddSubdivisionComponent extends BaseComponent implements OnInit {
             confirmButtonText: 'OK'
           }).then(() => {
             // Redirect to the list of subdivisions after success
-            this.router.navigate(['/site-admin/list-subdivision']);
+            this.router.navigate(['/admin/subdivisions']);
           });
 
         }, error => {

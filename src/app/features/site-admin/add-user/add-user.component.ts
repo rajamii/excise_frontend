@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { Account } from '../../../core/models/accounts';
 import { District } from '../../../core/models/district.model';
-import { SubDivision } from '../../../core/models/subdivision.model';
+import { Subdivision } from '../../../core/models/subdivision.model';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependendency';
 import { SiteAdminService } from '../site-admin-service';
 import { MaterialModule } from '../../../shared/material.module';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-add-user',
@@ -16,12 +17,16 @@ import { MaterialModule } from '../../../shared/material.module';
 export class AddUserComponent extends BaseComponent implements OnInit {
   user: Account = new Account(); // User object to hold user data
   districts: District[] = []; // Array to hold all districts
-  subdivisons: SubDivision[] = []; // Array to hold all subdivisions
-  filteredSubdivisions: SubDivision[] = []; // Array to hold filtered subdivisions based on district
+  subdivisons: Subdivision[] = []; // Array to hold all subdivisions
+  filteredSubdivisions: Subdivision[] = []; // Array to hold filtered subdivisions based on district
   roles = [
     { key: 'site_admin', label: 'Site Admin' },
-    { key: 'officer', label: 'Officer' },
-    { key: 'licensee', label: 'Licensee' }
+    { key: 'licensee', label: 'Licensee' },
+    { key: 'level_1', label: 'Level 1' },
+    { key: 'level_2', label: 'Level 2' },
+    { key: 'level_3', label: 'Level 3' },
+    { key: 'level_4', label: 'Level 4' },
+    { key: 'level_5', label: 'Level 5' },
   ];
 
   constructor(base: BaseDependency, private siteAdminService: SiteAdminService) {
@@ -29,7 +34,7 @@ export class AddUserComponent extends BaseComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.user.is_active = true; // Set default active status for user
+    this.user.isActive = true; // Set default active status for user
     this.loadDistricts(); // Load the list of districts
     this.loadSubdivisions(); // Load all subdivisions initially
   }
@@ -45,8 +50,8 @@ export class AddUserComponent extends BaseComponent implements OnInit {
 
   // Method to load all subdivisions from the backend
   loadSubdivisions(): void {
-    this.siteAdminService.getSubDivision().subscribe(
-      (data: SubDivision[]) => {
+    this.siteAdminService.getSubdivision().subscribe(
+      (data: Subdivision[]) => {
         this.subdivisons = data; // Store the fetched subdivisions
       },
       (error) => {
@@ -58,37 +63,50 @@ export class AddUserComponent extends BaseComponent implements OnInit {
   // Method to filter subdivisions based on the selected district
   onDistrictChange(id: number): void {
     console.log('Selected District ID:', id); // Log selected district ID for debugging
-    this.filteredSubdivisions = this.subdivisons.filter(subDiv => subDiv.DistrictCode === id); // Filter subdivisions based on district
+    this.filteredSubdivisions = this.subdivisons.filter(subDiv => subDiv.districtCode === id); // Filter subdivisions based on district
     console.log('Filtered Subdivisions:', this.filteredSubdivisions); // Log filtered subdivisions
   }
 
   // Method to handle form submission
   submit(): void {
     // Check if password and confirm password match
-    if (this.user.password !== this.user.confirm_password) {
-      this.toastrService.error('Passwords do not match!'); // Show error if passwords do not match
+    if (this.user.password !== this.user.confirmPassword) {
+      this.toastrService.error('Passwords do not match!');
       return;
     }
 
-    // Show confirmation popup before saving the user data
-    this.myswal
-      .fire({
-        title: 'Are you sure?',
-        text: 'You want to add this user?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Save',
-        cancelButtonText: 'Cancel',
-      })
-      .then((submit: { isConfirmed: any }) => {
-        // If user confirms, save the user data
-        if (submit.isConfirmed) {
-          this.siteAdminService.registerUser(this.user).subscribe(res => {
-            this.toastrService.success(res.message); // Show success message
-            this.router.navigate(['/site-admin/list-user']); // Redirect to user list page
-          });
-        }
-      });
+    // Show confirmation dialog before saving
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You want to add this user?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Save',
+      cancelButtonText: 'Cancel',
+    }).then((submit) => {
+      if (submit.isConfirmed) {
+        this.siteAdminService.registerUser(this.user).subscribe({
+          next: res => {
+            this.toastrService.success(res.message);
+
+            // Show success SweetAlert popup with generated username
+            Swal.fire({
+              title: 'Success!',
+              html: `User has been registered successfully.<br><strong>Username: ${res.username}</strong>`,
+              icon: 'success',
+              confirmButtonText: 'OK',
+            }).then(() => {
+              // Redirect to user list after confirmation
+              this.router.navigate(['/admin/users']);
+            });
+          },
+          error: err => {
+            console.error("Error registering user:", err);
+            this.toastrService.error(err.error?.message || 'Failed to register user.');
+          }
+        });
+      }
+    });
   }
 
   // Method to cancel the form and navigate back to the previous page

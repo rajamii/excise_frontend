@@ -7,12 +7,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { ApplyLicenseComponent } from '../../../apply-license/apply-license.component';
 import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2';
-
-export interface Objection {
-  field_name: string;
-  remarks: string;
-  resolved: boolean;
-}
+import { Objection } from '../../../../../core/models/license-application.model';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -50,14 +45,14 @@ export class ViewApplicationComponent {
     // License details
     exciseDistrict: 'Excise District',
     licenseCategory: 'License Category',
-    exciseSubDivision: 'Excise Sub-Division',
+    exciseSubdivision: 'Excise Sub-Division',
     license: 'License',
 
     // Key Info
     licenseType: 'License Type',
     establishmentName: 'Establishment Name',
     mobileNumber: 'Mobile Number',
-    emailId: 'Email ID',
+    email: 'Email ID',
     licenseNo: 'License Number',
     initialGrantDate: 'Initial Grant Date',
     renewedFrom: 'Renewed From',
@@ -65,10 +60,10 @@ export class ViewApplicationComponent {
     yearlyLicenseFee: 'Yearly License Fee',
     licenseNature: 'License Nature',
     functioningStatus: 'Functioning Status',
-    modeofOperation: 'Mode of Operation',
+    modeOfOperation: 'Mode of Operation',
 
     // Address
-    siteSubDivision: 'Site Sub-Division',
+    siteSubdivision: 'Site Sub-Division',
     policeStation: 'Police Station',
     locationCategory: 'Location Category',
     locationName: 'Location Name',
@@ -86,7 +81,7 @@ export class ViewApplicationComponent {
     companyCin: 'Company CIN',
     incorporationDate: 'Incorporation Date',
     companyPhoneNumber: 'Company Phone Number',
-    companyEmailId: 'Company Email ID',
+    companyEmail: 'Company Email ID',
 
     // Member Details
     status: 'Status',
@@ -96,7 +91,7 @@ export class ViewApplicationComponent {
     gender: 'Gender',
     pan: 'PAN',
     memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email ID',
+    memberEmail: 'Member Email ID',
 
     photo: 'Photo'
   };
@@ -104,13 +99,13 @@ export class ViewApplicationComponent {
   dropdownFields: { [key: string]: any[] } = {
     exciseDistrict: [],
     licenseCategory: [],
-    exciseSubDivision: [],
+    exciseSubdivision: [],
     license: ['New', 'License A', 'License B', 'License C'],
     licenseType: [],
     licenseNature: ['Regular', 'Temporary', 'Seasonal', 'Special Event'],
     functioningStatus: ['Yes', 'No'],
     modeofOperation: ['Self', 'Salesman', 'Barman'],
-    siteSubDivision: [],
+    siteSubdivision: [],
     policeStation: [],
     locationCategory: ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'],
     locationName: ['Location 1', 'Location 2', 'Location 3', 'Location 4'],
@@ -146,24 +141,24 @@ export class ViewApplicationComponent {
 
     // Group application data into sections for display
     this.licenseData = this.getFieldDisplayList([
-      'exciseDistrict', 'licenseCategory', 'exciseSubDivision', 'license'
+      'exciseDistrict', 'licenseCategory', 'exciseSubdivision', 'license'
     ]);
     this.keyInfoData = this.getFieldDisplayList([
-      'licenseType', 'establishmentName', 'mobileNumber', 'emailId', 'licenseNo',
+      'licenseType', 'establishmentName', 'mobileNumber', 'email', 'licenseNo',
       'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
-      'licenseNature', 'functioningStatus', 'modeofOperation'
+      'licenseNature', 'functioningStatus', 'modeOfOperation'
     ]);
     this.addressData = this.getFieldDisplayList([
-      'siteSubDivision', 'policeStation', 'locationCategory', 'locationName',
+      'siteSubdivision', 'policeStation', 'locationCategory', 'locationName',
       'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
     ]);
     this.unitDetailsData = this.getFieldDisplayList([
       'companyName', 'companyAddress', 'companyPan', 'companyCin',
-      'incorporationDate', 'companyPhoneNumber', 'companyEmailId'
+      'incorporationDate', 'companyPhoneNumber', 'companyEmail'
     ]);
     this.memberDetailsData = this.getFieldDisplayList([
       'status', 'memberName', 'fatherHusbandName', 'nationality',
-      'gender', 'pan', 'memberMobileNumber', 'memberEmailId'
+      'gender', 'pan', 'memberMobileNumber', 'memberEmail'
     ]);
     this.memberDetailsData.push({
       key: 'Photo',
@@ -182,7 +177,7 @@ export class ViewApplicationComponent {
 
   fetchObjections() {
     // Fetch objections related to the application from backend
-    this.licenseApplicationService.getObjections(this.application.application_id).subscribe({
+    this.licenseApplicationService.getObjections(this.application.applicationId).subscribe({
       next: (data) => {
         this.objections = data;
         // Initialize the form for resolving objections
@@ -200,33 +195,33 @@ export class ViewApplicationComponent {
   initializeResolveForm(): void {
     const group: { [key: string]: FormControl } = {};
     for (const obj of this.objections) {
-      group[obj.field_name] = obj.field_name === 'photo'
+      group[obj.fieldName] = obj.fieldName === 'photo'
         // Photo requires file input
         ? new FormControl(null, Validators.required)
         // For other fields, pre-fill existing value from application
-        : new FormControl(this.application[obj.field_name] || '', Validators.required);
+        : new FormControl(this.application[obj.fieldName] || '', Validators.required);
     }
     this.resolveObjectionForm = new FormGroup(group);
   }
 
   // Checks if a specific field has an unresolved objection
   hasObjection(field: string): boolean {
-    return this.objections.some(obj => obj.field_name === field && !obj.resolved);
+    return this.objections.some(obj => obj.fieldName === field && !obj.isResolved);
   }
 
   // Determines if there is at least one unresolved objection
   hasAnyObjections(): boolean {
-    return this.objections.some(obj => this.hasObjection(obj.field_name));
+    return this.objections.some(obj => this.hasObjection(obj.fieldName));
   } 
   
   // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
-    return this.objections.find(obj => obj.field_name === field && !obj.resolved)?.remarks || '';
+    return this.objections.find(obj => obj.fieldName === field && !obj.isResolved)?.remarks || '';
   }
 
   // Returns only unresolved objections for iteration in the template
   get unresolvedObjections(): Objection[] {
-    return this.objections.filter(obj => !obj.resolved);
+    return this.objections.filter(obj => !obj.isResolved);
   }
   
   // Handles photo file selection and sets it into the form
@@ -248,9 +243,9 @@ export class ViewApplicationComponent {
       this.dropdownFields['licenseCategory'] = data;
     });
 
-    this.licenseeService.getSubDivision().subscribe(data => {
-      this.dropdownFields['exciseSubDivision'] = data;
-      this.dropdownFields['siteSubDivision'] = data;
+    this.licenseeService.getSubdivision().subscribe(data => {
+      this.dropdownFields['exciseSubdivision'] = data;
+      this.dropdownFields['siteSubdivision'] = data;
     });
 
     this.licenseeService.getPoliceStations().subscribe(data => {
@@ -284,7 +279,7 @@ export class ViewApplicationComponent {
         }
 
         // Send resolved data to backend
-        this.licenseApplicationService.resolveObjections(this.application.application_id, formData).subscribe({
+        this.licenseApplicationService.resolveObjections(this.application.applicationId, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => location.reload());
           },
@@ -311,7 +306,7 @@ export class ViewApplicationComponent {
       confirmButtonText: 'Yes, delete it!',
     }).then(result => {
       if (result.isConfirmed) {
-        this.licenseApplicationService.deleteApplication(this.application.application_id).subscribe({
+        this.licenseApplicationService.deleteApplication(this.application.applicationId).subscribe({
           next: () => {
             Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
           },

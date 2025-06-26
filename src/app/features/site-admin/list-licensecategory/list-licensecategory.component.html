@@ -9,7 +9,7 @@
       <div class="page-title">License Category List</div>
       
       <!-- Button to navigate to add license category page -->
-      <button mat-flat-button [routerLink]="'../licensecategory/new'">
+      <button mat-flat-button [routerLink]="'../license-category/new'">
         <mat-icon>add</mat-icon> Add License Category
       </button> 
     </mat-card-header>
@@ -32,7 +32,7 @@
           <!-- Column definition for License Category Description -->
           <ng-container matColumnDef="licenseCategory">
             <mat-header-cell *matHeaderCellDef> License Category </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{element.licenseCategoryDescription}} </mat-cell>
+            <mat-cell *matCellDef="let element"> {{element.licenseCategory}} </mat-cell>
           </ng-container>
 
           <!-- Column for Edit and Delete buttons -->

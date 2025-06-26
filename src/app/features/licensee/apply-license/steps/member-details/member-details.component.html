@@ -83,9 +83,9 @@
         <!-- Email ID Input -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId"/>
-          <mat-error *ngIf="memberDetailsForm.controls['memberEmailId'].invalid">
-            {{ getErrorMessage('memberEmailId') }}
+          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmail"/>
+          <mat-error *ngIf="memberDetailsForm.controls['memberEmail'].invalid">
+            {{ getErrorMessage('memberEmail') }}
           </mat-error>
         </mat-form-field>
 

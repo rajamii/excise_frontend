@@ -39,7 +39,7 @@ export class AddLicensecategoryComponent implements OnInit {
           (res) => {
             // On success, show success dialog and navigate to list page
             Swal.fire('Success', 'License Category Added Successfully!', 'success');
-            this.router.navigate(['/site-admin/list-licensecategory']);
+            this.router.navigate(['/admin/license-categories']);
           },
           (error) => {
             // On error, log and show error message

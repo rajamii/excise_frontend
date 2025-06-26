@@ -2,7 +2,7 @@
   <!-- Step 1: Show Application Data -->
     <mat-step label="Application Data">
         <div class="step-header">
-            <h5>{{application.application_id}}</h5>
+            <h5>Application Id: {{application.applicationId}}</h5>
         </div>
         <div class="application-details">
             <!-- Section: License Info -->
@@ -154,7 +154,7 @@
     <mat-step *ngIf="hasAnyObjections()" label="Resolve Objections">
         <form [formGroup]="resolveObjectionForm">
             <div class="step-header">
-                <h5>{{application.application_id}}</h5> 
+                <h5>{{application.applicationId}}</h5> 
             </div>
 
             <!-- Display unresolved objections -->
@@ -162,11 +162,11 @@
                 <div *ngFor="let obj of unresolvedObjections">
 
                     <!-- If the objection is not about the photo, show an input field -->
-                    <ng-container *ngIf="obj.field_name !== 'photo'; else photoUpload">
+                    <ng-container *ngIf="obj.fieldName !== 'photo'; else photoUpload">
                         <mat-form-field appearance="outline">
                             <!-- Label is dynamically generated from field name -->
-                            <mat-label>{{ fieldLabelMap[obj.field_name] | titlecase }}</mat-label>
-                            <input matInput [formControlName]="obj.field_name">
+                            <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                            <input matInput [formControlName]="obj.fieldName">
                             <!-- Show original objection as hint -->
                             <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
                         </mat-form-field>

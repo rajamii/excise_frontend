@@ -23,8 +23,8 @@
                             <!-- Default option to show all districts -->
                             <mat-option [value]="null">All Districts</mat-option>
                             <!-- Loop through the districts array to display options -->
-                            <mat-option *ngFor="let district of districts" [value]="district.DistrictCode">
-                                {{ district.District }}
+                            <mat-option *ngFor="let district of districts" [value]="district.districtCode">
+                                {{ district.district }}
                             </mat-option>
                         </mat-select>
                     </mat-form-field>
@@ -41,33 +41,33 @@
                   </ng-container>
   
                   <!-- Column for displaying Sub Division Name -->
-                  <ng-container matColumnDef="subdivisionName">
-                      <mat-header-cell *matHeaderCellDef> Sub Division Name </mat-header-cell>
-                      <mat-cell *matCellDef="let element"> {{ element.SubDivisionName }} </mat-cell>
+                  <ng-container matColumnDef="subdivision">
+                      <mat-header-cell *matHeaderCellDef> Sub Division </mat-header-cell>
+                      <mat-cell *matCellDef="let element"> {{ element.subdivision }} </mat-cell>
                   </ng-container>
   
                   <!-- Column for displaying Sub Division Name in LL -->
-                  <ng-container matColumnDef="subdivisionNameLL">
+                  <ng-container matColumnDef="subdivisionNameLl">
                       <mat-header-cell *matHeaderCellDef> Sub Division Name LL</mat-header-cell>
-                      <mat-cell *matCellDef="let element"> {{ element.SubDivisionNameLL }} </mat-cell>
+                      <mat-cell *matCellDef="let element"> {{ element.subdivisionNameLl }} </mat-cell>
                   </ng-container>
   
                   <!-- Column for displaying Sub Division Code -->
                   <ng-container matColumnDef="subdivisionCode">
                       <mat-header-cell *matHeaderCellDef> Sub Division Code </mat-header-cell>
-                      <mat-cell *matCellDef="let element"> {{ element.SubDivisionCode }} </mat-cell>
+                      <mat-cell *matCellDef="let element"> {{ element.subdivisionCode }} </mat-cell>
                   </ng-container>
   
                   <!-- Column for displaying District Name -->
                   <ng-container matColumnDef="district">
                       <mat-header-cell *matHeaderCellDef> District Name </mat-header-cell>
-                      <mat-cell *matCellDef="let element"> {{ element.District }} </mat-cell>
+                      <mat-cell *matCellDef="let element"> {{ element.district }} </mat-cell>
                   </ng-container>
   
                   <!-- Column for displaying District Code -->
                   <ng-container matColumnDef="districtCode">
                       <mat-header-cell *matHeaderCellDef> District Code </mat-header-cell>
-                      <mat-cell *matCellDef="let element"> {{ element.DistrictCode }} </mat-cell>
+                      <mat-cell *matCellDef="let element"> {{ element.districtCode }} </mat-cell>
                   </ng-container>
   
                   <!-- Column for actions (Edit/Delete buttons) -->

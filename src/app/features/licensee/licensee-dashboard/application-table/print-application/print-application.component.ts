@@ -3,6 +3,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import Swal from 'sweetalert2';
+import { LicenseApplication } from '../../../../../core/models/license-application.model';
 
 @Component({
   selector: 'app-print-application',
@@ -11,7 +12,7 @@ import Swal from 'sweetalert2';
   styleUrl: './print-application.component.scss'
 })
 export class PrintApplicationComponent {
-  application: any;
+  application: LicenseApplication;
 
   constructor(
     public dialogRef: MatDialogRef<PrintApplicationComponent>,
@@ -24,10 +25,10 @@ export class PrintApplicationComponent {
 
   onPrint(): void {
     // Call backend API to register a license print and get updated count
-    this.licenseApplicationService.printLicense(this.application.application_id).subscribe({
+    this.licenseApplicationService.printLicense(this.application.applicationId).subscribe({
       next: (res) => { 
         // Update local print count with response from backend
-        this.application.print_count = res.print_count;
+        this.application.printCount = res.printCount;
 
         // Trigger the actual browser print dialog with license layout
         this.triggerPrint();
@@ -118,12 +119,12 @@ export class PrintApplicationComponent {
     popupWin?.document.write(`
       <html>
         <head>
-          <title>${this.application.application_id}</title>
+          <title>${this.application.applicationId}</title>
           <style>${printStyles}</style>
         </head>
         <script>
           // Replace default about:blank URL in the new tab with a custom one
-          window.history.replaceState({}, 'License Print', '/license/print/${this.application.application_id}');
+          window.history.replaceState({}, 'License Print', '/license/print/${this.application.applicationId}');
         </script>
         <body onload="window.print(); window.close();">
           ${printContents}

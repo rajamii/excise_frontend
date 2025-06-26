@@ -3,7 +3,7 @@ import { MaterialModule } from '../../../shared/material.module';
 import { RouterModule } from '@angular/router'; 
 import { BaseComponent } from '../../../base/base.components';  // Import base component for common functionality
 import { BaseDependency } from '../../../base/dependency/base.dependendency';  // Import base dependency class
-import { SubDivision } from '../../../core/models/subdivision.model';  // Import SubDivision model
+import { Subdivision } from '../../../core/models/subdivision.model';  // Import SubDivision model
 import { SiteAdminService } from '../site-admin-service';  // Import SiteAdminService for API calls
 import { PatternConstants } from '../../../shared/constants/pattern.constants';  // Import constant patterns
 import { PoliceStation } from '../../../core/models/policestation.model';  // Import PoliceStation model
@@ -17,7 +17,7 @@ import Swal from 'sweetalert2';  // Import Swal for sweetalert2 dialog
 })
 export class AddPolicestationComponent extends BaseComponent implements OnInit {
   patternConstants = PatternConstants;  // Initialize pattern constants
-  subdivisions: SubDivision[] = [];  // Array to hold subdivision data
+  subdivisions: Subdivision[] = [];  // Array to hold subdivision data
   policeStation!: PoliceStation;  // Initialize police station object
 
   // Constructor for the component, injecting dependencies
@@ -33,7 +33,7 @@ export class AddPolicestationComponent extends BaseComponent implements OnInit {
     this.policeStation = new PoliceStation();  // Initialize a new PoliceStation object
 
     // Fetch subdivisions from the SiteAdminService and assign to subdivisions array
-    this.siteAdminService.getSubDivision().subscribe(res => {
+    this.siteAdminService.getSubdivision().subscribe(res => {
       this.subdivisions = res;
     });
   }
@@ -64,7 +64,7 @@ export class AddPolicestationComponent extends BaseComponent implements OnInit {
               confirmButtonText: 'OK'  // Confirm button text
             }).then(() => {
               // Navigate to the police station list page after success
-              this.router.navigate(['/site-admin/list-policestation']);
+              this.router.navigate(['/admin/police-stations']);
             });
     
           }, error => {

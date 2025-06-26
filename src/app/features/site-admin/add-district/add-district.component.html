@@ -23,7 +23,7 @@
               <mat-label>District Name</mat-label>
               <input
                 matInput
-                [(ngModel)]="district.District"
+                [(ngModel)]="district.district"
                 name="districtname"
                 #districtname="ngModel"
                 placeholder="Enter District Name"
@@ -61,7 +61,7 @@
                 placeholder="Enter District Name in Local Language"
                 name="districtnamell"
                 #districtnamell="ngModel"
-                [(ngModel)]="district.DistrictNameLL"
+                [(ngModel)]="district.districtNameLl"
               />
             </mat-form-field>
           </div>
@@ -76,7 +76,7 @@
                 placeholder="Enter District Code"
                 name="districtcode"
                 #districtcode="ngModel"
-                [(ngModel)]="district.DistrictCode"
+                [(ngModel)]="district.districtCode"
                 required
               />
             </mat-form-field>
@@ -99,10 +99,10 @@
           <div class="col-xl-4 col-lg-4 col-md-4">
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>State</mat-label>
-              <mat-select placeholder="Select State" name="statename" #statename="ngModel" [(ngModel)]="district.StateCode" required>
+              <mat-select placeholder="Select State" name="statename" #statename="ngModel" [(ngModel)]="district.stateCode" required>
                 <mat-option>--</mat-option>
                 <mat-option *ngFor="let st of states" [value]="st.stateCode">
-                  {{ st.stateName }} ({{ st.stateCode }})
+                  {{ st.state }} ({{ st.stateCode }})
                 </mat-option>
               </mat-select>
             </mat-form-field>

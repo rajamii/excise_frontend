@@ -1,9 +1,9 @@
 export class PoliceStation {
     id!: number;
-    PoliceStationName!: string;
-    PoliceStationCode!: number;
-    SubDivisionName!: string;
-    SubDivisionCode!: number;
+    policeStation!: string;
+    policeStationCode!: number;
+    subdivision!: string;
+    subdivisionCode!: number;
     isActive!: boolean;
 }
   

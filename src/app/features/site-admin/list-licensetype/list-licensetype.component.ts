@@ -75,8 +75,6 @@ export class ListLicensetypeComponent extends BaseComponent implements OnInit {
             Swal.fire('Deleted!', 'The license type has been deleted.', 'success');
             // Refresh the table after deletion
             this.loadLicenseTypes();
-            // Navigate back to the license type list
-            this.router.navigate([`./site-admin/list-licensetype`]);
           },
           (error) => {
             // Handle error during deletion and show an error message

@@ -10,6 +10,7 @@ import { ApplyLicenseComponent } from '../../apply-license/apply-license.compone
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ViewApplicationComponent } from './view-application/view-application.component';
 import { PrintApplicationComponent } from './print-application/print-application.component';
+import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
 
 @Component({
   selector: 'app-application-table',
@@ -21,10 +22,11 @@ export class ApplicationTableComponent extends BaseComponent{
   // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
-  @Input() dataSource!: MatTableDataSource<any>;
+  @Input() dataSource!: MatTableDataSource<LicenseApplication>;
   @Input() tableType!: string;  // For conditional rendering of action buttons
 
-  objections: any[] = [];
+  objections: Objection[] = [];
+  unresolvedObjectionAppIds: Set<string> = new Set();
 
   // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
@@ -47,6 +49,12 @@ export class ApplicationTableComponent extends BaseComponent{
     level_3: 'Under Review by Level 3',
     level_4: 'Under Review by Level 4',
     level_5: 'Under Review by Level 5',
+
+    level_1_objection: 'Objection Raised by Level 1',
+    level_2_objection: 'Objection Raised by Level 2',
+    level_3_objection: 'Objection Raised by Level 3',
+    level_4_objection: 'Objection Raised by Level 4',
+    level_5_objection: 'Objection Raised by Level 5',
     
     rejected_by_level_1: 'Rejected by Level 1',
     rejected_by_level_2: 'Rejected by Level 2',
@@ -67,11 +75,14 @@ export class ApplicationTableComponent extends BaseComponent{
 
   // Angular lifecycle hook that runs when input properties change
   ngOnChanges() {
-    // For each application in the data source, check for unresolved objections
+    this.unresolvedObjectionAppIds.clear();
+
     this.dataSource?.data?.forEach(app => {
-      this.licenseApplicationService.getObjections(app.application_id).subscribe((objections) => {
-        const unresolved = objections?.some(obj => obj.resolved === false);
-        app.hasUnresolvedObjection = unresolved;
+      this.licenseApplicationService.getObjections(app.applicationId).subscribe((objections) => {
+        const hasUnresolved = objections?.some(obj => obj.isResolved === false);
+        if (hasUnresolved) {
+          this.unresolvedObjectionAppIds.add(app.applicationId);
+        }
       });
     });
   }

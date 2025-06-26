@@ -35,6 +35,16 @@
   
 			<!-- Custom captcha component -->
 			<app-captcha [formGroup]="loginForm"></app-captcha>
+
+			<div *ngIf="loginError" class="error-box">
+				<mat-card class="error-card">
+					<mat-card-content>
+					<ul>
+						<li *ngFor="let msg of loginErrorMessages">{{ msg }}</li>
+					</ul>
+					</mat-card-content>
+				</mat-card>
+			</div>
 			
 			<div class="buttons">
 				<div>

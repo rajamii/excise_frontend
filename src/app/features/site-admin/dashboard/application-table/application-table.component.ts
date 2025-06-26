@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { BaseComponent } from '../../../../base/base.components';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ReviewApplicationComponent } from './review-application/review-application.component';
+import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
 
 @Component({
   selector: 'app-application-table',
@@ -22,7 +23,8 @@ export class ApplicationTableComponent extends BaseComponent {
   @Input() dataSource!: MatTableDataSource<any>;
   @Input() tableType!: string; // For conditional rendering of action buttons
 
-  objections: any[] = [];
+  objections: Objection[] = [];
+  unresolvedObjectionAppIds: Set<string> = new Set();
 
   // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
@@ -81,8 +83,8 @@ export class ApplicationTableComponent extends BaseComponent {
   ngOnChanges() {
     // For each application in the data source, check for unresolved objections
     this.dataSource?.data?.forEach(app => {
-      this.licenseApplicationService.getObjections(app.application_id).subscribe((objections) => {
-        const unresolved = objections?.some(obj => obj.resolved === false);
+      this.licenseApplicationService.getObjections(app.applicationId).subscribe((objections) => {
+        const unresolved = objections?.some(obj => obj.isResolved === false);
         app.hasUnresolvedObjection = unresolved;
       });
     });

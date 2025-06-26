@@ -5,33 +5,33 @@
   <mat-dialog-content>
     <!-- Input field for Subdivision Name -->
     <mat-form-field appearance="outline">
-      <mat-label>Subdivision Name</mat-label>
+      <mat-label>Subdivision</mat-label>
       <!-- Two-way binding with ngModel to bind the input value to the component's data object -->
-      <input matInput [(ngModel)]="data.SubDivisionName">
+      <input matInput [(ngModel)]="data.subdivision">
     </mat-form-field>
 
     <!-- Input field for Subdivision Name LL (Local Language) -->
     <mat-form-field appearance="outline">
       <mat-label>Subdivision Name LL</mat-label>
       <!-- Two-way binding with ngModel to bind the input value to the component's data object -->
-      <input matInput [(ngModel)]="data.SubDivisionNameLL">
+      <input matInput [(ngModel)]="data.subdivisionNameLl">
     </mat-form-field>
 
     <!-- Input field for Subdivision Code -->
     <mat-form-field appearance="outline">
       <mat-label>Subdivision Code</mat-label>
       <!-- Two-way binding with ngModel to bind the input value to the component's data object -->
-      <input matInput [(ngModel)]="data.SubDivisionCode">
+      <input matInput [(ngModel)]="data.subdivisionCode">
     </mat-form-field>
 
     <!-- Dropdown to select District -->
     <mat-form-field appearance="outline">
       <mat-label>District</mat-label>
       <!-- Two-way binding with ngModel for District selection, triggers onDistrictChange on value change -->
-      <mat-select [(ngModel)]="data.District" (selectionChange)="onDistrictChange($event.value)">
+      <mat-select [(ngModel)]="data.district" (selectionChange)="onDistrictChange($event.value)">
         <!-- Iterating over the list of districts and displaying each district name in the dropdown -->
         <mat-option *ngFor="let district of districts" [value]="district">
-          {{ district.District }}
+          {{ district.district }}
         </mat-option>
       </mat-select>          
     </mat-form-field>      
@@ -40,7 +40,7 @@
     <mat-form-field appearance="outline">
       <mat-label>District Code</mat-label>
       <!-- Two-way binding with ngModel to bind the input value to the component's data object, but disabled for editing -->
-      <input matInput [(ngModel)]="data.DistrictCode" disabled>
+      <input matInput [(ngModel)]="data.districtCode" disabled>
     </mat-form-field>
   </mat-dialog-content>
 

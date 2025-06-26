@@ -11,19 +11,19 @@
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division</mat-label>
-          <mat-select formControlName="siteSubDivision" (selectionChange)="onSubDivisionChange($event.value)" required>
-            <mat-option *ngFor="let siteSubDivision of siteSubDivisions" [value]="siteSubDivision.SubDivisionName">{{ siteSubDivision.SubDivisionName }}</mat-option>
+          <mat-select formControlName="siteSubdivision" (selectionChange)="onSubDivisionChange($event.value)" required>
+            <mat-option *ngFor="let siteSubdivision of subdivisions" [value]="siteSubdivision.subdivision">{{ siteSubdivision.subdivision }}</mat-option>
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['siteSubDivision'].invalid">
-            {{ getErrorMessage('siteSubDivision') }}
+          <mat-error *ngIf="addressForm.controls['siteSubdivision'].invalid">
+            {{ getErrorMessage('siteSubdivision') }}
           </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Police Station</mat-label>
           <mat-select formControlName="policeStation" required>
-            <mat-option *ngFor="let policeStation of sitePoliceStations" [value]="policeStation.PoliceStationName">{{ policeStation.PoliceStationName }}</mat-option>
-          </mat-select>
+            <mat-option *ngFor="let policeStation of sitePoliceStations" [value]="policeStation.policeStation">{{ policeStation.policeStation }}</mat-option>
+          </mat-select> 
           <mat-error *ngIf="addressForm.controls['policeStation'].invalid">
             {{ getErrorMessage('policeStation') }}
           </mat-error>

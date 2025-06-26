@@ -1,7 +1,7 @@
 import { Component, Inject } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog'; // For dialog functionality
 import { SiteAdminService } from '../../site-admin-service'; // Service for API calls
-import { SubDivision } from '../../../../core/models/subdivision.model'; // Model for SubDivision
+import { Subdivision } from '../../../../core/models/subdivision.model'; // Model for SubDivision
 import { PoliceStation } from '../../../../core/models/policestation.model'; // Model for PoliceStation
 import Swal from 'sweetalert2'; // For showing alerts
 import { MaterialModule } from '../../../../shared/material.module'; // For importing Material Design components
@@ -13,7 +13,7 @@ import { MaterialModule } from '../../../../shared/material.module'; // For impo
   styleUrl: './edit-policestation.component.scss' // Styling for the component
 })
 export class EditPolicestationComponent {
-  subDivisions: SubDivision[] = []; // Array to hold SubDivision data
+  subdivisions: Subdivision[] = []; // Array to hold SubDivision data
 
   constructor(
     public dialogRef: MatDialogRef<EditPolicestationComponent>, // Dialog reference to control the dialog
@@ -28,9 +28,9 @@ export class EditPolicestationComponent {
 
   // Method to load SubDivisions from the backend
   loadSubdivisions(): void {
-    this.siteAdminService.getSubDivision().subscribe(
-      (subDivisions) => {
-        this.subDivisions = subDivisions; // Assign fetched subdivisions to the subDivisions array
+    this.siteAdminService.getSubdivision().subscribe(
+      (subdivisions) => {
+        this.subdivisions = subdivisions; // Assign fetched subdivisions to the subDivisions array
       },
       (error) => {
         console.error('Error fetching subdivisions:', error); // Log error in case of failure
@@ -39,21 +39,21 @@ export class EditPolicestationComponent {
   }
 
   // Method to handle the change in selected subdivision from the dropdown
-  onSubDivisionChange(selectedSubdivision: SubDivision): void {
+  onSubDivisionChange(selectedSubdivision: Subdivision): void {
     if (selectedSubdivision) {
       // Set the SubDivisionName and SubDivisionCode in the data object when a selection is made
-      this.data.SubDivisionName = selectedSubdivision.SubDivisionName;
-      this.data.SubDivisionCode = selectedSubdivision.SubDivisionCode;
+      this.data.subdivision = selectedSubdivision.subdivision;
+      this.data.subdivisionCode = selectedSubdivision.subdivisionCode;
     }
   }
 
   // Method to save the updated police station data
   onSave(): void {
     const updatedData = {
-      PoliceStationName: this.data.PoliceStationName,
-      PoliceStationCode: this.data.PoliceStationCode,
-      SubDivisionName: this.data.SubDivisionName,
-      SubDivisionCode: this.data.SubDivisionCode,
+      policeStation: this.data.policeStation,
+      policeStationCode: this.data.policeStationCode,
+      subdivision: this.data.subdivision,
+      subdivisionCode: this.data.subdivisionCode,
     };
 
     // Call the service to update the police station data

@@ -101,7 +101,7 @@ export class LicenseeHomeComponent extends BaseComponent{
             <li>Photograph of site</li>
           </ul>
           <h4>Fees</h4>
-          <p>License Fee: ₹5,000<br>Processing Fee: ₹500</p>
+          <p>License Fee: ₹13,500 - 20,000<br>Processing Fee: ₹500</p>
         </div>
       `,
       showCancelButton: true,

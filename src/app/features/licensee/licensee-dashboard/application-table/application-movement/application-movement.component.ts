@@ -2,7 +2,7 @@ import { Component, Inject, Input } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { MovementTransaction, ApplicationWithTransactions } from '../../../../../core/models/application-movement.model';
+import { LicenseApplication, Transaction } from '../../../../../core/models/license-application.model';
 
 @Component({
   selector: 'app-application-movement',
@@ -13,7 +13,7 @@ import { MovementTransaction, ApplicationWithTransactions } from '../../../../..
 })
 export class ApplicationMovementComponent {
   // Input to allow setting the data source from outside if needed
-  @Input() movementDataSource: MatTableDataSource<MovementTransaction>;
+  @Input() movementDataSource: MatTableDataSource<Transaction>;
 
   // Column definitions used by the mat-table in the template
   movementColumns: string[] = ['slNo', 'date', 'forwardedBy', 'forwardedTo', 'remarks'];
@@ -45,7 +45,7 @@ export class ApplicationMovementComponent {
 
   constructor(
     @Inject(MAT_DIALOG_DATA)
-    public data: { movementDataSource: { data: ApplicationWithTransactions[] } }
+    public data: { movementDataSource: { data: LicenseApplication[] } }
   ) {
     // Extract transactions from all applications passed in dialog data
     const apps = Array.isArray(data.movementDataSource?.data)
@@ -53,10 +53,10 @@ export class ApplicationMovementComponent {
       : [];
 
     // Flatten transactions from all applications and add the application ID to each
-    const transactions: MovementTransaction[] = apps.flatMap(app =>
+    const transactions: Transaction[] = apps.flatMap(app =>
       (app.transactions || []).map(txn => ({
         ...txn,
-        applicationId: app.application_id,
+        applicationId: app.applicationId,
       }))
     ).reverse(); // Reverse to show latest transaction first
 

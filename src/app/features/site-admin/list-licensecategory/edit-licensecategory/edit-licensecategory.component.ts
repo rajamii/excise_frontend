@@ -24,7 +24,7 @@ export class EditLicensecategoryComponent {
   onSave(): void {
     // Prepare the updated data for the license category
     const updatedData: Partial<LicenseCategory> = {
-      licenseCategoryDescription: this.data.licenseCategoryDescription, // Only the description is updated here
+      licenseCategory: this.data.licenseCategory, // Only the description is updated here
     };
   
     // Call the service to update the license category via an API request

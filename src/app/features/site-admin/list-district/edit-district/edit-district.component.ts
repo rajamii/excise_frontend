@@ -31,9 +31,9 @@ export class EditDistrictComponent {
   onSave(): void {
     // Prepare updated object with only required fields
     const updatedData: Partial<District> = {
-      District: this.data.District,
-      DistrictNameLL: this.data.DistrictNameLL,
-      DistrictCode: this.data.DistrictCode,
+      district: this.data.district,
+      districtNameLl: this.data.districtNameLl,
+      districtCode: this.data.districtCode,
     };
 
     // Call the update API and handle success or error

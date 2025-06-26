@@ -11,12 +11,9 @@ import { SiteEnquiryFormComponent } from '../site-enquiry-form/site-enquiry-form
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { LocationFee } from '../../../../../core/models/location-fee.model';
 import { MaterialModule } from '../../../../../shared/material.module';
-
-export interface Objection {
-  field_name: string;
-  remarks: string;
-  resolved: boolean;
-}
+import { Objection } from '../../../../../core/models/license-application.model';
+import { FormDataService } from '../../../../../core/config/form-data.service';
+import { SiteEnquiryFormModel } from '../../../../../core/models/site-enquiry.model';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -44,6 +41,10 @@ export class ReviewApplicationComponent implements OnInit {
 
   objections: Objection[] = [];
   isObjectionLoaded = false;
+
+  siteDetail: SiteEnquiryFormModel | null = null;
+  siteDetailData: { key: string; value: any; field: string }[] = [];
+  sitePdfUrl: string | null = null;
 
   // UI state flags to control which workflow is active
   isApproveFlow = false;
@@ -73,14 +74,14 @@ export class ReviewApplicationComponent implements OnInit {
     // License details
     exciseDistrict: 'Excise District',
     licenseCategory: 'License Category',
-    exciseSubDivision: 'Excise Sub-Division',
+    exciseSubdivision: 'Excise Sub-Division',
     license: 'License',
 
     // Key Info
     licenseType: 'License Type',
     establishmentName: 'Establishment Name',
     mobileNumber: 'Mobile Number',
-    emailId: 'Email ID',
+    email: 'Email ID',
     licenseNo: 'License Number',
     initialGrantDate: 'Initial Grant Date',
     renewedFrom: 'Renewed From',
@@ -88,10 +89,10 @@ export class ReviewApplicationComponent implements OnInit {
     yearlyLicenseFee: 'Yearly License Fee',
     licenseNature: 'License Nature',
     functioningStatus: 'Functioning Status',
-    modeofOperation: 'Mode of Operation',
+    modeOfOperation: 'Mode of Operation',
 
     // Address
-    siteSubDivision: 'Site Sub-Division',
+    siteSubdivision: 'Site Sub-Division',
     policeStation: 'Police Station',
     locationCategory: 'Location Category',
     locationName: 'Location Name',
@@ -109,7 +110,7 @@ export class ReviewApplicationComponent implements OnInit {
     companyCin: 'Company CIN',
     incorporationDate: 'Incorporation Date',
     companyPhoneNumber: 'Company Phone Number',
-    companyEmailId: 'Company Email ID',
+    companyEmail: 'Company Email ID',
 
     // Member Details
     status: 'Status',
@@ -119,7 +120,7 @@ export class ReviewApplicationComponent implements OnInit {
     gender: 'Gender',
     pan: 'PAN',
     memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email ID',
+    memberEmail: 'Member Email ID',
 
     photo: 'Photo'
   };
@@ -163,31 +164,33 @@ export class ReviewApplicationComponent implements OnInit {
 
     // Load existing objections if any
     this.fetchObjections();
+
+    this.fetchSiteDetails();
     
     // Group application data into sections for display
     this.licenseData = this.getFieldDisplayList([
-      'exciseDistrict', 'licenseCategory', 'exciseSubDivision', 'license'
+      'exciseDistrict', 'licenseCategory', 'exciseSubdivision', 'license'
     ]);
 
     this.keyInfoData = this.getFieldDisplayList([
-      'licenseType', 'establishmentName', 'mobileNumber', 'emailId', 'licenseNo',
+      'licenseType', 'establishmentName', 'mobileNumber', 'email', 'licenseNo',
       'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
-      'licenseNature', 'functioningStatus', 'modeofOperation'
+      'licenseNature', 'functioningStatus', 'modeOfOperation'
     ]);
 
     this.addressData = this.getFieldDisplayList([
-      'siteSubDivision', 'policeStation', 'locationCategory', 'locationName',
+      'siteSubdivision', 'policeStation', 'locationCategory', 'locationName',
       'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
     ]);
 
     this.unitDetailsData = this.getFieldDisplayList([
       'companyName', 'companyAddress', 'companyPan', 'companyCin',
-      'incorporationDate', 'companyPhoneNumber', 'companyEmailId'
+      'incorporationDate', 'companyPhoneNumber', 'companyEmail'
     ]);
 
     this.memberDetailsData = this.getFieldDisplayList([
       'status', 'memberName', 'fatherHusbandName', 'nationality',
-      'gender', 'pan', 'memberMobileNumber', 'memberEmailId'
+      'gender', 'pan', 'memberMobileNumber', 'memberEmail'
     ]);
 
     // Manually append photo field to member details
@@ -232,7 +235,7 @@ export class ReviewApplicationComponent implements OnInit {
 
   fetchObjections() {
     // Fetch objections related to the application from backend
-    this.licenseAppService.getObjections(this.application.application_id).subscribe({
+    this.licenseAppService.getObjections(this.application.applicationId).subscribe({
       next: data => {
         this.objections = data;
         this.isObjectionLoaded = true; // Mark objections as loaded
@@ -244,14 +247,95 @@ export class ReviewApplicationComponent implements OnInit {
     });
   }
 
+  fetchSiteDetails() {
+    // Fetch objections related to the application from backend
+    this.licenseAppService.getSiteDetails(this.application.applicationId).subscribe((data: SiteEnquiryFormModel) => {
+      this.siteDetail = data;
+
+      // Prepare data for display
+      this.siteDetailData = [
+        { key: 'Has Traditional Place', value: data.hasTraditionalPlace, field: 'hasTraditionalPlace' },
+        { key: 'Traditional Place Distance', value: data.traditionalPlaceDistance, field: 'traditionalPlaceDistance' },
+        { key: 'Traditional Place Name', value: data.traditionalPlaceName, field: 'traditionalPlaceName' },
+        { key: 'Traditional Place Nature', value: data.traditionalPlaceNature, field: 'traditionalPlaceNature' },
+        { key: 'Traditional Place Construction', value: data.traditionalPlaceConstruction, field: 'traditionalPlaceConstruction' },
+
+        { key: 'Has Educational Institution', value: data.hasEducationalInstitution, field: 'hasEducationalInstitution' },
+        { key: 'Educational Institution Distance', value: data.educationalInstitutionDistance, field: 'educationalInstitutionDistance' },
+        { key: 'Educational Institution Name', value: data.educationalInstitutionName, field: 'educationalInstitutionName' },
+        { key: 'Educational Institution Nature', value: data.educationalInstitutionNature, field: 'educationalInstitutionNature' },
+
+        { key: 'Has Hospital', value: data.hasHospital, field: 'hasHospital' },
+        { key: 'Hospital Distance', value: data.hospitalDistance, field: 'hospitalDistance' },
+        { key: 'Hospital Name', value: data.hospitalName, field: 'hospitalName' },
+
+        { key: 'Has Taxi Stand', value: data.hasTaxiStand, field: 'hasTaxiStand' },
+        { key: 'Taxi Stand Name', value: data.taxiStandName, field: 'taxiStandName' },
+        { key: 'Taxi Stand Distance', value: data.taxiStandDistance, field: 'taxiStandDistance' },
+
+        { key: 'Is Interconnected With Shops', value: data.isInterconnectedWithShops, field: 'isInterconnectedWithShops' },
+        { key: 'Interconnectivity Remarks', value: data.interconnectivityRemarks, field: 'interconnectivityRemarks' },
+
+        { key: 'Enquiry Officer Comments', value: data.enquiryOfficerComments, field: 'enquiryOfficerComments' },
+        { key: 'Shop Construction Type', value: data.shopConstructionType, field: 'shopConstructionType' },
+
+        { key: 'Has Excise Shops Nearby', value: data.hasExciseShopsNearby, field: 'hasExciseShopsNearby' },
+        { key: 'Nearby Excise Shop Count', value: data.nearbyExciseShopCount, field: 'nearbyExciseShopCount' },
+        { key: 'Nearby Excise Shops Remarks', value: data.nearbyExciseShopsRemarks, field: 'nearbyExciseShopsRemarks' },
+
+        { key: 'Is On Highway', value: data.isOnHighway, field: 'isOnHighway' },
+        { key: 'Highway Name', value: data.highwayName, field: 'highwayName' },
+
+        { key: 'Latitude', value: data.latitude, field: 'latitude' },
+        { key: 'Longitude', value: data.longitude, field: 'longitude' },
+
+        { key: 'Is Shop Size Correct', value: data.isShopSizeCorrect, field: 'isShopSizeCorrect' },
+        { key: 'Shop Size Remarks', value: data.shopSizeRemarks, field: 'shopSizeRemarks' },
+
+        { key: 'Additional Enquiry Officer Comments', value: data.additionalEnquiryOfficerComments, field: 'additionalEnquiryOfficerComments' },
+
+        { key: 'Has ID Proof', value: data.hasIdProof, field: 'hasIdProof' },
+        { key: 'ID Proof Comments', value: data.idProofComments, field: 'idProofComments' },
+
+        { key: 'Has Age Proof', value: data.hasAgeProof, field: 'hasAgeProof' },
+        { key: 'Age Proof Comments', value: data.ageProofComments, field: 'ageProofComments' },
+
+        { key: 'Has NOC From Landlord', value: data.hasNocFromLandlord, field: 'hasNocFromLandlord' },
+        { key: 'NOC Comments', value: data.nocComments, field: 'nocComments' },
+
+        { key: 'Has Ownership Proof', value: data.hasOwnershipProof, field: 'hasOwnershipProof' },
+        { key: 'Ownership Proof Comments', value: data.ownershipProofComments, field: 'ownershipProofComments' },
+
+        { key: 'Has Trade License', value: data.hasTradeLicense, field: 'hasTradeLicense' },
+        { key: 'Trade License Comments', value: data.tradeLicenseComments, field: 'tradeLicenseComments' },
+
+        { key: 'Proposes Barman Or Salesman', value: data.proposesBarmanOrSalesman, field: 'proposesBarmanOrSalesman' },
+        { key: 'Worker Proposal Comments', value: data.workerProposalComments, field: 'workerProposalComments' },
+
+        { key: 'Worker Docs Valid', value: data.workerDocsValid, field: 'workerDocsValid' },
+        { key: 'Worker Docs Comments', value: data.workerDocsComments, field: 'workerDocsComments' },
+
+        { key: 'License Recommendation', value: data.licenseRecommendation, field: 'licenseRecommendation' },
+        { key: 'Recommendation Comments', value: data.recommendationComments, field: 'recommendationComments' },
+
+        { key: 'Special Remarks', value: data.specialRemarks, field: 'specialRemarks' },
+        { key: 'Reporting Place', value: data.reportingPlace, field: 'reportingPlace' },
+      ];  
+
+      // PDF URL (safe handling)
+      this.sitePdfUrl = data.shopImageDocument
+        ? `http://127.0.0.1:8000/${data.shopImageDocument}`
+        : '';    });
+  }
+
   // Checks if a specific field has an unresolved objection
   hasObjection(field: string): boolean {
-    return this.objections.some(obj => obj.field_name === field && !obj.resolved);
+    return this.objections.some(obj => obj.fieldName === field && !obj.isResolved);
   }
 
   // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
-    const match = this.objections.find(obj => obj.field_name === field && !obj.resolved);
+    const match = this.objections.find(obj => obj.fieldName === field && !obj.isResolved);
     return match?.remarks || '';
   }
 
@@ -288,7 +372,7 @@ export class ReviewApplicationComponent implements OnInit {
   }
 
   onConfirm() {
-    const applicationId = this.application.application_id;
+    const applicationId = this.application.applicationId;
     const remarks = this.remarksForm.value.remarks;
 
     // Utility to show error alert
@@ -316,7 +400,7 @@ export class ReviewApplicationComponent implements OnInit {
 
     if (this.accountService.hasAnyRole('level_1')) {
       // Level 1 approval requires fee amount from selected location
-      const fee = this.selectedLocation?.fee_amount;
+      const fee = this.selectedLocation?.feeAmount;
       if (!fee) {
         Swal.fire('Missing Fee', 'Select a location before proceeding.', 'warning');
         return;
@@ -341,15 +425,17 @@ export class ReviewApplicationComponent implements OnInit {
         return;
       }
 
-      // Prepare form data for site enquiry submission
-      const formData = new FormData();
-      formData.append('application_id', applicationId);
-      formData.append('remarks', remarks);
+      // Prepare combined data object
+      const data: any = {
+        applicationId,
+        remarks,
+        ...siteData
+      };
 
-      Object.entries(siteData).forEach(([k, v]) => {
-        if (v != null) formData.append(k, v instanceof File ? v : v.toString());
-      });
+      // Convert to FormData using utility (handles snake_case conversion)
+      const formData = FormDataService.buildFormData(data);
 
+      // Add license category ID if selected
       const catId = this.licenseCategoryForm.value.licenseCategory?.id;
 
       // First submit site enquiry data, then advance application
@@ -383,7 +469,7 @@ export class ReviewApplicationComponent implements OnInit {
   }
 
   onSubmitObjection() {
-    const applicationId = this.application.application_id;
+    const applicationId = this.application.applicationId;
 
     // Collect selected objection fields with remarks
     const selectedFields = this.objectionFields

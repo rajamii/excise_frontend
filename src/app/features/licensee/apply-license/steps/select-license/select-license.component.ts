@@ -5,7 +5,7 @@ import { takeUntil } from 'rxjs/operators';
 import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { District } from '../../../../../core/models/district.model';
-import { SubDivision } from '../../../../../core/models/subdivision.model';
+import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 
@@ -22,8 +22,8 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   // Dropdown data
   districts: District[] = [];
-  private subDivisions: SubDivision[] = [];
-  filteredSubdivisions: SubDivision[] = [];
+  private subdivisions: Subdivision[] = [];
+  filteredSubdivisions: Subdivision[] = [];
   licenseCategories: LicenseCategory[] = [];
 
   // Static license types
@@ -40,7 +40,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   errorMessages = {
     exciseDistrict: signal(''),
     licenseCategory: signal(''),
-    exciseSubDivision: signal(''),
+    exciseSubdivision: signal(''),
     license: signal('')
   };
 
@@ -52,7 +52,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     this.selectLicenseForm = this.fb.group({
       exciseDistrict: new FormControl(storedValues.exciseDistrict, [Validators.required]),
       licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
-      exciseSubDivision: new FormControl(storedValues.exciseSubDivision, [Validators.required]),
+      exciseSubdivision: new FormControl(storedValues.exciseSubdivision, [Validators.required]),
       license: new FormControl(storedValues.license || 'New', [Validators.required]),
     });
 
@@ -75,14 +75,22 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   }
 
   // Load dropdown values from service
-  private loadDropdownData(): void {    
+  private loadDropdownData(): void {
     this.licenseeService.getDistrict().subscribe({
       next: (data: District[]) => this.districts = data,
       error: (error) => console.error('Error fetching districts:', error)
     });
 
-    this.licenseeService.getSubDivision().subscribe({
-      next: (data: SubDivision[]) => this.subDivisions = data,
+    this.licenseeService.getSubdivision().subscribe({
+      next: (data: Subdivision[]) => {
+        this.subdivisions = data;
+
+        // After loading subdivisions, trigger filtering using saved district
+        const storedDistrict = this.selectLicenseForm.get('exciseDistrict')?.value;
+        if (storedDistrict) {
+          this.onDistrictChange(storedDistrict);
+        }
+      },
       error: (error) => console.error('Failed to load subdivisions.', error)
     });
 
@@ -94,7 +102,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   // Filter sub-divisions when district changes
   onDistrictChange(name: string): void {
-    this.filteredSubdivisions = this.subDivisions.filter(subDiv => subDiv.District === name);
+    this.filteredSubdivisions = this.subdivisions.filter(subdiv => subdiv.district === name);
   }
 
   // Read form data from session storage

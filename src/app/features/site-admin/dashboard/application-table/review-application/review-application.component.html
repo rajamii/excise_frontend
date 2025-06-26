@@ -2,7 +2,7 @@
   <!-- Step 1: Show Application Data -->
     <mat-step label="Application Data">
         <div class="step-header">
-            <h5>{{application.application_id}}</h5>
+            <h5>{{application.applicationId}}</h5>
         </div>
         <div class="application-details">
             <!-- Section: License Info -->
@@ -112,7 +112,7 @@
                         <div class="value">
                             <!-- Conditionally display photo if field is 'photo' -->
                             <ng-container *ngIf="item.field === 'photo' && photoUrl; else normalValue">
-                                <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                                <img [src]="photoUrl" alt="Photo" rel="noopener" class="photo-preview" />
                             </ng-container>
                             <ng-template #normalValue>
                                 {{ item.value }}
@@ -128,6 +128,30 @@
                     </div>
                 </div>
             </ng-container>
+
+            <!-- Section: Site Details -->
+            <ng-container *ngIf="siteDetail">
+            <h6>Site Details</h6>
+            <div class="section-table">
+                <div
+                class="row"
+                *ngFor="let item of siteDetailData">
+                    <div class="key">{{ item.key }}</div>
+                    <div class="value">
+                        {{ item.value === true ? 'Yes' : item.value === false ? 'No' : (item.value || 'N/A') }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Link -->
+            <div class="pdf-link" *ngIf="sitePdfUrl">
+                <a [href]="sitePdfUrl" target="_blank" rel="noopener">
+                <mat-icon>picture_as_pdf</mat-icon>
+                View Shop Image
+                </a>
+            </div>
+            </ng-container>
+
         </div>
 
         <!-- Action Buttons (conditional by role/status) -->
@@ -168,7 +192,7 @@
     <mat-step *ngIf="isObjection" label="Raise Objection">
         <form [formGroup]="objectionForm">
             <div class="step-header">
-                <h5>{{application.application_id}}</h5>
+                <h5>{{application.applicationId}}</h5>
             </div>
 
             <!-- Objection Form -->
@@ -201,7 +225,7 @@
     <mat-step *ngIf="accountService.hasAnyRole('level_1') && isApproveFlow" [stepControl]="feeForm"  label="Calculate Fee">
         <form  [formGroup]="feeForm" label="Calculate Fee">
             <div class="step-header">
-                <h5>{{application.application_id}}</h5>
+                <h5>{{application.applicationId}}</h5>
             </div>
             <div class="step-content">
                 <div>
@@ -209,14 +233,14 @@
                     <mat-form-field appearance="outline" class="w-full">
                         <mat-label>Select Location</mat-label>
                         <mat-select formControlName="location" (selectionChange)="onLocationChange($event.value)">
-                        <mat-option *ngFor="let loc of locationFees" [value]="loc">{{ loc.location_name }}</mat-option>
+                        <mat-option *ngFor="let loc of locationFees" [value]="loc">{{ loc.locationName }}</mat-option>
                         </mat-select>
                     </mat-form-field>
                     
                     <!-- Fee amount auto-filled and non-editable -->
                     <mat-form-field appearance="outline" class="w-full">
                         <mat-label>License Fee</mat-label>
-                        <input matInput [value]="selectedLocation?.fee_amount" disabled>
+                        <input matInput [value]="selectedLocation?.feeAmount" disabled>
                     </mat-form-field>
                 </div>
 
@@ -232,7 +256,7 @@
     <mat-step *ngIf="accountService.hasAnyRole('level_2') && isApproveFlow" label="Site Enquiry">
         <div class="step-body">
             <div class="step-header justify-content-between px-1">
-                <h5 class = "application-id">{{ application.application_id }}</h5>
+                <h5 class = "application-id">{{ application.applicationId }}</h5>
                 <div class = "dialog-title">Site Enquiry Form</div>
             </div>
 
@@ -252,7 +276,7 @@
     <mat-step *ngIf="accountService.hasAnyRole('level_2') && isApproveFlow && !isRejected" [stepControl]="licenseCategoryForm" label="License Category">
         <form [formGroup]="licenseCategoryForm">
             <div class="step-header">
-                <h5>{{application.application_id}}</h5>
+                <h5>{{application.applicationId}}</h5>
             </div>
             <div class="step-content">
                 <div>
@@ -260,7 +284,7 @@
                         <mat-label>Select License Category</mat-label>
                         <mat-select formControlName="licenseCategory">
                         <mat-option *ngFor="let category of licenseCategories" [value]="category">
-                            {{ category.licenseCategoryDescription }}
+                            {{ category.licenseCategory }}
                         </mat-option>
                         </mat-select>
                     </mat-form-field>
@@ -277,7 +301,7 @@
     <mat-step [stepControl]="remarksForm" label="Review Remarks">
         <form [formGroup]="remarksForm">
             <div class="step-header">
-                <h5>{{application.application_id}}</h5>
+                <h5>{{application.applicationId}}</h5>
             </div>
             <div class="step-content">
                 <mat-form-field appearance="outline">
@@ -310,8 +334,8 @@
                 <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
 
                 <!-- Show fee only to Level 1 -->
-                <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.fee_amount">
-                    <strong>Fee Amount:</strong> ₹{{ selectedLocation?.fee_amount }}
+                <p *ngIf="accountService.hasAnyRole('level_1') && selectedLocation?.feeAmount">
+                    <strong>Fee Amount:</strong> ₹{{ selectedLocation?.feeAmount }}
                 </p>
 
                 <!-- Show license category only to Level 2 -->

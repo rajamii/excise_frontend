@@ -18,7 +18,7 @@ import { RouterModule } from '@angular/router';
 })
 export class ListUserComponent extends BaseComponent implements OnInit {
   // Columns displayed in the users list table
-  displayedColumns: string[] = ['firstName', 'middleName', 'lastName', 'username', 'phoneNumber', 'email', 'district', 'subDivision', 'role', 'createdBy', 'actions'];
+  displayedColumns: string[] = ['firstName', 'middleName', 'lastName', 'username', 'phoneNumber', 'email', 'district', 'subdivision', 'role', 'createdBy', 'actions'];
   
   // MatTableDataSource is used to handle the data for the table
   users = new MatTableDataSource<Account>();
@@ -35,6 +35,7 @@ export class ListUserComponent extends BaseComponent implements OnInit {
   ngOnInit(): void {
     // Loads users when the component is initialized
     this.loadUsers();
+    console.log(this.users)
   }
 
   // Method to load users from the server

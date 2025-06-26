@@ -6,6 +6,7 @@ import { LicenseApplication } from '../../../../../core/models/license-applicati
 import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2'; 
 import { Subscription } from 'rxjs';
+import { FormDataService } from '../../../../../core/config/form-data.service';
 
 @Component({
   selector: 'app-submit-application',
@@ -57,12 +58,12 @@ export class SubmitApplicationComponent {
   readonly licenseApplicationLabels: Partial<Record<keyof LicenseApplication, string>> = {
     exciseDistrict: 'Excise District',
     licenseCategory: 'License Category',
-    exciseSubDivision: 'Excise Sub Division',
+    exciseSubdivision: 'Excise Sub Division',
     license: 'License',
     licenseType: 'License Type',
     establishmentName: 'Establishment Name',
     mobileNumber: 'Mobile Number',
-    emailId: 'Email Id',
+    email: 'Email Id',
     licenseNo: 'License No.',
     initialGrantDate: 'Initial Grant Date',
     renewedFrom: 'Renewed From',
@@ -70,8 +71,8 @@ export class SubmitApplicationComponent {
     yearlyLicenseFee: 'Yearly License Fee',
     licenseNature: 'License Nature',
     functioningStatus: 'Functioning Status',
-    modeofOperation: 'Mode of Operation',
-    siteSubDivision: 'Site Sub Division',
+    modeOfOperation: 'Mode of Operation',
+    siteSubdivision: 'Site Sub Division',
     policeStation: 'Police Station',
     locationCategory: 'Location Category',
     locationName: 'Location Name',
@@ -87,7 +88,7 @@ export class SubmitApplicationComponent {
     companyCin: 'Company CIN',
     incorporationDate: 'Incorporation Date',
     companyPhoneNumber: 'Company Phone Number',
-    companyEmailId: 'Company Email Id',
+    companyEmail: 'Company Email Id',
     status: 'Status',
     memberName: 'Member Name',
     fatherHusbandName: 'Father/Husband Name',
@@ -95,7 +96,7 @@ export class SubmitApplicationComponent {
     gender: 'Gender',
     pan: 'PAN',
     memberMobileNumber: 'Member Mobile Number',
-    memberEmailId: 'Member Email Id',
+    memberEmail: 'Member Email Id',
     photo: 'Photo'
   };
 
@@ -191,7 +192,6 @@ export class SubmitApplicationComponent {
    * Combines data from session storage, photo, and submits via API.
    */
   async submit(): Promise<void> {
-    // Confirmation popup before submission
     const confirm = await Swal.fire({
       title: 'Are you sure?',
       text: 'Do you want to submit this application?',
@@ -204,7 +204,6 @@ export class SubmitApplicationComponent {
     if (!confirm.isConfirmed) return;
 
     try {
-      // Gather all relevant stored session data
       const keys = [
         'selectLicenseData',
         'keyInfoData',
@@ -220,22 +219,15 @@ export class SubmitApplicationComponent {
 
       const photoFile = this.licenseeService.getPassPhoto();
 
-      // Ensure all required data is present
       if (!photoFile || Object.keys(formValues).length === 0) {
         alert('Missing application data. Please complete the form.');
         return;
       }
 
-      // Build multipart form data
-      const formData = new FormData();
-      Object.entries(formValues).forEach(([key, val]) => {
-        if (val !== null && val !== undefined) {
-          formData.append(key, val.toString());
-        }
-      });
-      formData.append('photo', photoFile);
+      // Use FormDataService to build FormData with snake_case keys
+      const formData = FormDataService.buildFormData(formValues);
+      formData.append('photo', photoFile); // append file separately to root
 
-      // Make API call
       this.licenseeService.submitLicenseApplication(formData).subscribe({
         next: () => {
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
@@ -255,4 +247,5 @@ export class SubmitApplicationComponent {
       Swal.fire('Error', 'An unexpected error occurred.', 'error');
     }
   }
+
 }

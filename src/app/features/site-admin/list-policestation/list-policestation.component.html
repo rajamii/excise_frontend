@@ -6,7 +6,7 @@
     <mat-card-header class="page-card-header">
       <div class="page-title">Police Station List</div>
       <!-- Button to navigate to the 'Add Police Station' page -->
-      <button mat-flat-button [routerLink]="'../policestation/new'">
+      <button mat-flat-button [routerLink]="'../police-station/new'">
         <mat-icon>add</mat-icon> Add Police Station
       </button>
     </mat-card-header>
@@ -18,11 +18,11 @@
           <!-- Dropdown to select Subdivision with an option to filter by Subdivision -->
           <mat-form-field appearance="outline">
             <mat-label>Select Subdivision</mat-label>
-            <mat-select [(ngModel)]="selectedSubDivisionCode" (selectionChange)="onSubdivisionSelect()">
+            <mat-select [(ngModel)]="selectedSubdivisionCode" (selectionChange)="onSubdivisionSelect()">
               <mat-option [value]="null">All Subdivisions</mat-option>
               <!-- Iterate over the subdivisions to populate the options -->
-              <mat-option *ngFor="let sub of subdivisions" [value]="sub.SubDivisionCode">
-                {{ sub.SubDivisionName }}
+              <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
+                {{ sub.subdivision }}
               </mat-option>
             </mat-select>
           </mat-form-field>
@@ -40,21 +40,21 @@
           </ng-container>
 
           <!-- Column for Police Station Name -->
-          <ng-container matColumnDef="policeStationName">
+          <ng-container matColumnDef="policeStation">
             <mat-header-cell *matHeaderCellDef> Police Station Name </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{ element.PoliceStationName }} </mat-cell>
+            <mat-cell *matCellDef="let element"> {{ element.policeStation }} </mat-cell>
           </ng-container>
 
           <!-- Column for Police Station Code -->
           <ng-container matColumnDef="policeStationCode">
             <mat-header-cell *matHeaderCellDef> Police Station Code </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{ element.PoliceStationCode }} </mat-cell>
+            <mat-cell *matCellDef="let element"> {{ element.policeStationCode }} </mat-cell>
           </ng-container>
 
           <!-- Column for Sub Division Code -->
-          <ng-container matColumnDef="subDivisionCode">
+          <ng-container matColumnDef="subdivisionCode">
             <mat-header-cell *matHeaderCellDef> Sub Division Code </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{ element.SubDivisionCode }} </mat-cell>
+            <mat-cell *matCellDef="let element"> {{ element.subdivisionCode }} </mat-cell>
           </ng-container>
 
           <!-- Column for Actions (Edit & Delete) -->

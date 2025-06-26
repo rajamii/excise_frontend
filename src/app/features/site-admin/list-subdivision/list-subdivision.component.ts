@@ -6,7 +6,7 @@ import { BaseDependency } from '../../../base/dependency/base.dependendency';
 import { MatTableDataSource } from '@angular/material/table';
 import { District } from '../../../core/models/district.model';
 import { SiteAdminService } from '../site-admin-service';
-import { SubDivision } from '../../../core/models/subdivision.model';
+import { Subdivision } from '../../../core/models/subdivision.model';
 import Swal from 'sweetalert2';
 import { EditSubdivisionComponent } from './edit-subdivision/edit-subdivision.component';
 import { MatDialog } from '@angular/material/dialog';
@@ -19,14 +19,14 @@ import { MatDialog } from '@angular/material/dialog';
 })
 export class ListSubdivisionComponent extends BaseComponent implements OnInit {
   // Define the columns for the MatTable (for displaying subdivisions)
-  displayedColumns: string[] = ['id', 'subdivisionName', 'subdivisionNameLL', 'subdivisionCode', 'district', 'districtCode', 'actions'];
+  displayedColumns: string[] = ['id', 'subdivision', 'subdivisionNameLl', 'subdivisionCode', 'district', 'districtCode', 'actions'];
 
   // Create MatTableDataSource to manage the subdivision data
-  subdivisionDataSource = new MatTableDataSource<SubDivision>();
+  subdivisionDataSource = new MatTableDataSource<Subdivision>();
 
   // Arrays to hold district and subdivision data
   districts: District[] = [];
-  allSubdivisions: SubDivision[] = [];
+  allSubdivisions: Subdivision[] = [];
 
   // Variable to hold the selected district code (used for filtering subdivisions)
   selectedDistrictCode: number | null = null;
@@ -37,7 +37,7 @@ export class ListSubdivisionComponent extends BaseComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadDistricts(); // Load the districts data from the service
-    this.loadSubDivision(); // Load all subdivisions initially
+    this.loadSubdivision(); // Load all subdivisions initially
   }
 
   // Load all districts from the service and store them in the districts array
@@ -48,8 +48,8 @@ export class ListSubdivisionComponent extends BaseComponent implements OnInit {
   }
 
   // Load all subdivisions from the service and store them in the allSubdivisions array
-  loadSubDivision(): void {
-    this.siteAdminService.getSubDivision().subscribe(data => {
+  loadSubdivision(): void {
+    this.siteAdminService.getSubdivision().subscribe(data => {
       this.allSubdivisions = data; // Store all subdivisions
       this.subdivisionDataSource.data = this.allSubdivisions; // Initially show all subdivisions
     });
@@ -61,7 +61,7 @@ export class ListSubdivisionComponent extends BaseComponent implements OnInit {
       this.subdivisionDataSource.data = this.allSubdivisions; // Show all subdivisions if no district is selected
     } else {
       // Filter subdivisions based on the selected district code
-      this.subdivisionDataSource.data = this.allSubdivisions.filter(sub => sub.DistrictCode === this.selectedDistrictCode);
+      this.subdivisionDataSource.data = this.allSubdivisions.filter(sub => sub.districtCode === this.selectedDistrictCode);
     }
   }
 
@@ -75,13 +75,13 @@ export class ListSubdivisionComponent extends BaseComponent implements OnInit {
     // Reload subdivisions data when dialog is closed and changes were made
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.loadSubDivision(); // Reload subdivisions after successful edit
+        this.loadSubdivision(); // Reload subdivisions after successful edit
       }
     });
   }
 
   // Prompt the user for confirmation to delete the selected subdivision
-  onDelete(element: SubDivision): void {
+  onDelete(element: Subdivision): void {
       Swal.fire({
           title: 'Are you sure?',
           text: 'You will not be able to recover this subdivision!',
@@ -95,7 +95,7 @@ export class ListSubdivisionComponent extends BaseComponent implements OnInit {
               this.siteAdminService.deleteSubdivision(element.id).subscribe(
                   () => {
                       Swal.fire('Deleted!', 'Subdivision has been deleted.', 'success');
-                      this.loadSubDivision(); // Reload subdivisions after deletion
+                      this.loadSubdivision(); // Reload subdivisions after deletion
                   },
                   error => {
                       console.error('Error deleting subdivision:', error);

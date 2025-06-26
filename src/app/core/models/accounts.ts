@@ -6,11 +6,11 @@ export class Account {
   phoneNumber!: string;
   email!: string;
   password!: string;
-  confirm_password?: string;
+  confirmPassword?: string;
   role!: string;
   district!: string;  
-  subDivision!: string;
+  subdivision!: string;
   address?: string;
   createdBy?: string;
-  is_active!: boolean;
+  isActive!: boolean;
 }

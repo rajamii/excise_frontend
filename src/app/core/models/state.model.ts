@@ -1,8 +1,8 @@
 export class State {
     id!: number;
+    state!: string;
     stateCode!: number;
-    stateName!: string;
-    stateNameLL!: string;
-    active!: boolean;
+    stateNameLl!: string;
+    isActive!: boolean;
   }
   
