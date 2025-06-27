@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest, HttpErrorResponse } from '@angular/common/http';
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
-import { ApiService } from '../services/api.service';
+import { AuthService } from '../services/auth.service';
 
 @Injectable()
 export class CsrfInterceptor implements HttpInterceptor {
@@ -14,7 +14,7 @@ export class CsrfInterceptor implements HttpInterceptor {
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object, // Check if code is running in browser
-    private apiService: ApiService // Service to handle API calls including refresh
+    private authService: AuthService // Service to handle API calls including refresh
   ) {}
 
   /**
@@ -73,10 +73,13 @@ export class CsrfInterceptor implements HttpInterceptor {
       }
 
       // Call API to get new access token using the refresh token
-      return this.apiService.refreshToken().pipe(
-        switchMap((token: any) => {
+      return this.authService.refreshToken().pipe(
+        switchMap((response: any) => {
           this.isRefreshing = false;
-          const newAccessToken = token.access;
+          console.log('Received refresh response:', response);
+
+          // Accept either response.access or response.new_access_token
+          const newAccessToken = response.access || response.new_access_token;
 
           if (!newAccessToken) {
             console.error('No new access token received, logging out.');
@@ -86,6 +89,7 @@ export class CsrfInterceptor implements HttpInterceptor {
 
           // Store new access token and continue with the original request
           localStorage.setItem('access', newAccessToken);
+
           this.refreshTokenSubject.next(newAccessToken);
 
           return next.handle(this.addToken(req, newAccessToken));
@@ -115,6 +119,6 @@ export class CsrfInterceptor implements HttpInterceptor {
   private logoutAndRedirect() {
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
-    this.apiService.logout(); // Optionally call backend logout endpoint
+    this.authService.logout(); // Optionally call backend logout endpoint
   }
 }

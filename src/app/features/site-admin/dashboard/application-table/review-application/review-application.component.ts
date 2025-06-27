@@ -12,7 +12,7 @@ import { LicenseCategory } from '../../../../../core/models/license-category.mod
 import { LocationFee } from '../../../../../core/models/location-fee.model';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Objection } from '../../../../../core/models/license-application.model';
-import { FormDataService } from '../../../../../core/config/form-data.service';
+import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { SiteEnquiryFormModel } from '../../../../../core/models/site-enquiry.model';
 
 // Interface to describe how a field will be displayed in the UI
@@ -433,7 +433,7 @@ export class ReviewApplicationComponent implements OnInit {
       };
 
       // Convert to FormData using utility (handles snake_case conversion)
-      const formData = FormDataService.buildFormData(data);
+      const formData = FormDataUtil.buildFormData(data);
 
       // Add license category ID if selected
       const catId = this.licenseCategoryForm.value.licenseCategory?.id;

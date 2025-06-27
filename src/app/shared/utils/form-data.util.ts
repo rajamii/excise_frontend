@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 @Injectable({
   providedIn: 'root',
 })
-export class FormDataService {
+export class FormDataUtil  {
   private static camelToSnake(key: string): string {
     return key.replace(/([A-Z])/g, '_$1').toLowerCase();
   }
@@ -35,4 +35,5 @@ export class FormDataService {
 
     return form;
   }
+
 }

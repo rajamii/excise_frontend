@@ -4,8 +4,8 @@ import { ToastrService } from 'ngx-toastr';
 import { BaseDependency } from './dependency/base.dependendency';
 import { StateStorageService } from '../core/config/state-storage.service';
 import { AccountService } from '../core/services/account.service';
-import { ApiService } from '../core/services/api.service';
 import Swal from 'sweetalert2';
+import { AuthService } from '../core/services/auth.service';
 
 @Component({
   template: '', // Base component has no template. Designed for inheritance.
@@ -25,7 +25,7 @@ export class BaseComponent implements OnDestroy {
   protected accountService: AccountService;
 
   // Handles API requests across the app
-  protected apiService: ApiService;
+  protected authService: AuthService;
 
   // SweetAlert instance for alert modals
   protected myswal: any;
@@ -41,7 +41,7 @@ export class BaseComponent implements OnDestroy {
     this.toastrService = baseDependency.toastrService;
     this.accountService = baseDependency.accountService;
     this.myswal = Swal;
-    this.apiService = baseDependency.apiService;
+    this.authService = baseDependency.authService;
   }
 
   /**

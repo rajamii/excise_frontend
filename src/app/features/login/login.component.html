@@ -67,12 +67,12 @@
 			<!-- Phone number input (shown if OTP not sent yet) -->
 			<mat-form-field appearance="outline" *ngIf="!otpSent">
 			  <mat-icon>phone</mat-icon>
-			  <input matInput formControlName="phonenumber" placeholder="Phone Number"/>
+			  <input matInput formControlName="phoneNumber" placeholder="Phone Number"/>
 			</mat-form-field>
   
 			<!-- Send OTP button -->
 			<div class="mt-3" *ngIf="!otpSent">
-			  <button mat-flat-button class="send-otp-button" type="button" (click)="sendOtp()" [disabled]="loginForm.controls['phonenumber'].invalid">
+			  <button mat-flat-button class="send-otp-button" type="button" (click)="sendOtp()" [disabled]="loginForm.controls['phoneNumber'].invalid">
 				Send OTP
 			  </button>
 			</div>
@@ -82,7 +82,7 @@
 
 				<!-- OTP sent info message and reset link -->
 				<div class="otp-sent-info mt-3">
-					<p>OTP sent to {{ loginForm.controls['phonenumber'].value }}.<br> Not your number? <a (click)="resetPhoneNumber()">Go Back</a></p>
+					<p>OTP sent to {{ loginForm.controls['phoneNumber'].value }}.<br> Not your number? <a (click)="resetPhoneNumber()">Go Back</a></p>
 				</div>
 
 				<!-- OTP input using ng-otp-input -->

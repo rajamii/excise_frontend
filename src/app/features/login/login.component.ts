@@ -4,8 +4,9 @@ import { MaterialModule } from '../../shared/material.module';
 import { CaptchaComponent } from '../../shared/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
 import { BaseDependency } from '../../base/dependency/base.dependendency';
-import { ApiService } from '../../core/services/api.service';
 import { NgOtpInputModule } from 'ng-otp-input';
+import { AuthService } from '../../core/services/auth.service';
+import { FormDataUtil } from '../../shared/utils/form-data.util';
 
 @Component({
   selector: 'app-login',
@@ -26,7 +27,7 @@ export class LoginComponent extends BaseComponent {
 
   constructor(
     protected override baseDependency: BaseDependency,
-    protected override apiService: ApiService,
+    protected override authService: AuthService,
     private fb: FormBuilder
   ) {
     super(baseDependency);
@@ -35,7 +36,7 @@ export class LoginComponent extends BaseComponent {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
       password: [''],
-      phonenumber: [''], 
+      phoneNumber: [''], 
       otp: [''],
       response: ['', Validators.required],   // Captcha response value
       hashkey: ['', Validators.required],    // Captcha hashkey
@@ -74,22 +75,22 @@ export class LoginComponent extends BaseComponent {
 
   /** Sends OTP to the user's phone number */
   sendOtp(): void {
-    if (this.loginForm.controls['phonenumber'].invalid) {
+    if (this.loginForm.controls['phoneNumber'].invalid) {
       alert('Please enter a valid phone number.');
       return;
     }
 
-    const phonenumber = this.loginForm.value.phonenumber;
-    console.log('🔹 Sending OTP request for:', phonenumber);
+    const phoneNumber = this.loginForm.value.phoneNumber;
+    console.log('🔹 Sending OTP request for:', phoneNumber);
 
-    const formData = new FormData();
-    formData.append('phonenumber', phonenumber);
+    const formData = FormDataUtil.buildFormData({ phoneNumber });
 
-    this.apiService.sendOtp(formData).subscribe({
+    this.authService.sendOtp(formData).subscribe({
       next: (response) => {
         this.otpSent = true;
-        this.otpIndex = response.otp_id; // Capture OTP index
-        console.log('🔹 OTP sent successfully:', this.otpIndex);
+        this.otpIndex = response.otpId; // Capture OTP index
+
+        console.log('OTP:', response.otp); // only if backend includes it
       },
       error: (err) => {
         console.error('❌ Error sending OTP:', err);
@@ -128,7 +129,7 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    this.apiService.login(this.loginForm.value).subscribe({
+    this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
         this.loginError = false;
         this.loginErrorMessages = [];
@@ -178,14 +179,14 @@ export class LoginComponent extends BaseComponent {
     }
 
     const requestData = {
-      phonenumber: this.loginForm.value.phonenumber,
+      phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
-      otp_id: this.otpIndex ?? ''
+      otpId: this.otpIndex ?? ''
     };
 
     console.log('🔹 Verifying OTP:', requestData);
 
-    this.apiService.verifyOtp(requestData).subscribe({
+    this.authService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
         console.log('🔹 OTP verification response:', res);
         this.handleAuthResponse(res);
@@ -202,6 +203,8 @@ export class LoginComponent extends BaseComponent {
     if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
       localStorage.setItem('access', res.authenticatedUser.access);
       localStorage.setItem('refresh', res.authenticatedUser.refresh);
+
+      console.log('Access Token:', res.authenticatedUser.access);
       
       // Fetch user identity (which includes the role) and redirect based on role
       this.accountService.identity(true).subscribe({

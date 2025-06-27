@@ -6,7 +6,7 @@ import { LicenseApplication } from '../../../../../core/models/license-applicati
 import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2'; 
 import { Subscription } from 'rxjs';
-import { FormDataService } from '../../../../../core/config/form-data.service';
+import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 
 @Component({
   selector: 'app-submit-application',
@@ -225,7 +225,7 @@ export class SubmitApplicationComponent {
       }
 
       // Use FormDataService to build FormData with snake_case keys
-      const formData = FormDataService.buildFormData(formValues);
+      const formData = FormDataUtil.buildFormData(formValues);
       formData.append('photo', photoFile); // append file separately to root
 
       this.licenseeService.submitLicenseApplication(formData).subscribe({

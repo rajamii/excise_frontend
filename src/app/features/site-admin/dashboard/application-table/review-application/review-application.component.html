@@ -340,7 +340,7 @@
 
                 <!-- Show license category only to Level 2 -->
                 <p *ngIf="accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory">
-                    <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategoryDescription }}
+                    <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategory }}
                 </p>
             </mat-card>
             </ng-container>

@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { AccountService } from '../../core/services/account.service';
-import { ApiService } from '../../core/services/api.service';
 import { StateStorageService } from '../../core/config/state-storage.service';
+import { AuthService } from '../../core/services/auth.service';
 
 /**
  * A shared service container that provides all core dependencies
@@ -27,7 +27,7 @@ export class BaseDependency {
     public toastrService: ToastrService,
 
     // Shared service for making API calls to the backend
-    public apiService: ApiService,
+    public authService: AuthService,
 
     // Manages state in local or session storage
     public stateStorageService: StateStorageService
