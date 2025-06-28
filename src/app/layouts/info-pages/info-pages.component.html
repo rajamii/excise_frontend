@@ -43,7 +43,7 @@
   <mat-card class = "organisational-structure grid-card" *ngIf="page === 'organisational-structure'">
     <mat-card-header>Organisational Structure</mat-card-header>
     <mat-card-content class = "card-container">
-      <img src = "assets/images/footer/link/Org_Struct.jpg">
+      <img src = "assets/images/info-page/Org_Struct.jpg">
     </mat-card-content>
   </mat-card>
 
@@ -62,59 +62,17 @@
   <!--ABOUT US: Heads of Organisations-->
   <mat-card class = "hods grid-card" *ngIf="page === 'hods'">
     <mat-card-header>Heads of Organisations</mat-card-header>
-    <mat-card-content class = "card-container">
-
-      <mat-card class = "person">
-        <mat-card-content>
-          <img src = "assets/images/footer/link/hods/governor.jpg">
-          <div class = "description">
-            <h6>Shri Om Prakash Mathur</h6>
-            Honorable Governor
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class = "person">
-        <mat-card-content>
-          <img src = "assets/images/footer/link/hods/cm.jpg">
-          <div class = "description">
-            <h6>Shri Prem Singh Tamang</h6>
-            Hon'ble Chief Minister
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class = "person">
-        <mat-card-content>
-          <img src = "assets/images/footer/link/hods/advisor.jpg">
-          <div class = "description">
-            <h6>Shri Bedu Singh Panth</h6>
-            Hon'ble Advisor, Excise
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class = "person">
-        <mat-card-content>
-          <img src = "assets/images/footer/link/hods/default.png">
-          <div class = "description">
-            <h6>Shri Milan Kumar Subba</h6>
-            Secretary
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card class = "person">
-        <mat-card-content>
-          <img src = "assets/images/footer/link/hods/default.png">
-          <div class = "description">
-            <h6>Smt Binita Chettri</h6>
-            Commissioner
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-    </mat-card-content>
+      <mat-card-content class="card-container">
+        <mat-card class="hod" *ngFor="let hod of hods">
+          <mat-card-content>
+            <img [src]="hod.image" alt="{{ hod.name }}">
+            <div class="description">
+              <h6>{{ hod.name }}</h6>
+              {{ hod.title }}
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-card-content>
   </mat-card>
 
   <!--Excise Secretaries / Principal Secretaries-->
@@ -279,11 +237,11 @@
         </div>
         <div class="contact">
           <div class="phone">
-            <img src="assets/images/footer/link/phone.png">
+            <mat-icon>call</mat-icon>
             <div class="text">{{ nodalOfficer[0].phoneNumber }}</div>
           </div>
           <div class="email">
-            <img src="assets/images/footer/link/email.png">
+            <mat-icon>email</mat-icon>
             <div class="text">{{ nodalOfficer[0].email }}</div>
           </div>
         </div>

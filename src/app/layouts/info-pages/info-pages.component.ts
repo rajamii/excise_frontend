@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Pipe, PipeTransform } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
@@ -60,6 +60,34 @@ export class InfoPagesComponent implements OnInit {
   districtColumns: string[] = ['district', 'name', 'designation', 'address', 'phoneNumber'];
   districtData: PublicInformationOfficer[] = [];
 
+  hods = [
+    {
+      name: 'Shri Om Prakash Mathur',
+      title: 'Honorable Governor',
+      image: 'assets/images/info-page/hods/governor.jpg',
+    },
+    {
+      name: 'Shri Prem Singh Tamang',
+      title: "Hon'ble Chief Minister",
+      image: 'assets/images/info-page/hods/cm.jpg',
+    },
+    {
+      name: 'Shri Bedu Singh Panth',
+      title: "Hon'ble Advisor, Excise",
+      image: 'assets/images/info-page/hods/advisor.jpg',
+    },
+    {
+      name: 'Shri Milan Kumar Subba',
+      title: 'Secretary',
+      image: 'assets/images/info-page/hods/default.png',
+    },
+    {
+      name: 'Smt Binita Chettri',
+      title: 'Commissioner',
+      image: 'assets/images/info-page/hods/default.png',
+    },
+  ];
+
   constructor(private route: ActivatedRoute, private infoPagesService: InfoPagesService) {}
 
   ngOnInit(): void {
@@ -106,5 +134,18 @@ export class InfoPagesComponent implements OnInit {
       const matchesSubLevel = this.selectedOfficeSubLevel ? officer.officeSubLevel === this.selectedOfficeSubLevel : true;
       return matchesLevel && matchesSubLevel;
     });
+  }
+
+  getMarkdownPath(page: string): string {
+    return `assets/content/${page}.md`;
+  }
+
+  getPageTitle(page: string): string {
+    const titles: Record<string, string> = {  
+      'terms-of-use': 'Terms of Use',
+      'privacy-policy': 'Privacy Policy',
+      'disclaimer': 'Disclaimer',
+    };
+    return titles[page] || 'Information';
   }
 }

@@ -3,7 +3,7 @@ import { FormGroup, FormBuilder, FormControl, Validators } from '@angular/forms'
 import { MaterialModule } from '../../shared/material.module';
 import { CaptchaComponent } from '../../shared/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
-import { BaseDependency } from '../../base/dependency/base.dependendency';
+import { BaseDependency } from '../../base/dependency/base.dependency';
 import { NgOtpInputModule } from 'ng-otp-input';
 import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';

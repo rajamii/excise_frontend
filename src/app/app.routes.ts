@@ -54,7 +54,7 @@ export const routes: Routes = [
         Authority.LEVEL_5
       ]
     },
-    loadChildren: () => import('./features/site-admin/site-admin-routes')
+    loadChildren: () => import('./features/admin/admin.routes')
   },
 
   // Licensee feature module

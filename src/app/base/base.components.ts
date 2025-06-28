@@ -1,11 +1,18 @@
 import { Component, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { BaseDependency } from './dependency/base.dependendency';
+import { BaseDependency } from './dependency/base.dependency';
 import { StateStorageService } from '../core/config/state-storage.service';
 import { AccountService } from '../core/services/account.service';
 import Swal from 'sweetalert2';
 import { AuthService } from '../core/services/auth.service';
+import { MasterService } from '../core/services/master.service';
+import { UserService } from '../core/services/user.service';
+import { LicenseApplicationService } from '../core/services/license-application.service';
+import { InfoPagesService } from '../core/services/info-pages.service';
+import { SalesmanBarmanRegistrationService } from '../core/services/salesman-barman-registration.service';
+import { CompanyRegistrationService } from '../core/services/company-registration.service';
+import { AdminService } from '../features/admin/admin.service';
 
 @Component({
   template: '', // Base component has no template. Designed for inheritance.
@@ -30,6 +37,16 @@ export class BaseComponent implements OnDestroy {
   // SweetAlert instance for alert modals
   protected myswal: any;
 
+  protected masterService: MasterService;
+  protected userService: UserService;
+  protected licenseAppService: LicenseApplicationService;
+  protected infoPagesService: InfoPagesService;
+  protected salesmanBarmanService: SalesmanBarmanRegistrationService;
+  protected companyRegistrationService: CompanyRegistrationService;
+
+  // Admin service
+  protected adminService: AdminService;
+
   /**
    * Constructor injects a base dependency object that bundles all core services.
    * This allows shared services to be used by any component extending BaseComponent.
@@ -42,6 +59,15 @@ export class BaseComponent implements OnDestroy {
     this.accountService = baseDependency.accountService;
     this.myswal = Swal;
     this.authService = baseDependency.authService;
+
+    this.masterService = baseDependency.masterService;
+    this.userService = baseDependency.userService;
+    this.licenseAppService = baseDependency.licenseAppService;
+    this.infoPagesService = baseDependency.infoPagesService;
+    this.salesmanBarmanService = baseDependency.salesmanBarmanService;
+    this.companyRegistrationService = baseDependency.companyRegistrationService;
+
+    this.adminService = baseDependency.adminService;
   }
 
   /**

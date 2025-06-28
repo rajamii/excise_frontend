@@ -3,37 +3,38 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Account } from '../models/accounts';
+import { Role } from '../models/role';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private baseUrl = `${environment.apiBaseUrl}/user`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/user`;
 
   constructor(private http: HttpClient) {}
 
-  // Fetches the list of all users
-  listUsers(): Observable<Account[]> {
-    return this.http.get<Account[]>(`${this.baseUrl}/list/`);
+  // Get all users
+  getUsers(): Observable<Account[]> {
+    return this.http.get<Account[]>(`${this.baseUrl}/list/?username=all`);
   }
 
-  // Retrieves a specific user's details by username
-  getUser(username: string): Observable<Account> {
+  // Get user by username
+  getUserByUsername(username: string): Observable<Account> {
     return this.http.get<Account>(`${this.baseUrl}/detail/${username}/`);
   }
 
-  // Sends a request to create a new user
-  createUser(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/create/`, data);
+  // Get currently logged-in user
+  getCurrentUser(): Observable<Account> {
+    return this.http.get<Account>(`${this.baseUrl}/detail/`);
   }
 
-  // Updates an existing user's details
-  updateUser(username: string, data: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/update/${username}/`, data);
+  // Update user by username
+  updateUser(username: string, changes: Partial<Account>): Observable<Account> {
+    return this.http.put<Account>(`${this.baseUrl}/update/${username}/`, changes);
   }
 
-  // Deletes a user by username
-  deleteUser(username: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/delete/${username}/`);
+  // Retrieves all roles
+  getRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>(`${this.baseUrl}/roles`);
   }
 }

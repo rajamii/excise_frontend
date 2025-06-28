@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module'; 
 import { RouterModule } from '@angular/router'; 
 import { BaseComponent } from '../../../base/base.components';
-import { BaseDependency } from '../../../base/dependency/base.dependendency'; 
+import { BaseDependency } from '../../../base/dependency/base.dependency'; 
 import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';

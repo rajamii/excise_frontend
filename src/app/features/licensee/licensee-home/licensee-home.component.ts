@@ -3,7 +3,7 @@ import { RouterModule, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { BaseComponent } from '../../../base/base.components';
-import { BaseDependency } from '../../../base/dependency/base.dependendency';
+import { BaseDependency } from '../../../base/dependency/base.dependency';
 import { UserProfileComponent } from './user-profile/user-profile.component';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatMenuModule } from '@angular/material/menu';
