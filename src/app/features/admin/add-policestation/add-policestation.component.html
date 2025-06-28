@@ -9,7 +9,7 @@
     </mat-card-header>
     <mat-card-content class="page-card-content">
       <form #newPoliceStationForm="ngForm">
-  
+
         <!-- Police Station Name Input Field -->
         <div class="row mb-3">
           <div class="col-xl-4 col-lg-4 col-md-4">
@@ -17,92 +17,114 @@
               <mat-label>Police Station Name</mat-label>
               <input
                 matInput
-                [(ngModel)]="policeStation.policeStation" 
+                [(ngModel)]="policeStation.policeStation"
                 name="policeStationName"
                 #policeStationName="ngModel"
                 placeholder="Enter Police Station Name"
-                maxlength="150"  
-                minlength="3"   
-                [pattern]="patternConstants.NAME"  
-                required        
-              />
-            </mat-form-field>
-
-            <!-- Error messages for Police Station Name field -->
-            <div class="no-margin" *ngIf="(policeStationName.dirty || policeStationName.touched) && policeStationName.invalid">
-              <mat-error *ngIf="policeStationName.errors?.['required']">
-                  <small>This field is required</small>
-                </mat-error>
-              <mat-error *ngIf="policeStationName.errors?.['minlength']">
-                <small>Minimum length is 3</small>
-              </mat-error>
-              <mat-error *ngIf="policeStationName.errors?.['maxlength']">
-                <small>Maximum length is 150</small>
-              </mat-error>
-              <mat-error *ngIf="policeStationName.errors?.['pattern']">
-                <small>Invalid format</small>
-              </mat-error>                  
-            </div>
-          </div>
-  
-          <!-- Police Station Code Input Field -->
-          <div class="col-xl-4 col-lg-4 col-md-4">
-            <mat-form-field class="my-form-full-width" appearance="outline">
-              <mat-label>Police Station Code</mat-label>
-              <input
-                matInput
-                [pattern]="patternConstants.NUMBER"  
-                placeholder="Enter Police Station Code"
-                name="policeStationCode"
-                #policeStationCode="ngModel"
-                [(ngModel)]="policeStation.policeStationCode"
+                maxlength="150"
+                minlength="3"
+                [pattern]="patternConstants.NAME"
                 required
-              />
-            </mat-form-field>
+                />
+              </mat-form-field>
 
-            <!-- Error messages for Police Station Code field -->
-            <div class="no-margin" *ngIf="(policeStationCode.dirty || policeStationCode.touched) && policeStationCode.invalid">
-              <mat-error *ngIf="policeStationCode.errors?.['required']">
-                <small>This field is required</small>
-              </mat-error>
-              <mat-error *ngIf="policeStationCode.errors?.['pattern']">
-                <small>Please enter a valid Police Station Code (numbers only).</small>
-              </mat-error>
+              <!-- Error messages for Police Station Name field -->
+              @if ((policeStationName.dirty || policeStationName.touched) && policeStationName.invalid) {
+                <div class="no-margin">
+                  @if (policeStationName.errors?.['required']) {
+                    <mat-error>
+                      <small>This field is required</small>
+                    </mat-error>
+                  }
+                  @if (policeStationName.errors?.['minlength']) {
+                    <mat-error>
+                      <small>Minimum length is 3</small>
+                    </mat-error>
+                  }
+                  @if (policeStationName.errors?.['maxlength']) {
+                    <mat-error>
+                      <small>Maximum length is 150</small>
+                    </mat-error>
+                  }
+                  @if (policeStationName.errors?.['pattern']) {
+                    <mat-error>
+                      <small>Invalid format</small>
+                    </mat-error>
+                  }
+                </div>
+              }
             </div>
-          </div>
-        </div>
-  
-        <!-- Subdivision Selection -->
-        <div class="row mb-3">
-          <div class="col-xl-4 col-lg-4 col-md-4">
-            <mat-form-field class="my-form-full-width" appearance="outline">
-              <mat-label>Subdivision</mat-label>
-              <mat-select placeholder="Select Subdivision" name="subdivision" #subdivision="ngModel" [(ngModel)]="policeStation.subdivisionCode" required>
-                <mat-option>--</mat-option>
-                <!-- Loop through subdivisions and display each one as an option -->
-                <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
-                  {{ sub.subdivision }}
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
 
-            <!-- Error message for Subdivision field -->
-            <div class="no-margin" *ngIf="(subdivision.dirty || subdivision.touched) && subdivision.invalid">
-              <mat-error *ngIf="subdivision.errors?.['required']">
-                <small>This field is required</small>
-              </mat-error>
+            <!-- Police Station Code Input Field -->
+            <div class="col-xl-4 col-lg-4 col-md-4">
+              <mat-form-field class="my-form-full-width" appearance="outline">
+                <mat-label>Police Station Code</mat-label>
+                <input
+                  matInput
+                  [pattern]="patternConstants.NUMBER"
+                  placeholder="Enter Police Station Code"
+                  name="policeStationCode"
+                  #policeStationCode="ngModel"
+                  [(ngModel)]="policeStation.policeStationCode"
+                  required
+                  />
+                </mat-form-field>
+
+                <!-- Error messages for Police Station Code field -->
+                @if ((policeStationCode.dirty || policeStationCode.touched) && policeStationCode.invalid) {
+                  <div class="no-margin">
+                    @if (policeStationCode.errors?.['required']) {
+                      <mat-error>
+                        <small>This field is required</small>
+                      </mat-error>
+                    }
+                    @if (policeStationCode.errors?.['pattern']) {
+                      <mat-error>
+                        <small>Please enter a valid Police Station Code (numbers only).</small>
+                      </mat-error>
+                    }
+                  </div>
+                }
+              </div>
             </div>
-          </div>
-        </div>
-  
-        <!-- Save and Cancel Buttons -->
-        <div class="row mb-3">
-          <div class="col-xl-4 col-lg-4 col-md-4">
-            <button mat-raised-button color="primary" (click)="save()" [disabled]="newPoliceStationForm.form.invalid">Save</button>
-            <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
-          </div>
-        </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
-</div>
+
+            <!-- Subdivision Selection -->
+            <div class="row mb-3">
+              <div class="col-xl-4 col-lg-4 col-md-4">
+                <mat-form-field class="my-form-full-width" appearance="outline">
+                  <mat-label>Subdivision</mat-label>
+                  <mat-select placeholder="Select Subdivision" name="subdivision" #subdivision="ngModel" [(ngModel)]="policeStation.subdivisionCode" required>
+                    <mat-option>--</mat-option>
+                    <!-- Loop through subdivisions and display each one as an option -->
+                    @for (sub of subdivisions; track sub) {
+                      <mat-option [value]="sub.subdivisionCode">
+                        {{ sub.subdivision }}
+                      </mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <!-- Error message for Subdivision field -->
+                @if ((subdivision.dirty || subdivision.touched) && subdivision.invalid) {
+                  <div class="no-margin">
+                    @if (subdivision.errors?.['required']) {
+                      <mat-error>
+                        <small>This field is required</small>
+                      </mat-error>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Save and Cancel Buttons -->
+            <div class="row mb-3">
+              <div class="col-xl-4 col-lg-4 col-md-4">
+                <button mat-raised-button color="primary" (click)="save()" [disabled]="newPoliceStationForm.form.invalid">Save</button>
+                <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
+              </div>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>

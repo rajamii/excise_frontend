@@ -1,7 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
-import { NavbarModule, NavModule } from '@coreui/angular';
 import { AccountService } from '../../core/services/account.service';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../core/services/auth.service';
@@ -11,8 +10,6 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [
     MaterialModule,
     RouterModule,
-    NavbarModule,
-    NavModule
   ],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'

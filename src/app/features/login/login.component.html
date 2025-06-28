@@ -1,136 +1,136 @@
 <div class="login-container">
-	<!-- Main login card -->
-	<mat-card class="sign-in-card">
-  
-	  <!-- Heading for the login form -->
-	  <mat-card-header>Sign In</mat-card-header>
-	
-	  <mat-card-content>
-		<!-- Toggle buttons to switch between Password and OTP login modes -->
-		<div class="switch-toggle">
-			<div class="switch-indicator" [class.right]="!isPasswordMode"></div>
-			<button (click)="toggleMode(true)" [class.active]="isPasswordMode">Password</button>
-			<button (click)="toggleMode(false)" [class.active]="!isPasswordMode">OTP</button>
-		</div>		  
-  
-		<!-- Login form -->
-		<form [formGroup]="loginForm" (ngSubmit)="onLogin()" [ngStyle]="{ 'margin-top.px': !isPasswordMode ? 55 : 0 }">
-  
-		  <!-- Password-based login section -->
-		  <ng-container *ngIf="isPasswordMode">
-			<!-- Username field -->
-			<mat-form-field appearance="outline">
-			  <mat-icon>person</mat-icon>
-			  <input matInput formControlName="username" placeholder="Username" />
-			</mat-form-field>
-  
-			<!-- Password field with toggle visibility -->
-			<mat-form-field appearance="outline">
-			  <mat-icon>lock</mat-icon>
-			  <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Password" />
-			  <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
-				<mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
-			  </button>
-			</mat-form-field>
-  
-			<!-- Custom captcha component -->
-			<app-captcha [formGroup]="loginForm"></app-captcha>
+  <!-- Main login card -->
+  <mat-card class="sign-in-card">
 
-			<div *ngIf="loginError" class="error-box">
-				<mat-card class="error-card">
-					<mat-card-content>
-					<ul>
-						<li *ngFor="let msg of loginErrorMessages">{{ msg }}</li>
-					</ul>
-					</mat-card-content>
-				</mat-card>
-			</div>
-			
-			<div class="buttons">
-				<div>
-				  <button mat-flat-button class="sign-in-button" type="submit" [disabled]="loginForm.invalid">
-					Sign In
-				  </button>
-				</div>
-	  
-				<!-- Forgot password link -->
-				<div class="forgot-password mt-3">
-				  <a style="font-size: 14px;" (click)="resetPhoneNumber()">Forgot Password?</a>
-				</div>
-			</div>
-			<!-- Submit button -->
-		  </ng-container>
-  
-		  <!-- OTP-based login section -->
-		  <ng-container *ngIf="!isPasswordMode">
-  
-			<!-- Phone number input (shown if OTP not sent yet) -->
-			<mat-form-field appearance="outline" *ngIf="!otpSent">
-			  <mat-icon>phone</mat-icon>
-			  <input matInput formControlName="phoneNumber" placeholder="Phone Number"/>
-			</mat-form-field>
-  
-			<!-- Send OTP button -->
-			<div class="mt-3" *ngIf="!otpSent">
-			  <button mat-flat-button class="send-otp-button" type="button" (click)="sendOtp()" [disabled]="loginForm.controls['phoneNumber'].invalid">
-				Send OTP
-			  </button>
-			</div>
-  
-			<!-- OTP input and verify section (shown after OTP is sent) -->
-			<div *ngIf="otpSent">
+    <!-- Heading for the login form -->
+    <mat-card-header>Sign In</mat-card-header>
 
-				<!-- OTP sent info message and reset link -->
-				<div class="otp-sent-info mt-3">
-					<p>OTP sent to {{ loginForm.controls['phoneNumber'].value }}.<br> Not your number? <a (click)="resetPhoneNumber()">Go Back</a></p>
-				</div>
+    <mat-card-content>
+      <!-- Toggle buttons to switch between Password and OTP login modes -->
+      <div class="switch-toggle">
+        <div class="switch-indicator" [class.right]="!isPasswordMode"></div>
+        <button (click)="toggleMode(true)" [class.active]="isPasswordMode">Password</button>
+        <button (click)="toggleMode(false)" [class.active]="!isPasswordMode">OTP</button>
+      </div>
 
-				<!-- OTP input using ng-otp-input -->
-				<ng-otp-input
-					[formControl]="otpControl"
-					[config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
-					(onInputChange)="onOtpChange($event)">
-				</ng-otp-input>										
-  
-			  	<!-- Verify OTP button -->
-				<div class="mt-3" *ngIf="!otpAutoSubmitted">
-				<button mat-flat-button class="verify-otp-button" type="submit" [disabled]="loginForm.controls['otp'].invalid">
-					Verify
-				</button>
-				</div>
-			</div>
-		  </ng-container>
-		</form>
-	  </mat-card-content>
-	</mat-card>
-  
-	<!-- Overlay card with government seal and registration prompt -->
-	<mat-card class="overlay">
-	  <mat-card-header>
-		<img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
-	  </mat-card-header>
-  
-	  <!-- Greeting text and register button -->
-	  <mat-card-content>
-		<div class="text">
-		  <h1>Hello!</h1>
-		  <p>Don't have an account? Register now.</p>
-		</div>
-		<button mat-flat-button (click)="goToApplyLicense()">Register</button>
-	  </mat-card-content>
-  
-	  <!-- Help desk info -->
-	  <mat-card-footer>
-			<h6>HELP DESK</h6>
-			<div class="footer-contact">
-				<mat-icon>call</mat-icon>
-				<span>03592-203963</span>
-			</div>
-			<div class="footer-contact">
-				<mat-icon>email</mat-icon>
-				<span>helpdesk-excise&#64;sikkim.gov.in</span>
-			</div>
-	  </mat-card-footer>
-	</mat-card>
-  </div>
-  
+      <!-- Login form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onLogin()" [ngStyle]="{ 'margin-top.px': !isPasswordMode ? 55 : 0 }">
+
+        <!-- Password-based login section -->
+        @if (isPasswordMode) {
+          <!-- Username field -->
+          <mat-form-field appearance="outline">
+            <mat-icon>person</mat-icon>
+            <input matInput formControlName="username" placeholder="Username" />
+          </mat-form-field>
+          <!-- Password field with toggle visibility -->
+          <mat-form-field appearance="outline">
+            <mat-icon>lock</mat-icon>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="Password" />
+            <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
+              <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+            </button>
+          </mat-form-field>
+          <!-- Custom captcha component -->
+          <app-captcha [formGroup]="loginForm"></app-captcha>
+          @if (loginError) {
+            <div class="error-box">
+              <mat-card class="error-card">
+                <mat-card-content>
+                  <ul>
+                    @for (msg of loginErrorMessages; track msg) {
+                      <li>{{ msg }}</li>
+                    }
+                  </ul>
+                </mat-card-content>
+              </mat-card>
+            </div>
+          }
+          <div class="buttons">
+            <div>
+              <button mat-flat-button class="sign-in-button" type="submit" [disabled]="loginForm.invalid">
+                Sign In
+              </button>
+            </div>
+            <!-- Forgot password link -->
+            <div class="forgot-password mt-3">
+              <a style="font-size: 14px;" (click)="resetPhoneNumber()">Forgot Password?</a>
+            </div>
+          </div>
+          <!-- Submit button -->
+        }
+
+        <!-- OTP-based login section -->
+        @if (!isPasswordMode) {
+          <!-- Phone number input (shown if OTP not sent yet) -->
+          @if (!otpSent) {
+            <mat-form-field appearance="outline">
+              <mat-icon>phone</mat-icon>
+              <input matInput formControlName="phoneNumber" placeholder="Phone Number"/>
+            </mat-form-field>
+          }
+          <!-- Send OTP button -->
+          @if (!otpSent) {
+            <div class="mt-3">
+              <button mat-flat-button class="send-otp-button" type="button" (click)="sendOtp()" [disabled]="loginForm.controls['phoneNumber'].invalid">
+                Send OTP
+              </button>
+            </div>
+          }
+          <!-- OTP input and verify section (shown after OTP is sent) -->
+          @if (otpSent) {
+            <div>
+              <!-- OTP sent info message and reset link -->
+              <div class="otp-sent-info mt-3">
+                <p>OTP sent to {{ loginForm.controls['phoneNumber'].value }}.<br> Not your number? <a (click)="resetPhoneNumber()">Go Back</a></p>
+              </div>
+              <!-- OTP input using ng-otp-input -->
+              <ng-otp-input
+                [formControl]="otpControl"
+                [config]="{ length: 4, inputStyles: { width: '54.4px', height: '50px' } }"
+                (onInputChange)="onOtpChange($event)">
+              </ng-otp-input>
+              <!-- Verify OTP button -->
+              @if (!otpAutoSubmitted) {
+                <div class="mt-3">
+                  <button mat-flat-button class="verify-otp-button" type="submit" [disabled]="loginForm.controls['otp'].invalid">
+                    Verify
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        }
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Overlay card with government seal and registration prompt -->
+  <mat-card class="overlay">
+    <mat-card-header>
+      <img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
+    </mat-card-header>
+
+    <!-- Greeting text and register button -->
+    <mat-card-content>
+      <div class="text">
+        <h1>Hello!</h1>
+        <p>Don't have an account? Register now.</p>
+      </div>
+      <button mat-flat-button (click)="goToApplyLicense()">Register</button>
+    </mat-card-content>
+
+    <!-- Help desk info -->
+    <mat-card-footer>
+      <h6>HELP DESK</h6>
+      <div class="footer-contact">
+        <mat-icon>call</mat-icon>
+        <span>03592-203963</span>
+      </div>
+      <div class="footer-contact">
+        <mat-icon>email</mat-icon>
+        <span>helpdesk-excise&#64;sikkim.gov.in</span>
+      </div>
+    </mat-card-footer>
+  </mat-card>
+</div>

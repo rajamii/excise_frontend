@@ -4,15 +4,13 @@ import { HeaderComponent } from './layouts/header/header.component';
 import { FooterComponent } from './layouts/footer/footer.component';
 import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CarouselComponent } from "./layouts/landing/carousel/carousel.component";
-import { CommonModule } from '@angular/common';
+
 import { filter } from 'rxjs'
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
-
-    CommonModule,
     RouterOutlet,
     HeaderComponent,
     FooterComponent,

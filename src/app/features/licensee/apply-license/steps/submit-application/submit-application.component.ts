@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
@@ -12,10 +12,9 @@ import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
   selector: 'app-submit-application',
   standalone: true,
   imports: [
-    CommonModule,
     MaterialModule,
     RouterModule
-  ],
+],
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })

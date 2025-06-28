@@ -1,210 +1,222 @@
 <mat-horizontal-stepper #stepper>
   <!-- Step 1: Show Application Data -->
-    <mat-step label="Application Data">
+  <mat-step label="Application Data">
+    <div class="step-header">
+      <h5>Application Id: {{application.applicationId}}</h5>
+    </div>
+    <div class="application-details">
+      <!-- Section: License Info -->
+      <ng-container>
+        <h6>License</h6>
+        <div class="section-table">
+          @for (item of licenseData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                <!-- Objection icon with tooltip if objection exists -->
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Key Info -->
+      <ng-container>
+        <h6>Key Info</h6>
+        <div class="section-table">
+          @for (item of keyInfoData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Address -->
+      <ng-container>
+        <h6>Address</h6>
+        <div class="section-table">
+          @for (item of addressData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Unit Details (only if license type is Company)-->
+      @if (application.licenseType === 'Company') {
+        <h6>Unit Details</h6>
+        <div class="section-table">
+          @for (item of unitDetailsData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">{{ item.key }}</div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Section: Member Details (includes photo rendering) -->
+      <ng-container>
+        <h6>Member Details</h6>
+        <div class="section-table">
+          @for (item of memberDetailsData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                <!-- Conditionally display photo if field is 'photo' -->
+                @if (item.field === 'photo' && photoUrl) {
+                  <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                } @else {
+                  {{ item.value }}
+                }
+                <!-- Objection icon -->
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="step-buttons">
+      <!-- Edit Application -->
+      @if (tableType === 'applied') {
+        <button mat-flat-button (click)="onEdit(stepper)">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+      }
+
+      <!-- Resolve Objection -->
+      @if (tableType === 'pending' && hasAnyObjections()) {
+        <button mat-flat-button class="resolve-button" (click)="stepper.next()">
+          <mat-icon>build</mat-icon>
+          Resolve Objections
+        </button>
+      }
+
+      <!-- Delete Application -->
+      <button mat-flat-button class="delete-button" (click)="onDelete(stepper)" >
+        <mat-icon>delete</mat-icon>
+        Delete
+      </button>
+    </div>
+  </mat-step>
+
+  <!-- Resolve Objections -->
+  @if (hasAnyObjections()) {
+    <mat-step label="Resolve Objections">
+      <form [formGroup]="resolveObjectionForm">
         <div class="step-header">
-            <h5>Application Id: {{application.applicationId}}</h5>
+          <h5>{{application.applicationId}}</h5>
         </div>
-        <div class="application-details">
-            <!-- Section: License Info -->
-            <ng-container>
-                <h6>License</h6>
-                <div class="section-table">
-                    <div
-                    class="row"
-                    *ngFor="let item of licenseData"
-                    [class.objection]="hasObjection(item.field)">
-                        <div class="key">
-                            {{ item.key }}
+        <!-- Display unresolved objections -->
+        @if (objections.length) {
+          <div class="step-content">
+            @for (obj of unresolvedObjections; track obj) {
+              <div>
+                <!-- If the objection is not about the photo, show an input field -->
+                @if (obj.fieldName !== 'photo') {
+                  <mat-form-field appearance="outline">
+                    <!-- Label is dynamically generated from field name -->
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <input matInput [formControlName]="obj.fieldName">
+                    <!-- Show original objection as hint -->
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                } @else {
+                  <mat-label>Photo</mat-label>
+                  <div class="photo-upload-container" (click)="fileInput.click()">
+                    <!-- Photo Upload -->
+                    <input
+                      type="file"
+                      hidden
+                      #fileInput
+                      accept="image/*"
+                      (change)="onPhotoSelected($event)"/>
+                      <div class="upload-box">
+                        <mat-icon>cloud_upload</mat-icon>
+                        <div class="upload-text">
+                          <h6>Upload Photo</h6>
+                          <div class="upload-subtext">Drag and drop files here</div>
                         </div>
-                        <div class="value">
-                            {{ item.value }}
-                            <!-- Objection icon with tooltip if objection exists -->
-                            <mat-icon
-                            *ngIf="hasObjection(item.field)"
-                            matTooltip="{{ getObjectionRemarks(item.field) }}">
-                                error
-                            </mat-icon>
-                        </div>
+                      </div>
                     </div>
+                    <mat-hint class="photo-objection">Objection: {{ obj.remarks }}</mat-hint>
+                  }
+                  <!-- Special handling for photo upload field -->
                 </div>
-            </ng-container>
-
-            <!-- Section: Key Info -->
-            <ng-container>
-                <h6>Key Info</h6>
-                <div class="section-table">
-                    <div
-                    class="row"
-                    *ngFor="let item of keyInfoData"
-                    [class.objection]="hasObjection(item.field)">
-                        <div class="key">
-                            {{ item.key }}
-                        </div>
-                        <div class="value">
-                            {{ item.value }}
-                            <mat-icon
-                            *ngIf="hasObjection(item.field)"
-                            matTooltip="{{ getObjectionRemarks(item.field) }}">
-                                error
-                            </mat-icon>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
-
-            <!-- Section: Address -->
-            <ng-container>
-                <h6>Address</h6>
-                <div class="section-table">
-                    <div
-                    class="row"
-                    *ngFor="let item of addressData"
-                    [class.objection]="hasObjection(item.field)">
-                        <div class="key">
-                            {{ item.key }}
-                        </div>
-                        <div class="value">
-                            {{ item.value }}
-                            <mat-icon
-                            *ngIf="hasObjection(item.field)"
-                            matTooltip="{{ getObjectionRemarks(item.field) }}">
-                                error
-                            </mat-icon>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
-
-            <!-- Section: Unit Details (only if license type is Company)-->
-            <ng-container *ngIf="application.licenseType === 'Company'">
-                <h6>Unit Details</h6>
-                <div class="section-table">
-                    <div
-                    class="row"
-                    *ngFor="let item of unitDetailsData"
-                    [class.objection]="hasObjection(item.field)">
-                    <div class="key">{{ item.key }}</div>
-                    <div class="value">
-                        {{ item.value }}
-                        <mat-icon
-                        *ngIf="hasObjection(item.field)"
-                        matTooltip="{{ getObjectionRemarks(item.field) }}">
-                        error
-                        </mat-icon>
-                    </div>
-                    </div>
-                </div>
-            </ng-container>
-
-            <!-- Section: Member Details (includes photo rendering) -->
-            <ng-container>
-                <h6>Member Details</h6>
-                <div class="section-table">
-                    <div
-                    class="row"
-                    *ngFor="let item of memberDetailsData"
-                    [class.objection]="hasObjection(item.field)">
-                        <div class="key">
-                            {{ item.key }}
-                        </div>
-                        <div class="value">
-                            <!-- Conditionally display photo if field is 'photo' -->
-                            <ng-container *ngIf="item.field === 'photo' && photoUrl; else normalValue">
-                                <img [src]="photoUrl" alt="Photo" class="photo-preview" />
-                            </ng-container>
-                            <ng-template #normalValue>
-                                {{ item.value }}
-                            </ng-template>
-
-                            <!-- Objection icon -->
-                            <mat-icon
-                            *ngIf="hasObjection(item.field)"
-                            matTooltip="{{ getObjectionRemarks(item.field) }}">
-                                error
-                            </mat-icon>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="step-buttons">
-            <!-- Edit Application -->
-            <button mat-flat-button (click)="onEdit(stepper)" *ngIf="tableType === 'applied'">
-                <mat-icon>edit</mat-icon>
-                Edit
-            </button>
-
-            <!-- Resolve Objection -->
-            <button mat-flat-button class="resolve-button" (click)="stepper.next()" *ngIf="tableType === 'pending' && hasAnyObjections()">
-                <mat-icon>build</mat-icon>
-                Resolve Objections
-            </button>
-
-            <!-- Delete Application -->
-            <button mat-flat-button class="delete-button" (click)="onDelete(stepper)" >
-                <mat-icon>delete</mat-icon>
-                Delete
-            </button>
-        </div>
-    </mat-step>
-
-    <!-- Resolve Objections -->
-    <mat-step *ngIf="hasAnyObjections()" label="Resolve Objections">
-        <form [formGroup]="resolveObjectionForm">
-            <div class="step-header">
-                <h5>{{application.applicationId}}</h5> 
+              }
             </div>
-
-            <!-- Display unresolved objections -->
-            <div class="step-content" *ngIf="objections.length">
-                <div *ngFor="let obj of unresolvedObjections">
-
-                    <!-- If the objection is not about the photo, show an input field -->
-                    <ng-container *ngIf="obj.fieldName !== 'photo'; else photoUpload">
-                        <mat-form-field appearance="outline">
-                            <!-- Label is dynamically generated from field name -->
-                            <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
-                            <input matInput [formControlName]="obj.fieldName">
-                            <!-- Show original objection as hint -->
-                            <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
-                        </mat-form-field>
-                    </ng-container>
-
-                    <!-- Special handling for photo upload field -->
-                    <ng-template #photoUpload>
-                        <mat-label>Photo</mat-label>
-                        <div class="photo-upload-container" (click)="fileInput.click()">
-
-                            <!-- Photo Upload -->
-                            <input 
-                            type="file"
-                            hidden
-                            #fileInput
-                            accept="image/*"
-                            (change)="onPhotoSelected($event)"/>
-                            <div class="upload-box">
-                                <mat-icon>cloud_upload</mat-icon>
-                                <div class="upload-text">
-                                    <h6>Upload Photo</h6>
-                                    <div class="upload-subtext">Drag and drop files here</div>
-                                </div>
-                            </div>
-                        </div>
-                        <mat-hint class="photo-objection">Objection: {{ obj.remarks }}</mat-hint>
-                    </ng-template>
-                </div>
-            </div>
-
-            <div class="step-buttons">
-                <button 
-                mat-raised-button 
-                (click)="submitResolvedData()" 
-                [disabled]="resolveObjectionForm.invalid">
-                    Submit Corrections
-                </button>
-            </div>
+          }
+          <div class="step-buttons">
+            <button
+              mat-raised-button
+              (click)="submitResolvedData()"
+              [disabled]="resolveObjectionForm.invalid">
+              Submit Corrections
+            </button>
+          </div>
         </form>
-    </mat-step>
-</mat-horizontal-stepper>
+      </mat-step>
+    }
+  </mat-horizontal-stepper>

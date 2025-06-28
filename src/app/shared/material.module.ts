@@ -34,7 +34,6 @@ import { MatPaginator } from '@angular/material/paginator';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {  MatTableDataSource } from '@angular/material/table';
 //import { FormsModule, ReactiveFormsModule, FormBuilder, Validators} from '@angular/forms';
-import { FaIconLibrary, FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 
 @NgModule({
@@ -53,7 +52,6 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
     MatButtonModule,
     MatIcon,
     MatPaginator,
-    FontAwesomeModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -77,9 +75,6 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
     MatTooltipModule,
     MatStepperModule,
     MatDividerModule,
-
-    // FontAwesome
-    FontAwesomeModule,
   ],
   exports: [
     CommonModule,
@@ -112,9 +107,6 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
     MatTooltipModule,
     MatStepperModule,
     MatDividerModule,
-
-    // FontAwesome
-    FontAwesomeModule,
   ],
   providers: [
     MatNativeDateModule,

@@ -15,31 +15,35 @@
           <mat-label>License Type Name</mat-label>
           <input
             matInput
-            [(ngModel)]="licenseType.licenseType"  
-            name="licensetypename"                 
-            #licensetypename="ngModel"             
+            [(ngModel)]="licenseType.licenseType"
+            name="licensetypename"
+            #licensetypename="ngModel"
             placeholder="Enter License Type Name"
             maxlength="150"
             minlength="3"
-            required                                 
-          />
-        </mat-form-field>
+            required
+            />
+          </mat-form-field>
 
-        <!-- Error message if the field is touched or dirty and invalid -->
-        <div *ngIf="(licensetypename.dirty || licensetypename.touched) && licensetypename.invalid">
-          <mat-error *ngIf="licensetypename.errors?.['required']">
-            <small>This field is required.</small>
-          </mat-error>
-        </div>
+          <!-- Error message if the field is touched or dirty and invalid -->
+          @if ((licensetypename.dirty || licensetypename.touched) && licensetypename.invalid) {
+            <div>
+              @if (licensetypename.errors?.['required']) {
+                <mat-error>
+                  <small>This field is required.</small>
+                </mat-error>
+              }
+            </div>
+          }
 
-        <!-- Buttons for Save and Cancel -->
-        <div class="buttons-container">
-          <!-- Save button is disabled if form is invalid -->
-          <button mat-raised-button color="primary" (click)="save()" [disabled]="newLicenseTypeForm.form.invalid">Save</button>
-          <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
-        </div>
+          <!-- Buttons for Save and Cancel -->
+          <div class="buttons-container">
+            <!-- Save button is disabled if form is invalid -->
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="newLicenseTypeForm.form.invalid">Save</button>
+            <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
+          </div>
 
-      </form>
-    </mat-card-content>
-  </mat-card>
-</div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>

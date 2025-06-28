@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { MatDialog } from '@angular/material/dialog';
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependency';
@@ -13,7 +13,7 @@ import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-licensee-home', // Component selector used in HTML
-  imports: [ CommonModule, RouterModule, RouterOutlet, MaterialModule, MatMenuModule], // Modules needed for this component
+  imports: [RouterModule, RouterOutlet, MaterialModule, MatMenuModule], // Modules needed for this component
   templateUrl: './licensee-home.component.html', // Path to the component’s HTML template
   styleUrl: './licensee-home.component.scss' // Path to the component’s SCSS styles
 })

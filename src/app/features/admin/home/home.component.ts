@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 
@@ -16,7 +16,7 @@ import { MatMenuModule } from '@angular/material/menu';
 @Component({
   selector: 'app-home',
   standalone: true, // This component is a standalone component (not declared in a module)
-  imports: [CommonModule, RouterModule, MaterialModule, MatMenuModule], // Required Angular and custom modules
+  imports: [RouterModule, MaterialModule, MatMenuModule], // Required Angular and custom modules
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })

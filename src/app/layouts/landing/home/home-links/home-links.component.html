@@ -1,72 +1,65 @@
 <div class="page-container">
-    <!--PREVENTIVE RAIDS-->
-  <mat-card class = "preventive-raids grid-card" *ngIf="page === 'preventive-raids'">
-    <mat-card-header>Preventive Raids</mat-card-header>
-    <mat-card-content class = "card-container">
-      <table mat-table [dataSource]="dataSource">
-
-        <ng-container matColumnDef="photo">
-          <th mat-header-cell *matHeaderCellDef>Photograph Details</th>
-          <td mat-cell *matCellDef="let element">
-            <img [src]="element.photoUrl" alt="Excise Raid" class="photo">
-            <p class="published-date"><em>Published On</em> {{ element.publishedOn }}</p>
-          </td>
-        </ng-container>
-      
-        <ng-container class = "caption" matColumnDef="caption">
-          <th mat-header-cell *matHeaderCellDef>Caption</th>
-          <td mat-cell *matCellDef="let element">
-            <h6>{{ element.caption }}</h6>
-            <p class="caption-link">{{ element.captionLink }}</p>
-          </td>
-        </ng-container>
-      
-        <!-- Table Header & Row Definitions -->
-        <tr mat-header-row *matHeaderRowDef="raidsColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: raidsColumns;"></tr>
-      
-      </table>
-      
-    </mat-card-content>
+  <!--PREVENTIVE RAIDS-->
+  @if (page === 'preventive-raids') {
+    <mat-card class = "preventive-raids grid-card">
+      <mat-card-header>Preventive Raids</mat-card-header>
+      <mat-card-content class = "card-container">
+        <table mat-table [dataSource]="dataSource">
+          <ng-container matColumnDef="photo">
+            <th mat-header-cell *matHeaderCellDef>Photograph Details</th>
+            <td mat-cell *matCellDef="let element">
+              <img [src]="element.photoUrl" alt="Excise Raid" class="photo">
+              <p class="published-date"><em>Published On</em> {{ element.publishedOn }}</p>
+            </td>
+          </ng-container>
+          <ng-container class = "caption" matColumnDef="caption">
+            <th mat-header-cell *matHeaderCellDef>Caption</th>
+            <td mat-cell *matCellDef="let element">
+              <h6>{{ element.caption }}</h6>
+              <p class="caption-link">{{ element.captionLink }}</p>
+            </td>
+          </ng-container>
+          <!-- Table Header & Row Definitions -->
+          <tr mat-header-row *matHeaderRowDef="raidsColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: raidsColumns;"></tr>
+        </table>
+      </mat-card-content>
     </mat-card>
+  }
 
-    <!--NOTIFICATIONS-->
-    <mat-card class = "notifications grid-card" *ngIf="page === 'notifications'">
-        <mat-card-header>Notifications</mat-card-header>
-        <mat-card-content class = "card-container">
-
-          <mat-radio-group [(ngModel)]="selectedCategory">
-            <mat-radio-button value="act">Acts</mat-radio-button>
-            <mat-radio-button value="rule">Rules</mat-radio-button>
-            <mat-radio-button value="circular">Circulars</mat-radio-button>
-            <mat-radio-button value="all">All</mat-radio-button>
-          </mat-radio-group>
-          
-          <table mat-table [dataSource]="filteredNotifications" class="mat-elevation-z8">
->
-            <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef> Date </th>
-              <td mat-cell *matCellDef="let notification"> {{ notification.date }} </td>
-            </ng-container>
-          
-            <ng-container matColumnDef="subject">
-              <th mat-header-cell *matHeaderCellDef> Subject </th>
-              <td mat-cell *matCellDef="let notification"> {{ notification.subject }} </td>
-            </ng-container>
-
-            <ng-container matColumnDef="download">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let notification">
-                <button mat-icon-button (click)="downloadFile(notification)">
-                  <mat-icon>download</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-          
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-          </table>
-      
-        </mat-card-content>
+  <!--NOTIFICATIONS-->
+  @if (page === 'notifications') {
+    <mat-card class = "notifications grid-card">
+      <mat-card-header>Notifications</mat-card-header>
+      <mat-card-content class = "card-container">
+        <mat-radio-group [(ngModel)]="selectedCategory">
+          <mat-radio-button value="act">Acts</mat-radio-button>
+          <mat-radio-button value="rule">Rules</mat-radio-button>
+          <mat-radio-button value="circular">Circulars</mat-radio-button>
+          <mat-radio-button value="all">All</mat-radio-button>
+        </mat-radio-group>
+        <table mat-table [dataSource]="filteredNotifications" class="mat-elevation-z8">
+          >
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef> Date </th>
+            <td mat-cell *matCellDef="let notification"> {{ notification.date }} </td>
+          </ng-container>
+          <ng-container matColumnDef="subject">
+            <th mat-header-cell *matHeaderCellDef> Subject </th>
+            <td mat-cell *matCellDef="let notification"> {{ notification.subject }} </td>
+          </ng-container>
+          <ng-container matColumnDef="download">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let notification">
+              <button mat-icon-button (click)="downloadFile(notification)">
+                <mat-icon>download</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </mat-card-content>
     </mat-card>
+  }
 </div>

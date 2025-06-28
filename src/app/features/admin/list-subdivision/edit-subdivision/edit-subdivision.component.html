@@ -30,11 +30,13 @@
       <!-- Two-way binding with ngModel for District selection, triggers onDistrictChange on value change -->
       <mat-select [(ngModel)]="data.district" (selectionChange)="onDistrictChange($event.value)">
         <!-- Iterating over the list of districts and displaying each district name in the dropdown -->
-        <mat-option *ngFor="let district of districts" [value]="district">
-          {{ district.district }}
-        </mat-option>
-      </mat-select>          
-    </mat-form-field>      
+        @for (district of districts; track district) {
+          <mat-option [value]="district">
+            {{ district.district }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
 
     <!-- Disabled input field for District Code, auto-filled when District is selected -->
     <mat-form-field appearance="outline">

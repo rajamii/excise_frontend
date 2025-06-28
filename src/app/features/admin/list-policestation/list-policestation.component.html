@@ -1,7 +1,7 @@
 <div class="container-fluid">
   <!-- Main card container for Police Station List -->
   <mat-card class="mat-card">
-    
+
     <!-- Header of the card -->
     <mat-card-header class="page-card-header">
       <div class="page-title">Police Station List</div>
@@ -21,9 +21,11 @@
             <mat-select [(ngModel)]="selectedSubdivisionCode" (selectionChange)="onSubdivisionSelect()">
               <mat-option [value]="null">All Subdivisions</mat-option>
               <!-- Iterate over the subdivisions to populate the options -->
-              <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
-                {{ sub.subdivision }}
-              </mat-option>
+              @for (sub of subdivisions; track sub) {
+                <mat-option [value]="sub.subdivisionCode">
+                  {{ sub.subdivision }}
+                </mat-option>
+              }
             </mat-select>
           </mat-form-field>
         </div>
@@ -32,7 +34,7 @@
       <!-- Table to display Police Station List -->
       <div class="table-container">
         <mat-table [dataSource]="policeStationDataSource">
-        
+
           <!-- Column for Police Station ID -->
           <ng-container matColumnDef="id">
             <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
@@ -61,20 +63,20 @@
           <ng-container matColumnDef="actions">
             <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
             <mat-cell *matCellDef="let element">
-                <!-- Edit button, triggers onEdit method when clicked -->
-                <button mat-icon-button color="primary" (click)="onEdit(element)">
-                    <mat-icon>edit</mat-icon>
-                </button>
-                <!-- Delete button, triggers onDelete method when clicked -->
-                <button mat-icon-button color="warn" (click)="onDelete(element)">
-                    <mat-icon>delete</mat-icon>
-                </button>
+              <!-- Edit button, triggers onEdit method when clicked -->
+              <button mat-icon-button color="primary" (click)="onEdit(element)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <!-- Delete button, triggers onDelete method when clicked -->
+              <button mat-icon-button color="warn" (click)="onDelete(element)">
+                <mat-icon>delete</mat-icon>
+              </button>
             </mat-cell>
           </ng-container>
 
           <!-- Table Header Row definition -->
           <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-          
+
           <!-- Table Row definition (binds data to table) -->
           <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
         </mat-table>

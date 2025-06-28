@@ -16,9 +16,11 @@
         <mat-radio-button value="Imported from other States/Country">Imported from other States/Country</mat-radio-button>
         <mat-radio-button value="Bottled in Sikkim (Collaboration)">Bottled in Sikkim (Collaboration)</mat-radio-button>
         <!-- Error Display -->
-        <mat-error *ngIf="companyDetailsForm.controls['brandType'].invalid">
-          {{ getErrorMessage('brandType') }}
-        </mat-error>
+        @if (companyDetailsForm.controls['brandType'].invalid) {
+          <mat-error>
+            {{ getErrorMessage('brandType') }}
+          </mat-error>
+        }
       </mat-radio-group>
 
       <!-- Basic Company Info Fields -->
@@ -28,55 +30,69 @@
         <mat-form-field appearance="outline">
           <mat-label>Select License</mat-label>
           <mat-select formControlName="license">
-            <mat-option *ngFor="let license of licenses" [value]="license">{{ license }}</mat-option>
+            @for (license of licenses; track license) {
+              <mat-option [value]="license">{{ license }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="companyDetailsForm.controls['license'].invalid">
-            {{ getErrorMessage('license') }}
-          </mat-error>
+          @if (companyDetailsForm.controls['license'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('license') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Application Year Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Select Application Year</mat-label>
           <mat-select formControlName="applicationYear">
-            <mat-option *ngFor="let year of applicationYears" [value]="year">{{ year }}</mat-option>
+            @for (year of applicationYears; track year) {
+              <mat-option [value]="year">{{ year }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="companyDetailsForm.controls['applicationYear'].invalid">
-            {{ getErrorMessage('applicationYear') }}
-          </mat-error>
+          @if (companyDetailsForm.controls['applicationYear'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicationYear') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Company Name -->
         <mat-form-field appearance="outline">
           <mat-label>Name</mat-label>
           <input matInput placeholder="Enter Company Name" type="text" formControlName="companyName"/>
-          <mat-error *ngIf="companyDetailsForm.controls['companyName'].invalid">
-            {{ getErrorMessage('companyName') }}
-          </mat-error>
+          @if (companyDetailsForm.controls['companyName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('companyName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- PAN Input -->
         <mat-form-field appearance="outline">
           <mat-label>PAN</mat-label>
           <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required/>
-          <mat-error *ngIf="companyDetailsForm.controls['pan'].invalid">
-            {{ getErrorMessage('pan') }}
-          </mat-error>
+          @if (companyDetailsForm.controls['pan'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pan') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Registered Office Address -->
         <mat-form-field appearance="outline">
           <mat-label>Registered Office Address</mat-label>
           <textarea matInput placeholder="Enter Registered Office Address (max 1000 characters)"
-                    formControlName="officeAddress"
-                    cdkTextareaAutosize
-                    #autosize="cdkTextareaAutosize"
-                    cdkAutosizeMinRows="1"
-                    cdkAutosizeMaxRows="5">
+            formControlName="officeAddress"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5">
           </textarea>
-          <mat-error *ngIf="companyDetailsForm.controls['officeAddress'].invalid">
-            {{ getErrorMessage('officeAddress') }}
-          </mat-error>
+          @if (companyDetailsForm.controls['officeAddress'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('officeAddress') }}
+            </mat-error>
+          }
         </mat-form-field>
 
       </div>
@@ -90,46 +106,58 @@
           <mat-form-field appearance="outline">
             <mat-label>Country</mat-label>
             <mat-select formControlName="country">
-              <mat-option *ngFor="let country of countries" [value]="country">{{ country }}</mat-option>
+              @for (country of countries; track country) {
+                <mat-option [value]="country">{{ country }}</mat-option>
+              }
             </mat-select>
-            <mat-error *ngIf="companyDetailsForm.controls['country'].invalid">
-              {{ getErrorMessage('country') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['country'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('country') }}
+              </mat-error>
+            }
           </mat-form-field>
 
           <!-- State Dropdown -->
           <mat-form-field appearance="outline">
             <mat-label>State</mat-label>
             <mat-select formControlName="state">
-              <mat-option *ngFor="let state of states" [value]="state">{{ state }}</mat-option>
+              @for (state of states; track state) {
+                <mat-option [value]="state">{{ state }}</mat-option>
+              }
             </mat-select>
-            <mat-error *ngIf="companyDetailsForm.controls['state'].invalid">
-              {{ getErrorMessage('state') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['state'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('state') }}
+              </mat-error>
+            }
           </mat-form-field>
 
           <!-- Factory Address -->
           <mat-form-field appearance="outline">
             <mat-label>Address</mat-label>
             <textarea matInput placeholder="Enter Address (max 500 characters)"
-                      formControlName="factoryAddress"
-                      cdkTextareaAutosize
-                      #autosize="cdkTextareaAutosize"
-                      cdkAutosizeMinRows="1"
-                      cdkAutosizeMaxRows="5">
+              formControlName="factoryAddress"
+              cdkTextareaAutosize
+              #autosize="cdkTextareaAutosize"
+              cdkAutosizeMinRows="1"
+              cdkAutosizeMaxRows="5">
             </textarea>
-            <mat-error *ngIf="companyDetailsForm.controls['factoryAddress'].invalid">
-              {{ getErrorMessage('factoryAddress') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['factoryAddress'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('factoryAddress') }}
+              </mat-error>
+            }
           </mat-form-field>
 
           <!-- Pin Code -->
           <mat-form-field appearance="outline">
             <mat-label>Pin Code</mat-label>
             <input matInput placeholder="Enter Pin Code" type="number" formControlName="pinCode"/>
-            <mat-error *ngIf="companyDetailsForm.controls['pinCode'].invalid">
-              {{ getErrorMessage('pinCode') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['pinCode'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('pinCode') }}
+              </mat-error>
+            }
           </mat-form-field>
 
         </div>
@@ -144,18 +172,22 @@
           <mat-form-field appearance="outline">
             <mat-label>Mobile Number</mat-label>
             <input matInput placeholder="Enter Company Mobile Number" type="number" formControlName="companyMobileNumber"/>
-            <mat-error *ngIf="companyDetailsForm.controls['companyMobileNumber'].invalid">
-              {{ getErrorMessage('companyMobileNumber') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['companyMobileNumber'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('companyMobileNumber') }}
+              </mat-error>
+            }
           </mat-form-field>
 
           <!-- Email ID -->
           <mat-form-field appearance="outline">
             <mat-label>Email Id</mat-label>
             <input matInput placeholder="Enter Company Email" type="email" formControlName="companyEmailId"/>
-            <mat-error *ngIf="companyDetailsForm.controls['companyEmailId'].invalid">
-              {{ getErrorMessage('companyEmailId') }}
-            </mat-error>
+            @if (companyDetailsForm.controls['companyEmailId'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('companyEmailId') }}
+              </mat-error>
+            }
           </mat-form-field>
 
         </div>

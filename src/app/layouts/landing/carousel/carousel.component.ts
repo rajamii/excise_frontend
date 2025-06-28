@@ -1,22 +1,13 @@
-import { NgFor } from '@angular/common';
+
+import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  CarouselCaptionComponent,
-  CarouselControlComponent,
-  CarouselIndicatorsComponent,
-  CarouselInnerComponent,
-  CarouselItemComponent,
-  ThemeDirective,
-  CarouselModule
-} from '@coreui/angular';
-
 @Component({
   selector: 'app-carousel',
   templateUrl: './carousel.component.html',
   styleUrl: './carousel.component.scss',
   standalone: true,
-  imports: [ThemeDirective, CarouselModule, CarouselIndicatorsComponent, CarouselInnerComponent, NgFor, CarouselItemComponent, CarouselCaptionComponent, CarouselControlComponent, RouterLink]
+  imports: [ CommonModule ]
 })
 
 export class CarouselComponent implements OnInit{

@@ -10,7 +10,7 @@
 
     <!-- Main content section of the card -->
     <mat-card-content>
-      
+
       <!-- Template-driven form reference -->
       <form #newLicenseCategoryForm="ngForm">
 
@@ -19,32 +19,36 @@
           <mat-label>License Category Name</mat-label>
           <input
             matInput
-            [(ngModel)]="licenseCategory.licenseCategory"  
-            name="licensecategoryname"                                
-            #licensecategoryname="ngModel"                             
+            [(ngModel)]="licenseCategory.licenseCategory"
+            name="licensecategoryname"
+            #licensecategoryname="ngModel"
             placeholder="Enter License Category Name"
-            maxlength="150"                                             
+            maxlength="150"
             minlength="3"
-            required                                                    
-          />
-        </mat-form-field>
+            required
+            />
+          </mat-form-field>
 
-        <!-- Error message displayed if the input is invalid after touch or change -->
-        <div *ngIf="(licensecategoryname.dirty || licensecategoryname.touched) && licensecategoryname.invalid">
-          <mat-error *ngIf="licensecategoryname.errors?.['required']">
-            <small>This field is required.</small>
-          </mat-error>
-        </div>
+          <!-- Error message displayed if the input is invalid after touch or change -->
+          @if ((licensecategoryname.dirty || licensecategoryname.touched) && licensecategoryname.invalid) {
+            <div>
+              @if (licensecategoryname.errors?.['required']) {
+                <mat-error>
+                  <small>This field is required.</small>
+                </mat-error>
+              }
+            </div>
+          }
 
-        <!-- Buttons for save and cancel -->
-        <div class="buttons-container">
-          <!-- Save button is disabled until form is valid -->
-          <button mat-raised-button color="primary" (click)="save()" [disabled]="newLicenseCategoryForm.form.invalid">Save</button>
-          <!-- Cancel button to discard and navigate back -->
-          <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
-        </div>
+          <!-- Buttons for save and cancel -->
+          <div class="buttons-container">
+            <!-- Save button is disabled until form is valid -->
+            <button mat-raised-button color="primary" (click)="save()" [disabled]="newLicenseCategoryForm.form.invalid">Save</button>
+            <!-- Cancel button to discard and navigate back -->
+            <button mat-raised-button color="warn" (click)="cancel()">Cancel</button>
+          </div>
 
-      </form>
-    </mat-card-content>
-  </mat-card>
-</div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>

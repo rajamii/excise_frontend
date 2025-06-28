@@ -5,32 +5,42 @@
 
   <mat-card-content>
     <!-- Dynamically render grouped data sections -->
-    <ng-container *ngFor="let section of displaySections">
-      <div class="section-title" *ngIf="!section.condition || section.condition()">
-        {{ section.title }}
-      </div>
-      <div class="section-table" *ngIf="!section.condition || section.condition()">
-        <div class="row" *ngFor="let item of section.data">
-          <div class="key">{{ item.key }}</div>
-          <div class="value">{{ item.value || 'N/A' }}</div>
+    @for (section of displaySections; track section) {
+      @if (!section.condition || section.condition()) {
+        <div class="section-title">
+          {{ section.title }}
         </div>
-      </div>
-    </ng-container>
+      }
+      @if (!section.condition || section.condition()) {
+        <div class="section-table">
+          @for (item of section.data; track item) {
+            <div class="row">
+              <div class="key">{{ item.key }}</div>
+              <div class="value">{{ item.value || 'N/A' }}</div>
+            </div>
+          }
+        </div>
+      }
+    }
 
     <!-- Member Details section with photo display -->
     <div class="section-title">Member Details</div>
     <div class="details-with-photo">
       <div class="left-section">
-        <div class="row" *ngFor="let item of memberDetailsData">
-          <div class="key">{{ item.key }}</div>
-          <div class="value">{{ item.value || 'N/A' }}</div>
-        </div>
+        @for (item of memberDetailsData; track item) {
+          <div class="row">
+            <div class="key">{{ item.key }}</div>
+            <div class="value">{{ item.value || 'N/A' }}</div>
+          </div>
+        }
       </div>
 
       <!-- Photo display (if photo URL is available) -->
-      <div class="photo-section" *ngIf="passPhotoUrl">
-        <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
-      </div>
+      @if (passPhotoUrl) {
+        <div class="photo-section">
+          <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
+        </div>
+      }
     </div>
   </mat-card-content>
 

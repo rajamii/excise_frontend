@@ -8,12 +8,12 @@
     <mat-card-content class="page-card-content">
       <!-- User form starts here -->
       <form #newUserForm="ngForm" (ngSubmit)="submit()">
-        
+
         <!-- First Name, Middle Name, Last Name Fields -->
         <div class="row mb-3">
           <div class="col-xl-4 col-lg-4 col-md-4">
             <!-- First Name Input -->
-            <mat-form-field class="my-form-full-width" appearance="outline" required> 
+            <mat-form-field class="my-form-full-width" appearance="outline" required>
               <mat-label>First Name</mat-label>
               <input matInput [(ngModel)]="user.firstName" name="firstName" placeholder="Enter First Name" required />
             </mat-form-field>
@@ -59,9 +59,11 @@
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>District</mat-label>
               <mat-select matInput placeholder="Enter District" [(ngModel)]="user.district" name="district" required>
-                <mat-option *ngFor="let district of districts" [value]="district.districtCode" (click)="onDistrictChange(district.districtCode)">
-                  {{ district.district }}
-                </mat-option>
+                @for (district of districts; track district) {
+                  <mat-option [value]="district.districtCode" (click)="onDistrictChange(district.districtCode)">
+                    {{ district.district }}
+                  </mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -74,9 +76,11 @@
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>Subdivision</mat-label>
               <mat-select matInput placeholder="Enter Subdivision" [(ngModel)]="user.subdivision" name="subdivision" required>
-                <mat-option *ngFor="let subdivision of filteredSubdivisions" [value]="subdivision.subdivisionCode">
-                  {{ subdivision.subdivision }}
-                </mat-option>
+                @for (subdivision of filteredSubdivisions; track subdivision) {
+                  <mat-option [value]="subdivision.subdivisionCode">
+                    {{ subdivision.subdivision }}
+                  </mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -86,9 +90,11 @@
             <mat-form-field class="my-form-full-width" appearance="outline">
               <mat-label>Role</mat-label>
               <mat-select [(ngModel)]="user.role" name="role" required>
-                <mat-option *ngFor="let role of roles" [value]="role.id">
-                  {{ role.name }}
-                </mat-option>
+                @for (role of roles; track role) {
+                  <mat-option [value]="role.id">
+                    {{ role.name }}
+                  </mat-option>
+                }
               </mat-select>
             </mat-form-field>
           </div>
@@ -98,8 +104,8 @@
               <mat-label>Address</mat-label>
               <textarea matInput [(ngModel)]="user.address" name="address" placeholder="Enter Address" rows="3"></textarea>
             </mat-form-field>
-          </div>  
-            
+          </div>
+
         </div>
 
         <div class="row mb-3">

@@ -1,85 +1,107 @@
 <form [formGroup]="licenseForm">
-    <mat-card>
-      <mat-card-header>
-        <div class="heading">License</div>
-        <div class="validation">
-          * Marked Fields Are Mandatory
-        </div>
-      </mat-card-header>
-  
-      <mat-card-content>
-        <div class="form-field-container"> 
-            <mat-form-field appearance="outline">
-                <mat-label>Select Application Year</mat-label>
-                <mat-select formControlName="applicationYear" required>
-                    <mat-option *ngFor="let year of applicationYears" [value]="year">{{ year }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="licenseForm.controls['applicationYear'].invalid">
-                    {{ getErrorMessage('applicationYear') }}
-                </mat-error>
-            </mat-form-field>
-    
-            <mat-form-field appearance="outline">
-                <mat-label>Application Id</mat-label>
-                <input matInput placeholder="Enter Application Id" type="text" formControlName="applicationId" required/>
-                <mat-error *ngIf="licenseForm.controls['applicationId'].invalid">
-                    {{ getErrorMessage('applicationId') }}
-                </mat-error>
-            </mat-form-field>
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">License</div>
+      <div class="validation">
+        * Marked Fields Are Mandatory
+      </div>
+    </mat-card-header>
 
-            <mat-form-field appearance="outline">
-                <mat-label>Application Date</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="applicationDate" required/>
-                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
-            </mat-form-field>
-    
-            <mat-form-field appearance="outline">
-                <mat-label>District</mat-label>
-                <mat-select formControlName="district" required>
-                    <mat-option *ngFor="let district of districts" [value]="district">{{ district }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="licenseForm.controls['district'].invalid">
-                    {{ getErrorMessage('district') }}
-                </mat-error>
-            </mat-form-field>
-    
-            <mat-form-field appearance="outline">
-                <mat-label>Select License Category</mat-label>
-                <mat-select formControlName="licenseCategory" required>
-                    <mat-option *ngFor="let category of licenseCategories" [value]="category">{{ category }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="licenseForm.controls['licenseCategory'].invalid">
-                    {{ getErrorMessage('licenseCategory') }}
-                </mat-error>
-            </mat-form-field>
-    
-            <mat-form-field appearance="outline">
-                <mat-label>Select License</mat-label>
-                <mat-select formControlName="license" required>
-                    <mat-option *ngFor="let license of licenses" [value]="license">{{ license }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="licenseForm.controls['license'].invalid">
-                    {{ getErrorMessage('license') }}
-                </mat-error>
-            </mat-form-field>
-    
-            <mat-form-field appearance="outline">
-                <mat-label>Select Mode of Operation</mat-label>
-                <mat-select formControlName="role" required>
-                    <mat-option *ngFor="let role of roles" [value]="role">{{ role }}</mat-option>
-                </mat-select>
-                <mat-error *ngIf="licenseForm.controls['role'].invalid">
-                    {{ getErrorMessage('role') }}
-                </mat-error>
-            </mat-form-field>
-        </div>
-      </mat-card-content>
-  
-      <mat-card-actions>
-        <button mat-stroked-button (click)="goBack()">Back</button>
-        <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
-        <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!licenseForm.valid">Next</button>
-      </mat-card-actions>
-    </mat-card>
+    <mat-card-content>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Select Application Year</mat-label>
+          <mat-select formControlName="applicationYear" required>
+            @for (year of applicationYears; track year) {
+              <mat-option [value]="year">{{ year }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseForm.controls['applicationYear'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicationYear') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Application Id</mat-label>
+          <input matInput placeholder="Enter Application Id" type="text" formControlName="applicationId" required/>
+          @if (licenseForm.controls['applicationId'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicationId') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Application Date</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="applicationDate" required/>
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>District</mat-label>
+          <mat-select formControlName="district" required>
+            @for (district of districts; track district) {
+              <mat-option [value]="district">{{ district }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseForm.controls['district'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('district') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Select License Category</mat-label>
+          <mat-select formControlName="licenseCategory" required>
+            @for (category of licenseCategories; track category) {
+              <mat-option [value]="category">{{ category }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseForm.controls['licenseCategory'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseCategory') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Select License</mat-label>
+          <mat-select formControlName="license" required>
+            @for (license of licenses; track license) {
+              <mat-option [value]="license">{{ license }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseForm.controls['license'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('license') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Select Mode of Operation</mat-label>
+          <mat-select formControlName="role" required>
+            @for (role of roles; track role) {
+              <mat-option [value]="role">{{ role }}</mat-option>
+            }
+          </mat-select>
+          @if (licenseForm.controls['role'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('role') }}
+            </mat-error>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!licenseForm.valid">Next</button>
+    </mat-card-actions>
+  </mat-card>
 </form>

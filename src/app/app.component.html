@@ -1,12 +1,14 @@
 <div class="content-wrapper" >
-    <app-header></app-header>
+  <app-header></app-header>
 
-    <app-carousel *ngIf="showCarousel"></app-carousel>
-    
-    <div class="main-content" style="min-height: 80dvh;">
-      <router-outlet></router-outlet>
-    </div>
-    
-    <app-footer></app-footer>
-   
+  @if (showCarousel) {
+    <app-carousel></app-carousel>
+  }
+
+  <div class="main-content" style="min-height: 80dvh;">
+    <router-outlet></router-outlet>
   </div>
+
+  <app-footer></app-footer>
+
+</div>
