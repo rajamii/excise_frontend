@@ -244,6 +244,15 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     });
   }
 
+  get selectedObjections(): { field: string; remarks: string }[] {
+    return this.objectionFields
+      .filter(f => this.objectionForm.get(f.key)?.value)
+      .map(f => ({
+        field: f.label,
+        remarks: this.objectionForm.get(f.key + '_remarks')?.value || 'No remarks'
+      }));
+  }
+
   fetchSiteDetails() {
     // Fetch objections related to the application from backend
     this.licenseAppService.getSiteDetails(this.application.applicationId).subscribe((data: SiteEnquiryFormModel) => {
@@ -368,6 +377,14 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     stepper.next();
   }
 
+  onConfirmClick() {
+    if (this.isObjection) {
+      this.onSubmitObjection(); // handle objection-specific logic
+    } else {
+      this.onConfirm(); // handle approval or rejection
+    }
+  }
+
   onConfirm() {
     const applicationId = this.application.applicationId;
     const remarks = this.remarksForm.value.remarks;
@@ -480,29 +497,18 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       Swal.fire('Required', 'Select at least one field with remarks.', 'warning');
       return;
     }
-    
-    // Confirm with user before raising objection
-    Swal.fire({
-      title: 'Raise Objection?',
-      text: 'Are you sure you want to raise an objection on selected fields?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Confirm',
-      cancelButtonText: 'Cancel'
-    }).then(result => {
-      if (result.isConfirmed) {
-        this.licenseAppService.advanceApplication(
-          applicationId,
-          undefined,
-          undefined,
-          'raise_objection',
-          undefined,
-          selectedFields
-        ).subscribe({
-          next: () => Swal.fire('Success', 'Objection raised.', 'success').then(() => location.reload()),
-          error: () => Swal.fire('Error', 'Objection failed.', 'error')
-        });
-      }
+
+    // Directly raise objection (confirmation already shown earlier in stepper)
+    this.licenseAppService.advanceApplication(
+      applicationId,
+      undefined,
+      undefined,
+      'raise_objection',
+      undefined,
+      selectedFields
+    ).subscribe({
+      next: () => Swal.fire('Success', 'Objection raised.', 'success').then(() => location.reload()),
+      error: () => Swal.fire('Error', 'Objection failed.', 'error')
     });
   }
 }

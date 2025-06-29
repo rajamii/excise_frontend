@@ -89,13 +89,13 @@
     <!-- Form Buttons -->
     <mat-card-actions>
       <!-- Back Button -->
-      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button matButton="outlined" (click)="goBack()">Back</button>
 
       <!-- Reset Button -->
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
 
       <!-- Next Button (disabled if form is invalid) -->
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!selectLicenseForm.valid">
+      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!selectLicenseForm.valid">
         Next
       </button>
     </mat-card-actions>

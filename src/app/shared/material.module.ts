@@ -35,6 +35,8 @@ import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {  MatTableDataSource } from '@angular/material/table';
 //import { FormsModule, ReactiveFormsModule, FormBuilder, Validators} from '@angular/forms';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
+import { MarkdownModule } from 'ngx-markdown';
+import { RouterModule } from '@angular/router';
 
 @NgModule({
   imports: [
@@ -75,11 +77,15 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
     MatTooltipModule,
     MatStepperModule,
     MatDividerModule,
+    MarkdownModule,
+    RouterModule,
+    MatDialogModule
   ],
   exports: [
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterModule,
 
     // Material Modules
     MatButtonModule,
@@ -107,6 +113,8 @@ import { CdkTextareaAutosize } from '@angular/cdk/text-field';
     MatTooltipModule,
     MatStepperModule,
     MatDividerModule,
+    MarkdownModule,
+    MatDialogModule
   ],
   providers: [
     MatNativeDateModule,

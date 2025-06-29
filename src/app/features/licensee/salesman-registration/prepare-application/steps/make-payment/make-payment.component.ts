@@ -1,8 +1,6 @@
 import { Component, EventEmitter, Output, signal } from '@angular/core';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { merge } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-make-payment',

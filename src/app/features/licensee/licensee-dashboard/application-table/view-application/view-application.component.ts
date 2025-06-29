@@ -1,13 +1,14 @@
-import { Component, inject, Inject } from '@angular/core';
+import { Component, inject, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { AccountService } from '../../../../../core/services/account.service';
 import { ApplyLicenseComponent } from '../../../apply-license/apply-license.component';
-import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2';
 import { Objection } from '../../../../../core/models/license-application.model';
+import { BaseComponent } from '../../../../../base/base.components';
+import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -22,7 +23,7 @@ export interface FieldDisplay {
   templateUrl: './view-application.component.html',
   styleUrl: './view-application.component.scss'
 })
-export class ViewApplicationComponent {
+export class ViewApplicationComponent extends BaseComponent implements OnInit{
   resolveObjectionForm!: FormGroup;
   application: any;
   tableType: string = '';
@@ -118,13 +119,12 @@ export class ViewApplicationComponent {
 
   constructor(
     @Inject(MAT_DIALOG_DATA) public data: any,
+    deps: BaseDependency,
     private dialogRef: MatDialogRef<MaterialModule>,
     private fb: FormBuilder,
     private dialog: MatDialog,
-    private licenseApplicationService: LicenseApplicationService,
-    private licenseeService: LicenseeService,
-    protected accountService: AccountService
   ) {
+    super(deps)
     this.application = data.application;
     this.tableType = data.tableType;
   }
@@ -177,7 +177,7 @@ export class ViewApplicationComponent {
 
   fetchObjections() {
     // Fetch objections related to the application from backend
-    this.licenseApplicationService.getObjections(this.application.applicationId).subscribe({
+    this.licenseAppService.getObjections(this.application.applicationId).subscribe({
       next: (data) => {
         this.objections = data;
         // Initialize the form for resolving objections
@@ -235,24 +235,24 @@ export class ViewApplicationComponent {
 
   // Loads all dropdown values needed to populate dynamic form fields
   loadDropdownOptions(): void {
-    this.licenseeService.getDistrict().subscribe(data => {
+    this.masterService.getDistrict().subscribe(data => {
       this.dropdownFields['exciseDistrict'] = data;
     });
 
-    this.licenseeService.getLicenseCategories().subscribe(data => {
+    this.masterService.getLicenseCategories().subscribe(data => {
       this.dropdownFields['licenseCategory'] = data;
     });
 
-    this.licenseeService.getSubdivision().subscribe(data => {
+    this.masterService.getSubdivision().subscribe(data => {
       this.dropdownFields['exciseSubdivision'] = data;
       this.dropdownFields['siteSubdivision'] = data;
     });
 
-    this.licenseeService.getPoliceStations().subscribe(data => {
+    this.masterService.getPoliceStations().subscribe(data => {
       this.dropdownFields['policeStation'] = data;
     });
 
-    this.licenseeService.getLicenseTypes().subscribe(data => {
+    this.masterService.getLicenseTypes().subscribe(data => {
       this.dropdownFields['licenseType'] = data;
     });
   }
@@ -279,7 +279,7 @@ export class ViewApplicationComponent {
         }
 
         // Send resolved data to backend
-        this.licenseApplicationService.resolveObjections(this.application.applicationId, formData).subscribe({
+        this.licenseAppService.resolveObjections(this.application.applicationId, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => location.reload());
           },
@@ -306,7 +306,7 @@ export class ViewApplicationComponent {
       confirmButtonText: 'Yes, delete it!',
     }).then(result => {
       if (result.isConfirmed) {
-        this.licenseApplicationService.deleteApplication(this.application.applicationId).subscribe({
+        this.licenseAppService.deleteApplication(this.application.applicationId).subscribe({
           next: () => {
             Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
           },

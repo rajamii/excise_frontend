@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { MaterialModule } from '../../../../../../shared/material.module';
-import { LicenseeService } from '../../../../licensee.services';
+import { SalesmanBarmanRegistrationService } from '../../../../../../core/services/salesman-barman-registration.service';
 import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../../core/models/salesman-barman.model';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
@@ -54,7 +54,7 @@ export class SubmitApplicationComponent {
   // Output event emitter to notify parent about "back" action
   @Output() back = new EventEmitter<void>();
 
-  constructor(private licenseeService: LicenseeService, private router: Router) {}
+  constructor(private salesmanBarmanService: SalesmanBarmanRegistrationService, private router: Router) {}
 
   ngOnDestroy(): void {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
@@ -72,7 +72,7 @@ export class SubmitApplicationComponent {
 
   // Get uploaded document metadata (filename) for preview display
   get salesmanBarmanDocuments(): { key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }[] {
-    const docs = this.licenseeService.getSalesmanBarmanDocuments();
+    const docs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
     this.fileUrls = [];
   
     return Object.entries(docs).map(([key, file]) => {
@@ -137,7 +137,7 @@ export class SubmitApplicationComponent {
       const personalDetails: Partial<SalesmanBarman> = JSON.parse(sessionStorage.getItem('personalDetails') || '{}');
 
       // Get uploaded files from service
-      const salesmanBarmanDocuments = this.licenseeService.getSalesmanBarmanDocuments();
+      const salesmanBarmanDocuments = this.salesmanBarmanService.getSalesmanBarmanDocuments();
 
       if (!licenseDetails || !personalDetails || !salesmanBarmanDocuments) {
         alert('Missing application data. Please complete the form.');
@@ -162,12 +162,12 @@ export class SubmitApplicationComponent {
       }
 
       // Make API call to submit form
-      this.licenseeService.createSalesmanBarman(formData).subscribe({
+      this.salesmanBarmanService.createSalesmanBarman(formData).subscribe({
         next: () => {
           // On success: notify user, clear data, redirect
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
             sessionStorage.clear();
-            this.licenseeService.clearSalesmanBarmanDocuments();
+            this.salesmanBarmanService.clearSalesmanBarmanDocuments();
             this.router.navigate(['/site-admin/dashboard']);
           });
         },

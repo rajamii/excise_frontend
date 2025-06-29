@@ -188,13 +188,13 @@
     <!-- Action Buttons -->
     <mat-card-actions>
       <!-- Navigate back to previous step -->
-      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button matButton="outlined" (click)="goBack()">Back</button>
 
       <!-- Reset the form fields -->
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
 
       <!-- Proceed to next step only if form is valid -->
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid">Next</button>
+      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid">Next</button>
     </mat-card-actions>
 
   </mat-card>

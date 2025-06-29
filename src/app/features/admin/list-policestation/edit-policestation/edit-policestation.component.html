@@ -44,9 +44,9 @@
   <!-- Dialog action buttons -->
   <mat-dialog-actions>
     <!-- Cancel button that calls onCancel() method to close the dialog -->
-    <button mat-button (click)="onCancel()">Cancel</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
 
     <!-- Save button that calls onSave() method to save the data -->
-    <button mat-flat-button (click)="onSave()">Save</button>
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
   </mat-dialog-actions>
 </div>

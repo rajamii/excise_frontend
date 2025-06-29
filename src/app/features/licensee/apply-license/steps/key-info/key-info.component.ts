@@ -2,12 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseType } from '../../../../../core/models/license-type.model';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { DatePipe } from '@angular/common';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-key-info',
@@ -53,7 +53,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private licenseeService: LicenseeService,
+    private masterService: MasterService,
     private datePipe: DatePipe
   ) {
     // Retrieve data from session storage if available
@@ -112,7 +112,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   // Load data for License Type dropdown from service
   private loadDropdownData(): void {
-    this.licenseeService.getLicenseTypes().subscribe(
+    this.masterService.getLicenseTypes().subscribe(
       (data: LicenseType[]) => {
         this.licenseTypes = data;
       },

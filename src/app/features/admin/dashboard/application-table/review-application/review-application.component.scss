@@ -6,14 +6,23 @@
         display:none !important;
     }  
     .mat-horizontal-content-container{
-        padding:20px !important;     
+        padding:0 !important;     
     }
 }
 
 .step-header{
     display: flex;
     justify-content: center;
-    margin-bottom: 10px;
+    align-items: center;
+    padding: 10px;
+    font-size: 19px;
+    color: #ffffff;
+    background-color: #1C2B78;
+    font-weight: 500;
+    .form-title{
+      font-size: 15px;
+      font-weight: 400;
+    }
 }
 
 .step-content {
@@ -33,36 +42,23 @@
 .objection-form-content{
     max-height: 500px;
     overflow-y:scroll;
+    padding: 20px;  
     .objection-field{
     display: flex;
     flex-direction: column;
     }
 }
 .step-buttons {
-    margin-top: 10px;
     display: flex;
     justify-content: center;
     gap: 5px;
-    .accept-button {
-        background-color: #4CAF50;
-        color: white;
-    }
-
-    .objection-button {
-        background-color: #FFC107;
-        color: black;
-    }
-
-    .reject-button {
-        background-color: #F44336;
-        color: white;
-    }
+    padding: 10px;
 }
 
 .application-details{
   max-height: 500px;
   overflow-y: auto;
-  padding: 0 1rem;
+  padding: 1rem;
   .section-table {
     display: flex;
     flex-direction: column;
@@ -108,4 +104,5 @@
 /* Scroll only the form */
 .form-container {
     overflow-y: auto;
+    padding:0 10px!important;
 }

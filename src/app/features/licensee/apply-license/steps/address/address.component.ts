@@ -2,12 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../licensee.services';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { PoliceStation } from '../../../../../core/models/policestation.model';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-address',
@@ -54,7 +54,7 @@ export class AddressComponent implements OnInit, OnDestroy {
     longitude: signal('')
   };
 
-  constructor(private fb: FormBuilder, private licenseeService: LicenseeService) {
+  constructor(private fb: FormBuilder, private masterService: MasterService) {
     const storedValues = this.getFromSessionStorage(); // Retrieve saved form values from session storage
 
     // Initialize the form with stored values and validators
@@ -95,13 +95,13 @@ export class AddressComponent implements OnInit, OnDestroy {
 
   // Fetches dropdown data from backend service
   private loadDropdownData(): void {
-    this.licenseeService.getSubdivision().subscribe((data: Subdivision[]) => {
+    this.masterService.getSubdivision().subscribe((data: Subdivision[]) => {
       this.subdivisions = data;
     }, error => {
       console.error('Failed to load subdivisions.', error);
     });
 
-    this.licenseeService.getPoliceStations().subscribe({
+    this.masterService.getPoliceStations().subscribe({
       next: (data: PoliceStation[]) => {
         this.policeStations = data;
 

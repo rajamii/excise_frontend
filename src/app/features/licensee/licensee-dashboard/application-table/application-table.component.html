@@ -1,5 +1,5 @@
 @if (dataSource.data.length) {
-  <mat-table [dataSource]="dataSource.filteredData" class="mat-elevation-z2">
+  <mat-table [dataSource]="dataSource.filteredData">
     <!-- Serial Number Column -->
     <ng-container matColumnDef="slNo">
       <mat-header-cell *matHeaderCellDef class="sl-no"> Sl No </mat-header-cell>
@@ -31,18 +31,19 @@
     <!-- Current workflow stage of the application -->
     <ng-container matColumnDef="currentStage">
       <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
-      <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.currentStage] }} </mat-cell>
+      <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.currentStage] || 'N/A' }} </mat-cell>
     </ng-container>
     <!-- Most recent remarks on the application -->
     <ng-container matColumnDef="remarks">
       <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
-      <mat-cell *matCellDef="let element"> {{element.latestTransaction?.remarks}} </mat-cell>
+      <mat-cell *matCellDef="let element"> {{element.latestTransaction?.remarks || '-' }} </mat-cell>
     </ng-container>
     <!-- Performed By -->
     <ng-container matColumnDef="performedBy">
       <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        {{ roleDisplayMapping[element.latestTransaction?.performedBy?.role] }}
+        <div>{{ element.latestTransaction?.performedBy?.username || 'Unknown' }}</div>
+        <div class="text-secondary"> Role: {{ roleDisplayMapping[element.latestTransaction?.performedBy?.roleName ] || 'Unknown' }}</div>
         <div class="text-secondary"> Date: {{element.latestTransaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }} </div>
       </mat-cell>
     </ng-container>

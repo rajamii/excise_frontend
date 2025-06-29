@@ -2,11 +2,11 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetec
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../shared/utils/capitalize.util';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 @Component({
   selector: 'app-member-details',
@@ -50,7 +50,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder, 
-    private licenseeService: LicenseeService,
+    private licenseApplicationService: LicenseApplicationService,
     private cdr: ChangeDetectorRef
   ){
     // Load saved form data from sessionStorage (if available)
@@ -82,7 +82,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     FormUtils.capitalize(this.memberDetailsForm.get('pan')!, this.destroy$);
 
     // Restore photo from service
-    const storedPhoto = this.licenseeService.getPassPhoto();
+    const storedPhoto = this.licenseApplicationService.getPassPhoto();
     if (storedPhoto) {
       this.passPhoto.file = storedPhoto;
       this.passPhoto.fileUrl = URL.createObjectURL(storedPhoto);
@@ -117,7 +117,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       this.passPhoto.fileUrl = URL.createObjectURL(file);
 
       this.cdr.detectChanges(); // Trigger change detection
-      this.licenseeService.setPassPhoto(file); // Save to service
+      this.licenseApplicationService.setPassPhoto(file); // Save to service
     }
   }
 

@@ -1,12 +1,11 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
-import { LicenseeService } from '../../../licensee.services';
 import Swal from 'sweetalert2'; 
 import { Subscription } from 'rxjs';
 import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 @Component({
   selector: 'app-submit-application',
@@ -18,7 +17,7 @@ import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })
-export class SubmitApplicationComponent {
+export class SubmitApplicationComponent implements OnInit, OnDestroy{
   // Emits event to move to the previous screen
   @Output() back = new EventEmitter<void>();
 
@@ -29,18 +28,24 @@ export class SubmitApplicationComponent {
   private photoSub?: Subscription;
 
   constructor(
-    private licenseeService: LicenseeService,
-    private router: Router
+    private licenseAppService: LicenseApplicationService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   // On component init, subscribe to the photo observable
   ngOnInit(): void {
-    this.photoSub = this.licenseeService.getPassPhotoObservable().subscribe(file => {
+    this.photoSub = this.licenseAppService.getPassPhotoObservable().subscribe(file => {
       // Release previous object URL if exists
       if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
 
       // Create a new preview URL if file exists
       this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
+
+      setTimeout(() => {
+        this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
+        this.cdr.detectChanges(); // safe after timeout
+      });
     });
   }
 
@@ -216,7 +221,7 @@ export class SubmitApplicationComponent {
         return { ...acc, ...data };
       }, {});
 
-      const photoFile = this.licenseeService.getPassPhoto();
+      const photoFile = this.licenseAppService.getPassPhoto();
 
       if (!photoFile || Object.keys(formValues).length === 0) {
         alert('Missing application data. Please complete the form.');
@@ -227,7 +232,7 @@ export class SubmitApplicationComponent {
       const formData = FormDataUtil.buildFormData(formValues);
       formData.append('photo', photoFile); // append file separately to root
 
-      this.licenseeService.submitLicenseApplication(formData).subscribe({
+      this.licenseAppService.submitLicenseApplication(formData).subscribe({
         next: () => {
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
             sessionStorage.clear();

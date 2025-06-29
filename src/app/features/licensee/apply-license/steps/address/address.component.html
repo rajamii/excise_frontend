@@ -148,9 +148,9 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!addressForm.valid">Next</button>
+      <button matButton="outlined" (click)="goBack()">Back</button>
+      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
+      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!addressForm.valid">Next</button>
     </mat-card-actions>
   </mat-card>
 

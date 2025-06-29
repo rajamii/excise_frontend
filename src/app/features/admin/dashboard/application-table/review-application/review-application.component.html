@@ -2,7 +2,7 @@
   <!-- Step 1: Show Application Data -->
   <mat-step label="Application Data">
     <div class="step-header">
-      <h5>{{application.applicationId}}</h5>
+      {{application.applicationId}}
     </div>
     <div class="application-details">
       <!-- Section: License Info -->
@@ -170,8 +170,8 @@
       <!-- Approve -->
       @if (['pending', 'rejected'].includes(tableType)) {
         <button
-          mat-flat-button
-          class="accept-button"
+          matButton
+          class="bg-success text-white"
           (click)="onApprove(stepper)"
           >
           <mat-icon>check_circle</mat-icon>
@@ -182,8 +182,8 @@
       <!-- Raise Objection -->
       @if (tableType==='pending') {
         <button
-          mat-flat-button
-          class="objection-button"
+          matButton
+          class="bg-warning"
           (click)="onRaiseObjection(stepper)"
           >
           <mat-icon>flag</mat-icon>
@@ -194,8 +194,8 @@
       <!-- Reject -->
       @if (tableType==='pending') {
         <button
-          mat-flat-button
-          class="reject-button"
+          matButton="filled"
+          color="warn"
           (click)="onReject(stepper)"
           >
           <mat-icon>cancel</mat-icon>
@@ -210,7 +210,7 @@
     <mat-step label="Raise Objection">
       <form [formGroup]="objectionForm">
         <div class="step-header">
-          <h5>{{application.applicationId}}</h5>
+          {{application.applicationId}}
         </div>
         <!-- Objection Form -->
         <div class="objection-form-content">
@@ -233,8 +233,8 @@
         </div>
         <!-- Objection Step Buttons -->
         <div class="step-buttons">
-          <button mat-stroked-button matStepperPrevious>Back</button>
-          <button mat-flat-button (click)="onSubmitObjection()">Submit Objection</button>
+          <button matButton="outlined" matStepperPrevious>Back</button>
+          <button matButton class="bg-warning" matStepperNext>Submit Objection</button>
         </div>
       </form>
     </mat-step>
@@ -247,7 +247,7 @@
         <div class="step-header">
           <h5>{{application.applicationId}}</h5>
         </div>
-        <div class="step-content">
+        <div class="step-content p-2">
           <div>
             <!-- Location dropdown triggers fee update on change -->
             <mat-form-field appearance="outline" class="w-full">
@@ -265,8 +265,8 @@
             </mat-form-field>
           </div>
           <div class="step-buttons">
-            <button mat-stroked-button matStepperPrevious>Back</button>
-            <button mat-flat-button [disabled]="!feeForm.valid" matStepperNext>Next</button>
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" [disabled]="!feeForm.valid" matStepperNext>Next</button>
           </div>
         </div>
       </form>
@@ -277,17 +277,17 @@
   @if (accountService.hasAnyRole('level_2') && isApproveFlow) {
     <mat-step label="Site Enquiry">
       <div class="step-body">
-        <div class="step-header justify-content-between px-1">
-          <h5 class = "application-id">{{ application.applicationId }}</h5>
-          <div class = "dialog-title">Site Enquiry Form</div>
+        <div class="step-header justify-content-between px-4">
+          {{ application.applicationId }}
+          <div class="form-title">Site Enquiry Form</div>
         </div>
         <!-- Site enquiry form component emits form validity status -->
-        <div class="form-container">
+        <div class="form-container p-2">
           <app-site-enquiry-form (formStatus)="onFormValidityChange($event)"></app-site-enquiry-form>
         </div>
         <div class="step-buttons">
-          <button mat-stroked-button matStepperPrevious>Back</button>
-          <button mat-flat-button matStepperNext [disabled]="!siteEnquiryFormValid">Next</button>
+          <button matButton="outlined" matStepperPrevious>Back</button>
+          <button matButton="filled" color="primary"s matStepperNext [disabled]="!siteEnquiryFormValid">Next</button>
         </div>
       </div>
     </mat-step>
@@ -300,7 +300,7 @@
         <div class="step-header">
           <h5>{{application.applicationId}}</h5>
         </div>
-        <div class="step-content">
+        <div class="step-content p-4">
           <div>
             <mat-form-field appearance="outline">
               <mat-label>Select License Category</mat-label>
@@ -314,47 +314,48 @@
             </mat-form-field>
           </div>
           <div class="step-buttons">
-            <button mat-stroked-button matStepperPrevious>Back</button>
-            <button mat-flat-button matStepperNext>Next</button>
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" matStepperNext>Next</button>
           </div>
         </div>
       </form>
     </mat-step>
   }
 
-  <!-- Common remarks form step (used in all flows: approve, reject, objection) -->
-  <mat-step [stepControl]="remarksForm" label="Review Remarks">
-    <form [formGroup]="remarksForm">
-      <div class="step-header">
-        <h5>{{application.applicationId}}</h5>
-      </div>
-      <div class="step-content">
-        <mat-form-field appearance="outline">
-          <mat-label>Review Remarks</mat-label>
-          <textarea matInput formControlName="remarks" required></textarea>
-          @if (remarksForm.controls['remarks'].hasError('required')) {
-            <mat-error>
-              Remarks are required
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <div class="step-buttons">
-          <button mat-stroked-button matStepperPrevious>Back</button>
-          <button mat-flat-button matStepperNext [disabled]="!remarksForm.valid">Next</button>
+  <!-- Common remarks form step (used in : approve, reject) -->
+  @if (isApproveFlow || isRejectFlow) {
+    <mat-step [stepControl]="remarksForm" label="Review Remarks">
+      <form [formGroup]="remarksForm">
+        <div class="step-header">
+          {{application.applicationId}}
         </div>
-      </div>
-    </form>
-  </mat-step>
+        <div class="step-content p-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Review Remarks</mat-label>
+            <textarea matInput formControlName="remarks" required></textarea>
+            @if (remarksForm.controls['remarks'].hasError('required')) {
+              <mat-error>
+                Remarks are required
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <div class="step-buttons">
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" matStepperNext [disabled]="!remarksForm.valid">Next</button>
+          </div>
+        </div>
+      </form>
+    </mat-step>
+  }
 
   <!-- Final confirmation step -->
   <mat-step class="confirmation-step" label="Confirm">
-    <div class="step-content">
+    <div class="step-content p-4">
 
       <!-- Shown in approval flow -->
       @if (isApproveFlow) {
-        <h5>
-          <mat-icon class="approve-icon">check_circle</mat-icon>
+        <h5 class="text-success">
           Confirm Approval
         </h5>
         <mat-card appearance="outlined">
@@ -376,8 +377,7 @@
 
       <!-- Shown in rejection flow -->
       @if (isRejectFlow) {
-        <h5>
-          <mat-icon class="reject-icon">cancel</mat-icon>
+        <h5 class="text-danger">
           Confirm Rejection
         </h5>
         <mat-card appearance="outlined">
@@ -387,26 +387,27 @@
 
       <!-- Shown in objection flow -->
       @if (isObjection) {
-        <h5>
-          <mat-icon class="objection-icon">flag</mat-icon>
+        <h5 class="text-danger">
           Confirm Objection
         </h5>
         <mat-card appearance="outlined">
-          <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
           <!-- Show all objection details -->
-          @for (obj of objectionForm.value.objections; track obj) {
-            <p>
-              <mat-icon>error_outline</mat-icon>
-              <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
-            </p>
-          }
+            @for (obj of selectedObjections; track obj.field) {
+              <p>
+                <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
+              </p>
+            }
         </mat-card>
       }
 
       <!-- Buttons common to all confirmation cases -->
       <div class="step-buttons">
-        <button mat-stroked-button matStepperPrevious>Back</button>
-        <button mat-flat-button (click)="onConfirm()">Confirm</button>
+        <button matButton="outlined" matStepperPrevious>Back</button>
+        <button matButton="filled" color="primary" 
+        (click)="onConfirmClick()"
+        [disabled]="isObjection && selectedObjections.length === 0">
+          Confirm
+        </button>
       </div>
 
     </div>

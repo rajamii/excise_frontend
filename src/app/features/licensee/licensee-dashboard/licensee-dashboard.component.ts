@@ -1,12 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module'; 
-import { RouterModule } from '@angular/router'; 
-import { BaseComponent } from '../../../base/base.components';
-import { BaseDependency } from '../../../base/dependency/base.dependency'; 
 import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
 import { LicenseApplicationService } from '../../../core/services/license-application.service';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { LicenseApplication } from '../../../core/models/license-application.model';
 
@@ -15,14 +12,12 @@ import { LicenseApplication } from '../../../core/models/license-application.mod
   standalone: true, 
   imports: [ 
     MaterialModule, 
-    RouterModule,
-    MatDialogModule,
     ApplicationTableComponent 
   ],
   templateUrl: './licensee-dashboard.component.html',
   styleUrl: './licensee-dashboard.component.scss'   
 })
-export class LicenseeDashboardComponent extends BaseComponent{
+export class LicenseeDashboardComponent implements OnInit{
   // Dashboard counts for applied, pending, approved, and rejected applications
   dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
 
@@ -33,12 +28,9 @@ export class LicenseeDashboardComponent extends BaseComponent{
   rejectedApplications: ApplicationStatus[] = [];
 
   constructor(
-    public baseDependancy: BaseDependency,
-    protected licenseApplicationService: LicenseApplicationService,
+    protected licenseAppService: LicenseApplicationService,
     private dialog: MatDialog
-  ) { 
-    super(baseDependancy); // Calling the parent class constructor
-  }
+  ) { }
 
   // Table Data Sources
   appliedDataSource = new MatTableDataSource<LicenseApplication>();
@@ -65,7 +57,7 @@ export class LicenseeDashboardComponent extends BaseComponent{
   // Lifecycle hook to initialize data
   ngOnInit(): void {
     // Fetch dashboard counts
-    this.licenseApplicationService.getDashboardCounts().subscribe({
+    this.licenseAppService.getDashboardCounts().subscribe({
       next: (res) => {
         this.dashboardCounts = res; // Update dashboard counts
       },
@@ -75,11 +67,12 @@ export class LicenseeDashboardComponent extends BaseComponent{
     });
 
     // Fetch applications by stage
-    this.licenseApplicationService.getApplicationsByStatus().subscribe(res => {
+    this.licenseAppService.getApplicationsByStatus().subscribe(res => {
       this.appliedDataSource.data = res.applied;
       this.pendingDataSource.data = res.pending;
       this.approvedDataSource.data = res.approved;
       this.rejectedDataSource.data = res.rejected;
+      console.log(res)
     }, error => {
       console.error('Error fetching applications:', error);
     });

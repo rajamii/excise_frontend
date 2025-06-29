@@ -22,26 +22,31 @@ export class CsrfInterceptor implements HttpInterceptor {
    */
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     if (isPlatformBrowser(this.platformId)) {
-      let token = localStorage.getItem('access');
+      const token = localStorage.getItem('access');
 
-      // Attach access token if it exists
-      if (token) {
+      // Public routes that shouldn't have Authorization header
+      const publicEndpoints = [
+        '/get_captcha/',
+        '/captcha/',
+      ];
+
+      // If the request is public, skip attaching token
+      const isPublic = publicEndpoints.some(publicUrl => req.url.includes(publicUrl));
+
+      if (!isPublic && token) {
         req = this.addToken(req, token);
       }
 
       return next.handle(req).pipe(
         catchError(error => {
-          // If 401 error, attempt to refresh token
-          if (error instanceof HttpErrorResponse && error.status === 401) {
+          if (!isPublic && error instanceof HttpErrorResponse && error.status === 401) {
             return this.handle401Error(req, next);
           }
-          // If not 401, just propagate the error
           return throwError(() => error);
         })
       );
     }
 
-    // If not running in browser (e.g., server-side rendering), just forward request
     return next.handle(req);
   }
 

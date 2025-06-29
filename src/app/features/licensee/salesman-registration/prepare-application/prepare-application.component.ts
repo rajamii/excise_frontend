@@ -7,6 +7,7 @@ import { SubmitApplicationComponent } from "./steps/submit-application/submit-ap
 
 @Component({
   selector: 'app-salesman-registration', // Custom HTML tag for the Salesman Registration component
+  standalone: true,
   imports: [MaterialModule, LicenseComponent, DetailsComponent, MakePaymentComponent, SubmitApplicationComponent], // Import the necessary modules and step components
   templateUrl: './prepare-application.component.html', // Path to the HTML template for the component
   styleUrl: './prepare-application.component.scss' // Path to the SCSS styles for the component

@@ -14,14 +14,14 @@
 
       <div class="nav-links-container">
         @if (!isLoggedIn) {
-          <button mat-button (click)="login()">
+          <button matButton (click)="login()">
             <mat-icon>login</mat-icon>
             <span class="text">Sign In</span>
           </button>
         }
 
         @if (isLoggedIn) {
-          <button mat-button (click)="logout()">
+          <button matButton (click)="logout()">
             <mat-icon>logout</mat-icon>
             <span class="text">Sign Out</span>
           </button>

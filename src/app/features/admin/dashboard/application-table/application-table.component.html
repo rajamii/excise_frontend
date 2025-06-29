@@ -1,5 +1,5 @@
 @if (hasData()) {
-  <mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+  <mat-table [dataSource]="dataSource">
     <!-- Serial Number Column -->
     <ng-container matColumnDef="slNo">
       <mat-header-cell *matHeaderCellDef class="sl-no"> Sl No </mat-header-cell>
@@ -9,11 +9,16 @@
     <ng-container matColumnDef="id">
       <mat-header-cell *matHeaderCellDef class="app-id"> Application ID </mat-header-cell>
       <mat-cell *matCellDef="let element" class="app-id">
-        <div class="application-id" [ngClass]="{ 'objection-text': element.hasUnresolvedObjection }">
+        <div class="application-id" [ngClass]="{ 'objection-text': unresolvedObjectionAppIds.has(element.applicationId) }">
           {{ element?.applicationId }}
           <!-- Show warning icon if there is an unresolved objection -->
-          @if (element.hasUnresolvedObjection) {
-            <mat-icon color="warn" matTooltip="Objection pending">error</mat-icon>
+          @if (unresolvedObjectionAppIds.has(element.applicationId)) {
+            <mat-icon
+              color="warn"
+              matTooltip="Objection pending"
+              >
+              error
+            </mat-icon>
           }
         </div>
         <!-- Shows the submission date from the first transaction -->
@@ -40,7 +45,8 @@
     <ng-container matColumnDef="performedBy">
       <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        {{ roleDisplayMapping[element.latestTransaction?.performedBy?.role] || 'Unknown' }}
+        <div>{{ element.latestTransaction?.performedBy?.username || 'Unknown' }}</div>
+        <div class="text-secondary"> Role: {{ roleDisplayMapping[element.latestTransaction?.performedBy?.roleName ] || 'Unknown' }}</div>
         <div class="text-secondary">
           Date: {{ element.latestTransaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
         </div>

@@ -1,12 +1,8 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
-import Swal from 'sweetalert2';
-import { BaseDependency } from '../../../../base/dependency/base.dependency';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
 import { MatDialog } from '@angular/material/dialog';
-import { BaseComponent } from '../../../../base/base.components';
-import { ApplyLicenseComponent } from '../../apply-license/apply-license.component';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ViewApplicationComponent } from './view-application/view-application.component';
 import { PrintApplicationComponent } from './print-application/print-application.component';
@@ -18,7 +14,7 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-export class ApplicationTableComponent extends BaseComponent{
+export class ApplicationTableComponent implements OnChanges{
   // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
@@ -35,12 +31,9 @@ export class ApplicationTableComponent extends BaseComponent{
   @Output() movement = new EventEmitter<any>();
 
   constructor(
-    public baseDependancy: BaseDependency,
-    protected licenseApplicationService: LicenseApplicationService,
+    protected licenseAppService: LicenseApplicationService,
     private dialog: MatDialog
-  ) { 
-    super(baseDependancy); // Calling the parent class constructor
-  }
+  ) { }
 
   // Mapping of internal application stages to user-friendly display strings
   stageDisplayMapping: { [key: string]: string } = {
@@ -78,7 +71,7 @@ export class ApplicationTableComponent extends BaseComponent{
     this.unresolvedObjectionAppIds.clear();
 
     this.dataSource?.data?.forEach(app => {
-      this.licenseApplicationService.getObjections(app.applicationId).subscribe((objections) => {
+      this.licenseAppService.getObjections(app.applicationId).subscribe((objections) => {
         const hasUnresolved = objections?.some(obj => obj.isResolved === false);
         if (hasUnresolved) {
           this.unresolvedObjectionAppIds.add(app.applicationId);

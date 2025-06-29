@@ -4,39 +4,7 @@
     <mat-card class = "department grid-card">
       <mat-card-header>About Us</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>The  Excise Department, under the Government of Sikkim
-          enforces regulations and administers the Sikkim Excise Act,
-          1992. The said Act provides for manufacturing, possession, sale,
-          transport, import of alcoholic liquor; and imposition of
-          duty in form of excise duty, license fee, export pass fee, etc.
-          under the various Acts listed below. The Department also strives
-          to prevent the use of unsafe liquor and ensure consumption of liquor
-          keeping in view the health of the consumers. <br><br>The Sikkim Excise Act,
-          1992 and the Medicinal & Toilet Preparation Act 1955 enables the
-          Department not only to regulate but also enable collection of
-          Revenues by way of Excise Duty, License Fee, and Export Pass Fee
-          etc. Under the provisions of the above Acts, the Department monitors
-          and frames Rules and Regulations for manufacture, import, export,
-          licensing, sale, storage /warehousing, inspection of all alcohol,
-          spirits, derivatives, raw material and by products. The Department
-          is also a major contributor to the Revenue of the State Government.<br><br>
-          The Department is presently headed by an officer in the rank of
-          Secretary to the Government. Till 1974 it was headed by the Executive
-          Officer and was located at the old District Office (presently the
-          Secretariat Annex adjacent to Power Secretariat). The Department shifted
-          to its present premises at Mahatma Gandhi Marg, Gangtok in the mid 1970’s.
-          The Secretary is assisted by Commissioner, Joint Commissioner, Deputy
-          Commissioner, other officers and staffs. The Department has a Regional
-          Office for South/West located at Jorethang headed by a Deputy Commissioner
-          District who looks after the affairs and Assistant Commissioner who acts
-          as the D&DO for South and West Districts. <br><br>An officer in the rank of
-          Sub-Inspector along with other supporting staffs is also stationed in
-          Gyalshing, West Sikkim. The North and the East Districts’ falls under
-          the jurisdiction of the Regional Office (North/East) attached with the
-          Head Office, Gangtok. Excise personals are also posted at Mangan, North Sikkim.
-          The Department also runs a Laboratory at Chanatar, Rangpo. The sole
-          responsibility of the Laboratory is to examine, test and analyze all
-        liquors produced in Sikkim.</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -56,11 +24,7 @@
     <mat-card class = "objectives grid-card">
       <mat-card-header>Objectives</mat-card-header>
       <mat-card-content class = "card-container">
-        The Objectives of the Excise Department, Government of Sikkim are:-<br><br>
-        1) Regulate manufacture, transport, possession and sale of all excisable articles.<br>
-        2) Effective enforcement and inspection.<br>
-        3) Generate optimal Revenue for funding of developmental activities of the State Government.<br>
-        4) Impart training to officers and staffs for better efficiency.
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -90,26 +54,26 @@
     <mat-card class = "secretaries grid-card">
       <mat-card-header>Excise Secretaries / Principal Secretaries</mat-card-header>
       <mat-card-content class = "card-container">
-        <table mat-table [dataSource]="commissionerData" class="mat-elevation-z8">
+        <mat-table [dataSource]="commissionerData">
           <ng-container matColumnDef="slNo">
-            <th mat-header-cell *matHeaderCellDef> Sl No. </th>
-            <td mat-cell *matCellDef="let com"> {{com.slNo}} </td>
+            <mat-header-cell *matHeaderCellDef> Sl No. </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.slNo}} </mat-cell>
           </ng-container>
           <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef> Name </th>
-            <td mat-cell *matCellDef="let com"> {{com.name}} </td>
+            <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.name}} </mat-cell>
           </ng-container>
           <ng-container matColumnDef="fromDate">
-            <th mat-header-cell *matHeaderCellDef> From Date </th>
-            <td mat-cell *matCellDef="let com"> {{com.fromDate}} </td>
+            <mat-header-cell *matHeaderCellDef> From Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.fromDate}} </mat-cell>
           </ng-container>
           <ng-container matColumnDef="toDate">
-            <th mat-header-cell *matHeaderCellDef> To Date </th>
-            <td mat-cell *matCellDef="let com"> {{com.toDate}} </td>
+            <mat-header-cell *matHeaderCellDef> To Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.toDate}} </mat-cell>
           </ng-container>
-          <tr mat-header-row *matHeaderRowDef="commissionerColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: commissionerColumns;"></tr>
-        </table>
+          <mat-header-row *matHeaderRowDef="commissionerColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: commissionerColumns;"></mat-row>
+        </mat-table>
       </mat-card-content>
     </mat-card>
   }
@@ -119,29 +83,7 @@
     <mat-card class = "terms-of-use grid-card">
       <mat-card-header>Terms of Use</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>This Portal is designed, developed and hosted by Excise Department,
-          Government of Sikkim with technical support from National Informatics
-          Centre, Government of India.<br><br>Though all efforts have been made
-          to ensure the accuracy and currency of the content on this Portal, the
-          same should not be construed as a statement of law or used for any legal
-          purposes. Excise Department accepts no responsibility in relation to
-          the accuracy, completeness, usefulness or otherwise, of the contents.
-          Users are advised to verify/check any information with the relevant
-          Government department(s) and/or other source(s), and to obtain any
-          appropriate professional advice before acting on the information
-          provided in the Portal.<br><br>In no event will the Excise Department
-          be liable for any expense, loss or damage including, without limitation,
-          indirect or consequential loss or damage, or any expense, loss or
-          damage whatsoever arising from use, or loss of use, of data, arising
-          out of or in connection with the use of this Portal.<br><br>Links
-          to other websites that have been included on this Portal are provided
-          for public convenience only. Excise Department is not responsible for
-          the contents or reliability of linked websites and does not necessarily
-          endorse the view expressed within them. We cannot guarantee the availability
-          of such linked pages at all times.<br><br>These terms and conditions
-          shall be governed by and construed in accordance with the Indian Laws.
-          Any dispute arising under these terms and conditions shall be subject to
-        the exclusive jurisdiction of the courts of India.</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -151,22 +93,7 @@
     <mat-card class = "linking-policy grid-card">
       <mat-card-header>Linking Policy</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>Links to external websites/portals<br><br>At many places in
-          this Portal, you shall find links to other websites/portals.
-          This links have been placed for your convenience. Excise Department
-          is not responsible for the contents and reliability of the linked
-          websites and does not necessarily endorse the views expressed in them.
-          Mere presence of the link or its listing on this Portal should not
-          be assumed as endorsement of any kind. We can not guarantee that these
-          links will work all the time and we have no control over availability
-          of linked pages.<br><br>Links to Excise Portal by other websites<br><br>
-          We do not object to you linking directly to the information that is hosted
-          on this Portal and no prior permission is required for the same. However,
-          we would like you to inform us about any links provided to this Portal so
-          that you can be informed of any changes or updations therein. Also, we do
-          not permit our pages to be loaded into frames on your site. The pages
-          belonging to this Portal must load into a newly opened browser window
-        of the User.</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -176,15 +103,7 @@
     <mat-card class = "copyright-policy grid-card">
       <mat-card-header>Copyright Policy</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>Material featured on this Portal may be reproduced free of charge
-          after taking proper permission by sending a mail to us. However,
-          the material has to be reproduced accurately and not to be used in
-          a derogatory manner or in a misleading context. Wherever the material
-          is being published or issued to others, the source must be prominently
-          acknowledged. However, the permission to reproduce this material
-          shall not extend to any material which is identified as being copyright
-          of a third party. Authorisation to reproduce such material must be
-        obtained from the departments/copyright holders concerned.</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -194,22 +113,7 @@
     <mat-card class = "privacy-policy grid-card">
       <mat-card-header>Privacy Policy</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>Excise Portal and apps based on Excise Portal such as Windows
-          8 app does not automatically capture any specific personal information
-          from you, (like name, phone number or e-mail address), that allows us
-          to identify you individually.<br><br>If the Excise Portal requests you
-          to provide personal information, you will be informed for the particular
-          purposes for which the information is gathered and adequate security
-          measures will be taken to protect your personal information.<br><br>
-          We do not sell or share any personally identifiable information volunteered
-          on the Excise Portal site to any third party (public/private). Any
-          information provided to this Portal will be protected from loss,
-          misuse, unauthorized access or disclosure, alteration, or destruction.<br><br>
-          We gather certain information about the User, such as Internet protocol
-          (IP) addresses, domain name, browser type, operating system, the date
-          and time of the visit and the pages visited. We make no attempt to link
-          these addresses with the identity of individuals visiting our site unless
-        an attempt to damage the site has been detected</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -219,17 +123,7 @@
     <mat-card class = "legal-disclaimer grid-card">
       <mat-card-header>Legal Disclaimer</mat-card-header>
       <mat-card-content class = "card-container">
-        <p>The information provided by Excise Department, Government of Sikkim on
-          <a href="http://localhost:4200/">https://excise.sikkim.gov.in</a>
-          is for general informational purposes only. All information on the
-          Site is provided in good faith, however we make no representation
-          or warranty of any kind, express or implied, regarding the accuracy,
-          adequacy, validity, reliability, availability, or completeness of
-          any information on the Site. <br><br> UNDER NO CIRCUMSTANCE SHALL
-          WE HAVE ANY LIABILITY TO YOU FOR ANY LOSS OR DAMAGE OF ANY KIND
-          INCURRED AS A RESULT OF THE USE OF THE SITE OR RELIANCE ON ANY
-          INFORMATION PROVIDED ON THE SITE. YOUR USE OF THE SITE AND YOUR
-        RELIANCE ON ANY INFORMATION ON THE SITE IS SOLELY AT YOUR OWN RISK.</p>
+        <markdown [data]="markdownContent"></markdown>
       </mat-card-content>
     </mat-card>
   }
@@ -268,63 +162,63 @@
         @if (contactsTab === 1) {
           <div class="public-info-officers">
             <mat-card-content>
-              <mat-radio-group [(ngModel)]="pioTab" class="contacts-radio-group">
+              <mat-radio-group [(ngModel)]="pioTab" class="contacts-radio-group mb-3">
                 <mat-radio-button [value]="0">Headquarter</mat-radio-button>
                 <mat-radio-button [value]="1">District</mat-radio-button>
               </mat-radio-group>
               <!-- Headquarter Table -->
               @if (pioTab === 0) {
-                <table mat-table [dataSource]="headquarterData" class="mat-elevation-z8">
+                <mat-table [dataSource]="headquarterData">
                   <ng-container matColumnDef="headquarter">
-                    <th mat-header-cell *matHeaderCellDef> Headquarter </th>
-                    <td mat-cell *matCellDef="let hq"> {{hq.location}} </td>
+                    <mat-header-cell *matHeaderCellDef> Headquarter </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.location}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef> Officer Name </th>
-                    <td mat-cell *matCellDef="let hq"> {{hq.name}} </td>
+                    <mat-header-cell *matHeaderCellDef> Officer Name </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.name}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="designation">
-                    <th mat-header-cell *matHeaderCellDef> Designation </th>
-                    <td mat-cell *matCellDef="let hq"> {{hq.designation}} </td>
+                    <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.designation}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="address">
-                    <th mat-header-cell *matHeaderCellDef> Address </th>
-                    <td mat-cell *matCellDef="let hq"> {{hq.address}} </td>
+                    <mat-header-cell *matHeaderCellDef> Address </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.address}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="phoneNumber">
-                    <th mat-header-cell *matHeaderCellDef> Phone Number </th>
-                    <td mat-cell *matCellDef="let hq"> {{hq.phoneNumber}} </td>
+                    <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.phoneNumber}} </mat-cell>
                   </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="headquarterColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: headquarterColumns;"></tr>
-                </table>
+                  <mat-header-row *matHeaderRowDef="headquarterColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: headquarterColumns;"></mat-row>
+                </mat-table>
               }
               <!-- District Table -->
               @if (pioTab === 1) {
-                <table mat-table [dataSource]="districtData" class="mat-elevation-z8">
+                <mat-table [dataSource]="districtData">
                   <ng-container matColumnDef="district">
-                    <th mat-header-cell *matHeaderCellDef> District </th>
-                    <td mat-cell *matCellDef="let dt"> {{dt.location}} </td>
+                    <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.location}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="name">
-                    <th mat-header-cell *matHeaderCellDef> Officer Name </th>
-                    <td mat-cell *matCellDef="let dt"> {{dt.name}} </td>
+                    <mat-header-cell *matHeaderCellDef> Officer Name </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.name}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="designation">
-                    <th mat-header-cell *matHeaderCellDef> Designation </th>
-                    <td mat-cell *matCellDef="let dt"> {{dt.designation}} </td>
+                    <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.designation}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="address">
-                    <th mat-header-cell *matHeaderCellDef> Address </th>
-                    <td mat-cell *matCellDef="let dt"> {{dt.address}} </td>
+                    <mat-header-cell *matHeaderCellDef> Address </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.address}} </mat-cell>
                   </ng-container>
                   <ng-container matColumnDef="phoneNumber">
-                    <th mat-header-cell *matHeaderCellDef> Phone Number </th>
-                    <td mat-cell *matCellDef="let dt"> {{dt.phoneNumber}} </td>
+                    <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.phoneNumber}} </mat-cell>
                   </ng-container>
-                  <tr mat-header-row *matHeaderRowDef="districtColumns"></tr>
-                  <tr mat-row *matRowDef="let row; columns: districtColumns;"></tr>
-                </table>
+                  <mat-header-row *matHeaderRowDef="districtColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: districtColumns;"></mat-row>
+                </mat-table>
               }
             </mat-card-content>
           </div>
@@ -332,11 +226,11 @@
         @if (contactsTab === 2) {
           <div class="directorate-officials">
             <mat-card-content>
-              <mat-table [dataSource]="directorateAndDistrictOfficialsData" class="mat-elevation-z8">
-                <!-- <ng-container matColumnDef="id">
-                <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
-                <mat-cell *matCellDef="let ddo"> {{ddo.id}} </mat-cell>
-              </ng-container> -->
+            <mat-table [dataSource]="directorateAndDistrictOfficialsData">
+              <ng-container matColumnDef="slno">
+                <mat-header-cell *matHeaderCellDef> Sl. No. </mat-header-cell>
+                <mat-cell *matCellDef="let row; let i = index"> {{ i + 1 }} </mat-cell>
+              </ng-container>
               <ng-container matColumnDef="name">
                 <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
                 <mat-cell *matCellDef="let ddo"> {{ddo.name}} </mat-cell>
@@ -384,38 +278,38 @@
                 </mat-select>
               </mat-form-field>
             </div>
-            <table mat-table [dataSource]="grievanceRedressalOfficerData" class="mat-elevation-z8">
+            <mat-table [dataSource]="grievanceRedressalOfficerData">
               <!-- <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef> Id </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.id}} </td>
+              <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.id}} </mat-cell>
             </ng-container> -->
             <ng-container matColumnDef="officeLevel">
-              <th mat-header-cell *matHeaderCellDef> Office Level </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.officeLevel}} </td>
+              <mat-header-cell *matHeaderCellDef> Office Level </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.officeLevel}} </mat-cell>
             </ng-container>
             <ng-container matColumnDef="officeSubLevel">
-              <th mat-header-cell *matHeaderCellDef> Office Sub Level </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.officeSubLevel}} </td>
+              <mat-header-cell *matHeaderCellDef> Office Sub Level </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.officeSubLevel}} </mat-cell>
             </ng-container>
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef> Name </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.name}} </td>
+              <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.name}} </mat-cell>
             </ng-container>
             <ng-container matColumnDef="designation">
-              <th mat-header-cell *matHeaderCellDef> Designation </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.designation}} </td>
+              <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.designation}} </mat-cell>
             </ng-container>
             <ng-container matColumnDef="phoneNumber">
-              <th mat-header-cell *matHeaderCellDef> Phone Number </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.phoneNumber}} </td>
+              <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.phoneNumber}} </mat-cell>
             </ng-container>
             <ng-container matColumnDef="email">
-              <th mat-header-cell *matHeaderCellDef> Email </th>
-              <td mat-cell *matCellDef="let gro"> {{gro.email}} </td>
+              <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.email}} </mat-cell>
             </ng-container>
-            <tr mat-header-row *matHeaderRowDef="grievanceRedressalOfficerColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: grievanceRedressalOfficerColumns;"></tr>
-          </table>
+            <mat-header-row *matHeaderRowDef="grievanceRedressalOfficerColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: grievanceRedressalOfficerColumns;"></mat-row>
+          </mat-table>
         </mat-card-content>
       </div>
     }

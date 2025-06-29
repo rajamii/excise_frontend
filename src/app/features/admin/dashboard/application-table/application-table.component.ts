@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { BaseDependency } from '../../../../base/dependency/base.dependency';
@@ -15,7 +15,7 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   styleUrl: './application-table.component.scss'
 })
 
-export class ApplicationTableComponent extends BaseComponent {
+export class ApplicationTableComponent extends BaseComponent implements OnChanges{
   // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
@@ -79,7 +79,8 @@ export class ApplicationTableComponent extends BaseComponent {
 
   // Angular lifecycle hook that runs when input properties change
   ngOnChanges() {
-    // For each application in the data source, check for unresolved objections
+    this.unresolvedObjectionAppIds.clear();
+
     this.dataSource?.data?.forEach(app => {
       this.licenseAppService.getObjections(app.applicationId).subscribe((objections) => {
         const hasUnresolved = objections?.some(obj => obj.isResolved === false);

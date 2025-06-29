@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module'; // Shared Angular Material components
 
 // Importing step components for the multi-step license application form
@@ -8,7 +8,6 @@ import { UnitDetailsComponent } from './steps/unit-details/unit-details.componen
 import { MemberDetailsComponent } from './steps/member-details/member-details.component';
 import { SubmitApplicationComponent } from './steps/submit-application/submit-application.component';
 import { SelectLicenseComponent } from './steps/select-license/select-license.component';
-import { MatStepper } from '@angular/material/stepper';
 
 @Component({
   selector: 'app-apply-license', // Selector for the component

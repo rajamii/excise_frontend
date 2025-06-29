@@ -1,4 +1,4 @@
-import { Component, OnInit, Pipe, PipeTransform } from '@angular/core';
+import { Component, OnInit, OnChanges } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
 import { ActivatedRoute } from '@angular/router';
 import { MatTableDataSource } from '@angular/material/table';
@@ -9,6 +9,7 @@ import {
   NodalOfficer,
   PublicInformationOfficer
 } from '../../core/models/contact-us.model';
+import { HttpClient } from '@angular/common/http';
 
 export interface Commissioner {
   slNo: number;
@@ -39,6 +40,8 @@ export class InfoPagesComponent implements OnInit {
 
   selectedOfficeLevel: string = '';
   selectedOfficeSubLevel: string = '';
+  
+  markdownContent: string = '';
 
   commissionerColumns: string[] = ['slNo', 'name', 'fromDate', 'toDate'];
   commissionerData = COMMISSIONER_DATA;
@@ -88,64 +91,68 @@ export class InfoPagesComponent implements OnInit {
     },
   ];
 
-  constructor(private route: ActivatedRoute, private infoPagesService: InfoPagesService) {}
+    constructor(
+      private route: ActivatedRoute, 
+      private infoPagesService: InfoPagesService,
+      private http: HttpClient
 
-  ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
-      this.page = params.get('page');
-    });
-    this.loadTableData();
+    ) {}
+
+    ngOnInit(): void {
+      this.route.paramMap.subscribe(params => {
+        this.page = params.get('page');
+        if (this.page) {
+          this.loadMarkdown(this.page); // ✅ move here
+        }
+      });
+      this.loadTableData();
+    }
+
+    loadTableData(): void {
+      //Load Nodal Officers
+      this.infoPagesService.getNodalOfficers().subscribe({
+        next: (data) => {
+          this.nodalOfficer = data;
+        }
+      });
+
+      // Load Directorate and District Officials
+      this.infoPagesService.getDirectorateAndDistrictOfficials().subscribe(data => {
+        this.directorateAndDistrictOfficialsData.data = data;
+      });
+
+      // Load Grievance Redressal Officers
+      this.infoPagesService.getGrievanceRedressalOfficers().subscribe(data => {
+        this.grievanceRedressalOfficerFullData = data;
+        this.applyFilters(); // Initialize filtered data
+      });
+
+      // Load Public Information Officers
+      this.infoPagesService.getPublicInformationOfficers().subscribe({
+        next: (officers: PublicInformationOfficer[]) => {
+          this.headquarterData = officers.filter(o => o.locationType === 'Headquarter');
+          this.districtData = officers.filter(o => o.locationType === 'District');
+        },
+        error: (err) => {
+          console.error('Error fetching officers:', err);
+        }
+      });
+    }
+
+    applyFilters(): void {
+      this.grievanceRedressalOfficerData.data = this.grievanceRedressalOfficerFullData.filter(officer => {
+        const matchesLevel = this.selectedOfficeLevel ? officer.officeLevel === this.selectedOfficeLevel : true;
+        const matchesSubLevel = this.selectedOfficeSubLevel ? officer.officeSubLevel === this.selectedOfficeSubLevel : true;
+        return matchesLevel && matchesSubLevel;
+      });
+    }
+
+    loadMarkdown(page: string): void {
+      this.http.get(`assets/content/${page}.md`, { responseType: 'text' })
+        .subscribe({
+          next: data => this.markdownContent = data,
+          error: () => this.markdownContent = '*Content not available.*'
+        });
+    }
+
   }
-
-  loadTableData(): void {
-    //Load Nodal Officers
-    this.infoPagesService.getNodalOfficers().subscribe({
-      next: (data) => {
-        this.nodalOfficer = data;
-      }
-    });
-
-    // Load Directorate and District Officials
-    this.infoPagesService.getDirectorateAndDistrictOfficials().subscribe(data => {
-      this.directorateAndDistrictOfficialsData.data = data;
-    });
-
-    // Load Grievance Redressal Officers
-    this.infoPagesService.getGrievanceRedressalOfficers().subscribe(data => {
-      this.grievanceRedressalOfficerFullData = data;
-      this.applyFilters(); // Initialize filtered data
-    });
-
-    // Load Public Information Officers
-    this.infoPagesService.getPublicInformationOfficers().subscribe({
-      next: (officers: PublicInformationOfficer[]) => {
-        this.headquarterData = officers.filter(o => o.locationType === 'Headquarter');
-        this.districtData = officers.filter(o => o.locationType === 'District');
-      },
-      error: (err) => {
-        console.error('Error fetching officers:', err);
-      }
-    });
-  }
-
-  applyFilters(): void {
-    this.grievanceRedressalOfficerData.data = this.grievanceRedressalOfficerFullData.filter(officer => {
-      const matchesLevel = this.selectedOfficeLevel ? officer.officeLevel === this.selectedOfficeLevel : true;
-      const matchesSubLevel = this.selectedOfficeSubLevel ? officer.officeSubLevel === this.selectedOfficeSubLevel : true;
-      return matchesLevel && matchesSubLevel;
-    });
-  }
-
-  getMarkdownPath(page: string): string {
-    return `assets/content/${page}.md`;
-  }
-
-  getPageTitle(page: string): string {
-    const titles: Record<string, string> = {  
-      'terms-of-use': 'Terms of Use',
-      'privacy-policy': 'Privacy Policy',
-      'disclaimer': 'Disclaimer',
-    };
-    return titles[page] || 'Information';
-  }
-}

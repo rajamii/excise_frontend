@@ -2,7 +2,7 @@
   <!-- Step 1: Show Application Data -->
   <mat-step label="Application Data">
     <div class="step-header">
-      <h5>Application Id: {{application.applicationId}}</h5>
+      Application Id: {{application.applicationId}}
     </div>
     <div class="application-details">
       <!-- Section: License Info -->
@@ -140,7 +140,7 @@
     <div class="step-buttons">
       <!-- Edit Application -->
       @if (tableType === 'applied') {
-        <button mat-flat-button (click)="onEdit(stepper)">
+        <button matButton="filled" color="primary" (click)="onEdit(stepper)">
           <mat-icon>edit</mat-icon>
           Edit
         </button>
@@ -148,17 +148,19 @@
 
       <!-- Resolve Objection -->
       @if (tableType === 'pending' && hasAnyObjections()) {
-        <button mat-flat-button class="resolve-button" (click)="stepper.next()">
+        <button matButton class="bg-warning" (click)="stepper.next()">
           <mat-icon>build</mat-icon>
           Resolve Objections
         </button>
       }
 
-      <!-- Delete Application -->
-      <button mat-flat-button class="delete-button" (click)="onDelete(stepper)" >
-        <mat-icon>delete</mat-icon>
-        Delete
-      </button>
+      <!-- Delete Application --> 
+      @if (tableType === 'applied') {
+        <button matButton="filled" color="warn" (click)="onDelete(stepper)" >
+          <mat-icon>delete</mat-icon>
+          Delete
+        </button>
+      }
     </div>
   </mat-step>
 
@@ -171,7 +173,7 @@
         </div>
         <!-- Display unresolved objections -->
         @if (objections.length) {
-          <div class="step-content">
+          <div class="step-content p-3">
             @for (obj of unresolvedObjections; track obj) {
               <div>
                 <!-- If the objection is not about the photo, show an input field -->
@@ -210,7 +212,8 @@
           }
           <div class="step-buttons">
             <button
-              mat-raised-button
+              matButton="filled"
+              color="primary"
               (click)="submitResolvedData()"
               [disabled]="resolveObjectionForm.invalid">
               Submit Corrections

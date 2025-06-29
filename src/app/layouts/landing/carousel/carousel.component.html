@@ -1,25 +1,27 @@
 <div id="carouselExampleCaptions" class="carousel slide" data-bs-ride="carousel">
   <div class="carousel-indicators">
-    <button *ngFor="let slide of slides; let i = index"
-            type="button"
-            data-bs-target="#carouselExampleCaptions"
-            [attr.data-bs-slide-to]="i"
-            [ngClass]="{ 'active': i === 0 }"
-            [attr.aria-current]="i === 0 ? 'true' : null"
-            [attr.aria-label]="'Slide ' + (i + 1)">
-    </button>
+    @for (slide of slides; track slide) {
+      <button
+        type="button"
+        data-bs-target="#carouselExampleCaptions"
+        [attr.data-bs-slide-to]="$index"
+        [ngClass]="{ 'active': $index === 0 }"
+        [attr.aria-current]="$index === 0 ? 'true' : null"
+        [attr.aria-label]="'Slide ' + ($index + 1)">
+      </button>
+    }
   </div>
 
   <div class="carousel-inner">
-    <div *ngFor="let slide of slides; let i = index"
-         class="carousel-item"
-         [ngClass]="{ 'active': i === 0 }">
-      <img [src]="slide.src" class="d-block w-100" [alt]="slide.title" loading="lazy" />
-      <div class="carousel-caption d-none d-md-block">
-        <h5>{{ slide.title }}</h5>
-        <p>{{ slide.subtitle }}</p>
+    @for (slide of slides; track slide) {
+      <div class="carousel-item" [ngClass]="{ 'active': $index === 0 }">
+        <img [src]="slide.src" class="d-block w-100" [alt]="slide.title" loading="lazy" />
+        <div class="carousel-caption d-none d-md-block">
+          <h5>{{ slide.title }}</h5>
+          <p>{{ slide.subtitle }}</p>
+        </div>
       </div>
-    </div>
+    }
   </div>
 
   <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="prev">
