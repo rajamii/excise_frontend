@@ -40,10 +40,10 @@ export class AdminService {
     return this.http.get<Account>(`${this.baseUrl}/user/detail/`);
   }
 
-  // Update user by username
+/*   // Update user by username
   updateUser(username: string, changes: Partial<Account>): Observable<Account> {
     return this.http.put<Account>(`${this.baseUrl}/user/update/${username}/`, changes);
-  }
+  } */
 
   // Delete user by username
   deleteUser(username: string): Observable<any> {

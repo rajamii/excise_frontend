@@ -1,0 +1,77 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title>Edit User</h2>
+
+  <mat-dialog-content>
+    <!-- Input field for First Name -->
+    <mat-form-field appearance="outline">
+      <mat-label>First Name</mat-label>
+      <input matInput [(ngModel)]="data.firstName">
+    </mat-form-field>
+
+    <!-- Input field for Middle Name -->
+    <mat-form-field appearance="outline">
+      <mat-label>Middle Name</mat-label>
+      <input matInput [(ngModel)]="data.middleName">
+    </mat-form-field>
+
+      <!-- Input field for Last Name -->
+    <mat-form-field appearance="outline">
+      <mat-label>Last Name</mat-label>
+      <input matInput [(ngModel)]="data.lastName">
+    </mat-form-field>
+
+    <!-- Input field Email -->
+    <mat-form-field appearance="outline">
+      <mat-label>Email</mat-label>
+      <input matInput [(ngModel)]="data.email">
+    </mat-form-field>
+
+    <!-- Input field for Phone Number -->
+    <mat-form-field appearance="outline">
+      <mat-label>Phone Number</mat-label>
+      <input matInput [(ngModel)]="data.phoneNumber">
+    </mat-form-field>
+
+    <!-- Dropdown to select District -->
+    <mat-form-field appearance="outline">
+      <mat-label>District</mat-label>
+      <mat-select [(ngModel)]="data.district" name="district">
+        @for (district of districts; track district) {
+          <mat-option [value]="district.districtCode" (click)="onDistrictChange(district.districtCode)">
+            {{ district.district }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Dropdown to select Subdivision -->
+    <mat-form-field appearance="outline">
+      <mat-label>Subdivision</mat-label>
+      <mat-select [(ngModel)]="data.subdivision" name="subdivision">
+        @for (subdivision of filteredSubdivisions; track subdivision) {
+          <mat-option [value]="subdivision.subdivisionCode">
+            {{ subdivision.subdivision }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <!-- Dropdown to select Role -->
+    <mat-form-field appearance="outline">
+      <mat-label>Role</mat-label>
+      <mat-select [(ngModel)]="data.role">
+        @for (role of roles; track role) {
+          <mat-option [value]="role">
+            {{ role.name }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <!-- Dialog action buttons -->
+  <mat-dialog-actions>
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

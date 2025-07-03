@@ -1,0 +1,29 @@
+<!-- Container for the dialog content -->
+<div class="container-fluid">
+  
+  <!-- Dialog title -->
+  <h2 mat-dialog-title>Edit District</h2>
+
+  <!-- Dialog body content -->
+  <mat-dialog-content>
+    
+    <!-- Input for District Name -->
+    <mat-form-field appearance="outline">
+      <mat-label>District</mat-label>
+      <input matInput [(ngModel)]="data.district"> <!-- Two-way binding -->
+    </mat-form-field>
+
+    <!-- Input for District Code -->
+    <mat-form-field appearance="outline">
+      <mat-label>District Code</mat-label>
+      <input matInput [(ngModel)]="data.districtCode"> <!-- Two-way binding -->
+    </mat-form-field>
+
+  </mat-dialog-content>
+
+  <!-- Dialog action buttons -->
+  <mat-dialog-actions>
+    <button matButton="filled" color="primary" (click)="onSave()">Save</button>
+    <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+  </mat-dialog-actions>
+</div>

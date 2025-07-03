@@ -18,6 +18,10 @@
             <td>{{ user.firstName }}</td>
           </tr>
           <tr>
+            <td><strong>Middle Name:</strong></td>
+            <td>{{ user.middleName }}</td>
+          </tr>
+          <tr>
             <td><strong>Last Name:</strong></td>
             <td>{{ user.lastName }}</td>
           </tr>
@@ -35,7 +39,7 @@
           </tr>
           <tr>
             <td><strong>Role:</strong></td>
-            <td>{{ user.role }}</td>
+            <td>{{ user.role.name }}</td>
           </tr>
           <tr>
             <td><strong>District Code:</strong></td>

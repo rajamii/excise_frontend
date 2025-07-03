@@ -30,7 +30,7 @@ export class AccountService {
         tap(account => {
           // Cache basic user details in localStorage for potential reuse
           localStorage.setItem('username', account.username);
-          localStorage.setItem('role', account.role);
+          localStorage.setItem('role', account.role.name);
           localStorage.setItem('firstName', account.firstName);
           localStorage.setItem('lastName', account.lastName);
 
@@ -65,7 +65,7 @@ export class AccountService {
    */
   hasAnyRole(roles: string[] | string): boolean {
     if (!this.userIdentity?.role) return false;
-    const userRole = this.userIdentity.role.toLowerCase().trim();
+    const userRole = this.userIdentity.role.name.toLowerCase().trim();
     return Array.isArray(roles)
       ? roles.some(role => role.toLowerCase().trim() === userRole)
       : roles.toLowerCase().trim() === userRole;

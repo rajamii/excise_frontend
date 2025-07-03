@@ -1,0 +1,17 @@
+.container-fluid{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding:0;
+    h2{
+        text-align: center;
+        width: 100%;
+        color: #fff;
+        background-color: #1C2B78;
+    }
+    mat-dialog-content{
+        display: flex;        
+        flex-direction: column;
+        padding: 1rem 0;
+    }
+}

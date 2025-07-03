@@ -1,0 +1,66 @@
+<!-- Container for the entire page -->
+<div class="container-fluid">
+
+  <!-- Material Card to hold the license category content -->
+  <mat-card>
+
+    <!-- Header section with title and Add button -->
+    <mat-card-header>
+      <div class="page-title">License Category List</div>
+      
+      <!-- Button to navigate to add license category page -->
+      <button mat-flat-button (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add License Category
+      </button> 
+    </mat-card-header>
+
+    <!-- Main content of the card -->
+    <mat-card-content>
+
+      <!-- Wrapper for the table -->
+      <div class="table-container">
+
+        <!-- Angular Material Table bound to data source -->
+        <mat-table [dataSource]="licenseCategoryDataSource" class="mat-table">
+
+          <!-- Column definition for ID -->
+          <ng-container matColumnDef="id">
+            <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{element.id}} </mat-cell>
+          </ng-container>
+
+          <!-- Column definition for License Category Description -->
+          <ng-container matColumnDef="licenseCategory">
+            <mat-header-cell *matHeaderCellDef> License Category </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{element.licenseCategory}} </mat-cell>
+          </ng-container>
+
+          <!-- Column for Edit and Delete buttons -->
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              
+              <!-- Edit Button -->
+              <button mat-icon-button color="primary" (click)="onEdit(element)">
+                <mat-icon>edit</mat-icon>
+              </button>
+
+              <!-- Delete Button -->
+              <button mat-icon-button color="warn" (click)="onDelete(element)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>          
+
+          <!-- Header Row Definition -->
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+
+          <!-- Data Row Definition -->
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+
+        </mat-table>
+      </div>  
+
+    </mat-card-content>
+  </mat-card>
+</div>

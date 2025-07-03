@@ -29,8 +29,11 @@ export class UserService {
   }
 
   // Update user by username
-  updateUser(username: string, changes: Partial<Account>): Observable<Account> {
-    return this.http.put<Account>(`${this.baseUrl}/update/${username}/`, changes);
+  updateUser(username: string, payload: any): Observable<any> {
+    return this.http.put<any>(
+      `${this.baseUrl}/update/${username}/`, // use correct base path
+      payload
+    );
   }
 
   // Retrieves all roles

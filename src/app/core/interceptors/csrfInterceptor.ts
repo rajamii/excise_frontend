@@ -28,6 +28,7 @@ export class CsrfInterceptor implements HttpInterceptor {
       const publicEndpoints = [
         '/get_captcha/',
         '/captcha/',
+        '/token/refresh/'
       ];
 
       // If the request is public, skip attaching token
