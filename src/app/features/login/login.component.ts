@@ -25,6 +25,16 @@ export class LoginComponent extends BaseComponent {
   loginError = false;
   loginErrorMessages: string[] = [];
 
+  isRightPanelActive = false;
+
+  switchToSignUp() {
+    this.isRightPanelActive = true;
+  }
+
+  switchToSignIn() {
+    this.isRightPanelActive = false;
+  }
+
   constructor(
     protected override baseDependency: BaseDependency,
     protected override authService: AuthService,
@@ -93,7 +103,7 @@ export class LoginComponent extends BaseComponent {
         console.log('OTP:', response.otp); // only if backend includes it
       },
       error: (err) => {
-        console.error('❌ Error sending OTP:', err);
+        console.error('Error sending OTP:', err);
         alert('Failed to send OTP. Please try again.');
       }
     });

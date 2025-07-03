@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-home',
@@ -8,8 +9,9 @@ import { Router } from '@angular/router';
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'] // Corrected styleUrls
 })
-export class HomeComponent {
+export class HomeComponent implements OnInit{
   selectedLink: string = '';
+  markdownContent: string = '';
 
   notifications = [
     {
@@ -44,9 +46,23 @@ export class HomeComponent {
     }
   ];
 
+  constructor(private router: Router, private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.loadMarkdown();
+  }
+
+  loadMarkdown(): void {
+    this.http.get(`assets/content/department.md`, { responseType: 'text' })
+      .subscribe({
+        next: data => this.markdownContent = data,
+        error: () => this.markdownContent = '*Content not available.*'
+      });
+  }
+
   navigateToExternal(url: string) {
     window.location.href = url;
-  }  constructor(private router: Router) {} // Inject Router into the constructor
+  }  
 
   navigateTo(page: string) {
     this.router.navigate(['/home', page]);

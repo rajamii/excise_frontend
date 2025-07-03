@@ -95,7 +95,6 @@ export class InfoPagesComponent implements OnInit {
       private route: ActivatedRoute, 
       private infoPagesService: InfoPagesService,
       private http: HttpClient
-
     ) {}
 
     ngOnInit(): void {

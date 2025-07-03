@@ -1,3 +1,16 @@
-.input-container mat-form-field{
+.captcha-header{
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    .captcha-img{
+        width: 80px;
+        height: 33px;
+    }
+}
+input {
+    background-color: #eee;
+    border: none;
+    padding: 12px 15px;
     width: 100%;
+    margin-top: 5px;
 }

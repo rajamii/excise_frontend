@@ -53,9 +53,9 @@ button{
 }
 
 .about-us{
-    p{ 
-        max-height: 412px;
-        overflow-y: scroll; /* Enable scroll bar */
+    mat-card-content{ 
+        
+        overflow-y: scroll;
         line-height: 1.6;
     }
 }

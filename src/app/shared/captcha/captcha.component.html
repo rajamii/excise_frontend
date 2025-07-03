@@ -1,15 +1,14 @@
 <div class="captcha-section">
   <div class="captcha-header">
+    <button matIconButton class="refresh-captcha-btn" (click)="refreshCaptcha($event)">
+      <mat-icon>refresh</mat-icon>
+    </button>
     @if (captchaImageUrl) {
-      <img [src]="captchaImageUrl" alt="Captcha" class="captcha-img" />
+      <img [src]="captchaImageUrl" alt="Captcha" class="captcha-img"/>
     }
-    <button mat-button class="refresh-captcha-btn" (click)="refreshCaptcha($event)">Refresh Captcha</button>
   </div>
   <!-- Add formGroup directive here -->
   <div [formGroup]="formGroup" class = "input-container">
-    <mat-form-field appearance="outline" class="captcha-input">
-      <mat-label>Captcha</mat-label>
-      <input matInput formControlName="response" placeholder="Enter captcha" (input)="onResponseChange($event)" />
-    </mat-form-field>
+    <input formControlName="response" placeholder="Captcha" (input)="onResponseChange($event)" />
   </div>
 </div>
