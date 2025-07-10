@@ -1,0 +1,136 @@
+<mat-dialog-content class="print-dialog-content">
+  <h2 class="title">Print License</h2>
+
+  <!-- Warning message about print limitations -->
+  <p class="print-warning">
+    The printing of license is limited to 5 nos, if lost a duplicate copy can be printed only after payment of Rs. 500/- per copy.
+  </p>
+
+  <p class="print-count">
+    No. of times license printed by licensee:
+    <!-- Add conditional styling if print limit (5) is reached -->
+    <strong [ngClass]="{ 'over-limit': application.printCount >= 5 }">
+      {{ application.printCount }}
+    </strong>
+  </p>
+</mat-dialog-content>
+
+<mat-dialog-actions align="center">
+  <!-- Triggers license printing -->
+  <button mat-flat-button class="bg-primary text-white" (click)="onPrint()">
+    Print License
+  </button>
+
+  <!-- Pay button enabled only if print count reaches 5 -->
+  <button matButton="elevated" (click)="onPrint()"
+  [disabled]="application.printCount < 5">
+    Pay
+  </button>
+
+  <!-- Closes the dialog -->
+  <button matButton class="bg-danger text-white" (click)="dialogRef.close()">
+    Close
+  </button>
+</mat-dialog-actions>
+
+<!-- Hidden section used for printing license layout -->
+<div id="licenseToPrint" class="license-container" style="display: none;">
+  <div class="license-header">
+    <img src="../../../../../../assets/images/header/Seal_of_Sikkim_greyscale.png">
+    <h3>EXCISE DEPARTMENT</h3>
+    <h3>Government of Sikkim</h3>
+    <h3>Commercial License</h3>
+    <p class="act">Under the SIKKIM EXCISE ACT, 1992 ( ACT NO. 2 OF 1992)</p>
+  </div>
+
+  <div class="license-details-container">
+    <table>
+      <!-- Application details displayed in key-value format -->
+      <tr>
+        <td class="key">License Number</td>
+        <td class="colon">:</td>
+        <td class="value">{{ application.applicationId }}</td>
+      </tr>
+      <tr>
+        <td class="key">Name of the Licensee</td>
+        <td class="colon">:</td>
+        <td class="value">{{ application.establishmentName }}</td>
+      </tr>
+      <tr>
+        <td class="key">Nature of the License</td>
+        <td class="colon">:</td>
+        <td class="value">{{ application.licenseNature }}</td>
+      </tr>
+      <tr>
+        <td class="key">License Premises</td>
+        <td class="colon">:</td>
+        <td class="value">{{ application.businessAddress }}</td>
+      </tr>
+      <tr>
+        <td class="key">License Fee</td>
+        <td class="colon">:</td>
+        <td class="value">₹{{ application.yearlyLicenseFee }}</td>
+      </tr>
+      <tr>
+        <td class="key">License Validity</td>
+        <td class="colon">:</td>
+        <!-- Static date used – consider dynamic binding if this varies -->
+        <td class="value">From 12/03/2022 to 20/03/2022</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="license-restrictions">
+    <h4>License Restrictions:</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>License Premises Name</th>
+          <th>Boundaries</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ application.businessAddress }}</td>
+          <td>{{ application.locationName }}, {{ application.wardName }}, {{ application.siteSubdivision }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="terms">
+    <!-- Terms and conditions of license -->
+    <p>The aforesaid license has been granted as per the following terms and conditions: -</p>
+    <ol type="I">
+      <li>The licensee shall purchase foreign liquor (excluding draught 
+        beer and liquor imported from outside India) only from such
+        licensees of the district as may be specified by the Collector.</li>
+      <li>The license permits sale of loose foreign liquor for consumption 
+        on the premises.</li>
+      <li>The licensee shall not sell and stock Foreign Liquor which is 
+        unfit for human consumption.</li>
+      <li>The maximum quantity that may be possessed at a time under 
+        the license shall be as fixed by the District Excise Officer.</li>
+      <li>The licensee shall stock all foreign liquor other than malt liquor 
+        (beer) and wine, in sealed bottles, each containing at least 700 
+        milliliter, except that ones that have been open for sale. However, 
+        except draught beer, malt liquor (beer) and wine can/shall be 
+        stocked in cans or glass bottles of the capacity of 325 milliliter 
+        or more.</li>
+      <li>The licensee shall preserve all the permits and invoices of stock 
+        received in proper order and produce them for inspection.</li>
+      <li>The licensee shall maintain day to day true account of all foreign 
+        liquor received, stocked and sold.</li>
+      <li>The licensee shall be personally responsible for the due observance 
+        of the license conditions.</li>
+      <li>The licensee shall submit a return incorporating all the relevant 
+        details about purchase, sales, balance etc. within 3 days of
+        the expiry of the license.
+      </li>
+      <li>On breach of any condition of the license or provisions of the 
+        Sikkim Excise Act, 1992 or rules made there under or orders 
+        issued by the Excise Commissioner, this license 1 [shall] be suspended 
+        or cancelled by the Licensing Authority.</li>
+    </ol>
+  </div>
+</div>

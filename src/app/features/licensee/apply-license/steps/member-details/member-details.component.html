@@ -17,76 +17,96 @@
         <mat-form-field appearance="outline">
           <mat-label>Status</mat-label>
           <mat-select formControlName="status" required>
-            <mat-option *ngFor="let status of statuses" [value]="status">{{ status }}</mat-option>
+            @for (status of statuses; track status) {
+              <mat-option [value]="status">{{ status }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="memberDetailsForm.controls['status'].invalid">
-            {{ getErrorMessage('status') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['status'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('status') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Member Name Input -->
         <mat-form-field appearance="outline">
           <mat-label>Member Name</mat-label>
           <input matInput placeholder="Enter Your Name" type="text" formControlName="memberName"/>
-          <mat-error *ngIf="memberDetailsForm.controls['memberName'].invalid">
-            {{ getErrorMessage('memberName') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Father's / Husband's Name Input -->
         <mat-form-field appearance="outline">
           <mat-label>Father's / Husband's Name</mat-label>
           <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="fatherHusbandName"/>
-          <mat-error *ngIf="memberDetailsForm.controls['fatherHusbandName'].invalid">
-            {{ getErrorMessage('fatherHusbandName') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['fatherHusbandName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('fatherHusbandName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Nationality Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Nationality</mat-label>
           <mat-select formControlName="nationality" required>
-            <mat-option *ngFor="let nationality of nationalities" [value]="nationality">{{ nationality }}</mat-option>
+            @for (nationality of nationalities; track nationality) {
+              <mat-option [value]="nationality">{{ nationality }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="memberDetailsForm.controls['nationality'].invalid">
-            {{ getErrorMessage('nationality') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['nationality'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('nationality') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Gender Radio Buttons -->
         <mat-radio-group aria-label="Gender" formControlName="gender" required>
           <mat-radio-button value="Male">Male</mat-radio-button>
           <mat-radio-button value="Female">Female</mat-radio-button>
-          <mat-error *ngIf="memberDetailsForm.controls['gender'].invalid">
-            {{ getErrorMessage('gender') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['gender'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('gender') }}
+            </mat-error>
+          }
         </mat-radio-group>
 
         <!-- PAN Input -->
         <mat-form-field appearance="outline">
           <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter PAN" type="text" formControlName="pan"/> 
-          <mat-error *ngIf="memberDetailsForm.controls['pan'].invalid">
-            {{ getErrorMessage('pan') }}
-          </mat-error>
+          <input matInput placeholder="Enter PAN" type="text" formControlName="pan"/>
+          @if (memberDetailsForm.controls['pan'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pan') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Phone Number Input -->
         <mat-form-field appearance="outline">
           <mat-label>Enter Phone Number</mat-label>
           <input matInput placeholder="Enter Phone Number" type="number" formControlName="memberMobileNumber"/>
-          <mat-error *ngIf="memberDetailsForm.controls['memberMobileNumber'].invalid">
-            {{ getErrorMessage('memberMobileNumber') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberMobileNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberMobileNumber') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Email ID Input -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId"/>
-          <mat-error *ngIf="memberDetailsForm.controls['memberEmailId'].invalid">
-            {{ getErrorMessage('memberEmailId') }}
-          </mat-error>
+          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmail"/>
+          @if (memberDetailsForm.controls['memberEmail'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberEmail') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <div class="upload-section">
@@ -95,22 +115,25 @@
             type="file"
             id="photoUpload"
             (change)="onPhotoSelect($event)"
-            accept=".png,.jpg,.jpeg"/>
-        
-          <button mat-icon-button *ngIf="photo.fileUrl" (click)="viewPhoto()" aria-label="View Uploaded Photo">
-            <mat-icon>visibility</mat-icon>
-          </button>
+            accept=".png,.jpg,.jpeg"
+            />
+
+            @if (passPhoto.fileUrl) {
+              <button mat-icon-button (click)="viewPhoto()" aria-label="View Uploaded Photo">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            }
+          </div>
+
         </div>
+      </mat-card-content>
 
-      </div>
-    </mat-card-content>  
+      <!-- Form Actions -->
+      <mat-card-actions>
+        <button matButton="outlined" (click)="goBack()">Back</button>
+        <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
+        <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!memberDetailsForm.valid || !isPhotoUploaded()">Next</button>
+      </mat-card-actions>
 
-    <!-- Form Actions -->
-    <mat-card-actions>
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!memberDetailsForm.valid || !isPhotoUploaded()">Next</button>
-    </mat-card-actions>
-
-  </mat-card>
-</form>
+    </mat-card>
+  </form>

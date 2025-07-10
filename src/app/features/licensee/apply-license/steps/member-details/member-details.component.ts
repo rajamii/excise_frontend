@@ -1,15 +1,12 @@
-// Angular core imports
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
-// Services and shared modules
-import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../shared/utils/capitalize.util';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 @Component({
   selector: 'app-member-details',
@@ -21,6 +18,11 @@ import { LicenseApplication } from '../../../../../core/models/license-applicati
 export class MemberDetailsComponent implements OnInit, OnDestroy {
   // Reactive form instance
   memberDetailsForm: FormGroup;
+
+  passPhoto = {
+    file: null as File | null,
+    fileUrl: ''
+  };
 
   // Static dropdown values
   statuses: string[] = ['Single', 'Married', 'Divorced'];
@@ -42,16 +44,15 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
     gender: signal(''),
     pan: signal(''),
     memberMobileNumber: signal(''),
-    memberEmailId: signal(''),
+    memberEmail: signal(''),
     photo: signal('')
   };
-  
-  photo = {
-    file: null as File | null,
-    fileUrl: ''
-  };
 
-  constructor(private fb: FormBuilder, private licenseeService: LicenseeService) {
+  constructor(
+    private fb: FormBuilder, 
+    private licenseApplicationService: LicenseApplicationService,
+    private cdr: ChangeDetectorRef
+  ){
     // Load saved form data from sessionStorage (if available)
     const storedValues = this.getFromSessionStorage();
 
@@ -64,7 +65,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       gender: new FormControl(storedValues.gender, [Validators.required]),
       pan: new FormControl(storedValues.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
       memberMobileNumber: new FormControl(storedValues.memberMobileNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
-      memberEmailId: new FormControl(storedValues.memberEmailId, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
+      memberEmail: new FormControl(storedValues.memberEmail, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
     });
 
     // Subscribe to form value changes to update error messages and save form data to sessionStorage
@@ -79,6 +80,13 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   // Initialize PAN formatting utility on component load
   ngOnInit() {
     FormUtils.capitalize(this.memberDetailsForm.get('pan')!, this.destroy$);
+
+    // Restore photo from service
+    const storedPhoto = this.licenseApplicationService.getPassPhoto();
+    if (storedPhoto) {
+      this.passPhoto.file = storedPhoto;
+      this.passPhoto.fileUrl = URL.createObjectURL(storedPhoto);
+    }
   }
 
   // Clean up observables on component destroy
@@ -103,33 +111,31 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
   onPhotoSelect(event: Event) {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-  
+
     if (file) {
-      this.photo.file = file;
-      this.photo.fileUrl = URL.createObjectURL(file);
-  
-      // Store the file in the service
-      this.licenseeService.setLicenseApplicationDocuments({
-        photo: file
-      });
+      this.passPhoto.file = file;
+      this.passPhoto.fileUrl = URL.createObjectURL(file);
+
+      this.cdr.detectChanges(); // Trigger change detection
+      this.licenseApplicationService.setPassPhoto(file); // Save to service
     }
   }
 
   viewPhoto() {
-    if (this.photo.fileUrl) {
-      window.open(this.photo.fileUrl, '_blank');
+    if (this.passPhoto.fileUrl) {
+      window.open(this.passPhoto.fileUrl, '_blank');
     }
   }
 
-  // Check if required documents are uploaded
+  // Check if photo is uploaded
   isPhotoUploaded(): boolean {
-    return !!this.photo.file;
+    return !!this.passPhoto.file;
   }
 
   clearPhotoUrl() {
-    if (this.photo.fileUrl) {
-      URL.revokeObjectURL(this.photo.fileUrl);
-      this.photo.fileUrl = '';
+    if (this.passPhoto.fileUrl) {
+      URL.revokeObjectURL(this.passPhoto.fileUrl);
+      this.passPhoto.fileUrl = '';
     }
   }
 

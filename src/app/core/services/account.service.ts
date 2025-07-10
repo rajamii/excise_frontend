@@ -1,121 +1,89 @@
-import { DOCUMENT, isPlatformBrowser } from '@angular/common';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
-import { BehaviorSubject, Observable, ReplaySubject, catchError, mergeMap, of, shareReplay, tap } from 'rxjs';
 import { Account } from '../models/accounts';
-import { ApiService } from './api.service';
 import { environment } from '../../../environments/environment';
-import { throwError } from 'rxjs';
+import { Observable, ReplaySubject, of, shareReplay, catchError, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AccountService {
-  private baseUrl = `${environment.apiBaseUrl}`; // Base URL for the API
-
-  // Stores the currently authenticated user's identity
+  private baseUrl = `${environment.apiBaseUrl}`;
   private userIdentity: Account | null = null;
+  private authenticationState = new ReplaySubject<Account | null>(1); // Emits current authentication state
+  private accountCache$?: Observable<Account> | null; // Used to cache the user account observable
 
-  // Emits current authentication state changes
-  private authenticationState = new ReplaySubject<Account | null>(1);
+  constructor(private http: HttpClient) {}
 
-  // Caches the current account observable to prevent duplicate API calls
-  private accountCache$?: Observable<Account> | null;
-
-  constructor(
-    private http: HttpClient,
-    private apiService: ApiService,
-    @Inject(DOCUMENT) private document: Document,
-    @Inject(PLATFORM_ID) private platformId: Object
-  ) {}
-
-  // Fetches all user details from the API
-  getUserDetails(): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/user/list/`, {});
+  // Fetch user details from backend
+  getUserDetails(): Observable<Account> {
+    return this.http.get<Account>(`${this.baseUrl}/user/detail/me/`);
   }
 
-  // Logs out the user and clears local storage
-  logout(): Observable<any> {
-    return this.apiService.logout().pipe(
-      tap(() => {
-        // Clear tokens and user-related data from local storage
-        localStorage.removeItem('access');
-        localStorage.removeItem('refresh');
-        localStorage.removeItem('username');
-        localStorage.removeItem('role');
-        localStorage.removeItem('firstName');
-        localStorage.removeItem('lastName');
+  /**
+   * Retrieves user identity. If `force` is true or there's no cached observable, it fetches fresh data.
+   * Also sets localStorage and emits authentication state.
+   */
+  identity(force = false): Observable<Account | null> {
+    if (!this.accountCache$ || force) {
+      this.accountCache$ = this.getUserDetails().pipe(
+        tap(account => {
+          // Cache basic user details in localStorage for potential reuse
+          localStorage.setItem('username', account.username);
+          localStorage.setItem('role', account.role.name);
+          localStorage.setItem('firstName', account.firstName);
+          localStorage.setItem('lastName', account.lastName);
 
-        // Update authentication state to null
-        this.authenticate(null);
-      }),
-      catchError((error) => {
-        console.error("Logout API error:", error);
-        return throwError(() => error);
-      })
-    );
+          this.authenticate(account); // Update internal auth state
+        }),
+        shareReplay() // Share the result among subscribers and cache the latest value
+      );
+    }
+    return this.accountCache$.pipe(catchError(() => of(null))); // Gracefully handle errors
   }
 
-  // Returns an observable of the current authentication state
+  // Sets the current user identity and updates auth state stream
+  authenticate(identity: Account | null): void {
+    this.userIdentity = identity;
+    this.authenticationState.next(this.userIdentity);
+    if (!identity) this.accountCache$ = null; // Clear cache if user is unauthenticated
+  }
+
+  // Observable for auth state changes (e.g., login/logout)
   getAuthenticationState(): Observable<Account | null> {
     return this.authenticationState.asObservable();
   }
 
-  // Sets the authentication state and updates the cache
-  authenticate(identity: Account | null): void {
-    this.userIdentity = identity;
-    this.authenticationState.next(this.userIdentity);
-
-    // Clear the cached account observable if the identity is null
-    if (!identity) {
-      this.accountCache$ = null;
-    }
-  }
-
-  // Checks if the user has a specific role
-  hasAnyRole(roles: string[] | string): boolean {
-    if (!this.userIdentity || !this.userIdentity.role) {
-      return false;
-    }
-  
-    const userRole = this.userIdentity.role.toLowerCase().trim();
-  
-    if (Array.isArray(roles)) {
-      return roles.some(role => role.toLowerCase().trim() === userRole);
-    }
-  
-    return roles.toLowerCase().trim() === userRole;
-  }
-  
-
-  // Fetches the user identity, with caching and optional force refresh
-  identity(force?: boolean): Observable<Account | null> {
-    if (!this.accountCache$ || force) {
-      this.accountCache$ = this.getUserDetails().pipe(
-        tap((account: Account) => {
-          // Save account data to local storage
-          localStorage.setItem('userName', account.username);
-          localStorage.setItem('role', account.role);
-          localStorage.setItem('firstName', account.firstName);
-          localStorage.setItem('lastName', account.lastName);
-
-          // Set internal state
-          this.authenticate(account);
-        }),
-        shareReplay(), // Share the response among multiple subscribers
-      );
-    }
-
-    // Return the cached observable or null if it fails
-    return this.accountCache$.pipe(catchError(() => of(null)));
-  }
-
-  // Checks if the user is authenticated
+  // Returns whether a user is currently authenticated
   isAuthenticated(): boolean {
     return this.userIdentity !== null;
   }
 
-  // Allows a user to change their password
+  /**
+   * Checks if user has a specific role (or one of the roles)
+   * Case-insensitive comparison.
+   */
+  hasAnyRole(roles: string[] | string): boolean {
+    if (!this.userIdentity?.role) return false;
+    const userRole = this.userIdentity.role.name.toLowerCase().trim();
+    return Array.isArray(roles)
+      ? roles.some(role => role.toLowerCase().trim() === userRole)
+      : roles.toLowerCase().trim() === userRole;
+  }
+
+  /*
+  // Uncomment if using permissions-based access
+  hasModuleAccess(moduleKey: keyof Account['permissions'], required: 'read' | 'read_write'): boolean {
+    const permissions = this.userIdentity?.permissions;
+    if (!permissions || !permissions[moduleKey] || permissions[moduleKey] === 'none') return false;
+
+    return required === 'read'
+      ? permissions[moduleKey] === 'read' || permissions[moduleKey] === 'read_write'
+      : permissions[moduleKey] === 'read_write';
+  }
+  */
+
+  // Sends a password change request
   changePassword(username: string, old_password: string, new_password: string): Observable<any> {
     return this.http.put(`${this.baseUrl}/api/change_password/`, { username, old_password, new_password });
   }

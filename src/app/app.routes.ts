@@ -4,7 +4,7 @@ import { Authority } from './shared/constants/authority.enum';
 import { UserRouteAccessService } from './core/config/user-route-access.service';
 import { HomeComponent } from './layouts/landing/home/home.component';
 import { HomeLinksComponent } from './layouts/landing/home/home-links/home-links.component';
-import { InfoPagesComponent } from './layouts/footer/info-pages/info-pages.component';
+import { InfoPagesComponent } from './layouts/info-pages/info-pages.component';
 
 export const routes: Routes = [
   // Landing layout with nested children
@@ -45,9 +45,16 @@ export const routes: Routes = [
     path: 'admin',
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.SITE_ADMIN, Authority.COMMISSIONER, Authority.JOINT_COMMISSIONER, Authority.PERMIT_SECTION]
+      authorities: [
+        Authority.SITE_ADMIN, 
+        Authority.LEVEL_1, 
+        Authority.LEVEL_2,
+        Authority.LEVEL_3, 
+        Authority.LEVEL_4, 
+        Authority.LEVEL_5
+      ]
     },
-    loadChildren: () => import('./features/site-admin/site-admin-routes')
+    loadChildren: () => import('./features/admin/admin.routes')
   },
 
   // Licensee feature module

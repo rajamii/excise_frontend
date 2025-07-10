@@ -4,64 +4,49 @@
   </mat-card-header>
 
   <mat-card-content>
-    <!-- License Details -->
-    <div class="section-title">License Details</div>
-    <div class="section-table">
-      <div class="row" *ngFor="let item of selectLicenseData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
-      </div>
-    </div>
+    <!-- Dynamically render grouped data sections -->
+    @for (section of displaySections; track section.title) {
+      @if (!section.condition || section.condition()) {
+        <div class="section-title">
+          {{ section.title }}
+        </div>
+      }
+      @if (!section.condition || section.condition()) {
+        <div class="section-table">
+          @for (item of section.data; track item.key) {
+            <div class="row">
+              <div class="key">{{ item.key }}</div>
+              <div class="value">{{ item.value || 'N/A' }}</div>
+            </div>
+          }
+        </div>
+      }
+    }
 
-    <!-- Member Details with Photo -->
+    <!-- Member Details section with photo display -->
     <div class="section-title">Member Details</div>
     <div class="details-with-photo">
       <div class="left-section">
-      <div class="row" *ngFor="let item of memberDetailsData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
+        @for (item of memberDetailsData; track item.key) {
+          <div class="row">
+            <div class="key">{{ item.key }}</div>
+            <div class="value">{{ item.value || 'N/A' }}</div>
+          </div>
+        }
       </div>
-      </div>
-      <div class="photo-section" *ngIf="licenseApplicationDocuments.length > 0">
-        <img
-          class="profile-photo"
-          [src]="licenseApplicationDocuments[0].fileUrl"
-          alt="Applicant Photo"
-        />
-      </div>
-    </div>
 
-    <!-- Key Info -->
-    <div class="section-title">Key Info</div>
-    <div class="section-table">
-      <div class="row" *ngFor="let item of keyInfoData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
-      </div>
-    </div>
-
-    <!-- Unit Details -->
-    <div class="section-title">Unit Details</div>
-    <div class="section-table">
-      <div class="row" *ngFor="let item of unitDetailsData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
-      </div>
-    </div>
-
-    <!-- Address Details -->
-    <div class="section-title">Address Details</div>
-    <div class="section-table">
-      <div class="row" *ngFor="let item of addressData">
-        <div class="key">{{ item.key }}</div>
-        <div class="value">{{ item.value }}</div>
-      </div>
+      <!-- Photo display (if photo URL is available) -->
+      @if (passPhotoUrl) {
+        <div class="photo-section">
+          <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
+        </div>
+      }
     </div>
   </mat-card-content>
 
-  <!-- Buttons -->
+  <!-- Action buttons -->
   <mat-card-actions>
-    <button mat-stroked-button (click)="goBack()">Back</button>
-    <button mat-flat-button color="primary" (click)="submit()">Submit</button>
+    <button matButton="outlined" (click)="goBack()">Back</button>
+    <button matButton="filled" color="primary" (click)="submit()">Submit</button>
   </mat-card-actions>
 </mat-card>

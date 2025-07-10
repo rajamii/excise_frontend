@@ -2,11 +2,11 @@ import { Component, EventEmitter, Output, OnDestroy, signal, inject } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../../licensee.services';
 import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { DatePipe } from '@angular/common';
 import { Company, CompanyDocuments } from '../../../../../../core/models/company.model';
+import { CompanyRegistrationService } from '../../../../../../core/services/company-registration.service';
 
 @Component({
   selector: 'app-upload-documents', 
@@ -46,7 +46,7 @@ export class UploadDocumentsComponent implements OnDestroy {
 
   constructor(
     private fb: FormBuilder, 
-    private licenseeService: LicenseeService, 
+    private companyRegistrationService: CompanyRegistrationService, 
     private datePipe: DatePipe
   ) {
     const storedValues = this.getFromSessionStorage(); // Retrieve stored form data from sessionStorage
@@ -120,7 +120,7 @@ export class UploadDocumentsComponent implements OnDestroy {
       document.fileUrl = URL.createObjectURL(file);
 
       // Update the service with the selected file
-      this.licenseeService.setCompanyDocuments({
+      this.companyRegistrationService.setCompanyDocuments({
         [document.key]: file
       });
     }

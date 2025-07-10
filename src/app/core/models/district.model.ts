@@ -1,10 +1,10 @@
 export class District {
   id!: number;
-  DistrictCode!: number;
-  District!: string;
-  DistrictNameLL?: string;
-  StateCode!: number;
-  stateName!: string;
-  IsActive!: boolean;
+  district!: string;
+  districtCode!: number;
+  districtNameLl?: string;
+  stateCode!: number;
+  state!: string;
+  isActive!: boolean;
 }
   

@@ -4,7 +4,7 @@
        <div class="heading" [innerText]="modeofOperation === 'Barman' ? 'Barman Details' : (
         modeofOperation === 'Salesman' ? 'Salesman Details' : 'Details'
         )">
-        </div>
+      </div>
       <div class="validation">
         * Marked Fields Are Mandatory
       </div>
@@ -12,122 +12,150 @@
 
     <mat-card-content>
       <div class="form-field-container">
-        <mat-form-field appearance="outline"> 
+        <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>
           <input matInput placeholder="Enter First Name" type="text" formControlName="firstName" required/>
-          <mat-error *ngIf="detailsForm.controls['firstName'].invalid">
-            {{ getErrorMessage('firstName') }}
-          </mat-error>
+          @if (detailsForm.controls['firstName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('firstName') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Middle Name</mat-label>
           <input matInput placeholder="Enter Middle Name" type="text" formControlName="middleName"/>
-          <mat-error *ngIf="detailsForm.controls['middleName'].invalid">
-            {{ getErrorMessage('middleName') }}
-          </mat-error>
+          @if (detailsForm.controls['middleName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('middleName') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Last Name</mat-label>
           <input matInput placeholder="Enter Last Name" type="text" formControlName="lastName" required/>
-          <mat-error *ngIf="detailsForm.controls['lastName'].invalid">
-            {{ getErrorMessage('lastName') }}
-          </mat-error>
+          @if (detailsForm.controls['lastName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('lastName') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Father's/Husband's Name</mat-label>
           <input matInput placeholder="Enter Father's/Husband's Name" type="text" formControlName="fatherHusbandName" required/>
-          <mat-error *ngIf="detailsForm.controls['fatherHusbandName'].invalid">
-            {{ getErrorMessage('fatherHusbandName') }}
-          </mat-error>
+          @if (detailsForm.controls['fatherHusbandName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('fatherHusbandName') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-radio-group aria-label="Gender" formControlName="gender" required>
           <mat-radio-button value="Male">Male</mat-radio-button>
           <mat-radio-button value="Female">Female</mat-radio-button>
-          <mat-error *ngIf="detailsForm.controls['gender'].invalid">
-            {{ getErrorMessage('gender') }}
-          </mat-error>
+          @if (detailsForm.controls['gender'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('gender') }}
+            </mat-error>
+          }
         </mat-radio-group>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Date of Birth</mat-label>
           <input matInput [matDatepicker]="picker" formControlName="dob" required>
           <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
           <mat-datepicker #picker></mat-datepicker>
-          <mat-error *ngIf="detailsForm.controls['dob'].invalid">
-            {{ getErrorMessage('dob') }}
-          </mat-error>
+          @if (detailsForm.controls['dob'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('dob') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Nationality</mat-label>
           <mat-select formControlName="nationality" required>
             <mat-option>None</mat-option>
-            <mat-option *ngFor="let nationality of nationalities" [value]="nationality">{{ nationality }}</mat-option>
+            @for (nationality of nationalities; track nationality) {
+              <mat-option [value]="nationality">{{ nationality }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="detailsForm.controls['nationality'].invalid">
-            {{ getErrorMessage('nationality') }}
-          </mat-error>
+          @if (detailsForm.controls['nationality'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('nationality') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Address</mat-label>
           <textarea matInput
-                    placeholder="Enter Address (max 500 characters)"
-                    formControlName="address"
-                    cdkTextareaAutosize
-                    #autosize="cdkTextareaAutosize"
-                    cdkAutosizeMinRows="1"
-                    cdkAutosizeMaxRows="5"
-                    required>
+            placeholder="Enter Address (max 500 characters)"
+            formControlName="address"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5"
+            required>
           </textarea>
-          <mat-error *ngIf="detailsForm.controls['address'].invalid">
-            {{ getErrorMessage('address') }}
-          </mat-error>
+          @if (detailsForm.controls['address'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('address') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>PAN</mat-label>
           <input matInput placeholder="Enter PAN" type="text" formControlName="pan" appUppercase required/>
-          <mat-error *ngIf="detailsForm.controls['pan'].invalid">
-            {{ getErrorMessage('pan') }}
-          </mat-error>
+          @if (detailsForm.controls['pan'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pan') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Aadhaar No.</mat-label>
           <input matInput placeholder="Enter Aadhaar No." type="text" formControlName="aadhaar" required/>
-          <mat-error *ngIf="detailsForm.controls['aadhaar'].invalid">
-            {{ getErrorMessage('aadhaar') }}
-          </mat-error>
+          @if (detailsForm.controls['aadhaar'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('aadhaar') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
-            <mat-label>Enter Mobile Number</mat-label>
-            <input matInput placeholder="Enter Phone Number" type="tel" formControlName="mobileNumber" required/>
-            <mat-error *ngIf="detailsForm.controls['mobileNumber'].invalid">
+          <mat-label>Enter Mobile Number</mat-label>
+          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="mobileNumber" required/>
+          @if (detailsForm.controls['mobileNumber'].invalid) {
+            <mat-error>
               {{ getErrorMessage('mobileNumber') }}
             </mat-error>
+          }
         </mat-form-field>
-  
+
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
           <input matInput placeholder="Enter Email" type="email" formControlName="emailId"/>
-          <mat-error *ngIf="detailsForm.controls['emailId'].invalid">
-            {{ getErrorMessage('emailId') }}
-          </mat-error>
+          @if (detailsForm.controls['emailId'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('emailId') }}
+            </mat-error>
+          }
         </mat-form-field>
-  
+
         <div class="checkbox">
           <mat-checkbox formControlName="sikkimSubject" required>
             The <span [innerText]="modeofOperation === 'Barman' ? 'Barman' : 'Salesman'"></span> holds Sikkim Subject Certificate / Certificate of Identification / Residential Certificate (for urban area only).
-          </mat-checkbox> 
-          <mat-error *ngIf="detailsForm.controls['sikkimSubject'].invalid">
-            {{ getErrorMessage('sikkimSubject') }}
-          </mat-error>
+          </mat-checkbox>
+          @if (detailsForm.controls['sikkimSubject'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('sikkimSubject') }}
+            </mat-error>
+          }
         </div>
       </div>
 
@@ -137,44 +165,50 @@
         </div>
         <div class="table-container">
           <table mat-table [dataSource]="documents" class="mat-elevation-z8">
-    
+
             <!-- Serial Number Column -->
             <ng-container matColumnDef="serialNo">
               <th mat-header-cell *matHeaderCellDef> Sl. No </th>
               <td mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </td>
             </ng-container>
-      
+
             <!-- Document Type Column -->
             <ng-container matColumnDef="docType">
               <th mat-header-cell *matHeaderCellDef> Document Type Description </th>
-              <td mat-cell *matCellDef="let element"> 
-                {{ element.name }} 
-                <span class="required" *ngIf="element.required">*</span>
-                <a *ngIf="element.format" class="format"> ({{ element.format }}) </a>
+              <td mat-cell *matCellDef="let element">
+                {{ element.name }}
+                @if (element.required) {
+                  <span class="required">*</span>
+                }
+                @if (element.format) {
+                  <a class="format"> ({{ element.format }}) </a>
+                }
               </td>
             </ng-container>
-      
+
             <!-- File Upload Column -->
             <ng-container matColumnDef="upload">
               <th mat-header-cell *matHeaderCellDef> Browse File </th>
-              <td mat-cell *matCellDef="let element"> 
+              <td mat-cell *matCellDef="let element">
                 <input type="file" (change)="onFileSelect($event, element)" [accept]="element.accept">
               </td>
             </ng-container>
-      
+
             <!-- View File Column -->
             <ng-container matColumnDef="view">
               <th mat-header-cell *matHeaderCellDef> Click to View </th>
               <td mat-cell *matCellDef="let element">
-                <button mat-icon-button *ngIf="element.file" (click)="viewFile(element)">
-                  <mat-icon>visibility</mat-icon>
-                </button>
+                @if (element.file) {
+                  <button mat-icon-button (click)="viewFile(element)">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                }
               </td>
             </ng-container>
-      
+
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      
+
           </table>
         </div>
       </div>

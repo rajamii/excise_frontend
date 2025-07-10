@@ -1,12 +1,13 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClientModule, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { CsrfInterceptor } from './core/interceptors/csrfInterceptor';
 import { provideToastr, ToastrModule } from 'ngx-toastr';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { MarkdownModule } from 'ngx-markdown';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -14,10 +15,16 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withInterceptorsFromDi()),
     provideAnimationsAsync(),
-    provideRouter(routes),
-    { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
     provideToastr(),
-    provideAnimations()
-  
+    provideAnimations(),
+
+    // ✅ ADD THIS TO FIX _MarkdownService injection
+    importProvidersFrom(
+      HttpClientModule,
+      MarkdownModule.forRoot()
+    ),
+
+    // Keep interceptor last
+    { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
   ]
 };

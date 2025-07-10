@@ -11,115 +11,147 @@
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division</mat-label>
-          <mat-select formControlName="siteSubDivision" (selectionChange)="onSubDivisionChange($event.value)" required>
-            <mat-option *ngFor="let siteSubDivision of siteSubDivisions" [value]="siteSubDivision.SubDivisionName">{{ siteSubDivision.SubDivisionName }}</mat-option>
+          <mat-select formControlName="siteSubdivision" (selectionChange)="onSubDivisionChange($event.value)" required>
+            @for (siteSubdivision of subdivisions; track siteSubdivision) {
+              <mat-option [value]="siteSubdivision.subdivision">{{ siteSubdivision.subdivision }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['siteSubDivision'].invalid">
-            {{ getErrorMessage('siteSubDivision') }}
-          </mat-error>
+          @if (addressForm.controls['siteSubdivision'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('siteSubdivision') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Police Station</mat-label>
           <mat-select formControlName="policeStation" required>
-            <mat-option *ngFor="let policeStation of sitePoliceStations" [value]="policeStation.PoliceStationName">{{ policeStation.PoliceStationName }}</mat-option>
+            @for (policeStation of sitePoliceStations; track policeStation) {
+              <mat-option [value]="policeStation.policeStation">{{ policeStation.policeStation }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['policeStation'].invalid">
-            {{ getErrorMessage('policeStation') }}
-          </mat-error>
+          @if (addressForm.controls['policeStation'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('policeStation') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Location Category</mat-label>
           <mat-select formControlName="locationCategory" required>
-            <mat-option *ngFor="let locationCategory of locationCategories" [value]="locationCategory">{{ locationCategory }}</mat-option>
+            @for (locationCategory of locationCategories; track locationCategory) {
+              <mat-option [value]="locationCategory">{{ locationCategory }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['locationCategory'].invalid">
-            {{ getErrorMessage('locationCategory') }}
-          </mat-error>
+          @if (addressForm.controls['locationCategory'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('locationCategory') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Location Name</mat-label>
           <mat-select formControlName="locationName" required>
-            <mat-option *ngFor="let locationName of locationNames" [value]="locationName">{{ locationName }}</mat-option>
+            @for (locationName of locationNames; track locationName) {
+              <mat-option [value]="locationName">{{ locationName }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['locationName'].invalid">
-            {{ getErrorMessage('locationName') }}
-          </mat-error>
+          @if (addressForm.controls['locationName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('locationName') }}
+            </mat-error>
+          }
         </mat-form-field>
-        
+
         <mat-form-field appearance="outline">
           <mat-label>Ward Name</mat-label>
           <mat-select formControlName="wardName" required>
-            <mat-option *ngFor="let wardName of wardNames" [value]="wardName">{{ wardName }}</mat-option>
+            @for (wardName of wardNames; track wardName) {
+              <mat-option [value]="wardName">{{ wardName }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['wardName'].invalid">
-            {{ getErrorMessage('wardName') }}
-          </mat-error>
+          @if (addressForm.controls['wardName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('wardName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Address of the Business Premises</mat-label>
           <textarea matInput
-                    placeholder="Enter Site Address (max 500 characters)"
-                    formControlName="businessAddress"
-                    cdkTextareaAutosize
-                    #autosize="cdkTextareaAutosize"
-                    cdkAutosizeMinRows="1"
-                    cdkAutosizeMaxRows="5"
-                    required>
+            placeholder="Enter Site Address (max 500 characters)"
+            formControlName="businessAddress"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="5"
+            required>
           </textarea>
-          <mat-error *ngIf="addressForm.controls['businessAddress'].invalid">
-            {{ getErrorMessage('businessAddress') }}
-          </mat-error>
+          @if (addressForm.controls['businessAddress'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('businessAddress') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Road Name</mat-label>
           <mat-select formControlName="roadName" required>
-            <mat-option *ngFor="let roadName of roadNames" [value]="roadName">{{ roadName }}</mat-option>
+            @for (roadName of roadNames; track roadName) {
+              <mat-option [value]="roadName">{{ roadName }}</mat-option>
+            }
           </mat-select>
-          <mat-error *ngIf="addressForm.controls['roadName'].invalid">
-            {{ getErrorMessage('roadName') }}
-          </mat-error>
+          @if (addressForm.controls['roadName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('roadName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>PIN Code</mat-label>
           <input matInput placeholder="Enter PIN" type="number" formControlName="pinCode" required/>
-          <mat-error *ngIf="addressForm.controls['pinCode'].invalid">
-            {{ getErrorMessage('pinCode') }}
-          </mat-error>
+          @if (addressForm.controls['pinCode'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pinCode') }}
+            </mat-error>
+          }
         </mat-form-field>
       </div>
-        
+
       <h5>Site Map (Optional)</h5>
-      
+
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Latitude</mat-label>
           <input matInput placeholder="Enter Latitude" type="text" formControlName="latitude"/>
-          <mat-error *ngIf="addressForm.controls['latitude'].invalid">
-            {{ getErrorMessage('latitude') }}
-          </mat-error>
+          @if (addressForm.controls['latitude'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('latitude') }}
+            </mat-error>
+          }
         </mat-form-field>
-          
+
         <mat-form-field appearance="outline">
           <mat-label>Longitude</mat-label>
           <input matInput placeholder="Enter Longitude" type="text" formControlName="longitude"/>
-          <mat-error *ngIf="addressForm.controls['longitude'].invalid">
-            {{ getErrorMessage('longitude') }}
-          </mat-error>
+          @if (addressForm.controls['longitude'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('longitude') }}
+            </mat-error>
+          }
         </mat-form-field>
       </div>
     </mat-card-content>
-    
+
     <mat-card-actions>
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!addressForm.valid">Next</button>
+      <button matButton="outlined" (click)="goBack()">Back</button>
+      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
+      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!addressForm.valid">Next</button>
     </mat-card-actions>
   </mat-card>
-  
+
 </form>

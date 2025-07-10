@@ -1,0 +1,416 @@
+<mat-horizontal-stepper #stepper>
+  <!-- Step 1: Show Application Data -->
+  <mat-step label="Application Data">
+    <div class="step-header">
+      {{application.applicationId}}
+    </div>
+    <div class="application-details">
+      <!-- Section: License Info -->
+      <ng-container>
+        <h6>License</h6>
+        <div class="section-table">
+          @for (item of licenseData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                <!-- Objection icon with tooltip if objection exists -->
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Key Info -->
+      <ng-container>
+        <h6>Key Info</h6>
+        <div class="section-table">
+          @for (item of keyInfoData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Address -->
+      <ng-container>
+        <h6>Address</h6>
+        <div class="section-table">
+          @for (item of addressData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Unit Details (only if license type is Company)-->
+      @if (application.licenseType === 'Company') {
+        <h6>Unit Details</h6>
+        <div class="section-table">
+          @for (item of unitDetailsData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                {{ item.value }}
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Section: Member Details (includes photo rendering) -->
+      <ng-container>
+        <h6>Member Details</h6>
+        <div class="section-table">
+          @for (item of memberDetailsData; track item) {
+            <div
+              class="row"
+              [class.objection]="hasObjection(item.field)">
+              <div class="key">
+                {{ item.key }}
+              </div>
+              <div class="value">
+                <!-- Conditionally display photo if field is 'photo' -->
+                @if (item.field === 'photo' && photoUrl) {
+                  <img [src]="photoUrl" alt="Photo" rel="noopener" class="photo-preview" />
+                } @else {
+                  {{ item.value }}
+                }
+                <!-- Objection icon -->
+                @if (hasObjection(item.field)) {
+                  <mat-icon
+                    matTooltip="{{ getObjectionRemarks(item.field) }}">
+                    error
+                  </mat-icon>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </ng-container>
+
+      <!-- Section: Site Details -->
+      @if (siteDetail) {
+        <h6>Site Details</h6>
+        <div class="section-table">
+          @for (item of siteDetailData; track item) {
+            <div
+              class="row"
+              >
+              <div class="key">{{ item.key }}</div>
+              <div class="value">
+                {{ item.value === true ? 'Yes' : item.value === false ? 'No' : (item.value || 'N/A') }}
+              </div>
+            </div>
+          }
+        </div>
+        <!-- PDF Link -->
+        @if (sitePdfUrl) {
+          <div class="pdf-link">
+            <a [href]="sitePdfUrl" target="_blank" rel="noopener">
+              <mat-icon>picture_as_pdf</mat-icon>
+              View Shop Image
+            </a>
+          </div>
+        }
+      }
+
+    </div>
+
+    <!-- Action Buttons (conditional by role/status) -->
+    <div class="step-buttons">
+      <!-- Approve -->
+      @if (['pending', 'rejected'].includes(tableType)) {
+        <button
+          matButton
+          class="bg-success text-white"
+          (click)="onApprove(stepper)"
+          >
+          <mat-icon>check_circle</mat-icon>
+          Approve
+        </button>
+      }
+
+      <!-- Raise Objection -->
+      @if (tableType==='pending') {
+        <button
+          matButton
+          class="bg-warning"
+          (click)="onRaiseObjection(stepper)"
+          >
+          <mat-icon>flag</mat-icon>
+          Raise Objection
+        </button>
+      }
+
+      <!-- Reject -->
+      @if (tableType==='pending') {
+        <button
+          matButton="filled"
+          color="warn"
+          (click)="onReject(stepper)"
+          >
+          <mat-icon>cancel</mat-icon>
+          Reject
+        </button>
+      }
+    </div>
+  </mat-step>
+
+  <!-- Raise Objection Form -->
+  @if (isObjection) {
+    <mat-step label="Raise Objection">
+      <form [formGroup]="objectionForm">
+        <div class="step-header">
+          {{application.applicationId}}
+        </div>
+        <!-- Objection Form -->
+        <div class="objection-form-content">
+          @for (field of objectionFields; track field) {
+            <div class="objection-field">
+              <mat-checkbox [formControlName]="field.key">
+                {{ field.label }}
+              </mat-checkbox>
+              <!-- Remarks field shown only if checkbox is selected -->
+              @if (objectionForm.get(field.key)?.value) {
+                <mat-form-field appearance="outline">
+                  <textarea
+                    matInput
+                    [formControlName]="field.key + '_remarks'"
+                  placeholder="Write Remarks"></textarea>
+                </mat-form-field>
+              }
+            </div>
+          }
+        </div>
+        <!-- Objection Step Buttons -->
+        <div class="step-buttons">
+          <button matButton="outlined" matStepperPrevious>Back</button>
+          <button matButton class="bg-warning" matStepperNext>Submit Objection</button>
+        </div>
+      </form>
+    </mat-step>
+  }
+
+  <!-- Calculate Fee (Level 1 only) -->
+  @if (accountService.hasAnyRole('level_1') && isApproveFlow) {
+    <mat-step [stepControl]="feeForm"  label="Calculate Fee">
+      <form  [formGroup]="feeForm" label="Calculate Fee">
+        <div class="step-header">
+          <h5>{{application.applicationId}}</h5>
+        </div>
+        <div class="step-content p-2">
+          <div>
+            <!-- Location dropdown triggers fee update on change -->
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Select Location</mat-label>
+              <mat-select formControlName="location" (selectionChange)="onLocationChange($event.value)">
+                @for (loc of locationFees; track loc) {
+                  <mat-option [value]="loc">{{ loc.locationName }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <!-- Fee amount auto-filled and non-editable -->
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>License Fee</mat-label>
+              <input matInput [value]="selectedLocation?.feeAmount" disabled>
+            </mat-form-field>
+          </div>
+          <div class="step-buttons">
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" [disabled]="!feeForm.valid" matStepperNext>Next</button>
+          </div>
+        </div>
+      </form>
+    </mat-step>
+  }
+
+  <!-- Site Enquiry (Level 2 only) -->
+  @if (accountService.hasAnyRole('level_2') && isApproveFlow) {
+    <mat-step label="Site Enquiry">
+      <div class="step-body">
+        <div class="step-header justify-content-between px-4">
+          {{ application.applicationId }}
+          <div class="form-title">Site Enquiry Form</div>
+        </div>
+        <!-- Site enquiry form component emits form validity status -->
+        <div class="form-container p-2">
+          <app-site-enquiry-form (formStatus)="onFormValidityChange($event)"></app-site-enquiry-form>
+        </div>
+        <div class="step-buttons">
+          <button matButton="outlined" matStepperPrevious>Back</button>
+          <button matButton="filled" color="primary"s matStepperNext [disabled]="!siteEnquiryFormValid">Next</button>
+        </div>
+      </div>
+    </mat-step>
+  }
+
+  <!-- License Category Selection (Level 2 only) -->
+  @if (accountService.hasAnyRole('level_2') && isApproveFlow && !isRejected) {
+    <mat-step [stepControl]="licenseCategoryForm" label="License Category">
+      <form [formGroup]="licenseCategoryForm">
+        <div class="step-header">
+          <h5>{{application.applicationId}}</h5>
+        </div>
+        <div class="step-content p-4">
+          <div>
+            <mat-form-field appearance="outline">
+              <mat-label>Select License Category</mat-label>
+              <mat-select formControlName="licenseCategory">
+                @for (category of licenseCategories; track category) {
+                  <mat-option [value]="category">
+                    {{ category.licenseCategory }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <div class="step-buttons">
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" matStepperNext>Next</button>
+          </div>
+        </div>
+      </form>
+    </mat-step>
+  }
+
+  <!-- Common remarks form step (used in : approve, reject) -->
+  @if (isApproveFlow || isRejectFlow) {
+    <mat-step [stepControl]="remarksForm" label="Review Remarks">
+      <form [formGroup]="remarksForm">
+        <div class="step-header">
+          {{application.applicationId}}
+        </div>
+        <div class="step-content p-3">
+          <mat-form-field appearance="outline">
+            <mat-label>Review Remarks</mat-label>
+            <textarea matInput formControlName="remarks" required></textarea>
+            @if (remarksForm.controls['remarks'].hasError('required')) {
+              <mat-error>
+                Remarks are required
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <div class="step-buttons">
+            <button matButton="outlined" matStepperPrevious>Back</button>
+            <button matButton="filled" color="primary" matStepperNext [disabled]="!remarksForm.valid">Next</button>
+          </div>
+        </div>
+      </form>
+    </mat-step>
+  }
+
+  <!-- Final confirmation step -->
+  <mat-step class="confirmation-step" label="Confirm">
+    <div class="step-content p-4">
+
+      <!-- Shown in approval flow -->
+      @if (isApproveFlow) {
+        <h5 class="text-success">
+          Confirm Approval
+        </h5>
+        <mat-card appearance="outlined">
+          <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+          <!-- Show fee only to Level 1 -->
+          @if (accountService.hasAnyRole('level_1') && selectedLocation?.feeAmount) {
+            <p>
+              <strong>Fee Amount:</strong> ₹{{ selectedLocation?.feeAmount }}
+            </p>
+          }
+          <!-- Show license category only to Level 2 -->
+          @if (accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory) {
+            <p>
+              <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategory }}
+            </p>
+          }
+        </mat-card>
+      }
+
+      <!-- Shown in rejection flow -->
+      @if (isRejectFlow) {
+        <h5 class="text-danger">
+          Confirm Rejection
+        </h5>
+        <mat-card appearance="outlined">
+          <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
+        </mat-card>
+      }
+
+      <!-- Shown in objection flow -->
+      @if (isObjection) {
+        <h5 class="text-danger">
+          Confirm Objection
+        </h5>
+        <mat-card appearance="outlined">
+          <!-- Show all objection details -->
+            @for (obj of selectedObjections; track obj.field) {
+              <p>
+                <strong>{{ obj.field }}:</strong> {{ obj.remarks }}
+              </p>
+            }
+        </mat-card>
+      }
+
+      <!-- Buttons common to all confirmation cases -->
+      <div class="step-buttons">
+        <button matButton="outlined" matStepperPrevious>Back</button>
+        <button matButton="filled" color="primary" 
+        (click)="onConfirmClick()"
+        [disabled]="isObjection && selectedObjections.length === 0">
+          Confirm
+        </button>
+      </div>
+
+    </div>
+  </mat-step>
+
+</mat-horizontal-stepper>

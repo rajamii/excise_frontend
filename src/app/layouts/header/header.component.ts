@@ -1,17 +1,15 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { MaterialModule } from '../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
-import { NavbarModule, NavModule } from '@coreui/angular';
 import { AccountService } from '../../core/services/account.service';
 import Swal from 'sweetalert2';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-header',
   imports: [
     MaterialModule,
     RouterModule,
-    NavbarModule,
-    NavModule
   ],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
@@ -19,7 +17,11 @@ import Swal from 'sweetalert2';
 export class HeaderComponent implements OnInit {
   isLoggedIn = false;
 
-  constructor(private router: Router, private accountService: AccountService){}
+  constructor(
+    private router: Router, 
+    private accountService: AccountService,
+    private authService: AuthService,
+  ){}
 
   ngOnInit(): void {
     this.accountService.getAuthenticationState().subscribe((user) => {
@@ -42,7 +44,7 @@ export class HeaderComponent implements OnInit {
       confirmButtonText: 'Yes, log me out!',
     }).then((result) => {
       if (result.isConfirmed) {
-        this.accountService.logout().subscribe({
+        this.authService.logout().subscribe({
           next: () => {
             console.log('Logout successful');
             this.router.navigate(['/login']);

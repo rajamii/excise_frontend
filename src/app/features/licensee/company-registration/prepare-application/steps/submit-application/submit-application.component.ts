@@ -1,9 +1,9 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
 import { MaterialModule } from '../../../../../../shared/material.module';
-import { LicenseeService } from '../../../../licensee.services';
 import { Company, CompanyDocuments } from '../../../../../../core/models/company.model';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
+import { CompanyRegistrationService } from '../../../../../../core/services/company-registration.service';
 
 @Component({
   selector: 'app-submit-application',
@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })
-export class SubmitApplicationComponent {
+export class SubmitApplicationComponent implements OnDestroy{
   fileUrls: string[] = []
 
   // Human-readable labels for company fields
@@ -47,7 +47,7 @@ export class SubmitApplicationComponent {
   // Output event emitter to notify parent about "back" action
   @Output() back = new EventEmitter<void>();
 
-  constructor(private licenseeService: LicenseeService, private router: Router) {}
+  constructor(private companyRegistrationService: CompanyRegistrationService, private router: Router) {}
 
   ngOnDestroy(): void {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
@@ -70,7 +70,7 @@ export class SubmitApplicationComponent {
 
   // Get uploaded document metadata (filename) for preview display
   get companyDocuments(): { key: keyof CompanyDocuments; file: File; fileUrl: string }[] {
-    const docs = this.licenseeService.getCompanyDocuments();
+    const docs = this.companyRegistrationService.getCompanyDocuments();
     this.fileUrls = [];
   
     return Object.entries(docs).map(([key, file]) => {
@@ -125,7 +125,7 @@ export class SubmitApplicationComponent {
       const paymentDetails: Partial<Company> = JSON.parse(sessionStorage.getItem('paymentDetails') || '{}');
 
       // Get uploaded files from service
-      const companyRegistrationDocuments = this.licenseeService.getCompanyDocuments();
+      const companyRegistrationDocuments = this.companyRegistrationService.getCompanyDocuments();
 
       // Ensure nothing is missing
       if (!companyDetails || !memberDetails || !paymentDetails || !companyRegistrationDocuments) {
@@ -151,7 +151,7 @@ export class SubmitApplicationComponent {
       }
 
       // Make API call to submit form
-      this.licenseeService.createCompany(formData).subscribe({
+      this.companyRegistrationService.createCompany(formData).subscribe({
         next: () => {
           // On success: notify user, clear data, redirect
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {

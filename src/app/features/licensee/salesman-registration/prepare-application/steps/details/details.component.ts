@@ -2,15 +2,16 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../../licensee.services';
 import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../../shared/utils/capitalize.util';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../../core/models/salesman-barman.model';
 import { DatePipe } from '@angular/common';
+import { SalesmanBarmanRegistrationService } from '../../../../../../core/services/salesman-barman-registration.service';
 
 @Component({
   selector: 'app-details',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './details.component.html',
   styleUrl: './details.component.scss',
@@ -51,7 +52,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder,
-    private licenseeService: LicenseeService,
+    private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private datePipe: DatePipe
   ) {
     const storedValues = this.getFromSessionStorage();
@@ -134,7 +135,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
       document.fileUrl = URL.createObjectURL(file);
 
       // Update the service with the selected file
-      this.licenseeService.setSalesmanBarmanDocuments({
+      this.salesmanBarmanService.setSalesmanBarmanDocuments({
         [document.key]: file
       });
     }

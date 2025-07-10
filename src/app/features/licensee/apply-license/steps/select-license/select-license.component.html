@@ -14,60 +14,74 @@
         <!-- Excise District Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Excise District</mat-label>
-          <mat-select 
-            formControlName="exciseDistrict" 
-            (selectionChange)="onDistrictChange($event.value)" 
+          <mat-select
+            formControlName="exciseDistrict"
+            (selectionChange)="onDistrictChange($event.value)"
             required>
             <!-- Dynamically generated district options -->
-            <mat-option *ngFor="let district of districts" [value]="district.District">
-              {{ district.District }}
-            </mat-option>
+            @for (district of districts; track district) {
+              <mat-option [value]="district.district">
+                {{ district.district }}
+              </mat-option>
+            }
           </mat-select>
           <!-- Error message for invalid district selection -->
-          <mat-error *ngIf="selectLicenseForm.controls['exciseDistrict'].invalid">
-            {{ getErrorMessage('exciseDistrict') }}
-          </mat-error>
+          @if (selectLicenseForm.controls['exciseDistrict'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('exciseDistrict') }}
+            </mat-error>
+          }
         </mat-form-field>
-        
+
         <!-- License Category Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Select License Category</mat-label>
           <mat-select formControlName="licenseCategory" required>
             <!-- Dynamically generated license category options -->
-            <mat-option *ngFor="let category of licenseCategories" [value]="category.licenseCategoryDescription">
-              {{ category.licenseCategoryDescription }}
-            </mat-option>
+            @for (category of licenseCategories; track category) {
+              <mat-option [value]="category.licenseCategory">
+                {{ category.licenseCategory }}
+              </mat-option>
+            }
           </mat-select>
           <!-- Error message for invalid license category -->
-          <mat-error *ngIf="selectLicenseForm.controls['licenseCategory'].invalid">
-            {{ getErrorMessage('licenseCategory') }}
-          </mat-error>
+          @if (selectLicenseForm.controls['licenseCategory'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseCategory') }}
+            </mat-error>
+          }
         </mat-form-field>
-        
+
         <!-- Excise Sub Division Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Excise Sub Division</mat-label>
-          <mat-select formControlName="exciseSubDivision" required>
+          <mat-select formControlName="exciseSubdivision" required>
             <!-- Subdivision options filtered based on selected district -->
-            <mat-option *ngFor="let subDivision of filteredSubdivisions" [value]="subDivision.SubDivisionName">
-              {{ subDivision.SubDivisionName }}
-            </mat-option>
+            @for (subdivision of filteredSubdivisions; track subdivision) {
+              <mat-option [value]="subdivision.subdivision">
+                {{ subdivision.subdivision }}
+              </mat-option>
+            }
           </mat-select>
-        </mat-form-field>        
+        </mat-form-field>
 
         <!-- License Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Select License</mat-label>
           <mat-select formControlName="license" required>
             <!-- Dynamically generated license list -->
-            <mat-option *ngFor="let license of licenses" [value]="license">
-              {{ license }}
-            </mat-option>
+            @for (license of licenses; track license) {
+              <mat-option [value]="license">
+                {{ license }}
+              </mat-option>
+            }
           </mat-select>
           <!-- Error message for invalid license -->
-          <mat-error *ngIf="selectLicenseForm.controls['license'].invalid">
-            {{ getErrorMessage('license') }}
-          </mat-error>
+          @if (selectLicenseForm.controls['license'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('license') }}
+            </mat-error>
+          }
         </mat-form-field>
       </div>
     </mat-card-content>
@@ -75,13 +89,13 @@
     <!-- Form Buttons -->
     <mat-card-actions>
       <!-- Back Button -->
-      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button matButton="outlined" (click)="goBack()">Back</button>
 
       <!-- Reset Button -->
-      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
 
       <!-- Next Button (disabled if form is invalid) -->
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!selectLicenseForm.valid">
+      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!selectLicenseForm.valid">
         Next
       </button>
     </mat-card-actions>

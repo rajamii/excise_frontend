@@ -2,16 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
-// Services and shared modules
-import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
-
-// Models
 import { District } from '../../../../../core/models/district.model';
-import { SubDivision } from '../../../../../core/models/subdivision.model';
+import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-select-license',
@@ -26,8 +22,8 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   // Dropdown data
   districts: District[] = [];
-  private subDivisions: SubDivision[] = [];
-  filteredSubdivisions: SubDivision[] = [];
+  private subdivisions: Subdivision[] = [];
+  filteredSubdivisions: Subdivision[] = [];
   licenseCategories: LicenseCategory[] = [];
 
   // Static license types
@@ -44,11 +40,11 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   errorMessages = {
     exciseDistrict: signal(''),
     licenseCategory: signal(''),
-    exciseSubDivision: signal(''),
+    exciseSubdivision: signal(''),
     license: signal('')
   };
 
-  constructor(private fb: FormBuilder, private licenseeService: LicenseeService) {
+  constructor(private fb: FormBuilder, private masterService: MasterService) {
     // Preload saved data from session storage
     const storedValues = this.getFromSessionStorage();
 
@@ -56,7 +52,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     this.selectLicenseForm = this.fb.group({
       exciseDistrict: new FormControl(storedValues.exciseDistrict, [Validators.required]),
       licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
-      exciseSubDivision: new FormControl(storedValues.exciseSubDivision, [Validators.required]),
+      exciseSubdivision: new FormControl(storedValues.exciseSubdivision, [Validators.required]),
       license: new FormControl(storedValues.license || 'New', [Validators.required]),
     });
 
@@ -79,18 +75,26 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   }
 
   // Load dropdown values from service
-  private loadDropdownData(): void {    
-    this.licenseeService.getDistrict().subscribe({
+  private loadDropdownData(): void {
+    this.masterService.getDistrict().subscribe({
       next: (data: District[]) => this.districts = data,
       error: (error) => console.error('Error fetching districts:', error)
     });
 
-    this.licenseeService.getSubDivision().subscribe({
-      next: (data: SubDivision[]) => this.subDivisions = data,
+    this.masterService.getSubdivision().subscribe({
+      next: (data: Subdivision[]) => {
+        this.subdivisions = data;
+
+        // After loading subdivisions, trigger filtering using saved district
+        const storedDistrict = this.selectLicenseForm.get('exciseDistrict')?.value;
+        if (storedDistrict) {
+          this.onDistrictChange(storedDistrict);
+        }
+      },
       error: (error) => console.error('Failed to load subdivisions.', error)
     });
 
-    this.licenseeService.getLicenseCategories().subscribe({
+    this.masterService.getLicenseCategories().subscribe({
       next: (data: LicenseCategory[]) => this.licenseCategories = data,
       error: (error) => console.error('Failed to load license categories.', error)
     });
@@ -98,7 +102,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   // Filter sub-divisions when district changes
   onDistrictChange(name: string): void {
-    this.filteredSubdivisions = this.subDivisions.filter(subDiv => subDiv.District === name);
+    this.filteredSubdivisions = this.subdivisions.filter(subdiv => subdiv.district === name);
   }
 
   // Read form data from session storage

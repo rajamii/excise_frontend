@@ -1,10 +1,10 @@
-export class SubDivision {
+import { District } from "./district.model";
+export class Subdivision {
     id!: number;
-    SubDivisionCode!: number;
-    SubDivisionName!: string;
-    SubDivisionNameLL?: string;
-    DistrictCode!: number;
-    District!: string;
-    IsActive!: boolean;
+    subdivision!: string;
+    subdivisionCode!: number;
+    districtCode!: number;
+    district!: string;
+    isActive!: boolean;
   }
   

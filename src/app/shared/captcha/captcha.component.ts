@@ -1,8 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { MaterialModule } from '../material.module';
-import { ApiService } from '../../core/services/api.service';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators,FormBuilder } from '@angular/forms';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-captcha',
@@ -17,7 +17,7 @@ export class CaptchaComponent implements OnInit {
   captchaKey: string = '';
   private baseUrl = `${environment.apiBaseUrl}`; // Base URL for the API
 
-  constructor(private captchaService: ApiService) {}
+  constructor(private authService: AuthService) {}
 
   ngOnInit(): void {
     this.initializeFormControls(); // Ensure controls exist
@@ -35,9 +35,9 @@ export class CaptchaComponent implements OnInit {
   }
 
   loadCaptcha(): void {
-    this.captchaService.getCaptcha().subscribe({
-      next: (data: { key: string; image_url: string }) => {
-        this.captchaImageUrl = `${this.baseUrl}${data.image_url}`;
+    this.authService.getCaptcha().subscribe({
+      next: (data: { key: string; imageUrl: string }) => {
+        this.captchaImageUrl = `${this.baseUrl}${data.imageUrl}`;
         this.captchaKey = data.key;
         this.formGroup.patchValue({ hashkey: this.captchaKey });
       },

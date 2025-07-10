@@ -2,13 +2,16 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../../licensee.services';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { SalesmanBarman } from '../../../../../../core/models/salesman-barman.model';
 import { DatePipe } from '@angular/common';
+import { BaseDependency } from '../../../../../../base/dependency/base.dependency';
+import { BaseComponent } from '../../../../../../base/base.components';
+import { MasterService } from '../../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-license',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './license.component.html',
   styleUrl: './license.component.scss',
@@ -39,18 +42,18 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder, 
-    private licenseeService: LicenseeService, 
+    private masterService: MasterService, 
     private datePipe: DatePipe) {
-    const storedValues = this.getFromSessionStorage();
+      const storedValues = this.getFromSessionStorage();
 
-    this.licenseForm = this.fb.group({
-      applicationYear: new FormControl(storedValues.applicationYear, [Validators.required]),
-      applicationId: new FormControl(storedValues.applicationId, [Validators.required]),
-      applicationDate: new FormControl(storedValues.applicationDate, [Validators.required]),
-      district: new FormControl(storedValues.district, [Validators.required]),
-      licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
-      license: new FormControl(storedValues.license || 'New', [Validators.required]),
-      role: new FormControl(storedValues.role, [Validators.required])
+      this.licenseForm = this.fb.group({
+        applicationYear: new FormControl(storedValues.applicationYear, [Validators.required]),
+        applicationId: new FormControl(storedValues.applicationId, [Validators.required]),
+        applicationDate: new FormControl(storedValues.applicationDate, [Validators.required]),
+        district: new FormControl(storedValues.district, [Validators.required]),
+        licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
+        license: new FormControl(storedValues.license || 'New', [Validators.required]),
+        role: new FormControl(storedValues.role, [Validators.required])
     });
 
     this.licenseForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
@@ -69,13 +72,13 @@ export class LicenseComponent implements OnInit, OnDestroy {
   }
 
   private loadDropdownData(): void {
-    this.licenseeService.getDistrict().subscribe(
-      (data) => (this.districts = data.map(d => d.District)),
+    this.masterService.getDistrict().subscribe(
+      (data) => (this.districts = data.map(d => d.district)),
       (error) => console.error('Error fetching districts:', error)
     );
 
-    this.licenseeService.getLicenseCategories().subscribe(
-      (data) => (this.licenseCategories = data.map(category => category.licenseCategoryDescription)),
+    this.masterService.getLicenseCategories().subscribe(
+      (data) => (this.licenseCategories = data.map(category => category.licenseCategory)),
       (error) => console.error('Error fetching license categories:', error)
     );
   }

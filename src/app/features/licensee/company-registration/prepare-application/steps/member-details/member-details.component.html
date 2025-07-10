@@ -20,9 +20,11 @@
           <mat-label>Member Name</mat-label>
           <input matInput placeholder="Enter Company Name" type="text" formControlName="memberName" />
           <!-- Display error if invalid -->
-          <mat-error *ngIf="memberDetailsForm.controls['memberName'].invalid">
-            {{ getErrorMessage('memberName') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberName') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Member Designation Textarea -->
@@ -37,27 +39,33 @@
             cdkAutosizeMinRows="1"
             cdkAutosizeMaxRows="5">
           </textarea>
-          <mat-error *ngIf="memberDetailsForm.controls['memberDesignation'].invalid">
-            {{ getErrorMessage('memberDesignation') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberDesignation'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberDesignation') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Mobile Number Input -->
         <mat-form-field appearance="outline">
           <mat-label>Mobile Number</mat-label>
           <input matInput placeholder="Enter Mobile Number" type="number" formControlName="memberMobileNumber" />
-          <mat-error *ngIf="memberDetailsForm.controls['memberMobileNumber'].invalid">
-            {{ getErrorMessage('memberMobileNumber') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberMobileNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberMobileNumber') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Email Input -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
           <input matInput placeholder="Enter Email" type="email" formControlName="memberEmailId" />
-          <mat-error *ngIf="memberDetailsForm.controls['memberEmailId'].invalid">
-            {{ getErrorMessage('memberEmailId') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberEmailId'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberEmailId') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Member Address Textarea -->
@@ -72,9 +80,11 @@
             cdkAutosizeMinRows="1"
             cdkAutosizeMaxRows="5">
           </textarea>
-          <mat-error *ngIf="memberDetailsForm.controls['memberAddress'].invalid">
-            {{ getErrorMessage('memberAddress') }}
-          </mat-error>
+          @if (memberDetailsForm.controls['memberAddress'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('memberAddress') }}
+            </mat-error>
+          }
         </mat-form-field>
 
       </div>

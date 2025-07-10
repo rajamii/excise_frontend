@@ -1,0 +1,345 @@
+<div class="page-container">
+  <!--ABOUT US: Department-->
+  @if (page === 'department') {
+    <mat-card class = "department grid-card">
+      <mat-card-header>About Us</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--ABOUT US: Organisational Structure-->
+  @if (page === 'organisational-structure') {
+    <mat-card class = "organisational-structure grid-card">
+      <mat-card-header>Organisational Structure</mat-card-header>
+      <mat-card-content class = "card-container">
+        <img src = "assets/images/info-page/Org_Struct.jpg">
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--ABOUT US: Objectives-->
+  @if (page === 'objectives') {
+    <mat-card class = "objectives grid-card">
+      <mat-card-header>Objectives</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--ABOUT US: Heads of Organisations-->
+  @if (page === 'hods') {
+    <mat-card class = "hods grid-card">
+      <mat-card-header>Heads of Organisations</mat-card-header>
+      <mat-card-content class="card-container">
+        @for (hod of hods; track hod) {
+          <mat-card class="hod">
+            <mat-card-content>
+              <img [src]="hod.image" alt="{{ hod.name }}">
+              <div class="description">
+                <h6>{{ hod.name }}</h6>
+                {{ hod.title }}
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--Excise Secretaries / Principal Secretaries-->
+  @if (page === 'secretaries') {
+    <mat-card class = "secretaries grid-card">
+      <mat-card-header>Excise Secretaries / Principal Secretaries</mat-card-header>
+      <mat-card-content class = "card-container">
+        <mat-table [dataSource]="commissionerData">
+          <ng-container matColumnDef="slNo">
+            <mat-header-cell *matHeaderCellDef> Sl No. </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.slNo}} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="name">
+            <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.name}} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="fromDate">
+            <mat-header-cell *matHeaderCellDef> From Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.fromDate}} </mat-cell>
+          </ng-container>
+          <ng-container matColumnDef="toDate">
+            <mat-header-cell *matHeaderCellDef> To Date </mat-header-cell>
+            <mat-cell *matCellDef="let com"> {{com.toDate}} </mat-cell>
+          </ng-container>
+          <mat-header-row *matHeaderRowDef="commissionerColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: commissionerColumns;"></mat-row>
+        </mat-table>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--TERMS OF USE-->
+  @if (page === 'terms-of-use') {
+    <mat-card class = "terms-of-use grid-card">
+      <mat-card-header>Terms of Use</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--LINKING POLICY-->
+  @if (page === 'linking-policy') {
+    <mat-card class = "linking-policy grid-card">
+      <mat-card-header>Linking Policy</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--COPYRIGHT POLICY-->
+  @if (page === 'copyright-policy') {
+    <mat-card class = "copyright-policy grid-card">
+      <mat-card-header>Copyright Policy</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--PRIVACY POLICY-->
+  @if (page === 'privacy-policy') {
+    <mat-card class = "privacy-policy grid-card">
+      <mat-card-header>Privacy Policy</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--LEGAL DISCLAIMER-->
+  @if (page === 'legal-disclaimer') {
+    <mat-card class = "legal-disclaimer grid-card">
+      <mat-card-header>Legal Disclaimer</mat-card-header>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!--CONTACT US-->
+  @if (page === 'contact-us') {
+    <mat-card class="contact-us grid-card">
+      <mat-card-header>
+        Contact Us
+      </mat-card-header>
+      <mat-tab-group [(selectedIndex)]="contactsTab">
+        <mat-tab label="Website Nodal Officer"></mat-tab>
+        <mat-tab label="Public Information Officers"></mat-tab>
+        <mat-tab label="Directorate & District Officials"></mat-tab>
+        <mat-tab label="Grievance Redressal Officer"></mat-tab>
+      </mat-tab-group>
+      <mat-card-content>
+        @if (contactsTab === 0 && nodalOfficer.length > 0) {
+          <div class="web-nodal-officer">
+            <div class="heading">
+              <!-- {{ nodalOfficer[0].cell }},<br> -->
+              {{ nodalOfficer[0].department }}
+            </div>
+            <div class="contact">
+              <div class="phone">
+                <mat-icon>call</mat-icon>
+                <div class="text">{{ nodalOfficer[0].phoneNumber }}</div>
+              </div>
+              <div class="email">
+                <mat-icon>email</mat-icon>
+                <div class="text">{{ nodalOfficer[0].email }}</div>
+              </div>
+            </div>
+          </div>
+        }
+        @if (contactsTab === 1) {
+          <div class="public-info-officers">
+            <mat-card-content>
+              <mat-radio-group [(ngModel)]="pioTab" class="contacts-radio-group mb-3">
+                <mat-radio-button [value]="0">Headquarter</mat-radio-button>
+                <mat-radio-button [value]="1">District</mat-radio-button>
+              </mat-radio-group>
+              <!-- Headquarter Table -->
+              @if (pioTab === 0) {
+                <mat-table [dataSource]="headquarterData">
+                  <ng-container matColumnDef="headquarter">
+                    <mat-header-cell *matHeaderCellDef> Headquarter </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.location}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <mat-header-cell *matHeaderCellDef> Officer Name </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.name}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="designation">
+                    <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.designation}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="address">
+                    <mat-header-cell *matHeaderCellDef> Address </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.address}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="phoneNumber">
+                    <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                    <mat-cell *matCellDef="let hq"> {{hq.phoneNumber}} </mat-cell>
+                  </ng-container>
+                  <mat-header-row *matHeaderRowDef="headquarterColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: headquarterColumns;"></mat-row>
+                </mat-table>
+              }
+              <!-- District Table -->
+              @if (pioTab === 1) {
+                <mat-table [dataSource]="districtData">
+                  <ng-container matColumnDef="district">
+                    <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.location}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="name">
+                    <mat-header-cell *matHeaderCellDef> Officer Name </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.name}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="designation">
+                    <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.designation}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="address">
+                    <mat-header-cell *matHeaderCellDef> Address </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.address}} </mat-cell>
+                  </ng-container>
+                  <ng-container matColumnDef="phoneNumber">
+                    <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                    <mat-cell *matCellDef="let dt"> {{dt.phoneNumber}} </mat-cell>
+                  </ng-container>
+                  <mat-header-row *matHeaderRowDef="districtColumns"></mat-header-row>
+                  <mat-row *matRowDef="let row; columns: districtColumns;"></mat-row>
+                </mat-table>
+              }
+            </mat-card-content>
+          </div>
+        }
+        @if (contactsTab === 2) {
+          <div class="directorate-officials">
+            <mat-card-content>
+            <mat-table [dataSource]="directorateAndDistrictOfficialsData">
+              <ng-container matColumnDef="slno">
+                <mat-header-cell *matHeaderCellDef> Sl. No. </mat-header-cell>
+                <mat-cell *matCellDef="let row; let i = index"> {{ i + 1 }} </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="name">
+                <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+                <mat-cell *matCellDef="let ddo"> {{ddo.name}} </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="designation">
+                <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+                <mat-cell *matCellDef="let ddo"> {{ddo.designation}} </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="phoneNumber">
+                <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+                <mat-cell *matCellDef="let ddo"> {{ddo.phoneNumber}} </mat-cell>
+              </ng-container>
+              <ng-container matColumnDef="email">
+                <mat-header-cell *matHeaderCellDef> Email Id </mat-header-cell>
+                <mat-cell *matCellDef="let ddo"> {{ddo.email}} </mat-cell>
+              </ng-container>
+              <mat-header-row *matHeaderRowDef="directorateAndDistrictOfficialsColumns"></mat-header-row>
+              <mat-row *matRowDef="let row; columns: directorateAndDistrictOfficialsColumns;"></mat-row>
+            </mat-table>
+          </mat-card-content>
+        </div>
+      }
+      @if (contactsTab === 3) {
+        <div class="grievance-redressal-officer">
+          <mat-card-content>
+            <div class="filters">
+              <mat-form-field appearance="outline">
+                <mat-label>Office Level</mat-label>
+                <mat-select [(value)]="selectedOfficeLevel" (selectionChange)="applyFilters()">
+                  <mat-option value="">All</mat-option>
+                  <mat-option value="Excise Head Office">Excise Head Office</mat-option>
+                  <mat-option value="District">District</mat-option>
+                  <mat-option value="Subdivision">Subdivision</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Office Sub Level</mat-label>
+                <mat-select [(value)]="selectedOfficeSubLevel" (selectionChange)="applyFilters()">
+                  <mat-option value="">All</mat-option>
+                  <mat-option value="Head Quarter">Head Quarter</mat-option>
+                  <mat-option value="Permit Section">Permit Section</mat-option>
+                  <mat-option value="Administration Section">Administration Section</mat-option>
+                  <mat-option value="Accounts Section">Accounts Section</mat-option>
+                  <mat-option value="IT Cell">IT Cell</mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <mat-table [dataSource]="grievanceRedressalOfficerData">
+              <!-- <ng-container matColumnDef="id">
+              <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.id}} </mat-cell>
+            </ng-container> -->
+            <ng-container matColumnDef="officeLevel">
+              <mat-header-cell *matHeaderCellDef> Office Level </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.officeLevel}} </mat-cell>
+            </ng-container>
+            <ng-container matColumnDef="officeSubLevel">
+              <mat-header-cell *matHeaderCellDef> Office Sub Level </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.officeSubLevel}} </mat-cell>
+            </ng-container>
+            <ng-container matColumnDef="name">
+              <mat-header-cell *matHeaderCellDef> Name </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.name}} </mat-cell>
+            </ng-container>
+            <ng-container matColumnDef="designation">
+              <mat-header-cell *matHeaderCellDef> Designation </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.designation}} </mat-cell>
+            </ng-container>
+            <ng-container matColumnDef="phoneNumber">
+              <mat-header-cell *matHeaderCellDef> Phone Number </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.phoneNumber}} </mat-cell>
+            </ng-container>
+            <ng-container matColumnDef="email">
+              <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
+              <mat-cell *matCellDef="let gro"> {{gro.email}} </mat-cell>
+            </ng-container>
+            <mat-header-row *matHeaderRowDef="grievanceRedressalOfficerColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: grievanceRedressalOfficerColumns;"></mat-row>
+          </mat-table>
+        </mat-card-content>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
+}
+
+<!--RIGHT TO INFORMATION-->
+@if (page === 'right-to-information') {
+  <mat-card class = "right-to-information grid-card">
+    <mat-card-header>THE RIGHT TO INFORMATION ACT, 2005</mat-card-header>
+    <mat-card-content class = "card-container">
+      <p>An Act to provide for setting out the practical regime of right to
+        information for citizens to secure access to information under the
+        control of public authorities, in order to promote transparency and
+        accountability in the working of every public authority, the constitution
+        of a Central Information Commission and State Information Commissions
+        and for matters connected therewith or incidental thereto. WHEREAS the
+        Constitution of India has established democratic Republic; AND WHEREAS
+        democracy requires an informed citizenry and transparency of information
+        which are vital to its functioning and also to contain corruption and
+        to hold Governments and their instrumentalities accountable to the governed;
+        AND WHEREAS revelation of information in actual practice is likely to
+        conflict with other public interests including efficient operations of
+        the Governments, optimum use of limited fiscal resources and the preservation
+      of confidentiality of sensitive information.</p>
+    </mat-card-content>
+  </mat-card>
+}
+
+
+</div>
+

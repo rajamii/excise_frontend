@@ -2,41 +2,9 @@
 
   <mat-card class = "about-us grid-card" id = "about-us">
     <mat-card-header>About Us</mat-card-header>
-    <mat-card-content class = "card-container">
-      <p cCardText>The  Excise Department, under the Government of Sikkim 
-        enforces regulations and administers the Sikkim Excise Act, 
-        1992. The said Act provides for manufacturing, possession, sale, 
-        transport, import of alcoholic liquor; and imposition of 
-        duty in form of excise duty, license fee, export pass fee, etc. 
-        under the various Acts listed below. The Department also strives 
-        to prevent the use of unsafe liquor and ensure consumption of liquor 
-        keeping in view the health of the consumers. <br><br>The Sikkim Excise Act, 
-        1992 and the Medicinal & Toilet Preparation Act 1955 enables the 
-        Department not only to regulate but also enable collection of 
-        Revenues by way of Excise Duty, License Fee, and Export Pass Fee 
-        etc. Under the provisions of the above Acts, the Department monitors 
-        and frames Rules and Regulations for manufacture, import, export, 
-        licensing, sale, storage /warehousing, inspection of all alcohol, 
-        spirits, derivatives, raw material and by products. The Department 
-        is also a major contributor to the Revenue of the State Government.<br><br>
-        The Department is presently headed by an officer in the rank of 
-        Secretary to the Government. Till 1974 it was headed by the Executive 
-        Officer and was located at the old District Office (presently the 
-        Secretariat Annex adjacent to Power Secretariat). The Department shifted 
-        to its present premises at Mahatma Gandhi Marg, Gangtok in the mid 1970’s. 
-        The Secretary is assisted by Commissioner, Joint Commissioner, Deputy 
-        Commissioner, other officers and staffs. The Department has a Regional 
-        Office for South/West located at Jorethang headed by a Deputy Commissioner 
-        District who looks after the affairs and Assistant Commissioner who acts 
-        as the D&DO for South and West Districts. <br><br>An officer in the rank of 
-        Sub-Inspector along with other supporting staffs is also stationed in 
-        Gyalshing, West Sikkim. The North and the East Districts’ falls under 
-        the jurisdiction of the Regional Office (North/East) attached with the 
-        Head Office, Gangtok. Excise personals are also posted at Mangan, North Sikkim.
-        The Department also runs a Laboratory at Chanatar, Rangpo. The sole 
-        responsibility of the Laboratory is to examine, test and analyze all 
-        liquors produced in Sikkim.</p>
-    </mat-card-content>
+      <mat-card-content class = "card-container">
+        <markdown [data]="markdownContent"></markdown>
+      </mat-card-content>
   </mat-card>
 
   <mat-card class = "revenue-receipts grid-card">
@@ -59,7 +27,7 @@
           Excise Raids on illicit dens in Remote Villages.
         </p>
       </div>
-      <button mat-flat-button (click)="navigateTo('preventive-raids')">Read More</button>
+      <button matButton="filled" (click)="navigateTo('preventive-raids')">Read More</button>
     </mat-card-content>
   </mat-card>
 
@@ -72,64 +40,18 @@
       <div class="notifications">
         <h6>Notifications</h6>
         <div class="notifications-grid-container">
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              Circular Regarding Settlement of Excise License
+          @for (note of notifications; track note) {
+            <div
+              class="notification styled-link"
+              (click)="navigateToExternal(note.link)"
+            >
+              <div class="title">{{ note.title }}</div>
+              <div class="date">{{ note.date }}</div>
             </div>
-            <div class="date">
-              04/02/2025
-            </div>
-          </div>
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              DRY DAY NOTIFICATION
-            </div>
-            <div class="date">
-              23/12/2024
-            </div>
-          </div>
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              Office order no 226/Excise dated 11/09/2024 regarding Grievance cell
-            </div>
-            <div class="date">
-              11/09/2024
-            </div>
-          </div>
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              Gazette No 394 regarding suspension on issue of New Foreign Liquor Retail License 
-            </div>
-            <div class="date">
-              14/08/2024
-            </div>
-          </div>
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              Notification No 01/Excise regarding License Renewal for FY 2024-25
-            </div>
-            <div class="date">
-              08/02/2024
-            </div>
-          </div>
-
-          <div button (click)="navigateToExternal('https://example.com')" class="notification styled-link">
-            <div class="title">
-              DRY DAY NOTIFICATION 2024
-            </div>
-            <div class="date">
-              08/01/2024	
-            </div>
-          </div>
-
+          }
         </div>
       </div>
-      <button mat-flat-button (click)="navigateTo('notifications')">View All</button>
+      <button matButton="filled" (click)="navigateTo('notifications')">View All</button>
     </mat-card-content>
   </mat-card>
   

@@ -1,0 +1,60 @@
+<!-- Display the card only when data is fully loaded -->
+@if (loaded) {
+  <mat-card>
+    <!-- Card header displaying the title -->
+    <mat-card-header>
+      User Profile
+      <button mat-icon-button (click)="closeDialog()">
+        <mat-icon style="color: white;">close</mat-icon>
+      </button>
+    </mat-card-header>
+    <!-- Card content is shown only if the user object exists -->
+    @if (user) {
+      <mat-card-content>
+        <table>
+          <!-- Each row displays a specific piece of user information -->
+          <tr>
+            <td><strong>First Name:</strong></td>
+            <td>{{ user.firstName }}</td>
+          </tr>
+          <tr>
+            <td><strong>Middle Name:</strong></td>
+            <td>{{ user.middleName }}</td>
+          </tr>
+          <tr>
+            <td><strong>Last Name:</strong></td>
+            <td>{{ user.lastName }}</td>
+          </tr>
+          <tr>
+            <td><strong>User Name:</strong></td>
+            <td>{{ user.username }}</td>
+          </tr>
+          <tr>
+            <td><strong>Email:</strong></td>
+            <td>{{ user.email }}</td>
+          </tr>
+          <tr>
+            <td><strong>Phone:</strong></td>
+            <td>{{ user.phoneNumber }}</td>
+          </tr>
+          <tr>
+            <td><strong>Role:</strong></td>
+            <td>{{ user.role.name }}</td>
+          </tr>
+          <tr>
+            <td><strong>District Code:</strong></td>
+            <td>{{ user.district }}</td>
+          </tr>
+          <tr>
+            <td><strong>Subdivision Code:</strong></td>
+            <td>{{ user.subdivision }}</td>
+          </tr>
+          <tr>
+            <td><strong>Address:</strong></td>
+            <td>{{ user.address }}</td>
+          </tr>
+        </table>
+      </mat-card-content>
+    }
+  </mat-card>
+}

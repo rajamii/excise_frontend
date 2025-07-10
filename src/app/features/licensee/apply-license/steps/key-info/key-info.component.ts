@@ -2,12 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../licensee.services';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseType } from '../../../../../core/models/license-type.model';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { DatePipe } from '@angular/common';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-key-info',
@@ -26,7 +26,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   licenseTypes: LicenseType[] = [];
   licenseNatures: string[] = ['Regular', 'Temporary', 'Seasonal', 'Special Event'];
   functioningStatuses: string[] = ['Yes', 'No'];
-  modeofOperations: string[] = ['Self', 'Salesman', 'Barman'];
+  modeOfOperations: string[] = ['Self', 'Salesman', 'Barman'];
 
   // Emit navigation events to parent component
   @Output() readonly next = new EventEmitter<void>();
@@ -40,7 +40,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     licenseType: signal(''),
     establishmentName: signal(''),
     mobileNumber: signal(''),
-    emailId: signal(''),
+    email: signal(''),
     licenseNo: signal(''),
     initialGrantDate: signal(''),
     renewedFrom: signal(''),
@@ -48,12 +48,12 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     yearlyLicenseFee: signal(''),
     licenseNature: signal(''),
     functioningStatus: signal(''),
-    modeofOperation: signal('')
+    modeOfOperation: signal('')
   };
 
   constructor(
     private fb: FormBuilder,
-    private licenseeService: LicenseeService,
+    private masterService: MasterService,
     private datePipe: DatePipe
   ) {
     // Retrieve data from session storage if available
@@ -71,7 +71,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.required,
         Validators.pattern(PatternConstants.MOBILE)
       ]),
-      emailId: new FormControl(storedValues.emailId, [
+      email: new FormControl(storedValues.email, [
         Validators.required,
         Validators.pattern(PatternConstants.EMAIL)
       ]),
@@ -79,15 +79,15 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.pattern(PatternConstants.CODE),
         Validators.maxLength(50)
       ]),
-      initialGrantDate: new FormControl(storedValues.initialGrantDate),
-      renewedFrom: new FormControl(storedValues.renewedFrom),
-      validUpTo: new FormControl(storedValues.validUpTo),
+      initialGrantDate: new FormControl(storedValues?.initialGrantDate ?? null),
+      renewedFrom: new FormControl(storedValues?.renewedFrom ?? null),
+      validUpTo: new FormControl(storedValues?.validUpTo ?? null),
       yearlyLicenseFee: new FormControl(storedValues.yearlyLicenseFee, [
         Validators.pattern(PatternConstants.NUMBER)
       ]),
       licenseNature: new FormControl(storedValues.licenseNature, [Validators.required]),
       functioningStatus: new FormControl(storedValues.functioningStatus, [Validators.required]),
-      modeofOperation: new FormControl(storedValues.modeofOperation, [Validators.required])
+      modeOfOperation: new FormControl(storedValues.modeOfOperation, [Validators.required])
     });
 
     // Subscribe to form changes to update session storage and errors
@@ -112,7 +112,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   // Load data for License Type dropdown from service
   private loadDropdownData(): void {
-    this.licenseeService.getLicenseTypes().subscribe(
+    this.masterService.getLicenseTypes().subscribe(
       (data: LicenseType[]) => {
         this.licenseTypes = data;
       },
@@ -131,22 +131,28 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   // Save form values to session storage on change
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.keyInfoForm.getRawValue();
-    const rawInitialGrantDate = new Date(formData.initialGrantDate as string);
-    const rawRenewedFrom = new Date(formData.renewedFrom as string);
-    const rawValidUpTo = new Date(formData.validUpTo as string);
 
-    if (!isNaN(rawInitialGrantDate.getTime())) {
-      formData.initialGrantDate = this.datePipe.transform(rawInitialGrantDate, 'yyyy-MM-dd')!;
-    }
-    if (!isNaN(rawRenewedFrom.getTime())) {
-      formData.renewedFrom = this.datePipe.transform(rawRenewedFrom, 'yyyy-MM-dd')!;
-    }
-    if (!isNaN(rawValidUpTo.getTime())) {
-      formData.validUpTo = this.datePipe.transform(rawValidUpTo, 'yyyy-MM-dd')!;
-    }
-    
-    sessionStorage.setItem('keyInfoData', JSON.stringify(formData));
+    const parsedDates = {
+      initialGrantDate: this.transformValidDate(formData.initialGrantDate),
+      renewedFrom: this.transformValidDate(formData.renewedFrom),
+      validUpTo: this.transformValidDate(formData.validUpTo),
+    };
+
+    sessionStorage.setItem(
+      'keyInfoData',
+      JSON.stringify({
+        ...formData,
+        ...parsedDates
+      })
+    );
   }
+
+  private transformValidDate(dateValue: unknown): string | null {
+    if (!dateValue) return null;
+    const date = new Date(dateValue as string);
+    return isNaN(date.getTime()) ? null : this.datePipe.transform(date, 'yyyy-MM-dd');
+  }
+
 
   // Update the error message of a specific form control
   private updateErrorMessage(field: keyof typeof this.errorMessages) {

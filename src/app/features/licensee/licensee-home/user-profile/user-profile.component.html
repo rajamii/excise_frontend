@@ -1,58 +1,64 @@
 <!-- Only show card if component is loaded -->
-<mat-card *ngIf="loaded">
-    
-  <!-- Card header -->
-  <mat-card-header>
-    User Profile
-    <button mat-icon-button (click)="closeDialog()">
-      <mat-icon style="color: white;">close</mat-icon>
-    </button>
-  </mat-card-header>
-  
-  <!-- Card content only shown if user data is available -->
-  <mat-card-content *ngIf="user">
-    <table>
-      <!-- Each row shows a user detail -->
-      <tr>
-        <td><strong>First Name:</strong></td>
-        <td>{{ user.firstName }}</td>
-      </tr>
-      <tr>
-        <td><strong>Last Name:</strong></td>
-        <td>{{ user.lastName }}</td>
-      </tr>
-      <tr>
-        <td><strong>User Name:</strong></td>
-        <td>{{ user.username }}</td>
-      </tr>
-      <tr>
-        <td><strong>Email:</strong></td>
-        <td>{{ user.email }}</td>
-      </tr>
-      <tr>
-        <td><strong>Phone:</strong></td>
-        <td>{{ user.phoneNumber }}</td>
-      </tr>
-      <tr>
-        <td><strong>Role:</strong></td>
-        <td>{{ user.role }}</td>
-      </tr>
-      <tr>
-        <td><strong>District:</strong></td>
-        <td>{{ user.district }}</td>
-      </tr>
-      <tr>
-        <td><strong>Sub Division:</strong></td>
-        <td>{{ user.subDivision }}</td>
-      </tr>
-      <tr>
-        <td><strong>Address:</strong></td>
-        <td>{{ user.address }}</td>
-      </tr>
-      <tr>
-        <td><strong>Created by:</strong></td>
-        <td>{{ user.createdBy }}</td>
-      </tr>
-    </table>
-  </mat-card-content>
-</mat-card>
+@if (loaded) {
+  <mat-card>
+    <!-- Card header -->
+    <mat-card-header>
+      User Profile
+      <button mat-icon-button (click)="closeDialog()">
+        <mat-icon style="color: white;">close</mat-icon>
+      </button>
+    </mat-card-header>
+    <!-- Card content only shown if user data is available -->
+    @if (user) {
+      <mat-card-content>
+        <table>
+          <!-- Each row shows a user detail -->
+          <tr>
+            <td><strong>First Name:</strong></td>
+            <td>{{ user.firstName }}</td>
+          </tr>
+          <tr>
+            <td><strong>Middle Name:</strong></td>
+            <td>{{ user.middleName }}</td>
+          </tr>
+          <tr>
+            <td><strong>Last Name:</strong></td>
+            <td>{{ user.lastName }}</td>
+          </tr>
+          <tr>
+            <td><strong>User Name:</strong></td>
+            <td>{{ user.username }}</td>
+          </tr>
+          <tr>
+            <td><strong>Email:</strong></td>
+            <td>{{ user.email }}</td>
+          </tr>
+          <tr>
+            <td><strong>Phone:</strong></td>
+            <td>{{ user.phoneNumber }}</td>
+          </tr>
+          <tr>
+            <td><strong>Role:</strong></td>
+            <td>{{ user.role.name }}</td>
+          </tr>
+          <tr>
+            <td><strong>District Code:</strong></td>
+            <td>{{ user.district }}</td>
+          </tr>
+          <tr>
+            <td><strong>Sub Division Code:</strong></td>
+            <td>{{ user.subdivision }}</td>
+          </tr>
+          <tr>
+            <td><strong>Address:</strong></td>
+            <td>{{ user.address }}</td>
+          </tr>
+          <tr>
+            <td><strong>Created by:</strong></td>
+            <td>{{ user.createdBy }}</td>
+          </tr>
+        </table>
+      </mat-card-content>
+    }
+  </mat-card>
+}

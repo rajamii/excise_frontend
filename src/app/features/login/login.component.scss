@@ -1,129 +1,218 @@
-.login-container {
-    display: grid;
-	margin: 30px 0px;
-	grid-template-columns: 1fr 1fr;
-	grid-template-rows: 600px;
-	
-	justify-self: center;
-	align-self: baseline;
-	box-shadow: 0px 4px 15px rgba(0, 14, 31, 0.28);
-	border-radius: 20px;
-	.sign-in-button, .send-otp-button, .verify-otp-button{
-		background-color: #1C2B78;
-		color: #ffffff;
-	}
+:host {
+  display: flex;
+  align-items: center;
+  margin: 40px 0;
 }
 
-@media(max-width: 568px){
-	.login-container{
-		grid-template-columns: 1fr;
-	}
-}
-
-.sign-in-card{
-	border-radius: 20px 0 0 20px!important; 
-	background-color: #ffffff;
-	padding: 20px;
+.form-container {
+	position: absolute;
+	top: 0;
+	padding: 0 50px;
+	height: 100%;
+	overflow: hidden;
+	transition: all 0.6s ease-in-out;
+	display: flex;
+	gap: 40px;
+	justify-content: center;
 	align-items: center;
+	flex-direction: column;
+}
+
+.form-header{
+	width: 100%;
 	text-align: center;
-	border-radius: 0;
-	mat-card-header{
-		font-size: 40px;
-		font-weight: 700;
-		padding: 20px;
+	h1{
+		font-weight: 600;
+		margin-bottom: 10px;
 	}
-	mat-card-content{
+}
+
+form {
+	width:100%;
+	background-color: #ffffff;
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+	text-align: center;
+	gap: 12px;
+}
+
+input {
+	background-color: #eee;
+	border: none;
+	padding: 12px 15px;
+	width: 100%;
+}
+
+.filled-button{
+	background-color: #1C2B78;
+	color: #fff;
+}
+
+.container {
+	background-color: #fff;
+	box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+	position: relative;
+	overflow: hidden; 	
+	width: 768px;
+	min-height: 550px;
+}
+
+.sign-in-container {
+	left: 0;
+	width: 50%;
+	z-index: 2;
+	app-captcha{
+		width:100%;
+	}
+	.switch-toggle {
+		width: 100%;
+		position: relative;
 		display: flex;
-		flex-direction: column;
-		gap: 30px;
-		.switch-toggle {
-			position: relative;
-			display: flex;
-			height: 40px;
-			background: #ddd;
-			border-radius: 20px;
-			overflow: hidden;
-			button {
+		height: 40px;
+		background: #ddd;
+		border-radius: 5px;
+		overflow: hidden;
+		button {
 			flex: 1;
-			z-index: 2;
+			z-index: 2; 
 			border: none;
 			background: transparent;
 			font-weight: 500; 
-			cursor: pointer;
+		cursor: pointer;
 			transition: color 0.3s ease;
 			&.active {
 				color: white;
 			}
-			}
-			.switch-indicator {
+		}
+		.switch-indicator {
 			position: absolute;
 			width: 50%;
 			height: 100%;
 			background: #1C2B78;
-			border-radius: 20px;
+			border-radius: 5px;
 			transition: transform 0.3s ease;
 			z-index: 1;
 			transform: translateX(0%);
-			} 
-			.switch-indicator.right {
+		} 
+		.switch-indicator.right {
 			transform: translateX(100%);
-			}
-		}		
-		form{
-			display: flex;
-			flex-direction: column;
-			gap: 8px;
-			mat-form-field{
-				::ng-deep .mat-mdc-form-field-subscript-wrapper {
-					display: none;
-				}			
-			}
-			.otp-sent-info{
-				text-align: start;
-				font-size: 14.7px;
-				a{
-					color: #0020c1;
-				}
-			}
-			.forgot-password a{
-				color: #0020c1;
-				cursor: pointer;
-				margin-top: 10px;
-			}
+		}
+	}
+	.error-box{
+		width: 100%;
+		color:#ff4b2b
+	}
+	.otp-info{
+		text-align: left;
+		font-size: 13px;
+		margin-bottom: 0;
+		a{
+			cursor: pointer;
+			color:#de4a00;
 		}
 	}
 }
 
-.overlay {
-	border-radius: 0;
-	color: #ffffff;
-	align-items: center;
-	text-align: center;
-	justify-content: space-between;
-	position: relative;
-	width: 370px;
-	border-radius: 0 20px 20px 0 !important; 
-	background: 
-		//linear-gradient(to bottom, rgba(255, 255, 255, 0.619), rgba(255, 255, 255, 0) 30%),
-		linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(28, 0, 210, 0) 50%),
-		url('../../../assets/images/login/overlay.jpg') no-repeat center / cover;
-	button{
-		background-color: #ffffff;
-		color: #1C2B78;
-	}
-	mat-card-header img {
-		width: 100px;
+.container.right-panel-active .sign-in-container {
+	transform: translateX(100%);
+}
+
+.sign-up-container {
+	left: 0;
+	width: 50%;
+	opacity: 0;
+	z-index: 1;
+	height: 100%;
+	background-color: #fff;
+}
+
+.container.right-panel-active .sign-up-container {
+	transform: translateX(100%);
+	opacity: 1;
+	z-index: 5;
+	animation: show 0.6s;
+}
+
+@keyframes show {
+	0%,
+	49.99% {
+		opacity: 0;
+		z-index: 1;
 	}
 
-	mat-card-footer {
-		font-size: 12px;
-		padding: 10px;
-		justify-items: center;
-		.footer-contact {
-			display: flex;
-		}
-		mat-icon {
-			font-size: 16px;
-		  }
+	50%,
+	100% {
+		opacity: 1;
+		z-index: 5;
 	}
+}
+
+.overlay-container {
+	position: absolute;
+	top: 0;
+	left: 50%;
+	width: 50%;
+	height: 100%;
+	overflow: hidden;
+	transition: transform 0.6s ease-in-out;
+	z-index: 100;
+	background-color: #fff;
+}
+
+.container.right-panel-active .overlay-container {
+	transform: translateX(-100%);
+}
+
+.overlay {
+	background: 
+		linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+		url('../../../assets/images/login/overlay.jpg') no-repeat center / cover;
+	color: #ffffff;
+	position: relative;
+	left: -100%;
+	height: 100%;
+	width: 200%;
+	transform: translateX(0);
+	transition: transform 0.6s ease-in-out;
+}
+
+.container.right-panel-active .overlay {
+	transform: translateX(50%);
+}
+
+.overlay-panel {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	margin-top: 20px;
+	flex-direction: column;
+	padding: 0 40px;
+	text-align: center;
+	top: 0;
+	height: 100%;
+	width: 50%;
+	transform: translateX(0);
+	transition: transform 0.6s ease-in-out;
+	img {
+		width: 100px;
+		margin-bottom: 5rem;
+	}
+}
+
+.overlay-left {
+	transform: translateX(-20%);
+}
+
+.container.right-panel-active .overlay-left {
+	transform: translateX(0);
+}
+
+.overlay-right {
+	right: 0;
+	transform: translateX(0);
+}
+
+.container.right-panel-active .overlay-right {
+	transform: translateX(20%);
 }

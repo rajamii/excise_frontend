@@ -2,12 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { LicenseeService } from '../../../licensee.services';
-import { SubDivision } from '../../../../../core/models/subdivision.model';
+import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { PoliceStation } from '../../../../../core/models/policestation.model';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
+import { MasterService } from '../../../../../core/services/master.service';
 
 @Component({
   selector: 'app-address',
@@ -21,15 +21,14 @@ export class AddressComponent implements OnInit, OnDestroy {
   siteDistrict = '';
 
   // Raw data from API for dropdowns
-  private subDivisions: SubDivision[] = [];
+  subdivisions: Subdivision[] = [];
   private policeStations: PoliceStation[] = [];
 
   // Filtered data shown in dropdowns
-  siteSubDivisions: any[] = [];
   sitePoliceStations: any[] = [];
 
   // Static dropdown values
-  locationCategories: string[] = ['Category 1', 'Category 2', 'Category 3', 'Category 4'];
+  locationCategories: string[] = ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'];
   locationNames: string[] = ['Location 1', 'Location 2', 'Location 3', 'Location 4'];
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
   roadNames: string[] = ['Road 1', 'Road 2', 'Road 3', 'Road 4'];
@@ -43,7 +42,7 @@ export class AddressComponent implements OnInit, OnDestroy {
 
   // Error messages using Angular signal for reactive UI updates
   errorMessages = {
-    siteSubDivision: signal(''),
+    siteSubdivision: signal(''),
     policeStation: signal(''),
     locationCategory: signal(''),
     locationName: signal(''),
@@ -55,12 +54,12 @@ export class AddressComponent implements OnInit, OnDestroy {
     longitude: signal('')
   };
 
-  constructor(private fb: FormBuilder, private licenseeService: LicenseeService) {
+  constructor(private fb: FormBuilder, private masterService: MasterService) {
     const storedValues = this.getFromSessionStorage(); // Retrieve saved form values from session storage
 
     // Initialize the form with stored values and validators
     this.addressForm = this.fb.group({
-      siteSubDivision: new FormControl(storedValues.siteSubDivision, [Validators.required]),
+      siteSubdivision: new FormControl(storedValues.siteSubdivision, [Validators.required]),
       policeStation: new FormControl(storedValues.policeStation, [Validators.required]),
       locationCategory: new FormControl(storedValues.locationCategory, [Validators.required]),
       locationName: new FormControl(storedValues.locationName, [Validators.required]),
@@ -83,9 +82,9 @@ export class AddressComponent implements OnInit, OnDestroy {
     this.loadDropdownData(); // Load data for subdivisions and police stations
 
     // Optional: auto-populate police stations if a subdivision was already selected
-    const subDivision = this.addressForm.get('siteSubDivision')?.value;
-    if (subDivision) {
-      this.onSubDivisionChange(subDivision);
+    const subdivision = this.addressForm.get('siteSubdivision')?.value;
+    if (subdivision) {
+      this.onSubDivisionChange(subdivision);
     }
   }
 
@@ -96,26 +95,29 @@ export class AddressComponent implements OnInit, OnDestroy {
 
   // Fetches dropdown data from backend service
   private loadDropdownData(): void {
-    this.licenseeService.getSubDivision().subscribe((data: SubDivision[]) => {
-      this.siteSubDivisions = data;
+    this.masterService.getSubdivision().subscribe((data: Subdivision[]) => {
+      this.subdivisions = data;
     }, error => {
       console.error('Failed to load subdivisions.', error);
     });
 
-    this.licenseeService.getPoliceStations().subscribe((data: PoliceStation[]) => {
-      this.policeStations = data;
-    }, error => {
-      console.error('Failed to load police stations.', error);
+    this.masterService.getPoliceStations().subscribe({
+      next: (data: PoliceStation[]) => {
+        this.policeStations = data;
+
+        // After loading subdivisions, trigger filtering using saved district
+        const storedSubdivision = this.addressForm.get('siteSubdivision')?.value;
+        if (storedSubdivision) {
+          this.onSubDivisionChange(storedSubdivision);
+        }
+      },
+      error: (error) => console.error('Failed to load subdivisions.', error)
     });
   }
 
-  /**
-   * Filters police stations based on selected subdivision
-   * @param name selected subdivision name
-   */
+  // Filters police stations based on selected subdivision
   onSubDivisionChange(name: string): void {
-    this.sitePoliceStations = this.policeStations.filter(ps => ps.SubDivisionName === name);
-    console.log('Filtered police station:', this.sitePoliceStations);
+    this.sitePoliceStations = this.policeStations.filter(ps => ps.subdivision === name);
   }
 
   // Retrieves form data from session storage

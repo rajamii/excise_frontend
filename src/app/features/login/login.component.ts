@@ -3,9 +3,10 @@ import { FormGroup, FormBuilder, FormControl, Validators } from '@angular/forms'
 import { MaterialModule } from '../../shared/material.module';
 import { CaptchaComponent } from '../../shared/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
-import { BaseDependency } from '../../base/dependency/base.dependendency';
-import { ApiService } from '../../core/services/api.service';
+import { BaseDependency } from '../../base/dependency/base.dependency';
 import { NgOtpInputModule } from 'ng-otp-input';
+import { AuthService } from '../../core/services/auth.service';
+import { FormDataUtil } from '../../shared/utils/form-data.util';
 
 @Component({
   selector: 'app-login',
@@ -19,10 +20,24 @@ export class LoginComponent extends BaseComponent {
   hidePassword = true;               // Toggles password visibility
   otpSent: boolean = false;          // Tracks whether OTP has been sent
   otpIndex: string | null = null;    // Placeholder for OTP index if backend returns it
+  otpAutoSubmitted = false;
+
+  loginError = false;
+  loginErrorMessages: string[] = [];
+
+  isRightPanelActive = false;
+
+  switchToSignUp() {
+    this.isRightPanelActive = true;
+  }
+
+  switchToSignIn() {
+    this.isRightPanelActive = false;
+  }
 
   constructor(
     protected override baseDependency: BaseDependency,
-    protected override apiService: ApiService,
+    protected override authService: AuthService,
     private fb: FormBuilder
   ) {
     super(baseDependency);
@@ -31,7 +46,7 @@ export class LoginComponent extends BaseComponent {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
       password: [''],
-      phonenumber: [''], 
+      phoneNumber: [''], 
       otp: [''],
       response: ['', Validators.required],   // Captcha response value
       hashkey: ['', Validators.required],    // Captcha hashkey
@@ -70,25 +85,25 @@ export class LoginComponent extends BaseComponent {
 
   /** Sends OTP to the user's phone number */
   sendOtp(): void {
-    if (this.loginForm.controls['phonenumber'].invalid) {
+    if (this.loginForm.controls['phoneNumber'].invalid) {
       alert('Please enter a valid phone number.');
       return;
     }
 
-    const phonenumber = this.loginForm.value.phonenumber;
-    console.log('🔹 Sending OTP request for:', phonenumber);
+    const phoneNumber = this.loginForm.value.phoneNumber;
+    console.log('🔹 Sending OTP request for:', phoneNumber);
 
-    const formData = new FormData();
-    formData.append('phonenumber', phonenumber);
+    const formData = FormDataUtil.buildFormData({ phoneNumber });
 
-    this.apiService.sendOtp(formData).subscribe({
+    this.authService.sendOtp(formData).subscribe({
       next: (response) => {
-        console.log('✅ OTP API Response:', response);
         this.otpSent = true;
-        // Optionally capture response.otpIndex if returned from backend.
+        this.otpIndex = response.otpId; // Capture OTP index
+
+        console.log('OTP:', response.otp); // only if backend includes it
       },
       error: (err) => {
-        console.error('❌ Error sending OTP:', err);
+        console.error('Error sending OTP:', err);
         alert('Failed to send OTP. Please try again.');
       }
     });
@@ -124,21 +139,41 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    this.apiService.login(this.loginForm.value).subscribe({
+    this.authService.login(this.loginForm.value).subscribe({
       next: (res: any) => {
-        console.log(res); // 👈 Print the token
+        this.loginError = false;
+        this.loginErrorMessages = [];
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('Login error:', err);
-        alert('Incorrect username or password.');
+        this.loginError = true;
+
+        // Flatten and capture API errors for display
+        this.loginErrorMessages = this.extractErrorMessages(err.error);
       }
+    });
+  }
+
+  private extractErrorMessages(errorObj: any): string[] {
+    if (!errorObj || typeof errorObj !== 'object') return ['Unknown error'];
+
+    return Object.values(errorObj).flatMap((val) => {
+      if (Array.isArray(val)) {
+        return val.map(v => String(v));
+      }
+      return [String(val)];
     });
   }
 
   /** Updates OTP value as user types into the OTP input */
   onOtpChange(otp: string): void {
     this.loginForm.controls['otp'].setValue(otp);
+
+    if (otp.length === 4 && !this.otpAutoSubmitted) {
+      this.otpAutoSubmitted = true;
+      this.verifyOtp();
+    }
   }
 
   /** Verifies the entered OTP with the backend */
@@ -148,19 +183,22 @@ export class LoginComponent extends BaseComponent {
       return;
     }
 
-    if (this.otpIndex === undefined) {
+    if (!this.otpIndex) {
       alert('OTP index missing. Please request OTP again.');
       return;
     }
 
     const requestData = {
-      phonenumber: this.loginForm.value.phonenumber,
+      phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
-      index: Number(this.otpIndex)
+      otpId: this.otpIndex ?? ''
     };
 
-    this.apiService.verifyOtp(requestData.phonenumber, requestData.otp, requestData.index).subscribe({
+    console.log('🔹 Verifying OTP:', requestData);
+
+    this.authService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
+        console.log('🔹 OTP verification response:', res);
         this.handleAuthResponse(res);
       },
       error: (err) => {
@@ -172,15 +210,17 @@ export class LoginComponent extends BaseComponent {
 
   /** Stores tokens and navigates to the appropriate dashboard after successful login */
   private handleAuthResponse(res: any): void {
-    if (res.authenticated_user?.access && res.authenticated_user?.refresh) {
-      localStorage.setItem('access', res.authenticated_user.access);
-      localStorage.setItem('refresh', res.authenticated_user.refresh);
+    if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
+      localStorage.setItem('access', res.authenticatedUser.access);
+      localStorage.setItem('refresh', res.authenticatedUser.refresh);
+
+      console.log('Access Token:', res.authenticatedUser.access);
       
       // Fetch user identity (which includes the role) and redirect based on role
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
-            this.redirectBasedOnRole(user.role); // Redirect to role-based dashboard
+            this.redirectBasedOnRole(user.role.name); // Redirect to role-based dashboard
           } else {
             alert('Failed to fetch user details. Please log in again.');
           }
@@ -193,22 +233,22 @@ export class LoginComponent extends BaseComponent {
 
   /** Redirects user to appropriate dashboard based on their role */
   private redirectBasedOnRole(role: string): void {
-    switch (role) {
-      case 'site_admin':
-        this.router.navigate(['admin/dashboard']);
-        break;
-      case 'commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'joint_commissioner':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'permit_section':
-        this.router.navigate(['admin/dashboard']); // Assuming both 'site_admin' and 'officer' go to the same dashboard
-        break;
-      case 'licensee':
-        this.router.navigate(['licensee/dashboard']);
-        break;
+    const adminRoles = [
+      'level_1',
+      'level_2',
+      'level_3',
+      'level_4',
+      'level_5',
+      'site_admin',
+      'dev'
+    ];
+
+    if (adminRoles.includes(role)) {
+      this.router.navigate(['admin/dashboard']);
+    } else if (role === 'licensee') {
+      this.router.navigate(['licensee/dashboard']);
+    } else {
+      console.warn('Unknown role:', role);
     }
   }
 

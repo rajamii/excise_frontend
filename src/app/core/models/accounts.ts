@@ -1,16 +1,22 @@
+import { District } from "./district.model";
+import { Subdivision } from "./subdivision.model";
+import { PoliceStation } from "./policestation.model";
+import { Role } from "./role";
 export class Account {
+  id!: number;
+  username!: string;
   firstName!: string;
   middleName?: string;
   lastName!: string;
-  username!: string;
-  phoneNumber!: string;
   email!: string;
-  password!: string;
-  confirmPassword?: string;
-  role!: string;
-  district!: string;  
-  subDivision!: string;
-  address?: string;
+  phoneNumber!: string;
+  district!: District;
+  subdivision!: Subdivision;
+  address!: string;
+  role!: Role;
   createdBy?: string;
-  is_active!: boolean;
+  isActive?: boolean;
+
+  password?: string;
+  confirmPassword?: string;
 }

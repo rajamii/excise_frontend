@@ -1,27 +1,28 @@
+import { Account } from "./accounts";
 export class LicenseApplication {
-  //select license
-  id!: number;
+  // select license
+  applicationId!: string;
   exciseDistrict!: string;
   licenseCategory!: string;
-  exciseSubDivision!: string;
+  exciseSubdivision!: string;
   license!: string;
 
-  //key info
+  // key info
   licenseType!: string;  
   establishmentName!: string;
   mobileNumber!: number;
-  emailId!: string;
-  licenseNo?: number;            //not required
-  initialGrantDate?: string;     //not required
-  renewedFrom?: string;          //not required
-  validUpTo?: string;            //not required
-  yearlyLicenseFee?: string;     //not required
+  email!: string;
+  licenseNo?: number;
+  initialGrantDate?: string;
+  renewedFrom?: string;
+  validUpTo?: string;
+  yearlyLicenseFee?: string;
   licenseNature!: string;
   functioningStatus!: string;
-  modeofOperation!: string;  
+  modeOfOperation!: string;  
 
-  //address
-  siteSubDivision!: string;
+  // address
+  siteSubdivision!: string;
   policeStation!: string;
   locationCategory!: string;
   locationName!: string;
@@ -29,19 +30,19 @@ export class LicenseApplication {
   businessAddress!: string;
   roadName!: string;
   pinCode!: number;
-  latitude?: string;            //not required
-  longitude?: string;           //not required
+  latitude?: string;
+  longitude?: string;
 
-  //unit details: only if licenseType = 'Company'
+  // unit details (only if licenseType = 'Company')
   companyName!: string;
   companyAddress!: string;
   companyPan!: string;
   companyCin!: string;
   incorporationDate!: string;
   companyPhoneNumber!: number;
-  companyEmailId!: string;
+  companyEmail!: string;
 
-  //member details
+  // member details
   status!: string;
   memberName!: string;
   fatherHusbandName!: string;
@@ -49,13 +50,38 @@ export class LicenseApplication {
   gender!: string;
   pan!: number;
   memberMobileNumber!: number;
-  memberEmailId!: string;
+  memberEmail!: string;
 
-  current_stage!: string;
-  is_approved!: boolean;
+  // document
+  photo!: File;
+
+  // transactions
+  currentStage!: string;
+  isApproved!: boolean;
+  printCount: number = 0;
+  // Related models
+  objections?: Objection[];
+  transactions?: Transaction[];
 }
 
-//documents
-export class LicenseApplicationDocuments {
-  photo!: File;
+export class Transaction {
+  id!: number;
+  licenseApplication!: string | LicenseApplication;
+  performedBy!: number | any;
+  forwardedBy!: number | any;
+  forwardedTo!: number | any;
+  stage!: string;
+  remarks?: string;
+  timestamp!: string; 
+}
+
+export class Objection {
+  id?: number;
+  application!: string; // or LicenseApplication if full object is returned
+  fieldName!: string;
+  remarks!: string;
+  raisedBy!: Account | null;
+  isResolved!: boolean;
+  raisedOn!: string;
+  resolvedOn?: string | null;
 }

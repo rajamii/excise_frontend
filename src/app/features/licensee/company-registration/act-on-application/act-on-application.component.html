@@ -14,7 +14,7 @@
 
       <!-- Angular Material Table with data source binding -->
       <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
-      
+
         <!-- Application Info Column Definition -->
         <ng-container matColumnDef="applicationInfo">
           <!-- Table header for Application Info -->
@@ -24,14 +24,16 @@
           <td mat-cell *matCellDef="let element">
             <!-- Display a list of key-value pairs from applicationInfo -->
             <mat-list>
-              <div class="sessionStorageEntries" *ngFor="let item of element.applicationInfo">
-                <div class="key">{{ item.key }}:</div>
-                <div class="value">{{ item.value }}</div>
-              </div>
+              @for (item of element.applicationInfo; track item) {
+                <div class="sessionStorageEntries">
+                  <div class="key">{{ item.key }}:</div>
+                  <div class="value">{{ item.value }}</div>
+                </div>
+              }
             </mat-list>
           </td>
         </ng-container>
-      
+
         <!-- Company Details Column Definition -->
         <ng-container matColumnDef="companyDetails">
           <!-- Table header for Company Details -->
@@ -41,14 +43,16 @@
           <td mat-cell *matCellDef="let element">
             <!-- Display a list of key-value pairs from companyDetails -->
             <mat-list>
-              <div class="sessionStorageEntries" *ngFor="let item of element.companyDetails">
-                <div class="key">{{ item.key }}:</div>
-                <div class="value">{{ item.value }}</div>
-              </div>
+              @for (item of element.companyDetails; track item) {
+                <div class="sessionStorageEntries">
+                  <div class="key">{{ item.key }}:</div>
+                  <div class="value">{{ item.value }}</div>
+                </div>
+              }
             </mat-list>
           </td>
         </ng-container>
-      
+
         <!-- View Column Definition -->
         <ng-container matColumnDef="view">
           <!-- Table header for View -->
@@ -58,20 +62,22 @@
           <td mat-cell *matCellDef="let element">
             <!-- Render multiple buttons defined in the view array -->
             <div class="button-column">
-              <button mat-button *ngFor="let btn of element.view" (click)="btn.action()">
-                {{ btn.label }}
-              </button>
-            </div>                  
+              @for (btn of element.view; track btn) {
+                <button mat-button (click)="btn.action()">
+                  {{ btn.label }}
+                </button>
+              }
+            </div>
           </td>
         </ng-container>
-      
+
         <!-- Table header row binding to displayedColumns -->
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
 
         <!-- Table data row binding to displayedColumns -->
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
-      </table>          
+      </table>
     </mat-card-content>
 
     <!-- Optional actions section (currently empty) -->

@@ -51,3 +51,26 @@ mat-card{
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.photo-upload-container {
+  border: 1px solid #ccc;
+  padding: 20px;
+  //text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+  .upload-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    .upload-text{
+      text-align: center;
+      h6{
+        margin: 0;
+      }
+    }
+  }
+}
+.photo-upload-container:hover {
+  border-color: #1976d2;
+}
