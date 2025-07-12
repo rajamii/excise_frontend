@@ -1,8 +1,8 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { MaterialModule } from '../material.module';
+import { MaterialModule } from '../../material.module';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators,FormBuilder } from '@angular/forms';
-import { environment } from '../../../environments/environment';
-import { AuthService } from '../../core/services/auth.service';
+import { environment } from '../../../../environments/environment';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-captcha',

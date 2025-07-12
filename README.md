@@ -1,59 +1,33 @@
-# ExciseFrontend
+## Excise Department of Sikkim – Frontend 
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.4.
+This is the **frontend web application** for the **Website of the Excise Department of Sikkim**, developed using **Angular**.
 
-## Development server
 
-To start a local development server, run:
 
-```bash
-ng serve
-```
+For the backend repository, visit: [https://github.com/rajamii/excise_backend](https://github.com/rajamii/excise_backend)
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-## Code scaffolding
+## Setup
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Clone the project
 
 ```bash
-ng generate component component-name
+git clone https://github.com/rajamii/excise_frontend.git
 ```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
+Go to the project directory
 ```bash
-ng generate --help
+cd excise_frontend
 ```
-
-## Building
-
-To build the project run:
-
+Install dependencies
 ```bash
-ng build
+npm install
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
+Start the development server
 ```bash
-ng test
+npm start
 ```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+> Alternatively, if you use Angular CLI directly, you can run:
+> ```bash
+> ng serve
+> ```
