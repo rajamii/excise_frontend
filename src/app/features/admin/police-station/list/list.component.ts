@@ -18,7 +18,7 @@ import { AddComponent } from '../add/add.component';
 })
 export class ListComponent extends BaseComponent implements OnInit{
   // Columns for the police station table
-  displayedColumns: string[] = ['id', 'policeStation', 'policeStationCode', 'subdivisionCode', 'actions'];
+  displayedColumns: string[] = ['id', 'policeStation', 'policeStationCode', 'subdivision', 'subdivisionCode', 'actions'];
   
   // Data source for the table, which will hold all the police stations
   policeStationDataSource = new MatTableDataSource<PoliceStation>();

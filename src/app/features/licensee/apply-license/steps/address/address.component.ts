@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, DoCheck } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -16,7 +16,7 @@ import { MasterService } from '../../../../../core/services/master.service';
   templateUrl: './address.component.html',
   styleUrl: './address.component.scss',
 })
-export class AddressComponent implements OnInit, OnDestroy {
+export class AddressComponent implements OnInit, OnDestroy, DoCheck {
   addressForm: FormGroup; // Main form group for address
   siteDistrict = '';
 
@@ -59,7 +59,7 @@ export class AddressComponent implements OnInit, OnDestroy {
 
     // Initialize the form with stored values and validators
     this.addressForm = this.fb.group({
-      siteSubdivision: new FormControl(storedValues.siteSubdivision, [Validators.required]),
+      siteSubdivision: new FormControl({ value: storedValues.siteSubdivision, disabled: true }, [Validators.required]),
       policeStation: new FormControl(storedValues.policeStation, [Validators.required]),
       locationCategory: new FormControl(storedValues.locationCategory, [Validators.required]),
       locationName: new FormControl(storedValues.locationName, [Validators.required]),
@@ -93,6 +93,25 @@ export class AddressComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  ngDoCheck(): void {
+    const selectLicenseData = sessionStorage.getItem('selectLicenseData');
+    if (selectLicenseData) {
+      const parsed = JSON.parse(selectLicenseData);
+      const selectedExciseSubdivision = parsed?.exciseSubdivision;
+
+      const siteSubdivisionControl = this.addressForm.get('siteSubdivision');
+      const currentValue = siteSubdivisionControl?.value;
+
+      if (selectedExciseSubdivision && currentValue !== selectedExciseSubdivision) {
+        siteSubdivisionControl?.setValue(selectedExciseSubdivision);
+        siteSubdivisionControl?.disable({ emitEvent: false });
+
+        // ⬅️ This line ensures police stations are filtered immediately
+        this.onSubDivisionChange(selectedExciseSubdivision);
+      }
+    }
+  }
+
   // Fetches dropdown data from backend service
   private loadDropdownData(): void {
     this.masterService.getSubdivision().subscribe((data: Subdivision[]) => {
@@ -116,8 +135,10 @@ export class AddressComponent implements OnInit, OnDestroy {
   }
 
   // Filters police stations based on selected subdivision
-  onSubDivisionChange(name: string): void {
-    this.sitePoliceStations = this.policeStations.filter(ps => ps.subdivision === name);
+  onSubDivisionChange(code: number): void {
+    this.sitePoliceStations = this.policeStations.filter(
+      ps => ps.subdivisionCode === code
+    );
   }
 
   // Retrieves form data from session storage

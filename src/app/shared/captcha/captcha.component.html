@@ -1,12 +1,12 @@
 <div class="captcha-section">
-  <div class="captcha-header">
-    <button matIconButton class="refresh-captcha-btn" (click)="refreshCaptcha($event)">
-      <mat-icon>refresh</mat-icon>
-    </button>
-    @if (captchaImageUrl) {
-      <img [src]="captchaImageUrl" alt="Captcha" class="captcha-img"/>
-    }
-  </div>
+<div class="captcha-header">
+  <button mat-icon-button class="refresh-captcha-btn" (click)="refreshCaptcha($event)">
+    <mat-icon>refresh</mat-icon>
+  </button>
+
+  <img *ngIf="captchaImageUrl" [src]="captchaImageUrl" alt="Captcha" class="captcha-img"/>
+</div>
+
   <!-- Add formGroup directive here -->
   <div [formGroup]="formGroup" class = "input-container">
     <input formControlName="response" placeholder="Captcha" (input)="onResponseChange($event)" />

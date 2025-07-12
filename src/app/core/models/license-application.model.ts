@@ -1,10 +1,14 @@
 import { Account } from "./accounts";
+import { District } from "./district.model";
+import { LicenseCategory } from "./license-category.model";
+import { PoliceStation } from "./policestation.model";
+import { Subdivision } from "./subdivision.model";
 export class LicenseApplication {
   // select license
   applicationId!: string;
-  exciseDistrict!: string;
-  licenseCategory!: string;
-  exciseSubdivision!: string;
+  exciseDistrict!: District;
+  licenseCategory!: LicenseCategory;
+  exciseSubdivision!: Subdivision;
   license!: string;
 
   // key info
@@ -22,8 +26,8 @@ export class LicenseApplication {
   modeOfOperation!: string;  
 
   // address
-  siteSubdivision!: string;
-  policeStation!: string;
+  siteSubdivision!: Subdivision;
+  policeStation!: PoliceStation;
   locationCategory!: string;
   locationName!: string;
   wardName!: string;

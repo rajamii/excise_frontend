@@ -89,7 +89,7 @@ export class ListComponent extends BaseComponent implements OnInit {
     // Displays a confirmation prompt before deletion
     Swal.fire({
       title: 'Are you sure?',
-      text: `Do you really want to delete ${user.username}?`,
+      text: `Do you really want to delete ${user.id}?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it!',
@@ -97,7 +97,7 @@ export class ListComponent extends BaseComponent implements OnInit {
     }).then((result) => {
       if (result.isConfirmed) {
         // Calls the service to delete the user if confirmed
-        this.adminService.deleteUser(user.username).subscribe(
+        this.adminService.deleteUser(user.id).subscribe(
           () => {
             // Success: Shows a success message and reloads users
             Swal.fire('Deleted!', 'The user has been deleted.', 'success');

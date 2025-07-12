@@ -16,7 +16,7 @@
           <mat-label>License Type</mat-label>
           <mat-select formControlName="licenseType" required>
             @for (licenseType of licenseTypes; track licenseType) {
-              <mat-option [value]="licenseType.licenseType">
+              <mat-option [value]="licenseType.id">
                 {{ licenseType.licenseType }}
               </mat-option>
             }

@@ -5,7 +5,7 @@ import { Observable, catchError, switchMap, throwError, BehaviorSubject, filter,
 import { AuthService } from '../services/auth.service';
 
 @Injectable()
-export class CsrfInterceptor implements HttpInterceptor {
+export class JwtRefreshInterceptor implements HttpInterceptor {
   // Flag to prevent multiple refresh requests at once
   private isRefreshing = false;
 

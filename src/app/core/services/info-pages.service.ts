@@ -14,7 +14,7 @@ import {
 })
 export class InfoPagesService {
   // Base URL from environment configuration
-  private baseUrl = `${environment.apiBaseUrl}/contact_us`; // Base URL for the API
+  private baseUrl = `${environment.apiBaseUrl}/masters/contact_us`; // Base URL for the API
 
   constructor(private http: HttpClient) {}
 

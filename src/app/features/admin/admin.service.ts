@@ -14,7 +14,8 @@ import { Role } from '../../core/models/role';
 
 export class AdminService {
   private readonly baseUrl = environment.apiBaseUrl;
-  private readonly mastersUrl = `${this.baseUrl}/masters`;
+  private readonly mastersUrl = `${this.baseUrl}/masters/core`;
+  private readonly usersUrl = `${this.baseUrl}/auth`;
 
   constructor(private http: HttpClient) {}
 
@@ -22,32 +23,41 @@ export class AdminService {
 
   // Register a new user
   registerUser(user: Account): Observable<any> {
-    return this.http.post(`${this.baseUrl}/user/register/`, user);
+    return this.http.post(`${this.usersUrl}/users/register/`, user);
   }
 
-  // Get all users
-  getUsers(): Observable<Account[]> {
-    return this.http.get<Account[]>(`${this.baseUrl}/user/list/?username=all`);
+  // Update user by id
+  updateUser(id: number, payload: any): Observable<any> {
+    return this.http.put<any>(
+      `${this.usersUrl}/users/${id}/update/`,
+      payload
+    );
   }
-
-  // Get user by username
-  getUserByUsername(username: string): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/user/detail/${username}/`);
-  }
-
-  // Get currently logged-in user
-  getCurrentUser(): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/user/detail/`);
-  }
-
-/*   // Update user by username
-  updateUser(username: string, changes: Partial<Account>): Observable<Account> {
-    return this.http.put<Account>(`${this.baseUrl}/user/update/${username}/`, changes);
-  } */
 
   // Delete user by username
-  deleteUser(username: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/user/delete/${username}/`);
+  deleteUser(id: number): Observable<any> {
+    return this.http.delete(`${this.usersUrl}/users/${id}/delete/`);
+  }
+
+
+  // ========================== ROLE MANAGEMENT ==========================
+
+  // Create a new user
+  createRole(role: Role): Observable<any> {
+    return this.http.post(`${this.usersUrl}/roles/register/`, role);
+  }
+
+  // Update role by id
+  updateRole(id: number, payload: any): Observable<any> {
+    return this.http.put<any>(
+      `${this.usersUrl}/${id}/users/update/`,
+      payload
+    );
+  }
+
+  // Delete role by id
+  deleteRole(username: string): Observable<any> {
+    return this.http.delete(`${this.usersUrl}/user/${username}/delete/`);
   }
 
   // ========================== DISTRICT MANAGEMENT ==========================
@@ -59,12 +69,12 @@ export class AdminService {
 
   // Updates details of an existing district by ID
   updateDistrict(id: number, changes: Partial<District>): Observable<District> {
-    return this.http.put<District>(`${this.mastersUrl}/districts/update/${id}/`, changes);
+    return this.http.put<District>(`${this.mastersUrl}/districts/${id}/update/`, changes);
   }
 
   // Deletes a district by ID
   deleteDistrict(id: number): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/districts/delete/${id}/`);
+    return this.http.delete(`${this.mastersUrl}/districts/${id}/delete/`);
   }
 
   // ========================== SUBDIVISION MANAGEMENT ==========================
@@ -76,62 +86,62 @@ export class AdminService {
 
   // Updates an existing subdivision by ID
   updateSubDivision(id: number, changes: Partial<Subdivision>): Observable<Subdivision> {
-    return this.http.put<Subdivision>(`${this.mastersUrl}/subdivisions/update/${id}/`, changes);
+    return this.http.put<Subdivision>(`${this.mastersUrl}/subdivisions/${id}/update/`, changes);
   }
 
   // Deletes a subdivision by ID
   deleteSubdivision(id: number): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/subdivisions/delete/${id}/`);
+    return this.http.delete(`${this.mastersUrl}/subdivisions/${id}/delete/`);
   }
 
   // ========================== POLICE STATION MANAGEMENT ==========================
 
   // Adds a new police station
   addPoliceStation(policeStation: PoliceStation): Observable<any> {
-    return this.http.post(`${this.mastersUrl}/policestations/create/`, policeStation);
+    return this.http.post(`${this.mastersUrl}/police-stations/create/`, policeStation);
   }
 
   // Updates a police station’s details by ID
   updatePolicestation(id: number, changes: Partial<PoliceStation>): Observable<PoliceStation> {
-    return this.http.put<PoliceStation>(`${this.mastersUrl}/policestations/update/${id}/`, changes);
+    return this.http.put<PoliceStation>(`${this.mastersUrl}/police-stations/${id}/update/`, changes);
   }
 
   // Deletes a police station by ID
   deletePoliceStation(id: number): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/policestations/delete/${id}/`);
+    return this.http.delete(`${this.mastersUrl}/police-stations/${id}/delete/`);
   }
 
   // ========================== LICENSE TYPE MANAGEMENT ==========================
 
   // Adds a new license type
   addLicenseType(licenseType: LicenseType): Observable<any> {
-    return this.http.post(`${this.mastersUrl}/licensetypes/create/`, licenseType);
+    return this.http.post(`${this.mastersUrl}/license-types/create/`, licenseType);
   }
 
   // Updates an existing license type by ID
   updateLicenseType(id: number, changes: Partial<LicenseType>): Observable<LicenseType> {
-    return this.http.put<LicenseType>(`${this.mastersUrl}/licensetypes/update/${id}/`, changes);
+    return this.http.put<LicenseType>(`${this.mastersUrl}/license-types/${id}/update/`, changes);
   }
 
   // Deletes a license type by ID
   deleteLicenseType(id: number): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/licensetypes/delete/${id}/`);
+    return this.http.delete(`${this.mastersUrl}/license-types/${id}/delete/`);
   }
 
   // ========================== LICENSE CATEGORY MANAGEMENT ==========================
 
   // Adds a new license category
   addLicenseCategory(category: LicenseCategory): Observable<any> {
-    return this.http.post(`${this.mastersUrl}/licensecategories/create/`, category);
+    return this.http.post(`${this.mastersUrl}/license-categories/create/`, category);
   }
 
   // Updates an existing license category by ID
   updateLicenseCategory(id: number, changes: Partial<LicenseCategory>): Observable<LicenseCategory> {
-    return this.http.put<LicenseCategory>(`${this.mastersUrl}/licensecategories/update/${id}/`, changes);
+    return this.http.put<LicenseCategory>(`${this.mastersUrl}/license-categories/${id}/update/`, changes);
   }
 
   // Deletes a license category by ID
   deleteLicenseCategory(id: number): Observable<any> {
-    return this.http.delete(`${this.mastersUrl}/licensecategories/delete/${id}/`);
+    return this.http.delete(`${this.mastersUrl}/license-categories/${id}/delete/`);
   }
 }

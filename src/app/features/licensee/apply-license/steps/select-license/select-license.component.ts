@@ -101,8 +101,10 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   }
 
   // Filter sub-divisions when district changes
-  onDistrictChange(name: string): void {
-    this.filteredSubdivisions = this.subdivisions.filter(subdiv => subdiv.district === name);
+  onDistrictChange(selectedDistrictCode: number): void {
+    this.filteredSubdivisions = this.subdivisions.filter(
+      subdiv => subdiv.districtCode === selectedDistrictCode
+    );
   }
 
   // Read form data from session storage

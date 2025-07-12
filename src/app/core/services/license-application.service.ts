@@ -11,7 +11,7 @@ import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
   providedIn: 'root'
 })
 export class LicenseApplicationService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/licenseapplication`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/masters/license_application`;
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
 
   constructor(private http: HttpClient) { }

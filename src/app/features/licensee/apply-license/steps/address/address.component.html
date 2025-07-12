@@ -11,23 +11,20 @@
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division</mat-label>
-          <mat-select formControlName="siteSubdivision" (selectionChange)="onSubDivisionChange($event.value)" required>
+          <mat-select formControlName="siteSubdivision" required>
             @for (siteSubdivision of subdivisions; track siteSubdivision) {
-              <mat-option [value]="siteSubdivision.subdivision">{{ siteSubdivision.subdivision }}</mat-option>
+              <mat-option [value]="siteSubdivision.subdivisionCode">
+                {{ siteSubdivision.subdivision }}
+              </mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['siteSubdivision'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('siteSubdivision') }}
-            </mat-error>
-          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Police Station</mat-label>
           <mat-select formControlName="policeStation" required>
             @for (policeStation of sitePoliceStations; track policeStation) {
-              <mat-option [value]="policeStation.policeStation">{{ policeStation.policeStation }}</mat-option>
+              <mat-option [value]="policeStation.policeStationCode">{{ policeStation.policeStation }}</mat-option>
             }
           </mat-select>
           @if (addressForm.controls['policeStation'].invalid) {

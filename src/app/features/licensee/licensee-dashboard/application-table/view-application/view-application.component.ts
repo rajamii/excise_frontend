@@ -2,13 +2,14 @@ import { Component, inject, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
-import { AccountService } from '../../../../../core/services/account.service';
 import { ApplyLicenseComponent } from '../../../apply-license/apply-license.component';
 import Swal from 'sweetalert2';
 import { Objection } from '../../../../../core/models/license-application.model';
 import { BaseComponent } from '../../../../../base/base.components';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
+import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
+import { forkJoin, Observable } from 'rxjs';
+import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -40,6 +41,65 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   addressData: FieldDisplay[] = [];
   unitDetailsData: FieldDisplay[] = [];
   memberDetailsData: FieldDisplay[] = [];
+
+  fieldMetaMap: { [key: string]: any } = {
+    // API-based dropdowns (send id or code)
+    exciseDistrict: { type: 'dropdown', source: 'exciseDistrict', submitKey: 'districtCode' },
+    licenseCategory: { type: 'dropdown', source: 'licenseCategory', submitKey: 'id' },
+    exciseSubdivision: { type: 'dropdown', source: 'exciseSubdivision', submitKey: 'subdivisionCode' },
+    siteSubdivision: { type: 'dropdown', source: 'siteSubdivision', submitKey: 'subdivisionCode' },
+    policeStation: { type: 'dropdown', source: 'policeStation', submitKey: 'policeStationCode' },
+    licenseType: { type: 'dropdown', source: 'licenseType', submitKey: 'id' },
+
+    // Hardcoded dropdowns
+    license: { type: 'dropdown', source: 'license' },
+    licenseNature: { type: 'dropdown', source: 'licenseNature' },
+    functioningStatus: { type: 'dropdown', source: 'functioningStatus' },
+    modeOfOperation: { type: 'dropdown', source: 'modeofOperation' },
+    locationCategory: { type: 'dropdown', source: 'locationCategory' },
+    locationName: { type: 'dropdown', source: 'locationName' },
+    wardName: { type: 'dropdown', source: 'wardName' },
+    roadName: { type: 'dropdown', source: 'roadName' },
+    status: { type: 'dropdown', source: 'status' },
+    nationality: { type: 'dropdown', source: 'nationality' },
+    gender: { type: 'dropdown', source: 'gender' },
+
+    // Textareas
+    establishmentName: { type: 'textarea' },
+    businessAddress: { type: 'textarea' },
+    companyAddress: { type: 'textarea' },
+
+    // Numbers
+    licenseNo: { type: 'number' },
+    latitude: { type: 'number' },
+    longitude: { type: 'number' },
+
+    // Dates
+    initialGrantDate: { type: 'date' },
+    renewedFrom: { type: 'date' },
+    validUpTo: { type: 'date' },
+    incorporationDate: { type: 'date' },
+
+    // Patterns
+    mobileNumber: { type: 'text', pattern: PatternConstants.MOBILE },
+    pinCode: { type: 'text', pattern: PatternConstants.PINCODE },
+    companyPan: { type: 'text', pattern: PatternConstants.PAN },
+    pan: { type: 'text', pattern: PatternConstants.PAN },
+    companyCin: { type: 'text', pattern: PatternConstants.CIN },
+    companyPhoneNumber: { type: 'text', pattern: PatternConstants.MOBILE },
+    companyEmail: { type: 'text', pattern: PatternConstants.EMAIL },
+    email: { type: 'text', pattern: PatternConstants.EMAIL },
+    memberMobileNumber: { type: 'text', pattern: PatternConstants.MOBILE },
+    memberEmail: { type: 'text', pattern: PatternConstants.EMAIL },
+
+    // File
+    photo: { type: 'file' },
+
+    // Strings
+    companyName: { type: 'text' },
+    memberName: { type: 'text' },
+    fatherHusbandName: { type: 'text' }
+  };
 
   // Field label mapping for display and objections
   fieldLabelMap: { [key: string]: string } = {
@@ -133,11 +193,18 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     // Set photo URL if photo exists
     this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
 
-    // Load dropdown options
-    this.loadDropdownOptions()
+      // First load dropdowns
+  this.loadDropdownOptions().subscribe(dropdowns => {
+    this.dropdownFields['exciseDistrict'] = dropdowns.exciseDistrict;
+    this.dropdownFields['licenseCategory'] = dropdowns.licenseCategory;
+    this.dropdownFields['exciseSubdivision'] = dropdowns.subdivision;
+    this.dropdownFields['siteSubdivision'] = dropdowns.subdivision;
+    this.dropdownFields['policeStation'] = dropdowns.policeStation;
+    this.dropdownFields['licenseType'] = dropdowns.licenseType;
 
-    // Load existing objections if any
+    // Then fetch objections and initialize form
     this.fetchObjections();
+  });
 
     // Group application data into sections for display
     this.licenseData = this.getFieldDisplayList([
@@ -167,12 +234,47 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     });
   }
 
+  getOptionLabel(field: string, option: any): string {
+    switch (field) {
+      case 'licenseCategory':
+        return option.licenseCategory;
+      case 'licenseType':
+        return option.licenseType;
+      case 'exciseDistrict':
+        return option.district;
+      case 'exciseSubdivision':
+      case 'siteSubdivision':
+        return option.subdivision;
+      case 'policeStation':
+        return option.policeStation;
+      default:
+        return option.toString(); // for hardcoded strings
+    }
+  }
+
+  getOptionValue(field: string, option: any): any {
+    const meta = this.fieldMetaMap[field];
+    // If it's a plain string (hardcoded dropdown), return it directly
+    if (typeof option === 'string') return option;
+
+    // Else, for API dropdowns, use submitKey or id
+    return option?.[meta?.submitKey] ?? option?.id;
+  }
+
   getFieldDisplayList(fields: string[]): FieldDisplay[] {
-    return fields.map(field => ({
-      key: this.fieldLabelMap[field] || field, // Friendly label
-      field, // Raw field name
-      value: this.application[field] || 'N/A'
-    }));
+    return fields.map(field => {
+      const displayValueKey = field + 'Name';
+      const value =
+        this.application[displayValueKey] !== undefined
+          ? this.application[displayValueKey]
+          : this.application[field];
+
+      return {
+        key: this.fieldLabelMap[field] || field,
+        field, // retain original field for objection tracking
+        value: value || '-'
+      };
+    });
   }
 
   fetchObjections() {
@@ -194,13 +296,35 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   // Initializes the form used to resolve objections
   initializeResolveForm(): void {
     const group: { [key: string]: FormControl } = {};
-    for (const obj of this.objections) {
-      group[obj.fieldName] = obj.fieldName === 'photo'
-        // Photo requires file input
-        ? new FormControl(null, Validators.required)
-        // For other fields, pre-fill existing value from application
-        : new FormControl(this.application[obj.fieldName] || '', Validators.required);
+
+    for (const obj of this.objections.filter(o => !o.isResolved)) {
+      const meta = this.fieldMetaMap[obj.fieldName] || {};
+      const validators = [Validators.required];
+
+      if (meta.pattern) {
+        validators.push(Validators.pattern(meta.pattern));
+      }
+
+      let initialValue = this.application[obj.fieldName];
+
+      // ✅ If dropdown
+      if (meta.type === 'dropdown' && meta.source) {
+        const dropdownList = this.dropdownFields[meta.source] || [];
+
+        // For API-driven dropdowns, store the matched object
+        if (meta.submitKey) {
+          const match = dropdownList.find((item: any) =>
+            item[meta.submitKey] === initialValue || item.id === initialValue
+          );
+          initialValue = match || null;
+        }
+
+        // For hardcoded (strings), leave as-is
+      }
+
+      group[obj.fieldName] = new FormControl(initialValue, validators);
     }
+
     this.resolveObjectionForm = new FormGroup(group);
   }
 
@@ -234,30 +358,17 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   }
 
   // Loads all dropdown values needed to populate dynamic form fields
-  loadDropdownOptions(): void {
-    this.masterService.getDistrict().subscribe(data => {
-      this.dropdownFields['exciseDistrict'] = data;
-    });
-
-    this.masterService.getLicenseCategories().subscribe(data => {
-      this.dropdownFields['licenseCategory'] = data;
-    });
-
-    this.masterService.getSubdivision().subscribe(data => {
-      this.dropdownFields['exciseSubdivision'] = data;
-      this.dropdownFields['siteSubdivision'] = data;
-    });
-
-    this.masterService.getPoliceStations().subscribe(data => {
-      this.dropdownFields['policeStation'] = data;
-    });
-
-    this.masterService.getLicenseTypes().subscribe(data => {
-      this.dropdownFields['licenseType'] = data;
+  loadDropdownOptions(): Observable<any> {
+    return forkJoin({
+      exciseDistrict: this.masterService.getDistrict(),
+      licenseCategory: this.masterService.getLicenseCategories(),
+      subdivision: this.masterService.getSubdivision(),
+      policeStation: this.masterService.getPoliceStations(),
+      licenseType: this.masterService.getLicenseTypes()
     });
   }
 
-  // Submits corrected data to resolve objections
+
   submitResolvedData() {
     Swal.fire({
       title: 'Are you sure?',
@@ -269,16 +380,32 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     }).then(result => {
       if (result.isConfirmed) {
         const formValue = this.resolveObjectionForm.value;
-        const formData = new FormData();
+        const transformed: any = {};
 
-        // Append each form value to FormData object
         for (const key in formValue) {
           if (formValue.hasOwnProperty(key)) {
-            formData.append(key, formValue[key]);
+            const meta = this.fieldMetaMap[key];
+            const selected = formValue[key];
+
+            if (meta?.type === 'file') {
+              transformed[key] = selected;
+            }
+            else if (meta?.type === 'dropdown') {
+              if (meta.submitKey && typeof selected === 'object') {
+                transformed[key] = selected[meta.submitKey];
+              } else {
+                transformed[key] = selected;
+              }
+            }
+            else {
+              transformed[key] = selected;
+            }
           }
         }
 
-        // Send resolved data to backend
+        const formData = FormDataUtil.buildFormData(transformed);
+        console.log('Submitting resolved form:', formValue);
+
         this.licenseAppService.resolveObjections(this.application.applicationId, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => location.reload());

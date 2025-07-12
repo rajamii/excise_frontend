@@ -53,6 +53,12 @@
             <mat-cell *matCellDef="let element"> {{ element.policeStationCode }} </mat-cell>
           </ng-container>
 
+          <!-- Column: Subdivision Name -->
+          <ng-container matColumnDef="subdivision">
+            <mat-header-cell *matHeaderCellDef> Subdivision Name </mat-header-cell>
+            <mat-cell *matCellDef="let element"> {{element.subdivision}} </mat-cell>
+          </ng-container>
+
           <!-- Column for Sub Division Code -->
           <ng-container matColumnDef="subdivisionCode">
             <mat-header-cell *matHeaderCellDef> Sub Division Code </mat-header-cell>

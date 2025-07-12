@@ -17,18 +17,17 @@
 
 <mat-dialog-actions align="center">
   <!-- Triggers license printing -->
-  <button mat-flat-button class="bg-primary text-white" (click)="onPrint()">
+  <button matButton="filled" color="primary" [disabled]="application.printCount >= 5" (click)="onPrint()">
     Print License
   </button>
 
   <!-- Pay button enabled only if print count reaches 5 -->
-  <button matButton="elevated" (click)="onPrint()"
-  [disabled]="application.printCount < 5">
+  <button matButton="outlined" (click)="onPay()" *ngIf="application.printCount >= 5">
     Pay
   </button>
 
   <!-- Closes the dialog -->
-  <button matButton class="bg-danger text-white" (click)="dialogRef.close()">
+  <button matButton="filled" color="warn" (click)="dialogRef.close()">
     Close
   </button>
 </mat-dialog-actions>

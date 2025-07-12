@@ -26,21 +26,6 @@ export class ApplicationMovementComponent {
     level_3: 'Level 3',
     level_4: 'Level 4',
     level_5: 'Level 5',
-
-    rejected_by_level_1: 'Rejected by Level 1',
-    rejected_by_level_2: 'Rejected by Level 2',
-    rejected_by_level_3: 'Rejected by Level 3',
-    rejected_by_level_4: 'Rejected by Level 4',
-    rejected_by_level_5: 'Rejected by Level 5',
-
-    level_1_objection: 'Objection by Level 1',
-    level_2_objection: 'Objection by Level 2',
-    level_3_objection: 'Objection by Level 3',
-    level_4_objection: 'Objection by Level 4',
-    level_5_objection: 'Objection by Level 5',
-
-    approved: 'Approved',
-    rejected: 'Application Rejected',
   };
 
   constructor(
@@ -58,7 +43,7 @@ export class ApplicationMovementComponent {
         ...txn,
         applicationId: app.applicationId,
       }))
-    ).reverse(); // Reverse to show latest transaction first
+    ) //.reverse(); // Reverse to show latest transaction first
 
     // Initialize data source for the mat-table
     this.movementDataSource = new MatTableDataSource(transactions);
@@ -66,6 +51,6 @@ export class ApplicationMovementComponent {
 
   // Get human-readable role label from the mapping
   getRoleLabel(role: string): string {
-    return this.roleDisplayMapping[role] || role || 'N/A';
+    return this.roleDisplayMapping[role] || role || '-';
   }
 }

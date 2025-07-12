@@ -59,18 +59,18 @@
           <!-- Column for User Role -->
           <ng-container matColumnDef="role">
             <mat-header-cell *matHeaderCellDef> Role </mat-header-cell>
-            <mat-cell *matCellDef="let user"> {{user.role}} </mat-cell>
+            <mat-cell *matCellDef="let user"> {{user.role.name}} </mat-cell>
           </ng-container>
 
           <!-- Column for District -->
           <ng-container matColumnDef="district">
-            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+            <mat-header-cell *matHeaderCellDef> District Code</mat-header-cell>
             <mat-cell *matCellDef="let user"> {{user.district}} </mat-cell>
           </ng-container>
 
           <!-- Column for Sub Division -->
           <ng-container matColumnDef="subdivision">
-            <mat-header-cell *matHeaderCellDef> Sub Division </mat-header-cell>
+            <mat-header-cell *matHeaderCellDef> Subdivision Code</mat-header-cell>
             <mat-cell *matCellDef="let user"> {{user.subdivision}} </mat-cell>
           </ng-container>
 

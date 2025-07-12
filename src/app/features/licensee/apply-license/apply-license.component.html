@@ -19,7 +19,7 @@
   </mat-step>
 
   <!-- Step 4: Unit Details - Only visible if licenseType is 'Company' -->
-  @if (licenseType == 'Company') {
+  @if (licenseType == 2) {
     <mat-step label="Unit Details">
       <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
     </mat-step>

@@ -69,7 +69,7 @@ export class DashboardComponent extends BaseComponent {
       })
     )
     .subscribe(res => {
-      this.dashboardCounts = res;
+      this.dashboardCounts = res; 
     });
 
     // Fetch applications by stage
@@ -77,6 +77,7 @@ export class DashboardComponent extends BaseComponent {
       this.pendingDataSource.data = res.pending; 
       this.approvedDataSource.data = res.approved; 
       this.rejectedDataSource.data = res.rejected;
+      console.log(res)
     }, error => {
       console.error('Error fetching applications:', error); // Log error
     });

@@ -7,25 +7,70 @@ import { BaseDependency } from '../../base/dependency/base.dependency';
 import { NgOtpInputModule } from 'ng-otp-input';
 import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
+import Swal from 'sweetalert2';
+import { ADMIN_ROLES } from '../../shared/constants/role.constants';
+import { PatternConstants } from '../../shared/constants/pattern.constants';
 
 @Component({
   selector: 'app-login',
+  standalone: true,
   imports: [MaterialModule, CaptchaComponent, NgOtpInputModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
 export class LoginComponent extends BaseComponent {
-  loginForm: FormGroup;              // Reactive form group for login
-  isPasswordMode: boolean = true;    // Toggle between password and OTP login modes
-  hidePassword = true;               // Toggles password visibility
-  otpSent: boolean = false;          // Tracks whether OTP has been sent
-  otpIndex: string | null = null;    // Placeholder for OTP index if backend returns it
+  loginForm: FormGroup;
+  isPasswordMode = true;
+  hidePassword = true;
+  otpSent = false;
+  otpIndex: string | null = null;
   otpAutoSubmitted = false;
+  isSendingOtp = false; // To prevent multiple OTP requests
 
   loginError = false;
   loginErrorMessages: string[] = [];
 
   isRightPanelActive = false;
+
+  constructor(
+    protected override baseDependency: BaseDependency,
+    protected override authService: AuthService,
+    private fb: FormBuilder
+  ) {
+    super(baseDependency);
+
+    this.loginForm = this.fb.group({
+      username: ['', Validators.required],
+      password: [''],
+      phoneNumber: ['', Validators.pattern(PatternConstants.MOBILE)],
+      otp: [''],
+      response: ['', Validators.required],
+      hashkey: ['', Validators.required],
+    });
+
+    this.setValidators();
+  }
+
+  ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['sessionExpired']) {
+        setTimeout(() => {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Session Expired',
+            text: 'Your session has expired. Please log in again.',
+            confirmButtonText: 'OK'
+          });
+
+          // Remove the query param after showing
+          this.router.navigate([], {
+            queryParams: { sessionExpired: null },
+            queryParamsHandling: 'merge'
+          });
+        }, 100);
+      }
+    });
+  }
 
   switchToSignUp() {
     this.isRightPanelActive = true;
@@ -35,36 +80,15 @@ export class LoginComponent extends BaseComponent {
     this.isRightPanelActive = false;
   }
 
-  constructor(
-    protected override baseDependency: BaseDependency,
-    protected override authService: AuthService,
-    private fb: FormBuilder
-  ) {
-    super(baseDependency);
-
-    // Initialize form controls with default validators
-    this.loginForm = this.fb.group({
-      username: ['', Validators.required],
-      password: [''],
-      phoneNumber: [''], 
-      otp: [''],
-      response: ['', Validators.required],   // Captcha response value
-      hashkey: ['', Validators.required],    // Captcha hashkey
-    });
-
-    this.setValidators(); // Apply initial validation rules
-  }
-
-  /** Toggle between password and OTP-based login modes */
   toggleMode(isPassword: boolean): void {
     this.isPasswordMode = isPassword;
     this.otpSent = false;
     this.otpIndex = null;
-    this.loginForm.reset(); // Clear form fields
-    this.setValidators();   // Adjust validators depending on mode
+    this.otpAutoSubmitted = false;
+    this.loginForm.reset();
+    this.setValidators();
   }
 
-  /** Apply validators based on current login mode */
   private setValidators(): void {
     if (this.isPasswordMode) {
       this.loginForm.controls['password'].setValidators(Validators.required);
@@ -78,61 +102,54 @@ export class LoginComponent extends BaseComponent {
     this.loginForm.controls['otp'].updateValueAndValidity();
   }
 
-  /** Toggle password field visibility */
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
   }
 
-  /** Sends OTP to the user's phone number */
   sendOtp(): void {
-    if (this.loginForm.controls['phoneNumber'].invalid) {
-      alert('Please enter a valid phone number.');
+    if (this.loginForm.controls['phoneNumber'].invalid || this.isSendingOtp) {
       return;
     }
 
+    this.isSendingOtp = true;
     const phoneNumber = this.loginForm.value.phoneNumber;
-    console.log('🔹 Sending OTP request for:', phoneNumber);
-
     const formData = FormDataUtil.buildFormData({ phoneNumber });
 
     this.authService.sendOtp(formData).subscribe({
       next: (response) => {
         this.otpSent = true;
-        this.otpIndex = response.otpId; // Capture OTP index
-
-        console.log('OTP:', response.otp); // only if backend includes it
+        this.otpIndex = response.otpId;
+        console.log('OTP:', response.otp); // Log for dev only
+        this.isSendingOtp = false;
       },
       error: (err) => {
         console.error('Error sending OTP:', err);
         alert('Failed to send OTP. Please try again.');
+        this.isSendingOtp = false;
       }
     });
   }
 
-  /** Getter for OTP form control (used with OTP input component) */
   get otpControl(): FormControl {
     return this.loginForm.get('otp') as FormControl;
   }
 
-  /** Handles login form submission */
   onLogin(): void {
     if (this.isPasswordMode) {
       this.loginWithPassword();
     } else {
       if (!this.otpSent) {
-        this.sendOtp(); // Trigger OTP if not already sent
+        this.sendOtp();
       } else {
-        this.verifyOtp(); // Attempt OTP verification
+        this.verifyOtp();
       }
     }
   }
 
-  /** Navigate to license registration page */
   goToApplyLicense(): void {
     this.router.navigate(['/licensee/apply-license']);
   }
 
-  /** Handles password-based login logic */
   private loginWithPassword(): void {
     if (this.loginForm.invalid) {
       alert("Please fill in all fields correctly.");
@@ -148,8 +165,6 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         console.error('Login error:', err);
         this.loginError = true;
-
-        // Flatten and capture API errors for display
         this.loginErrorMessages = this.extractErrorMessages(err.error);
       }
     });
@@ -166,7 +181,6 @@ export class LoginComponent extends BaseComponent {
     });
   }
 
-  /** Updates OTP value as user types into the OTP input */
   onOtpChange(otp: string): void {
     this.loginForm.controls['otp'].setValue(otp);
 
@@ -174,9 +188,8 @@ export class LoginComponent extends BaseComponent {
       this.otpAutoSubmitted = true;
       this.verifyOtp();
     }
-  }
+  } 
 
-  /** Verifies the entered OTP with the backend */
   private verifyOtp(): void {
     if (!this.loginForm.value.otp) {
       alert('Please enter the OTP.');
@@ -191,36 +204,30 @@ export class LoginComponent extends BaseComponent {
     const requestData = {
       phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
-      otpId: this.otpIndex ?? ''
+      otpId: this.otpIndex
     };
-
-    console.log('🔹 Verifying OTP:', requestData);
 
     this.authService.verifyOtp(requestData).subscribe({
       next: (res: any) => {
-        console.log('🔹 OTP verification response:', res);
         this.handleAuthResponse(res);
       },
       error: (err) => {
         console.error('OTP verification error:', err);
         alert('Invalid OTP. Please try again.');
+        this.otpAutoSubmitted = false; // Allow retry
       }
     });
   }
 
-  /** Stores tokens and navigates to the appropriate dashboard after successful login */
   private handleAuthResponse(res: any): void {
     if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
       localStorage.setItem('access', res.authenticatedUser.access);
       localStorage.setItem('refresh', res.authenticatedUser.refresh);
 
-      console.log('Access Token:', res.authenticatedUser.access);
-      
-      // Fetch user identity (which includes the role) and redirect based on role
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
-            this.redirectBasedOnRole(user.role.name); // Redirect to role-based dashboard
+            this.redirectBasedOnRole(user.role.name);
           } else {
             alert('Failed to fetch user details. Please log in again.');
           }
@@ -231,19 +238,8 @@ export class LoginComponent extends BaseComponent {
     }
   }
 
-  /** Redirects user to appropriate dashboard based on their role */
   private redirectBasedOnRole(role: string): void {
-    const adminRoles = [
-      'level_1',
-      'level_2',
-      'level_3',
-      'level_4',
-      'level_5',
-      'site_admin',
-      'dev'
-    ];
-
-    if (adminRoles.includes(role)) {
+    if (ADMIN_ROLES.includes(role)) {
       this.router.navigate(['admin/dashboard']);
     } else if (role === 'licensee') {
       this.router.navigate(['licensee/dashboard']);
@@ -252,10 +248,11 @@ export class LoginComponent extends BaseComponent {
     }
   }
 
-  /** Resets phone number and form state (used when switching numbers) */
   resetPhoneNumber(): void {
     this.otpSent = false;
+    this.otpIndex = null;
+    this.otpAutoSubmitted = false;
     this.loginForm.reset();
-    this.setValidators(); // Re-apply validators after reset
+    this.setValidators();
   }
 }

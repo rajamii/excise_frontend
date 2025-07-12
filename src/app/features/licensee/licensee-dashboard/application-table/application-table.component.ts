@@ -63,6 +63,9 @@ export class ApplicationTableComponent implements OnChanges{
   roleDisplayMapping: { [key: string]: string } = {
     level_1: 'Level 1',
     level_2: 'Level 2',
+    level_3: 'Level 3',
+    level_4: 'Level 4',
+    level_5: 'Level 5',
     licensee: 'Licensee',
   };
 

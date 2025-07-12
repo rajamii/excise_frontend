@@ -116,7 +116,7 @@ export class EditComponent extends BaseComponent implements OnInit{
     };
 
     // Make an API call to update the subdivision
-    this.userService.updateUser(this.data.username, updatedData).subscribe(
+    this.adminService.updateUser(this.data.id, updatedData).subscribe(
       () => {
         // On success, show a success alert and close the dialog
         Swal.fire('Updated!', 'User Data updated successfully.', 'success');

@@ -30,12 +30,17 @@
       <!-- Password login -->
       @if (isPasswordMode) {
         <input formControlName="username" placeholder="Username" required/>
-        <input
-          [type]="hidePassword ? 'password' : 'text'"
-          formControlName="password"
-          placeholder="Password"
-          required
-        />  
+        <div class="password-wrapper">
+          <input
+            [type]="hidePassword ? 'password' : 'text'"
+            formControlName="password"
+            placeholder="Password"
+            required
+          />
+          <mat-icon class="toggle-password-icon" (click)="togglePasswordVisibility()">
+            {{ hidePassword ? 'visibility' : 'visibility_off' }}
+          </mat-icon>
+        </div>
 
         <app-captcha [formGroup]="loginForm"></app-captcha>
 
@@ -89,16 +94,46 @@
   <div class="overlay-container">
     <div class="overlay">
       <div class="overlay-panel overlay-left">
-        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
-        <h1>Welcome Back!</h1>
-        <p>To keep connected, login with your personal info</p>
-        <button matButton="filled" (click)="switchToSignIn()">Sign In</button>
+        <header>
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
+        </header>
+        <content>
+          <h1>Welcome Back!</h1>
+          <p>Login, if you already have an account</p>
+          <button matButton="filled" (click)="switchToSignIn()">Sign In</button>
+        </content>
+        <footer>
+          <h6>HELP DESK</h6>
+          <div class="footer-contact">
+            <mat-icon>call</mat-icon>
+            <span>03592-203963</span>
+          </div>
+          <div class="footer-contact">
+            <mat-icon>email</mat-icon>
+            <span>helpdesk-excise&#64;sikkim.gov.in</span>
+          </div>
+        </footer>
       </div>
       <div class="overlay-panel overlay-right">
-        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
-        <h1 class="pt-4">Hello!</h1>
-        <p>Register now and apply for licenses</p>
-        <button matButton="filled" (click)="switchToSignUp()">Sign Up</button>
+        <header>
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png">
+        </header>
+        <content>
+          <h1 class="pt-4">Hello!</h1>
+          <p>Register now and apply for licenses</p>
+          <button matButton="filled" (click)="switchToSignUp()">Sign Up</button>
+        </content>
+        <footer>
+          <h6>HELP DESK</h6>
+          <div class="footer-contact">
+            <mat-icon>call</mat-icon>
+            <span>03592-203963</span>
+          </div>
+          <div class="footer-contact">
+            <mat-icon>email</mat-icon>
+            <span>helpdesk-excise&#64;sikkim.gov.in</span>
+          </div>
+        </footer>
       </div>
     </div>
   </div>
