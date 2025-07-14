@@ -9,6 +9,9 @@ import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
 import { Account } from '../../core/models/accounts';
 import { Role } from '../../core/models/role';
+import { LicenseSubcategory } from '../models/license-subcategory.model';
+import { LicenseTitle } from '../models/license-title.model';
+import { Road } from '../models/road.model';
 
 @Injectable({
   providedIn: 'root'
@@ -51,5 +54,20 @@ export class MasterService {
   // Fetches all license categories
   getLicenseCategories(): Observable<LicenseCategory[]> {
     return this.http.get<LicenseCategory[]>(`${this.baseUrl}/license-categories`);
+  }
+
+  // Fetches all license subcategories
+  getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
+    return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/license-subcategories`);
+  }
+
+  // Fetches all available license titles
+  getLicenseTitles(): Observable<LicenseTitle[]> {
+    return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
+  }
+
+  // Fetches all available roads
+  getRoads(): Observable<Road[]> {
+    return this.http.get<Road[]>(`${this.baseUrl}/roads`);
   }
 }

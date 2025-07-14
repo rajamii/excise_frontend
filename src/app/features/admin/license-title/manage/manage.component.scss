@@ -1,9 +1,7 @@
 .container-fluid{
     display: flex;
     flex-direction: column;
-    align-items: center;
     padding:0;
-    
     h2{
         text-align: center;
         width: 100%;
@@ -13,7 +11,9 @@
     mat-dialog-content{
         display: flex;        
         flex-direction: column;
-        width: 100%;
-        padding: 1.5rem;
+        padding: 0.5rem 2rem;
+    }
+    mat-dialog-actions{
+        justify-content: center;
     }
 }
