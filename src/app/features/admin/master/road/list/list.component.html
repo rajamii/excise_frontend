@@ -1,0 +1,60 @@
+<div class="container-fluid">
+  <mat-card>
+    <mat-card-header>
+      <div class="page-title">Roads</div>
+      <button matButton="filled" (click)="onAdd()">
+        <mat-icon>add</mat-icon> Add Road
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="table-container">
+        <mat-table [dataSource]="roads">
+
+          <!-- ID -->
+          <ng-container matColumnDef="id">
+            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
+            <mat-cell *matCellDef="let road"> {{ road.id }} </mat-cell>
+          </ng-container>
+
+          <!-- Road Name -->
+          <ng-container matColumnDef="roadName">
+            <mat-header-cell *matHeaderCellDef> Road Name </mat-header-cell>
+            <mat-cell *matCellDef="let road"> {{ road.roadName }} </mat-cell>
+          </ng-container>
+
+          <!-- Road Type -->
+          <ng-container matColumnDef="roadType">
+            <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
+            <mat-cell *matCellDef="let road">
+              {{ roadTypeLabels[road.roadType] }}
+            </mat-cell>
+          </ng-container>
+
+          <!-- District -->
+          <ng-container matColumnDef="district">
+            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+            <mat-cell *matCellDef="let road"> {{ road.district.district  }} </mat-cell>
+          </ng-container>
+
+          <!-- Actions -->
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
+            <mat-cell *matCellDef="let road">
+              <button matIconButton color="primary" (click)="onEdit(road)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button matIconButton color="warn" (click)="onDelete(road)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Header & Row rendering -->
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

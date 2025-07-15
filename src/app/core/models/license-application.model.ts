@@ -1,4 +1,4 @@
-import { Account } from "./accounts";
+import { Account } from "./account.model";
 import { District } from "./district.model";
 import { LicenseCategory } from "./license-category.model";
 import { PoliceStation } from "./policestation.model";

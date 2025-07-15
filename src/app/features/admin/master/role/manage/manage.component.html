@@ -1,0 +1,84 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Role</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- Role Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>Role Name</mat-label>
+        <input 
+          matInput 
+          [(ngModel)]="role.name" 
+          name="name" required 
+          #roleModel="ngModel" 
+        />
+        <mat-error *ngIf="roleModel.invalid && roleModel.touched">
+          Role name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Role Precedence -->
+      <mat-form-field appearance="outline">
+        <mat-label>Role Precedence</mat-label>
+        <input 
+          matInput type="number"
+          [(ngModel)]="role.rolePrecedence"
+          name="rolePrecedence" 
+          required
+          min="0" max="9"
+          #precedenceModel="ngModel" 
+        />        
+        <mat-error *ngIf="precedenceModel.errors?.['required']">
+          Precedence is required
+        </mat-error>
+        <mat-error *ngIf="precedenceModel.errors?.['min'] || precedenceModel.errors?.['max']">
+          Precedence must be between 0 and 9
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Permissions -->
+      <div>
+        <label><h6>Can View</h6></label>
+        <div *ngFor="let app of appLabels">
+          <mat-checkbox [(ngModel)]="canViewMap[app]" [name]="'canView_' + app">
+            {{ appDisplayMap[app] || app }}
+          </mat-checkbox>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <label><h6>Can Add</h6></label>
+        <div *ngFor="let app of appLabels">
+          <mat-checkbox [(ngModel)]="canAddMap[app]" [name]="'canAdd_' + app">
+            {{ appDisplayMap[app] || app }}
+          </mat-checkbox>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <label><h6>Can Update</h6></label>
+        <div *ngFor="let app of appLabels">
+          <mat-checkbox [(ngModel)]="canUpdateMap[app]" [name]="'canUpdate_' + app">
+            {{ appDisplayMap[app] || app }}
+          </mat-checkbox>
+        </div>
+      </div>
+
+      <div class="mt-2">
+        <label><h6>Can Delete</h6></label>
+        <div *ngFor="let app of appLabels">
+          <mat-checkbox [(ngModel)]="canDeleteMap[app]" [name]="'canDelete_' + app">
+            {{ appDisplayMap[app] || app }}
+          </mat-checkbox>
+        </div>
+      </div>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

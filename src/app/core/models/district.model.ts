@@ -1,5 +1,5 @@
 export class District {
-  id!: number;
+  id?: number;
   district!: string;
   districtCode!: number;
   stateCode!: number;

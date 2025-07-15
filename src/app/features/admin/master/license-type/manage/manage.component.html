@@ -1,0 +1,36 @@
+<div class="container-fluid">
+  <!-- Dialog title changes based on mode -->
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} License Type</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <!-- License Type input field -->
+      <mat-form-field appearance="outline">
+        <mat-label>License Type</mat-label>
+        <input
+          matInput
+          name="licenseType"
+          [(ngModel)]="licenseType.licenseType"
+          required
+          #licenseTypeModel="ngModel"
+        />
+        <mat-error *ngIf="licenseTypeModel.errors?.['required']">
+          License Type is required
+        </mat-error>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <!-- Action buttons: Save and Cancel -->
+    <mat-dialog-actions align="center">
+      <button
+        matButton="filled"
+        color="primary"
+        (click)="onSave()"
+        [disabled]="form.invalid"
+      >
+        Save
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

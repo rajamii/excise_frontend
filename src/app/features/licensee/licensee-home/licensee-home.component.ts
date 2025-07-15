@@ -7,7 +7,7 @@ import { BaseDependency } from '../../../base/dependency/base.dependency';
 import { UserProfileComponent } from './user-profile/user-profile.component';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatMenuModule } from '@angular/material/menu';
-import { Account } from '../../../core/models/accounts';
+import { Account } from '../../../core/models/account.model';
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 

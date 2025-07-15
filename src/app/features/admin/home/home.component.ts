@@ -4,7 +4,7 @@ import { Subscription } from 'rxjs';
 
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependency';
-import { Account } from '../../../core/models/accounts';
+import { Account } from '../../../core/models/account.model';
 
 import { MaterialModule } from '../../../shared/material.module';
 import { UserProfileComponent } from './user-profile/user-profile.component';

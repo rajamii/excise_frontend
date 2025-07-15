@@ -4,5 +4,5 @@ export class Road {
   id?: number;
   roadName!: string;
   roadType!: string;
-  district!: number | District;
+  district!: number | District | undefined;
 }

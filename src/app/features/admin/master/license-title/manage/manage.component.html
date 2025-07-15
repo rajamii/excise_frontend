@@ -1,0 +1,29 @@
+<div class="container-fluid">
+  <!-- Dialog title switches based on mode -->
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} License Title</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <!-- Input for license title description -->
+      <mat-form-field appearance="outline">
+        <mat-label>Description</mat-label>
+        <input
+          matInput 
+          [(ngModel)]="licenseTitle.description" 
+          name="description" 
+          required
+          #descriptionModel="ngModel" 
+        />
+        <mat-error *ngIf="descriptionModel.errors?.['required']">
+          License Title is required
+        </mat-error>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <!-- Action buttons (Save is disabled if form invalid) -->
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

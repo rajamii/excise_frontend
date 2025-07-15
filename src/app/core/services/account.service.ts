@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Account } from '../models/accounts';
+import { Account } from '../models/account.model';
 import { environment } from '../../../environments/environment';
 import { Observable, ReplaySubject, of, shareReplay, catchError, tap } from 'rxjs';
 import { TokenUtil } from '../../shared/utils/token.util';
@@ -26,7 +26,7 @@ export class AccountService {
     if (!this.accountCache$ || force) {
       this.accountCache$ = this.getUserDetails().pipe(
         tap(account => {
-          localStorage.setItem('username', account.username);
+          localStorage.setItem('username', account?.username ?? '');
           localStorage.setItem('role', account.role.name);
           localStorage.setItem('firstName', account.firstName);
           localStorage.setItem('lastName', account.lastName);

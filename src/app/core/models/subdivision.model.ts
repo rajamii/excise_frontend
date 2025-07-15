@@ -1,6 +1,5 @@
-import { District } from "./district.model";
 export class Subdivision {
-    id!: number;
+    id?: number;
     subdivision!: string;
     subdivisionCode!: number;
     districtCode!: number;

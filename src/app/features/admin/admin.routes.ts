@@ -25,7 +25,7 @@ const routes: Routes = [
       },
       {
         path: 'users',
-        loadComponent: () => import('./user/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/user/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -33,7 +33,7 @@ const routes: Routes = [
       },
       {
         path: 'roles',
-        loadComponent: () => import('./role/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/role/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -41,7 +41,7 @@ const routes: Routes = [
       },
       {
         path: 'districts',
-        loadComponent: () => import('./district/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/district/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -49,7 +49,7 @@ const routes: Routes = [
       },
       {
         path: 'subdivisions',
-        loadComponent: () => import('./subdivision/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/subdivision/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -57,7 +57,7 @@ const routes: Routes = [
       },
       {
         path: 'police-stations',
-        loadComponent: () => import('./police-station/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/police-station/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -65,7 +65,7 @@ const routes: Routes = [
       },
       {
         path: 'license-types',
-        loadComponent: () => import('./license-type/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/license-type/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -73,7 +73,7 @@ const routes: Routes = [
       },
       {
         path: 'license-categories',
-        loadComponent: () => import('./license-category/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/license-category/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -81,7 +81,7 @@ const routes: Routes = [
       },
       {
         path: 'license-titles',
-        loadComponent: () => import('./license-title/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/license-title/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -89,7 +89,7 @@ const routes: Routes = [
       },
       {
         path: 'license-subcategories',
-        loadComponent: () => import('./license-subcategory/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/license-subcategory/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -97,7 +97,7 @@ const routes: Routes = [
       },
       {
         path: 'roads',
-        loadComponent: () => import('./road/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/road/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]

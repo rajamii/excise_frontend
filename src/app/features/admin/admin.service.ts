@@ -7,8 +7,8 @@ import { Subdivision } from '../../core/models/subdivision.model';
 import { PoliceStation } from '../../core/models/policestation.model';
 import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
-import { Account } from '../../core/models/accounts';
-import { Role } from '../../core/models/role';
+import { Account } from '../../core/models/account.model';
+import { Role } from '../../core/models/role.model';
 import { LicenseSubcategory } from '../../core/models/license-subcategory.model';
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
@@ -24,16 +24,16 @@ export class AdminService {
 
   // ========================== USER MANAGEMENT ==========================
 
-  // Register a new user
-  registerUser(user: Account): Observable<any> {
+  // Add a new user
+  addUser(user: Account): Observable<any> {
     return this.http.post(`${this.usersUrl}/users/register/`, user);
   }
 
   // Update user by id
-  updateUser(id: number, payload: any): Observable<any> {
-    return this.http.put<any>(
+  updateUser(id: number, changes: Partial<Account>): Observable<any> {
+    return this.http.put<Account>(
       `${this.usersUrl}/users/${id}/update/`,
-      payload
+      changes
     );
   }
 
@@ -63,7 +63,7 @@ export class AdminService {
   // ========================== DISTRICT MANAGEMENT ==========================
 
   // Adds a new district record
-  saveDistrict(district: District): Observable<any> {
+  addDistrict(district: District): Observable<any> {
     return this.http.post(`${this.mastersUrl}/districts/create/`, district);
   }
 
@@ -80,12 +80,12 @@ export class AdminService {
   // ========================== SUBDIVISION MANAGEMENT ==========================
 
   // Adds a new subdivision
-  saveSubDivision(subdivision: Subdivision): Observable<any> {
+  addSubdivision(subdivision: Subdivision): Observable<any> {
     return this.http.post(`${this.mastersUrl}/subdivisions/create/`, subdivision);
   }
 
   // Updates an existing subdivision by ID
-  updateSubDivision(id: number, changes: Partial<Subdivision>): Observable<Subdivision> {
+  updateSubdivision(id: number, changes: Partial<Subdivision>): Observable<Subdivision> {
     return this.http.put<Subdivision>(`${this.mastersUrl}/subdivisions/${id}/update/`, changes);
   }
 
@@ -102,7 +102,7 @@ export class AdminService {
   }
 
   // Updates a police station’s details by ID
-  updatePolicestation(id: number, changes: Partial<PoliceStation>): Observable<PoliceStation> {
+  updatePoliceStation(id: number, changes: Partial<PoliceStation>): Observable<PoliceStation> {
     return this.http.put<PoliceStation>(`${this.mastersUrl}/police-stations/${id}/update/`, changes);
   }
 
