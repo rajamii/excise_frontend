@@ -20,7 +20,6 @@ export class ListComponent implements OnInit {
 
   // Table columns
   displayedColumns: string[] = [
-    'id',
     'name',
     'rolePrecedence',
     'canView',

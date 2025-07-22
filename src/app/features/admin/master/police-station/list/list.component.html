@@ -28,12 +28,6 @@
         <!-- Material table bound to policeStations array -->
         <mat-table [dataSource]="policeStations">
 
-          <!-- Table column: ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
-            <mat-cell *matCellDef="let row"> {{ row.id }} </mat-cell>
-          </ng-container>
-
           <!-- Table column: Police Station Name -->
           <ng-container matColumnDef="policeStation">
             <mat-header-cell *matHeaderCellDef> Police Station </mat-header-cell>
@@ -42,7 +36,7 @@
 
           <!-- Table column: Police Station Code -->
           <ng-container matColumnDef="policeStationCode">
-            <mat-header-cell *matHeaderCellDef> Code </mat-header-cell>
+            <mat-header-cell *matHeaderCellDef> Police Station Code </mat-header-cell>
             <mat-cell *matCellDef="let row"> {{ row.policeStationCode }} </mat-cell>
           </ng-container>
 
@@ -50,12 +44,6 @@
           <ng-container matColumnDef="subdivision">
             <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
             <mat-cell *matCellDef="let row"> {{ row.subdivision }} </mat-cell>
-          </ng-container>
-
-          <!-- Table column: Subdivision Code -->
-          <ng-container matColumnDef="subdivisionCode">
-            <mat-header-cell *matHeaderCellDef> Subdivision Code </mat-header-cell>
-            <mat-cell *matCellDef="let row"> {{ row.subdivisionCode }} </mat-cell>
           </ng-container>
 
           <!-- Table column: Action buttons -->

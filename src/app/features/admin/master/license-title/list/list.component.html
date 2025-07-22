@@ -10,12 +10,8 @@
     <mat-card-content>
       <div class="table-container">
         <mat-table [dataSource]="licenseTitles">
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
-            <mat-cell *matCellDef="let title"> {{ title.id }} </mat-cell>
-          </ng-container>
 
+          <!-- Description -->
           <ng-container matColumnDef="description">
             <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
             <mat-cell *matCellDef="let title"> {{ title.description }} </mat-cell>

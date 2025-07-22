@@ -11,12 +11,6 @@
       <div class="table-container">
         <mat-table [dataSource]="licenseCategories">
 
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.id }} </mat-cell>
-          </ng-container>
-
           <!-- License Category -->
           <ng-container matColumnDef="licenseCategory">
             <mat-header-cell *matHeaderCellDef> Category </mat-header-cell>

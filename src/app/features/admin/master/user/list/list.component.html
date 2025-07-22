@@ -11,12 +11,6 @@
       <div class="table-container">
         <mat-table [dataSource]="users"><!-- Bind user data to table -->
 
-          <!-- ID Column (compact width) -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef class="small-column"> ID </mat-header-cell>
-            <mat-cell *matCellDef="let u" class="small-column"> {{ u.id }} </mat-cell>
-          </ng-container>
-
           <!-- Basic info columns -->
           <ng-container matColumnDef="firstName">
             <mat-header-cell *matHeaderCellDef> First Name </mat-header-cell>
@@ -45,19 +39,19 @@
           </ng-container>
 
           <ng-container matColumnDef="email">
-            <mat-header-cell *matHeaderCellDef> Email </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.email }} </mat-cell>
+            <mat-header-cell *matHeaderCellDef class="email-column"> Email </mat-header-cell>
+            <mat-cell *matCellDef="let u" class="email-column"> {{ u.email }} </mat-cell>
           </ng-container>
 
           <!-- Location -->
           <ng-container matColumnDef="district">
-            <mat-header-cell *matHeaderCellDef> District Code </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.district }} </mat-cell>
+            <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.district.name }} </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="subdivision">
-            <mat-header-cell *matHeaderCellDef> Subdivision Code </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.subdivision }} </mat-cell>
+            <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
+            <mat-cell *matCellDef="let u"> {{ u.subdivision.name }} </mat-cell>
           </ng-container>
 
           <!-- Role & creator (with formatting) -->

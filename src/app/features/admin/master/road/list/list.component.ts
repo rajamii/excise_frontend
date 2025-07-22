@@ -18,7 +18,6 @@ export class ListComponent implements OnInit {
   roads: Road[] = [];
 
   displayedColumns: string[] = [
-    'id',
     'roadName',
     'roadType',
     'district',

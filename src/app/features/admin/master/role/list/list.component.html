@@ -11,12 +11,6 @@
       <div class="table-container">
         <mat-table [dataSource]="roles">
 
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef class="narrow-column"> ID </mat-header-cell>
-            <mat-cell *matCellDef="let road" class="narrow-column"> {{ road.id }} </mat-cell>
-          </ng-container>
-
           <!-- Role Name -->
           <ng-container matColumnDef="name">
             <mat-header-cell *matHeaderCellDef class="small-column"> Name </mat-header-cell>

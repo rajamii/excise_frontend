@@ -17,7 +17,7 @@ import { ManageComponent } from '../manage/manage.component';
 })
 export class ListComponent extends BaseComponent implements OnInit {
   // Columns for display
-  displayedColumns: string[] = ['id', 'subdivision', 'subdivisionCode', 'district', 'districtCode', 'actions'];
+  displayedColumns: string[] = ['subdivision', 'subdivisionCode', 'district', 'actions'];
 
   // All subdivision and filtered list
   allSubdivisions: Subdivision[] = [];

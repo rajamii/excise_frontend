@@ -10,11 +10,6 @@
     <mat-card-content>
       <div class="table-container">
         <mat-table [dataSource]="licenseSubcategories">
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.id }} </mat-cell>
-          </ng-container>
 
           <!-- Description -->
           <ng-container matColumnDef="description">

@@ -14,12 +14,6 @@
       <div class="table-container">
         <mat-table [dataSource]="districtDataSource">
 
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef>Id</mat-header-cell>
-            <mat-cell *matCellDef="let element">{{ element.id }}</mat-cell>
-          </ng-container>
-
           <!-- District Name -->
           <ng-container matColumnDef="district">
             <mat-header-cell *matHeaderCellDef>District</mat-header-cell>
@@ -36,12 +30,6 @@
           <ng-container matColumnDef="state">
             <mat-header-cell *matHeaderCellDef>State</mat-header-cell>
             <mat-cell *matCellDef="let element">{{ element.state }}</mat-cell>
-          </ng-container>
-
-          <!-- State Code -->
-          <ng-container matColumnDef="stateCode">
-            <mat-header-cell *matHeaderCellDef>State Code</mat-header-cell>
-            <mat-cell *matCellDef="let element">{{ element.stateCode }}</mat-cell>
           </ng-container>
 
           <!-- Actions -->

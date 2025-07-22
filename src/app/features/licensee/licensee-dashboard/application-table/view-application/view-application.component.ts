@@ -416,6 +416,15 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     });
   }
 
+  payLicenseFee() {
+    this.licenseAppService.payLicenseFee(this.application.applicationId).subscribe({
+      next: () => {
+        Swal.fire('Success', 'License Fee Paid.', 'success').then(() => location.reload());
+      },
+      error: () => Swal.fire('Error', 'Payment error.', 'error')
+    });
+  }
+
   // Method to handle application updation
   onEdit(application: any): void {
     this.dialog.open(ApplyLicenseComponent, {

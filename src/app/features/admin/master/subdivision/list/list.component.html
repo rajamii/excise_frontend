@@ -32,12 +32,6 @@
         <!-- Angular Material table bound to subdivisions array -->
         <mat-table [dataSource]="subdivisions">
 
-          <!-- Subdivision ID column -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> Id </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{ element.id }} </mat-cell>
-          </ng-container>
-
           <!-- Subdivision name column -->
           <ng-container matColumnDef="subdivision">
             <mat-header-cell *matHeaderCellDef> Sub Division </mat-header-cell>
@@ -54,12 +48,6 @@
           <ng-container matColumnDef="district">
             <mat-header-cell *matHeaderCellDef> District Name </mat-header-cell>
             <mat-cell *matCellDef="let element"> {{ element.district }} </mat-cell>
-          </ng-container>
-
-          <!-- District code column -->
-          <ng-container matColumnDef="districtCode">
-            <mat-header-cell *matHeaderCellDef> District Code </mat-header-cell>
-            <mat-cell *matCellDef="let element"> {{ element.districtCode }} </mat-cell>
           </ng-container>
 
           <!-- Action buttons for edit/delete -->

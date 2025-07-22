@@ -11,12 +11,6 @@
       <div class="table-container">
         <mat-table [dataSource]="roads">
 
-          <!-- ID -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
-            <mat-cell *matCellDef="let road"> {{ road.id }} </mat-cell>
-          </ng-container>
-
           <!-- Road Name -->
           <ng-container matColumnDef="roadName">
             <mat-header-cell *matHeaderCellDef> Road Name </mat-header-cell>

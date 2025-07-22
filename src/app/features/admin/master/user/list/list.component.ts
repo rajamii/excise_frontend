@@ -20,7 +20,6 @@ export class ListComponent implements OnInit {
   stringUtil = StringUtil;
 
   displayedColumns: string[] = [
-    'id',
     'firstName',
     'middleName',
     'lastName',
@@ -49,8 +48,9 @@ export class ListComponent implements OnInit {
   // Fetch user list from backend
   loadUsers(): void {
     this.userService.getUsers().subscribe({
+      
       // If single object is returned instead of array, wrap it
-      next: (data) => this.users = Array.isArray(data) ? data : [data],
+      next: (data) => {this.users = Array.isArray(data) ? data : [data]; console.log(data)},
       error: (err) => console.error('Failed to fetch users:', err)
     });
   }

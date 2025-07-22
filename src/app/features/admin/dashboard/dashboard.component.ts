@@ -10,7 +10,7 @@ import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { LicenseApplication } from '../../../core/models/license-application.model';
 
-type TableView = 'stats' | 'pending' | 'approved' | 'rejected';
+type TableView = 'stats' | 'applied' | 'pending' | 'approved' | 'rejected';
 
 @Component({
   selector: 'app-dashboard', 
@@ -21,9 +21,10 @@ type TableView = 'stats' | 'pending' | 'approved' | 'rejected';
 })
 export class DashboardComponent extends BaseComponent {
   // Dashboard counts for pending, approved, and rejected applications
-  dashboardCounts: DashboardCount = { pending: 0, approved: 0, rejected: 0 };
+  dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
 
   // Arrays to store applications 
+  appliedApplications: ApplicationStatus[] = [];
   pendingApplications: ApplicationStatus[] = [];
   approvedApplications: ApplicationStatus[] = [];
   rejectedApplications: ApplicationStatus[] = [];
@@ -36,6 +37,7 @@ export class DashboardComponent extends BaseComponent {
 
   // Table Data Sources
   statsDataSource = LICENSE_DATA; // Data source for license statistics
+  appliedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for pending applications
   pendingDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for pending applications
   approvedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for approved applications
   rejectedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for rejected applications
@@ -65,7 +67,7 @@ export class DashboardComponent extends BaseComponent {
       catchError(err => {
         console.error('Failed to fetch dashboard counts:', err);
         // Provide a fallback default value
-        return of({ pending: 0, approved: 0, rejected: 0 });
+        return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
       })
     )
     .subscribe(res => {
@@ -74,6 +76,7 @@ export class DashboardComponent extends BaseComponent {
 
     // Fetch applications by stage
     this.licenseAppService.getApplicationsByStatus().subscribe(res => {
+      this.appliedDataSource.data = res.applied; 
       this.pendingDataSource.data = res.pending; 
       this.approvedDataSource.data = res.approved; 
       this.rejectedDataSource.data = res.rejected;

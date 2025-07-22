@@ -15,7 +15,7 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss'
 })
 export class ListComponent implements OnInit {
-  displayedColumns: string[] = ['id', 'licenseType', 'actions']; // Columns to show in the table
+  displayedColumns: string[] = ['licenseType', 'actions']; // Columns to show in the table
   licenseTypes: LicenseType[] = []; // Stores fetched license types
 
   constructor(

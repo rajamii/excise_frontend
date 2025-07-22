@@ -17,7 +17,7 @@ import { ManageComponent } from '../manage/manage.component';
   styleUrl: './list.component.scss'
 })
 export class ListComponent extends BaseComponent implements OnInit {
-  displayedColumns: string[] = ['id', 'policeStation', 'policeStationCode', 'subdivision', 'subdivisionCode', 'actions']; // Table columns
+  displayedColumns: string[] = ['policeStation', 'policeStationCode', 'subdivision', 'actions']; // Table columns
 
   policeStations: PoliceStation[] = [];
   allPoliceStations: PoliceStation[] = []; 

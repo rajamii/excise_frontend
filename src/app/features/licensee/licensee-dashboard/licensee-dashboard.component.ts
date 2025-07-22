@@ -72,8 +72,6 @@ export class LicenseeDashboardComponent implements OnInit{
       this.pendingDataSource.data = res.pending;
       this.approvedDataSource.data = res.approved;
       this.rejectedDataSource.data = res.rejected;
-      console.log("asdadsa")
-      console.log(res)
     }, error => {
       console.error('Error fetching applications:', error);
     });

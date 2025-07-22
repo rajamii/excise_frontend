@@ -16,16 +16,13 @@ mat-card{
             width: 100%;
             overflow-x: auto;
             mat-table {
-                min-width: 1467px;
-                mat-cell{
-                    white-space: normal;
-                    word-break: break-word;
+                width: 140%;
+                  .email-column {
+                    min-width: 250px; 
+                    max-width: 400px;
+                    white-space: nowrap;
                 }
-            }  
-            .small-column{
-                width: 60px;
-                max-width: 60px;
-            }     
+            }
         }
     }
 }

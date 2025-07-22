@@ -12,12 +12,6 @@
     <mat-card-content>
       <div class="table-container">
         <mat-table [dataSource]="licenseTypes">
-          
-          <!-- ID Column -->
-          <ng-container matColumnDef="id">
-            <mat-header-cell *matHeaderCellDef> ID </mat-header-cell>
-            <mat-cell *matCellDef="let item"> {{ item.id }} </mat-cell>
-          </ng-container>
 
           <!-- License Type Name Column -->
           <ng-container matColumnDef="licenseType">

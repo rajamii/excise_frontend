@@ -18,7 +18,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 export class ListComponent implements OnInit {
 
   // Columns to be displayed in the table
-  displayedColumns: string[] = ['id', 'district', 'districtCode', 'state', 'stateCode', 'actions'];
+  displayedColumns: string[] = ['district', 'districtCode', 'state', 'actions'];
 
   // DataSource for MatTable
   districtDataSource = new MatTableDataSource<District>();

@@ -17,7 +17,7 @@ import { AdminService } from '../../../admin.service';
 export class ListComponent implements OnInit {
   licenseSubcategories: LicenseSubcategory[] = []; // List of license subcategories
 
-  displayedColumns: string[] = ['id', 'description', 'category', 'actions']; // Columns for table display
+  displayedColumns: string[] = ['description', 'category', 'actions']; // Columns for table display
 
   constructor(
     private masterService: MasterService,

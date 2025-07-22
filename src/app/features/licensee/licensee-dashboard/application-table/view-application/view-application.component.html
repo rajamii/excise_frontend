@@ -147,11 +147,19 @@
       }
 
       <!-- Resolve Objection -->
-      @if (tableType === 'pending' && hasAnyObjections()) {
-        <button matButton class="bg-warning" (click)="stepper.next()">
-          <mat-icon>build</mat-icon>
-          Resolve Objections
-        </button>
+      @if (tableType === 'pending') {
+        @if (hasAnyObjections()) {
+          <button matButton class="bg-warning" (click)="stepper.next()">
+            <mat-icon>build</mat-icon>
+            Resolve Objections
+          </button> 
+        }
+        @if (!application.isLicenseFeePaid) {
+          <button matButton="filled" color="primary" (click)="stepper.next()">
+            <mat-icon>payment</mat-icon>
+            Pay Fees
+          </button>
+        }
       }
 
       <!-- Delete Application --> 
@@ -281,4 +289,19 @@
       </form>
     </mat-step>
   }
-  </mat-horizontal-stepper>
+
+  <!-- Fee Payment -->
+  <mat-step label="Confirm Payment">
+    <div class="step-content confirmation-step">
+      <h5 class="text-success">
+        Confirm Payment
+      </h5>
+      <mat-card appearance="outlined">
+        <p><strong>Fee Amount:</strong> ₹{{ application.yearlyLicenseFee }}</p>
+      </mat-card>
+      <button mat-raised-button color="primary" (click)="payLicenseFee()">
+        Pay
+      </button>
+    </div>
+  </mat-step>
+</mat-horizontal-stepper>

@@ -137,4 +137,9 @@ export class LicenseApplicationService {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get<SiteEnquiryFormModel>(`${this.baseUrl}/${encodedId}/site-detail/`);
   }
+
+  payLicenseFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/${encodedId}/pay-license-fee/`, {});
+  } 
 }
