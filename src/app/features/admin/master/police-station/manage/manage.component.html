@@ -5,7 +5,7 @@
     <mat-dialog-content>
 
       <!-- Police Station Name input with validation -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Police Station Name</mat-label>
         <input
           matInput
@@ -20,7 +20,7 @@
       </mat-form-field>
 
       <!-- 4-digit Police Station Code input with min/max validation -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Police Station Code</mat-label>
         <input
           matInput
@@ -41,7 +41,7 @@
       </mat-form-field>
 
       <!-- Subdivision dropdown selector populated from loaded list -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Subdivision</mat-label>
         <mat-select
           [(ngModel)]="policeStation.subdivisionCode"

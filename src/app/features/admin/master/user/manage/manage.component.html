@@ -5,7 +5,7 @@
     <mat-dialog-content>
 
       <!-- First Name -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>First Name</mat-label>
         <input
           matInput
@@ -13,6 +13,7 @@
           required
           [(ngModel)]="user.firstName"
           #firstNameModel="ngModel"
+          [pattern]="patternConstants.NAME"
         />
         <mat-error *ngIf="firstNameModel.errors?.['required']">
           First name is required
@@ -20,17 +21,18 @@
       </mat-form-field>
 
       <!-- Middle Name -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Middle Name</mat-label>
         <input
           matInput
           name="middleName"
           [(ngModel)]="user.middleName"
+          [pattern]="patternConstants.NAME"
         />
       </mat-form-field>
 
       <!-- Last Name -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Last Name</mat-label>
         <input
           matInput
@@ -38,6 +40,7 @@
           required
           [(ngModel)]="user.lastName"
           #lastNameModel="ngModel"
+          [pattern]="patternConstants.NAME"
         />
         <mat-error *ngIf="lastNameModel.errors?.['required']">
           Last name is required
@@ -45,7 +48,7 @@
       </mat-form-field>
 
       <!-- Email -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic"> 
         <mat-label>Email</mat-label>
         <input
           matInput
@@ -54,14 +57,18 @@
           required
           [(ngModel)]="user.email"
           #emailModel="ngModel"
+          [pattern]="patternConstants.EMAIL"
         />
         <mat-error *ngIf="emailModel.errors?.['required']">
           Email is required
         </mat-error>
+        <mat-error *ngIf="emailModel.errors?.['pattern']">
+          Please enter a valid email address.
+        </mat-error>
       </mat-form-field>
 
       <!-- Phone Number -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Phone Number</mat-label>
         <input
           matInput
@@ -71,45 +78,49 @@
           maxlength="10"
           [(ngModel)]="user.phoneNumber"
           #phoneModel="ngModel"
+          [pattern]="patternConstants.MOBILE"
         />
         <mat-error *ngIf="phoneModel.errors?.['required']">
           Phone number is required
         </mat-error>
+        <mat-error *ngIf="phoneModel.errors?.['pattern']">
+          Phone number must be 10 digits and start with 6-9.
+        </mat-error>
       </mat-form-field>
 
       <!-- District -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>District</mat-label>
         <mat-select
           name="district"
           required
-          [(ngModel)]="user.district.districtCode"
-          (selectionChange)="onDistrictChange($event.value)"
+          [(ngModel)]="user.district"
+          (selectionChange)="onDistrictChange()"
           #districtModel="ngModel"
         >
-          <mat-option *ngFor="let d of districts" [value]="d.districtCode">
-            {{ d.district }}
+          <mat-option *ngFor="let district  of districts" [value]="district">
+            {{ district.district }}
           </mat-option>
         </mat-select>
       </mat-form-field>
 
       <!-- Subdivision -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Subdivision</mat-label>
         <mat-select
           name="subdivision"
           required
-          [(ngModel)]="user.subdivision.subdivisionCode"
+          [(ngModel)]="user.subdivision"
           #subdivisionModel="ngModel"
         >
-          <mat-option *ngFor="let s of filteredSubdivisions" [value]="s.subdivisionCode">
-            {{ s.subdivision }}
+          <mat-option *ngFor="let subdivision  of filteredSubdivisions" [value]="subdivision">
+            {{ subdivision.subdivision }}
           </mat-option>
         </mat-select>
       </mat-form-field>
 
       <!-- Address -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Address</mat-label>
         <input
           matInput
@@ -124,16 +135,16 @@
       </mat-form-field>
 
       <!-- Role -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Role</mat-label>
         <mat-select
           name="role"
           required
-          [(ngModel)]="user.role.id"
+          [(ngModel)]="user.role"
           #roleModel="ngModel"
         >
-          <mat-option *ngFor="let r of roles" [value]="r.id">
-            {{ r.name }}
+          <mat-option *ngFor="let role  of roles" [value]="role ">
+            {{ role.name }}
           </mat-option>
         </mat-select>
         <mat-error *ngIf="roleModel.errors?.['required']">
@@ -143,7 +154,7 @@
 
       <!-- Password Fields (Only in Add Mode) -->
       <ng-container *ngIf="!isEditMode">
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Password</mat-label>
           <input
             matInput
@@ -152,13 +163,17 @@
             required
             [(ngModel)]="user.password"
             #passwordModel="ngModel"
+            [pattern]="patternConstants.PASSWORD"
           />
           <mat-error *ngIf="passwordModel.errors?.['required']">
             Password is required
           </mat-error>
+          <mat-error *ngIf="passwordModel.errors?.['pattern']" >
+            Password must be at least 8 characters with uppercase, lowercase, digit, and special character.
+          </mat-error>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Confirm Password</mat-label>
           <input
             matInput
@@ -167,9 +182,13 @@
             required
             [(ngModel)]="user.confirmPassword"
             #confirmPasswordModel="ngModel"
+            [pattern]="patternConstants.PASSWORD"
           />
           <mat-error *ngIf="confirmPasswordModel.errors?.['required']">
             Confirm password is required
+          </mat-error>
+          <mat-error *ngIf="user.confirmPassword && !passwordsMatch()">
+            Passwords do not match.
           </mat-error>
         </mat-form-field>
       </ng-container>
@@ -177,9 +196,14 @@
     </mat-dialog-content>
 
     <mat-dialog-actions align="center">
-      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">
-        {{ isEditMode ? 'Update' : 'Save' }}
-      </button>
+    <button 
+      matButton="filled" 
+      color="primary" 
+      (click)="onSave()" 
+      [disabled]="form.invalid || (!isEditMode && !passwordsMatch())"
+    >
+      {{ isEditMode ? 'Update' : 'Save' }}
+    </button>
       <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
     </mat-dialog-actions>
   </form>

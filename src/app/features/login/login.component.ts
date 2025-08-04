@@ -227,7 +227,7 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
-            this.redirectBasedOnRole(user.role.name);
+            this.redirectBasedOnRole(user.role!.name);
           } else {
             alert('Failed to fetch user details. Please log in again.');
           }

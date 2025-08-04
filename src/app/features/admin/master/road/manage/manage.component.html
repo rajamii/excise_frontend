@@ -5,7 +5,7 @@
     <mat-dialog-content>
 
       <!-- Road Name -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Road Name</mat-label>
         <input
           matInput
@@ -20,7 +20,7 @@
       </mat-form-field>
 
       <!-- Road Type -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Road Type</mat-label>
         <mat-select [(ngModel)]="road.roadType" name="roadType" required #roadTypeModel="ngModel">
           <mat-option *ngFor="let type of roadTypes" [value]="type.value">
@@ -33,7 +33,7 @@
       </mat-form-field>
 
       <!-- District -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>District</mat-label>
         <mat-select [(ngModel)]="road.district" name="district" required>
           <mat-option *ngFor="let d of districts" [value]="d.id">

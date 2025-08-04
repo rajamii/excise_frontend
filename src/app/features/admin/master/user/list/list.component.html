@@ -46,12 +46,12 @@
           <!-- Location -->
           <ng-container matColumnDef="district">
             <mat-header-cell *matHeaderCellDef> District </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.district.name }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.district.district }} </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="subdivision">
             <mat-header-cell *matHeaderCellDef> Subdivision </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ u.subdivision.name }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.subdivision.subdivision }} </mat-cell>
           </ng-container>
 
           <!-- Role & creator (with formatting) -->

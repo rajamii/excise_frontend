@@ -1,27 +1,29 @@
+// manage-user.component.ts
 import { Component, Inject, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import Swal from 'sweetalert2';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Account } from '../../../../../core/models/account.model';
 import { District } from '../../../../../core/models/district.model';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { Role } from '../../../../../core/models/role.model';
-import Swal from 'sweetalert2';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
+import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 
 @Component({
-  selector: 'app-manage-user',
+  selector: 'app-manage',
   standalone: true,
   imports: [MaterialModule],
   templateUrl: './manage.component.html',
-  styleUrl: './manage.component.scss'
+  styleUrl: './manage.component.scss',
 })
 export class ManageComponent extends BaseComponent implements OnInit {
+  patternConstants = PatternConstants;
+
   user: Account = {
-    id: 0,
     firstName: '',
     lastName: '',
-    middleName: '',
     email: '',
     phoneNumber: '',
     district: {} as District,
@@ -29,8 +31,6 @@ export class ManageComponent extends BaseComponent implements OnInit {
     address: '',
     role: {} as Role,
     isActive: true,
-    password: '',
-    confirmPassword: ''
   };
 
   isEditMode = false;
@@ -42,140 +42,104 @@ export class ManageComponent extends BaseComponent implements OnInit {
   constructor(
     deps: BaseDependency,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account | null
+    @Inject(MAT_DIALOG_DATA) public data: Account | null // Injected if editing
   ) {
-    super(deps)
+    super(deps);
   }
 
   ngOnInit(): void {
     this.loadDistricts();
     this.loadRoles();
-    this.loadSubdivisions(() => {
-      if (this.data) {
-        this.user = { ...this.data };
-        this.isEditMode = true;
-        
-        // Handle case where backend might send numbers instead of objects
-        if (this.user.district && typeof this.user.district === 'object') {
-          // Already in correct format
-        } else if (typeof this.user.district === 'number') {
-          const districtCode = this.user.district;
-          const district = this.districts.find(d => d.districtCode === districtCode);
-          this.user.district = district || {} as District;
-        }
 
-        if (this.user.subdivision && typeof this.user.subdivision === 'object') {
-          // Already in correct format
-        } else if (typeof this.user.subdivision === 'number') {
-          const subdivisionCode = this.user.subdivision;
-          const subdivision = this.subdivisions.find(s => s.subdivisionCode === subdivisionCode);
-          this.user.subdivision = subdivision || {} as Subdivision;
-        }
+    if (this.data) {
+      this.user = { ...this.data };
+      this.isEditMode = true;
 
-        // Initialize filtered subdivisions
-        if (this.user.district?.districtCode) {
-          this.onDistrictChange(this.user.district.districtCode);
-          
-          // Ensure subdivision belongs to selected district
-          if (this.user.subdivision?.subdivisionCode && 
-              this.user.subdivision.districtCode !== this.user.district.districtCode) {
-            this.user.subdivision = {} as Subdivision;
-          }
-        }
+      // Load subdivisions and then map values properly
+      if (this.user.district?.districtCode) {
+        this.loadSubdivisions(this.user.district.districtCode, true);
       }
-    });
+    }
   }
 
   loadDistricts(): void {
     this.masterService.getDistrict().subscribe({
-      next: (data) => this.districts = data,
-      error: () => Swal.fire('Error', 'Failed to load districts.', 'error')
+      next: (data) => {
+        this.districts = data;
+        if (this.isEditMode && this.user.district?.districtCode) {
+          this.user.district = this.districts.find(
+            d => d.districtCode === this.user.district?.districtCode
+          )!;
+        }
+      },
+      error: () => Swal.fire('Error', 'Failed to load districts.', 'error'),
     });
   }
 
-  loadSubdivisions(callback?: () => void): void {
+  loadSubdivisions(districtCode: number, isInit = false): void {
     this.masterService.getSubdivision().subscribe({
       next: (data) => {
         this.subdivisions = data;
-        callback?.();
+        this.filteredSubdivisions = data.filter(
+          sub => sub.districtCode === districtCode
+        );
+
+        if (isInit && this.user.subdivision?.subdivisionCode) {
+          this.user.subdivision = this.filteredSubdivisions.find(
+            s => s.subdivisionCode === this.user.subdivision?.subdivisionCode
+          )!;
+        }
       },
-      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error')
+      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error'),
     });
   }
 
   loadRoles(): void {
     this.userService.getRoles().subscribe({
-      next: (data) => this.roles = data,
-      error: () => Swal.fire('Error', 'Failed to load roles.', 'error')
+      next: (data) => {
+        this.roles = data;
+        if (this.isEditMode && this.user.role?.id) {
+          this.user.role = this.roles.find(r => r.id === this.user.role!.id)!;
+        }
+      },
+      error: () => Swal.fire('Error', 'Failed to load roles.', 'error'),
     });
   }
 
-  onDistrictChange(districtCode: number): void {
-    this.user.subdivision = {} as Subdivision; // Reset subdivision when district changes
-    this.filteredSubdivisions = this.subdivisions.filter(
-      s => s.districtCode === districtCode
-    );
+  onDistrictChange(): void {
+    if (this.user.district?.districtCode) {
+      this.loadSubdivisions(this.user.district.districtCode);
+      this.user.subdivision = {} as Subdivision; // Reset subdivision when district changes
+    }
+  }
+
+  passwordsMatch(): boolean {
+    return this.user.password === this.user.confirmPassword;
   }
 
   onSave(): void {
-    const requiredFields = [
-      'firstName', 'lastName', 'email', 'phoneNumber',
-      'district', 'subdivision', 'address', 'role'
-    ];    
-    const userObj = this.user as any;
-
-    for (const field of requiredFields) {
-      if (!userObj[field]) {
-        Swal.fire('Warning', 'Please fill all required fields.', 'warning');
-        return;
-      }
-    }
-
-    if (!this.isEditMode && this.user.password !== this.user.confirmPassword) {
-      Swal.fire('Warning', 'Passwords do not match.', 'warning');
-      return;
-    }
-
-    const userPayload: any = {
-      ...this.user,
-      district: this.user.district.districtCode,
-      subdivision: this.user.subdivision.subdivisionCode,
-      role: this.user.role.id
-    };
-
-    if (this.isEditMode) {
-      userPayload.id = this.user.id;
-    }
-
     Swal.fire({
       title: this.isEditMode ? 'Update User?' : 'Add User?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: this.isEditMode ? 'Update' : 'Save'
-    }).then(result => {
+      confirmButtonText: this.isEditMode ? 'Update' : 'Save',
+    }).then((result) => {
       if (!result.isConfirmed) return;
 
+      const payload = { ...this.user };
+
       const request = this.isEditMode
-        ? this.adminService.updateUser(this.user.id, userPayload)
-        : this.adminService.addUser(userPayload);
+        ? this.adminService.updateUser(payload.id!, payload)
+        : this.adminService.addUser(payload);
 
       request.subscribe({
-        next: (res: any) => {
-          if (this.isEditMode) {
-            Swal.fire('Success', 'User updated!', 'success');
-          } else {
-            Swal.fire({
-              icon: 'success',
-              title: 'User added!',
-              html: `Generated username: <strong>${res.userId}</strong>
-              `
-            });
-          }
+        next: () => {
+          Swal.fire('Success', this.isEditMode ? 'Updated!' : 'Added!', 'success');
           this.dialogRef.close(true);
         },
-        error: () => {
-          Swal.fire('Error', 'Failed to save user.', 'error');
-        }
+        error: (err) => {
+          Swal.fire('Error', err.error?.message || 'Failed to save user.', 'error');
+        },
       });
     });
   }
