@@ -1,4 +1,3 @@
-// manage-user.component.ts
 import { Component, Inject, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import Swal from 'sweetalert2';
@@ -19,8 +18,10 @@ import { PatternConstants } from '../../../../../shared/constants/pattern.consta
   styleUrl: './manage.component.scss',
 })
 export class ManageComponent extends BaseComponent implements OnInit {
+  // Import pattern constants for form validation
   patternConstants = PatternConstants;
 
+  // Initialize empty user object with default values
   user: Account = {
     firstName: '',
     lastName: '',
@@ -33,39 +34,49 @@ export class ManageComponent extends BaseComponent implements OnInit {
     isActive: true,
   };
 
+  // Flag to determine if we're in edit mode
   isEditMode = false;
+  // Arrays to store dropdown options
   districts: District[] = [];
   subdivisions: Subdivision[] = [];
+  // Filtered subdivisions based on selected district
   filteredSubdivisions: Subdivision[] = [];
   roles: Role[] = [];
 
   constructor(
     deps: BaseDependency,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account | null // Injected if editing
+    @Inject(MAT_DIALOG_DATA) public data: Account | null // Injected data when editing existing user
   ) {
     super(deps);
   }
 
   ngOnInit(): void {
+    // Load initial data for dropdowns
     this.loadDistricts();
     this.loadRoles();
 
+    // Check if we're editing an existing user
     if (this.data) {
+      // Clone the user data to avoid direct mutation
       this.user = { ...this.data };
       this.isEditMode = true;
 
-      // Load subdivisions and then map values properly
+      // If editing and district is set, load subdivisions for that district
       if (this.user.district?.districtCode) {
         this.loadSubdivisions(this.user.district.districtCode, true);
       }
     }
   }
 
+  /**
+   * Load all districts for the dropdown
+   */
   loadDistricts(): void {
     this.masterService.getDistrict().subscribe({
       next: (data) => {
         this.districts = data;
+        // If editing, find and set the exact district object from the loaded list
         if (this.isEditMode && this.user.district?.districtCode) {
           this.user.district = this.districts.find(
             d => d.districtCode === this.user.district?.districtCode
@@ -76,14 +87,21 @@ export class ManageComponent extends BaseComponent implements OnInit {
     });
   }
 
+  /**
+   * Load subdivisions for a specific district
+   * @param districtCode - The district code to filter subdivisions
+   * @param isInit - Flag to indicate if this is initial load during edit
+   */
   loadSubdivisions(districtCode: number, isInit = false): void {
     this.masterService.getSubdivision().subscribe({
       next: (data) => {
         this.subdivisions = data;
+        // Filter subdivisions based on selected district
         this.filteredSubdivisions = data.filter(
           sub => sub.districtCode === districtCode
         );
 
+        // If initial load during edit, find and set the exact subdivision
         if (isInit && this.user.subdivision?.subdivisionCode) {
           this.user.subdivision = this.filteredSubdivisions.find(
             s => s.subdivisionCode === this.user.subdivision?.subdivisionCode
@@ -94,10 +112,14 @@ export class ManageComponent extends BaseComponent implements OnInit {
     });
   }
 
+  /**
+   * Load all available roles for the dropdown
+   */
   loadRoles(): void {
     this.userService.getRoles().subscribe({
       next: (data) => {
         this.roles = data;
+        // If editing, find and set the exact role object
         if (this.isEditMode && this.user.role?.id) {
           this.user.role = this.roles.find(r => r.id === this.user.role!.id)!;
         }
@@ -106,17 +128,29 @@ export class ManageComponent extends BaseComponent implements OnInit {
     });
   }
 
+  /**
+   * Handler for district dropdown change
+   * Loads subdivisions for the selected district and resets subdivision selection
+   */
   onDistrictChange(): void {
     if (this.user.district?.districtCode) {
       this.loadSubdivisions(this.user.district.districtCode);
-      this.user.subdivision = {} as Subdivision; // Reset subdivision when district changes
+      this.user.subdivision = {} as Subdivision; // Reset subdivision selection
     }
   }
 
+  /**
+   * Validates if password and confirm password match
+   * @returns boolean indicating if passwords match
+   */
   passwordsMatch(): boolean {
     return this.user.password === this.user.confirmPassword;
   }
 
+  /**
+   * Save handler for both create and update operations
+   * Shows confirmation dialog before proceeding
+   */
   onSave(): void {
     Swal.fire({
       title: this.isEditMode ? 'Update User?' : 'Add User?',
@@ -126,8 +160,10 @@ export class ManageComponent extends BaseComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
+      // Prepare payload by cloning user data
       const payload = { ...this.user };
 
+      // Determine which API call to make based on edit mode
       const request = this.isEditMode
         ? this.adminService.updateUser(payload.id!, payload)
         : this.adminService.addUser(payload);
@@ -135,6 +171,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
       request.subscribe({
         next: () => {
           Swal.fire('Success', this.isEditMode ? 'Updated!' : 'Added!', 'success');
+          // Close dialog with success flag
           this.dialogRef.close(true);
         },
         error: (err) => {
@@ -144,6 +181,9 @@ export class ManageComponent extends BaseComponent implements OnInit {
     });
   }
 
+  /**
+   * Cancel handler - closes the dialog without saving
+   */
   onCancel(): void {
     this.dialogRef.close();
   }
