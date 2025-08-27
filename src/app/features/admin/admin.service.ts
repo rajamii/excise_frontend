@@ -26,6 +26,7 @@ export class AdminService {
 
   // Add a new user
   addUser(user: Account): Observable<any> {
+    console.log('Adding user:', user);
     return this.http.post(`${this.usersUrl}/users/register/`, user);
   }
 

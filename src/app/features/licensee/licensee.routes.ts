@@ -22,6 +22,8 @@ export const licenseeRoutes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.LICENSEE] },
       },
+      
+      
       // Company Registration Flow
       {
         path: 'company',
