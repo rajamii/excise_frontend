@@ -27,7 +27,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   licenseCategories: LicenseCategory[] = [];
 
   // Static license types
-  licenses: string[] = ['New', 'License A', 'License B', 'License C'];
+  licenses: string[] = ['New'];
 
   // Event emitters for navigation
   @Output() readonly next = new EventEmitter<void>();

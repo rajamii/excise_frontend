@@ -54,7 +54,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
       if (this.data) {
         this.user = { ...this.data };
         this.isEditMode = true;
-        
+
         // Handle case where backend might send numbers instead of objects
         if (this.user.district && typeof this.user.district === 'object') {
           // Already in correct format
@@ -75,10 +75,10 @@ export class ManageComponent extends BaseComponent implements OnInit {
         // Initialize filtered subdivisions
         if (this.user.district?.districtCode) {
           this.onDistrictChange(this.user.district.districtCode);
-          
+
           // Ensure subdivision belongs to selected district
-          if (this.user.subdivision?.subdivisionCode && 
-              this.user.subdivision.districtCode !== this.user.district.districtCode) {
+          if (this.user.subdivision?.subdivisionCode &&
+            this.user.subdivision.districtCode !== this.user.district.districtCode) {
             this.user.subdivision = {} as Subdivision;
           }
         }
@@ -121,7 +121,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
     const requiredFields = [
       'firstName', 'lastName', 'email', 'phoneNumber',
       'district', 'subdivision', 'address', 'role'
-    ];    
+    ];
     const userObj = this.user as any;
 
     for (const field of requiredFields) {
@@ -143,8 +143,9 @@ export class ManageComponent extends BaseComponent implements OnInit {
       role: this.user.role.id
     };
 
+    //Do not send ID in payload when adding a new user
     if (this.isEditMode) {
-      userPayload.id = this.user.id;
+      delete userPayload.id;
     }
 
     Swal.fire({

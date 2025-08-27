@@ -231,7 +231,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy{
       // Use FormDataService to build FormData with snake_case keys
       const formData = FormDataUtil.buildFormData(formValues);
       formData.append('photo', photoFile); // append file separately to root
-
+      console.log(formData);
       this.licenseAppService.submitLicenseApplication(formData).subscribe({
         next: () => {
           Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
