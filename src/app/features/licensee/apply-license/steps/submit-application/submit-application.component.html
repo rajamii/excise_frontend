@@ -7,17 +7,18 @@
     <!-- Dynamically render grouped data sections -->
     @for (section of displaySections; track section.title) {
       @if (!section.condition || section.condition()) {
-        <div class="section-title">
-          {{ section.title }}
-        </div>
+        <div class="section-title">{{ section.title }}</div>
       }
+
       @if (!section.condition || section.condition()) {
         <div class="section-table">
           @for (item of section.data; track item.key) {
-            <div class="row">
-              <div class="key">{{ item.key }}</div>
-              <div class="value">{{ item.value || 'N/A' }}</div>
-            </div>
+            @if (item.value) {
+              <div class="row">
+                <div class="key">{{ item.key }}</div>
+                <div class="value">{{ item.value }}</div>
+              </div>
+            }
           }
         </div>
       }
@@ -28,10 +29,12 @@
     <div class="details-with-photo">
       <div class="left-section">
         @for (item of memberDetailsData; track item.key) {
-          <div class="row">
-            <div class="key">{{ item.key }}</div>
-            <div class="value">{{ item.value || 'N/A' }}</div>
-          </div>
+          @if (item.value) {
+            <div class="row">
+              <div class="key">{{ item.key }}</div>
+              <div class="value">{{ item.value }}</div>
+            </div>
+          }
         }
       </div>
 

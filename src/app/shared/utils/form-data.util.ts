@@ -36,4 +36,12 @@ export class FormDataUtil  {
     return form;
   }
 
+  static toTitleCase(input: string | null | undefined): string {
+    if (!input) return '';
+    return input
+      .split(/[_\s]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
 }

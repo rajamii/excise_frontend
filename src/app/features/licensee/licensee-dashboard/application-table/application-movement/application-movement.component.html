@@ -13,14 +13,14 @@
       <!-- Date Column -->
       <ng-container matColumnDef="date">
         <th mat-header-cell *matHeaderCellDef> Date </th>
-        <td mat-cell *matCellDef="let element"> {{ element.timestamp | date: 'dd-MM-yyyy' }} </td>
+        <td mat-cell *matCellDef="let element"> {{ element.timestamp | date: 'dd-MM-yyyy, hh:mm a' }} </td>
       </ng-container>
 
       <!-- Forwarded By -->
       <ng-container matColumnDef="forwardedBy">
         <th mat-header-cell *matHeaderCellDef> Forwarded By </th>
         <td mat-cell *matCellDef="let element">
-          {{ getRoleLabel(element.performedBy?.role) }}
+          {{ getRoleLabel(element.forwardedBy?.roleName) }}
         </td>
       </ng-container>
 
@@ -28,7 +28,7 @@
       <ng-container matColumnDef="forwardedTo">
         <th mat-header-cell *matHeaderCellDef> Forwarded To </th>
         <td mat-cell *matCellDef="let element">
-          {{ getRoleLabel(element.stage) }}
+          {{ getRoleLabel(element.forwardedTo?.name) }}
         </td>
       </ng-container>
 

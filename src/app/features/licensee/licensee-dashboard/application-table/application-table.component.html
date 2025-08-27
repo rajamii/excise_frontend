@@ -69,14 +69,7 @@
           (click)="viewMovement(element)">
           <mat-icon style="color: #1976d2;">timeline</mat-icon>
         </button>
-        <!-- Payment Interface -->
-        @if (tableType === 'approved') {
-          <button
-            mat-icon-button
-            >
-            <mat-icon style="color: #1976d2;">payment</mat-icon>
-          </button>
-        }
+        
       </mat-cell>
     </ng-container>
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>

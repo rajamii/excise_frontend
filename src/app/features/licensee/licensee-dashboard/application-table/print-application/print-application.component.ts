@@ -42,6 +42,10 @@ export class PrintApplicationComponent {
     });
   }
 
+  onPay(): void {
+    Swal.fire('Payment');
+  }
+
   // Returns CSS styles as a string to be applied during print
   private getPrintStyles(): string {
     return `

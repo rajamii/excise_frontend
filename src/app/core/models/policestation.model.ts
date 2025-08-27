@@ -1,5 +1,5 @@
 export class PoliceStation {
-    id!: number;
+    id?: number;
     policeStation!: string;
     policeStationCode!: number;
     subdivision!: string;

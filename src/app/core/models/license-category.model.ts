@@ -1,5 +1,5 @@
 export class LicenseCategory {
-    id!: number;
+    id?: number;
     licenseCategory!: string;
   }
   

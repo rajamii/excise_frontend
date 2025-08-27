@@ -1,0 +1,66 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Police Station</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- Police Station Name input with validation -->
+      <mat-form-field appearance="outline">
+        <mat-label>Police Station Name</mat-label>
+        <input
+          matInput
+          name="policeStation"
+          required
+          [(ngModel)]="policeStation.policeStation"
+          #nameModel="ngModel"
+        />
+        <mat-error *ngIf="nameModel.errors?.['required']">
+          Police Station name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- 4-digit Police Station Code input with min/max validation -->
+      <mat-form-field appearance="outline">
+        <mat-label>Police Station Code</mat-label>
+        <input
+          matInput
+          name="policeStationCode"
+          type="number"
+          required
+          min="1000"
+          max="9999"
+          [(ngModel)]="policeStation.policeStationCode"
+          #codeModel="ngModel"
+        />
+        <mat-error *ngIf="codeModel.errors?.['required']">
+          Police Station code is required
+        </mat-error>
+        <mat-error *ngIf="codeModel.errors?.['min'] || codeModel.errors?.['max']">
+          Police Station code must be between 1000 and 9999
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Subdivision dropdown selector populated from loaded list -->
+      <mat-form-field appearance="outline">
+        <mat-label>Subdivision</mat-label>
+        <mat-select
+          [(ngModel)]="policeStation.subdivisionCode"
+          name="subdivisionCode"
+          required
+          #subdivisionModel="ngModel"
+        >
+          <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
+            {{ sub.subdivision }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+    </mat-dialog-content>
+
+    <!-- Save disabled unless form is valid -->
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

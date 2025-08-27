@@ -43,6 +43,8 @@ export class ApplicationTableComponent implements OnChanges{
     level_4: 'Under Review by Level 4',
     level_5: 'Under Review by Level 5',
 
+    awaiting_payment: 'Awaiting Payment',
+
     level_1_objection: 'Objection Raised by Level 1',
     level_2_objection: 'Objection Raised by Level 2',
     level_3_objection: 'Objection Raised by Level 3',
@@ -63,6 +65,9 @@ export class ApplicationTableComponent implements OnChanges{
   roleDisplayMapping: { [key: string]: string } = {
     level_1: 'Level 1',
     level_2: 'Level 2',
+    level_3: 'Level 3',
+    level_4: 'Level 4',
+    level_5: 'Level 5',
     licensee: 'Licensee',
   };
 
@@ -91,7 +96,7 @@ export class ApplicationTableComponent implements OnChanges{
   // Method to view application details
   onView(application: any) {
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
-      width: '800px',
+      width: '550px',
       maxHeight: '100%',
       data: { application, tableType: this.tableType }
     });

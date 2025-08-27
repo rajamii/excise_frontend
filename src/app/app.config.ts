@@ -1,30 +1,33 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
-
-import { routes } from './app.routes';
-import { HTTP_INTERCEPTORS, HttpClientModule, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withInterceptorsFromDi,
+  withFetch
+} from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { CsrfInterceptor } from './core/interceptors/csrfInterceptor';
-import { provideToastr, ToastrModule } from 'ngx-toastr';
 import { provideAnimations } from '@angular/platform-browser/animations';
+import { provideToastr } from 'ngx-toastr';
 import { MarkdownModule } from 'ngx-markdown';
+import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { JwtRefreshInterceptor } from './core/interceptors/jwt-refresh.interceptor';
+import { routes } from './app.routes';
+import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
-    provideHttpClient(withInterceptorsFromDi()),
+    provideHttpClient(withFetch(), withInterceptorsFromDi()),
     provideAnimationsAsync(),
-    provideToastr(),
     provideAnimations(),
+    provideToastr(),
 
-    // ✅ ADD THIS TO FIX _MarkdownService injection
+    // ✅ No need for deprecated HttpClientModule
     importProvidersFrom(
-      HttpClientModule,
       MarkdownModule.forRoot()
     ),
-
-    // Keep interceptor last
-    { provide: HTTP_INTERCEPTORS, useClass: CsrfInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+    { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
   ]
 };

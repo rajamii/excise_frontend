@@ -159,6 +159,10 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     // Load dropdown options
     this.loadDropdownData();
 
+    this.licenseCategoryForm.get('licenseCategory')?.valueChanges.subscribe((id: number) => {
+      this.selectedCategory = this.licenseCategories.find(cat => cat.id === id) || null;
+    });
+
     // Load existing objections if any
     this.fetchObjections();
 
@@ -170,13 +174,13 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     ]);
 
     this.keyInfoData = this.getFieldDisplayList([
-      'licenseType', 'establishmentName', 'mobileNumber', 'email', 'licenseNo',
+      'licenseType', 'establishment', 'mobileNumber', 'email', 'licenseNo',
       'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
       'licenseNature', 'functioningStatus', 'modeOfOperation'
     ]);
 
     this.addressData = this.getFieldDisplayList([
-      'siteSubdivision', 'policeStation', 'locationCategory', 'locationName',
+      'siteSubdivision', 'policeStationName', 'locationCategory', 'locationName',
       'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
     ]);
 
@@ -194,17 +198,24 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     this.memberDetailsData.push({
       key: 'Photo',
       field: 'photo',
-      value: this.photoUrl || 'N/A'
+      value: this.photoUrl || '-'
     });
   }
 
   getFieldDisplayList(fields: string[]): FieldDisplay[] {
-  return fields.map(field => ({
-      key: this.fieldLabelMap[field] || field, // Friendly label
-      field, // Raw field name
+    return fields.map(field => {
+      const displayValueKey = field + 'Name';
+      const value =
+        this.application[displayValueKey] !== undefined
+          ? this.application[displayValueKey]
+          : this.application[field];
 
-      value: this.application[field] || 'N/A'
-    }));
+      return {
+        key: this.fieldLabelMap[field] || field,
+        field, // retain original field for objection tracking
+        value: value || '-'
+      };
+    });
   }
 
   loadDropdownData() {
@@ -450,7 +461,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       const formData = FormDataUtil.buildFormData(data);
 
       // Add license category ID if selected
-      const catId = this.licenseCategoryForm.value.licenseCategory?.id;
+      const catId = this.licenseCategoryForm.value.licenseCategory;
 
       // First submit site enquiry data, then advance application
       this.licenseAppService.submitSiteEnquiryData(

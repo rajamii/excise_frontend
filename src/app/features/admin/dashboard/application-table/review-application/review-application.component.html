@@ -147,7 +147,7 @@
               >
               <div class="key">{{ item.key }}</div>
               <div class="value">
-                {{ item.value === true ? 'Yes' : item.value === false ? 'No' : (item.value || 'N/A') }}
+                {{ item.value === true ? 'Yes' : item.value === false ? 'No' : (item.value || '-') }}
               </div>
             </div>
           }
@@ -301,18 +301,16 @@
           <h5>{{application.applicationId}}</h5>
         </div>
         <div class="step-content p-4">
-          <div>
             <mat-form-field appearance="outline">
               <mat-label>Select License Category</mat-label>
               <mat-select formControlName="licenseCategory">
                 @for (category of licenseCategories; track category) {
-                  <mat-option [value]="category">
+                  <mat-option [value]="category.id">
                     {{ category.licenseCategory }}
                   </mat-option>
                 }
               </mat-select>
             </mat-form-field>
-          </div>
           <div class="step-buttons">
             <button matButton="outlined" matStepperPrevious>Back</button>
             <button matButton="filled" color="primary" matStepperNext>Next</button>
@@ -367,9 +365,9 @@
             </p>
           }
           <!-- Show license category only to Level 2 -->
-          @if (accountService.hasAnyRole('level_2') && licenseCategoryForm.value.licenseCategory) {
+          @if (accountService.hasAnyRole('level_2') && selectedCategory) {
             <p>
-              <strong>License Category:</strong> {{ licenseCategoryForm.value.licenseCategory.licenseCategory }}
+              <strong>License Category:</strong> {{ selectedCategory.licenseCategory }}
             </p>
           }
         </mat-card>

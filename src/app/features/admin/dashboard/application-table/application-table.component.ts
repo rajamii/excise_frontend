@@ -94,7 +94,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   // Method to view application details
   onView(application: any): void {
     const dialogRef = this.dialog.open(ReviewApplicationComponent, {
-      width: '800px',
+      width: '550px',
       maxHeight: '100%',
       data: { application, tableType: this.tableType }
     });

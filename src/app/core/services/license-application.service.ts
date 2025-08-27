@@ -11,7 +11,7 @@ import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
   providedIn: 'root'
 })
 export class LicenseApplicationService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/licenseapplication`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
 
   constructor(private http: HttpClient) { }
@@ -20,6 +20,7 @@ export class LicenseApplicationService {
   
   // Final application submission by the licensee (includes all sections + photo).
   submitLicenseApplication(data: any): Observable<any> {
+    console.log(data);
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/apply/`, data);
   } 
 
@@ -137,4 +138,9 @@ export class LicenseApplicationService {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get<SiteEnquiryFormModel>(`${this.baseUrl}/${encodedId}/site-detail/`);
   }
+
+  payLicenseFee(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.baseUrl}/${encodedId}/pay-license-fee/`, {});
+  } 
 }

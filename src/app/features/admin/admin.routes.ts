@@ -24,8 +24,16 @@ const routes: Routes = [
         }, 
       },
       {
-        path: 'district/new',
-        loadComponent: () => import('./district/add/add.component').then(m => m.AddComponent),
+        path: 'users',
+        loadComponent: () => import('./master/user/list/list.component').then(m => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'roles',
+        loadComponent: () => import('./master/role/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -33,15 +41,7 @@ const routes: Routes = [
       },
       {
         path: 'districts',
-        loadComponent: () => import('./district/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'subdivision/new',
-        loadComponent: () => import('./subdivision/add/add.component').then(m => m.AddComponent),
+        loadComponent: () => import('./master/district/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -49,31 +49,7 @@ const routes: Routes = [
       },
       {
         path: 'subdivisions',
-        loadComponent: () => import('./subdivision/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'user/new',
-        loadComponent: () => import('./user/add/add.component').then(m => m.AddComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'users',
-        loadComponent: () => import('./user/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'police-station/new',
-        loadComponent: () => import('./police-station/add/add.component').then(m => m.AddComponent),
+        loadComponent: () => import('./master/subdivision/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -81,15 +57,7 @@ const routes: Routes = [
       },
       {
         path: 'police-stations',
-        loadComponent: () => import('./police-station/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-type/new',
-        loadComponent: () => import('./license-type/add/add.component').then(m => m.AddComponent),
+        loadComponent: () => import('./master/police-station/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -97,15 +65,7 @@ const routes: Routes = [
       },
       {
         path: 'license-types',
-        loadComponent: () => import('./license-type/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-category/new',
-        loadComponent: () => import('./license-category/add/add.component').then(m => m.AddComponent),
+        loadComponent: () => import('./master/license-type/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]
@@ -113,7 +73,31 @@ const routes: Routes = [
       },
       {
         path: 'license-categories',
-        loadComponent: () => import('./license-category/list/list.component').then(m => m.ListComponent),
+        loadComponent: () => import('./master/license-category/list/list.component').then(m => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'license-titles',
+        loadComponent: () => import('./master/license-title/list/list.component').then(m => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'license-subcategories',
+        loadComponent: () => import('./master/license-subcategory/list/list.component').then(m => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'roads',
+        loadComponent: () => import('./master/road/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]

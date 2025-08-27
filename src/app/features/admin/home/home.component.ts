@@ -1,11 +1,10 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 
-import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { BaseComponent } from '../../../base/base.components';
 import { BaseDependency } from '../../../base/dependency/base.dependency';
-import { Account } from '../../../core/models/accounts';
+import { Account } from '../../../core/models/account.model';
 
 import { MaterialModule } from '../../../shared/material.module';
 import { UserProfileComponent } from './user-profile/user-profile.component';
@@ -16,7 +15,7 @@ import { MatMenuModule } from '@angular/material/menu';
 @Component({
   selector: 'app-home',
   standalone: true, // This component is a standalone component (not declared in a module)
-  imports: [RouterModule, MaterialModule, MatMenuModule], // Required Angular and custom modules
+  imports: [MaterialModule, MatMenuModule], // Required Angular and custom modules
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss'],
 })

@@ -1,0 +1,52 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Road</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- Road Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>Road Name</mat-label>
+        <input
+          matInput
+          name="roadName"
+          required
+          [(ngModel)]="road.roadName"
+          #roadNameModel="ngModel"
+        />
+        <mat-error *ngIf="roadNameModel.errors?.['required']">
+          Road Name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Road Type -->
+      <mat-form-field appearance="outline">
+        <mat-label>Road Type</mat-label>
+        <mat-select [(ngModel)]="road.roadType" name="roadType" required #roadTypeModel="ngModel">
+          <mat-option *ngFor="let type of roadTypes" [value]="type.value">
+            {{ type.label }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="roadTypeModel.errors?.['required']">
+          Road Type is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- District -->
+      <mat-form-field appearance="outline">
+        <mat-label>District</mat-label>
+        <mat-select [(ngModel)]="road.district" name="district" required>
+          <mat-option *ngFor="let d of districts" [value]="d.id">
+            {{ d.district }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <!-- Actions -->
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

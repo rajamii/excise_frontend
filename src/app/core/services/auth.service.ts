@@ -4,15 +4,16 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
+import { AccountService } from './account.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
 
-  private baseUrl = `${environment.apiBaseUrl}/user`;
+  private baseUrl = `${environment.apiBaseUrl}/auth/users`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private accountService: AccountService) {}
 
   // Standard login using JSON body
   login(data: any): Observable<any> {
@@ -39,6 +40,10 @@ export class AuthService {
     };
 
     return this.http.post(`${this.baseUrl}/logout/`, { refresh }, { headers }).pipe(
+      tap(() => {
+        // Clear data and emit auth state change
+        this.accountService.clearAppData();
+      }),
       catchError(error => throwError(() => error))
     );
   }

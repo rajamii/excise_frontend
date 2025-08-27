@@ -1,0 +1,36 @@
+<div class="container-fluid">
+  <!-- Dialog Title -->
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} License Category
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+      <!-- License Category input field -->
+      <mat-form-field appearance="outline">
+        <mat-label>License Category</mat-label>
+        <input
+          matInput
+          name="licenseCategory"
+          [(ngModel)]="licenseCategory.licenseCategory"
+          required
+          #licenseCategoryModel="ngModel"
+        />
+        <!-- Show error if required field is empty -->
+        <mat-error *ngIf="licenseCategoryModel.errors?.['required']">
+          License Category is required
+        </mat-error>
+      </mat-form-field>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <!-- Disable save button if form is invalid -->
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">
+        Save
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">
+        Cancel
+      </button>
+    </mat-dialog-actions>
+  </form>
+</div>

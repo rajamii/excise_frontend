@@ -1,0 +1,186 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} User</h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- First Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>First Name</mat-label>
+        <input
+          matInput
+          name="firstName"
+          required
+          [(ngModel)]="user.firstName"
+          #firstNameModel="ngModel"
+        />
+        <mat-error *ngIf="firstNameModel.errors?.['required']">
+          First name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Middle Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>Middle Name</mat-label>
+        <input
+          matInput
+          name="middleName"
+          [(ngModel)]="user.middleName"
+        />
+      </mat-form-field>
+
+      <!-- Last Name -->
+      <mat-form-field appearance="outline">
+        <mat-label>Last Name</mat-label>
+        <input
+          matInput
+          name="lastName"
+          required
+          [(ngModel)]="user.lastName"
+          #lastNameModel="ngModel"
+        />
+        <mat-error *ngIf="lastNameModel.errors?.['required']">
+          Last name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Email -->
+      <mat-form-field appearance="outline">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          name="email"
+          required
+          [(ngModel)]="user.email"
+          #emailModel="ngModel"
+        />
+        <mat-error *ngIf="emailModel.errors?.['required']">
+          Email is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Phone Number -->
+      <mat-form-field appearance="outline">
+        <mat-label>Phone Number</mat-label>
+        <input
+          matInput
+          type="tel"
+          name="phoneNumber"
+          required
+          maxlength="10"
+          [(ngModel)]="user.phoneNumber"
+          #phoneModel="ngModel"
+        />
+        <mat-error *ngIf="phoneModel.errors?.['required']">
+          Phone number is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- District -->
+      <mat-form-field appearance="outline">
+        <mat-label>District</mat-label>
+        <mat-select
+          name="district"
+          required
+          [(ngModel)]="user.district.districtCode"
+          (selectionChange)="onDistrictChange($event.value)"
+          #districtModel="ngModel"
+        >
+          <mat-option *ngFor="let d of districts" [value]="d.districtCode">
+            {{ d.district }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Subdivision -->
+      <mat-form-field appearance="outline">
+        <mat-label>Subdivision</mat-label>
+        <mat-select
+          name="subdivision"
+          required
+          [(ngModel)]="user.subdivision.subdivisionCode"
+          #subdivisionModel="ngModel"
+        >
+          <mat-option *ngFor="let s of filteredSubdivisions" [value]="s.subdivisionCode">
+            {{ s.subdivision }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Address -->
+      <mat-form-field appearance="outline">
+        <mat-label>Address</mat-label>
+        <input
+          matInput
+          name="address"
+          required
+          [(ngModel)]="user.address"
+          #addressModel="ngModel"
+        />
+        <mat-error *ngIf="addressModel.errors?.['required']">
+          Address is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Role -->
+      <mat-form-field appearance="outline">
+        <mat-label>Role</mat-label>
+        <mat-select
+          name="role"
+          required
+          [(ngModel)]="user.role.id"
+          #roleModel="ngModel"
+        >
+          <mat-option *ngFor="let r of roles" [value]="r.id">
+            {{ r.name }}
+          </mat-option>
+        </mat-select>
+        <mat-error *ngIf="roleModel.errors?.['required']">
+          Role is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Password Fields (Only in Add Mode) -->
+      <ng-container *ngIf="!isEditMode">
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            type="password"
+            name="password"
+            required
+            [(ngModel)]="user.password"
+            #passwordModel="ngModel"
+          />
+          <mat-error *ngIf="passwordModel.errors?.['required']">
+            Password is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Confirm Password</mat-label>
+          <input
+            matInput
+            type="password"
+            name="confirmPassword"
+            required
+            [(ngModel)]="user.confirmPassword"
+            #confirmPasswordModel="ngModel"
+          />
+          <mat-error *ngIf="confirmPasswordModel.errors?.['required']">
+            Confirm password is required
+          </mat-error>
+        </mat-form-field>
+      </ng-container>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">
+        {{ isEditMode ? 'Update' : 'Save' }}
+      </button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

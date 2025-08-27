@@ -147,11 +147,19 @@
       }
 
       <!-- Resolve Objection -->
-      @if (tableType === 'pending' && hasAnyObjections()) {
-        <button matButton class="bg-warning" (click)="stepper.next()">
-          <mat-icon>build</mat-icon>
-          Resolve Objections
-        </button>
+      @if (tableType === 'pending') {
+        @if (hasAnyObjections()) {
+          <button matButton class="bg-warning" (click)="stepper.next()">
+            <mat-icon>build</mat-icon>
+            Resolve Objections
+          </button> 
+        }
+        @if (!application.isLicenseFeePaid) {
+          <button matButton="filled" color="primary" (click)="stepper.next()">
+            <mat-icon>payment</mat-icon>
+            Pay Fees
+          </button>
+        }
       }
 
       <!-- Delete Application --> 
@@ -169,57 +177,131 @@
     <mat-step label="Resolve Objections">
       <form [formGroup]="resolveObjectionForm">
         <div class="step-header">
-          <h5>{{application.applicationId}}</h5>
+          <h5>{{ application.applicationId }}</h5>
         </div>
-        <!-- Display unresolved objections -->
-        @if (objections.length) {
+
+        @if (unresolvedObjections.length) {
           <div class="step-content p-3">
             @for (obj of unresolvedObjections; track obj) {
-              <div>
-                <!-- If the objection is not about the photo, show an input field -->
-                @if (obj.fieldName !== 'photo') {
-                  <mat-form-field appearance="outline">
-                    <!-- Label is dynamically generated from field name -->
-                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
-                    <input matInput [formControlName]="obj.fieldName">
-                    <!-- Show original objection as hint -->
-                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
-                  </mat-form-field>
-                } @else {
-                  <mat-label>Photo</mat-label>
+              <ng-container [ngSwitch]="fieldMetaMap[obj.fieldName]?.type">
+                <!-- File Upload -->
+                @if (fieldMetaMap[obj.fieldName]?.type === 'file') {
                   <div class="photo-upload-container" (click)="fileInput.click()">
-                    <!-- Photo Upload -->
                     <input
                       type="file"
                       hidden
                       #fileInput
                       accept="image/*"
-                      (change)="onPhotoSelected($event)"/>
-                      <div class="upload-box">
-                        <mat-icon>cloud_upload</mat-icon>
-                        <div class="upload-text">
-                          <h6>Upload Photo</h6>
-                          <div class="upload-subtext">Drag and drop files here</div>
-                        </div>
+                      (change)="onPhotoSelected($event)"
+                    />
+                    <div class="upload-box">
+                      <mat-icon>cloud_upload</mat-icon>
+                      <div class="upload-text">
+                        <h6>Upload Photo</h6>
+                        <div class="upload-subtext">Drag and drop files here</div>
                       </div>
                     </div>
-                    <mat-hint class="photo-objection">Objection: {{ obj.remarks }}</mat-hint>
-                  }
-                  <!-- Special handling for photo upload field -->
-                </div>
-              }
-            </div>
-          }
-          <div class="step-buttons">
-            <button
-              matButton="filled"
-              color="primary"
-              (click)="submitResolvedData()"
-              [disabled]="resolveObjectionForm.invalid">
-              Submit Corrections
-            </button>
+                  </div>
+                  <mat-hint class="photo-objection">Objection: {{ obj.remarks }}</mat-hint>
+                }
+
+                <!-- Dropdown (select) -->
+                @if (fieldMetaMap[obj.fieldName]?.type === 'dropdown') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <mat-select [formControlName]="obj.fieldName">
+                      @for (option of dropdownFields[fieldMetaMap[obj.fieldName].source] || []; track option) {
+                        <mat-option
+                          [value]="option">
+                          {{ getOptionLabel(obj.fieldName, option) }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                }
+
+                <!-- Textarea -->
+                @if (fieldMetaMap[obj.fieldName]?.type === 'textarea') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <textarea
+                      matInput
+                      rows="3"
+                      [formControlName]="obj.fieldName">
+                    </textarea>
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                }
+
+                <!-- Date Picker -->
+                @if (fieldMetaMap[obj.fieldName]?.type === 'date') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <input
+                      matInput
+                      type="date"
+                      [formControlName]="obj.fieldName"
+                    />
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                }
+
+                <!-- Number -->
+                @if (fieldMetaMap[obj.fieldName]?.type === 'number') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      [formControlName]="obj.fieldName"
+                    />
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                }
+
+                <!-- Default text input -->
+                @if (!['file', 'dropdown', 'textarea', 'date', 'number'].includes(fieldMetaMap[obj.fieldName]?.type)) {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ fieldLabelMap[obj.fieldName] }}</mat-label>
+                    <input
+                      matInput
+                      type="text"
+                      [formControlName]="obj.fieldName"
+                    />
+                    <mat-hint>Objection: {{ obj.remarks }}</mat-hint>
+                  </mat-form-field>
+                }
+              </ng-container>
+            }
           </div>
-        </form>
-      </mat-step>
-    }
-  </mat-horizontal-stepper>
+        }
+
+        <div class="step-buttons">
+          <button
+            matButton="filled"
+            color="primary"
+            (click)="submitResolvedData()"
+            [disabled]="resolveObjectionForm.invalid">
+            Submit Corrections
+          </button>
+        </div>
+      </form>
+    </mat-step>
+  }
+
+  <!-- Fee Payment -->
+  <mat-step label="Confirm Payment">
+    <div class="step-content confirmation-step">
+      <h5 class="text-success">
+        Confirm Payment
+      </h5>
+      <mat-card appearance="outlined">
+        <p><strong>Fee Amount:</strong> ₹{{ application.yearlyLicenseFee }}</p>
+      </mat-card>
+      <button mat-raised-button color="primary" (click)="payLicenseFee()">
+        Pay
+      </button>
+    </div>
+  </mat-step>
+</mat-horizontal-stepper>

@@ -31,6 +31,7 @@
     align-items: center;     
     justify-content: center;   
     gap: 10px;
+    margin-top: 10px;
     mat-form-field {
         width: 100%;
     }
@@ -92,7 +93,7 @@
   }
 }
 
-.confirmation-step .step-content ng-container{
+.confirmation-step ng-container{
   h5{
     margin:0;
     display: flex;

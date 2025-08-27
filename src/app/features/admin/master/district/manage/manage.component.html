@@ -1,0 +1,75 @@
+<div class="container-fluid">
+  <h2 mat-dialog-title align="center">
+    {{ isEditMode ? 'Edit' : 'Add' }} District
+  </h2>
+
+  <form #form="ngForm">
+    <mat-dialog-content>
+
+      <!-- District Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>District Name</mat-label>
+        <input
+          matInput
+          name="district"
+          required
+          [(ngModel)]="district.district"
+          #districtModel="ngModel"
+        />
+        <mat-error *ngIf="districtModel.errors?.['required']">
+          District name is required
+        </mat-error>
+      </mat-form-field>
+
+      <!-- District Code -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>District Code</mat-label>
+        <input
+          matInput
+          type="number"
+          name="districtCode"
+          required
+          [(ngModel)]="district.districtCode"
+          #districtCodeModel="ngModel"
+          min="1000"
+          max="9999"
+        />
+        <mat-error *ngIf="districtCodeModel.errors?.['required']">
+          District code is required
+        </mat-error>
+        <mat-error *ngIf="districtCodeModel.errors?.['min'] || districtCodeModel.errors?.['max']">
+          District code must be between 1000 and 9999
+        </mat-error>
+      </mat-form-field>
+
+      <!-- State (disabled, hardcoded as Sikkim) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>State</mat-label>
+        <input
+          matInput
+          name="state"
+          [(ngModel)]="district.state"
+          disabled
+        />
+      </mat-form-field>
+
+      <!-- State Code (disabled) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>State Code</mat-label>
+        <input
+          matInput
+          type="number"
+          name="stateCode"
+          [(ngModel)]="district.stateCode"
+          disabled
+        />
+      </mat-form-field>
+
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="center">
+      <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+      <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+    </mat-dialog-actions>
+  </form>
+</div>

@@ -2,42 +2,39 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Account } from '../models/accounts';
-import { Role } from '../models/role';
+import { Account } from '../models/account.model';
+import { Role } from '../models/role.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
-  private readonly baseUrl = `${environment.apiBaseUrl}/user`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/auth`;
 
   constructor(private http: HttpClient) {}
 
   // Get all users
   getUsers(): Observable<Account[]> {
-    return this.http.get<Account[]>(`${this.baseUrl}/list/?username=all`);
+    return this.http.get<Account[]>(`${this.baseUrl}/users/`);
   }
 
-  // Get user by username
-  getUserByUsername(username: string): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/detail/${username}/`);
+  // Get user by id
+  getUserById(id: number): Observable<Account> {
+    return this.http.get<Account>(`${this.baseUrl}/users/${id}/detail/`);
   }
 
   // Get currently logged-in user
   getCurrentUser(): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/detail/`);
-  }
-
-  // Update user by username
-  updateUser(username: string, payload: any): Observable<any> {
-    return this.http.put<any>(
-      `${this.baseUrl}/update/${username}/`, // use correct base path
-      payload
-    );
+    return this.http.get<Account>(`${this.baseUrl}/users/me/`);
   }
 
   // Retrieves all roles
   getRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.baseUrl}/roles`);
+    return this.http.get<Role[]>(`${this.baseUrl}/roles/`);
+  }
+
+  // Get user by id
+  getRoleById(id: number): Observable<Role> {
+    return this.http.get<Role>(`${this.baseUrl}/roles/${id}/detail/`);
   }
 }

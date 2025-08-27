@@ -1,0 +1,43 @@
+.not-found-container {
+    position: relative;
+    height: 85vh;
+    background: url('/assets/images/carousel/carousel7.jpg') no-repeat center center;
+    background-size: cover;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4); 
+        z-index: 1;
+    }
+    .content {
+        position: relative;
+        z-index: 2;
+        color: #fff;
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        h1 {
+            font-size: 4rem;
+            font-weight: 600;
+        }
+        p {
+            font-size: 1.24rem;
+            margin-top: 1rem;
+            opacity: 0.75;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-top: 2rem;
+            font-size: 1rem;
+            color: #fff;
+            text-decoration: none;
+        }
+    }
+}
