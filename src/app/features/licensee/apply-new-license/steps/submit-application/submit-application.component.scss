@@ -1,0 +1,84 @@
+mat-card {
+  padding: 0;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background-color: #fff;
+
+  mat-card-header {
+    background-color: #1C2B78;
+    color: #fff;
+    font-weight: 500;
+    font-size: 24px;
+    padding: 12px 20px;
+    text-align: center;
+  }
+
+  mat-card-content {
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 30px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .section-table, .left-section {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 4px 12px;
+    }
+
+    .row {
+      display: contents;
+
+      .key {
+        font-weight: 500;
+        color: #555;
+        font-size: 15px;
+        padding: 0;
+      }
+
+      .value {
+        color: #000;
+        font-size: 15px;
+      }
+    }
+
+    .details-with-photo {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+
+      .left-section {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 4px 12px;
+      }
+
+      .photo-section {
+        width: 120px;
+        flex-shrink: 0;
+
+        .profile-photo {
+          width: 100%;
+          height: auto;
+          object-fit: cover;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+        }
+      }
+    }
+  }
+
+  mat-card-actions {
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #eee;
+  }
+}

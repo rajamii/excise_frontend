@@ -1,0 +1,51 @@
+mat-card{  
+    mat-card-header{
+        padding: 12px;
+        border-radius: 8px 8px 0 0;
+        background-color: #1C2B78;
+        color: #ffffff;
+        font-size: 24px;
+        font-weight: 500;
+        align-items: center;
+        justify-content: space-between; 
+        .validation{
+            font-size: 12px;
+            color: #ff1313;
+            font-style: italic;
+        }  
+    }
+    mat-card-content{
+        .form-field-container{
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px 40px;
+            padding: 20px 15px;
+            justify-items: center;
+            align-items: start;
+            mat-form-field{
+                width: 100%;
+                mat-label{
+                    font-size: 14px;
+                }
+                textarea {
+                    resize: vertical;
+                    min-height: 40px;
+                }
+                input::placeholder, textarea::placeholder{
+                    font-size: 13px;
+                }
+            }
+        }
+    }
+    mat-card-actions{
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+    }
+}
+
+@media(max-width: 633px){
+    mat-card mat-card-content .form-field-container{
+        grid-template-columns: 1fr 1fr;
+    }
+}

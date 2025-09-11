@@ -79,17 +79,21 @@ export class LicenseApplicationService {
   Depending on the action, it may include remarks, feeAmount, new license category, or objections. */
   advanceApplication(
     applicationId: string,
+    stageID: string | undefined,
     remarks: string | undefined,
     feeAmount: number | undefined,
     action: 'approve' | 'reject' | 'raise_objection',
     newLicenseCategoryId?: number,
-    objections?: { field: string; remarks: string }[]
+    objections?: { field: string; remarks: string }[],
+    context?: any
   ): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
+    const encodedStageId = encodeURIComponent(stageID ?? '');
     const body: any = {
       remarks,
       feeAmount,
       action,
+      context
     };
 
     // Optional: include new license category during approval if changed
@@ -101,7 +105,7 @@ export class LicenseApplicationService {
     if (action === 'raise_objection' && objections) {
       body.objections = objections;
     }
-    return this.http.post(`${this.baseUrl}/${encodedId}/advance/`, body);
+    return this.http.post(`${this.baseUrl}/${encodedId}/advance/${encodedStageId}/`, body);
   }
 
   // Retrieves all objections raised against a given application

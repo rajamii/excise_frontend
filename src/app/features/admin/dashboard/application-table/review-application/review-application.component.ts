@@ -410,18 +410,19 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     };
 
     if (this.isRejected) {
-      // Reject application flow
-      this.licenseAppService.advanceApplication(
-        applicationId, 
-        remarks, 
-        undefined, 
-        'reject'
-      ).subscribe({
-        next: () => reload('Application rejected.'),
-        error: () => showError('Rejection failed.')
-      });
-      return;
-    }
+    // Reject application flow (no special context needed)
+    this.licenseAppService.advanceApplication(
+      applicationId,
+      undefined,
+      remarks,
+      undefined,
+      'reject'
+    ).subscribe({
+      next: () => reload('Application rejected.'),
+      error: () => showError('Rejection failed.')
+    });
+    return;
+  }
 
     if (this.accountService.hasAnyRole('level_1')) {
       // Level 1 approval requires fee amount from selected location
@@ -431,10 +432,14 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         return;
       }
       this.licenseAppService.advanceApplication(
-        applicationId, 
+        applicationId,
+        undefined,
         remarks, 
         fee, 
-        'approve'
+        'approve',
+        undefined, 
+        undefined,
+        { is_fee_calculated: true}
       ).subscribe({
         next: () => reload('Application approved.'),
         error: () => showError('Approval failed.')
@@ -469,7 +474,8 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         formData
       ).subscribe({
         next: () => this.licenseAppService.advanceApplication(
-          applicationId, 
+          applicationId,
+          undefined,
           remarks, 
           undefined, 
           'approve', 
@@ -485,7 +491,8 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     // Default approve flow (for other roles or fallback)
     this.licenseAppService.advanceApplication(applicationId, 
       remarks, 
-      undefined, 
+      undefined,
+      undefined,
       'approve'
     ).subscribe({
       next: () => reload('Application approved.'),
@@ -512,6 +519,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     // Directly raise objection (confirmation already shown earlier in stepper)
     this.licenseAppService.advanceApplication(
       applicationId,
+      undefined,
       undefined,
       undefined,
       'raise_objection',

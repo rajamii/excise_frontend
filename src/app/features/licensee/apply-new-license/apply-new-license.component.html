@@ -1,0 +1,38 @@
+<!-- Horizontal Stepper with linear navigation enabled -->
+<mat-horizontal-stepper [linear]="true" #stepper>
+
+  <!-- Step 1: Select License -->
+  <mat-step label="Application Type">
+    <!-- Custom component with output event to move to next step -->
+    <app-select-license (next)="stepper.next()"></app-select-license>
+  </mat-step>
+
+  <!-- Step 2: Key Information -->
+  <mat-step label="Basic Info">
+    <!-- Custom component emits 'back' and 'next' events -->
+    <app-key-info (back)="stepper.previous()" (next)="stepper.next()"></app-key-info>
+  </mat-step>
+
+  <!-- Step 3: Address -->
+  <mat-step label="Address">
+    <app-address (back)="stepper.previous()" (next)="stepper.next()"></app-address>
+  </mat-step>
+
+  <!-- Step 4: Unit Details - Only visible if licenseType is 'Company' -->
+  @if (licenseType == 2) {
+    <mat-step label="Unit Details">
+      <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
+    </mat-step>
+  }
+
+  <!-- Step 5: Member Details -->
+  <mat-step label="Member Details">
+    <app-member-details (back)="stepper.previous()" (next)="stepper.next()"></app-member-details>
+  </mat-step>
+
+  <!-- Step 6: Final License Submission Step -->
+  <mat-step label="Submit Application">
+    <app-submit-application (back)="stepper.previous()"></app-submit-application>
+  </mat-step>
+
+</mat-horizontal-stepper>
