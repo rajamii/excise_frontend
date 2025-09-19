@@ -15,7 +15,6 @@ export class Account {
   role?: Role;
   createdBy?: string;
   isActive?: boolean;
-
   password?: string;
   confirmPassword?: string;
 }

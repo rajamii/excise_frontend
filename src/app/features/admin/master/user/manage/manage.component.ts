@@ -52,21 +52,14 @@ export class ManageComponent extends BaseComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Load initial data for dropdowns
-    this.loadDistricts();
-    this.loadRoles();
-
     // Check if we're editing an existing user
     if (this.data) {
       // Clone the user data to avoid direct mutation
       this.user = { ...this.data };
       this.isEditMode = true;
-
-      // If editing and district is set, load subdivisions for that district
-      if (this.user.district?.districtCode) {
-        this.loadSubdivisions(this.user.district.districtCode, true);
-      }
     }
+    this.loadDistricts();
+    this.loadRoles();
   }
 
   /**
@@ -80,7 +73,10 @@ export class ManageComponent extends BaseComponent implements OnInit {
         if (this.isEditMode && this.user.district?.districtCode) {
           this.user.district = this.districts.find(
             d => d.districtCode === this.user.district?.districtCode
-          )!;
+          );
+          if (this.user.district) {
+            this.loadSubdivisions(this.user.district.districtCode, true);
+          }
         }
       },
       error: () => Swal.fire('Error', 'Failed to load districts.', 'error'),
@@ -160,12 +156,26 @@ export class ManageComponent extends BaseComponent implements OnInit {
     }).then((result) => {
       if (!result.isConfirmed) return;
 
-      // Prepare payload by cloning user data
-      const payload = { ...this.user };
+      // Prepare payload for registration
+      const payload = {
+        email: this.user.email,
+        password: this.user.password,
+        confirmPassword: this.user.confirmPassword,
+        role: this.user.role?.id,
+        firstName: this.user.firstName,
+        middleName: this.user.middleName || '',
+        lastName: this.user.lastName,
+        phoneNumber: this.user.phoneNumber,
+        district: this.user.district?.districtCode,
+        subdivision: this.user.subdivision?.subdivisionCode,
+        address: this.user.address,
+      } as Account; // Type assertion to treat payload as Account
+
+      console.log('payload being sent:', payload)
 
       // Determine which API call to make based on edit mode
       const request = this.isEditMode
-        ? this.adminService.updateUser(payload.id!, payload)
+        ? this.adminService.updateUser(this.user.id!, { ...this.user })
         : this.adminService.addUser(payload);
 
       request.subscribe({

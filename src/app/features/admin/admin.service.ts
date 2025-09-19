@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { catchError, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
@@ -20,14 +20,19 @@ export class AdminService {
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
   private readonly usersUrl = `${this.baseUrl}/auth`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ========================== USER MANAGEMENT ==========================
 
   // Add a new user
   addUser(user: Account): Observable<any> {
     console.log('Adding user:', user);
-    return this.http.post(`${this.usersUrl}/users/register/`, user);
+    return this.http.post(`${this.usersUrl}/users/register/`, user).pipe(
+      catchError(err => {
+        console.error('registration Error:', err)
+        throw err;
+      })
+    );
   }
 
   // Update user by id
