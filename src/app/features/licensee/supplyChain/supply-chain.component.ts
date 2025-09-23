@@ -27,6 +27,7 @@ export class SupplyChainComponent {
   selectedDistillery = '';
   selectedStatus = '';
   activeTab = 'requisition';
+  sidebarHidden = false;
   
   // Sample data for display only
   requisitionData: TableData[] = [
@@ -108,5 +109,31 @@ export class SupplyChainComponent {
   viewWallet(): void {
     // Navigate to payment confirmation page (development route)
     this.router.navigate(['/dev-payment-confirmation']);
+  }
+
+  navigateTo(route: string): void {
+    switch (route) {
+      case 'import-permit':
+        this.router.navigate(['/dev-import-permit']);
+        break;
+      case 'transit-permit':
+        this.router.navigate(['/dev-transit-permit']);
+        break;
+      case 'dashboard':
+        this.router.navigate(['/dev-supply-chain']);
+        break;
+      case 'payments':
+        this.router.navigate(['/dev-payment-confirmation']);
+        break;
+      case 'payment-receipt':
+        this.router.navigate(['/dev-payment-receipt']);
+        break;
+      default:
+        this.router.navigate(['/dev-supply-chain']);
+    }
+  }
+
+  toggleSidebar(): void {
+    this.sidebarHidden = !this.sidebarHidden;
   }
 }

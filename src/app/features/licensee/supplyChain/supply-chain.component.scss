@@ -38,3 +38,121 @@
     transform: translateY(0);
   }
 }
+
+// Sidebar Navigation Styles
+.sidebar-nav {
+  min-height: 100vh;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  
+  &.sidebar-hidden {
+    width: 0 !important;
+    min-width: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
+
+// Accordion Button Styling
+.accordion-button {
+  &:not(.collapsed) {
+    box-shadow: none;
+  }
+  
+  &:focus {
+    box-shadow: none;
+    border-color: transparent;
+  }
+}
+
+// List Group Item Hover Effects
+.list-group-item-action {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+    border-left: 4px solid #0d6efd;
+  }
+}
+
+// Custom header gradient
+// .header-section {
+//   background: linear-gradient(135deg, #4CAF50 0%, #2E8B57 100%);
+// }
+
+// Circular Hamburger Button Styling
+.hamburger-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  }
+  
+  &.active {
+    background: rgba(40, 167, 69, 0.9);
+    border-color: rgba(40, 167, 69, 0.8);
+    
+    .hamburger-line {
+      background-color: white;
+      
+      &:nth-child(1) {
+        transform: rotate(45deg) translate(6px, 6px);
+      }
+      
+      &:nth-child(2) {
+        opacity: 0;
+      }
+      
+      &:nth-child(3) {
+        transform: rotate(-45deg) translate(6px, -6px);
+      }
+    }
+  }
+}
+
+.hamburger-line {
+  width: 20px;
+  height: 2px;
+  background-color: #28a745;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+// Responsive Sidebar
+@media (max-width: 768px) {
+  .sidebar-nav {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    height: 100vh;
+    z-index: 1050;
+    transition: left 0.3s ease;
+    
+    &.show {
+      left: 0;
+    }
+  }
+}
