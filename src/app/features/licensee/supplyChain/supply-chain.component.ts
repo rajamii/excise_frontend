@@ -1,25 +1,30 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 interface TableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
   status: string;
   amount: string;
+  isLive?: boolean;
+  isInvalid?: boolean;
 }
+
 @Component({
   selector: 'app-supply-chain',
   standalone: true,
-   imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './supply-chain.component.html',
   styleUrls: ['./supply-chain.component.scss']
 })
-export class SupplyChainComponent implements OnInit {
-  selectedDate: string = '';
-  activeTab: string = 'requisition';
+export class SupplyChainComponent {
+  selectedDate = '';
+  activeTab = 'requisition';
   
-  tableData: TableData[] = [
+  // Sample data for display only
+  requisitionData: TableData[] = [
     {
       referenceNo: 'BF502/EXCISE',
       submissionDate: '22-Sep-2025',
@@ -29,36 +34,43 @@ export class SupplyChainComponent implements OnInit {
     }
   ];
 
-  constructor() { }
+  revlidationData: TableData[] = [
+    {
+      referenceNo: 'IMP/SUP-AGDIST',
+      submissionDate: '22-Sep-2025',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      status: 'IMPORT PERMIT EXTENDS 45 DAYS - INVALID',
+      amount: '0.00',
+      isLive: true,
+      isInvalid: true
+    }
+  ];
 
-  ngOnInit(): void {
-    // Initialize component
-  }
+  cancellationData: TableData[] = [];
+  transitData: TableData[] = [];
 
+  // UI interaction methods only
   onSearch(): void {
-    console.log('Search clicked with date:', this.selectedDate);
-    // Implement search functionality
+    // Frontend search logic only
   }
 
   onClear(): void {
     this.selectedDate = '';
-    console.log('Clear clicked');
-    // Implement clear functionality
   }
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
-    console.log('Active tab changed to:', tab);
-    // Implement tab switching logic
   }
 
   viewApplication(item: TableData): void {
-    console.log('View application clicked for:', item.referenceNo);
-    // Implement view application functionality
+    // Frontend navigation logic only
   }
 
   viewSlip(item: TableData): void {
-    console.log('View slip clicked for:', item.referenceNo);
-    // Implement view slip functionality
+    // Frontend navigation logic only
+  }
+
+  requestRevlidation(item: TableData): void {
+    // Frontend navigation logic only
   }
 }
