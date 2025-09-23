@@ -41,6 +41,12 @@ export const routes: Routes = [
     component: LoginComponent
   },
 
+  // Development route - bypasses authentication
+  {
+    path: 'dev-supply-chain',
+    loadComponent: () => import('./features/licensee/supplyChain/supply-chain.component').then(m => m.SupplyChainComponent)
+  },
+
   // Role Protected modules
   {
     path: 'admin',

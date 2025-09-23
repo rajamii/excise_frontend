@@ -84,6 +84,15 @@ export const licenseeRoutes: Routes = [
           }
         ]
       },
+      
+      // Supply Chain Management
+      {
+        path: 'supply-chain',
+        loadComponent: () => import('./supplyChain/supply-chain.component').then(m => m.SupplyChainComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.LICENSEE] },
+      },
+      
       // Default Redirect to Dashboard
       {
         path: '',
