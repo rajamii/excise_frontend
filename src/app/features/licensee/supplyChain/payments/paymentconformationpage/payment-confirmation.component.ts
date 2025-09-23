@@ -261,7 +261,8 @@ export class PaymentConfirmationComponent implements OnInit {
 
   downloadDetails(): void {
     console.log('Downloading payment details');
-    this.showInfoMessage('Downloading payment details...');
+    // Navigate to payment receipt page
+    this.router.navigate(['/dev-payment-receipt']);
   }
 
   retryPayment(): void {

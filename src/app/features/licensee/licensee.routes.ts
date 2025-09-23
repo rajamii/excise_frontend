@@ -97,7 +97,7 @@ export const licenseeRoutes: Routes = [
           },
           {
             path: 'payments',
-            loadComponent: () => import('./supplyChain/payments/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
+            loadComponent: () => import('./supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           }

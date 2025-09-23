@@ -48,7 +48,11 @@ export const routes: Routes = [
   },
   {
     path: 'dev-payment-confirmation',
-    loadComponent: () => import('./features/licensee/supplyChain/payments/payment-confirmation.component').then(m => m.PaymentConfirmationComponent)
+    loadComponent: () => import('./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent)
+  },
+  {
+    path: 'dev-payment-receipt',
+    loadComponent: () => import('./features/licensee/supplyChain/payments/payment-receipt/payment-receipt.component').then(m => m.PaymentReceiptComponent)
   },
 
   // Role Protected modules
