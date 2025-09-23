@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 interface TableData {
   referenceNo: string;
@@ -21,6 +22,10 @@ interface TableData {
 })
 export class SupplyChainComponent {
   selectedDate = '';
+  selectedMonth = '';
+  selectedYear = '';
+  selectedDistillery = '';
+  selectedStatus = '';
   activeTab = 'requisition';
   
   // Sample data for display only
@@ -49,6 +54,8 @@ export class SupplyChainComponent {
   cancellationData: TableData[] = [];
   transitData: TableData[] = [];
 
+  constructor(private router: Router) {}
+
   // UI interaction methods only
   onSearch(): void {
     // Frontend search logic only
@@ -56,21 +63,50 @@ export class SupplyChainComponent {
 
   onClear(): void {
     this.selectedDate = '';
+    this.selectedMonth = '';
+    this.selectedYear = '';
+    this.selectedDistillery = '';
+    this.selectedStatus = '';
   }
+
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
   }
 
   viewApplication(item: TableData): void {
-    // Frontend navigation logic only
+    // Navigate to payment confirmation page (development route)
+    this.router.navigate(['/dev-payment-confirmation'], {
+      queryParams: { 
+        tab: 'requisition',
+        referenceNo: item.referenceNo 
+      }
+    });
   }
 
   viewSlip(item: TableData): void {
-    // Frontend navigation logic only
+    // Navigate to payment confirmation page (development route)
+    this.router.navigate(['/dev-payment-confirmation'], {
+      queryParams: { 
+        tab: 'requisition',
+        referenceNo: item.referenceNo,
+        action: 'viewSlip'
+      }
+    });
   }
 
   requestRevlidation(item: TableData): void {
-    // Frontend navigation logic only
+    // Navigate to payment confirmation page (development route)
+    this.router.navigate(['/dev-payment-confirmation'], {
+      queryParams: { 
+        tab: 'revalidation',
+        referenceNo: item.referenceNo 
+      }
+    });
+  }
+
+  viewWallet(): void {
+    // Navigate to payment confirmation page (development route)
+    this.router.navigate(['/dev-payment-confirmation']);
   }
 }

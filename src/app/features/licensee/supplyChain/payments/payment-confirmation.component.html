@@ -1,0 +1,479 @@
+<div class="container-fluid p-0">
+  <!-- Header Section -->
+  <div class="bg-success text-white py-3">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col">
+          <div class="d-flex align-items-center">
+            <img src="assets/images/logo.png" alt="Company Logo" class="me-3" style="width: 50px; height: 50px;">
+            <h2 class="mb-0 fw-bold">EXCISE DEPARTMENT</h2>
+          </div>
+        </div>
+        <div class="col-auto">
+          <a href="#" class="text-white text-decoration-none">
+            <i class="bi bi-house-door me-1"></i>HOME
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wallet Cards Section -->
+  <div class="container-fluid py-4">
+    <!-- Excise/Additional Wallet Card -->
+    <div class="wallet-card mb-4" *ngIf="!isBreweryUser">
+      <div class="wallet-content">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-wallet wallet-icon text-primary"></i>
+          <div>
+            <div class="wallet-title">Excise / Additional Wallet Balance</div>
+            <div class="wallet-amount text-primary">
+              <span class="currency">₹</span>
+              <span>{{ exciseWalletBalance | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-primary" (click)="addMoney('excise')">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brewery Wallet Card -->
+    <div class="wallet-card mb-4" *ngIf="isBreweryUser">
+      <div class="wallet-content">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-wallet wallet-icon text-primary"></i>
+          <div>
+            <div class="wallet-title">Brewery Wallet Balance</div>
+            <div class="wallet-amount text-primary">
+              <span class="currency">₹</span>
+              <span>{{ breweryWalletBalance | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-primary" (click)="addMoney('brewery')">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Education Cess Wallet Card -->
+    <div class="wallet-card mb-4">
+      <div class="wallet-content">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-wallet wallet-icon text-info"></i>
+          <div>
+            <div class="wallet-title">Education Cess Wallet Balance</div>
+            <div class="wallet-amount text-info">
+              <span class="currency">₹</span>
+              <span>{{ educationCessBalance | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-info" (click)="addMoney('education')">
+            <i class="bi bi-plus-circle me-1"></i>Add Money
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-3 mb-4">
+      <button class="btn btn-success" (click)="downloadDetails()">
+        <i class="bi bi-download me-1"></i>Download Details
+      </button>
+      <button class="btn btn-warning" *ngIf="showRetryButton" (click)="retryPayment()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Retry Payment
+      </button>
+      <button class="btn btn-secondary" (click)="returnToApplication()">
+        <i class="bi bi-arrow-left me-1"></i>Return to Application
+      </button>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'requisition'" (click)="setActiveTab('requisition')">
+          <i class="bi bi-file-text me-1"></i>Requisition
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'revalidation'" (click)="setActiveTab('revalidation')">
+          <i class="bi bi-arrow-repeat me-1"></i>Revalidation
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'cancellation'" (click)="setActiveTab('cancellation')">
+          <i class="bi bi-x-circle me-1"></i>Cancellation
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+          <i class="bi bi-truck me-1"></i>Transit Permit
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'recharge'" (click)="setActiveTab('recharge')">
+          <i class="bi bi-credit-card me-1"></i>Wallet Recharge
+        </button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
+          <i class="bi bi-clock-history me-1"></i>Wallet History
+        </button>
+      </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+      <!-- Requisition Tab -->
+      @if (activeTab === 'requisition') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Reference Number</th>
+                <th>BR Amount</th>
+                <th>HOA</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of requisitionData; track item.id) {
+                <tr>
+                  <td>{{ item.referenceNo }}</td>
+                  <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
+                  <td>{{ item.hoa }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-success btn-sm" 
+                      *ngIf="canPay(item)" 
+                      (click)="payItem(item)">
+                      <i class="bi bi-credit-card me-1"></i>Pay
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Revalidation Tab -->
+      @if (activeTab === 'revalidation') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Reference Number</th>
+                <th>BR Amount</th>
+                <th>HOA</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of revalidationData; track item.id) {
+                <tr>
+                  <td>{{ item.referenceNo }}</td>
+                  <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
+                  <td>{{ item.hoa }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-success btn-sm" 
+                      *ngIf="canPay(item)" 
+                      (click)="payItem(item)">
+                      <i class="bi bi-credit-card me-1"></i>Pay
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Cancellation Tab -->
+      @if (activeTab === 'cancellation') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Reference Number</th>
+                <th>BR Amount</th>
+                <th>HOA</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of cancellationData; track item.id) {
+                <tr>
+                  <td>{{ item.referenceNo }}</td>
+                  <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
+                  <td>{{ item.hoa }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-success btn-sm" 
+                      *ngIf="canPay(item)" 
+                      (click)="payItem(item)">
+                      <i class="bi bi-credit-card me-1"></i>Pay
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Transit Permit Tab -->
+      @if (activeTab === 'transit') {
+        <div class="alert alert-info mb-3" *ngIf="transitBillNo">
+          <h5><i class="bi bi-info-circle me-2"></i>Transit Permit Data</h5>
+          <p class="mb-0">Showing data for Bill No: <strong>{{ transitBillNo }}</strong></p>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Bill No</th>
+                <th>Serial No</th>
+                <th>Quantity</th>
+                <th>Portions</th>
+                <th>NIPS</th>
+                <th>Licensee ID</th>
+                <th>Status</th>
+                <th>Payment Date</th>
+                <th>Total Bill Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of transitData; track item.id) {
+                <tr>
+                  <td>{{ item.billNumber }}</td>
+                  <td>{{ item.serialNo }}</td>
+                  <td>{{ item.quantity }}</td>
+                  <td>{{ item.portions }}</td>
+                  <td>{{ item.nips }}</td>
+                  <td>{{ item.licenseeId }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>{{ item.paymentDate | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
+                  <td class="text-end">₹{{ item.totalAmount | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Transit Payment Section -->
+        <div class="row mt-4" *ngIf="showTransitPayment">
+          <div class="col-md-6">
+            <div class="card border-primary">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Bill Summary</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Total Amount (All Heads):</span>
+                  <span class="h4 text-primary">₹{{ transitTotalAmount | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Education Cess Total:</span>
+                  <span class="h5 text-info">₹{{ transitEducationCess | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Excise Duty Total:</span>
+                  <span class="h5 text-warning">₹{{ transitExciseDuty | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Additional Excise Duty Total:</span>
+                  <span class="h5 text-danger">₹{{ transitAdditionalExcise | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Number of Items:</span>
+                  <span class="h5 text-secondary">{{ transitItemCount }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="fw-bold">Bill Status:</span>
+                  <span class="badge bg-success">{{ transitBillStatus }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-success">
+              <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Action</h5>
+              </div>
+              <div class="card-body text-center">
+                <p class="text-muted mb-3">Pay for all items in this transit permit</p>
+                <button class="btn btn-lg btn-success w-100" (click)="payAllTransit()">
+                  <i class="bi bi-credit-card me-2"></i>PAY ALL ITEMS
+                </button>
+                <small class="text-muted mt-2 d-block">Click to pay for all items in this bill</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Wallet Recharge Tab -->
+      @if (activeTab === 'recharge') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Transaction Type</th>
+                <th>HOA</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of rechargeData; track item.id) {
+                <tr>
+                  <td>{{ item.transactionType }}</td>
+                  <td>{{ item.hoa }}</td>
+                  <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
+                  <td>{{ item.date | date:'dd-MMM-yyyy HH:mm:ss' }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <!-- Wallet History Tab -->
+      @if (activeTab === 'history') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Txn ID</th>
+                <th>User ID</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Status</th>
+                <th>Date/Time</th>
+                <th>Licensee ID</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of historyData; track item.id) {
+                <tr>
+                  <td>{{ item.txnId }}</td>
+                  <td>{{ item.userId }}</td>
+                  <td>{{ item.type }}</td>
+                  <td class="text-end">₹{{ item.amount | number:'1.2-2' }}</td>
+                  <td>{{ item.reference }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>{{ item.dateTime | date:'dd-MM-yyyy HH:mm:ss' }}</td>
+                  <td>{{ item.licenseeId }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+<!-- Payment Confirmation Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-credit-card me-2"></i>Payment Confirmation
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card border-primary">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Payment Details</h6>
+              </div>
+              <div class="card-body">
+                <p><strong>Reference:</strong> {{ selectedItem?.referenceNo }}</p>
+                <p><strong>Amount:</strong> ₹{{ selectedItem?.amount | number:'1.2-2' }}</p>
+                <p><strong>HOA:</strong> {{ selectedItem?.hoa }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-success">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="bi bi-wallet me-2"></i>Wallet Status</h6>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-sm">
+                    <thead>
+                      <tr>
+                        <th>Head</th>
+                        <th>Balance</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Education Cess</td>
+                        <td>₹{{ educationCessBalance | number:'1.2-2' }}</td>
+                        <td>
+                          <span class="badge bg-success" *ngIf="educationCessBalance >= (selectedItem?.amount || 0)">
+                            <i class="bi bi-check"></i> Sufficient
+                          </span>
+                          <span class="badge bg-danger" *ngIf="educationCessBalance < (selectedItem?.amount || 0)">
+                            <i class="bi bi-x"></i> Insufficient
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-success" (click)="confirmPayment()">
+          <i class="bi bi-check me-1"></i>Confirm Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -88,9 +88,20 @@ export const licenseeRoutes: Routes = [
       // Supply Chain Management
       {
         path: 'supply-chain',
-        loadComponent: () => import('./supplyChain/supply-chain.component').then(m => m.SupplyChainComponent),
-        canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.LICENSEE] },
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./supplyChain/supply-chain.component').then(m => m.SupplyChainComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'payments',
+            loadComponent: () => import('./supplyChain/payments/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          }
+        ]
       },
       
       // Default Redirect to Dashboard

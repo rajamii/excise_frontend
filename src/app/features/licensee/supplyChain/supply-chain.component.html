@@ -10,9 +10,9 @@
         <div class="col-auto">
           <div class="d-flex gap-2">
             <button class="btn btn-light bg-success btn-sm text-white">Distillery</button>
-            <button class="btn  btn-sm bg-success text-white">
-              <i class="bi bi-grid-3x3-gap  me-1"></i > View Widget
-            </button>
+            <button class="btn btn-sm bg-success text-white" (click)="viewWallet()">
+            <i class="bi bi-grid-3x3-gap me-1"></i> View Wallet
+           </button>
           </div>
         </div>
       </div>
@@ -22,15 +22,82 @@
   <!-- Search Section -->
   <div class="bg-white border-bottom">
     <div class="container-fluid py-3">
-      <div class="row align-items-center">
+      <div class="row align-items-center g-3">
+        <!-- Date Picker -->
         <div class="col-auto">
-          <input type="date" class="form-control" [(ngModel)]="selectedDate">
+          <label class="form-label small mb-1">Select Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate" placeholder="Select Date">
         </div>
+
+        <!-- Month Dropdown -->
         <div class="col-auto">
-          <button class="btn btn-primary btn-sm" (click)="onSearch()">Search</button>
+          <label class="form-label small mb-1">Month</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
+            <option value="">All Months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
         </div>
+
+        <!-- Year Dropdown -->
         <div class="col-auto">
-          <button class="btn btn-secondary btn-sm" (click)="onClear()">Clear</button>
+          <label class="form-label small mb-1">Year</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedYear">
+            <option value="">All Years</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+
+        <!-- Distillery Filter -->
+        <!-- <div class="col-auto">
+          <label class="form-label small mb-1">Distillery</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedDistillery">
+            <option value="">All Distilleries</option>
+            <option value="Sikkim Distilleries Ltd">Sikkim Distilleries Ltd</option>
+            <option value="Royal Distillery"> Distillery</option>
+            <option value="Mountain Spirits Ltd">Mountain Spirits Ltd</option>
+            <option value="Highland Distillery">Highland Distillery</option>
+            <option value="Valley Breweries">Valley Breweries</option>
+          </select>
+        </div> -->
+
+        <!-- Status Filter -->
+        <div class="col-auto">
+          <label class="form-label small mb-1">Status</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
+            <option value="">All Status</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Pending</option>
+            <option value="rejected">Rejected</option>
+            <option value="invalid">Invalid</option>
+            <option value="generated">Generated</option>
+          </select>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-auto">
+          <label class="form-label small mb-1 invisible">Actions</label>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" (click)="onSearch()">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" (click)="onClear()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Clear
+            </button>
+
+          </div>
         </div>
       </div>
     </div>
@@ -46,8 +113,8 @@
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-link" [class.active]="activeTab === 'revliquidation'" (click)="setActiveTab('revliquidation')">
-            REVLIQUIDATION
+          <button class="nav-link" [class.active]="activeTab === 'revalidation'" (click)="setActiveTab('revalidation')">
+            revalidation
           </button>
         </li>
         <li class="nav-item">
@@ -71,171 +138,171 @@
 
         <!-- Requisition Tab Content -->
         @if (activeTab === 'requisition') {
-          <table class="table table-hover table-bordered">
-            <thead class="table-success">
-              <tr>
-                <th scope="col">Reference No</th>
-                <th scope="col">Application Submission Date</th>
-                <th scope="col">Distillery Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">Import Pass Fee Amount</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of requisitionData; track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success">
-                    ₹{{ item.amount }}
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        VIEW APPLICATION
-                      </button>
-                      <button class="btn btn-warning btn-sm" (click)="viewSlip(item)">
-                        View Permit Slip
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th scope="col">Ref. No</th>
+              <th scope="col">App. Sub. Date</th>
+              <th scope="col">Distillery Name</th>
+              <th scope="col">Status</th>
+              <th scope="col">Imp. Pass Fee Amt.</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of requisitionData; track item.referenceNo) {
+            <tr>
+              <td>{{ item.referenceNo }}</td>
+              <td>{{ item.submissionDate }}</td>
+              <td>{{ item.distilleryName }}</td>
+              <td>
+                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 small">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="fw-semibold text-success">
+                ₹{{ item.amount }}
+              </td>
+              <td>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
+                    VIEW APPLICATION
+                  </button>
+                  <button class="btn btn-warning btn-sm" (click)="viewSlip(item)">
+                    View Permit Slip
+                  </button>
+                </div>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
         }
 
         <!-- Revlidation Tab Content -->
-        @if (activeTab === 'revliquidation') {
-          <table class="table table-hover table-bordered">
-            <thead class="table-success">
-              <tr>
-                <th scope="col">Reference No</th>
-                <th scope="col">Application Submission Date</th>
-                <th scope="col">Distillery Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">Import Pass Fee Amount</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of revlidationData; track item.referenceNo) {
-                <tr>
-                  <td>
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="fw-medium">{{ item.referenceNo }}</span>
-                      @if (item.isLive) {
-                        <span class="badge bg-danger text-white">LIVE</span>
-                      }
-                    </div>
-                  </td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success">
-                    ₹{{ item.amount }}
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-success btn-sm" (click)="requestRevlidation(item)">
-                        Request Revlidation
-                      </button>
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        View Application
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        @if (activeTab === 'revalidation') {
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th scope="col">Reference No</th>
+              <th scope="col">Application Submission Date</th>
+              <th scope="col">Distillery Name</th>
+              <th scope="col">Status</th>
+              <th scope="col">Import Pass Fee Amount</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of revlidationData; track item.referenceNo) {
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-medium">{{ item.referenceNo }}</span>
+                  @if (item.isLive) {
+                  <span class="badge bg-danger text-white">LIVE</span>
+                  }
+                </div>
+              </td>
+              <td>{{ item.submissionDate }}</td>
+              <td>{{ item.distilleryName }}</td>
+              <td>
+                <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2 small">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="fw-semibold text-success">
+                ₹{{ item.amount }}
+              </td>
+              <td>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button class="btn btn-success btn-sm" (click)="requestRevlidation(item)">
+                    Request Revlidation
+                  </button>
+                  <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
+                    View Application
+                  </button>
+                </div>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
         }
 
         <!-- Cancellation Tab Content -->
         @if (activeTab === 'cancellation') {
-          <table class="table table-hover table-bordered">
-            <thead class="table-success">
-              <tr>
-                <th scope="col">Reference No</th>
-                <th scope="col">Application Submission Date</th>
-                <th scope="col">Distillery Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">Import Pass Fee Amount</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of cancellationData; track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success">
-                    ₹{{ item.amount }}
-                  </td>
-                  <td>
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                      VIEW APPLICATION
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th scope="col">Reference No</th>
+              <th scope="col">Application Submission Date</th>
+              <th scope="col">Distillery Name</th>
+              <th scope="col">Status</th>
+              <th scope="col">Import Pass Fee Amount</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of cancellationData; track item.referenceNo) {
+            <tr>
+              <td>{{ item.referenceNo }}</td>
+              <td>{{ item.submissionDate }}</td>
+              <td>{{ item.distilleryName }}</td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 small">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="fw-semibold text-success">
+                ₹{{ item.amount }}
+              </td>
+              <td>
+                <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
+                  VIEW APPLICATION
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
         }
 
         <!-- Transit Tab Content -->
         @if (activeTab === 'transit') {
-          <table class="table table-hover table-bordered">
-            <thead class="table-success">
-              <tr>
-                <th scope="col">Reference No</th>
-                <th scope="col">Application Submission Date</th>
-                <th scope="col">Distillery Name</th>
-                <th scope="col">Status</th>
-                <th scope="col">Import Pass Fee Amount</th>
-                <th scope="col">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of transitData; track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success">
-                    ₹{{ item.amount }}
-                  </td>
-                  <td>
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                      VIEW APPLICATION
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <table class="table table-hover table-bordered">
+          <thead class="table-success">
+            <tr>
+              <th scope="col">Reference No</th>
+              <th scope="col">Application Submission Date</th>
+              <th scope="col">Distillery Name</th>
+              <th scope="col">Status</th>
+              <th scope="col">Import Pass Fee Amount</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of transitData; track item.referenceNo) {
+            <tr>
+              <td>{{ item.referenceNo }}</td>
+              <td>{{ item.submissionDate }}</td>
+              <td>{{ item.distilleryName }}</td>
+              <td>
+                <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small">
+                  {{ item.status }}
+                </span>
+              </td>
+              <td class="fw-semibold text-success">
+                ₹{{ item.amount }}
+              </td>
+              <td>
+                <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
+                  VIEW APPLICATION
+                </button>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
         }
 
       </div>

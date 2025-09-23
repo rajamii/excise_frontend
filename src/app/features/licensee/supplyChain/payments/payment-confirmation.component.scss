@@ -1,0 +1,245 @@
+// Wallet Card Styles
+.wallet-card {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F3F4F6 100%);
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.wallet-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-icon {
+  font-size: 3rem;
+  margin-right: 1.5rem;
+}
+
+.wallet-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 0.5rem;
+}
+
+.wallet-amount {
+  font-size: 3rem;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+}
+
+.currency {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+// Tab Styles
+.nav-tabs {
+  border-bottom: 2px solid #E5E7EB;
+  margin-bottom: 1rem;
+}
+
+.nav-tabs .nav-link {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6B7280;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  transition: color 0.3s, background-color 0.3s;
+  
+  &:hover {
+    color: #4F46E5;
+    background-color: #F3F4F6;
+  }
+  
+  &.active {
+    color: #4F46E5;
+    background-color: #FFFFFF;
+    border-bottom: 3px solid #4F46E5;
+  }
+}
+
+.tab-content {
+  background-color: #FFFFFF;
+  border-radius: 0 8px 8px 8px;
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+// Table Styles
+.table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th {
+  background-color: #F3F4F6;
+  font-weight: 600;
+  color: #1F2937;
+  padding: 12px;
+  border-bottom: 2px solid #E5E7EB;
+}
+
+.table td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.table tr:nth-child(even) {
+  background-color: #F9FAFB;
+}
+
+.table tr:hover {
+  background-color: #F3F4F6;
+}
+
+// Enhanced Button Styles
+.btn-payment {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  border: none;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(40, 167, 69, 0.3);
+    color: white;
+  }
+  
+  &:disabled {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+// Modal Styles
+.modal-content {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-footer {
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid #E5E7EB;
+}
+
+// Status Badge Colors
+.badge {
+  &.bg-success {
+    background-color: #059669 !important;
+  }
+  
+  &.bg-warning {
+    background-color: #d97706 !important;
+  }
+  
+  &.bg-danger {
+    background-color: #dc2626 !important;
+  }
+  
+  &.bg-secondary {
+    background-color: #4b5563 !important;
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .wallet-card {
+    .wallet-amount {
+      font-size: 2rem;
+    }
+    
+    .wallet-icon {
+      font-size: 2rem;
+    }
+    
+    .wallet-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  }
+  
+  .nav-tabs .nav-link {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .table-responsive {
+    font-size: 0.85rem;
+  }
+}
+
+// Animation for tab content
+.tab-content {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Loading spinner
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+// Alert styles
+.alert {
+  border-radius: 8px;
+  border: none;
+  
+  &.alert-info {
+    background-color: #EBF8FF;
+    color: #1E40AF;
+    border-left: 4px solid #3B82F6;
+  }
+  
+  &.alert-success {
+    background-color: #F0FDF4;
+    color: #166534;
+    border-left: 4px solid #22C55E;
+  }
+  
+  &.alert-warning {
+    background-color: #FFFBEB;
+    color: #92400E;
+    border-left: 4px solid #F59E0B;
+  }
+  
+  &.alert-danger {
+    background-color: #FEF2F2;
+    color: #991B1B;
+    border-left: 4px solid #EF4444;
+  }
+}
