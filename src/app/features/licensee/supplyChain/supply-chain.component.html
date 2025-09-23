@@ -1,51 +1,102 @@
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="fas fa-truck me-2"></i>
-            {{ title }}
-          </h3>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="info-box">
-                <span class="info-box-icon bg-info">
-                  <i class="fas fa-warehouse"></i>
-                </span>
-                <div class="info-box-content">
-                  <span class="info-box-text">Warehouse Managementss</span>
-                  <span class="info-box-number">Manage inventory and storage</span>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="info-box">
-                <span class="info-box-icon bg-success">
-                  <i class="fas fa-shipping-fast"></i>
-                </span>
-                <div class="info-box-content">
-                  <span class="info-box-text">Logistics Tracking</span>
-                  <span class="info-box-number">Track shipments and deliveries</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="row mt-4">
-            <div class="col-12">
-              <div class="alert alert-info">
-                <h4 class="alert-heading">Welcome to Supply Chain Management!</h4>
-                <p>This is your supply chain management module. You can start building your features here.</p>
-                <hr>
-                <p class="mb-0">Any changes you make to this component will automatically refresh in the browser.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+<div class="dashboard-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <p class="licensee-info">Licensee: Sikkim Distilleries Ltd (01202506012)</p>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-primary distillery-btn">Distillery</button>
+        <button class="btn btn-secondary view-widget-btn">
+          <i class="icon-widget"></i> View Widget
+        </button>
       </div>
     </div>
   </div>
+
+  <!-- Search Section -->
+  <div class="search-section">
+    <div class="search-container">
+      <input 
+        type="date" 
+        class="form-control date-input" 
+        placeholder="Enter date"
+        [(ngModel)]="selectedDate">
+      <button class="btn btn-search" (click)="onSearch()">Search</button>
+      <button class="btn btn-clear" (click)="onClear()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="tabs-section">
+    <div class="tab-container">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'requisition'"
+        (click)="setActiveTab('requisition')">
+        REQUISITION
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'revliquidation'"
+        (click)="setActiveTab('revliquidation')">
+        REVLIQUIDATION
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'cancellation'"
+        (click)="setActiveTab('cancellation')">
+        CANCELLATION
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab === 'transit'"
+        (click)="setActiveTab('transit')">
+        TRANSIT
+      </button>
+    </div>
+  </div>
+
+  <!-- Data Table Section -->
+  <div class="table-section">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Reference No</th>
+            <th>Application Submission Date</th>
+            <th>Distillery Name</th>
+            <th>Status</th>
+            <th>Import Pass Fee Amount</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of tableData" class="table-row">
+            <td>{{ item.referenceNo }}</td>
+            <td>{{ item.submissionDate }}</td>
+            <td>{{ item.distilleryName }}</td>
+            <td class="status-cell">
+              <span class="status-message">{{ item.status }}</span>
+            </td>
+            <td class="amount-cell">
+              <span class="currency-symbol">₹</span>
+              <span class="amount">{{ item.amount }}</span>
+            </td>
+            <td class="action-cell">
+              <button class="btn btn-view-application" (click)="viewApplication(item)">
+                VIEW APPLICATION
+              </button>
+              <button class="btn btn-view-slip" (click)="viewSlip(item)">
+                View Permit Slip
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
 </div>
