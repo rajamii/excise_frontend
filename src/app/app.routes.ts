@@ -54,6 +54,14 @@ export const routes: Routes = [
     path: 'dev-payment-receipt',
     loadComponent: () => import('./features/licensee/supplyChain/payments/payment-receipt/payment-receipt.component').then(m => m.PaymentReceiptComponent)
   },
+  {
+    path: 'dev-import-permit',
+    loadComponent: () => import('./features/licensee/supplyChain/import-permit/import-permit.component').then(m => m.ImportPermitComponent)
+  },
+  {
+    path: 'dev-transit-permit',
+    loadComponent: () => import('./features/licensee/supplyChain/transit-permit/transit-permit.component').then(m => m.TransitPermitComponent)
+  },
 
   // Role Protected modules
   {
