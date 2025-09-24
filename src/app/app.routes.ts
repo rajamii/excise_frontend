@@ -62,6 +62,10 @@ export const routes: Routes = [
     path: 'dev-transit-permit',
     loadComponent: () => import('./features/licensee/supplyChain/transit-permit/transit-permit.component').then(m => m.TransitPermitComponent)
   },
+  {
+    path: 'app-permit-section',
+    loadComponent: () => import('./features/licensee/supplyChain/permit-section/permit-section.component').then(m => m.PermitSectionComponent)
+  },
 
   // Role Protected modules
   {
