@@ -27,8 +27,8 @@ export class SupplyChainComponent {
   selectedDistillery = '';
   selectedStatus = '';
   activeTab = 'requisition';
-  sidebarHidden = false;
-  
+  sidebarHidden = true;
+
   // Sample data for display only
   requisitionData: TableData[] = [
     {
@@ -55,7 +55,7 @@ export class SupplyChainComponent {
   cancellationData: TableData[] = [];
   transitData: TableData[] = [];
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   // UI interaction methods only
   onSearch(): void {
@@ -78,9 +78,9 @@ export class SupplyChainComponent {
   viewApplication(item: TableData): void {
     // Navigate to payment confirmation page (development route)
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'requisition',
-        referenceNo: item.referenceNo 
+        referenceNo: item.referenceNo
       }
     });
   }
@@ -88,7 +88,7 @@ export class SupplyChainComponent {
   viewSlip(item: TableData): void {
     // Navigate to payment confirmation page (development route)
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'requisition',
         referenceNo: item.referenceNo,
         action: 'viewSlip'
@@ -99,9 +99,9 @@ export class SupplyChainComponent {
   requestRevlidation(item: TableData): void {
     // Navigate to payment confirmation page (development route)
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'revalidation',
-        referenceNo: item.referenceNo 
+        referenceNo: item.referenceNo
       }
     });
   }
