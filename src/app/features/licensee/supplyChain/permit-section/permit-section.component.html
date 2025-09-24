@@ -1,1 +1,170 @@
-<p>hi</p>
+<div class="dashboard-layout">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <h1 class="dashboard-title">Dashboard</h1>
+      </div>
+      <div class="right-section">
+       
+        <button class="btn btn-success btn-sm distillery-btn">Permit Section</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-content">
+    <!-- Left Sidebar -->
+    <div class="left-sidebar">
+      <!-- Filters Section (Now at the top) -->
+      <div class="filters-section">
+      
+        <div class="filters-container">
+          <div class="filter-group">
+            <label class="filter-label">Select Date</label>
+            <input type="date" class="form-control filter-input" [(ngModel)]="selectedDate">
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Month</label>
+            <select class="form-select filter-input" [(ngModel)]="selectedMonth">
+              <option value="">All Months</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Year</label>
+            <select class="form-select filter-input" [(ngModel)]="selectedYear">
+              <option value="">All Years</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Distillery</label>
+            <select class="form-select filter-input" [(ngModel)]="selectedDistillery">
+              <option value="">All Distilleries</option>
+              <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
+              <option value="mount-distilleries">Mount Distilleries Ltd</option>
+              <option value="darjeeling-artisan">Darjeeling Artisan Pvt Ltd</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label">Status</label>
+            <select class="form-select filter-input" [(ngModel)]="selectedStatus">
+              <option value="">All Status</option>
+              <option value="approved">Approved</option>
+              <option value="pending">Pending</option>
+              <option value="generated">Generated</option>
+            </select>
+          </div>
+
+          <div class="filter-actions">
+            <button class="btn btn-primary search-btn w-100 mb-2" (click)="onSearch()">
+              <i class="bi bi-search me-1"></i>Search
+            </button>
+            <button class="btn btn-outline-secondary clear-btn w-100" (click)="onClear()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Permit Types Section (Now below filters) -->
+      <div class="tabs-section">
+        
+        <div class="tabs-container">
+          <button class="tab-button" [class.active]="activeTab === 'requisition'" (click)="setActiveTab('requisition')">
+            <i class="bi bi-file-text me-2"></i>REQUISITION
+          </button>
+          <button class="tab-button" [class.active]="activeTab === 'revalidation'"
+            (click)="setActiveTab('revalidation')">
+            <i class="bi bi-arrow-repeat me-2"></i>REVALIDATION
+          </button>
+          <button class="tab-button" [class.active]="activeTab === 'cancellation'"
+            (click)="setActiveTab('cancellation')">
+            <i class="bi bi-x-circle me-2"></i>CANCELLATION
+          </button>
+          <button class="tab-button" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+            <i class="bi bi-truck me-2"></i>TRANSIT
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+
+    </div>
+
+    <!-- Right Content Area -->
+    <div class="right-content">
+      <!-- Table Section -->
+      <div class="table-section">
+        <div class="table-header">
+          <!-- <h4 class="table-title">{{ getActiveTabTitle() }} Records</h4> -->
+          <span class="record-count">{{ getFilteredData().length }} records found</span>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead class="color1">
+              <tr>
+                <th>Ref. No</th>
+                <th>App. Sub. Date</th>
+                <th>Distillery Name</th>
+                <th>Status</th>
+                <th>Imp. Pass Fee Amt.</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (permit of getFilteredData(); track permit.referenceNo) {
+              <tr>
+                <td class="ref-no">{{ permit.referenceNo }}</td>
+                <td>{{ permit.submissionDate | date:'dd-MMM-yyyy' }}</td>
+                <td>{{ permit.distilleryName }}</td>
+                <td>
+                  <span class="status-badge">
+                    {{ permit.status }}
+                  </span>
+                </td>
+                <td class="amount">{{ permit.amount | number:'1.2-2' }}</td>
+                <td class="actions">
+                  <button class="btn btn-primary btn-sm me-1" (click)="viewApplication(permit)">
+                    VIEW APPLICATION
+                  </button>
+                  @if (canViewPaymentSlip(permit)) {
+                  <button class="btn btn-warning btn-sm" (click)="viewPermitSlip(permit)">
+                    View Permit Slip
+                  </button>
+                  }
+                </td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="6" class="empty-state">
+                  <p>No records found for the selected criteria</p>
+                </td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
