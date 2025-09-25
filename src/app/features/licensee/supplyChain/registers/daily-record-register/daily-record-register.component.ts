@@ -6,7 +6,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './daily-record-register.component.html',
-  styleUrls: ['./daily-record-register.component.scss']
+  styleUrl: './daily-record-register.component.scss'
 })
 export class DailyRecordRegisterComponent {}
 
