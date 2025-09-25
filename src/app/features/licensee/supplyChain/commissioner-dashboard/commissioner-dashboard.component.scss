@@ -115,6 +115,16 @@
     height: 32px;
     white-space: nowrap;
   }
+
+// Fixed-size icon-only buttons for filters
+.icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
   
   .search-btn {
     background: #007bff;

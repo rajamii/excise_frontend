@@ -74,11 +74,11 @@
       </div>
 
       <div class="filter-actions">
-        <button class="btn btn-primary search-btn" (click)="onSearch()">
-          Search
+        <button class="btn btn-primary search-btn icon-button" title="Search" aria-label="Search" (click)="onSearch()">
+          <i class="bi bi-search"></i>
         </button>
-        <button class="btn btn-outline-secondary clear-btn" (click)="onClear()">
-          Clear
+        <button class="btn btn-outline-secondary clear-btn icon-button" title="Clear" aria-label="Clear filters" (click)="onClear()">
+          <i class="bi bi-arrow-clockwise"></i>
         </button>
       </div>
     </div>
@@ -87,20 +87,20 @@
   <!-- Tabs Section -->
   <div class="tabs-section">
     <div class="tabs-container">
-      <button class="tab-button" [class.active]="activeTab === 'requisition'"
+      <button class="tab-button" [class.active]="activeTab === 'requisition'" title="Requisition" aria-label="Requisition"
         (click)="setActiveTab('requisition')">
-        REQUISITION
+        <i class="bi bi-file-text me-2"></i>REQUISITION
       </button>
-      <button class="tab-button" [class.active]="activeTab === 'revalidation'"
+      <button class="tab-button" [class.active]="activeTab === 'revalidation'" title="Revalidation" aria-label="Revalidation"
         (click)="setActiveTab('revalidation')">
-        REVALIDATION
+        <i class="bi bi-arrow-repeat me-2"></i>REVALIDATION
       </button>
-      <button class="tab-button" [class.active]="activeTab === 'cancellation'"
+      <button class="tab-button" [class.active]="activeTab === 'cancellation'" title="Cancellation" aria-label="Cancellation"
         (click)="setActiveTab('cancellation')">
-        CANCELLATION
+        <i class="bi bi-x-circle me-2"></i>CANCELLATION
       </button>
-      <button class="tab-button" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
-        TRANSIT
+      <button class="tab-button" [class.active]="activeTab === 'transit'" title="Transit" aria-label="Transit" (click)="setActiveTab('transit')">
+        <i class="bi bi-truck me-2"></i>TRANSIT
       </button>
     </div>
   </div>
@@ -119,7 +119,9 @@
             <th>App. Sub. Date</th>
             <th>Distillery Name</th>
             <th>Status</th>
+            @if (activeTab !== 'transit') {
             <th>Imp. Pass Fee Amt.</th>
+            }
             <th>Action</th>
           </tr>
         </thead>
@@ -132,12 +134,14 @@
             <td>
               <span class="status-badge">{{ record.status }}</span>
             </td>
+            @if (activeTab !== 'transit') {
             <td class="amount">
               <div class="input-group">
                 <span class="input-group-text">₹</span>
                 <span class="amount-value">{{ getAmountByType(record) | number:'1.2-2' }}</span>
               </div>
             </td>
+            }
             <td class="actions">
               <!-- Requisition Actions -->
               @if (activeTab === 'requisition') {

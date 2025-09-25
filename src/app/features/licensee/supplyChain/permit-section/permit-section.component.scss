@@ -132,6 +132,17 @@
   }
 }
 
+// Icon-only button utility to prevent expansion on hover
+.icon-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 // Tabs Section
 .tabs-section {
   background: white;
@@ -168,6 +179,13 @@
       border-bottom-color: #007bff;
       background: rgba(0, 123, 255, 0.05);
     }
+  }
+
+  // Ensure tab icon buttons are fixed-size and don't grow on hover
+  .tab-button.icon-button {
+    width: 44px;
+    height: 44px;
+    padding: 0;
   }
 }
 .color1{
@@ -322,6 +340,16 @@
     margin: 0;
     font-size: 1rem;
   }
+}
+
+// Ensure Bootstrap-style buttons with icon-only do not expand
+.btn.icon-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 // Responsive Design
