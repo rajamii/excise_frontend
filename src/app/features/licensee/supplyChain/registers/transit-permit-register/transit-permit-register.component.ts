@@ -5,39 +5,8 @@ import { CommonModule } from '@angular/common';
   selector: 'app-transit-permit-register',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="container-fluid p-3">
-      <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="h5 m-0">Transit Permit Register</h2>
-      </div>
-      <div class="card">
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-sm table-bordered table-hover">
-              <thead class="table-success">
-                <tr>
-                  <th>Ref. No</th>
-                  <th>Date</th>
-                  <th>Consignee</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>TP-001</td>
-                  <td>22-Sep-2025</td>
-                  <td>Sikkim Distilleries Ltd</td>
-                  <td>
-                    <span class="badge bg-info-subtle text-info">Generated</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+  templateUrl: './transit-permit-register.component.html',
+  styleUrls: ['./transit-permit-register.component.scss']
 })
 export class TransitPermitRegisterComponent {}
 
