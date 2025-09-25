@@ -7,13 +7,16 @@
 
 // Header Section
 .header-section {
-  background: linear-gradient(135deg, #007bff, #0056b3);
-  color: white;
+  // background: linear-gradient(135deg, #007bff, #0056b3);
+  color: rgb(0, 0, 0);
   padding: 1rem 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   
   .header-content {
-    max-width: 1400px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: auto;
     margin: 0 auto;
   }
   
@@ -29,11 +32,23 @@
     margin: 0;
   }
   
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
   .user-info {
     font-size: 0.875rem;
     background: rgba(255, 255, 255, 0.2);
     padding: 0.25rem 0.75rem;
     border-radius: 1rem;
+  }
+  
+  .distillery-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
   }
 }
 
@@ -48,7 +63,8 @@
     align-items: end;
     gap: 0.75rem;
     max-width: 1400px;
-    margin: 0 auto;
+    margin: 0;
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
   
@@ -57,12 +73,6 @@
     flex-direction: column;
     min-width: 120px;
     flex: 0 0 auto;
-    
-    &:last-of-type {
-      flex: 1;
-      min-width: 150px;
-      max-width: 200px;
-    }
   }
   
   .filter-label {
@@ -137,8 +147,9 @@
   .tabs-container {
     display: flex;
     max-width: 1400px;
-    margin: 0 auto;
+    margin: 0;
     padding: 0 1.5rem;
+    justify-content: flex-start;
   }
   
   .tab-button {
@@ -169,42 +180,48 @@
 // Table Section
 .table-section {
   background: white;
-  margin: 1.5rem auto;
+  margin: 1.5rem;
   border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   overflow: hidden;
   max-width: 1400px;
-  width: calc(100% - 3rem);
+  margin-left: 1.5rem;
+  margin-right: 1.5rem;
+  
+  .table-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    
+    .record-count {
+      font-size: 0.875rem;
+      color: #6c757d;
+      background: #e9ecef;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+    }
+  }
   
   .table-container {
-    overflow: visible;
+    overflow-x: auto;
   }
   
   .data-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
-    table-layout: fixed;
     
     thead {
       background: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);
       
       th {
-        padding: 0.5rem;
+        padding: 0.75rem;
         text-align: left;
         font-weight: 600;
         color: #2c3e50;
         border-bottom: 2px solid #7fcdcd;
+        white-space: nowrap;
         font-size: 0.875rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        
-        &:nth-child(1) { width: 12%; } // Reference No
-        &:nth-child(2) { width: 15%; } // Submission Date
-        &:nth-child(3) { width: 18%; } // Distillery Name
-        &:nth-child(4) { width: 20%; } // Status
-        &:nth-child(5) { width: 12%; } // Amount
-        &:nth-child(6) { width: 23%; } // Action
       }
     }
     
@@ -223,11 +240,8 @@
       }
       
       td {
-        padding: 0.5rem;
+        padding: 0.75rem;
         vertical-align: middle;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
         
         &.ref-no {
           font-weight: 600;
@@ -263,13 +277,12 @@
         }
         
         &.actions {
-          white-space: normal;
-          overflow: visible;
+          white-space: nowrap;
           
           .btn {
             margin: 0.1rem;
-            padding: 0.2rem 0.4rem;
-            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
           }
         }
       }
@@ -288,7 +301,7 @@
   border-radius: 0.375rem;
   border: 1px solid #c3e6cb;
   line-height: 1.2;
-  max-width: 250px;
+  max-width: 300px;
   word-wrap: break-word;
 }
 
@@ -410,21 +423,6 @@
   }
 }
 
-// Dropdown
-.dropdown-menu {
-  .dropdown-item {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    color: #495057;
-    text-decoration: none;
-    
-    &:hover {
-      background: #f8f9fa;
-      color: #007bff;
-    }
-  }
-}
-
 // Pagination Section
 .pagination-section {
   display: flex;
@@ -492,11 +490,6 @@
     
     .filter-group {
       min-width: auto;
-      
-      &:last-of-type {
-        grid-column: 1 / -1;
-        max-width: none;
-      }
     }
     
     .filter-actions {
@@ -517,16 +510,42 @@
 }
 
 @media (max-width: 768px) {
-  .header-section {
-    padding: 0.75rem 1rem;
+  .header-content {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
   }
   
-  .dashboard-title {
-    font-size: 1.25rem;
+  .right-section {
+    width: 100%;
+    justify-content: space-between;
   }
   
   .filter-section {
     padding: 0.75rem 1rem;
+    
+    .filter-container {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  .tabs-section {
+    .tabs-container {
+      padding: 0 1rem;
+      flex-direction: column;
+    }
+    
+    .tab-button {
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+      border-radius: 0;
+      
+      &.active {
+        border-bottom-color: #007bff;
+        background: #007bff;
+        color: white;
+      }
+    }
   }
   
   .table-section {
@@ -538,10 +557,6 @@
     
     th, td {
       padding: 0.5rem 0.25rem;
-    }
-    
-    td.actions {
-      min-width: 250px;
     }
   }
   
@@ -563,20 +578,12 @@
 }
 
 @media (max-width: 576px) {
-  .tabs-container {
-    flex-direction: column;
+  .dashboard-title {
+    font-size: 1.25rem;
   }
   
-  .tab-button {
-    text-align: center;
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 0;
-    
-    &.active {
-      border-bottom-color: #007bff;
-      background: #007bff;
-      color: white;
-    }
+  .user-info {
+    font-size: 0.75rem;
   }
   
   .status-badge {
@@ -587,8 +594,6 @@
   
   .data-table {
     td.actions {
-      min-width: 200px;
-      
       .btn {
         display: block;
         width: 100%;
@@ -596,15 +601,6 @@
         
         &:last-child {
           margin-bottom: 0;
-        }
-      }
-      
-      .dropdown {
-        width: 100%;
-        margin-bottom: 0.25rem;
-        
-        .dropdown-toggle {
-          width: 100%;
         }
       }
     }

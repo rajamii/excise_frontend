@@ -1,312 +1,295 @@
 <div class="commissioner-dashboard">
-    <!-- Header Section -->
-    <div class="header-section">
-        <div class="header-content">
-            <div class="left-section">
-                <h1 class="dashboard-title">Dashboard</h1>
-                <span class="user-info">User: (ADMIN)</span>
-            </div>
-        </div>
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <h1 class="dashboard-title">Dashboard</h1>
+      </div>
+      <div class="right-section">
+ 
+        <button class="btn btn-success btn-sm distillery-btn">Commissioner</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Section -->
+  <div class="filter-section">
+    <div class="filter-container">
+      <div class="filter-group">
+        <label class="filter-label">Select Date</label>
+        <input type="date" class="form-control filter-input" [(ngModel)]="selectedDate"
+          (ngModelChange)="onSearch()">
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Month</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedMonth" (ngModelChange)="onSearch()">
+          <option value="">All Months</option>
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Year</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedYear" (ngModelChange)="onSearch()">
+          <option value="">All Years</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Distillery</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedDistillery" (ngModelChange)="onSearch()">
+          <option value="">All Distilleries</option>
+          <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
+          <option value="mount-distilleries">Mount Distilleries Ltd</option>
+          <option value="darjeeling-artisan">Darjeeling Artisan Pvt Ltd</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedStatus" (ngModelChange)="onSearch()">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="generated">Generated</option>
+          <option value="forwarded">Forwarded</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="terminated">Terminated</option>
+        </select>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-primary search-btn" (click)="onSearch()">
+          Search
+        </button>
+        <button class="btn btn-outline-secondary clear-btn" (click)="onClear()">
+          Clear
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="tabs-section">
+    <div class="tabs-container">
+      <button class="tab-button" [class.active]="activeTab === 'requisition'"
+        (click)="setActiveTab('requisition')">
+        REQUISITION
+      </button>
+      <button class="tab-button" [class.active]="activeTab === 'revalidation'"
+        (click)="setActiveTab('revalidation')">
+        REVALIDATION
+      </button>
+      <button class="tab-button" [class.active]="activeTab === 'cancellation'"
+        (click)="setActiveTab('cancellation')">
+        CANCELLATION
+      </button>
+      <button class="tab-button" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+        TRANSIT
+      </button>
+    </div>
+  </div>
+
+  <!-- Table Section -->
+  <div class="table-section">
+    <div class="table-header">
+      <span class="record-count">{{ getFilteredRecords().length }} records found</span>
     </div>
 
-    <!-- Filter Section -->
-    <div class="filter-section">
-        <div class="filter-container">
-            <div class="filter-group">
-                <label class="filter-label">Select Date</label>
-                <input type="date" class="form-control filter-input" [(ngModel)]="selectedDate"
-                    (ngModelChange)="onSearch()">
-            </div>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Ref. No</th>
+            <th>App. Sub. Date</th>
+            <th>Distillery Name</th>
+            <th>Status</th>
+            <th>Imp. Pass Fee Amt.</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (record of getPaginatedRecords(); track record.id) {
+          <tr>
+            <td class="ref-no">{{ record.referenceNo }}</td>
+            <td>{{ record.submissionDate | date:'dd-MMM-yyyy' }}</td>
+            <td>{{ record.distilleryName }}</td>
+            <td>
+              <span class="status-badge">{{ record.status }}</span>
+            </td>
+            <td class="amount">
+              <div class="input-group">
+                <span class="input-group-text">₹</span>
+                <span class="amount-value">{{ getAmountByType(record) | number:'1.2-2' }}</span>
+              </div>
+            </td>
+            <td class="actions">
+              <!-- Requisition Actions -->
+              @if (activeTab === 'requisition') {
+              @if (record.status === 'Pending' || record.status === 'ForwardedToCommissioner') {
+              <button class="btn btn-primary btn-sm me-1" (click)="forwardToCommissioner(record)">
+                FORWARD
+              </button>
+              }
 
-            <div class="filter-group">
-                <label class="filter-label">Month</label>
-                <select class="form-select filter-input" [(ngModel)]="selectedMonth" (ngModelChange)="onSearch()">
-                    <option value="">All Months</option>
-                    <option value="01">January</option>
-                    <option value="02">February</option>
-                    <option value="03">March</option>
-                    <option value="04">April</option>
-                    <option value="05">May</option>
-                    <option value="06">June</option>
-                    <option value="07">July</option>
-                    <option value="08">August</option>
-                    <option value="09">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
+              <button class="btn btn-primary btn-sm me-1" (click)="viewApplication(record)">
+                VIEW APPLICATION
+              </button>
 
-            <div class="filter-group">
-                <label class="filter-label">Year</label>
-                <select class="form-select filter-input" [(ngModel)]="selectedYear" (ngModelChange)="onSearch()">
-                    <option value="">All Years</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                </select>
-            </div>
+              @if (record.status !== 'Terminated' && record.status !== 'IMPORT PERMIT GENERATED') {
+              <button class="btn btn-success btn-sm me-1" (click)="approveApplication(record)">
+                APPROVED_APPLICATION & PRINT
+              </button>
+              }
 
-            <div class="filter-group">
-                <label class="filter-label">Distillery</label>
-                <select class="form-select filter-input" [(ngModel)]="selectedDistillery" (ngModelChange)="onSearch()">
-                    <option value="">All Distilleries</option>
-                    <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
-                    <option value="mount-distilleries">Mount Distilleries Ltd</option>
-                    <option value="darjeeling-artisan">Darjeeling Artisan Pvt Ltd</option>
-                </select>
-            </div>
+              @if (canShowTerminateButton(record)) {
+              <button class="btn btn-danger btn-sm me-1" (click)="terminateRequisition(record)">
+                TERMINATE
+              </button>
+              }
 
-            <div class="filter-group">
-                <label class="filter-label">Status</label>
-                <select class="form-select filter-input" [(ngModel)]="selectedStatus" (ngModelChange)="onSearch()">
-                    <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="generated">Generated</option>
-                    <option value="forwarded">Forwarded</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="terminated">Terminated</option>
-                </select>
-            </div>
+              @if (canShowPaymentSlip(record)) {
+              <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
+                View Payment Slip
+              </button>
+              }
+              }
 
-            <div class="filter-group">
-                <input type="text" class="form-control filter-input" placeholder="Enter filter..."
-                    [(ngModel)]="searchFilter" (ngModelChange)="onSearch()">
-            </div>
+              <!-- Revalidation Actions -->
+              @if (activeTab === 'revalidation') {
+              <button class="btn btn-primary btn-sm me-1" (click)="viewPermit(record)">
+                VIEW PERMIT
+              </button>
 
-            <div class="filter-actions">
-                <button class="search-btn" (click)="onSearch()">
-                    Search
-                </button>
-                <button class="clear-btn" (click)="onClear()">
-                    Clear
-                </button>
-            </div>
-        </div>
+              <button class="btn btn-primary btn-sm me-1" (click)="viewRevalidationApplication(record)">
+                VIEW APPLICATION
+              </button>
+
+              @if (record.status !== 'ApprovedRevalidationByCommissioner') {
+              <button class="btn btn-success btn-sm me-1" (click)="approveRevalidation(record)">
+                APPROVE
+              </button>
+              }
+
+              @if (canShowRevalidationPaymentSlip(record)) {
+              <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
+                View Payment Slip
+              </button>
+              }
+              }
+
+              <!-- Cancellation Actions -->
+              @if (activeTab === 'cancellation') {
+              <button class="btn btn-success btn-sm me-1" (click)="viewApprovalCancellation(record)">
+                View Approval Cancellation
+              </button>
+
+              @if (record.cancellationBRFilePath) {
+              <button class="btn btn-info btn-sm me-1" (click)="viewCancellationBR(record)">
+                View Cancellation BR
+              </button>
+              }
+
+              @if (record.status !== 'Approved Cancellation') {
+              <button class="btn btn-primary btn-sm me-1" (click)="approveCancellation(record)">
+                APPROVE CANCELLATION
+              </button>
+              }
+
+              <button class="btn btn-danger btn-sm" (click)="cancelPermit(record)">
+                Cancel Permit
+              </button>
+              }
+
+              <!-- Transit Actions -->
+              @if (activeTab === 'transit') {
+              <button class="btn btn-primary btn-sm me-1" (click)="viewApplication(record)">
+                VIEW APPLICATION
+              </button>
+
+              <button class="btn btn-success btn-sm me-1" (click)="approveApplication(record)">
+                APPROVE
+              </button>
+
+              @if (canShowPaymentSlip(record)) {
+              <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
+                View Payment Slip
+              </button>
+              }
+              }
+            </td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="6" class="empty-state">
+              <p>No records found for the selected criteria</p>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
     </div>
 
-    <!-- Tabs Section -->
-    <div class="tabs-section">
-        <div class="tabs-container">
-            <button class="tab-button" [class.active]="activeTab === 'requisition'"
-                (click)="setActiveTab('requisition')">
-                REQUISITION
-            </button>
-            <button class="tab-button" [class.active]="activeTab === 'revalidation'"
-                (click)="setActiveTab('revalidation')">
-                REVALIDATION
-            </button>
-            <button class="tab-button" [class.active]="activeTab === 'cancellation'"
-                (click)="setActiveTab('cancellation')">
-                CANCELLATION
-            </button>
-            <button class="tab-button" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
-                TRANSIT
-            </button>
-        </div>
+    <!-- Pagination -->
+    <div class="pagination-section">
+      <div class="pagination-info">
+        <span class="record-info">
+          Showing {{ (currentPage - 1) * pageSize + 1 }} to
+          {{ Math.min(currentPage * pageSize, totalRecords) }} of
+          {{ totalRecords }} records
+        </span>
+      </div>
+
+      <div class="pagination-controls">
+        <button class="btn btn-outline-primary btn-sm me-1" [disabled]="currentPage === 1"
+          (click)="goToFirstPage()">
+          <i class="fas fa-angle-double-left"></i> First
+        </button>
+
+        <button class="btn btn-outline-primary btn-sm me-1" [disabled]="currentPage === 1"
+          (click)="goToPreviousPage()">
+          <i class="fas fa-angle-left"></i> Prev
+        </button>
+
+        @for (page of getPageNumbers(); track page) {
+        <button class="btn btn-sm me-1" [class.btn-primary]="page === currentPage"
+          [class.btn-outline-primary]="page !== currentPage" (click)="goToPage(page)">
+          {{ page }}
+        </button>
+        }
+
+        <button class="btn btn-outline-primary btn-sm ms-1" [disabled]="currentPage === getTotalPages()"
+          (click)="goToNextPage()">
+          Next <i class="fas fa-angle-right"></i>
+        </button>
+
+        <button class="btn btn-outline-primary btn-sm ms-1" [disabled]="currentPage === getTotalPages()"
+          (click)="goToLastPage()">
+          Last <i class="fas fa-angle-double-right"></i>
+        </button>
+      </div>
     </div>
+  </div>
 
-    <!-- Table Section -->
-    <div class="table-section">
-        <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Reference No</th>
-                        <th>Application Submission Date</th>
-                        <th>Distillery Name</th>
-                        <th>Status</th>
-                        <th>Import Pass Fee Amount</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (record of getPaginatedRecords(); track record.id) {
-                    <tr>
-                        <td class="ref-no">{{ record.referenceNo }}</td>
-                        <td>{{ record.submissionDate | date:'dd-MMM-yyyy' }}</td>
-                        <td>{{ record.distilleryName }}</td>
-                        <td>
-                            <span class="status-badge">{{ record.status }}</span>
-                        </td>
-                        <td class="amount">
-                            <div class="input-group">
-                                <span class="input-group-text">₹</span>
-                                <span class="amount-value">{{ getAmountByType(record) | number:'1.2-2' }}</span>
-                            </div>
-                        </td>
-                        <td class="actions">
-                            <!-- Requisition Actions -->
-                            @if (activeTab === 'requisition') {
-                            @if (record.status === 'Pending' || record.status === 'ForwardedToCommissioner') {
-                            <button class="btn btn-primary btn-sm me-1" (click)="forwardToCommissioner(record)">
-                                FORWARD
-                            </button>
-                            }
-
-                            <button class="btn btn-primary btn-sm me-1" (click)="viewApplication(record)">
-                                VIEW APPLICATION
-                            </button>
-
-                            @if (record.status !== 'Terminated' && record.status !== 'IMPORT PERMIT GENERATED') {
-                            <button class="btn btn-success btn-sm me-1" (click)="approveApplication(record)">
-                                APPROVED_APPLICATION & PRINT
-                            </button>
-                            }
-
-                            @if (canShowTerminateButton(record)) {
-                            <button class="btn btn-danger btn-sm me-1" (click)="terminateRequisition(record)">
-                                TERMINATE
-                            </button>
-                            }
-
-                            @if (canShowPaymentSlip(record)) {
-                            <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
-                                View Payment Slip
-                            </button>
-                            }
-                            }
-
-                            <!-- Revalidation Actions -->
-                            @if (activeTab === 'revalidation') {
-                            <button class="btn btn-primary btn-sm me-1" (click)="viewPermit(record)">
-                                VIEW PERMIT
-                            </button>
-
-                            <button class="btn btn-primary btn-sm me-1" (click)="viewRevalidationApplication(record)">
-                                VIEW APPLICATION
-                            </button>
-
-                            @if (record.status !== 'ApprovedRevalidationByCommissioner') {
-                            <button class="btn btn-success btn-sm me-1" (click)="approveRevalidation(record)">
-                                APPROVE
-                            </button>
-                            }
-
-                            @if (canShowRevalidationPaymentSlip(record)) {
-                            <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
-                                View Payment Slip
-                            </button>
-                            }
-                            }
-
-                            <!-- Cancellation Actions -->
-                            @if (activeTab === 'cancellation') {
-                            <button class="btn btn-success btn-sm me-1" (click)="viewApprovalCancellation(record)">
-                                View Approval Cancellation
-                            </button>
-
-                            @if (record.cancellationBRFilePath) {
-                            <button class="btn btn-info btn-sm me-1" (click)="viewCancellationBR(record)">
-                                View Cancellation BR
-                            </button>
-                            }
-
-                            @if (record.status !== 'Approved Cancellation') {
-                            <button class="btn btn-primary btn-sm me-1" (click)="approveCancellation(record)">
-                                APPROVE CANCELLATION
-                            </button>
-                            }
-
-                            <div class="dropdown d-inline-block me-1">
-                                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                    Permit Actions
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a class="dropdown-item" href="#" (click)="viewPermit(record)">
-                                            View Permit Details
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item" href="#" (click)="viewApplication(record)">
-                                            View Application
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <button class="btn btn-danger btn-sm" (click)="cancelPermit(record)">
-                                Cancel Permit
-                            </button>
-                            }
-
-                            <!-- Transit Actions (if needed) -->
-                            @if (activeTab === 'transit') {
-                            <button class="btn btn-primary btn-sm me-1" (click)="viewApplication(record)">
-                                VIEW APPLICATION
-                            </button>
-
-                            <button class="btn btn-success btn-sm me-1" (click)="approveApplication(record)">
-                                APPROVE
-                            </button>
-
-                            @if (canShowPaymentSlip(record)) {
-                            <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
-                                View Payment Slip
-                            </button>
-                            }
-                            }
-                        </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <p>No records found for the selected criteria</p>
-                        </td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination-section">
-            <div class="pagination-info">
-                <span class="record-info">
-                    Showing {{ (currentPage - 1) * pageSize + 1 }} to
-                    {{ Math.min(currentPage * pageSize, totalRecords) }} of
-                    {{ totalRecords }} records
-                </span>
-            </div>
-
-            <div class="pagination-controls">
-                <button class="btn btn-outline-primary btn-sm me-1" [disabled]="currentPage === 1"
-                    (click)="goToFirstPage()">
-                    <i class="fas fa-angle-double-left"></i> First
-                </button>
-
-                <button class="btn btn-outline-primary btn-sm me-1" [disabled]="currentPage === 1"
-                    (click)="goToPreviousPage()">
-                    <i class="fas fa-angle-left"></i> Prev
-                </button>
-
-                @for (page of getPageNumbers(); track page) {
-                <button class="btn btn-sm me-1" [class.btn-primary]="page === currentPage"
-                    [class.btn-outline-primary]="page !== currentPage" (click)="goToPage(page)">
-                    {{ page }}
-                </button>
-                }
-
-                <button class="btn btn-outline-primary btn-sm ms-1" [disabled]="currentPage === getTotalPages()"
-                    (click)="goToNextPage()">
-                    Next <i class="fas fa-angle-right"></i>
-                </button>
-
-                <button class="btn btn-outline-primary btn-sm ms-1" [disabled]="currentPage === getTotalPages()"
-                    (click)="goToLastPage()">
-                    Last <i class="fas fa-angle-double-right"></i>
-                </button>
-            </div>
-        </div>
+  <!-- Footer -->
+  <div class="footer-section">
+    <div class="footer-content">
+      <p>Site designed, developed and maintained by National Informatics Centre (NIC)</p>
     </div>
-
-    <!-- Footer -->
-    <div class="footer-section">
-        <div class="footer-content">
-            <p>Site designed, developed and maintained by National Informatics Centre (NIC)</p>
-        </div>
-    </div>
+  </div>
 </div>
