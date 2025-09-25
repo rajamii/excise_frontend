@@ -8,6 +8,10 @@ import { CommonModule } from '@angular/common';
   templateUrl: './daily-record-register.component.html',
   styleUrl: './daily-record-register.component.scss'
 })
-export class DailyRecordRegisterComponent {}
+export class DailyRecordRegisterComponent {
+
+}
+
+
 
 

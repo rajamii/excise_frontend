@@ -116,6 +116,19 @@
             </div>
           </div>
 
+          <!-- Vehicle Number -->
+          <div class="col-md-6">
+            <div class="input-group-custom">
+              <label class="form-label">
+                <i class="fas fa-truck me-2"></i>Vehicle Number:
+              </label>
+              <select class="form-control input-field" [(ngModel)]="formData.vehicleNumber">
+                <option value="">-- Select Vehicle --</option>
+                <option *ngFor="let v of vehicleNumbers" [value]="v">{{ v }}</option>
+              </select>
+            </div>
+          </div>
+
           <!-- Add Product Button -->
           <div class="col-md-6 d-flex align-items-end">
             <button class="btn btn-primary" (click)="addProduct()">
@@ -177,6 +190,9 @@
     <div class="content">
       <p>Dear Sir,</p>
       <p>We would be ever grateful if you could kindly issue Transit permit to the following brands of liquor for our sales depot at {{ formData.depotAddress }}.</p>
+    </div>
+    <div class="vehiclenumber mb-3" *ngIf="formData.vehicleNumber">
+      <strong>Vehicle Number:</strong> {{ formData.vehicleNumber }}
     </div>
 
     <!-- Products Table -->

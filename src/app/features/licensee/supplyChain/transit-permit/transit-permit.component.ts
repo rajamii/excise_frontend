@@ -11,6 +11,7 @@ interface FormData {
   brand: string;
   size: string;
   cases: number;
+  vehicleNumber?: string;
 }
 
 interface Product {
@@ -37,7 +38,8 @@ export class TransitPermitComponent implements OnInit {
     depotAddress: '',
     brand: '',
     size: '',
-    cases: 0
+    cases: 0,
+    vehicleNumber: ''
   };
 
   products: Product[] = [];
@@ -51,6 +53,12 @@ export class TransitPermitComponent implements OnInit {
     'officers-choice': { educationCess: 12.00, exciseDuty: 95.00, additionalExcise: 35.00 },
     'imperial-blue': { educationCess: 14.00, exciseDuty: 110.00, additionalExcise: 40.00 }
   };
+
+  vehicleNumbers: string[] = [
+    'SK 01 AB 1234',
+    'SK 02 CD 5678',
+    'SK 03 EF 9012'
+  ];
 
   constructor(private router: Router) {}
 
@@ -217,6 +225,7 @@ export class TransitPermitComponent implements OnInit {
     this.formData.brand = '';
     this.formData.size = '';
     this.formData.cases = 0;
+    this.formData.vehicleNumber = '';
     
     // Clear products and errors
     this.products = [];

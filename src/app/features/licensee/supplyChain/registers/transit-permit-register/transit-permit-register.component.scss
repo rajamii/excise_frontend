@@ -6,4 +6,18 @@
   font-weight: 500;
 }
 
+.filters .form-label {
+  margin-bottom: 2px;
+}
+
+.filters .form-control-sm,
+.filters .form-select-sm {
+  min-width: 150px;
+}
+
+.card-body.py-2 {
+  padding-top: .5rem !important;
+  padding-bottom: .5rem !important;
+}
+
 

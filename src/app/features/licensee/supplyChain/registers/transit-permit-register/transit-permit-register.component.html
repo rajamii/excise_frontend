@@ -3,26 +3,104 @@
     <h2 class="h5 m-0">Transit Permit Register</h2>
   </div>
 
+  <!-- Filters -->
+  <div class="card mb-2">
+    <div class="card-body py-2">
+      <div class="filters d-flex align-items-end flex-wrap gap-2">
+        <div class="col-auto">
+          <label class="form-label small">Bill No</label>
+          <input type="text" class="form-control form-control-sm" placeholder="TRP/..." [(ngModel)]="filters.billNo" (ngModelChange)="applyFilters()" />
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.date" (ngModelChange)="applyFilters()" />
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Depot Address</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.depotAddress" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option value="gangtok">Gangtok</option>
+            <option value="namchi">Namchi</option>
+            <option value="gyalshing">Gyalshing</option>
+            <option value="mangan">Mangan</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Brand</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.brand" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>Royal Stag</option>
+            <option>Blenders Pride</option>
+            <option>Officers Choice</option>
+            <option>Imperial Blue</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Size (ml)</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.size" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>180ml</option>
+            <option>375ml</option>
+            <option>750ml</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Vehicle Number</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.vehicleNumber" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>SK 01 AB 1234</option>
+            <option>SK 02 CD 5678</option>
+            <option>SK 03 EF 9012</option>
+          </select>
+        </div>
+        <div class="col-auto d-flex gap-2">
+          <button class="btn btn-primary btn-sm px-2" type="button" (click)="applyFilters()" title="Search" aria-label="Search">
+            <i class="bi bi-search"></i>
+          </button>
+          <button class="btn btn-outline-secondary btn-sm px-2" type="button" (click)="clearFilters()" title="Clear" aria-label="Clear">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Table -->
   <div class="card">
     <div class="card-body">
       <div class="table-responsive">
         <table class="table table-sm table-bordered table-hover">
           <thead class="table-success">
             <tr>
-              <th>Ref. No</th>
+              <th>Bill No</th>
               <th>Date</th>
-              <th>Consignee</th>
-              <th>Status</th>
+              <th>Distributor</th>
+              <th>Depot</th>
+              <th>Brand</th>
+              <th>Size</th>
+              <th>Cases</th>
+              <th>Edu. Cess (₹/case)</th>
+              <th>Excise Duty (₹/case)</th>
+              <th>Addl. Excise (₹/case)</th>
+              <th>Vehicle Number</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>TP-001</td>
-              <td>22-Sep-2025</td>
-              <td>Sikkim Distilleries Ltd</td>
-              <td>
-                <span class="badge bg-info-subtle text-info">Generated</span>
-              </td>
+            <tr *ngFor="let r of filtered">
+              <td>{{ r.billNo }}</td>
+              <td>{{ r.date | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ r.distributor }}</td>
+              <td class="text-capitalize">{{ r.depotAddress }}</td>
+              <td>{{ r.brand }}</td>
+              <td>{{ r.size }}</td>
+              <td>{{ r.cases }}</td>
+              <td>{{ r.educationCess | number:'1.2-2' }}</td>
+              <td>{{ r.exciseDuty | number:'1.2-2' }}</td>
+              <td>{{ r.additionalExcise | number:'1.2-2' }}</td>
+              <td>{{ r.vehicleNumber }}</td>
+            </tr>
+            <tr *ngIf="filtered.length === 0">
+              <td colspan="11" class="text-center text-muted">No records</td>
             </tr>
           </tbody>
         </table>
