@@ -43,6 +43,33 @@
             </div>
           </div>
         </div>
+
+          <!-- Register Section -->
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed text-black fw-semibold" type="button"
+                data-bs-toggle="collapse" data-bs-target="#registerCollapse">
+                <i class="bi bi-journal-text me-2"></i>
+                Register
+              </button>
+            </h2>
+            <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+              <div class="accordion-body p-0">
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('transit-permit-register')" style="cursor: pointer;">
+                    <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
+                    <span>Transit Permit Register</span>
+                  </li>
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('daily-record-register')" style="cursor: pointer;">
+                    <i class="bi bi-journal-check me-3 text-success fs-5"></i>
+                    <span>Daily Record Register</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
       </div>
     </div>
   </nav>
@@ -65,7 +92,7 @@
             </div>
             <div class="col">
               <h1 class="h3 mb-1 fw-bold">Dashboard</h1>
-              <p class="mb-0 small opacity-75">Licensee: Sikkim Distilleries Ltd (01202506012)</p>
+              <p class="mb-0 small opacity-75">Licensees: Sikkim Distilleries Ltd (01202506012)</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">

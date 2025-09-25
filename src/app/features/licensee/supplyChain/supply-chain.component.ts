@@ -119,6 +119,12 @@ export class SupplyChainComponent {
       case 'transit-permit':
         this.router.navigate(['/dev-transit-permit']);
         break;
+      case 'transit-permit-register':
+        this.router.navigate(['/dev-transit-permit-register']);
+        break;
+      case 'daily-record-register':
+        this.router.navigate(['/dev-daily-record-register']);
+        break;
       case 'dashboard':
         this.router.navigate(['/dev-supply-chain']);
         break;

@@ -63,6 +63,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/transit-permit/transit-permit.component').then(m => m.TransitPermitComponent)
   },
   {
+    path: 'dev-transit-permit-register',
+    loadComponent: () => import('./features/licensee/supplyChain/registers/transit-permit-register/transit-permit-register.component').then(m => m.TransitPermitRegisterComponent)
+  },
+  {
+    path: 'dev-daily-record-register',
+    loadComponent: () => import('./features/licensee/supplyChain/registers/daily-record-register/daily-record-register.component').then(m => m.DailyRecordRegisterComponent)
+  },
+  {
     path: 'app-permit-section',
     loadComponent: () => import('./features/licensee/supplyChain/permit-section/permit-section.component').then(m => m.PermitSectionComponent)
   },
