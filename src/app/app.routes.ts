@@ -66,6 +66,10 @@ export const routes: Routes = [
     path: 'app-permit-section',
     loadComponent: () => import('./features/licensee/supplyChain/permit-section/permit-section.component').then(m => m.PermitSectionComponent)
   },
+  {
+    path: 'dev-commissioner-dashboard',
+    loadComponent: () => import('./features/licensee/supplyChain/commissioner-dashboard/commissioner-dashboard.component').then(m => m.CommissionerDashboardComponent)
+  },
 
   // Role Protected modules
   {
