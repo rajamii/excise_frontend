@@ -138,11 +138,13 @@
             <div class="col-auto">
               <label class="form-label small mb-1 invisible">Actions</label>
               <div class="d-flex gap-2">
-                <button class="btn btn-primary btn-sm" (click)="onSearch()">
-                  <i class="bi bi-search me-1"></i>Search
+                <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search">
+                  <i class="bi bi-search"></i>
+                  <span class="btn-label">Search</span>
                 </button>
-                <button class="btn btn-outline-secondary btn-sm" (click)="onClear()">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Clear
+                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear filters">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  <span class="btn-label">Clear</span>
                 </button>
               </div>
             </div>
@@ -215,11 +217,13 @@
                   </td>
                   <td>
                     <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        VIEW APPLICATION
+                      <button class="btn btn-primary btn-sm icon-btn" (click)="viewApplication(item)" title="View application">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span class="btn-label">View Application</span>
                       </button>
-                      <button class="btn btn-warning btn-sm" (click)="viewSlip(item)">
-                        View Permit Slip
+                      <button class="btn btn-warning btn-sm icon-btn" (click)="viewSlip(item)" title="View permit slip">
+                        <i class="bi bi-receipt"></i>
+                        <span class="btn-label">Permit Slip</span>
                       </button>
                     </div>
                   </td>
@@ -265,11 +269,13 @@
                   </td>
                   <td>
                     <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-success btn-sm" (click)="requestRevlidation(item)">
-                        Request Revlidation
+                      <button class="btn btn-success btn-sm icon-btn" (click)="requestRevlidation(item)" title="Request revalidation">
+                        <i class="bi bi-arrow-repeat"></i>
+                        <span class="btn-label">Revalidate</span>
                       </button>
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        View Application
+                      <button class="btn btn-primary btn-sm icon-btn" (click)="viewApplication(item)" title="View application">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <span class="btn-label">View</span>
                       </button>
                     </div>
                   </td>
@@ -307,8 +313,9 @@
                     ₹{{ item.amount }}
                   </td>
                   <td>
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                      VIEW APPLICATION
+                    <button class="btn btn-primary btn-sm icon-btn" (click)="viewApplication(item)" title="View application">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span class="btn-label">View</span>
                     </button>
                   </td>
                 </tr>
@@ -345,8 +352,9 @@
                     ₹{{ item.amount }}
                   </td>
                   <td>
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                      VIEW APPLICATION
+                    <button class="btn btn-primary btn-sm icon-btn" (click)="viewApplication(item)" title="View application">
+                      <i class="bi bi-file-earmark-text"></i>
+                      <span class="btn-label">View</span>
                     </button>
                   </td>
                 </tr>

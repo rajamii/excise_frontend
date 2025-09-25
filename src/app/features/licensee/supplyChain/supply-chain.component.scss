@@ -39,6 +39,30 @@
   }
 }
 
+// Icon-only button that reveals text on hover
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  .btn-label {
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: max-width 0.2s ease, opacity 0.2s ease;
+  }
+  &:hover .btn-label {
+    max-width: 200px;
+    opacity: 1;
+  }
+}
+
+// Tighter padding for small icon buttons
+.btn.icon-btn.btn-sm {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
 // Sidebar Navigation Styles
 .sidebar-nav {
   min-height: 100vh;
