@@ -1,7 +1,7 @@
 // Commissioner Dashboard Layout
 .commissioner-dashboard {
   background: #f8f9fa;
-  min-height: 100vh;
+  min-height: auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -184,7 +184,7 @@
   border-radius: 0.5rem;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
   overflow: hidden;
-  max-width: 1400px;
+  max-width: auto;
   margin-left: 1.5rem;
   margin-right: 1.5rem;
   
