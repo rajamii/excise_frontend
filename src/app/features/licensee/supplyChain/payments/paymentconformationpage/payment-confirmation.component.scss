@@ -9,12 +9,42 @@
   overflow: hidden;
 }
 
+.history-hover {
+  cursor: pointer;
+  transition: box-shadow .2s ease, transform .1s ease, background .2s ease;
+  &:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #FFFFFF 0%, #eef2ff 100%);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
 .wallet-content {
   position: relative;
   z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.wallet-click {
+  cursor: pointer;
+  padding-right: 1rem;
+  border-radius: 8px;
+  transition: background-color .2s ease, transform .1s ease;
+  &:hover {
+    background-color: rgba(0,0,0,.03);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+.view-hint {
+  font-size: .8rem;
+  color: #6B7280;
 }
 
 .wallet-icon {
@@ -60,11 +90,13 @@
     color: #4F46E5;
     background-color: #F3F4F6;
   }
-  
+  .custom-btn {
+    background-color: #1B2A74;
+  }
   &.active {
-    color: #4F46E5;
+    color: #ff0000;
     background-color: #FFFFFF;
-    border-bottom: 3px solid #4F46E5;
+    border-bottom: 3px solid #ff0000;
   }
 }
 

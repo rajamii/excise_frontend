@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 
 interface PaymentItem {
   id: string;
@@ -164,6 +164,13 @@ export class PaymentConfirmationComponent implements OnInit {
 
     // Check user type (this would come from a service in real app)
     this.isBreweryUser = false; // Set based on user session
+
+    // Ensure any stale modal/backdrop artifacts are cleaned on navigation
+    this.router.events.subscribe(ev => {
+      if (ev instanceof NavigationEnd) {
+        this.cleanupModalArtifacts();
+      }
+    });
   }
 
   // Wallet history (utilization and additions)
@@ -190,6 +197,8 @@ export class PaymentConfirmationComponent implements OnInit {
   walletHistoryFiltered: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [];
 
   openWalletHistory(wallet: 'excise' | 'education'): void {
+    // Clean any previous artifacts before opening a new modal
+    this.cleanupModalArtifacts();
     this.selectedWalletForHistory = wallet;
     this.clearWalletHistoryFilters(false);
     this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
@@ -197,6 +206,8 @@ export class PaymentConfirmationComponent implements OnInit {
     if (modalEl) {
       const modal = new (window as any).bootstrap.Modal(modalEl);
       modal.show();
+      // When modal fully hidden, run cleanup in case bootstrap misses anything
+      modalEl.addEventListener('hidden.bs.modal', () => this.cleanupModalArtifacts(), { once: true });
     }
   }
 
@@ -222,6 +233,18 @@ export class PaymentConfirmationComponent implements OnInit {
     this.walletHistoryFilters = { from: '', to: '', type: '', minAmount: '', maxAmount: '' };
     if (apply) {
       this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    }
+  }
+
+  // Defensive cleanup to avoid "stuck" page due to lingering modal/backdrop/body classes
+  private cleanupModalArtifacts(): void {
+    try {
+      document.body.classList.remove('modal-open');
+      document.body.style.removeProperty('padding-right');
+      const backdrops = Array.from(document.getElementsByClassName('modal-backdrop')) as HTMLElement[];
+      backdrops.forEach(el => el.parentNode?.removeChild(el));
+    } catch (_) {
+      // no-op
     }
   }
 

@@ -5,9 +5,9 @@
   <!-- Wallet Cards Section -->
   <div class="container-fluid py-4">
     <!-- Excise/Additional Wallet Card -->
-    <div class="wallet-card mb-4" *ngIf="!isBreweryUser">
+    <div class="wallet-card mb-4 history-hover" *ngIf="!isBreweryUser" (click)="openWalletHistory('excise')">
       <div class="wallet-content">
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center wallet-click" (click)="openWalletHistory('excise')" title="Click to view history" role="button">
           <i class="fas fa-wallet wallet-icon text-primary"></i>
           <div>
             <div class="wallet-title">Excise / Additional Wallet Balance</div>
@@ -15,13 +15,14 @@
               <span class="currency">₹</span>
               <span>{{ exciseWalletBalance | number:'1.2-2' }}</span>
             </div>
+            <!-- <span class="view-hint"><i class="bi bi-clock-history me-1"></i>View historys</span> -->
           </div>
         </div>
         <div>
-          <button class="btn btn-outline-primary me-2" (click)="openWalletHistory('excise')">
+          <button class="btn btn-outline-success me-2" (click)="openWalletHistory('excise'); $event.stopPropagation()">
             <i class="bi bi-clock-history me-1"></i>View History
           </button>
-          <button class="btn btn-primary" (click)="addMoney('excise')">
+          <button class="btn btn-primary" (click)="addMoney('excise'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
@@ -50,9 +51,9 @@
     </div>
 
     <!-- Education Cess Wallet Card -->
-    <div class="wallet-card mb-4">
+    <div class="wallet-card mb-4 history-hover" (click)="openWalletHistory('education')">
       <div class="wallet-content">
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center wallet-click" (click)="openWalletHistory('education')" title="Click to view history" role="button">
           <i class="fas fa-wallet wallet-icon text-info"></i>
           <div>
             <div class="wallet-title">Education Cess Wallet Balance</div>
@@ -60,13 +61,14 @@
               <span class="currency">₹</span>
               <span>{{ educationCessBalance | number:'1.2-2' }}</span>
             </div>
+            <!-- <span class="view-hint text-info"><i class="bi bi-clock-history me-1"></i>View history</span> -->
           </div>
         </div>
         <div>
-          <button class="btn btn-outline-info me-2" (click)="openWalletHistory('education')">
+          <button class="btn btn-outline-success me-2" (click)="openWalletHistory('education'); $event.stopPropagation()">
             <i class="bi bi-clock-history me-1"></i>View History
           </button>
-          <button class="btn btn-info" (click)="addMoney('education')">
+          <button class="btn btn-primary" (click)="addMoney('education'); $event.stopPropagation()">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
         </div>
