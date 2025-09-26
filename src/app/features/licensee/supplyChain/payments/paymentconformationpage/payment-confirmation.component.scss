@@ -11,13 +11,36 @@
 
 .history-hover {
   cursor: pointer;
-  transition: box-shadow .2s ease, transform .1s ease, background .2s ease;
+  transition: box-shadow .25s ease, transform .15s ease, background .25s ease, border-color .25s ease;
+  position: relative;
   &:hover {
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
     background: linear-gradient(135deg, #FFFFFF 0%, #eef2ff 100%);
+    border: 1px solid rgba(13, 110, 253, 0.25);
   }
   &:active {
     transform: translateY(1px);
+  }
+
+  &::after {
+    content: 'Click to view history';
+    position: absolute;
+    left: 1.5rem;
+    bottom: .75rem;
+    font-size: .85rem;
+    color: #157347;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 8px;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  &:hover::after {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
