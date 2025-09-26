@@ -1,5 +1,42 @@
-.table thead th {
-  white-space: nowrap;
+// Keep any minimal overrides
+.table thead th { white-space: nowrap; }
+
+/* Add local minimal styles to ensure readability if global styles are absent */
+.daily-record-register .record-count { font-size: 0.875rem; color: #6c757d; }
+.daily-record-register .form-label { font-weight: 600; }
+.daily-record-register .card-header { background-color: #f8f9fa; }
+
+/* Summary colored boxes */
+.daily-record-register .summary-box {
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  color: #0b2e13; /* will be overridden by variants */
 }
 
+.daily-record-register .summary-box .label {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
 
+.daily-record-register .summary-box .value {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.daily-record-register .bg-deposit {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #1b5e20;
+}
+
+.daily-record-register .bg-utilised {
+  background: #fff3e0;
+  border: 1px solid #ffe0b2;
+  color: #e65100;
+}
+
+.daily-record-register .bg-current {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  color: #0d47a1;
+}
