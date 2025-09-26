@@ -11,6 +11,18 @@ interface Product {
   additionalExcise: number;
 }
 
+interface PaymentDetails {
+  status: 'Paid' | 'Pending' | 'Failed';
+  totalAmount: number;
+  walletDeduction: {
+    exciseWallet: number;
+    educationCessWallet: number;
+  };
+  amountUtilized: number;
+  amountLeft: number;
+  paymentDate?: string;
+}
+
 interface RegisterRecord {
   billNo: string;
   date: string;
@@ -18,6 +30,7 @@ interface RegisterRecord {
   depotAddress: string;
   vehicleNumber: string;
   products: Product[];
+  payment: PaymentDetails;
 }
 
 @Component({
@@ -54,7 +67,18 @@ export class TransitPermitRegisterComponent {
           exciseDuty: 140,
           additionalExcise: 50
         }
-      ]
+      ],
+      payment: {
+        status: 'Paid',
+        totalAmount: 5550,
+        walletDeduction: {
+          exciseWallet: 3975,
+          educationCessWallet: 1575
+        },
+        amountUtilized: 5550,
+        amountLeft: 0,
+        paymentDate: '2025-09-22'
+      }
     },
     {
       billNo: 'TRP/3/EXCISE',
@@ -71,7 +95,18 @@ export class TransitPermitRegisterComponent {
           exciseDuty: 110,
           additionalExcise: 40
         }
-      ]
+      ],
+      payment: {
+        status: 'Paid',
+        totalAmount: 5740,
+        walletDeduction: {
+          exciseWallet: 3850,
+          educationCessWallet: 1890
+        },
+        amountUtilized: 5740,
+        amountLeft: 0,
+        paymentDate: '2025-09-22'
+      }
     },
     {
       billNo: 'TRP/4/EXCISE',
@@ -96,7 +131,17 @@ export class TransitPermitRegisterComponent {
           exciseDuty: 125,
           additionalExcise: 45
         }
-      ]
+      ],
+      payment: {
+        status: 'Pending',
+        totalAmount: 5500,
+        walletDeduction: {
+          exciseWallet: 0,
+          educationCessWallet: 0
+        },
+        amountUtilized: 0,
+        amountLeft: 5500
+      }
     }
   ];
 
@@ -136,6 +181,37 @@ export class TransitPermitRegisterComponent {
     if (modalEl) {
       const modal = new (window as any).bootstrap.Modal(modalEl);
       modal.show();
+    }
+  }
+
+  getTotalEducationCess(): number {
+    if (!this.selectedRecord) return 0;
+    return this.selectedRecord.products.reduce((total, product) => 
+      total + (product.educationCess * product.cases), 0);
+  }
+
+  getTotalExciseDuty(): number {
+    if (!this.selectedRecord) return 0;
+    return this.selectedRecord.products.reduce((total, product) => 
+      total + (product.exciseDuty * product.cases), 0);
+  }
+
+  getTotalAdditionalExcise(): number {
+    if (!this.selectedRecord) return 0;
+    return this.selectedRecord.products.reduce((total, product) => 
+      total + (product.additionalExcise * product.cases), 0);
+  }
+
+  getTotalAmount(): number {
+    return this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise();
+  }
+
+  getPaymentStatusClass(status: string): string {
+    switch (status) {
+      case 'Paid': return 'badge bg-success';
+      case 'Pending': return 'badge bg-warning';
+      case 'Failed': return 'badge bg-danger';
+      default: return 'badge bg-secondary';
     }
   }
 }
