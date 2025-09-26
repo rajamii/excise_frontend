@@ -18,6 +18,9 @@
           </div>
         </div>
         <div>
+          <button class="btn btn-outline-primary me-2" (click)="openWalletHistory('excise')">
+            <i class="bi bi-clock-history me-1"></i>View History
+          </button>
           <button class="btn btn-primary" (click)="addMoney('excise')">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
@@ -60,6 +63,9 @@
           </div>
         </div>
         <div>
+          <button class="btn btn-outline-info me-2" (click)="openWalletHistory('education')">
+            <i class="bi bi-clock-history me-1"></i>View History
+          </button>
           <button class="btn btn-info" (click)="addMoney('education')">
             <i class="bi bi-plus-circle me-1"></i>Add Money
           </button>
@@ -390,6 +396,88 @@
   </div>
 </div>
 
+<!-- Wallet History Modal -->
+<div class="modal fade" id="walletHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-clock-history me-2"></i>
+          {{ selectedWalletForHistory === 'excise' ? 'Excise / Additional' : 'Education Cess' }} Wallet History
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="card mb-3">
+          <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-end gap-2">
+              <div class="col-auto">
+                <label class="form-label small">From</label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.from" (ngModelChange)="applyWalletHistoryFilters()">
+              </div>
+              <div class="col-auto">
+                <label class="form-label small">To</label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.to" (ngModelChange)="applyWalletHistoryFilters()">
+              </div>
+              <div class="col-auto">
+                <label class="form-label small">Type</label>
+                <select class="form-select form-select-sm" [(ngModel)]="walletHistoryFilters.type" (ngModelChange)="applyWalletHistoryFilters()">
+                  <option value="">All</option>
+                  <option value="Added">Added</option>
+                  <option value="Utilized">Utilized</option>
+                </select>
+              </div>
+              <div class="col-auto">
+                <label class="form-label small">Min Amount</label>
+                <input type="number" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.minAmount" (ngModelChange)="applyWalletHistoryFilters()" placeholder="0">
+              </div>
+              <div class="col-auto">
+                <label class="form-label small">Max Amount</label>
+                <input type="number" class="form-control form-control-sm" [(ngModel)]="walletHistoryFilters.maxAmount" (ngModelChange)="applyWalletHistoryFilters()" placeholder="0">
+              </div>
+              <div class="col-auto ms-auto d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" (click)="clearWalletHistoryFilters(true)" title="Clear">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover">
+            <thead class="table-success">
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Balance After</th>
+                <th>Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of walletHistoryFiltered">
+                <td>{{ t.date | date:'dd-MMM-yyyy' }}</td>
+                <td>
+                  <span class="badge" [ngClass]="{ 'bg-success': t.type==='Added', 'bg-danger': t.type==='Utilized' }">{{ t.type }}</span>
+                </td>
+                <td class="text-end">₹{{ t.amount | number:'1.2-2' }}</td>
+                <td class="text-end">₹{{ t.balanceAfter | number:'1.2-2' }}</td>
+                <td>{{ t.reference }}</td>
+              </tr>
+              <tr *ngIf="walletHistoryFiltered.length === 0">
+                <td colspan="5" class="text-center text-muted">No transactions found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Payment Confirmation Modal -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog modal-lg">

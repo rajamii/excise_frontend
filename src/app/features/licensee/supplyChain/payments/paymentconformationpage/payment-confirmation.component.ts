@@ -166,6 +166,65 @@ export class PaymentConfirmationComponent implements OnInit {
     this.isBreweryUser = false; // Set based on user session
   }
 
+  // Wallet history (utilization and additions)
+  selectedWalletForHistory: 'excise' | 'education' | null = null;
+  walletHistoryFilters = {
+    from: '',
+    to: '',
+    type: '', // Added | Utilized
+    minAmount: '',
+    maxAmount: ''
+  };
+
+  exciseWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }>= [
+    { id: 'E1', date: '2025-09-20', type: 'Added', amount: 200000.00, balanceAfter: 10000000.00, reference: 'PG-20250920-001' },
+    { id: 'E2', date: '2025-09-21', type: 'Utilized', amount: 1500.00, balanceAfter: 99998500.00, reference: 'TP-BILL001' },
+    { id: 'E3', date: '2025-09-22', type: 'Utilized', amount: 2500.00, balanceAfter: 99996000.00, reference: 'REQUISITION-IBPS/03/EXCISE' }
+  ];
+
+  educationWalletTransactions: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }>= [
+    { id: 'ED1', date: '2025-09-19', type: 'Added', amount: 100000.00, balanceAfter: 10000000.00, reference: 'PG-20250919-111' },
+    { id: 'ED2', date: '2025-09-21', type: 'Utilized', amount: 500.00, balanceAfter: 99999500.00, reference: 'REV-REV/001/2025' }
+  ];
+
+  walletHistoryFiltered: Array<{ id: string; date: string; type: 'Added' | 'Utilized'; amount: number; balanceAfter: number; reference: string; }> = [];
+
+  openWalletHistory(wallet: 'excise' | 'education'): void {
+    this.selectedWalletForHistory = wallet;
+    this.clearWalletHistoryFilters(false);
+    this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    const modalEl = document.getElementById('walletHistoryModal');
+    if (modalEl) {
+      const modal = new (window as any).bootstrap.Modal(modalEl);
+      modal.show();
+    }
+  }
+
+  getActiveWalletTxns() {
+    return this.selectedWalletForHistory === 'excise' ? this.exciseWalletTransactions : this.educationWalletTransactions;
+  }
+
+  applyWalletHistoryFilters(): void {
+    const txns = this.getActiveWalletTxns();
+    const f = this.walletHistoryFilters;
+    this.walletHistoryFiltered = txns.filter(t => {
+      const tDate = t.date;
+      const afterFrom = f.from ? tDate >= f.from : true;
+      const beforeTo = f.to ? tDate <= f.to : true;
+      const typeOk = f.type ? t.type === (f.type as any) : true;
+      const minOk = f.minAmount ? t.amount >= Number(f.minAmount) : true;
+      const maxOk = f.maxAmount ? t.amount <= Number(f.maxAmount) : true;
+      return afterFrom && beforeTo && typeOk && minOk && maxOk;
+    });
+  }
+
+  clearWalletHistoryFilters(apply: boolean = true): void {
+    this.walletHistoryFilters = { from: '', to: '', type: '', minAmount: '', maxAmount: '' };
+    if (apply) {
+      this.walletHistoryFiltered = [...this.getActiveWalletTxns()];
+    }
+  }
+
   setActiveTab(tab: string): void {
     this.activeTab = tab;
   }
