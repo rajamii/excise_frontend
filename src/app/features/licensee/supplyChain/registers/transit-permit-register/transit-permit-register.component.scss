@@ -20,4 +20,165 @@
   padding-bottom: .5rem !important;
 }
 
+// Compact Modal Styling
+.modal-lg {
+  max-width: 900px;
+}
+
+.modal-content {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.modal-header.bg-gradient {
+  border-bottom: none;
+  padding: 0.75rem 1rem;
+}
+
+.modal-body {
+  background-color: #f8f9fa;
+}
+
+// Card Enhancements
+.card {
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.card-header {
+  border-radius: 10px 10px 0 0 !important;
+  border-bottom: none;
+  padding: 1rem 1.5rem;
+}
+
+// Table Enhancements
+.table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table thead th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(0,123,255,0.05);
+}
+
+.table tfoot {
+  background-color: #343a40;
+  color: white;
+}
+
+// Badge Enhancements
+.badge {
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+// Gradient Backgrounds
+.bg-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+// Icon Styling
+.fas {
+  transition: all 0.3s ease;
+}
+
+.fas:hover {
+  transform: scale(1.1);
+}
+
+// Button Enhancements
+.btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+// Status Badge Colors
+.badge.bg-success {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.badge.bg-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+}
+
+.badge.bg-danger {
+  background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%) !important;
+}
+
+// Animation for modal appearance
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal.fade .modal-dialog {
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+// Compact styling for smaller elements
+.table-sm th,
+.table-sm td {
+  padding: 0.25rem 0.5rem;
+}
+
+.card-header {
+  padding: 0.5rem 1rem;
+}
+
+.card-body {
+  padding: 0.75rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .modal-lg {
+    max-width: 95%;
+    margin: 1rem auto;
+  }
+  
+  .modal-header {
+    padding: 0.5rem;
+  }
+  
+  .modal-body {
+    padding: 0.75rem;
+  }
+  
+  .card-body {
+    padding: 0.5rem;
+  }
+}
+
 

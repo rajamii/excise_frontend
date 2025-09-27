@@ -103,129 +103,222 @@
   </div>
 </div>
 
-<!-- Details Modal -->
+<!-- Compact Details Modal -->
 <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <i class="bi bi-eye me-2"></i>Transit Permit Details
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content border-0 shadow-lg">
+      <!-- Compact Header with Gradient -->
+      <div class="modal-header bg-gradient text-white py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="d-flex align-items-center">
+          <div class="me-2">
+            <i class="fas fa-file-invoice fa-lg"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">
+              <i class="fas fa-eye me-1"></i>Transit Permit Details
+            </h5>
+            <small class="opacity-75">Bill: {{ selectedRecord?.billNo }}</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
+
+      <div class="modal-body p-3">
+        <!-- Single Row Bill Information -->
         <div class="row mb-3">
-          <div class="col-md-6">
-            <strong>Bill No:</strong> {{ selectedRecord?.billNo }}
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-receipt text-primary me-2"></i>
+              <div>
+                <small class="text-muted d-block">Bill Number</small>
+                <strong class="text-primary">{{ selectedRecord?.billNo }}</strong>
+              </div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <strong>Date:</strong> {{ selectedRecord?.date | date:'dd-MMM-yyyy' }}
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-calendar-alt text-info me-2"></i>
+              <div>
+                <small class="text-muted d-block">Date</small>
+                <strong class="text-info">{{ selectedRecord?.date | date:'dd-MMM-yyyy' }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-building text-success me-2"></i>
+              <div>
+                <small class="text-muted d-block">Depot</small>
+                <strong class="text-success">{{ selectedRecord?.depotAddress | titlecase }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-truck text-warning me-2"></i>
+              <div>
+                <small class="text-muted d-block">Vehicle</small>
+                <strong class="text-warning">{{ selectedRecord?.vehicleNumber }}</strong>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <strong>Distributor:</strong> {{ selectedRecord?.distributor }}
-          </div>
-          <div class="col-md-6">
-            <strong>Depot:</strong> {{ selectedRecord?.depotAddress | titlecase }}
-          </div>
-        </div>
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <strong>Vehicle Number:</strong> {{ selectedRecord?.vehicleNumber }}
+
+        <!-- Compact Distributor Information -->
+        <div class="d-flex align-items-center p-2 bg-primary bg-opacity-10 rounded mb-3">
+          <i class="fas fa-user-tie text-primary me-2"></i>
+          <div>
+            <small class="text-muted d-block">Sole Distributor</small>
+            <strong class="text-dark">{{ selectedRecord?.distributor }}</strong>
           </div>
         </div>
         
-        <h6 class="mt-4 mb-3">Product Details</h6>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered">
-            <thead class="table-success">
-              <tr>
-                <th>Brand</th>
-                <th>Size</th>
-                <th>Cases</th>
-                <th>Edu. Cess (₹/case)</th>
-                <th>Excise Duty (₹/case)</th>
-                <th>Addl. Excise (₹/case)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let product of selectedRecord?.products">
-                <td>{{ product.brand }}</td>
-                <td>{{ product.size }}</td>
-                <td>{{ product.cases }}</td>
-                <td>{{ product.educationCess | number:'1.2-2' }}</td>
-                <td>{{ product.exciseDuty | number:'1.2-2' }}</td>
-                <td>{{ product.additionalExcise | number:'1.2-2' }}</td>
-              </tr>
-              <tr class="table-info fw-bold">
-                <td colspan="3">Total</td>
-                <td>{{ getTotalEducationCess() | number:'1.2-2' }}</td>
-                <td>{{ getTotalExciseDuty() | number:'1.2-2' }}</td>
-                <td>{{ getTotalAdditionalExcise() | number:'1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Compact Product Details Section -->
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white py-2">
+            <h6 class="mb-0">
+              <i class="fas fa-boxes me-1"></i>Product Details
+              <span class="badge bg-light text-primary ms-2">{{ selectedRecord?.products?.length || 0 }} Items</span>
+            </h6>
+          </div>
+          <div class="card-body p-2">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="border-0 py-1">Brand</th>
+                    <th class="border-0 py-1">Size</th>
+                    <th class="border-0 py-1 text-center">Cases</th>
+                    <th class="border-0 py-1 text-end">Edu. Cess</th>
+                    <th class="border-0 py-1 text-end">Excise Duty</th>
+                    <th class="border-0 py-1 text-end">Addl. Excise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let product of selectedRecord?.products; let i = index" 
+                      [class]="i % 2 === 0 ? 'table-light' : ''">
+                    <td class="border-0 py-1">
+                      <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">
+                        {{ product.brand }}
+                      </span>
+                    </td>
+                    <td class="border-0 py-1 fw-bold">{{ product.size }}</td>
+                    <td class="border-0 py-1 text-center">
+                      <span class="badge bg-info bg-opacity-10 text-info px-2 py-1">
+                        {{ product.cases }}
+                      </span>
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-success">
+                      ₹{{ product.educationCess | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-primary">
+                      ₹{{ product.exciseDuty | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-warning">
+                      ₹{{ product.additionalExcise | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-dark">
+                  <tr>
+                    <td colspan="3" class="border-0 py-1 fw-bold">
+                      <i class="fas fa-calculator me-1"></i>Total
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-success">
+                      ₹{{ getTotalEducationCess() | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-primary">
+                      ₹{{ getTotalExciseDuty() | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-warning">
+                      ₹{{ getTotalAdditionalExcise() | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
         </div>
 
-        <!-- Payment Status Section -->
-        <div class="mt-4">
-          <h6 class="mb-3">Payment Status</h6>
-          <div class="row">
-            <div class="col-md-6">
-              <div class="card border-0 bg-light">
-                <div class="card-body p-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="fw-bold">Status:</span>
-                    <span [class]="getPaymentStatusClass(selectedRecord?.payment?.status || '')">
-                      {{ selectedRecord?.payment?.status }}
-                    </span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Total Amount:</span>
-                    <span class="fw-bold">₹{{ selectedRecord?.payment?.totalAmount | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Amount Utilized:</span>
-                    <span class="fw-bold text-success">₹{{ selectedRecord?.payment?.amountUtilized | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span>Amount Left:</span>
-                    <span class="fw-bold text-warning">₹{{ selectedRecord?.payment?.amountLeft | number:'1.2-2' }}</span>
-                  </div>
-                  <div *ngIf="selectedRecord?.payment?.paymentDate" class="mt-2">
-                    <small class="text-muted">Payment Date: {{ selectedRecord?.payment?.paymentDate | date:'dd-MMM-yyyy' }}</small>
-                  </div>
+        <!-- Compact Payment Status Section -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-success text-white py-2">
+                <h6 class="mb-0">
+                  <i class="fas fa-credit-card me-1"></i>Payment Status
+                </h6>
+              </div>
+              <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-bold">Status:</span>
+                  <span [class]="getPaymentStatusClass(selectedRecord?.payment?.status || '')">
+                    {{ selectedRecord?.payment?.status }}
+                  </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Total Amount:</span>
+                  <span class="fw-bold text-dark">₹{{ selectedRecord?.payment?.totalAmount | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Amount Utilized:</span>
+                  <span class="fw-bold text-success">₹{{ selectedRecord?.payment?.amountUtilized | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Amount Left:</span>
+                  <span class="fw-bold text-warning">₹{{ selectedRecord?.payment?.amountLeft | number:'1.2-2' }}</span>
+                </div>
+                <div *ngIf="selectedRecord?.payment?.paymentDate" class="mt-2 pt-2 border-top">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>
+                    {{ selectedRecord?.payment?.paymentDate | date:'dd-MMM-yyyy' }}
+                  </small>
                 </div>
               </div>
             </div>
-            <div class="col-md-6">
-              <div class="card border-0 bg-light">
-                <div class="card-body p-3">
-                  <h6 class="card-title mb-3">Wallet Deduction Details</h6>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Excise Wallet:</span>
-                    <span class="fw-bold text-primary">₹{{ selectedRecord?.payment?.walletDeduction?.exciseWallet | number:'1.2-2' }}</span>
-                  </div>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span>Education Cess Wallet:</span>
-                    <span class="fw-bold text-info">₹{{ selectedRecord?.payment?.walletDeduction?.educationCessWallet | number:'1.2-2' }}</span>
-                  </div>
-                  <hr class="my-2">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Total Deducted:</span>
-                    <span class="fw-bold text-danger">
-                      ₹{{ (selectedRecord?.payment?.walletDeduction?.exciseWallet || 0) + (selectedRecord?.payment?.walletDeduction?.educationCessWallet || 0) | number:'1.2-2' }}
-                    </span>
-                  </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-primary text-white py-2">
+                <h6 class="mb-0">
+                  <i class="fas fa-wallet me-1"></i>Wallet Details
+                </h6>
+              </div>
+              <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Excise Wallet:</span>
+                  <span class="fw-bold text-primary">₹{{ selectedRecord?.payment?.walletDeduction?.exciseWallet | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Education Cess:</span>
+                  <span class="fw-bold text-info">₹{{ selectedRecord?.payment?.walletDeduction?.educationCessWallet | number:'1.2-2' }}</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-dark">Total Deducted:</span>
+                  <span class="fw-bold text-danger">
+                    ₹{{ (selectedRecord?.payment?.walletDeduction?.exciseWallet || 0) + (selectedRecord?.payment?.walletDeduction?.educationCessWallet || 0) | number:'1.2-2' }}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+
+      <!-- Compact Footer -->
+      <div class="modal-footer bg-light border-top-0 py-2 px-3">
+        <div class="d-flex justify-content-between w-100 align-items-center">
+          <div class="text-muted">
+            <small>
+              <i class="fas fa-info-circle me-1"></i>
+              Updated: {{ selectedRecord?.date | date:'dd-MMM-yyyy' }}
+            </small>
+          </div>
+          <button class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+        </div>
       </div>
     </div>
   </div>
