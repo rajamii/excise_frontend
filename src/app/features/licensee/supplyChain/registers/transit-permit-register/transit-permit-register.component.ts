@@ -214,6 +214,29 @@ export class TransitPermitRegisterComponent {
       default: return 'badge bg-secondary';
     }
   }
+
+  // Print helpers
+  printRegister(): void {
+    const printContents = document.getElementById('registerPrintSection')?.innerHTML || '';
+    const originalContents = document.body.innerHTML;
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+
+    document.body.innerHTML = `<!doctype html><html><head>${styles}<style>@media print { .no-print { display: none !important; } .print-header { display: block !important; } #registerPrintSection { padding: 0 8mm; } } @media screen { .print-header { display: none; } }</style></head><body>${printContents}</body></html>`;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload();
+  }
+
+  getPrintMonthLabel(): string {
+    if (!this.filters.date) {
+      return 'All';
+    }
+    const d = new Date(this.filters.date);
+    const month = d.toLocaleString('en-US', { month: 'long' });
+    return `${month} ${d.getFullYear()}`;
+  }
 }
 
 

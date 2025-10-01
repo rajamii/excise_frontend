@@ -60,24 +60,32 @@
           <button class="btn btn-outline-secondary btn-sm px-2" type="button" (click)="clearFilters()" title="Clear" aria-label="Clear">
             <i class="bi bi-arrow-clockwise"></i>
           </button>
+          <button class="btn btn-outline-warning btn-sm px-2 no-print" type="button" (click)="printRegister()" title="Print filtered list" aria-label="Print">
+            <i class="bi bi-printer"></i>
+          </button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Register Table -->
-  <div class="card">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-sm table-bordered table-hover">
-          <thead class="table-success">
+  <div id="registerPrintSection">
+    <div class="print-header text-center mb-2">
+      <h5 class="mb-1">Transit Permit Register</h5>
+      <small>Month: {{ getPrintMonthLabel() }}</small>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover table-striped align-middle sticky-header">
+          <thead class="header-gradient">
             <tr>
               <th>Bill No</th>
               <th>Date</th>
               <th>Distributor</th>
               <th>Depot</th>
-              <th>Vehicle Number</th>
-              <th>Action</th>
+                <th>Vehicle Number</th>
+                <th class="no-print">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -87,17 +95,20 @@
               <td>{{ r.distributor }}</td>
               <td class="text-capitalize">{{ r.depotAddress }}</td>
               <td>{{ r.vehicleNumber }}</td>
-              <td>
+                <td class="no-print">
                 <button class="btn btn-outline-primary btn-sm" (click)="viewDetails(r)" title="View Details">
                   <i class="bi bi-eye me-1"></i>View Details
                 </button>
               </td>
             </tr>
             <tr *ngIf="filtered.length === 0">
-              <td colspan="6" class="text-center text-muted">No records</td>
+              <td colspan="6" class="text-center text-muted py-4">
+                <i class="bi bi-inbox me-1"></i>No records found
+              </td>
             </tr>
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   </div>

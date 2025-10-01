@@ -96,6 +96,28 @@ export class DailyRecordRegisterComponent implements OnInit {
     const names = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     return names[m - 1];
   }
+
+  // Print helpers
+  printRegister(): void {
+    const printContents = document.getElementById('dailyRecordPrintSection')?.innerHTML || '';
+    const originalContents = document.body.innerHTML;
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+
+    document.body.innerHTML = `<!doctype html><html><head>${styles}<style>@media print { .no-print { display: none !important; } .print-header { display: block !important; } #dailyRecordPrintSection { padding: 0 8mm; } } @media screen { .print-header { display: none; } }</style></head><body>${printContents}</body></html>`;
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload();
+  }
+
+  getPrintMonthLabel(): string {
+    if (!this.selectedMonth) {
+      return `${this.getCurrentMonthName()} ${this.selectedYear}`;
+    }
+    const monthName = this.getMonthName(parseInt(this.selectedMonth));
+    return `${monthName} ${this.selectedYear}`;
+  }
 }
 
 

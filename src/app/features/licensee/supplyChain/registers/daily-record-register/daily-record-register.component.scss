@@ -6,6 +6,26 @@
 .daily-record-register .form-label { font-weight: 600; }
 .daily-record-register .card-header { background-color: #f8f9fa; }
 
+.print-header { display: none; }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-header { display: block !important; }
+  .container-fluid { padding: 0 !important; }
+  .d-flex.flex-wrap.align-items-end.gap-2.mb-3 { display: none !important; }
+  /* Remove extra borders/lines and shadows */
+  .card, .card-body, .card-header { border: 0 !important; box-shadow: none !important; }
+  .card-header { display: none !important; }
+  /* Page sizing and compact layout */
+  @page { size: A4 portrait; margin: 10mm; }
+  table { page-break-inside: auto; width: 100% !important; font-size: 12px; border-collapse: collapse !important; }
+  thead th, tbody td, tfoot td { padding: 4px 6px !important; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  /* Light table borders for cleaner print */
+  table.table, table.table th, table.table td { border: 1px solid #ddd !important; }
+  thead.table-success th { background: #D1E7DD !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 /* Summary colored boxes */
 .daily-record-register .summary-box {
   border-radius: 0.5rem;
