@@ -227,7 +227,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of requisitionData; track item.referenceNo) {
+                @for (item of getPaged(requisitionData, 'requisition'); track item.referenceNo) {
                 <tr>
                   <td>{{ item.referenceNo }}</td>
                   <td>{{ item.submissionDate }}</td>
@@ -254,6 +254,27 @@
                 }
               </tbody>
             </table>
+            <!-- Pagination: requisition -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div class="small text-muted">Showing
+                {{ (getCurrentPage('requisition') - 1) * getPageSize('requisition') + 1 }}-
+                {{ Math.min(getCurrentPage('requisition') * getPageSize('requisition'), requisitionData.length) }}
+                of {{ requisitionData.length }}
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('requisition')" (ngModelChange)="changePageSize('requisition', $event)">
+                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', 1, requisitionData)" [disabled]="getCurrentPage('requisition')===1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getCurrentPage('requisition')-1, requisitionData)" [disabled]="getCurrentPage('requisition')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('requisition') }} / {{ getTotalPages(requisitionData, 'requisition') }}</span>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getCurrentPage('requisition')+1, requisitionData)" [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getTotalPages(requisitionData, 'requisition'), requisitionData)" [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">»</button>
+                </div>
+              </div>
+            </div>
             }
 
             <!-- Revalidation Tab Content -->
@@ -270,7 +291,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of revlidationData; track item.referenceNo) {
+                @for (item of getPaged(revlidationData, 'revalidation'); track item.referenceNo) {
                 <tr>
                   <td>
                     <div class="d-flex align-items-center gap-2">
@@ -304,6 +325,27 @@
                 }
               </tbody>
             </table>
+            <!-- Pagination: revalidation -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div class="small text-muted">Showing
+                {{ (getCurrentPage('revalidation') - 1) * getPageSize('revalidation') + 1 }}-
+                {{ Math.min(getCurrentPage('revalidation') * getPageSize('revalidation'), revlidationData.length) }}
+                of {{ revlidationData.length }}
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('revalidation')" (ngModelChange)="changePageSize('revalidation', $event)">
+                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', 1, revlidationData)" [disabled]="getCurrentPage('revalidation')===1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getCurrentPage('revalidation')-1, revlidationData)" [disabled]="getCurrentPage('revalidation')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('revalidation') }} / {{ getTotalPages(revlidationData, 'revalidation') }}</span>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getCurrentPage('revalidation')+1, revlidationData)" [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getTotalPages(revlidationData, 'revalidation'), revlidationData)" [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">»</button>
+                </div>
+              </div>
+            </div>
             }
 
             <!-- Cancellation Tab Content -->
@@ -320,7 +362,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of cancellationData; track item.referenceNo) {
+                @for (item of getPaged(cancellationData, 'cancellation'); track item.referenceNo) {
                 <tr>
                   <td>{{ item.referenceNo }}</td>
                   <td>{{ item.submissionDate }}</td>
@@ -342,6 +384,27 @@
                 }
               </tbody>
             </table>
+            <!-- Pagination: cancellation -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div class="small text-muted">Showing
+                {{ (getCurrentPage('cancellation') - 1) * getPageSize('cancellation') + 1 }}-
+                {{ Math.min(getCurrentPage('cancellation') * getPageSize('cancellation'), cancellationData.length) }}
+                of {{ cancellationData.length }}
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('cancellation')" (ngModelChange)="changePageSize('cancellation', $event)">
+                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', 1, cancellationData)" [disabled]="getCurrentPage('cancellation')===1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getCurrentPage('cancellation')-1, cancellationData)" [disabled]="getCurrentPage('cancellation')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('cancellation') }} / {{ getTotalPages(cancellationData, 'cancellation') }}</span>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getCurrentPage('cancellation')+1, cancellationData)" [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getTotalPages(cancellationData, 'cancellation'), cancellationData)" [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">»</button>
+                </div>
+              </div>
+            </div>
             }
 
             <!-- Transit Tab Content -->
@@ -357,7 +420,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (item of transitData; track item.referenceNo) {
+                @for (item of getPaged(transitData, 'transit'); track item.referenceNo) {
                 <tr>
                   <td>{{ item.referenceNo }}</td>
                   <td>{{ item.submissionDate }}</td>
@@ -376,6 +439,27 @@
                 }
               </tbody>
             </table>
+            <!-- Pagination: transit -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div class="small text-muted">Showing
+                {{ (getCurrentPage('transit') - 1) * getPageSize('transit') + 1 }}-
+                {{ Math.min(getCurrentPage('transit') * getPageSize('transit'), transitData.length) }}
+                of {{ transitData.length }}
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('transit')" (ngModelChange)="changePageSize('transit', $event)">
+                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', 1, transitData)" [disabled]="getCurrentPage('transit')===1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getCurrentPage('transit')-1, transitData)" [disabled]="getCurrentPage('transit')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('transit') }} / {{ getTotalPages(transitData, 'transit') }}</span>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getCurrentPage('transit')+1, transitData)" [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getTotalPages(transitData, 'transit'), transitData)" [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">»</button>
+                </div>
+              </div>
+            </div>
             }
 
           </div>
