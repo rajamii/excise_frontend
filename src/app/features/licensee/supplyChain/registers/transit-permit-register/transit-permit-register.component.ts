@@ -42,6 +42,7 @@ interface RegisterRecord {
 })
 
 export class TransitPermitRegisterComponent {
+  Math = Math;
   // Sample data mirroring Transit Permit fields
   records: RegisterRecord[] = [
     {
@@ -156,6 +157,11 @@ export class TransitPermitRegisterComponent {
 
   filtered = [...this.records];
 
+  // Pagination
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize = 5;
+  currentPage = 1;
+
   applyFilters(): void {
     const f = this.filters;
     this.filtered = this.records.filter(r =>
@@ -166,11 +172,13 @@ export class TransitPermitRegisterComponent {
       (f.size ? r.products.some(p => p.size === f.size) : true) &&
       (f.vehicleNumber ? r.vehicleNumber === f.vehicleNumber : true)
     );
+    this.currentPage = 1;
   }
 
   clearFilters(): void {
     this.filters = { billNo: '', date: '', depotAddress: '', brand: '', size: '', vehicleNumber: '' };
     this.filtered = [...this.records];
+    this.currentPage = 1;
   }
 
   selectedRecord: RegisterRecord | null = null;
@@ -213,6 +221,28 @@ export class TransitPermitRegisterComponent {
       case 'Failed': return 'badge bg-danger';
       default: return 'badge bg-secondary';
     }
+  }
+
+  // Pagination helpers
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filtered.length / this.pageSize));
+  }
+
+  getPaged(): RegisterRecord[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filtered.slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages) return;
+    this.currentPage = page;
+  }
+
+  changePageSize(size: string | number): void {
+    const s = typeof size === 'string' ? parseInt(size, 10) : size;
+    if (!s) return;
+    this.pageSize = s;
+    this.currentPage = 1;
   }
 
   // Print helpers

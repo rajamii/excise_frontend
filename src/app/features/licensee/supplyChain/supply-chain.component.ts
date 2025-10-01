@@ -21,6 +21,7 @@ interface TableData {
   styleUrls: ['./supply-chain.component.scss']
 })
 export class SupplyChainComponent {
+  Math = Math;
   selectedDate = '';
   selectedMonth = '';
   selectedYear = '';
@@ -141,5 +142,53 @@ export class SupplyChainComponent {
 
   toggleSidebar(): void {
     this.sidebarHidden = !this.sidebarHidden;
+  }
+
+  // Pagination state per tab
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSizeByTab: Record<string, number> = {
+    requisition: 5,
+    revalidation: 5,
+    cancellation: 5,
+    transit: 5
+  };
+  currentPageByTab: Record<string, number> = {
+    requisition: 1,
+    revalidation: 1,
+    cancellation: 1,
+    transit: 1
+  };
+
+  getCurrentPage(tab: string): number {
+    return this.currentPageByTab[tab] ?? 1;
+  }
+
+  getPageSize(tab: string): number {
+    return this.pageSizeByTab[tab] ?? 5;
+  }
+
+  getTotalPages(data: TableData[], tab: string): number {
+    const size = this.getPageSize(tab);
+    return Math.max(1, Math.ceil((data?.length || 0) / size));
+  }
+
+  getPaged(data: TableData[], tab: string): TableData[] {
+    const size = this.getPageSize(tab);
+    const page = this.getCurrentPage(tab);
+    const start = (page - 1) * size;
+    return (data || []).slice(start, start + size);
+  }
+
+  goToPage(tab: string, page: number, data: TableData[]): void {
+    const total = this.getTotalPages(data, tab);
+    if (page < 1 || page > total) return;
+    this.currentPageByTab[tab] = page;
+  }
+
+  changePageSize(tab: string, size: string | number): void {
+    const s = typeof size === 'string' ? parseInt(size, 10) : size;
+    if (!s) return;
+    this.pageSizeByTab[tab] = s;
+    this.currentPageByTab[tab] = 1;
   }
 }
