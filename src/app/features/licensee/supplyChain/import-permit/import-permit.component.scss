@@ -53,21 +53,113 @@
 
 // Print styles
 @media print {
+  // Hide everything by default
   body * {
     visibility: hidden;
   }
   
-  .main, .main * {
+  // Show only the printable bill content
+  .printable-content, 
+  .printable-content * {
     visibility: visible;
   }
   
-  .main {
+  // Style the printable content for print
+  .printable-content {
     position: absolute;
     left: 0;
     top: 0;
-    width: 90%;
-    border: 2px solid black;
-    padding: 20px;
+    width: auto;
+    max-width: 190mm; // keep within A4 printable width
+    background: white;
+    padding: 12mm;
+    margin: 0 auto;
+    box-shadow: none;
+    border: 2px solid #000 !important;
+  }
+  
+  // Hide form elements during print
+  .form-section,
+  .card-header,
+  .btn,
+  .alert,
+  footer,
+  .bg-light {
+    display: none !important;
+  }
+  
+  // Ensure proper spacing for print
+  .letter-content p {
+    margin-bottom: 15px;
+    line-height: 1.8;
+  }
+  
+  // Print-specific header styling
+  .letter-header {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid black;
+  }
+  
+  // Print-specific signature section
+  .signature-section {
+    margin-top: 60px;
+    text-align: right;
+    margin-right: 50px;
+    page-break-inside: avoid;
+  }
+  
+  // Remove background colors and shadows for print
+  .card, .main {
+    background: white !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  // Ensure text is black for print without stripping images/backgrounds
+  .printable-content,
+  .printable-content * {
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  // Make sure images are printed but not oversized
+  .printable-content img {
+    visibility: visible !important;
+    max-width: 100% !important;
+    max-height: 25mm !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  // Specific cap for the header seal
+  .letter-header img {
+    max-height: 18mm !important;
+    width: auto !important;
+  }
+
+  // If you need to preserve a background image/color on an element, add class="preserve-bg"
+  .preserve-bg {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  // Page break settings
+  .printable-content {
+    page-break-before: auto;
+    page-break-after: auto;
+    page-break-inside: avoid;
+  }
+  
+  // Print margins
+  @page {
+    margin: 1in;
+    size: A4;
   }
 }
 

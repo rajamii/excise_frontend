@@ -38,6 +38,97 @@ export class SupplyChainComponent {
       distilleryName: 'Sikkim Distilleries Ltd',
       status: 'THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.',
       amount: '8.00'
+    },
+    {
+      referenceNo: 'BF503/EXCISE',
+      submissionDate: '21-Sep-2025',
+      distilleryName: 'Himalayan Distilleries Pvt Ltd',
+      status: 'APPLICATION UNDER REVIEW BY DEPARTMENT.',
+      amount: '12.50'
+    },
+    {
+      referenceNo: 'BF504/EXCISE',
+      submissionDate: '20-Sep-2025',
+      distilleryName: 'Royal Sikkim Brewery',
+      status: 'PERMIT APPROVED AND READY FOR COLLECTION.',
+      amount: '15.75'
+    },
+    {
+      referenceNo: 'BF505/EXCISE',
+      submissionDate: '19-Sep-2025',
+      distilleryName: 'Mountain View Distilleries',
+      status: 'DOCUMENTATION VERIFICATION IN PROGRESS.',
+      amount: '9.25'
+    },
+    {
+      referenceNo: 'BF506/EXCISE',
+      submissionDate: '18-Sep-2025',
+      distilleryName: 'Eastern Himalaya Distillery',
+      status: 'PERMIT PROCESSING - AWAITING FINAL APPROVAL.',
+      amount: '11.00'
+    },
+    {
+      referenceNo: 'BF507/EXCISE',
+      submissionDate: '17-Sep-2025',
+      distilleryName: 'Gangtok Premium Spirits',
+      status: 'APPLICATION SUBMITTED - INITIAL REVIEW COMPLETED.',
+      amount: '14.25'
+    },
+    {
+      referenceNo: 'BF508/EXCISE',
+      submissionDate: '16-Sep-2025',
+      distilleryName: 'Khangchendzonga Breweries',
+      status: 'PERMIT READY FOR DISPATCH TO LICENSEE.',
+      amount: '13.50'
+    },
+    {
+      referenceNo: 'BF509/EXCISE',
+      submissionDate: '15-Sep-2025',
+      distilleryName: 'Teesta Valley Distilleries',
+      status: 'TECHNICAL EVALUATION IN PROGRESS.',
+      amount: '16.80'
+    },
+    {
+      referenceNo: 'BF510/EXCISE',
+      submissionDate: '14-Sep-2025',
+      distilleryName: 'Rangit River Spirits',
+      status: 'COMPLIANCE CHECK COMPLETED - AWAITING CLEARANCE.',
+      amount: '10.75'
+    },
+    {
+      referenceNo: 'BF511/EXCISE',
+      submissionDate: '13-Sep-2025',
+      distilleryName: 'Sikkim Highland Brewery',
+      status: 'PERMIT APPROVED - COLLECTION NOTICE SENT.',
+      amount: '18.90'
+    },
+    {
+      referenceNo: 'BF512/EXCISE',
+      submissionDate: '12-Sep-2025',
+      distilleryName: 'Pelling Craft Distillery',
+      status: 'APPLICATION UNDER DEPARTMENTAL REVIEW.',
+      amount: '7.60'
+    },
+    {
+      referenceNo: 'BF513/EXCISE',
+      submissionDate: '11-Sep-2025',
+      distilleryName: 'Yuksom Traditional Spirits',
+      status: 'PERMIT GENERATION IN FINAL STAGE.',
+      amount: '20.25'
+    },
+    {
+      referenceNo: 'BF514/EXCISE',
+      submissionDate: '10-Sep-2025',
+      distilleryName: 'Namchi Valley Breweries',
+      status: 'DOCUMENTATION REVIEW COMPLETED - PROCESSING.',
+      amount: '12.40'
+    },
+    {
+      referenceNo: 'BF515/EXCISE',
+      submissionDate: '09-Sep-2025',
+      distilleryName: 'Jorethang Premium Distillery',
+      status: 'PERMIT ISSUED - READY FOR COLLECTION.',
+      amount: '19.15'
     }
   ];
 
@@ -50,11 +141,68 @@ export class SupplyChainComponent {
       amount: '0.00',
       isLive: true,
       isInvalid: true
+    },
+    {
+      referenceNo: 'REV/BF601',
+      submissionDate: '18-Sep-2025',
+      distilleryName: 'Himalayan Distilleries Pvt Ltd',
+      status: 'REVALIDATION REQUEST PENDING APPROVAL',
+      amount: '5.00',
+      isLive: false,
+      isInvalid: false
+    },
+    {
+      referenceNo: 'REV/BF602',
+      submissionDate: '17-Sep-2025',
+      distilleryName: 'Royal Sikkim Brewery',
+      status: 'PERMIT EXPIRED - REQUIRES IMMEDIATE REVALIDATION',
+      amount: '7.50',
+      isLive: true,
+      isInvalid: true
+    },
+    {
+      referenceNo: 'REV/BF603',
+      submissionDate: '16-Sep-2025',
+      distilleryName: 'Mountain View Distilleries',
+      status: 'REVALIDATION APPROVED - PERMIT EXTENDED',
+      amount: '6.25',
+      isLive: false,
+      isInvalid: false
     }
   ];
 
-  cancellationData: TableData[] = [];
-  transitData: TableData[] = [];
+  cancellationData: TableData[] = [
+    {
+      referenceNo: 'CAN/BF701',
+      submissionDate: '15-Sep-2025',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      status: 'CANCELLATION REQUEST APPROVED',
+      amount: '0.00'
+    },
+    {
+      referenceNo: 'CAN/BF702',
+      submissionDate: '14-Sep-2025',
+      distilleryName: 'Himalayan Distilleries Pvt Ltd',
+      status: 'CANCELLATION UNDER REVIEW',
+      amount: '0.00'
+    }
+  ];
+  transitData: TableData[] = [
+    {
+      referenceNo: 'TRN/BF801',
+      submissionDate: '13-Sep-2025',
+      distilleryName: 'Royal Sikkim Brewery',
+      status: 'TRANSIT PERMIT ISSUED',
+      amount: '10.00'
+    },
+    {
+      referenceNo: 'TRN/BF802',
+      submissionDate: '12-Sep-2025',
+      distilleryName: 'Mountain View Distilleries',
+      status: 'TRANSIT APPLICATION PROCESSING',
+      amount: '8.50'
+    }
+  ];
 
   constructor(private router: Router) { }
 

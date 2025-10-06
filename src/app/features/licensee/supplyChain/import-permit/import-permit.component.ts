@@ -112,7 +112,47 @@ export class ImportPermitComponent implements OnInit {
 
   printBill(): void {
     console.log('Printing bill');
-    window.print();
+
+    if (!this.validateForm()) {
+      alert('Please fill all required fields before printing the bill.');
+      return;
+    }
+
+    // Extract printable HTML and open a clean window for printing
+    setTimeout(() => {
+      const printable = document.getElementById('importPermitPrintSection')?.innerHTML || '';
+      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+        .map(el => (el as HTMLElement).outerHTML)
+        .join('');
+
+      const printWindow = window.open('', '_blank', 'width=900,height=1000');
+      if (!printWindow) return;
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
+        <html>
+          <head>
+            <title>Import Permit - ${this.formData.refNo}</title>
+            ${styles}
+            <style>
+              @page { size: A4; margin: 12mm; }
+              body { background: #fff; }
+              .no-print { display: none !important; }
+              /* Ensure our printable content is visible */
+              .printable-content, .printable-content * { visibility: visible !important; }
+            </style>
+          </head>
+          <body>
+            ${printable}
+          </body>
+        </html>`);
+      printWindow.document.close();
+      // Print after window is ready
+      printWindow.onload = () => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      };
+    }, 50);
   }
 
   submitForm(): void {
