@@ -65,6 +65,33 @@ export class LocalSalesRegisterComponent {
     }
   ];
 
+  // New entry form model (UI only)
+  newEntry: {
+    date: string;
+    invoiceNo: string;
+    exciseTPNo: string;
+    vendorName: string;
+    dansbergBlue: number | '';
+    hit: number | '';
+    dansbergStrong: number | '';
+    premium650ml: number | '';
+    premium330ml: number | '';
+    totalAmount: number | '';
+    remarks: string;
+  } = {
+    date: '',
+    invoiceNo: '',
+    exciseTPNo: '',
+    vendorName: '',
+    dansbergBlue: '',
+    hit: '',
+    dansbergStrong: '',
+    premium650ml: '',
+    premium330ml: '',
+    totalAmount: '',
+    remarks: ''
+  };
+
   get filtered(): LocalSaleRecord[] {
     const m = this.selectedMonth;
     const y = this.selectedYear;
@@ -151,5 +178,57 @@ export class LocalSalesRegisterComponent {
       '', 'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ][idx] || 'All';
+  }
+
+  // Form helpers
+  getNewTotalCases(): number {
+    const toNum = (v: number | '' | undefined) => (v === '' || v === undefined ? 0 : Number(v));
+    return (
+      toNum(this.newEntry.dansbergBlue) +
+      toNum(this.newEntry.hit) +
+      toNum(this.newEntry.dansbergStrong) +
+      toNum(this.newEntry.premium650ml) +
+      toNum(this.newEntry.premium330ml)
+    );
+  }
+
+  addEntry(): void {
+    if (!this.newEntry.date || !this.newEntry.invoiceNo || !this.newEntry.exciseTPNo || !this.newEntry.vendorName) {
+      return;
+    }
+    const toNum = (v: number | '' | undefined) => (v === '' || v === undefined ? 0 : Number(v));
+    const record: LocalSaleRecord = {
+      date: this.newEntry.date,
+      invoiceNo: this.newEntry.invoiceNo.trim(),
+      exciseTPNo: this.newEntry.exciseTPNo.trim(),
+      vendorName: this.newEntry.vendorName.trim(),
+      dansbergBlue: toNum(this.newEntry.dansbergBlue),
+      hit: toNum(this.newEntry.hit),
+      dansbergStrong: toNum(this.newEntry.dansbergStrong),
+      premium650ml: toNum(this.newEntry.premium650ml),
+      premium330ml: toNum(this.newEntry.premium330ml),
+      totalAmount: toNum(this.newEntry.totalAmount),
+      remarks: this.newEntry.remarks?.trim() || ''
+    };
+    // Add to top of list for visibility
+    this.records = [record, ...this.records];
+    this.onFilterChange();
+    this.clearEntry();
+  }
+
+  clearEntry(): void {
+    this.newEntry = {
+      date: '',
+      invoiceNo: '',
+      exciseTPNo: '',
+      vendorName: '',
+      dansbergBlue: '',
+      hit: '',
+      dansbergStrong: '',
+      premium650ml: '',
+      premium330ml: '',
+      totalAmount: '',
+      remarks: ''
+    };
   }
 }

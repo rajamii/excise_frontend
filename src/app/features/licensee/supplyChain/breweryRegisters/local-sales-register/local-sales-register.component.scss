@@ -9,14 +9,21 @@
 }
 
 /* Header styles */
-.print-header .company-name {
-  font-size: 1.25rem;
+.print-header .company-name,
+.company-name {
+  font-size: 1.6rem;
 }
-.print-header .company-address {
-  font-size: .95rem;
-}
-.print-header .register-title {
+.print-header .company-address,
+.company-address {
   font-size: 1.1rem;
+}
+.print-header .register-title,
+.register-title {
+  font-size: 1.3rem;
+}
+.month-label {
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 @media print {
