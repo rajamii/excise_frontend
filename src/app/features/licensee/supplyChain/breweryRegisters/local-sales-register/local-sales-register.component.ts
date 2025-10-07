@@ -103,6 +103,31 @@ export class LocalSalesRegisterComponent {
     return end > this.filtered.length ? this.filtered.length : end;
   }
 
+  printRegister(): void {
+    const section = document.getElementById('localSalesPrintSection');
+    if (!section) {
+      window.print();
+      return;
+    }
+    const printWindow = window.open('', '_blank', 'width=1024,height=768');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map((el) => el.outerHTML)
+      .join('\n');
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html><html><head><title>Local Sales Register</title>${styles}</head><body>${section.outerHTML}</body></html>`);
+    printWindow.document.close();
+    // Delay to ensure styles apply
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 150);
+  }
+
   // Helpers
   getTotalCases(row: LocalSaleRecord): number {
     return (

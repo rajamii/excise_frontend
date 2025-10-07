@@ -26,5 +26,23 @@
   .print-header {
     display: block;
   }
+  /* Fit content neatly when printing */
+  html, body {
+    height: auto;
+    overflow: visible !important;
+  }
+  #localSalesPrintSection {
+    overflow: visible !important;
+  }
+  /* Remove sticky headers for print to avoid gaps */
+  .sticky-header thead th {
+    position: static !important;
+  }
+  /* Hide screen-only wrappers and show print-only table */
+  .screen-only { display: none !important; }
+  .print-only { display: block !important; }
 }
+
+/* Hide print-only table on screen */
+.print-only { display: none; }
 
