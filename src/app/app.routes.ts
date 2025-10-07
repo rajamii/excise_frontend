@@ -51,6 +51,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent)
   },
   {
+    path: 'dev-local-sales-register',
+    loadComponent: () => import('./features/licensee/supplyChain/breweryRegisters/local-sales-register/local-sales-register.component').then(m => m.LocalSalesRegisterComponent)
+  },
+  {
     path: 'dev-payment-receipt',
     loadComponent: () => import('./features/licensee/supplyChain/payments/payment-receipt/payment-receipt.component').then(m => m.PaymentReceiptComponent)
   },
