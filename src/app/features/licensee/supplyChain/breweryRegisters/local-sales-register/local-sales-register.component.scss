@@ -1,0 +1,30 @@
+.sticky-header thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.print-header {
+  display: block;
+}
+
+/* Header styles */
+.print-header .company-name {
+  font-size: 1.25rem;
+}
+.print-header .company-address {
+  font-size: .95rem;
+}
+.print-header .register-title {
+  font-size: 1.1rem;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-header {
+    display: block;
+  }
+}
+
