@@ -1,237 +1,98 @@
 <div class="container-fluid p-3">
-  <!-- New Entry Form (separate box) -->
-  <div class="card mb-2">
-    <div class="card-body py-2">
-        <p>header</p>
-      <div class="d-flex flex-wrap align-items-end gap-2">
-        <p></p>
-        <div>
-          <label class="form-label small mb-1">Date</label>
-          <input type="date" class="form-control form-control-sm" [(ngModel)]="newEntry.date" />
+  <!-- New Entry Form -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-sm-3">
+          <label class="form-label small">Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="draft.date">
         </div>
-        <div>
-          <label class="form-label small mb-1">Invoice No.</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.invoiceNo" placeholder="INV-..." />
+        <div class="col-sm-3">
+          <label class="form-label small">Party</label>
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.party" placeholder="Party name">
         </div>
-        <div>
-          <label class="form-label small mb-1">Excise T.P. No.</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.exciseTPNo" placeholder="TP-..." />
+        <div class="col-sm-4">
+          <label class="form-label small">Brand of Production</label>
+          <div class="d-flex gap-2">
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.newBrand" placeholder="Type brand and click Add" (keyup.enter)="addDraftBrand()">
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="addDraftBrand()">Add</button>
+          </div>
+          <div class="mt-1" *ngIf="draft.brands.length">
+            <span class="badge text-bg-light border me-1 mb-1" *ngFor="let b of draft.brands">{{ b }}</span>
+          </div>
         </div>
-        <div class="flex-grow-1" style="min-width: 220px;">
-          <label class="form-label small mb-1">Vendor Name</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.vendorName" placeholder="Vendor" />
+        <div class="col-sm-2">
+          <label class="form-label small">Total Production</label>
+          <input type="number" min="0" class="form-control form-control-sm text-end" [(ngModel)]="draft.totalProduction">
         </div>
-        <div style="width: 90px;">
-          <label class="form-label small mb-1">Blue</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.dansbergBlue" />
+        <div class="col-sm-6">
+          <label class="form-label small">Remarks</label>
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.remarks" placeholder="Remarks">
         </div>
-        <div style="width: 90px;">
-          <label class="form-label small mb-1">HIT</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.hit" />
-        </div>
-        <div style="width: 90px;">
-          <label class="form-label small mb-1">Strong</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.dansbergStrong" />
-        </div>
-        <div style="width: 120px;">
-          <label class="form-label small mb-1">Premium 650</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.premium650ml" />
-        </div>
-        <div style="width: 120px;">
-          <label class="form-label small mb-1">Premium 330</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.premium330ml" />
-        </div>
-        <div style="width: 130px;">
-          <label class="form-label small mb-1">Total Cases</label>
-          <input type="number" class="form-control form-control-sm" [ngModel]="getNewTotalCases()" readonly />
-        </div>
-        <div style="width: 150px;">
-          <label class="form-label small mb-1">Total Amount</label>
-          <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.totalAmount" />
-        </div>
-        <div class="flex-grow-1" style="min-width: 200px;">
-          <label class="form-label small mb-1">Remarks</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.remarks" />
-        </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-primary btn-sm" (click)="addEntry()">Add</button>
-          <button class="btn btn-outline-secondary btn-sm" (click)="clearEntry()">Clear</button>
+        <div class="col-sm-6 text-end">
+          <button type="button" class="btn btn-success btn-sm" (click)="commitDraft()">Add to Register</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm ms-1" (click)="clearDraft()">Clear</button>
         </div>
       </div>
-
     </div>
   </div>
 
-  
+  <!-- Register View -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-bordered table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Sl. No.</th>
+              <th style="min-width: 130px;">Date</th>
+              <th style="min-width: 160px;">Party</th>
+              <th style="min-width: 280px;">Brand of Production</th>
+              <th style="min-width: 140px;">Total Production</th>
+              <th style="min-width: 220px;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ row.date ? (row.date | date:'dd-MM-yyyy') : '-' }}</td>
+              <td>{{ row.party || '-' }}</td>
+              <td>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="openDetails(i)">View Details ({{ row.brands.length }})</button>
+              </td>
+              <td class="text-end">{{ (row.totalProduction === '' || row.totalProduction == null) ? '-' : row.totalProduction }}</td>
+              <td>{{ row.remarks || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-  <!-- Register Table -->
-  <div id="localSalesPrintSection">
-   
-    <!-- Screen table (paginated) -->
-    <div class="card shadow-sm screen-only">
-      <div class="card-body">
-        <!-- Header + Filters + Print inside register card -->
-        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2">
-          <div class="text-center flex-grow-1">
-            <div class="fw-bold company-name">M/S YUKSOM BREWERIES LIMITED</div>
-            <div class="company-address">MELLI, SOUTH SIKKIM - 737 128</div>
-            <div class="text-uppercase fw-bold text-decoration-underline mt-1 register-title">LOCAL SALES REGISTER</div>
-            <small class="d-block mt-1 month-label">Month: {{ getPrintMonthLabel() }}</small>
-          </div>
-         
+  <!-- Modal: per-row brand details -->
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.4);" *ngIf="detailsIndex !== null" (click)="onBackdrop($event)">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Brands for Sl. No. {{ detailsIndex !== null ? (detailsIndex + 1) : '' }}</h5>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeDetails()"></button>
         </div>
-        <div>
-            <div class="d-flex align-items-end gap-2">
-                <div>
-                  <label class="form-label small">Month</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (change)="onFilterChange()">
-                    <option value="">All</option>
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="form-label small">Year</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (change)="onFilterChange()">
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                    <option value="2023">2023</option>
-                  </select>
-                </div>
-                <div class="d-flex align-items-end">
-                  <button class="btn btn-outline-warning btn-sm no-print" title="Print list" aria-label="Print" (click)="printRegister()">
-                    <i class="bi bi-printer"></i>
-                  </button>
-                </div>
-              </div><br>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm table-bordered table-hover table-striped align-middle sticky-header">
-            <thead class="table-light">
-              <tr>
-                <th>Date</th>
-                <th>Invoice No.</th>
-                <th>Excise T.P. No.</th>
-                <th>Vendor Name</th>
-                <th>Dansberg Blue</th>
-                <th>HIT</th>
-                <th>Dansberg Strong</th>
-                <th>Dansberg Premium 650 ML</th>
-                <th>Dansberg Premium 330 ML</th>
-                <th>Total Cases</th>
-                <th>Total Amount</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of getPaged()">
-                <td>{{ r.date | date:'dd-MM-yyyy' }}</td>
-                <td>{{ r.invoiceNo }}</td>
-                <td>{{ r.exciseTPNo }}</td>
-                <td>{{ r.vendorName }}</td>
-                <td class="text-end">{{ r.dansbergBlue }}</td>
-                <td class="text-end">{{ r.hit }}</td>
-                <td class="text-end">{{ r.dansbergStrong }}</td>
-                <td class="text-end">{{ r.premium650ml }}</td>
-                <td class="text-end">{{ r.premium330ml }}</td>
-                <td class="text-end fw-bold">{{ getTotalCases(r) }}</td>
-                <td class="text-end">₹ {{ r.totalAmount | number:'1.2-2' }}</td>
-                <td>{{ r.remarks }}</td>
-              </tr>
-              <tr *ngIf="filtered.length === 0">
-                <td colspan="12" class="text-center text-muted py-4">
-                  <i class="bi bi-inbox me-1"></i>No records found
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Pagination Controls -->
-        <div class="d-flex justify-content-between align-items-center mt-2 no-print">
-          <div class="small text-muted">Showing
-            {{ (currentPage - 1) * pageSize + 1 }}-
-            {{ getShowingEnd() }} of {{ filtered.length }}
-          </div>
-          <div class="d-flex align-items-center gap-2">
-            <label class="small me-1">Rows:</label>
-            <select class="form-select form-select-sm w-auto" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
-              <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-            </select>
-            <div class="btn-group btn-group-sm">
-              <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage===1">«</button>
-              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage-1)" [disabled]="currentPage===1">‹</button>
-              <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
-              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage+1)" [disabled]="currentPage===totalPages">›</button>
-              <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage===totalPages">»</button>
+        <div class="modal-body">
+          <ng-container *ngIf="detailsIndex !== null">
+            <div class="input-group input-group-sm mb-2">
+              <input type="text" class="form-control" [(ngModel)]="modalNewBrand" placeholder="Type brand and click Add" (keyup.enter)="addBrand(detailsIndex)">
+              <button class="btn btn-outline-primary" (click)="addBrand(detailsIndex)">Add</button>
             </div>
-          </div>
+            <div *ngIf="rows[detailsIndex].brands.length; else noBrandsForRow">
+              <span class="badge text-bg-light border me-1 mb-1" *ngFor="let b of rows[detailsIndex].brands">{{ b }}</span>
+            </div>
+            <ng-template #noBrandsForRow><em>No brands added yet for this row.</em></ng-template>
+          </ng-container>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeDetails()">Close</button>
         </div>
       </div>
     </div>
-
-    <!-- Print-only table (all rows, no pagination, no responsive wrapper) -->
-    <div class="print-only">
-      <div class="text-center mb-2">
-        <div class="fw-bold company-name">M/S YUKSOM BREWERIES LIMITED</div>
-        <div class="company-address">MELLI, SOUTH SIKKIM - 737 128</div>
-        <div class="text-uppercase fw-bold text-decoration-underline mt-1 register-title">LOCAL SALES REGISTER</div>
-        <small class="d-block mt-1 month-label">Month: {{ getPrintMonthLabel() }}</small>
-      </div>
-      <div>
-        
-      </div>
-      <table class="table table-sm table-bordered table-striped align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Date</th>
-            <th>Invoice No.</th>
-            <th>Excise T.P. No.</th>
-            <th>Vendor Name</th>
-            <th>Dansberg Blue</th>
-            <th>HIT</th>
-            <th>Dansberg Strong</th>
-            <th>Dansberg Premium 650 ML</th>
-            <th>Dansberg Premium 330 ML</th>
-            <th>Total Cases</th>
-            <th>Total Amount</th>
-            <th>Remarks</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let r of filtered">
-            <td>{{ r.date | date:'dd-MM-yyyy' }}</td>
-            <td>{{ r.invoiceNo }}</td>
-            <td>{{ r.exciseTPNo }}</td>
-            <td>{{ r.vendorName }}</td>
-            <td class="text-end">{{ r.dansbergBlue }}</td>
-            <td class="text-end">{{ r.hit }}</td>
-            <td class="text-end">{{ r.dansbergStrong }}</td>
-            <td class="text-end">{{ r.premium650ml }}</td>
-            <td class="text-end">{{ r.premium330ml }}</td>
-            <td class="text-end fw-bold">{{ getTotalCases(r) }}</td>
-            <td class="text-end">₹ {{ r.totalAmount | number:'1.2-2' }}</td>
-            <td>{{ r.remarks }}</td>
-          </tr>
-          <tr *ngIf="filtered.length === 0">
-            <td colspan="12" class="text-center text-muted py-4">
-              <i class="bi bi-inbox me-1"></i>No records found
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
   </div>
-
 </div>
-
