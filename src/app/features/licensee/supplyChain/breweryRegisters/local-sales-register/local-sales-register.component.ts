@@ -57,6 +57,77 @@ export class LocalSalesRegisterComponent {
   modalNewBrandCases: number | '' = '';
   showBrandsModal = false;
 
+  // Filters for register view
+  filters = {
+    date: '',
+    party: '',
+    brand: '',
+    month: '', // '01'..'12'
+    year: ''   // '2020'..'2026'
+  };
+
+  // Month and Year dropdown options
+  monthOptions: { label: string; value: string }[] = [
+    { label: 'January', value: '01' },
+    { label: 'February', value: '02' },
+    { label: 'March', value: '03' },
+    { label: 'April', value: '04' },
+    { label: 'May', value: '05' },
+    { label: 'June', value: '06' },
+    { label: 'July', value: '07' },
+    { label: 'August', value: '08' },
+    { label: 'September', value: '09' },
+    { label: 'October', value: '10' },
+    { label: 'November', value: '11' },
+    { label: 'December', value: '12' }
+  ];
+
+  yearOptions: string[] = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+
+  get filteredRows(): ProductionRow[] {
+    const dateFilter = (this.filters.date || '').trim();
+    const partyFilter = (this.filters.party || '').trim().toLowerCase();
+    const brandFilter = (this.filters.brand || '').trim().toLowerCase();
+    const monthFilter = (this.filters.month || '').trim(); // '01'..'12'
+    const yearFilter = (this.filters.year || '').trim();   // '2020'..'2026'
+
+    return this.rows.filter(row => {
+      const rowDate = (row.date || '').trim();
+      const rowMonth = rowDate ? rowDate.slice(5, 7) : '';
+      const rowYear = rowDate ? rowDate.slice(0, 4) : '';
+      const matchesDate = !dateFilter || row.date === dateFilter;
+      const matchesParty = !partyFilter || (row.party || '').toLowerCase().includes(partyFilter);
+      const matchesBrand = !brandFilter || row.brands.some(b => (b.name || '').toLowerCase().includes(brandFilter));
+      const matchesMonth = !monthFilter || rowMonth === monthFilter;
+      const matchesYear = !yearFilter || rowYear === yearFilter;
+      return matchesDate && matchesParty && matchesBrand && matchesMonth && matchesYear;
+    });
+  }
+
+  clearFilters(): void {
+    this.filters = { date: '', party: '', brand: '', month: '', year: '' };
+  }
+
+  private monthNames: string[] = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  getHeadingMonthYear(): string {
+    const monthCode = (this.filters.month || '').trim(); // '01'..'12'
+    const yearVal = (this.filters.year || '').trim();
+    if (monthCode && yearVal) {
+      const monthIndex = Math.max(0, Math.min(11, parseInt(monthCode, 10) - 1));
+      return `${this.monthNames[monthIndex]} ${yearVal}`;
+    }
+    if (monthCode) {
+      const monthIndex = Math.max(0, Math.min(11, parseInt(monthCode, 10) - 1));
+      return `${this.monthNames[monthIndex]}`;
+    }
+    if (yearVal) return yearVal;
+    return '';
+  }
+
   addRow(): void {
     this.rows = [...this.rows, { date: '', party: '', remarks: '', totalProduction: '', brands: [], newBrand: '', newBrandCases: '' }];
   }

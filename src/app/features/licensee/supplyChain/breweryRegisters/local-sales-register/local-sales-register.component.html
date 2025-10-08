@@ -46,6 +46,46 @@
   <!-- Register View -->
   <div class="card shadow-sm">
     <div class="card-body">
+      <!-- Heading -->
+      <div class="mb-3 text-center">
+        <div class="company-name fw-bold">Yuksom Brewweries</div>
+        <div class="company-address">Melli, South Sikkim</div>
+        <div class="register-title">Daily production of beer for the month of {{ getHeadingMonthYear() || '_____' }}</div>
+      </div>
+
+      <!-- Filters inside register box -->
+      <div class="filter-controls d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div class="filter-control">
+          <label class="form-label small mb-1">Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.date">
+        </div>
+        <div class="filter-control">
+          <label class="form-label small mb-1">Party</label>
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.party" placeholder="Search party">
+        </div>
+        <div class="filter-control">
+          <label class="form-label small mb-1">Brand</label>
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.brand" placeholder="Search brand">
+        </div>
+        <div class="filter-control">
+          <label class="form-label small mb-1">Month</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.month">
+            <option value="">All</option>
+            <option *ngFor="let m of monthOptions" [value]="m.value">{{ m.label }}</option>
+          </select>
+        </div>
+        <div class="filter-control">
+          <label class="form-label small mb-1">Year</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.year">
+            <option value="">All</option>
+            <option *ngFor="let y of yearOptions" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+        <div class="ms-auto"></div>
+        <div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">Clear Filters</button>
+        </div>
+      </div>
       <div class="table-responsive">
         <table class="table table-bordered table-sm align-middle">
           <thead>
@@ -59,7 +99,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of rows; let i = index">
+            <tr *ngFor="let row of filteredRows; let i = index">
               <td>{{ i + 1 }}</td>
               <td>{{ row.date ? (row.date | date:'dd-MM-yyyy') : '-' }}</td>
               <td>{{ row.party || '-' }}</td>

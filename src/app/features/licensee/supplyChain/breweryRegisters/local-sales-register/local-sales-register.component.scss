@@ -382,3 +382,22 @@
   }
 }
 
+/* Compact left-aligned filter controls */
+.filter-controls {
+  gap: 0.5rem !important;
+}
+
+.filter-control {
+  min-width: 140px;
+}
+
+.filter-control input.form-control.form-control-sm {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  height: calc(1.5em + 0.5rem + 2px);
+}
+
+.filter-control .form-label.small {
+  margin-bottom: 0.1rem !important;
+}
+
