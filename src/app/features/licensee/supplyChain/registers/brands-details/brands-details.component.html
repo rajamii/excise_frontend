@@ -1,1 +1,102 @@
-<p>brands-details works!</p>
+<div class="container-fluid py-3">
+  <div class="border bg-white rounded-1 p-3">
+    <!-- Header mimicking register sheet -->
+    <div class="register-header">
+   
+    
+    <div class="row mt-2 small">
+        <div class="text-center fw-bold fs-5">SIKKIM DISTILLERIES LTD, SAI BABA NAGAR, RANGPO, EAST SIKKIM, SIKKIM.</div>
+      <div class="col-md-6 d-flex gap-2 align-items-center">
+        <label class="mb-0">MONTH</label>
+        <select class="form-select form-select-sm w-auto" [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
+          <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
+        </select>
+        <label class="mb-0 ms-3">YEAR</label>
+        <select class="form-select form-select-sm w-auto" [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
+          <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+        </select>
+        <label class="mb-0 ms-3">DATE</label>
+        <input type="date" class="form-control form-control-sm w-auto" [(ngModel)]="selectedDate" (ngModelChange)="applyFilters()">
+        <button class="btn btn-sm btn-outline-secondary ms-2" (click)="selectedDate=''; applyFilters()">Clear Date</button>
+      </div>
+      <div class="col-md-6 text-md-end mt-2 mt-md-0">
+        <div class="btn-group btn-group-sm" role="group">
+          <button class="btn btn-outline-secondary" (click)="exportCsv()"><i class="bi bi-download me-1"></i>Export</button>
+          <button class="btn btn-outline-secondary" (click)="print()"><i class="bi bi-printer me-1"></i>Print</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Brand Tabs -->
+    <div class="bg-white border mt-3 p-2">
+    <ul class="nav nav-tabs">
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeBrand === 'SDL'" (click)="setBrand('SDL')">SDL BRANDS</button>
+      </li>
+      <li class="nav-item">
+        <button class="nav-link" [class.active]="activeBrand === 'JAGATJIT'" (click)="setBrand('JAGATJIT')">JAGATJIT BRANDS</button>
+      </li>
+    </ul>
+
+      <!-- Register Table -->
+      <div class="table-responsive mt-2">
+      <table class="table table-bordered table-striped align-middle brand-register">
+        <thead class="table-success small">
+          <tr>
+            <th class="text-start align-middle" rowspan="2" style="width: 22%">BRANDS</th>
+            <th class="text-center align-middle" rowspan="2" style="width: 8%">ALCOHOL%<br>(V/V)</th>
+            <th class="text-center align-middle" rowspan="2" style="width: 6%">SIZE<br>(ML)</th>
+            <th class="text-center" colspan="2" style="width: 14%">QUANTITY IN HAND</th>
+            <th class="text-center" colspan="2" style="width: 14%">QUANTITY PRODUCED</th>
+            <th class="text-center" colspan="2" style="width: 14%">QUANTITY ISSUED</th>
+            <th class="text-center" colspan="2" style="width: 14%">CLOSING BALANCE</th>
+          </tr>
+          <tr>
+            <th class="text-center">LOCAL</th>
+            <th class="text-center">EXPORT</th>
+            <th class="text-center">LOCAL</th>
+            <th class="text-center">EXPORT</th>
+            <th class="text-center">LOCAL</th>
+            <th class="text-center">EXPORT</th>
+            <th class="text-center">LOCAL</th>
+            <th class="text-center">EXPORT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="table-secondary fw-semibold">
+            <td colspan="11">{{ activeBrand === 'SDL' ? 'SDL BRANDS' : 'JAGATJIT BRANDS' }}</td>
+          </tr>
+          <tr *ngFor="let row of rows">
+            <td>
+              <div class="fw-semibold">{{ row.brandName }}</div>
+              <div class="small text-muted" *ngIf="row.variant">{{ row.variant }}</div>
+            </td>
+            <td class="text-center">{{ row.alcoholPercent }}</td>
+            <td class="text-center">{{ row.sizeMl }}</td>
+            <td class="text-end">{{ row.qtyInHandLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.qtyInHandExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.qtyProducedLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.qtyProducedExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.qtyIssuedLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.qtyIssuedExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.closingLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ row.closingExport | number:'1.0-0' }}</td>
+          </tr>
+          <tr class="fw-semibold">
+            <td colspan="3" class="text-end">TOTAL</td>
+            <td class="text-end">{{ totals.qtyInHandLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.qtyInHandExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.qtyProducedLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.qtyProducedExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.qtyIssuedLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.qtyIssuedExport | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.closingLocal | number:'1.0-0' }}</td>
+            <td class="text-end">{{ totals.closingExport | number:'1.0-0' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>

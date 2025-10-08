@@ -1,0 +1,22 @@
+.register-header .header-grid th,
+.brand-register th,
+.brand-register td {
+  vertical-align: middle;
+}
+
+.brand-register thead th {
+  white-space: nowrap;
+}
+
+@media print {
+  .btn, .form-control, .form-select, .nav, .nav-tabs {
+    display: none !important;
+  }
+  .table {
+    font-size: 12px;
+  }
+  .register-header {
+    border: none !important;
+  }
+}
+
