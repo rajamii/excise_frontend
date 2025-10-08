@@ -1,6 +1,7 @@
 import { Account } from "./account.model";
 import { District } from "./district.model";
 import { LicenseCategory } from "./license-category.model";
+import { LicenseSubcategory } from "./license-subcategory.model";
 import { PoliceStation } from "./policestation.model";
 import { Subdivision } from "./subdivision.model";
 export class LicenseApplication {
@@ -8,6 +9,7 @@ export class LicenseApplication {
   applicationId!: string;
   exciseDistrict!: District;
   licenseCategory!: LicenseCategory;
+  licenseSubCategory!: LicenseSubcategory;
   exciseSubdivision!: Subdivision;
   license!: string;
 

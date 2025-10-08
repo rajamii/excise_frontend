@@ -14,16 +14,16 @@
         <!-- License Category Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>License Category</mat-label>
-          <mat-select formControlName="licenseType" required>
-            @for (licenseType of licenseTypes; track licenseType) {
-              <mat-option [value]="licenseType.id">
-                {{ licenseType.licenseType }}
+          <mat-select formControlName="licenseCategory" required>
+            @for (licenseCategory of licenseCategories; track licenseCategory.id) {
+              <mat-option [value]="licenseCategory.id">
+                {{ licenseCategory.licenseCategory }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseType'].invalid) {
+          @if (keyInfoForm.controls['licenseCategory'].invalid && keyInfoForm.controls['licenseCategory'].touched) {
             <mat-error>
-              {{ getErrorMessage('licenseType') }}
+              {{ getErrorMessage('licenseCategory') }}
             </mat-error>
           }
         </mat-form-field>
@@ -31,16 +31,16 @@
         <!-- License Sub-Category Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>License Sub-Category</mat-label>
-          <mat-select formControlName="licenseType" required>
-            @for (licenseType of licenseTypes; track licenseType) {
-              <mat-option [value]="licenseType.id">
-                {{ licenseType.licenseType }}
+          <mat-select formControlName="licenseSubCategory" required>
+            @for (licenseSubCategory of filteredSubcategories; track licenseSubCategory.id) {
+              <mat-option [value]="licenseSubCategory.id">
+                {{ licenseSubCategory.description }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseType'].invalid) {
+          @if (keyInfoForm.controls['licenseSubCategory'].invalid && keyInfoForm.controls['licenseSubCategory'].touched) {
             <mat-error>
-              {{ getErrorMessage('licenseType') }}
+              {{ getErrorMessage('licenseSubCategory') }}
             </mat-error>
           }
         </mat-form-field>
@@ -63,7 +63,7 @@
           }
         </mat-form-field>
 
-        <!-- Contact Number -->
+        <!-- Contact Number
         <mat-form-field appearance="outline">
           <mat-label>Contact Number</mat-label>
           <input matInput placeholder="Enter Contact Number" type="tel" formControlName="mobileNumber" required />
@@ -72,9 +72,9 @@
               {{ getErrorMessage('mobileNumber') }}
             </mat-error>
           }
-        </mat-form-field>
+        </mat-form-field> -->
 
-        <!-- Email ID -->
+        <!-- Email ID
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
           <input matInput placeholder="Enter Email" type="email" formControlName="email" required />
@@ -83,70 +83,7 @@
               {{ getErrorMessage('email') }}
             </mat-error>
           }
-        </mat-form-field>
-
-        <!-- Manual License Number -->
-        <mat-form-field appearance="outline">
-          <mat-label>License Number (Manual System)</mat-label>
-          <textarea matInput
-            placeholder="Enter License Number if any (max 50 characters)"
-            formControlName="licenseNo"
-            cdkTextareaAutosize
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
-        </mat-form-field>
-
-        <!-- Initial Grant Date -->
-        <mat-form-field appearance="outline">
-          <mat-label>Initial Grant Date</mat-label>
-          <input matInput [matDatepicker]="initialGrantDate" formControlName="initialGrantDate">
-          <mat-datepicker-toggle matIconSuffix [for]="initialGrantDate"></mat-datepicker-toggle>
-          <mat-datepicker #initialGrantDate></mat-datepicker>
-          @if (keyInfoForm.controls['initialGrantDate'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('initialGrantDate') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Renewed From Date -->
-        <mat-form-field appearance="outline">
-          <mat-label>Renewed From</mat-label>
-          <input matInput [matDatepicker]="renewedFrom" formControlName="renewedFrom">
-          <mat-datepicker-toggle matIconSuffix [for]="renewedFrom"></mat-datepicker-toggle>
-          <mat-datepicker #renewedFrom></mat-datepicker>
-          @if (keyInfoForm.controls['renewedFrom'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('renewedFrom') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Valid Up To Date -->
-        <mat-form-field appearance="outline">
-          <mat-label>Valid Up to Date</mat-label>
-          <input matInput [matDatepicker]="validUpTo" formControlName="validUpTo">
-          <mat-datepicker-toggle matIconSuffix [for]="validUpTo"></mat-datepicker-toggle>
-          <mat-datepicker #validUpTo></mat-datepicker>
-          @if (keyInfoForm.controls['validUpTo'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('validUpTo') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Yearly License Fee -->
-        <mat-form-field floatLabel="always" appearance="outline">
-          <mat-label>Yearly License Fee (Rs.)</mat-label>
-          <input matInput type="number" class="example-right-align" formControlName="yearlyLicenseFee" placeholder="0" />
-          <span matTextPrefix>₹&nbsp;</span>
-          @if (keyInfoForm.controls['yearlyLicenseFee'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('yearlyLicenseFee') }}
-            </mat-error>
-          }
-        </mat-form-field>
+        </mat-form-field>-->
 
         <!-- License Nature Dropdown -->
         <mat-form-field appearance="outline">

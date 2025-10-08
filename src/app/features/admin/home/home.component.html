@@ -63,6 +63,11 @@
               <span class="nav-header-cus">Road</span>
             </mat-list-item>
           }
+          @if (accountService.hasAnyRole('single_window')) {
+            <mat-list-item routerLink="users" routerLinkActive="active-link">
+              <span class="nav-header-cus">User</span>
+            </mat-list-item>
+          }
         </mat-nav-list>
       </div>
     </mat-sidenav>

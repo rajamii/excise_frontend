@@ -9,10 +9,28 @@
 
     <mat-card-content>
       <div class="form-field-container">
+
+        <!-- Excise District Dropdown -->
+        <mat-form-field appearance="outline">
+          <mat-label>Excise District</mat-label>
+          <mat-select
+            formControlName="exciseDistrict"
+            (selectionChange)="onDistrictChange($event.value)"
+            required>
+            <mat-option *ngFor="let district of districts" [value]="district.districtCode">
+              {{ district.district }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="addressForm.controls['exciseDistrict'].invalid">
+            {{ getErrorMessage('exciseDistrict') }}
+          </mat-error>
+        </mat-form-field>
+      
+        <!-- Excise SubDivision Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division</mat-label>
           <mat-select formControlName="siteSubdivision" required>
-            @for (siteSubdivision of subdivisions; track siteSubdivision) {
+            @for (siteSubdivision of siteSubdivisions; track siteSubdivision) {
               <mat-option [value]="siteSubdivision.subdivisionCode">
                 {{ siteSubdivision.subdivision }}
               </mat-option>
@@ -114,30 +132,6 @@
           @if (addressForm.controls['pinCode'].invalid) {
             <mat-error>
               {{ getErrorMessage('pinCode') }}
-            </mat-error>
-          }
-        </mat-form-field>
-      </div>
-
-      <h5>Site Map (Optional)</h5>
-
-      <div class="form-field-container">
-        <mat-form-field appearance="outline">
-          <mat-label>Latitude</mat-label>
-          <input matInput placeholder="Enter Latitude" type="text" formControlName="latitude"/>
-          @if (addressForm.controls['latitude'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('latitude') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Longitude</mat-label>
-          <input matInput placeholder="Enter Longitude" type="text" formControlName="longitude"/>
-          @if (addressForm.controls['longitude'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('longitude') }}
             </mat-error>
           }
         </mat-form-field>

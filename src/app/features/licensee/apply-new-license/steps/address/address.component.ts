@@ -2,6 +2,7 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, DoCheck } f
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { District } from '../../../../../core/models/district.model';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { PoliceStation } from '../../../../../core/models/policestation.model';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -18,18 +19,23 @@ import { MasterService } from '../../../../../core/services/master.service';
 })
 export class AddressComponent implements OnInit, OnDestroy, DoCheck {
   addressForm: FormGroup; // Main form group for address
-  siteDistrict = '';
 
   // Raw data from API for dropdowns
-  subdivisions: Subdivision[] = [];
-  private policeStations: PoliceStation[] = [];
+  districts: District[] = [];
+
+  private subdivisions: Subdivision[] = [];
+  siteSubdivisions: Subdivision[] = [];
+
 
   // Filtered data shown in dropdowns
+  private policeStations: PoliceStation[] = [];
   sitePoliceStations: any[] = [];
 
+  
+
   // Static dropdown values
-  locationCategories: string[] = ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'];
-  locationNames: string[] = ['Location 1', 'Location 2', 'Location 3', 'Location 4'];
+  locationCategories: string[] = ['Category A', 'Category B', 'Category C', 'Category D'];
+  locationNames: string[] = ['Location A', 'Location B', 'Location C', 'Location D'];
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
   roadNames: string[] = ['Road 1', 'Road 2', 'Road 3', 'Road 4'];
 
@@ -42,6 +48,7 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
 
   // Error messages using Angular signal for reactive UI updates
   errorMessages = {
+    exciseDistrict: signal(''),
     siteSubdivision: signal(''),
     policeStation: signal(''),
     locationCategory: signal(''),
@@ -59,7 +66,8 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
 
     // Initialize the form with stored values and validators
     this.addressForm = this.fb.group({
-      siteSubdivision: new FormControl({ value: storedValues.siteSubdivision, disabled: true }, [Validators.required]),
+      exciseDistrict: new FormControl(storedValues.exciseDistrict, [Validators.required]),
+      siteSubdivision: new FormControl(storedValues.siteSubdivision, [Validators.required]),
       policeStation: new FormControl(storedValues.policeStation, [Validators.required]),
       locationCategory: new FormControl(storedValues.locationCategory, [Validators.required]),
       locationName: new FormControl(storedValues.locationName, [Validators.required]),
@@ -67,8 +75,6 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
       businessAddress: new FormControl(storedValues.businessAddress, [Validators.required, Validators.maxLength(500)]),
       roadName: new FormControl(storedValues.roadName, [Validators.required]),
       pinCode: new FormControl(storedValues.pinCode, [Validators.required, Validators.pattern(PatternConstants.PINCODE)]),
-      latitude: new FormControl(storedValues.latitude),
-      longitude: new FormControl(storedValues.longitude),
     });
 
     // Save form changes to session storage and update error messages live
@@ -82,10 +88,10 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
     this.loadDropdownData(); // Load data for subdivisions and police stations
 
     // Optional: auto-populate police stations if a subdivision was already selected
-    const subdivision = this.addressForm.get('siteSubdivision')?.value;
-    if (subdivision) {
-      this.onSubDivisionChange(subdivision);
-    }
+    // const subdivision = this.addressForm.get('siteSubdivision')?.value;
+    // if (subdivision) {
+    //   this.onSubDivisionChange(subdivision);
+    // }
   }
 
   ngOnDestroy() {
@@ -114,17 +120,29 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
 
   // Fetches dropdown data from backend service
   private loadDropdownData(): void {
-    this.masterService.getSubdivision().subscribe((data: Subdivision[]) => {
-      this.subdivisions = data;
-    }, error => {
-      console.error('Failed to load subdivisions.', error);
+
+    this.masterService.getDistrict().subscribe({
+      next: (data: District[]) => this.districts = data,
+      error: (error) => console.error('Error fetching districts:', error)
+    });
+
+    this.masterService.getSubdivision().subscribe({
+      next: (data: Subdivision[]) => {
+        this.subdivisions = data;
+        // After loading subdivisions, trigger filtering using saved district
+        const storedDistrict = this.addressForm.get('exciseDistrict')?.value;
+        if (storedDistrict) {
+          this.onDistrictChange(storedDistrict);
+        }
+      },
+    error: (error) => console.error('Failed to load subdivisions.', error)
     });
 
     this.masterService.getPoliceStations().subscribe({
       next: (data: PoliceStation[]) => {
         this.policeStations = data;
 
-        // After loading subdivisions, trigger filtering using saved district
+        // After loading subdivisions, trigger filtering using saved subdivision
         const storedSubdivision = this.addressForm.get('siteSubdivision')?.value;
         if (storedSubdivision) {
           this.onSubDivisionChange(storedSubdivision);
@@ -133,6 +151,14 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
       error: (error) => console.error('Failed to load subdivisions.', error)
     });
   }
+
+   // Filter sub-divisions when district changes
+  onDistrictChange(selectedDistrictCode: number): void {
+    this.siteSubdivisions = this.subdivisions.filter(
+      subdiv => subdiv.districtCode === selectedDistrictCode
+    );
+  }
+
 
   // Filters police stations based on selected subdivision
   onSubDivisionChange(code: number): void {

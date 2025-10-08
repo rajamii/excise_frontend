@@ -23,7 +23,7 @@ mat-card{
     mat-card-content{
         .form-field-container{
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 20px 40px;
             padding: 20px 15px;
             justify-items: center;
@@ -38,12 +38,12 @@ mat-card{
     mat-card-actions{
         display: flex;
         justify-content: center;
-        gap: 8px;
+        gap: 50px;
     }
 }
 
 @media(max-width: 633px){
     mat-card mat-card-content .form-field-container{
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 }

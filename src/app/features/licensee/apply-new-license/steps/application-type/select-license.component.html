@@ -10,16 +10,18 @@
     <mat-card-content>
       <div class="form-field-container">
         <!-- Excise District Dropdown -->
-        <mat-radio-group formControlName="licenseTypes">
+        <mat-radio-group formControlName="licenseType">
           @for (licenseType of licenseTypes; track licenseType) {
           <mat-radio-button [value]="licenseType.id">
             {{ licenseType.licenseType }}
           </mat-radio-button>
-        }
+          }
         </mat-radio-group>
-        <div
-          *ngIf="selectLicenseForm.get('licenseTypes')?.invalid && (selectLicenseForm.get('licenseTypes')?.touched || selectLicenseForm.get('licenseTypes')?.dirty)">
+        <div>
+          @if (selectLicenseForm.controls['licenseType'].invalid && selectLicenseForm.controls['licenseType'].touched) {
+          <div class="error-message">{{ getErrorMessage('licenseType') }}</div>
           <span class="error-text">This field is required</span>
+          }
         </div>
       </div>
     </mat-card-content>
