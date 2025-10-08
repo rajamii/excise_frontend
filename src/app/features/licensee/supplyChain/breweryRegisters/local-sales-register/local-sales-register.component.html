@@ -11,19 +11,25 @@
           <label class="form-label small">Party</label>
           <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.party" placeholder="Party name">
         </div>
-        <div class="col-sm-4">
+        <div class="col-sm-4 brand-input-section">
           <label class="form-label small">Brand of Production</label>
           <div class="d-flex gap-2">
-            <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.newBrand" placeholder="Type brand and click Add" (keyup.enter)="addDraftBrand()">
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.newBrand" placeholder="Brand name" (keyup.enter)="addDraftBrand()">
+            <input type="number" min="0" class="form-control form-control-sm" style="width: 80px;" [(ngModel)]="draft.newBrandCases" placeholder="Cases" (keyup.enter)="addDraftBrand()">
             <button type="button" class="btn btn-outline-primary btn-sm" (click)="addDraftBrand()">Add</button>
           </div>
-          <div class="mt-1" *ngIf="draft.brands.length">
-            <span class="badge text-bg-light border me-1 mb-1" *ngFor="let b of draft.brands">{{ b }}</span>
+          <div class="brands-summary-overlay" *ngIf="draft.brands.length">
+            <small class="text-muted">
+              {{ draft.brands.length }} brand(s) • {{ getTotalCases(draft.brands) }} total cases
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="openBrandsModal()" style="font-size: 0.7rem;">
+                Manage
+              </button>
+            </small>
           </div>
         </div>
         <div class="col-sm-2">
           <label class="form-label small">Total Production</label>
-          <input type="number" min="0" class="form-control form-control-sm text-end" [(ngModel)]="draft.totalProduction">
+          <input type="number" min="0" class="form-control form-control-sm text-end" [value]="getTotalCases(draft.brands)" readonly>
         </div>
         <div class="col-sm-6">
           <label class="form-label small">Remarks</label>
@@ -58,7 +64,9 @@
               <td>{{ row.date ? (row.date | date:'dd-MM-yyyy') : '-' }}</td>
               <td>{{ row.party || '-' }}</td>
               <td>
-                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="openDetails(i)">View Details ({{ row.brands.length }})</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="openDetails(i)">
+                  View Details ({{ row.brands.length }} brands, {{ getTotalCases(row.brands) }} cases)
+                </button>
               </td>
               <td class="text-end">{{ (row.totalProduction === '' || row.totalProduction == null) ? '-' : row.totalProduction }}</td>
               <td>{{ row.remarks || '-' }}</td>
@@ -70,27 +78,95 @@
   </div>
 
   <!-- Modal: per-row brand details -->
-  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.4);" *ngIf="detailsIndex !== null" (click)="onBackdrop($event)">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Brands for Sl. No. {{ detailsIndex !== null ? (detailsIndex + 1) : '' }}</h5>
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="detailsIndex !== null" (click)="onBackdrop($event)">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content view-details-modal">
+        <div class="modal-header view-details-modal-header">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-eye me-2 text-primary"></i>
+            <h5 class="modal-title mb-0">Brand Details - Row {{ detailsIndex !== null ? (detailsIndex + 1) : '' }}</h5>
+          </div>
           <button type="button" class="btn-close" aria-label="Close" (click)="closeDetails()"></button>
         </div>
-        <div class="modal-body">
-          <ng-container *ngIf="detailsIndex !== null">
-            <div class="input-group input-group-sm mb-2">
-              <input type="text" class="form-control" [(ngModel)]="modalNewBrand" placeholder="Type brand and click Add" (keyup.enter)="addBrand(detailsIndex)">
-              <button class="btn btn-outline-primary" (click)="addBrand(detailsIndex)">Add</button>
-            </div>
-            <div *ngIf="rows[detailsIndex].brands.length; else noBrandsForRow">
-              <span class="badge text-bg-light border me-1 mb-1" *ngFor="let b of rows[detailsIndex].brands">{{ b }}</span>
-            </div>
-            <ng-template #noBrandsForRow><em>No brands added yet for this row.</em></ng-template>
-          </ng-container>
+         <div class="modal-body view-details-modal-body">
+           <ng-container *ngIf="detailsIndex !== null">
+             <div *ngIf="rows[detailsIndex].brands.length; else noBrandsForRow">
+               <div class="brands-details-list">
+                 <div class="brand-detail-item" *ngFor="let brand of rows[detailsIndex].brands; let i = index">
+                   <div class="brand-detail-info">
+                     <div class="brand-detail-name">{{ brand.name }}</div>
+                     <div class="brand-detail-cases">{{ brand.cases }} cases</div>
+                   </div>
+                 </div>
+               </div>
+               <div class="total-summary">
+                 <div class="total-cases">
+                   <span class="total-label">Total Cases</span>
+                   <span class="total-value">{{ getTotalCases(rows[detailsIndex].brands) }}</span>
+                 </div>
+               </div>
+             </div>
+             <ng-template #noBrandsForRow>
+               <div class="empty-state">
+                 <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+                 <p class="text-muted mb-0">No brands added for this row</p>
+                 <small class="text-muted">This row doesn't have any brands yet</small>
+               </div>
+             </ng-template>
+           </ng-container>
+         </div>
+        <div class="modal-footer view-details-modal-footer">
+          <button type="button" class="btn btn-primary" (click)="closeDetails()">
+            <i class="bi bi-check-lg me-1"></i>Close
+          </button>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDetails()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brands Management Modal -->
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsModal" (click)="onBrandsModalBackdrop($event)">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content brands-modal">
+        <div class="modal-header brands-modal-header">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-tags me-2 text-primary"></i>
+            <h5 class="modal-title mb-0">Brand Management</h5>
+          </div>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeBrandsModal()"></button>
+        </div>
+        <div class="modal-body brands-modal-body">
+          <div *ngIf="draft.brands.length; else noBrandsMessage">
+            <div class="brands-list">
+              <div class="brand-item" *ngFor="let brand of draft.brands; let i = index">
+                <div class="brand-info">
+                  <div class="brand-name">{{ brand.name }}</div>
+                  <div class="brand-cases">{{ brand.cases }} cases</div>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm brand-remove-btn" (click)="removeDraftBrand(i)" title="Remove brand">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            </div>
+            <div class="total-summary">
+              <div class="total-cases">
+                <span class="total-label">Total Cases</span>
+                <span class="total-value">{{ getTotalCases(draft.brands) }}</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noBrandsMessage>
+            <div class="empty-state">
+              <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+              <p class="text-muted mb-0">No brands added yet</p>
+              <small class="text-muted">Add brands using the form above</small>
+            </div>
+          </ng-template>
+        </div>
+        <div class="modal-footer brands-modal-footer">
+          <button type="button" class="btn btn-primary" (click)="closeBrandsModal()">
+            <i class="bi bi-check-lg me-1"></i>Done
+          </button>
         </div>
       </div>
     </div>
