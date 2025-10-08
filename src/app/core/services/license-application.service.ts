@@ -75,6 +75,11 @@ export class LicenseApplicationService {
     // Sends a GET request to fetch a list of applications, organized by their current stage in the process
   }
 
+  getNextStages(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/next-stages/`);
+}
+
   /* Advances the license application to the next stage, including an action and remarks to describe the transition
   Depending on the action, it may include remarks, feeAmount, new license category, or objections. */
   advanceApplication(

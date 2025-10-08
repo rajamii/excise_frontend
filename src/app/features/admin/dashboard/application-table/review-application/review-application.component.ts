@@ -26,6 +26,7 @@ export interface FieldDisplay {
   templateUrl: './review-application.component.html',
   styleUrls: ['./review-application.component.scss']
 })
+
 export class ReviewApplicationComponent extends BaseComponent implements OnInit {
   @ViewChild(SiteEnquiryFormComponent) siteEnquiryFormComponent!: SiteEnquiryFormComponent;
 
@@ -66,6 +67,12 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   addressData: FieldDisplay[] = [];
   unitDetailsData: FieldDisplay[] = [];
   memberDetailsData: FieldDisplay[] = [];
+
+  nextStages: any[] = [];
+  stageID: string | undefined;
+  approvalStageId: string | undefined;
+  objectionStageId: string | undefined;
+  rejectionStageId: string | undefined;
 
   // Field label mapping for display and objections
   fieldLabelMap: { [key: string]: string } = {
@@ -129,6 +136,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     label
   }));
 
+
   constructor(
     deps: BaseDependency,
     @Inject(MAT_DIALOG_DATA) public data: any,
@@ -141,6 +149,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   }
 
   ngOnInit(): void {
+
     // Set photo URL if photo exists
     this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
 
@@ -158,6 +167,8 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
     // Load dropdown options
     this.loadDropdownData();
+
+    this.loadNextStages();
 
     this.licenseCategoryForm.get('licenseCategory')?.valueChanges.subscribe((id: number) => {
       this.selectedCategory = this.licenseCategories.find(cat => cat.id === id) || null;
@@ -240,6 +251,36 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       error: err => console.error('Category fetch error', err)
     });
   }
+
+  loadNextStages() {
+    this.licenseAppService.getNextStages(this.application.applicationId).subscribe({
+      next: (stages) => {
+        this.nextStages = stages;
+        const currentLevel = this.getCurrentLevel();
+        if (currentLevel) {
+          this.approvalStageId = this.findStageId(stages, currentLevel === 5 ? 'approved' : `level_${currentLevel + 1}`);
+          this.objectionStageId = this.findStageId(stages, `level_${currentLevel}_objection`);
+          this.rejectionStageId = this.findStageId(stages, `rejected_by_level_${currentLevel}`);
+        }
+      },
+      error: () => Swal.fire('Error', 'Failed to load next stages.', 'error')
+    });
+  }
+ 
+  getCurrentLevel(): number | undefined {
+    if (this.accountService.hasAnyRole('level_1')) return 1;
+    if (this.accountService.hasAnyRole('level_2')) return 2;
+    if (this.accountService.hasAnyRole('level_3')) return 3;
+    if (this.accountService.hasAnyRole('level_4')) return 4;
+    if (this.accountService.hasAnyRole('level_5')) return 5;
+    return undefined;
+  }
+
+  findStageId(stages: any[], name: string): string | undefined {
+    const stage = stages.find(s => s.name === name);
+    return stage ? stage.id.toString() : undefined;
+  }
+  
 
   fetchObjections() {
     // Fetch objections related to the application from backend
@@ -366,8 +407,18 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     this.selectedLocation = selected;
   }
 
+  onAdvance(stageId: string, action: 'approve' | 'raise_objection', stepper: MatStepper) {
+    this.stageID = stageId;
+    if (action === 'raise_objection') {
+      this.onRaiseObjection(stepper);
+    } else {
+      this.onApprove(stepper);
+    }
+  }
+
   // Begin approve flow — navigate to next step and update flags
   onApprove(stepper: MatStepper) {
+    this.stageID = this.approvalStageId;
     this.isApproveFlow = true;
     this.isRejectFlow = this.isObjection = this.isRejected = false;
     stepper.next();
@@ -375,6 +426,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
   // Begin reject flow — navigate to next step and update flags
   onReject(stepper: MatStepper) {
+    this.stageID = this.rejectionStageId;
     this.isRejectFlow = true;
     this.isApproveFlow = this.isObjection = false;
     this.isRejected = true;
@@ -383,6 +435,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
   // Begin objection-raising flow — navigate to next step and update flags
   onRaiseObjection(stepper: MatStepper) {
+     this.stageID = this.objectionStageId;
     this.isObjection = true;
     this.isRejected = this.isApproveFlow = this.isRejectFlow = false;
     stepper.next();
@@ -400,6 +453,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     const applicationId = this.application.applicationId;
     const remarks = this.remarksForm.value.remarks;
 
+    if (!this.stageID) {
+        Swal.fire('Error', 'No valid stage selected for advancement.', 'error');
+        return;
+    }
+
     // Utility to show error alert
     const showError = (msg: string) => Swal.fire('Error', msg, 'error');
 
@@ -413,7 +471,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     // Reject application flow (no special context needed)
     this.licenseAppService.advanceApplication(
       applicationId,
-      undefined,
+      this.stageID,
       remarks,
       undefined,
       'reject'
@@ -433,7 +491,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       }
       this.licenseAppService.advanceApplication(
         applicationId,
-        undefined,
+        this.stageID,
         remarks, 
         fee, 
         'approve',
@@ -475,7 +533,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       ).subscribe({
         next: () => this.licenseAppService.advanceApplication(
           applicationId,
-          undefined,
+          this.stageID,
           remarks, 
           undefined, 
           'approve', 
@@ -489,9 +547,10 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     }
 
     // Default approve flow (for other roles or fallback)
-    this.licenseAppService.advanceApplication(applicationId, 
+    this.licenseAppService.advanceApplication(
+      applicationId, 
+      this.stageID,
       remarks, 
-      undefined,
       undefined,
       'approve'
     ).subscribe({
@@ -502,6 +561,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
   onSubmitObjection() {
     const applicationId = this.application.applicationId;
+
+    if (!this.stageID) {
+      Swal.fire('Error', 'No valid stage selected for objection.', 'error');
+      return;
+    }
 
     // Collect selected objection fields with remarks
     const selectedFields = this.objectionFields
@@ -519,7 +583,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     // Directly raise objection (confirmation already shown earlier in stepper)
     this.licenseAppService.advanceApplication(
       applicationId,
-      undefined,
+      this.stageID,
       undefined,
       undefined,
       'raise_objection',
