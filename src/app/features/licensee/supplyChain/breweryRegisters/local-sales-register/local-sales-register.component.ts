@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -24,7 +24,7 @@ interface ProductionRow {
   templateUrl: './local-sales-register.component.html',
   styleUrls: ['./local-sales-register.component.scss']
 })
-export class LocalSalesRegisterComponent {
+export class LocalSalesRegisterComponent implements OnInit {
   rows: ProductionRow[] = [
     { 
       date: '2024-12-01', 
@@ -83,6 +83,15 @@ export class LocalSalesRegisterComponent {
   ];
 
   yearOptions: string[] = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+
+  ngOnInit(): void {
+    // Default month/year to current
+    const now = new Date();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(now.getFullYear());
+    if (!this.filters.month) this.filters.month = mm;
+    if (!this.filters.year) this.filters.year = yyyy;
+  }
 
   get filteredRows(): ProductionRow[] {
     const dateFilter = (this.filters.date || '').trim();

@@ -98,6 +98,12 @@
   margin: 1.75rem auto;
 }
 
+/* Brand details modal width */
+.view-details-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 800px !important;
+}
+
 /* Ensure brand summary dialog width overrides generic modal-md rules */
 .brands-summary-dialog.modal-dialog {
   max-width: 800px !important;
