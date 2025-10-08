@@ -239,4 +239,39 @@ export class LocalSalesRegisterComponent {
       this.closeBrandsModal();
     }
   }
+
+  // Brands Production Record (aggregated per current filters)
+  showBrandsSummary = false;
+
+  get aggregatedBrands(): { name: string; totalCases: number }[] {
+    const totals = new Map<string, number>();
+    for (const row of this.filteredRows) {
+      for (const b of row.brands) {
+        const name = (b.name || '').toUpperCase();
+        const value = typeof b.cases === 'number' ? b.cases : 0;
+        totals.set(name, (totals.get(name) || 0) + value);
+      }
+    }
+    return Array.from(totals.entries())
+      .map(([name, totalCases]) => ({ name, totalCases }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  get aggregatedTotalCases(): number {
+    return this.aggregatedBrands.reduce((sum, b) => sum + b.totalCases, 0);
+  }
+
+  openBrandsSummary(): void {
+    this.showBrandsSummary = true;
+  }
+
+  closeBrandsSummary(): void {
+    this.showBrandsSummary = false;
+  }
+
+  onBrandsSummaryBackdrop(ev: MouseEvent): void {
+    if ((ev.target as HTMLElement)?.classList.contains('modal')) {
+      this.closeBrandsSummary();
+    }
+  }
 }

@@ -98,6 +98,12 @@
   margin: 1.75rem auto;
 }
 
+/* Ensure brand summary dialog width overrides generic modal-md rules */
+.brands-summary-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 50vw !important;
+}
+
 /* Professional View Details Modal Styling */
 .view-details-modal {
   border: none;
@@ -399,5 +405,57 @@
 
 .filter-control .form-label.small {
   margin-bottom: 0.1rem !important;
+}
+
+/* Brands summary modal styles */
+.brands-summary-modal {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  overflow: hidden;
+  width: 100%;
+  max-width: none;
+}
+.brands-summary-dialog {
+  width: 50vw;
+  max-width: 800px;
+  margin: 0.75rem auto;
+}
+
+
+.brands-summary-modal-header {
+  background: linear-gradient(135deg, #0069d9 0%, #0053ad 100%);
+  color: white;
+  border-bottom: none;
+  padding: 1rem 1.25rem;
+  .modal-title { color: white; font-weight: 600; font-size: 1.1rem; }
+  .btn-close { filter: invert(1); opacity: 0.8; &:hover { opacity: 1; } }
+}
+
+.brands-summary-modal-body {
+  padding: 1.25rem;
+  background-color: #f8f9fa;
+}
+
+.brands-summary-list {
+  .brands-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    .brands-summary-name { font-weight: 600; color: #495057; }
+    .brands-summary-cases { color: #6c757d; font-weight: 600; }
+  }
+}
+
+.brands-summary-modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
 }
 

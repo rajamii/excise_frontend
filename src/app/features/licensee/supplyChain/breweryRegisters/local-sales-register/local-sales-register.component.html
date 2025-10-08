@@ -43,6 +43,11 @@
     </div>
   </div>
 
+  <!-- Brands Production Record Button -->
+  <div class="d-flex justify-content-start my-2">
+    <button type="button" class="btn btn-primary btn-sm" (click)="openBrandsSummary()">Brands Production Record</button>
+  </div>
+
   <!-- Register View -->
   <div class="card shadow-sm">
     <div class="card-body">
@@ -206,6 +211,49 @@
         <div class="modal-footer brands-modal-footer">
           <button type="button" class="btn btn-primary" (click)="closeBrandsModal()">
             <i class="bi bi-check-lg me-1"></i>Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brands Production Record Modal -->
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsSummary" (click)="onBrandsSummaryBackdrop($event)">
+    <div class="modal-dialog brands-summary-dialog">
+      <div class="modal-content brands-summary-modal">
+        <div class="modal-header brands-summary-modal-header">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-bar-chart-line me-2 text-white"></i>
+            <h5 class="modal-title mb-0">Brands Production Record</h5>
+          </div>
+          <button type="button" class="btn-close" aria-label="Close" (click)="closeBrandsSummary()"></button>
+        </div>
+        <div class="modal-body brands-summary-modal-body">
+          <div class="mb-2 text-muted small">Applies to current filters</div>
+          <div *ngIf="aggregatedBrands.length; else noBrandSummary">
+            <div class="brands-summary-list">
+              <div class="brands-summary-item" *ngFor="let b of aggregatedBrands">
+                <div class="brands-summary-name">{{ b.name }}</div>
+                <div class="brands-summary-cases">{{ b.totalCases }} cases</div>
+              </div>
+            </div>
+            <div class="total-summary mt-3">
+              <div class="total-cases">
+                <span class="total-label">Total Cases</span>
+                <span class="total-value">{{ aggregatedTotalCases }}</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noBrandSummary>
+            <div class="empty-state">
+              <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+              <p class="text-muted mb-0">No brand data for selected filters</p>
+            </div>
+          </ng-template>
+        </div>
+        <div class="modal-footer brands-summary-modal-footer">
+          <button type="button" class="btn btn-primary" (click)="closeBrandsSummary()">
+            <i class="bi bi-check-lg me-1"></i>Close
           </button>
         </div>
       </div>
