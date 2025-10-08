@@ -89,7 +89,11 @@
   box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
   overflow: hidden;
   min-width: 400px;
-  max-width: 500px;
+  max-width: 800px; /* allow content up to 800px */
+}
+.brands-manage-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 800px !important;
 }
 
 /* Custom modal dialog width */
@@ -107,7 +111,7 @@
 /* Ensure brand summary dialog width overrides generic modal-md rules */
 .brands-summary-dialog.modal-dialog {
   max-width: 800px !important;
-  width: 50vw !important;
+  width: 800px !important;
 }
 
 /* Professional View Details Modal Styling */
@@ -423,7 +427,7 @@
   max-width: none;
 }
 .brands-summary-dialog {
-  width: 50vw;
+  width: 800px;
   max-width: 800px;
   margin: 0.75rem auto;
 }
