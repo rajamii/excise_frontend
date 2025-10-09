@@ -64,7 +64,7 @@
             <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyInHandExport" placeholder="0">
           </div>
           <div class="col-md-1 d-flex align-items-end">
-            <button class="btn btn-success btn-sm w-100" (click)="addNewEntry()" [disabled]="!isNewEntryValid()">
+            <button class="btn btn-primary btn-sm w-100" (click)="addNewEntry()" [disabled]="!isNewEntryValid()">
               <i class="bi bi-plus"></i> Add
             </button>
           </div>
@@ -97,7 +97,7 @@
       <!-- Register Table -->
       <div class="table-responsive mt-2">
       <table class="table table-bordered table-striped align-middle brand-register">
-        <thead class="table-success small">
+        <thead class="small">
           <tr>
             <th class="text-start align-middle" rowspan="2" style="width: 18%">BRANDS</th>
             <th class="text-center align-middle" rowspan="2" style="width: 8%">ALCOHOL%<br>(V/V)</th>
@@ -123,7 +123,7 @@
           <tr class="table-secondary fw-semibold">
             <td colspan="12">{{ activeBrand === 'SDL' ? 'SDL BRANDS' : 'JAGATJIT BRANDS' }}</td>
           </tr>
-          <tr *ngFor="let row of rows; let i = index" [class.table-success]="row.isCompleted">
+          <tr *ngFor="let row of rows; let i = index" [class.completed-row]="row.isCompleted">
             <td>
               <input type="text" 
                      class="form-control form-control-sm brand-name-input" 
@@ -233,7 +233,7 @@
             <td class="text-end">{{ totals.closingExport | number:'1.0-0' }}</td>
             <td class="text-center">
               <button type="button" 
-                      class="btn btn-sm btn-success" 
+                      class="btn btn-sm btn-primary" 
                       (click)="addNewBrand()"
                       title="Add New Brand">
                 <i class="bi bi-plus"></i>
