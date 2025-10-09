@@ -1,5 +1,9 @@
 /* Minimal tweaks on top of Bootstrap */
 .brand-register thead th { white-space: nowrap; }
+.brand-register thead th { background-color: #d1e7dd !important; }
+.brand-register .table-secondary, .brand-register .table-secondary td { background-color: #d1e7dd !important; }
+.brand-register th, .brand-register td { border-color: #929090 !important; }
+.brand-register thead th { border-bottom: 2px solid #b0b1b1 !important; }
 .brand-register .closing-balance { font-weight: 700; }
 .brand-register .actions-cell { min-height: 60px; }
 .action-btn { transition: transform .15s ease-in-out, box-shadow .15s ease-in-out; }
