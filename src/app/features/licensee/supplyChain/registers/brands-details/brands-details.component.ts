@@ -30,23 +30,7 @@ export class BrandsDetailsComponent {
   rows: BrandRow[] = [];
   totals: BrandTotals = this.computeTotals([]);
 
-  // New entry form data
-  newEntry: BrandRow = {
-    brandName: '',
-    liquorType: 'Whisky',
-    alcoholPercent: '',
-    sizeMl: 0,
-    producedDate: new Date().toISOString().substring(0, 10),
-    qtyInHandLocal: 0,
-    qtyInHandExport: 0,
-    qtyProducedLocal: 0,
-    qtyProducedExport: 0,
-    qtyIssuedLocal: 0,
-    qtyIssuedExport: 0,
-    closingLocal: 0,
-    closingExport: 0,
-    isCompleted: false
-  };
+  // Removed new-entry form; rows are managed only via the table
 
   constructor() {
     this.loadRows();
@@ -200,53 +184,7 @@ export class BrandsDetailsComponent {
     this.totals = this.computeTotals([]);
   }
 
-  // New entry methods
-  createEmptyBrandRow(): BrandRow {
-    return {
-      brandName: '',
-      liquorType: this.activeBrand === 'SDL' ? 'Whisky' : 'Whisky',
-      alcoholPercent: '',
-      sizeMl: 0,
-      producedDate: new Date().toISOString().substring(0, 10),
-      qtyInHandLocal: 0,
-      qtyInHandExport: 0,
-      qtyProducedLocal: 0,
-      qtyProducedExport: 0,
-      qtyIssuedLocal: 0,
-      qtyIssuedExport: 0,
-      closingLocal: 0,
-      closingExport: 0,
-      isCompleted: false
-    };
-  }
-
-  isNewEntryValid(): boolean {
-    return !!(this.newEntry.brandName &&
-      this.newEntry.brandName.trim() !== '' &&
-      this.newEntry.alcoholPercent &&
-      this.newEntry.sizeMl > 0);
-  }
-
-  addNewEntry(): void {
-    if (this.isNewEntryValid()) {
-      // Calculate closing balance
-      this.newEntry.closingLocal = this.newEntry.qtyInHandLocal + this.newEntry.qtyProducedLocal - this.newEntry.qtyIssuedLocal;
-      this.newEntry.closingExport = this.newEntry.qtyInHandExport + this.newEntry.qtyProducedExport - this.newEntry.qtyIssuedExport;
-
-      // Add to base rows
-      this.baseRows.push({ ...this.newEntry });
-
-      // Clear the form
-      this.clearNewEntry();
-
-      // Refresh the display
-      this.applyFilters();
-    }
-  }
-
-  clearNewEntry(): void {
-    this.newEntry = this.createEmptyBrandRow();
-  }
+  // Removed new-entry helpers
 }
 
 // Types

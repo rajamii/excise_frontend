@@ -39,74 +39,21 @@
       </li>
     </ul>
 
-      <!-- Add New Entry Section -->
-      <div class="mb-3 p-3 bg-light border rounded">
-        <h6 class="mb-3"><i class="bi bi-plus-circle me-2"></i>Add New Register Entry</h6>
-        <div class="row g-2">
-          <div class="col-md-3">
-            <label class="form-label small">Brand Name</label>
-            <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.brandName" placeholder="Enter brand name">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Alcohol %</label>
-            <input type="text" class="form-control form-control-sm" [(ngModel)]="newEntry.alcoholPercent" placeholder="e.g., 42.8%">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Size (ML)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.sizeMl" placeholder="750">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Qty In Hand (Local)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyInHandLocal" placeholder="0">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Qty In Hand (Export)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyInHandExport" placeholder="0">
-          </div>
-          <div class="col-md-1 d-flex align-items-end">
-            <button class="btn btn-primary btn-sm w-100" (click)="addNewEntry()" [disabled]="!isNewEntryValid()">
-              <i class="bi bi-plus"></i> Add
-            </button>
-          </div>
-        </div>
-        <div class="row g-2 mt-2">
-          <div class="col-md-2">
-            <label class="form-label small">Qty Produced (Local)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyProducedLocal" placeholder="0">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Qty Produced (Export)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyProducedExport" placeholder="0">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Qty Issued (Local)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyIssuedLocal" placeholder="0">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label small">Qty Issued (Export)</label>
-            <input type="number" class="form-control form-control-sm" [(ngModel)]="newEntry.qtyIssuedExport" placeholder="0">
-          </div>
-          <div class="col-md-2">
-            <button class="btn btn-outline-secondary btn-sm w-100" (click)="clearNewEntry()">
-              <i class="bi bi-x-circle"></i> Clear
-            </button>
-          </div>
-        </div>
-      </div>
+      
 
       <!-- Register Table -->
       <div class="table-responsive mt-2">
       <table class="table table-bordered table-striped align-middle brand-register">
         <thead class="small">
           <tr>
-            <th class="text-start align-middle" rowspan="2" style="width: 18%">BRANDS</th>
-            <th class="text-center align-middle" rowspan="2" style="width: 8%">ALCOHOL%<br>(V/V)</th>
-            <th class="text-center align-middle" rowspan="2" style="width: 6%">SIZE<br>(ML)</th>
-            <th class="text-center" colspan="2" style="width: 14%">QUANTITY IN HAND</th>
-            <th class="text-center" colspan="2" style="width: 14%">QUANTITY PRODUCED</th>
-            <th class="text-center" colspan="2" style="width: 14%">QUANTITY ISSUED</th>
-            <th class="text-center" colspan="2" style="width: 14%">CLOSING BALANCE</th>
-            <th class="text-center align-middle" rowspan="2" style="width: 8%">ACTIONS</th>
+            <th class="text-start align-middle">BRANDS</th>
+            <th class="text-center align-middle">ALCOHOL%<br>(V/V)</th>
+            <th class="text-center align-middle">SIZE<br>(ML)</th>
+            <th class="text-center" colspan="2">QUANTITY IN HAND</th>
+            <th class="text-center" colspan="2">QUANTITY PRODUCED</th>
+            <th class="text-center" colspan="2">QUANTITY ISSUED</th>
+            <th class="text-center" colspan="2">CLOSING BALANCE</th>
+            <th class="text-center align-middle">ACTIONS</th>
           </tr>
           <tr>
             <th class="text-center">LOCAL</th>
@@ -126,60 +73,53 @@
           <tr *ngFor="let row of rows; let i = index" [class.completed-row]="row.isCompleted">
             <td>
               <input type="text" 
-                     class="form-control form-control-sm brand-name-input" 
+                     class="form-control form-control-sm" 
                      [(ngModel)]="row.brandName" 
                      (ngModelChange)="updateRowCompletionStatus(row)"
                      placeholder="Enter brand name"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 100%; min-width: 120px; box-sizing: border-box; margin: 0; padding: 0.25rem 0.5rem;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="text" 
                      class="form-control form-control-sm text-center" 
                      [(ngModel)]="row.alcoholPercent" 
                      (ngModelChange)="updateRowCompletionStatus(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
                      class="form-control form-control-sm text-center" 
                      [(ngModel)]="row.sizeMl" 
                      (ngModelChange)="updateRowCompletionStatus(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
                      class="form-control form-control-sm text-end" 
                      [(ngModel)]="row.qtyInHandLocal" 
                      (ngModelChange)="onQuantityChange(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
                      class="form-control form-control-sm text-end" 
                      [(ngModel)]="row.qtyInHandExport" 
                      (ngModelChange)="onQuantityChange(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
                      class="form-control form-control-sm text-end" 
                      [(ngModel)]="row.qtyProducedLocal" 
                      (ngModelChange)="onQuantityChange(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
                      class="form-control form-control-sm text-end" 
                      [(ngModel)]="row.qtyProducedExport" 
                      (ngModelChange)="onQuantityChange(row)"
-                     [readonly]="row.isCompleted === true"
-                     style="width: 80px;">
+                     [readonly]="row.isCompleted === true">
             </td>
             <td class="text-center">
               <input type="number" 
@@ -204,7 +144,7 @@
               {{ row.closingExport | number:'1.0-0' }}
             </td>
             <td class="text-center actions-cell">
-              <div class="btn-group-vertical btn-group-sm" role="group" *ngIf="!row.isCompleted">
+              <div class="d-grid gap-1" *ngIf="!row.isCompleted">
                 <button type="button" 
                         class="btn btn-sm btn-outline-primary action-btn" 
                         [disabled]="!row.canBeCompleted"
@@ -219,9 +159,9 @@
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
-              <div *ngIf="row.isCompleted" class="completed-indicator">
+              <div *ngIf="row.isCompleted" class="completed-indicator text-muted d-flex flex-column align-items-center">
                 <i class="bi bi-lock-fill text-muted" title="Row is locked and completed"></i>
-                <div class="small text-muted">LOCKED</div>
+                <div class="small">LOCKED</div>
               </div>
             </td>
           </tr>
