@@ -20,3 +20,65 @@
   }
 }
 
+/* New Entry Form Styling */
+.bg-light {
+  background-color: #f8f9fa !important;
+}
+
+.form-label.small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.25rem;
+}
+
+.form-control-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  border-radius: 0.2rem;
+}
+
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+  color: #fff;
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Enhanced table styling for better visibility */
+.brand-register tr.table-success {
+  background-color: #d1ecf1 !important;
+}
+
+.brand-register tr.table-success td {
+  background-color: #d1ecf1 !important;
+  border-color: #bee5eb !important;
+}
+
+.brand-register tr.table-success::after {
+  content: "✓ COMPLETED";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: #28a745;
+  color: white;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+  z-index: 10;
+}
