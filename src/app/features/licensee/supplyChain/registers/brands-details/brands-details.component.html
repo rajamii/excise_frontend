@@ -16,8 +16,11 @@
           <option *ngFor="let y of years" [value]="y">{{ y }}</option>
         </select>
         <label class="mb-0 ms-3">DATE</label>
-        <input type="date" class="form-control form-control-sm w-auto" [(ngModel)]="selectedDate" (ngModelChange)="applyFilters()">
+        <input type="date" class="form-control form-control-sm w-auto" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange($event)" [max]="todayIso">
         <button class="btn btn-sm btn-outline-secondary ms-2" (click)="selectedDate=''; applyFilters()">Clear Date</button>
+      </div>
+      <div *ngIf="errorMessage" class="col-12 mt-2">
+        <div class="alert alert-warning py-1 px-2 mb-0" role="alert">{{ errorMessage }}</div>
       </div>
       <div class="col-md-6 text-md-end mt-2 mt-md-0">
         <div class="btn-group btn-group-sm" role="group">

@@ -14,6 +14,8 @@ export class BrandsDetailsComponent {
   selectedMonth = '11';
   selectedYear = new Date().getFullYear().toString();
   selectedDate = new Date().toISOString().substring(0, 10);
+  todayIso = new Date().toISOString().substring(0, 10);
+  errorMessage: string | null = null;
 
   months = [
     { value: '01', label: 'January' }, { value: '02', label: 'February' }, { value: '03', label: 'March' },
@@ -51,6 +53,20 @@ export class BrandsDetailsComponent {
       return newRow;
     });
     this.applyFilters();
+  }
+
+  onDateChange(value: string): void {
+    this.selectedDate = value;
+    this.validateDateSelection();
+    this.applyFilters();
+  }
+
+  private validateDateSelection(): void {
+    if (this.selectedDate && this.selectedDate > this.todayIso) {
+      this.errorMessage = 'You can only enter data on or before today.';
+    } else {
+      this.errorMessage = null;
+    }
   }
 
   applyFilters(): void {
@@ -131,12 +147,19 @@ export class BrandsDetailsComponent {
   }
 
   addNewBrand(): void {
+    // Block future dates
+    const dateToUse = this.selectedDate || this.todayIso;
+    if (dateToUse > this.todayIso) {
+      this.errorMessage = 'You can enter data only when the day comes (no future dates).';
+      return;
+    }
+
     const newBrand: BrandRow = {
       brandName: '',
       liquorType: this.activeBrand === 'SDL' ? 'Whisky' : 'Whisky',
       alcoholPercent: '42.8%',
       sizeMl: 750,
-      producedDate: new Date().toISOString().substring(0, 10),
+      producedDate: dateToUse,
       qtyInHandLocal: 0,
       qtyInHandExport: 0,
       qtyProducedLocal: 0,
