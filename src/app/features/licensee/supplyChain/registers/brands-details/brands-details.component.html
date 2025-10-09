@@ -50,6 +50,7 @@
         <thead class="small">
           <tr>
             <th class="text-start align-middle" rowspan="2">BRANDS</th>
+            <th class="text-center align-middle" rowspan="2">LIQUOR TYPE</th>
             <th class="text-center align-middle" rowspan="2">ALCOHOL%<br>(V/V)</th>
             <th class="text-center align-middle" rowspan="2">SIZE<br>(ML)</th>
             <th class="text-center" colspan="2">QUANTITY IN HAND</th>
@@ -71,7 +72,7 @@
         </thead>
         <tbody>
           <tr class="table-secondary fw-semibold">
-            <td colspan="12">{{ activeBrand === 'SDL' ? 'SDL BRANDS' : 'JAGATJIT BRANDS' }}</td>
+            <td colspan="13">{{ activeBrand === 'SDL' ? 'SDL BRANDS' : 'JAGATJIT BRANDS' }}</td>
           </tr>
           <tr *ngFor="let row of rows; let i = index; trackBy: trackByRow" [class.completed-row]="row.isCompleted">
             <td>
@@ -81,6 +82,12 @@
                      (ngModelChange)="updateRowCompletionStatus(row)"
                      placeholder="Enter brand name"
                      [readonly]="row.isCompleted === true">
+            </td>
+            <td class="text-center">
+              <select class="form-select form-select-sm" [(ngModel)]="row.liquorType" [disabled]="row.isCompleted === true">
+                <option value="">Select</option>
+                <option *ngFor="let t of getLiquorTypes()" [value]="t">{{ t }}</option>
+              </select>
             </td>
             <td class="text-center">
               <input type="text" 
@@ -169,7 +176,7 @@
             </td>
           </tr>
           <tr class="fw-semibold">
-            <td colspan="3" class="text-end">TOTAL</td>
+            <td colspan="4" class="text-end">TOTAL</td>
             <td class="text-end">{{ totals.qtyInHandLocal | number:'1.0-0' }}</td>
             <td class="text-end">{{ totals.qtyInHandExport | number:'1.0-0' }}</td>
             <td class="text-end">{{ totals.qtyProducedLocal | number:'1.0-0' }}</td>
