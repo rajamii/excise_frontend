@@ -11,9 +11,9 @@ import { FormsModule } from '@angular/forms';
 })
 export class BrandsDetailsComponent {
   // Header controls
-  selectedMonth = '11';
+  selectedMonth = (('0' + (new Date().getMonth() + 1)).slice(-2));
   selectedYear = new Date().getFullYear().toString();
-  selectedDate = new Date().toISOString().substring(0, 10);
+  selectedDate = '';
   todayIso = new Date().toISOString().substring(0, 10);
   errorMessage: string | null = null;
 
@@ -31,6 +31,7 @@ export class BrandsDetailsComponent {
   baseRows: BrandRow[] = [];
   rows: BrandRow[] = [];
   totals: BrandTotals = this.computeTotals([]);
+  private nextId = 1;
 
   // Removed new-entry form; rows are managed only via the table
 
@@ -49,6 +50,8 @@ export class BrandsDetailsComponent {
     // Create fresh copies and initialize completion status
     this.baseRows = data.map(row => {
       const newRow = { ...row };
+      // Ensure a stable id that doesn't change during editing so trackBy remains constant
+      (newRow as BrandRow).id = (row as BrandRow).id ?? `row-${this.nextId++}`;
       newRow.canBeCompleted = this.isRowComplete(newRow);
       return newRow;
     });
@@ -155,6 +158,7 @@ export class BrandsDetailsComponent {
     }
 
     const newBrand: BrandRow = {
+      id: `row-${this.nextId++}`,
       brandName: '',
       liquorType: this.activeBrand === 'SDL' ? 'Whisky' : 'Whisky',
       alcoholPercent: '42.8%',
@@ -190,7 +194,7 @@ export class BrandsDetailsComponent {
     this.applyFilters();
   }
 
-  trackByRow = (_: number, row: BrandRow) => `${row.brandName}|${row.producedDate}|${row.sizeMl}`;
+  trackByRow = (_: number, row: BrandRow) => row.id;
 
   getLiquorTypes(): string[] {
     return ['Vodka', 'Brandy', 'Whisky', 'Rum', 'Gin', 'Wine', 'Liquor'];
@@ -225,6 +229,7 @@ export class BrandsDetailsComponent {
 
 // Types
 interface BrandRow {
+  id?: string;
   brandName: string;
   liquorType?: string;
   variant?: string;
