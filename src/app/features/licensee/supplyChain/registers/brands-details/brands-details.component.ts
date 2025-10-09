@@ -151,10 +151,23 @@ export class BrandsDetailsComponent {
     this.applyFilters();
   }
 
-  removeBrand(index: number): void {
-    this.baseRows.splice(index, 1);
+  removeBrand(row: BrandRow): void {
+    const baseIndex = this.baseRows.indexOf(row);
+    if (baseIndex !== -1) {
+      this.baseRows.splice(baseIndex, 1);
+    } else {
+      // Fallback: match by stable fields to handle filtered copies
+      const matchIdx = this.baseRows.findIndex(r =>
+        r.brandName === row.brandName &&
+        r.producedDate === row.producedDate &&
+        r.sizeMl === row.sizeMl
+      );
+      if (matchIdx !== -1) this.baseRows.splice(matchIdx, 1);
+    }
     this.applyFilters();
   }
+
+  trackByRow = (_: number, row: BrandRow) => `${row.brandName}|${row.producedDate}|${row.sizeMl}`;
 
   getLiquorTypes(): string[] {
     return ['Vodka', 'Brandy', 'Whisky', 'Rum', 'Gin', 'Wine', 'Liquor'];
