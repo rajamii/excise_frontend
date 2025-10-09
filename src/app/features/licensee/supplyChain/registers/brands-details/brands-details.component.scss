@@ -250,4 +250,75 @@ ure consistent positioning for all input fields */
   color: black !important;
   border-color: #80bdff !important;
   box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}/* Completed
+ row indicator styling */
+.completed-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  color: #6c757d;
+}
+
+.completed-indicator i {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.completed-indicator .small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Ensure action column has consistent width */
+.brand-register .actions-cell {
+  width: 8% !important;
+  min-width: 80px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+/* Smooth button transitions and performance optimization */
+.action-btn {
+  transition: all 0.2s ease-in-out !important;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:active:not(:disabled) {
+  transform: translateY(0);
+  transition: all 0.1s ease-in-out;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Optimize button group performance */
+.btn-group-vertical {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* Smooth transitions for form inputs */
+.brand-register input.form-control {
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Prevent layout shifts during state changes */
+.brand-register .actions-cell {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

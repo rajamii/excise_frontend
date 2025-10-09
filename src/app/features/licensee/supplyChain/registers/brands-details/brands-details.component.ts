@@ -60,7 +60,12 @@ export class BrandsDetailsComponent {
 
   loadRows(): void {
     const data = this.activeBrand === 'SDL' ? SDL_SAMPLE : JAGATJIT_SAMPLE;
-    this.baseRows = data;
+    // Create fresh copies and initialize completion status
+    this.baseRows = data.map(row => {
+      const newRow = { ...row };
+      newRow.canBeCompleted = this.isRowComplete(newRow);
+      return newRow;
+    });
     this.applyFilters();
   }
 
@@ -134,6 +139,11 @@ export class BrandsDetailsComponent {
 
   onQuantityChange(row: BrandRow): void {
     this.updateClosingBalance(row);
+    this.updateRowCompletionStatus(row);
+  }
+
+  updateRowCompletionStatus(row: BrandRow): void {
+    row.canBeCompleted = this.isRowComplete(row);
   }
 
   addNewBrand(): void {
@@ -150,7 +160,8 @@ export class BrandsDetailsComponent {
       qtyIssuedLocal: 0,
       qtyIssuedExport: 0,
       closingLocal: 0,
-      closingExport: 0
+      closingExport: 0,
+      canBeCompleted: false
     };
     this.baseRows.push(newBrand);
     this.applyFilters();
@@ -255,6 +266,7 @@ interface BrandRow {
   closingLocal: number;
   closingExport: number;
   isCompleted?: boolean; // Track if row is done/locked
+  canBeCompleted?: boolean; // Cache completion status for performance
 }
 
 interface BrandTotals {
