@@ -75,6 +75,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/registers/daily-record-register/daily-record-register.component').then(m => m.DailyRecordRegisterComponent)
   },
   {
+    path: 'dev-daily-production-register',
+    loadComponent: () => import('./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component').then(m => m.BeerProductionRegisterComponent)
+  },
+  {
     path: 'dev-brands-details',
     loadComponent: () => import('./features/licensee/supplyChain/registers/brands-details/brands-details.component').then(m => m.BrandsDetailsComponent)
   },
