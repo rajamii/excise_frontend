@@ -11,7 +11,8 @@ interface DailyRecord {
   utilisedAmount: number;
   cBalance: number;
   tpNo: string;
- 
+  isWalletDeposit?: boolean; // Track if this is a wallet deposit vs register entry
+  walletBalance?: number; // Running wallet balance
 }
 
 @Component({
@@ -26,17 +27,25 @@ export class DailyRecordRegisterComponent implements OnInit {
   selectedYear = '2025';
   obrAmount = 0;
   obrMonth = '';
+  walletDeposits: number = 0; // Total wallet deposits
+  walletBalance: number = 0; // Current wallet balance
+  expandedRow: number | null = null; // Track which row dropdown is open
 
   allRecords: DailyRecord[] = [
-    { sNo: 1, issueDate: new Date('2025-01-15'), brNo: 'BR001/2025', depositDate: new Date('2025-01-16'), depositAmount: 50000, utilisedAmount: 25000, cBalance: 25000, tpNo: 'TP001/2025'},
-    { sNo: 2, issueDate: new Date('2025-01-20'), brNo: 'BR002/2025', depositDate: new Date('2025-01-21'), depositAmount: 30000, utilisedAmount: 15000, cBalance: 15000, tpNo: 'TP002/2025' },
-    { sNo: 3, issueDate: new Date('2025-01-25'), brNo: 'BR003/2025', depositDate: new Date('2025-01-26'), depositAmount: 40000, utilisedAmount: 20000, cBalance: 20000, tpNo: 'TP003/2025' },
-    { sNo: 4, issueDate: new Date('2025-02-01'), brNo: 'BR004/2025', depositDate: new Date('2025-02-02'), depositAmount: 35000, utilisedAmount: 17500, cBalance: 17500, tpNo: 'TP004/2025'},
-    { sNo: 5, issueDate: new Date('2025-02-10'), brNo: 'BR005/2025', depositDate: new Date('2025-02-11'), depositAmount: 45000, utilisedAmount: 22500, cBalance: 22500, tpNo: 'TP005/2025' }
+    { sNo: 1, issueDate: new Date('2025-01-15'), brNo: 'BR001/2025', depositDate: new Date('2025-01-16'), depositAmount: 50000, utilisedAmount: 25000, cBalance: 25000, tpNo: 'TP001/2025', isWalletDeposit: false, walletBalance: 0},
+    { sNo: 2, issueDate: new Date('2025-01-20'), brNo: 'BR002/2025', depositDate: new Date('2025-01-21'), depositAmount: 30000, utilisedAmount: 15000, cBalance: 15000, tpNo: 'TP002/2025', isWalletDeposit: false, walletBalance: 0 },
+    { sNo: 3, issueDate: new Date('2025-01-25'), brNo: 'BR003/2025', depositDate: new Date('2025-01-26'), depositAmount: 40000, utilisedAmount: 20000, cBalance: 20000, tpNo: 'TP003/2025', isWalletDeposit: false, walletBalance: 0 },
+    { sNo: 4, issueDate: new Date('2025-02-01'), brNo: 'BR004/2025', depositDate: new Date('2025-02-02'), depositAmount: 35000, utilisedAmount: 17500, cBalance: 17500, tpNo: 'TP004/2025', isWalletDeposit: false, walletBalance: 0},
+    { sNo: 5, issueDate: new Date('2025-02-10'), brNo: 'BR005/2025', depositDate: new Date('2025-02-11'), depositAmount: 45000, utilisedAmount: 22500, cBalance: 22500, tpNo: 'TP005/2025', isWalletDeposit: false, walletBalance: 0 },
+    // Wallet deposit entries
+    { sNo: 6, issueDate: new Date('2025-01-18'), brNo: 'WALLET-001', depositDate: new Date('2025-01-18'), depositAmount: 100000, utilisedAmount: 0, cBalance: 100000, tpNo: 'WALLET-DEP', isWalletDeposit: true, walletBalance: 100000},
+    { sNo: 7, issueDate: new Date('2025-01-22'), brNo: 'WALLET-002', depositDate: new Date('2025-01-22'), depositAmount: 75000, utilisedAmount: 0, cBalance: 175000, tpNo: 'WALLET-DEP', isWalletDeposit: true, walletBalance: 175000},
+    { sNo: 8, issueDate: new Date('2025-02-05'), brNo: 'WALLET-003', depositDate: new Date('2025-02-05'), depositAmount: 50000, utilisedAmount: 0, cBalance: 225000, tpNo: 'WALLET-DEP', isWalletDeposit: true, walletBalance: 225000}
   ];
 
   ngOnInit(): void {
     this.calculateOBRAmount();
+    this.calculateWalletBalance();
   }
 
   onFilterChange(): void {
@@ -71,7 +80,48 @@ export class DailyRecordRegisterComponent implements OnInit {
   }
 
   getClosingBalance(): number {
-    return this.obrAmount + this.getTotalDeposits() - this.getTotalUtilized();
+    return this.obrAmount + this.getTotalDeposits() + this.walletBalance - this.getTotalUtilized();
+  }
+
+  calculateWalletBalance(): void {
+    const walletEntries = this.allRecords.filter(r => r.isWalletDeposit);
+    this.walletDeposits = walletEntries.reduce((sum, r) => sum + r.depositAmount, 0);
+    this.walletBalance = walletEntries.length > 0 ? walletEntries[walletEntries.length - 1].walletBalance || 0 : 0;
+  }
+
+  getWalletDeposits(): number {
+    return this.getFilteredData().filter(r => r.isWalletDeposit).reduce((sum, r) => sum + r.depositAmount, 0);
+  }
+
+  getRegisterDeposits(): number {
+    return this.getFilteredData().filter(r => !r.isWalletDeposit).reduce((sum, r) => sum + r.depositAmount, 0);
+  }
+
+  getWalletUtilized(): number {
+    return this.getFilteredData().filter(r => r.isWalletDeposit).reduce((sum, r) => sum + r.utilisedAmount, 0);
+  }
+
+  getRegisterUtilized(): number {
+    return this.getFilteredData().filter(r => !r.isWalletDeposit).reduce((sum, r) => sum + r.utilisedAmount, 0);
+  }
+
+  toggleDropdown(sNo: number): void {
+    this.expandedRow = this.expandedRow === sNo ? null : sNo;
+  }
+
+  getPreviousWalletBalance(record: DailyRecord): number {
+    const walletRecords = this.allRecords.filter(r => r.isWalletDeposit).sort((a, b) => a.sNo - b.sNo);
+    const currentIndex = walletRecords.findIndex(r => r.sNo === record.sNo);
+    if (currentIndex <= 0) return 0;
+    return walletRecords[currentIndex - 1].walletBalance || 0;
+  }
+
+  getNewAmountAdded(record: DailyRecord): number {
+    return record.depositAmount;
+  }
+
+  getTotalAfterDeposit(record: DailyRecord): number {
+    return record.walletBalance || 0;
   }
 
   calculateOBRAmount(): void {

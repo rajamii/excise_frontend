@@ -94,18 +94,55 @@
              
             </tr>
           </thead>
-          <tbody>
-            <tr *ngFor="let r of getFilteredData()">
-              <td>{{ r.sNo }}</td>
-              <td>{{ r.issueDate | date:'yyyy-MM-dd' }}</td>
-              <td>{{ r.brNo }}</td>
-              <td>{{ r.depositDate | date:'yyyy-MM-dd' }}</td>
-              <td class="text-end">{{ r.depositAmount | number:'1.2-2' }}</td>
-              <td class="text-end">{{ r.utilisedAmount | number:'1.2-2' }}</td>
-              <td class="text-end">{{ r.cBalance | number:'1.2-2' }}</td>
-              <td>{{ r.tpNo }}</td>
-            
-            </tr>
+            <tbody>
+              <tr *ngFor="let r of getFilteredData()" [class.table-warning]="r.isWalletDeposit">
+                <td>{{ r.sNo }}</td>
+                <td>{{ r.issueDate | date:'yyyy-MM-dd' }}</td>
+                <td>
+                  <span *ngIf="r.isWalletDeposit" class="badge bg-success me-1">💳</span>
+                  {{ r.brNo }}
+                </td>
+                <td>{{ r.depositDate | date:'yyyy-MM-dd' }}</td>
+                <td class="text-end">
+                  <div *ngIf="r.isWalletDeposit" class="dropdown">
+                    <button class="btn btn-sm btn-outline-success dropdown-toggle" 
+                            type="button" 
+                            (click)="toggleDropdown(r.sNo)"
+                            [class.show]="expandedRow === r.sNo">
+                      <span class="badge bg-success me-1">💳</span>
+                      ₹ {{ getTotalAfterDeposit(r) | number:'1.2-2' }}
+                    </button>
+                    <div class="dropdown-menu" 
+                         [class.show]="expandedRow === r.sNo"
+                         style="position: absolute; z-index: 1000; min-width: 280px;">
+                      <div class="dropdown-item-text p-3">
+                        <h6 class="mb-2 text-success">💳 Wallet Deposit Breakdown</h6>
+                        <div class="row g-2 small">
+                          <div class="col-6">
+                            <div class="text-muted">Previous Balance:</div>
+                            <div class="fw-bold">₹ {{ getPreviousWalletBalance(r) | number:'1.2-2' }}</div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-muted">New Amount Added:</div>
+                            <div class="fw-bold text-success">₹ {{ getNewAmountAdded(r) | number:'1.2-2' }}</div>
+                          </div>
+                          <div class="col-12 mt-2 pt-2 border-top">
+                            <div class="text-muted">Total After Deposit:</div>
+                            <div class="fw-bold text-primary fs-6">₹ {{ getTotalAfterDeposit(r) | number:'1.2-2' }}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <span *ngIf="!r.isWalletDeposit">{{ r.depositAmount | number:'1.2-2' }}</span>
+                </td>
+                <td class="text-end">{{ r.utilisedAmount | number:'1.2-2' }}</td>
+                <td class="text-end">
+                  <span *ngIf="r.isWalletDeposit" class="badge bg-success me-1">Wallet</span>
+                  {{ r.cBalance | number:'1.2-2' }}
+                </td>
+                <td>{{ r.tpNo }}</td>
+              </tr>
             <tr *ngIf="getFilteredData().length === 0">
               <td colspan="9" class="text-center text-muted">No records found for selected period.</td>
             </tr>
@@ -116,6 +153,20 @@
               <td class="text-end">₹ {{ getTotalDeposits() | number:'1.2-2' }}</td>
               <td class="text-end">₹ {{ getTotalUtilized() | number:'1.2-2' }}</td>
               <td class="text-end">₹ {{ getClosingBalance() | number:'1.2-2' }}</td>
+              <td colspan="2"></td>
+            </tr>
+            <tr class="table-success fw-bold">
+              <td colspan="4" class="text-end">Wallet Deposits Only</td>
+              <td class="text-end">₹ {{ getWalletDeposits() | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ getWalletUtilized() | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ walletBalance | number:'1.2-2' }}</td>
+              <td colspan="2"></td>
+            </tr>
+            <tr class="table-primary fw-bold">
+              <td colspan="4" class="text-end">Register Deposits Only</td>
+              <td class="text-end">₹ {{ getRegisterDeposits() | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ getRegisterUtilized() | number:'1.2-2' }}</td>
+              <td class="text-end">₹ {{ (getClosingBalance() - walletBalance) | number:'1.2-2' }}</td>
               <td colspan="2"></td>
             </tr>
           </tfoot>
