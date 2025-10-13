@@ -283,6 +283,9 @@ export class SupplyChainComponent {
       case 'yuksom-local-sales-register':
         this.router.navigate(['/dev-local-sales-register']);
         break;
+      case 'beer-production-register':
+        this.router.navigate(['/dev-beer-production-register']);
+        break;
       case 'dashboard':
         this.router.navigate(['/dev-supply-chain']);
         break;
