@@ -63,6 +63,11 @@ export class BeerProductionRegisterComponent implements OnInit {
 
   years = [2024, 2025, 2026, 2027];
 
+  // UI state for confirmation modal
+  showConfirmModal = false;
+  confirmTargetRecord: BeerProductionRecord | null = null;
+  confirmDateLabel = '';
+
   constructor(private router: Router, @Inject(PLATFORM_ID) platformId: Object) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -270,8 +275,23 @@ export class BeerProductionRegisterComponent implements OnInit {
   }
 
   makeAsRead(record: BeerProductionRecord): void {
-    record.locked = true;
+    // Open Bootstrap-styled confirmation modal
+    this.confirmTargetRecord = record;
+    this.confirmDateLabel = new Date(record.date).toLocaleDateString();
+    this.showConfirmModal = true;
+  }
+
+  confirmMakeAsRead(): void {
+    if (!this.confirmTargetRecord) return;
+    this.confirmTargetRecord.locked = true;
     this.saveRecords();
+    this.closeConfirmModal();
+  }
+
+  closeConfirmModal(): void {
+    this.showConfirmModal = false;
+    this.confirmTargetRecord = null;
+    this.confirmDateLabel = '';
   }
 
   deleteRecord(index: number): void {

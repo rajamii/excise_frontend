@@ -40,7 +40,19 @@
   .btn-sm { font-size: 0.8rem; }
 
   // Print styles
-  @media print { .btn { display: none !important; } }
+  @media print {
+    .btn { display: none !important; }
+    .header-section, .container-fluid.mb-4, .container-fluid.mt-4 { display: none !important; }
+    .card-header .bi { display: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .card-header { background: transparent !important; color: #000 !important; border: none !important; padding: 0 0 8px 0 !important; }
+    .print-header { display: block !important; text-align: center; font-weight: 700; margin-bottom: 8px; }
+    th:last-child, td:last-child { display: none; } // hide Action column
+    @page { size: A4 landscape; margin: 12mm; }
+  }
+
+  // Hidden by default; only visible in print
+  .print-header { display: none; }
 
   // Responsive adjustments
   @media (max-width: 768px) {
@@ -76,8 +88,7 @@
     color: #495057;
   }
 
-  .form-select,
-  .form-control { }
+  // form controls inherit global styles
 
   // Card header styling
   .card-header {
