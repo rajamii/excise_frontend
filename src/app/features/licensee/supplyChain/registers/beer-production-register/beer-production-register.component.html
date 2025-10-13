@@ -35,25 +35,19 @@
         <div class="card">
           <div class="card-header bg-light">
             <h5 class="mb-0">
-              <i class="bi bi-calendar3 me-2"></i>Select Month & Year
+              <i class="bi bi-calendar3 me-2"></i>Select Month
             </h5>
           </div>
           <div class="card-body">
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Month</label>
-                <select class="form-select" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
-                  <option *ngFor="let month of months" [value]="month.value">
-                    {{ month.name }}
-                  </option>
-                </select>
+                <input type="month" class="form-control" [(ngModel)]="selectedMonthInput" (ngModelChange)="onMonthInputChange($event)">
               </div>
               <div class="col-md-6">
                 <label class="form-label fw-semibold">Year</label>
                 <select class="form-select" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
-                  <option *ngFor="let year of years" [value]="year">
-                    {{ year }}
-                  </option>
+                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
                 </select>
               </div>
             </div>
@@ -71,13 +65,13 @@
           <div class="card-body">
             <div class="row text-center g-3">
               <div class="col-6">
-                <div class="p-2 bg-success-subtle rounded">
+                <div class="p-2 border rounded">
                   <div class="small text-muted">Rollover From Last Month</div>
                   <div class="fw-bold text-success">{{ getRolloverFromLastMonth() | number:'1.2-2' }}</div>
                 </div>
               </div>
               <div class="col-6">
-                <div class="p-2 bg-warning-subtle rounded">
+                <div class="p-2 border rounded">
                   <div class="small text-muted">Total Utilized (Issue + Loss)</div>
                   <div class="fw-bold text-warning">{{ getMonthNetUtilized() | number:'1.2-2' }}</div>
                 </div>
@@ -86,6 +80,7 @@
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 

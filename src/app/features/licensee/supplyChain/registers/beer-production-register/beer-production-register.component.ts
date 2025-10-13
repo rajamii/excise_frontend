@@ -30,6 +30,7 @@ export class BeerProductionRegisterComponent implements OnInit {
   currentYear: number = new Date().getFullYear();
   selectedMonth: number = this.currentMonth;
   selectedYear: number = this.currentYear;
+  selectedMonthInput: string = `${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}`; // yyyy-MM
   
   records: BeerProductionRecord[] = [];
   newRecord: BeerProductionRecord = {
@@ -175,6 +176,16 @@ export class BeerProductionRegisterComponent implements OnInit {
     this.loadRecords();
     this.generateDaysForMonth();
   }
+
+  onMonthInputChange(value: string): void {
+    // value format: yyyy-MM
+    if (!value || value.length < 7) return;
+    const [y, m] = value.split('-');
+    this.selectedYear = Number(y);
+    this.selectedMonth = Number(m);
+    this.onMonthYearChange();
+  }
+
 
   calculateTotals(record: BeerProductionRecord): void {
     if (record.sundayClosed) {
