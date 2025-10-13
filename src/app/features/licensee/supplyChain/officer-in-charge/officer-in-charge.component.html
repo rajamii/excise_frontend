@@ -28,7 +28,6 @@
           <button class="nav-link fw-bold" 
                   [class.active]="activeTab === 'applications'" 
                   [class.text-danger]="activeTab === 'applications'"
-                  [class.border-danger]="activeTab === 'applications'"
                   (click)="setActiveTab('applications')" type="button">
             <i class="bi bi-file-text me-2"></i> TRANSIT PERMIT APPLICATIONS
           </button>
@@ -37,7 +36,6 @@
           <button class="nav-link fw-bold" 
                   [class.active]="activeTab === 'register'" 
                   [class.text-danger]="activeTab === 'register'"
-                  [class.border-danger]="activeTab === 'register'"
                   (click)="setActiveTab('register')" type="button">
             <i class="bi bi-journal-text me-2"></i> OFFICER REGISTER
           </button>
