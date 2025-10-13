@@ -1,0 +1,38 @@
+// Custom tab styling for active state
+.nav-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    color: #dc3545;
+    border: none;
+  }
+  
+  &.active {
+    background-color: #fff;
+    border: none;
+    border-bottom: 3px solid #dc3545 !important;
+    color: #dc3545 !important;
+    font-weight: bold;
+    
+    &:hover {
+      color: #dc3545 !important;
+    }
+  }
+}
+
+// Enhanced red styling for active tabs
+.nav-tabs .nav-link.text-danger {
+  color: #dc3545 !important;
+  font-weight: bold;
+  
+  i {
+    color: #dc3545 !important;
+  }
+}
+
+// Add subtle background for active tab
+.nav-tabs .nav-link.active {
+  background-color: rgba(220, 53, 69, 0.05);
+}
