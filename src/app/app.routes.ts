@@ -94,6 +94,10 @@ export const routes: Routes = [
     path: 'dev-commissioner-dashboard',
     loadComponent: () => import('./features/licensee/supplyChain/commissioner-dashboard/commissioner-dashboard.component').then(m => m.CommissionerDashboardComponent)
   },
+  {
+    path: 'dev-officer-in-charge',
+    loadComponent: () => import('./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component').then(m => m.OfficerInChargeComponent)
+  },
 
   // Role Protected modules
   {
