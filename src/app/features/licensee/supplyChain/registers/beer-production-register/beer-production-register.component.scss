@@ -1,0 +1,183 @@
+.beer-production-register {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+
+  .header-section {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .card {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: none;
+    border-radius: 8px;
+  }
+
+  .table {
+    font-size: 0.9rem;
+    
+    th {
+      background-color: #343a40 !important;
+      color: white !important;
+      font-weight: 600;
+      border: 1px solid #495057;
+      padding: 12px 8px;
+    }
+
+    td {
+      padding: 8px;
+      vertical-align: middle;
+      border: 1px solid #dee2e6;
+    }
+
+    .record-row {
+      &:hover {
+        background-color: #f8f9fa;
+      }
+    }
+
+    input[type="number"] {
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.85rem;
+      width: 100%;
+      
+      &:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        outline: none;
+      }
+    }
+
+    .badge {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+    }
+
+    tfoot {
+      th {
+        background-color: #6c757d !important;
+        color: white !important;
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+    }
+  }
+
+  .form-control-sm {
+    font-size: 0.85rem;
+  }
+
+  .btn-sm {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
+
+  // Print styles
+  @media print {
+    .header-section {
+      background-color: #007bff !important;
+      -webkit-print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .card-header {
+      background-color: #28a745 !important;
+      -webkit-print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .table-dark th {
+      background-color: #343a40 !important;
+      -webkit-print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .table-secondary th {
+      background-color: #6c757d !important;
+      -webkit-print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .btn {
+      display: none !important;
+    }
+
+    .card {
+      box-shadow: none;
+      border: 1px solid #dee2e6;
+    }
+
+    .container-fluid {
+      padding: 0 !important;
+    }
+  }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .table-responsive {
+      font-size: 0.8rem;
+    }
+
+    .table th,
+    .table td {
+      padding: 6px 4px;
+    }
+
+    .btn-sm {
+      padding: 2px 4px;
+      font-size: 0.75rem;
+    }
+  }
+
+  // Animation for record updates
+  .record-row {
+    transition: background-color 0.2s ease;
+  }
+
+  // Color coding for different values
+  .text-primary {
+    color: #007bff !important;
+  }
+
+  .text-danger {
+    color: #dc3545 !important;
+  }
+
+  .text-success {
+    color: #28a745 !important;
+  }
+
+  .text-info {
+    color: #17a2b8 !important;
+  }
+
+  // Form styling
+  .form-label {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .form-select,
+  .form-control {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    
+    &:focus {
+      border-color: #80bdff;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+
+  // Card header styling
+  .card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+    font-weight: 600;
+  }
+
+  // Badge styling
+  .badge {
+    border-radius: 6px;
+    font-weight: 500;
+  }
+}

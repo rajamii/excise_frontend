@@ -1,1 +1,251 @@
-<p>beer-production-register works!</p>
+<div class="beer-production-register">
+  <!-- Header Section -->
+  <div class="header-section bg-primary text-white py-3 mb-4">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <button class="btn btn-light btn-sm" (click)="navigateBack()">
+            <i class="bi bi-arrow-left me-2"></i>Back to Supply Chain
+          </button>
+        </div>
+        <div class="col">
+          <h2 class="mb-0 fw-bold">
+            <i class="bi bi-cup-hot me-2"></i>Beer Production Register
+          </h2>
+          <p class="mb-0 small opacity-75">Licensees: Sikkim Distilleries Ltd (01202506012)</p>
+        </div>
+        <div class="col-auto">
+          <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm" (click)="exportToExcel()">
+              <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+            </button>
+            <button class="btn btn-info btn-sm" (click)="printRegister()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Month/Year Selection -->
+  <div class="container-fluid mb-4">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">
+              <i class="bi bi-calendar3 me-2"></i>Select Month & Year
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Month</label>
+                <select class="form-select" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
+                  <option *ngFor="let month of months" [value]="month.value">
+                    {{ month.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Year</label>
+                <select class="form-select" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
+                  <option *ngFor="let year of years" [value]="year">
+                    {{ year }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-light">
+            <h5 class="mb-0">
+              <i class="bi bi-bar-chart me-2"></i>Summary
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row text-center g-3">
+              <div class="col-6">
+                <div class="p-2 bg-success-subtle rounded">
+                  <div class="small text-muted">Rollover From Last Month</div>
+                  <div class="fw-bold text-success">{{ getRolloverFromLastMonth() | number:'1.2-2' }}</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="p-2 bg-warning-subtle rounded">
+                  <div class="small text-muted">Total Utilized (Issue + Loss)</div>
+                  <div class="fw-bold text-warning">{{ getMonthNetUtilized() | number:'1.2-2' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Table -->
+  <div class="container-fluid">
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-table me-2"></i>Beer Production Register - {{ months[selectedMonth-1]?.name }} {{ selectedYear }}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th rowspan="2" class="text-center align-middle">Date</th>
+                <th colspan="3" class="text-center">PART I</th>
+                <th colspan="3" class="text-center">PART II</th>
+                <th rowspan="2" class="text-center align-middle">Closing Balance</th>
+                <th rowspan="2" class="text-center align-middle">Action</th>
+              </tr>
+              <tr>
+                <th class="text-center">Opening Balance</th>
+                <th class="text-center">Production</th>
+                <th class="text-center">Total</th>
+                <th class="text-center">Issue</th>
+                <th class="text-center">Warehouse Loss</th>
+                <th class="text-center">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let record of records; let i = index" class="record-row">
+                <td class="fw-semibold text-center">
+                  {{ record.date | date:'dd/MM/yyyy' }}
+                  <div *ngIf="record.sundayClosed" class="small text-muted">Sunday Closed (no record)</div>
+                </td>
+                
+                <!-- Part I -->
+                <td class="text-end">
+                  <!-- Opening Balance: editable for days other than 1st; 1st day fixed from last month -->
+                  <input type="number" class="form-control form-control-sm text-end"
+                         [(ngModel)]="record.openingBalance"
+                         (ngModelChange)="calculateTotals(record)"
+                         [readonly]="isFirstDay(record) || record.locked || record.sundayClosed"
+                         placeholder="0" min="0" step="0.01">
+                </td>
+                <td class="text-end">
+                  <input type="number" class="form-control form-control-sm text-end" 
+                         [(ngModel)]="record.production" 
+                         (ngModelChange)="calculateTotals(record)"
+                         [readonly]="record.locked || record.sundayClosed"
+                         placeholder="0" min="0" step="0.01">
+                </td>
+                <td class="text-end fw-bold text-primary">
+                  {{ record.totalPart1 | number:'1.2-2' }}
+                </td>
+                
+                <!-- Part II -->
+                <td class="text-end">
+                  <input type="number" class="form-control form-control-sm text-end" 
+                         [(ngModel)]="record.issue" 
+                         (ngModelChange)="calculateTotals(record)"
+                         [readonly]="record.locked || record.sundayClosed"
+                         placeholder="0" min="0" step="0.01">
+                </td>
+                <td class="text-end">
+                  <input type="number" class="form-control form-control-sm text-end" 
+                         [(ngModel)]="record.warehouseLoss" 
+                         (ngModelChange)="calculateTotals(record)"
+                         [readonly]="record.locked || record.sundayClosed"
+                         placeholder="0" min="0" step="0.01">
+                </td>
+                <td class="text-end fw-bold text-danger">
+                  {{ record.totalPart2 | number:'1.2-2' }}
+                </td>
+                
+                <!-- Closing Balance -->
+                <td class="text-end fw-bold text-success">
+                  {{ record.closingBalance | number:'1.2-2' }}
+                </td>
+                
+                <!-- Action -->
+                <td class="text-center">
+                  <button class="btn btn-secondary btn-sm" (click)="makeAsRead(record)" [disabled]="record.locked || record.sundayClosed" title="Make this row read-only">
+                    <i class="bi bi-check2-circle me-1"></i>Make as Read
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot class="table-secondary">
+              <tr>
+                <th class="text-center fw-bold">TOTAL</th>
+                <th class="text-end fw-bold">{{ getTotalOpeningBalance() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold">{{ getTotalProduction() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold text-primary">{{ getTotalPart1() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold">{{ getTotalIssue() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold">{{ getTotalWarehouseLoss() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold text-danger">{{ getTotalPart2() | number:'1.2-2' }}</th>
+                <th class="text-end fw-bold text-success">{{ getFinalClosingBalance() | number:'1.2-2' }}</th>
+                <th></th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calculation Legend -->
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-info text-white">
+            <h6 class="mb-0">
+              <i class="bi bi-calculator me-2"></i>Calculation Formula
+            </h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0">
+              <li class="mb-2">
+                <strong>Opening Balance:</strong> 
+                <span class="text-muted">Closing balance of previous day (or last month's closing balance for 1st day)</span>
+              </li>
+              <li class="mb-2">
+                <strong>Total Part I:</strong> 
+                <span class="text-primary fw-bold">Opening Balance + Production</span>
+              </li>
+              <li class="mb-2">
+                <strong>Total Part II:</strong> 
+                <span class="text-danger fw-bold">Issue + Warehouse Loss</span>
+              </li>
+              <li class="mb-0">
+                <strong>Closing Balance:</strong> 
+                <span class="text-success fw-bold">Total Part I - Total Part II</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0">
+              <i class="bi bi-info-circle me-2"></i>Instructions
+            </h6>
+          </div>
+          <div class="card-body">
+            <ul class="list-unstyled mb-0 small">
+              <li class="mb-1">• Enter production quantity in liters</li>
+              <li class="mb-1">• Enter issue quantity in liters</li>
+              <li class="mb-1">• Enter warehouse loss quantity in liters</li>
+              <li class="mb-1">• All calculations are done automatically</li>
+              <li class="mb-1">• Data is saved automatically in browser storage</li>
+              <li class="mb-0">• Opening balance is calculated from previous day's closing balance</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
