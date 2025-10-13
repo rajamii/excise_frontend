@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { PLATFORM_ID } from '@angular/core';
 
 interface BeerProductionRecord {
   date: string;
@@ -24,6 +25,7 @@ interface BeerProductionRecord {
   styleUrls: ['./beer-production-register.component.scss']
 })
 export class BeerProductionRegisterComponent implements OnInit {
+  private isBrowser: boolean;
   currentMonth: number = new Date().getMonth() + 1;
   currentYear: number = new Date().getFullYear();
   selectedMonth: number = this.currentMonth;
@@ -60,7 +62,9 @@ export class BeerProductionRegisterComponent implements OnInit {
 
   years = [2024, 2025, 2026, 2027];
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     this.loadRecords();
@@ -68,12 +72,18 @@ export class BeerProductionRegisterComponent implements OnInit {
   }
 
   loadRecords(): void {
+    if (!this.isBrowser) {
+      this.records = [];
+      return;
+    }
     const key = `beer-production-${this.selectedYear}-${this.selectedMonth}`;
     const saved = localStorage.getItem(key);
     this.records = saved ? JSON.parse(saved) : [];
+    this.normalizeSundayRecords();
   }
 
   saveRecords(): void {
+    if (!this.isBrowser) return;
     const key = `beer-production-${this.selectedYear}-${this.selectedMonth}`;
     localStorage.setItem(key, JSON.stringify(this.records));
   }
@@ -104,7 +114,26 @@ export class BeerProductionRegisterComponent implements OnInit {
     }
     
     this.records.sort((a, b) => a.date.localeCompare(b.date));
+    this.normalizeSundayRecords();
     this.saveRecords();
+  }
+
+  private normalizeSundayRecords(): void {
+    // Ensure all Sunday rows are consistently marked and values reset
+    this.records.forEach(record => {
+      const d = new Date(record.date);
+      const isSunday = d.getDay() === 0;
+      record.sundayClosed = isSunday;
+      if (isSunday) {
+        record.locked = true;
+        record.production = 0;
+        record.issue = 0;
+        record.warehouseLoss = 0;
+        record.totalPart1 = record.openingBalance;
+        record.totalPart2 = 0;
+        record.closingBalance = record.openingBalance;
+      }
+    });
   }
 
   getOpeningBalanceForDate(dateStr: string): number {
@@ -125,6 +154,7 @@ export class BeerProductionRegisterComponent implements OnInit {
   }
 
   getLastMonthClosingBalance(): number {
+    if (!this.isBrowser) return 0;
     const lastMonth = this.selectedMonth === 1 ? 12 : this.selectedMonth - 1;
     const lastYear = this.selectedMonth === 1 ? this.selectedYear - 1 : this.selectedYear;
     const key = `beer-production-${lastYear}-${lastMonth}`;

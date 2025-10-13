@@ -12,7 +12,7 @@
           <h2 class="mb-0 fw-bold">
             <i class="bi bi-cup-hot me-2"></i>Beer Production Register
           </h2>
-          <p class="mb-0 small opacity-75">Licensees: Sikkim Distilleries Ltd (01202506012)</p>
+          <p class="mb-0 small opacity-75">Licensees: Sikkim Distilleries Ltd (0120250601222s)</p>
         </div>
         <div class="col-auto">
           <div class="d-flex gap-2">
@@ -94,7 +94,7 @@
     <div class="card">
       <div class="card-header bg-success text-white">
         <h5 class="mb-0">
-          <i class="bi bi-table me-2"></i>Beer Production Register - {{ months[selectedMonth-1]?.name }} {{ selectedYear }}
+          <i class="bi bi-table me-2"></i>Beer Production Register - {{ months[selectedMonth-1].name }} {{ selectedYear }}
         </h5>
       </div>
       <div class="card-body p-0">
@@ -118,11 +118,22 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let record of records; let i = index" class="record-row">
-                <td class="fw-semibold text-center">
-                  {{ record.date | date:'dd/MM/yyyy' }}
-                  <div *ngIf="record.sundayClosed" class="small text-muted">Sunday Closed (no record)</div>
-                </td>
+              <tr *ngFor="let record of records; let i = index" class="record-row" [class.sunday-row]="record.sundayClosed">
+                <!-- Sunday closed row: show single merged message row -->
+                <ng-container *ngIf="record.sundayClosed; else regularRow">
+                  <td class="fw-semibold text-center">
+                    {{ record.date | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td colspan="8" class="text-center fw-semibold text-muted">
+                    Sunday Closed (no record)
+                  </td>
+                </ng-container>
+                
+                <!-- Regular editable row -->
+                <ng-template #regularRow>
+                  <td class="fw-semibold text-center">
+                    {{ record.date | date:'dd/MM/yyyy' }}
+                  </td>
                 
                 <!-- Part I -->
                 <td class="text-end">
@@ -174,6 +185,7 @@
                     <i class="bi bi-check2-circle me-1"></i>Make as Read
                   </button>
                 </td>
+                </ng-template>
               </tr>
             </tbody>
             <tfoot class="table-secondary">
