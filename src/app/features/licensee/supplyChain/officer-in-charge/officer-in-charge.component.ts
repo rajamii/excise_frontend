@@ -36,6 +36,29 @@ interface OfficerActivity {
   comments: string;
 }
 
+// Mirror distillery brands register structure
+type BrandStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+interface BrandRow {
+  id: string;
+  brandName: string;
+  liquorType?: string; // SDL only
+  alcoholPercent: string;
+  sizeMl: number;
+  producedDate: string; // ISO yyyy-mm-dd
+  qtyInHandLocal: number;
+  qtyInHandExport: number;
+  qtyProducedLocal: number;
+  qtyProducedExport: number;
+  qtyIssuedLocal: number;
+  qtyIssuedExport: number;
+  closingLocal: number;
+  closingExport: number;
+  status: BrandStatus;
+  editing?: boolean;
+  changes?: Partial<Record<keyof BrandRow, boolean>>;
+}
+
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
@@ -46,6 +69,7 @@ interface OfficerActivity {
 export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
+  activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
   
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
@@ -99,6 +123,85 @@ export class OfficerInChargeComponent implements OnInit {
       comments: 'Application processed successfully'
     }
   ];
+
+  // Month/Year/Date filters to mirror distillery page
+  months = [
+    { value: '01', label: 'January' }, { value: '02', label: 'February' }, { value: '03', label: 'March' },
+    { value: '04', label: 'April' }, { value: '05', label: 'May' }, { value: '06', label: 'June' },
+    { value: '07', label: 'July' }, { value: '08', label: 'August' }, { value: '09', label: 'September' },
+    { value: '10', label: 'October' }, { value: '11', label: 'November' }, { value: '12', label: 'December' }
+  ];
+  years = Array.from({ length: 7 }, (_, i) => (2022 + i).toString());
+  selectedMonth = (('0' + (new Date().getMonth() + 1)).slice(-2));
+  selectedYear = new Date().getFullYear().toString();
+  selectedDate = '';
+  todayIso = new Date().toISOString().substring(0, 10);
+
+  // Distillery-provided brand rows (sample). In real app fetch per distillery and brand.
+  baseRowsSDL: BrandRow[] = [
+    {
+      id: 'SDL-1', brandName: 'SDL Premium Whisky', liquorType: 'Whisky', alcoholPercent: '42.8%', sizeMl: 750,
+      producedDate: '2025-10-13', qtyInHandLocal: 10, qtyInHandExport: 5, qtyProducedLocal: 30, qtyProducedExport: 10,
+      qtyIssuedLocal: 20, qtyIssuedExport: 5, closingLocal: 20, closingExport: 10, status: 'PENDING'
+    },
+    {
+      id: 'SDL-2', brandName: 'SDL Reserve Brandy', liquorType: 'Brandy', alcoholPercent: '42.8%', sizeMl: 750,
+      producedDate: '2025-10-12', qtyInHandLocal: 12, qtyInHandExport: 3, qtyProducedLocal: 20, qtyProducedExport: 8,
+      qtyIssuedLocal: 10, qtyIssuedExport: 4, closingLocal: 22, closingExport: 7, status: 'APPROVED'
+    },
+    {
+      id: 'SDL-3', brandName: 'SDL Classic Rum', liquorType: 'Rum', alcoholPercent: '40%', sizeMl: 375,
+      producedDate: '2025-10-11', qtyInHandLocal: 6, qtyInHandExport: 2, qtyProducedLocal: 18, qtyProducedExport: 6,
+      qtyIssuedLocal: 8, qtyIssuedExport: 3, closingLocal: 16, closingExport: 5, status: 'PENDING'
+    },
+    {
+      id: 'SDL-4', brandName: 'SDL Mountain Vodka', liquorType: 'Vodka', alcoholPercent: '40%', sizeMl: 180,
+      producedDate: '2025-10-10', qtyInHandLocal: 8, qtyInHandExport: 1, qtyProducedLocal: 25, qtyProducedExport: 4,
+      qtyIssuedLocal: 12, qtyIssuedExport: 2, closingLocal: 21, closingExport: 3, status: 'REJECTED'
+    },
+    {
+      id: 'SDL-5', brandName: 'SDL Heritage Whisky', liquorType: 'Whisky', alcoholPercent: '42.8%', sizeMl: 750,
+      producedDate: '2025-10-09', qtyInHandLocal: 15, qtyInHandExport: 5, qtyProducedLocal: 35, qtyProducedExport: 12,
+      qtyIssuedLocal: 20, qtyIssuedExport: 6, closingLocal: 30, closingExport: 11, status: 'PENDING'
+    },
+    {
+      id: 'SDL-6', brandName: 'SDL Pride Gin', liquorType: 'Gin', alcoholPercent: '40%', sizeMl: 750,
+      producedDate: '2025-10-08', qtyInHandLocal: 5, qtyInHandExport: 2, qtyProducedLocal: 15, qtyProducedExport: 5,
+      qtyIssuedLocal: 7, qtyIssuedExport: 1, closingLocal: 13, closingExport: 6, status: 'APPROVED'
+    }
+  ];
+
+  baseRowsJAGATJIT: BrandRow[] = [
+    {
+      id: 'JAG-1', brandName: 'Jagatjit Classic', alcoholPercent: '40%', sizeMl: 750,
+      producedDate: '2025-10-11', qtyInHandLocal: 8, qtyInHandExport: 2, qtyProducedLocal: 15, qtyProducedExport: 5,
+      qtyIssuedLocal: 10, qtyIssuedExport: 2, closingLocal: 13, closingExport: 5, status: 'PENDING'
+    },
+    {
+      id: 'JAG-2', brandName: 'Jagatjit Reserve', alcoholPercent: '42.8%', sizeMl: 750,
+      producedDate: '2025-10-10', qtyInHandLocal: 9, qtyInHandExport: 1, qtyProducedLocal: 20, qtyProducedExport: 6,
+      qtyIssuedLocal: 11, qtyIssuedExport: 2, closingLocal: 18, closingExport: 5, status: 'APPROVED'
+    },
+    {
+      id: 'JAG-3', brandName: 'Jagatjit Silver Vodka', alcoholPercent: '40%', sizeMl: 375,
+      producedDate: '2025-10-09', qtyInHandLocal: 4, qtyInHandExport: 1, qtyProducedLocal: 12, qtyProducedExport: 3,
+      qtyIssuedLocal: 5, qtyIssuedExport: 2, closingLocal: 11, closingExport: 2, status: 'PENDING'
+    }
+  ];
+
+  get currentBaseRows(): BrandRow[] {
+    return this.activeBrand === 'SDL' ? this.baseRowsSDL : this.baseRowsJAGATJIT;
+  }
+
+  brandRows: BrandRow[] = [];
+
+  // Brands filters and editing helpers
+  brandFilters = {
+    search: '',
+    status: '' as '' | BrandStatus
+  };
+
+  private originalBrandById: Record<string, BrandRow> = {};
   
   // Sample data for development - only applications for current officer's distillery
   allData: TransitPermitRecord[] = [
@@ -207,6 +310,7 @@ export class OfficerInChargeComponent implements OnInit {
   ngOnInit() {
     this.filteredData = [...this.allData];
     this.updatePagination();
+    this.applyBrandFilters();
   }
 
   getCurrentDateTime(): string {
@@ -215,6 +319,149 @@ export class OfficerInChargeComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+  }
+
+  // Brands helpers
+  getBrandStatusClass(status: BrandStatus): string {
+    switch (status) {
+      case 'PENDING': return 'bg-warning text-dark';
+      case 'APPROVED': return 'bg-success';
+      case 'REJECTED': return 'bg-danger';
+      default: return 'bg-secondary';
+    }
+  }
+
+  getBrandCount(status: BrandStatus): number {
+    return this.currentBaseRows.filter(b => b.status === status).length;
+  }
+
+  onBrandDateChange(value: string) {
+    this.selectedDate = value;
+    this.applyBrandFilters();
+  }
+
+  setBrand(brand: 'SDL' | 'JAGATJIT') {
+    if (this.activeBrand === brand) return;
+    this.activeBrand = brand;
+    this.applyBrandFilters();
+  }
+
+  applyBrandFilters() {
+    const byMonthYear = (d: string) => {
+      if (!d) return false;
+      const m = d.substring(5, 7);
+      const y = d.substring(0, 4);
+      if (this.selectedDate) return d === this.selectedDate;
+      const monthOk = this.selectedMonth ? m === this.selectedMonth : true;
+      const yearOk = this.selectedYear ? y === this.selectedYear : true;
+      return monthOk && yearOk;
+    };
+
+    const searchLc = this.brandFilters.search.toLowerCase();
+
+    this.brandRows = this.currentBaseRows.filter(r => {
+      const matchDate = byMonthYear(r.producedDate);
+      const matchSearch = !searchLc || [r.brandName, r.liquorType || '', String(r.sizeMl), r.alcoholPercent]
+        .some(v => v.toLowerCase().includes(searchLc));
+      const matchStatus = !this.brandFilters.status || r.status === this.brandFilters.status;
+      return matchDate && matchSearch && matchStatus;
+    }).map(r => ({ ...r }));
+  }
+
+  startEditBrand(brand: BrandRow) {
+    if (brand.editing) return;
+    brand.editing = true;
+    brand.changes = {};
+    // deep copy original editable fields
+    this.originalBrandById[brand.id] = { ...brand, editing: false, changes: {} } as BrandRow;
+  }
+
+  cancelEditBrand(brand: BrandRow) {
+    const orig = this.originalBrandById[brand.id];
+    if (orig) {
+      brand.brandName = orig.brandName;
+      brand.liquorType = orig.liquorType;
+      brand.alcoholPercent = orig.alcoholPercent;
+      brand.sizeMl = orig.sizeMl;
+      brand.qtyInHandLocal = orig.qtyInHandLocal;
+      brand.qtyInHandExport = orig.qtyInHandExport;
+      brand.qtyProducedLocal = orig.qtyProducedLocal;
+      brand.qtyProducedExport = orig.qtyProducedExport;
+      brand.qtyIssuedLocal = orig.qtyIssuedLocal;
+      brand.qtyIssuedExport = orig.qtyIssuedExport;
+      brand.closingLocal = orig.closingLocal;
+      brand.closingExport = orig.closingExport;
+    }
+    brand.editing = false;
+    brand.changes = {};
+  }
+
+  saveEditBrand(brand: BrandRow) {
+    // Log activity summarizing edited fields
+    const editedFields = Object.keys(brand.changes || {}).filter(k => (brand.changes as any)[k]);
+    if (editedFields.length > 0) {
+      this.officerActivities.unshift({
+        dateTime: new Date().toLocaleString(),
+        action: 'APPROVED',
+        referenceNo: brand.id,
+        amount: '0.00',
+        status: 'APPROVED',
+        comments: `Edited fields: ${editedFields.join(', ')}`
+      });
+    }
+    brand.editing = false;
+  }
+
+  onBrandFieldChange(brand: BrandRow, field: keyof BrandRow, value: string | number) {
+    // limit to editable fields
+    const editable: (keyof BrandRow)[] = ['brandName', 'liquorType', 'alcoholPercent', 'sizeMl', 'qtyInHandLocal', 'qtyInHandExport', 'qtyProducedLocal', 'qtyProducedExport', 'qtyIssuedLocal', 'qtyIssuedExport'];
+    if (!editable.includes(field)) return;
+    const orig = this.originalBrandById[brand.id];
+    (brand as any)[field] = value;
+    if (!brand.changes) brand.changes = {};
+    const changed = orig ? (orig as any)[field] !== value : true;
+    (brand.changes as any)[field] = changed;
+    // recalc closings for qty changes
+    if (['qtyInHandLocal','qtyProducedLocal','qtyIssuedLocal'].includes(field as string)) {
+      brand.closingLocal = (Number(brand.qtyInHandLocal)||0) + (Number(brand.qtyProducedLocal)||0) - (Number(brand.qtyIssuedLocal)||0);
+    }
+    if (['qtyInHandExport','qtyProducedExport','qtyIssuedExport'].includes(field as string)) {
+      brand.closingExport = (Number(brand.qtyInHandExport)||0) + (Number(brand.qtyProducedExport)||0) - (Number(brand.qtyIssuedExport)||0);
+    }
+  }
+
+  viewBrand(brand: BrandRow) {
+    alert(`Viewing brand: ${brand.brandName} (${brand.liquorType || '-'}) - ${brand.sizeMl}ml`);
+  }
+
+  approveBrand(brand: BrandRow) {
+    if (brand.status !== 'PENDING') return;
+    brand.status = 'APPROVED';
+    // Log activity
+    this.officerActivities.unshift({
+      dateTime: new Date().toLocaleString(),
+      action: 'APPROVED',
+      referenceNo: brand.id,
+      amount: '0.00',
+      status: 'APPROVED',
+      comments: `Brand approved: ${brand.brandName}`
+    });
+  }
+
+  rejectBrand(brand: BrandRow) {
+    if (brand.status !== 'PENDING') return;
+    const reason = prompt('Enter rejection reason:');
+    if (reason === null || !reason.trim()) return;
+    brand.status = 'REJECTED';
+    // Log activity
+    this.officerActivities.unshift({
+      dateTime: new Date().toLocaleString(),
+      action: 'TERMINATED',
+      referenceNo: brand.id,
+      amount: '0.00',
+      status: 'TERMINATED',
+      comments: `Brand rejected: ${brand.brandName}. Reason: ${reason}`
+    });
   }
 
   applyFilters() {

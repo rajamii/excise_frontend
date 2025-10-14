@@ -34,6 +34,14 @@
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" 
+                  [class.active]="activeTab === 'brands'" 
+                  [class.text-danger]="activeTab === 'brands'"
+                  (click)="setActiveTab('brands')" type="button">
+            <i class="bi bi-tags me-2"></i> BRANDS DETAILS
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" 
                   [class.active]="activeTab === 'register'" 
                   [class.text-danger]="activeTab === 'register'"
                   (click)="setActiveTab('register')" type="button">
@@ -184,6 +192,168 @@
       </div>
     </div>
   </div>
+    </div>
+
+    <!-- Brands Details Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'brands'" [class.active]="activeTab === 'brands'">
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <!-- Month/Year/Date & Brand Switch -->
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Month</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (change)="applyBrandFilters()">
+                <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Year</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (change)="applyBrandFilters()">
+                <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <label class="form-label small text-muted mb-1">Date</label>
+              <input class="form-control form-control-sm" type="date" [(ngModel)]="selectedDate" (ngModelChange)="onBrandDateChange($event || '')">
+            </div>
+            <div class="col-md-5 col-sm-6">
+              <div class="btn-group btn-group-sm" role="group">
+                <button class="btn" [class.btn-primary]="activeBrand==='SDL'" [class.btn-outline-primary]="activeBrand!=='SDL'" (click)="setBrand('SDL')">SDL Brands</button>
+                <button class="btn" [class.btn-primary]="activeBrand==='JAGATJIT'" [class.btn-outline-primary]="activeBrand!=='JAGATJIT'" (click)="setBrand('JAGATJIT')">JAGATJIT Brands</button>
+              </div>
+            </div>
+          </div>
+          <!-- Brand Filters -->
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-4 col-sm-6">
+              <label class="form-label small text-muted mb-1">Search</label>
+              <input class="form-control form-control-sm" placeholder="Name, Category, Pack size, Strength"
+                     [(ngModel)]="brandFilters.search" (input)="applyBrandFilters()">
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Status</label>
+              <select class="form-select form-select-sm" [(ngModel)]="brandFilters.status" (change)="applyBrandFilters()">
+                <option [ngValue]="''">All</option>
+                <option [ngValue]="'PENDING'">Pending</option>
+                <option [ngValue]="'APPROVED'">Approved</option>
+                <option [ngValue]="'REJECTED'">Rejected</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <button class="btn btn-outline-secondary btn-sm me-2" (click)="brandFilters = {search:'',status:''}; selectedDate=''; applyBrandFilters();">Clear</button>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0"><i class="bi bi-tags me-2"></i>Brands Details</h6>
+            <div class="d-flex align-items-center gap-2">
+              <span class="small text-muted">Pending:</span>
+              <span class="badge bg-warning text-dark">{{ getBrandCount('PENDING') }}</span>
+              <span class="small text-muted">Approved:</span>
+              <span class="badge bg-success">{{ getBrandCount('APPROVED') }}</span>
+              <span class="small text-muted">Rejected:</span>
+              <span class="badge bg-danger">{{ getBrandCount('REJECTED') }}</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th scope="col" rowspan="2" class="align-middle">BRANDS</th>
+                  <th scope="col" rowspan="2" class="align-middle">LIQUOR TYPE</th>
+                  <th scope="col" rowspan="2" class="align-middle">ALCOHOL%<br>(v/v)</th>
+                  <th scope="col" rowspan="2" class="align-middle">SIZE<br>(ML)</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY IN HAND</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY PRODUCED</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY ISSUED</th>
+                  <th scope="col" colspan="2" class="text-center">CLOSING BALANCE</th>
+                  <th scope="col" rowspan="2" class="align-middle text-end">ACTIONS</th>
+                </tr>
+                <tr>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let brand of brandRows">
+                  <td [class.edited-cell]="brand.changes?.brandName" class="fw-semibold">
+                    <ng-container *ngIf="brand.editing; else nameView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.brandName" (ngModelChange)="onBrandFieldChange(brand, 'brandName', $event)">
+                    </ng-container>
+                    <ng-template #nameView>{{ brand.brandName }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.liquorType">
+                    <ng-container *ngIf="brand.editing; else liquorView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.liquorType" (ngModelChange)="onBrandFieldChange(brand, 'liquorType', $event)">
+                    </ng-container>
+                    <ng-template #liquorView>{{ brand.liquorType || '-' }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.alcoholPercent">
+                    <ng-container *ngIf="brand.editing; else alcView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.alcoholPercent" (ngModelChange)="onBrandFieldChange(brand, 'alcoholPercent', $event)">
+                    </ng-container>
+                    <ng-template #alcView>{{ brand.alcoholPercent }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.sizeMl">
+                    <ng-container *ngIf="brand.editing; else sizeView">
+                      <input class="form-control form-control-sm" type="number" [ngModel]="brand.sizeMl" (ngModelChange)="onBrandFieldChange(brand, 'sizeMl', $event)">
+                    </ng-container>
+                    <ng-template #sizeView>{{ brand.sizeMl }}</ng-template>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyInHandLocal" (ngModelChange)="onBrandFieldChange(brand, 'qtyInHandLocal', $event)" [class.edited-cell]="brand.changes?.qtyInHandLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyInHandExport" (ngModelChange)="onBrandFieldChange(brand, 'qtyInHandExport', $event)" [class.edited-cell]="brand.changes?.qtyInHandExport" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyProducedLocal" (ngModelChange)="onBrandFieldChange(brand, 'qtyProducedLocal', $event)" [class.edited-cell]="brand.changes?.qtyProducedLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyProducedExport" (ngModelChange)="onBrandFieldChange(brand, 'qtyProducedExport', $event)" [class.edited-cell]="brand.changes?.qtyProducedExport" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyIssuedLocal" (ngModelChange)="onBrandFieldChange(brand, 'qtyIssuedLocal', $event)" [class.edited-cell]="brand.changes?.qtyIssuedLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyIssuedExport" (ngModelChange)="onBrandFieldChange(brand, 'qtyIssuedExport', $event)" [class.edited-cell]="brand.changes?.qtyIssuedExport" [disabled]="!brand.editing">
+                  </td>
+                  <td class="fw-semibold">{{ brand.closingLocal }}</td>
+                  <td class="fw-semibold">{{ brand.closingExport }}</td>
+                  <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button class="btn btn-outline-primary" (click)="viewBrand(brand)" *ngIf="!brand.editing">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-secondary" (click)="startEditBrand(brand)" *ngIf="!brand.editing">
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button class="btn btn-success" (click)="saveEditBrand(brand)" *ngIf="brand.editing">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                      <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                        <i class="bi bi-check-circle"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Register Tab -->
