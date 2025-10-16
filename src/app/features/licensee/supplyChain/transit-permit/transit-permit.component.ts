@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 interface FormData {
   billNo: string;
@@ -60,12 +60,25 @@ export class TransitPermitComponent implements OnInit {
     'SK 03 EF 9012'
   ];
 
-  constructor(private router: Router) {}
+  private isBrowser = false;
+  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
+    // Load by ref if provided
+    const ref = this.route.snapshot.queryParamMap.get('ref');
+    if (ref && this.isBrowser) {
+      const list: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+      const found = list.find(r => r.billNo === ref);
+      if (found) {
+        this.formData = { ...this.formData, ...found };
+        this.products = found.products || [];
+      }
+    }
   }
 
   onBrandChange(): void {
@@ -205,6 +218,15 @@ export class TransitPermitComponent implements OnInit {
 
     console.log('Bill locked successfully');
     alert('Bill has been locked successfully and is ready for payment processing.');
+    // Save to local storage for later viewing
+    if (this.isBrowser) {
+      const key = 'transitPermitRequests';
+      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const entry = { ...this.formData, products: this.products };
+      const idx = list.findIndex(r => r.billNo === this.formData.billNo);
+      if (idx >= 0) list[idx] = entry; else list.unshift(entry);
+      localStorage.setItem(key, JSON.stringify(list));
+    }
   }
 
   payAllItems(): void {

@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 interface FormData {
   refNo: string;
@@ -29,6 +29,8 @@ export class ImportPermitComponent implements OnInit {
   calculatedTotal = 0;
   strengthFrom = '';
   currentYear = new Date().getFullYear();
+  private isBrowser = false;
+  viewModeRef?: string;
 
   formData: FormData = {
     refNo: 'IBPS/01/EXCISE',
@@ -43,7 +45,9 @@ export class ImportPermitComponent implements OnInit {
     purpose: ''
   };
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     // Set today's date as default
@@ -52,6 +56,20 @@ export class ImportPermitComponent implements OnInit {
     
     // Generate reference number
     this.generateRefNumber();
+
+    // If navigated with a ref, attempt to load saved request and show it
+    const ref = this.route.snapshot.queryParamMap.get('ref');
+    if (ref && this.isBrowser) {
+      this.viewModeRef = ref;
+      const list: any[] = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+      const found = list.find(r => r.refNo === ref);
+      if (found) {
+        this.formData = { ...this.formData, ...found };
+        // recalc derived fields
+        this.onBulkSpiritTypeChange();
+        this.calculateTotal();
+      }
+    }
   }
 
   generateRefNumber(): void {
@@ -107,6 +125,13 @@ export class ImportPermitComponent implements OnInit {
   saveForm(): void {
     console.log('Saving form:', this.formData);
     // Frontend save logic only
+    if (this.isBrowser) {
+      const key = 'importPermitRequests';
+      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const idx = list.findIndex(r => r.refNo === this.formData.refNo);
+      if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
+      localStorage.setItem(key, JSON.stringify(list));
+    }
     alert('Form saved successfully!');
   }
 
@@ -159,6 +184,13 @@ export class ImportPermitComponent implements OnInit {
     if (this.validateForm()) {
       console.log('Submitting form:', this.formData);
       // Frontend submit logic only
+      if (this.isBrowser) {
+        const key = 'importPermitRequests';
+        const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+        const idx = list.findIndex(r => r.refNo === this.formData.refNo);
+        if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
+        localStorage.setItem(key, JSON.stringify(list));
+      }
       alert('Form submitted successfully!');
     }
   }

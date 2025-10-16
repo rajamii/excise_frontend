@@ -283,13 +283,8 @@ export class SupplyChainComponent {
   }
 
   viewApplication(item: TableData): void {
-    // Navigate to payment confirmation page (development route)
-    this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: {
-        tab: 'requisition',
-        referenceNo: item.referenceNo
-      }
-    });
+    // Navigate to import permit application view with ref
+    this.router.navigate(['/dev-import-permit'], { queryParams: { ref: item.referenceNo } });
   }
 
   viewSlip(item: TableData): void {
@@ -320,6 +315,10 @@ export class SupplyChainComponent {
 
   viewHologram(refNo: string): void {
     this.router.navigate(['/dev-hologram'], { queryParams: { ref: refNo } });
+  }
+
+  openTransitApplication(refNo: string): void {
+    this.router.navigate(['/dev-transit-permit'], { queryParams: { ref: refNo } });
   }
 
   openHologramDetails(row: HologramRow): void {
