@@ -268,6 +268,9 @@ export class SupplyChainComponent {
       case 'transit-permit':
         this.router.navigate(['/dev-transit-permit']);
         break;
+      case 'hologram':
+        this.router.navigate(['/dev-hologram']);
+        break;
       case 'transit-permit-register':
         this.router.navigate(['/dev-transit-permit-register']);
         break;

@@ -71,6 +71,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/registers/transit-permit-register/transit-permit-register.component').then(m => m.TransitPermitRegisterComponent)
   },
   {
+    path: 'dev-hologram',
+    loadComponent: () => import('./features/licensee/supplyChain/HoloGram/hologram/hologram.component').then(m => m.HologramComponent)
+  },
+  {
     path: 'dev-daily-record-register',
     loadComponent: () => import('./features/licensee/supplyChain/registers/daily-record-register/daily-record-register.component').then(m => m.DailyRecordRegisterComponent)
   },
