@@ -1,1 +1,173 @@
-<p>hologram works!</p>
+<div class="bg-light min-vh-100">
+  <br>
+  <div class="container mb-5">
+    <div class="row justify-content-center">
+      <div class="col-12">
+        <!-- Form Card -->
+        <div class="card shadow-lg border-0 mb-4" style="max-width: 1150px; margin: 0 auto;">
+          <div class="card-header bg-secondary text-white text-center py-3">
+            <h4 class="mb-0 fw-bold">Requisition for Security Holograms</h4>
+          </div>
+          <div class="card-body bg-white">
+
+            <div class="alert alert-danger" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+            <div class="form-section">
+              <div class="row mb-4 g-3 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label">Our Ref. No</label>
+                  <input type="text" class="form-control" [(ngModel)]="formData.refNo" readonly>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Date</label>
+                  <input type="date" class="form-control" [(ngModel)]="formData.date" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Company</label>
+                  <input type="text" class="form-control" [(ngModel)]="formData.companyName" required>
+                </div>
+              </div>
+
+              <!-- Quantities table like the image -->
+              <div class="table-responsive mb-3">
+                <table class="table table-bordered">
+                  <thead class="table-success">
+                    <tr>
+                      <th style="width: 120px;">Sl. No.</th>
+                      <th>Series</th>
+                      <th style="width: 260px;">Quantity (In Lakh)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1</td>
+                      <td>Local</td>
+                      <td>
+                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0" step="0.01" placeholder="e.g. 15">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>2</td>
+                      <td>Export</td>
+                      <td>
+                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0" step="0.01">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>3</td>
+                      <td>Defence</td>
+                      <td>
+                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0" step="0.01">
+                      </td>
+                    </tr>
+                    <tr>
+                      <th colspan="2" class="text-end">Total No. of Holograms</th>
+                      <th>
+                        <div class="form-control-plaintext fw-bold">{{ totalQtyLakh || 0 }} Lakh</div>
+                      </th>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="d-flex justify-content-center mt-4 gap-2">
+                <button class="btn btn-primary" (click)="saveDraft()">
+                  <i class="bi bi-save me-1"></i>Save
+                </button>
+                <button class="btn btn-success" (click)="submitForm()">
+                  <i class="bi bi-check-circle me-1"></i>Submit
+                </button>
+                <button class="btn btn-outline-warning" (click)="clearForm()">
+                  <i class="bi bi-eraser me-1"></i>Clear
+                </button>
+                <button class="btn btn-outline-secondary" (click)="goBack()">
+                  <i class="bi bi-arrow-left me-1"></i>Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Letter Preview -->
+        <div id="hologramPrintSection" class="card shadow-sm border-0 printable-content" *ngIf="showPreview" style="max-width: 1150px; margin: 0 auto;">
+          <div class="letter-header text-center fw-bold mb-3 fs-5">
+            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
+              <span>Yuksom Breweries Ltd.</span>
+            </div>
+          </div>
+          <div class="letter-content p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div><strong>Our Ref:</strong> <span class="fw-bold">{{ submittedData?.refNo || formData.refNo }}</span></div>
+              <div><strong>Date:</strong> <span class="fw-bold">{{ (submittedData?.date || formData.date) | date:'dd-MM-yyyy' }}</span></div>
+            </div>
+
+            
+            <p class="mb-1"><strong>To,</strong><br>
+              The Commissioner<br>
+              Excise (Abk) Department<br>
+              Government of Sikkim, Gangtok
+            </p>
+
+            <p class="mb-2"><strong>Sub:</strong> Requisition for Security Holograms</p>
+
+            <p class="mb-3">Dear Madam, Kindly issue us the following quantities of Security Hologram:</p>
+
+            <div class="table-responsive mb-3">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 120px;">Sl. No.</th>
+                    <th>Series</th>
+                    <th style="width: 260px;">Quantity (In Lakh)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Local</td>
+                    <td>{{ submittedData?.localQtyLakh ?? '-' }}</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Export</td>
+                    <td>{{ submittedData?.exportQtyLakh ?? '-' }}</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>Defence</td>
+                    <td>{{ submittedData?.defenceQtyLakh ?? '-' }}</td>
+                  </tr>
+                  <tr>
+                    <th colspan="2" class="text-end">Total No. of Holograms</th>
+                    <th>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) + (submittedData?.defenceQtyLakh || 0)) || 0 }} Lakh</th>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-4">
+              <p>Thanking You,</p>
+              <p class="mb-0">For {{ submittedData?.companyName || formData.companyName }}</p>
+              <div style="height: 50px"></div>
+              <p class="mb-0">(Jr. Sales Officer)</p>
+            </div>
+
+            <div class="no-print d-flex justify-content-center mt-4">
+              <button class="btn btn-secondary" (click)="openPrintPreview()">
+                <i class="bi bi-printer me-1"></i>Print Letter
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer mt-auto py-3 bg-primary text-white-50 shadow-sm">
+    <div class="container text-center">
+      <small>&copy; {{ currentYear }} State Excise Department, Government of Sikkim. All Rights Reserved.</small>
+    </div>
+  </footer>
+</div>
