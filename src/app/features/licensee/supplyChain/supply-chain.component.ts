@@ -246,6 +246,15 @@ export class SupplyChainComponent {
         { refNo: 'YB/1/BREW/' + String(new Date().getFullYear()).slice(-2), date: today, companyName: 'Yuksom Breweries Ltd.', localQtyLakh: 15, exportQtyLakh: 0, defenceQtyLakh: 0, status: 'Draft' },
         { refNo: 'YB/2/BREW/' + String(new Date().getFullYear()).slice(-2), date: today, companyName: 'Yuksom Breweries Ltd.', localQtyLakh: 10, exportQtyLakh: 2, defenceQtyLakh: 0, status: 'Submitted' }
       );
+      // Persist the seeded rows so the hologram view page can find them by ref
+      localStorage.setItem('hologramRequests', JSON.stringify(mapped.map(m => ({
+        refNo: m.refNo,
+        date: m.date,
+        companyName: m.companyName,
+        localQtyLakh: m.localQtyLakh,
+        exportQtyLakh: m.exportQtyLakh,
+        defenceQtyLakh: m.defenceQtyLakh
+      }))));
     }
 
     this.hologramList = mapped;

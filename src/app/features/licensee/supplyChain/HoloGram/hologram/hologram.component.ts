@@ -130,10 +130,24 @@ export class HologramComponent {
     if (!this.validateForm()) {
       return;
     }
-    // Lock the submitted data for preview/print
+    // Ask for confirmation / declaration before forwarding
+    const confirmed = window.confirm('Declaration: After you click OK, this letter will be forwarded to the Commissioner. Do you want to proceed?');
+    if (!confirmed) {
+      return;
+    }
+    // Lock the submitted data for preview/print and mark as submitted
     this.submittedData = { ...this.formData };
     this.showPreview = true;
-    // Scroll preview into view for user visibility
+    // Persist to list as forwarded
+    if (this.isBrowser) {
+      const key = 'hologramRequests';
+      const list: HologramFormData[] = JSON.parse(localStorage.getItem(key) || '[]');
+      list.unshift({ ...this.submittedData });
+      localStorage.setItem(key, JSON.stringify(list));
+    }
+    // Navigate to commissioner dashboard (dev)
+    this.router.navigate(['/dev-commissioner-dashboard']);
+    // Scroll preview into view for user visibility (for current page viewing if stays)
     setTimeout(() => {
       document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 25);
@@ -145,12 +159,7 @@ export class HologramComponent {
     this.formData.refNo = `YB/${this.getNextSequenceNumber()}/BREW/${String(new Date().getFullYear()).slice(-2)}`;
 
     // Save request locally for listing in Supply Chain → Hologram tab
-    if (this.isBrowser) {
-      const key = 'hologramRequests';
-      const list: HologramFormData[] = JSON.parse(localStorage.getItem(key) || '[]');
-      list.unshift({ ...this.submittedData });
-      localStorage.setItem(key, JSON.stringify(list));
-    }
+    // already saved above
   }
 
   openPrintPreview(): void {
