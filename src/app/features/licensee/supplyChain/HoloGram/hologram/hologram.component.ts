@@ -1,7 +1,7 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 interface HologramFormData {
   refNo: string;
@@ -30,15 +30,34 @@ export class HologramComponent {
     refNo: '',
     date: '',
     companyName: 'Yuksom Breweries Ltd.',
-    localQtyLakh: null,
-    exportQtyLakh: null,
-    defenceQtyLakh: null
+    // Prefill sample data so the user can see how inputs look
+    localQtyLakh: 15,
+    exportQtyLakh: 0,
+    defenceQtyLakh: 0
   };
 
-  constructor(private router: Router) {
+  private isBrowser = false;
+
+  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
     this.generateRefNumber();
+    // If a ref is provided, load and show its preview
+    if (this.isBrowser) {
+      const ref = this.route.snapshot.queryParamMap.get('ref');
+      if (ref) {
+        const list: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+        const found = list.find(r => r.refNo === ref);
+        if (found) {
+          this.submittedData = found;
+          this.showPreview = true;
+          setTimeout(() => {
+            document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 25);
+        }
+      }
+    }
   }
 
   generateRefNumber(): void {
@@ -50,12 +69,13 @@ export class HologramComponent {
 
   private getNextSequenceNumber(): number {
     const key = 'hologramRefSeqNext';
-    const raw = localStorage.getItem(key);
+    const raw = this.isBrowser ? localStorage.getItem(key) : null;
     const parsed = raw ? parseInt(raw, 10) : 1;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
   }
 
   private incrementSequenceNumber(): void {
+    if (!this.isBrowser) return;
     const key = 'hologramRefSeqNext';
     const curr = this.getNextSequenceNumber();
     localStorage.setItem(key, String(curr + 1));
@@ -123,6 +143,14 @@ export class HologramComponent {
     // Do not overwrite fields used in the preview; regenerate ref for next entry but
     // keep current input values visible until the user edits/clears
     this.formData.refNo = `YB/${this.getNextSequenceNumber()}/BREW/${String(new Date().getFullYear()).slice(-2)}`;
+
+    // Save request locally for listing in Supply Chain → Hologram tab
+    if (this.isBrowser) {
+      const key = 'hologramRequests';
+      const list: HologramFormData[] = JSON.parse(localStorage.getItem(key) || '[]');
+      list.unshift({ ...this.submittedData });
+      localStorage.setItem(key, JSON.stringify(list));
+    }
   }
 
   openPrintPreview(): void {

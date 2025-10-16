@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -11,6 +11,16 @@ interface TableData {
   amount: string;
   isLive?: boolean;
   isInvalid?: boolean;
+}
+
+interface HologramRow {
+  refNo: string;
+  date: string;
+  companyName: string;
+  localQtyLakh?: number;
+  exportQtyLakh?: number;
+  defenceQtyLakh?: number;
+  status: string;
 }
 
 @Component({
@@ -29,6 +39,10 @@ export class SupplyChainComponent {
   selectedStatus = '';
   activeTab = 'requisition';
   sidebarHidden = true;
+  hologramList: HologramRow[] = [];
+  private isBrowser = false;
+  showHologramModal = false;
+  selectedHologram: HologramRow | null = null;
 
   // Sample data for display only
   requisitionData: TableData[] = [
@@ -204,7 +218,38 @@ export class SupplyChainComponent {
     }
   ];
 
-  constructor(private router: Router) { }
+  constructor(private router: Router, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
+    this.refreshHologramList();
+  }
+
+  private refreshHologramList(): void {
+    if (!this.isBrowser) {
+      this.hologramList = [];
+      return;
+    }
+    const stored = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const mapped: HologramRow[] = (stored || []).map((r: any) => ({
+      refNo: r.refNo,
+      date: r.date,
+      companyName: r.companyName,
+      localQtyLakh: r.localQtyLakh,
+      exportQtyLakh: r.exportQtyLakh,
+      defenceQtyLakh: r.defenceQtyLakh,
+      status: 'Submitted'
+    }));
+
+    if (!mapped.length) {
+      // Seed with demo rows so user can see how it looks
+      const today = new Date().toISOString().split('T')[0];
+      mapped.push(
+        { refNo: 'YB/1/BREW/' + String(new Date().getFullYear()).slice(-2), date: today, companyName: 'Yuksom Breweries Ltd.', localQtyLakh: 15, exportQtyLakh: 0, defenceQtyLakh: 0, status: 'Draft' },
+        { refNo: 'YB/2/BREW/' + String(new Date().getFullYear()).slice(-2), date: today, companyName: 'Yuksom Breweries Ltd.', localQtyLakh: 10, exportQtyLakh: 2, defenceQtyLakh: 0, status: 'Submitted' }
+      );
+    }
+
+    this.hologramList = mapped;
+  }
 
   // UI interaction methods only
   onSearch(): void {
@@ -222,6 +267,10 @@ export class SupplyChainComponent {
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
+    if (tab === 'hologram') {
+      // refresh list on each visit
+      this.refreshHologramList();
+    }
   }
 
   viewApplication(item: TableData): void {
@@ -258,6 +307,24 @@ export class SupplyChainComponent {
   viewWallet(): void {
     // Navigate to payment confirmation page (development route)
     this.router.navigate(['/dev-payment-confirmation']);
+  }
+
+  viewHologram(refNo: string): void {
+    this.router.navigate(['/dev-hologram'], { queryParams: { ref: refNo } });
+  }
+
+  openHologramDetails(row: HologramRow): void {
+    this.selectedHologram = row;
+    this.showHologramModal = true;
+  }
+
+  closeHologramDetails(): void {
+    this.showHologramModal = false;
+    this.selectedHologram = null;
+  }
+
+  getHologramTotal(row: HologramRow): number {
+    return (row.localQtyLakh || 0) + (row.exportQtyLakh || 0) + (row.defenceQtyLakh || 0);
   }
 
   navigateTo(route: string): void {
@@ -313,13 +380,15 @@ export class SupplyChainComponent {
     requisition: 5,
     revalidation: 5,
     cancellation: 5,
-    transit: 5
+    transit: 5,
+    hologram: 5
   };
   currentPageByTab: Record<string, number> = {
     requisition: 1,
     revalidation: 1,
     cancellation: 1,
-    transit: 1
+    transit: 1,
+    hologram: 1
   };
 
   getCurrentPage(tab: string): number {
@@ -330,19 +399,19 @@ export class SupplyChainComponent {
     return this.pageSizeByTab[tab] ?? 5;
   }
 
-  getTotalPages(data: TableData[], tab: string): number {
+  getTotalPages(data: any[], tab: string): number {
     const size = this.getPageSize(tab);
     return Math.max(1, Math.ceil((data?.length || 0) / size));
   }
 
-  getPaged(data: TableData[], tab: string): TableData[] {
+  getPaged<T = any>(data: T[], tab: string): T[] {
     const size = this.getPageSize(tab);
     const page = this.getCurrentPage(tab);
     const start = (page - 1) * size;
     return (data || []).slice(start, start + size);
   }
 
-  goToPage(tab: string, page: number, data: TableData[]): void {
+  goToPage(tab: string, page: number, data: any[]): void {
     const total = this.getTotalPages(data, tab);
     if (page < 1 || page > total) return;
     this.currentPageByTab[tab] = page;
