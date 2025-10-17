@@ -179,6 +179,11 @@ export class PermitSectionComponent implements OnInit {
           queryParams: { ref: permit.referenceNo } 
         });
         break;
+      case 'cancellation':
+        this.router.navigate(['/dev-permit-section-cancellation-letter-view'], {
+          queryParams: { ref: permit.referenceNo }
+        });
+        break;
       default:
         this.router.navigate(['/dev-supply-chain']);
     }

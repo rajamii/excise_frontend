@@ -1,0 +1,9 @@
+.permit-section-cancellation-letter-view {
+  .page-title { font-size: 1.25rem; }
+  .printable-content { background: #fff; }
+  @media print {
+    .no-print { display: none !important; }
+  }
+}
+
+
