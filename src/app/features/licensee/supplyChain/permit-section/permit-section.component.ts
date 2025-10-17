@@ -169,6 +169,11 @@ export class PermitSectionComponent implements OnInit {
           queryParams: { ref: permit.referenceNo } 
         });
         break;
+      case 'revalidation':
+        this.router.navigate(['/dev-permit-section-revalidation-letter-view'], {
+          queryParams: { ref: permit.referenceNo }
+        });
+        break;
       case 'transit':
         this.router.navigate(['/dev-transit-permit'], { 
           queryParams: { ref: permit.referenceNo } 

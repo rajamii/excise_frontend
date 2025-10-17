@@ -14,6 +14,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-requisition-view/permit-section-requisition-view.component').then(m => m.PermitSectionRequisitionViewComponent)
   },
   {
+    path: 'dev-permit-section-revalidation-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-revalidation-view/permit-section-revalidation-view.component').then(m => m.PermitSectionRevalidationViewComponent)
+  },
+  {
     path: '',
     children: [
       {
