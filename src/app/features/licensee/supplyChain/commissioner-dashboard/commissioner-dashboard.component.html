@@ -102,6 +102,9 @@
       <button class="tab-button" [class.active]="activeTab === 'transit'" title="Transit" aria-label="Transit" (click)="setActiveTab('transit')">
         <i class="bi bi-truck me-2"></i>TRANSIT
       </button>
+      <button class="tab-button" [class.active]="activeTab === 'hologram'" title="Hologram" aria-label="Hologram" (click)="setActiveTab('hologram')">
+        <i class="bi bi-qr-code me-2"></i>HOLOGRAM
+      </button>
     </div>
   </div>
 
@@ -119,8 +122,11 @@
             <th>App. Sub. Date</th>
             <th>Distillery Name</th>
             <th>Status</th>
-            @if (activeTab !== 'transit') {
+            @if (activeTab !== 'transit' && activeTab !== 'hologram') {
             <th>Imp. Pass Fee Amt.</th>
+            }
+            @if (activeTab === 'hologram') {
+            <th>Total Qty (Lakh)</th>
             }
             <th>Action</th>
           </tr>
@@ -134,12 +140,17 @@
             <td>
               <span class="status-badge">{{ record.status }}</span>
             </td>
-            @if (activeTab !== 'transit') {
+            @if (activeTab !== 'transit' && activeTab !== 'hologram') {
             <td class="amount">
               <div class="input-group">
                 <span class="input-group-text">₹</span>
                 <span class="amount-value">{{ getAmountByType(record) | number:'1.2-2' }}</span>
               </div>
+            </td>
+            }
+            @if (activeTab === 'hologram') {
+            <td class="amount">
+              <span class="amount-value">{{ getHologramTotalQty(record) }} Lakh</span>
             </td>
             }
             <td class="actions">
@@ -235,6 +246,21 @@
                 View Payment Slip
               </button>
               }
+              }
+
+              <!-- Hologram Actions -->
+              @if (activeTab === 'hologram') {
+              <button class="btn btn-primary btn-sm me-1" (click)="viewHologramApplication(record)">
+                VIEW APPLICATION
+              </button>
+
+              <button class="btn btn-success btn-sm me-1" (click)="forwardToITCell(record)">
+                FORWARD TO IT CELL
+              </button>
+
+              <button class="btn btn-info btn-sm" (click)="viewHologramLetter(record)">
+                VIEW LETTER
+              </button>
               }
             </td>
           </tr>

@@ -12,9 +12,14 @@ interface PermitRecord {
   brAmount: number;
   revalidationAmount?: number;
   cancellationAmount?: number;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit';
+  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
   hasPaymentSlip?: boolean;
   cancellationBRFilePath?: string;
+  // Hologram specific fields
+  localQtyLakh?: number;
+  exportQtyLakh?: number;
+  defenceQtyLakh?: number;
+  companyName?: string;
 }
 
 @Component({
@@ -140,6 +145,46 @@ export class CommissionerDashboardComponent implements OnInit {
       cancellationAmount: 20.00,
       type: 'cancellation',
       hasPaymentSlip: true
+    },
+    // Hologram Records
+    {
+      id: '10',
+      referenceNo: 'YB/1/BREW/25',
+      submissionDate: new Date('2025-01-15'),
+      distilleryName: 'Yuksom Breweries Ltd',
+      status: 'Pending',
+      brAmount: 0,
+      type: 'hologram',
+      localQtyLakh: 15,
+      exportQtyLakh: 5,
+      defenceQtyLakh: 2,
+      companyName: 'Yuksom Breweries Ltd'
+    },
+    {
+      id: '11',
+      referenceNo: 'YB/2/BREW/25',
+      submissionDate: new Date('2025-01-16'),
+      distilleryName: 'Sikkim Distilleries Ltd',
+      status: 'Forwarded to IT Cell',
+      brAmount: 0,
+      type: 'hologram',
+      localQtyLakh: 20,
+      exportQtyLakh: 8,
+      defenceQtyLakh: 3,
+      companyName: 'Sikkim Distilleries Ltd'
+    },
+    {
+      id: '12',
+      referenceNo: 'YB/3/BREW/25',
+      submissionDate: new Date('2025-01-17'),
+      distilleryName: 'Mount Distilleries Ltd',
+      status: 'Approved',
+      brAmount: 0,
+      type: 'hologram',
+      localQtyLakh: 12,
+      exportQtyLakh: 6,
+      defenceQtyLakh: 1,
+      companyName: 'Mount Distilleries Ltd'
     }
   ];
 
@@ -302,7 +347,7 @@ export class CommissionerDashboardComponent implements OnInit {
     // Navigate to appropriate application view
     switch (record.type) {
       case 'requisition':
-        this.router.navigate(['/dev-import-permit'], { 
+        this.router.navigate(['/dev-requisition-letter-view'], { 
           queryParams: { ref: record.referenceNo } 
         });
         break;
@@ -423,7 +468,8 @@ export class CommissionerDashboardComponent implements OnInit {
       'requisition': 'Requisition',
       'revalidation': 'Revalidation',
       'cancellation': 'Cancellation',
-      'transit': 'Transit'
+      'transit': 'Transit',
+      'hologram': 'Hologram'
     };
     return titles[this.activeTab] || 'Records';
   }
@@ -437,5 +483,35 @@ export class CommissionerDashboardComponent implements OnInit {
       default:
         return record.brAmount;
     }
+  }
+
+  // Hologram specific methods
+  getHologramTotalQty(record: PermitRecord): number {
+    const local = record.localQtyLakh || 0;
+    const exportQty = record.exportQtyLakh || 0;
+    const defence = record.defenceQtyLakh || 0;
+    return local + exportQty + defence;
+  }
+
+  viewHologramApplication(record: PermitRecord): void {
+    console.log('Viewing hologram application:', record.referenceNo);
+    this.router.navigate(['/dev-hologram-letter-view'], { 
+      queryParams: { ref: record.referenceNo } 
+    });
+  }
+
+  forwardToITCell(record: PermitRecord): void {
+    if (confirm(`Are you sure you want to forward ${record.referenceNo} to IT Cell?`)) {
+      console.log('Forwarding to IT Cell:', record.referenceNo);
+      record.status = 'Forwarded to IT Cell';
+      alert(`Hologram request ${record.referenceNo} has been forwarded to IT Cell`);
+    }
+  }
+
+  viewHologramLetter(record: PermitRecord): void {
+    console.log('Viewing hologram letter:', record.referenceNo);
+    this.router.navigate(['/dev-hologram-letter-view'], { 
+      queryParams: { ref: record.referenceNo } 
+    });
   }
 }

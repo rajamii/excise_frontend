@@ -99,6 +99,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/commissioner-dashboard/commissioner-dashboard.component').then(m => m.CommissionerDashboardComponent)
   },
   {
+    path: 'dev-hologram-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/HoloGram/hologram-letter-view/hologram-letter-view.component').then(m => m.HologramLetterViewComponent)
+  },
+  {
+    path: 'dev-requisition-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/commissionerletterview/requisition-letter-view.component').then(m => m.RequisitionLetterViewComponent)
+  },
+  {
     path: 'dev-officer-in-charge',
     loadComponent: () => import('./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component').then(m => m.OfficerInChargeComponent)
   },

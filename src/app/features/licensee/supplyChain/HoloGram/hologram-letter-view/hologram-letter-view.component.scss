@@ -1,0 +1,84 @@
+.hologram-letter-view {
+  background: #f8f9fa;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header-section {
+  background: #fff;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #dee2e6;
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+  }
+}
+
+.letter-container {
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.printable-content {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.letter-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid #007bff;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.letter-content {
+  font-size: 14px;
+  line-height: 1.6;
+  
+  .table {
+    font-size: 13px;
+  }
+  
+  .table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+  }
+}
+
+.no-print {
+  @media print {
+    display: none !important;
+  }
+}
+
+@media print {
+  .hologram-letter-view {
+    background: #fff;
+  }
+  
+  .header-section {
+    display: none;
+  }
+  
+  .letter-container {
+    padding: 0;
+  }
+  
+  .printable-content {
+    box-shadow: none;
+    border-radius: 0;
+  }
+}

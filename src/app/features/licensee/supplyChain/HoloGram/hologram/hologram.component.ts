@@ -46,15 +46,19 @@ export class HologramComponent {
     // If a ref is provided, load and show its preview
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
+      const view = this.route.snapshot.queryParamMap.get('view');
       if (ref) {
         const list: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
         const found = list.find(r => r.refNo === ref);
         if (found) {
           this.submittedData = found;
           this.showPreview = true;
-          setTimeout(() => {
-            document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 25);
+          if (view === 'letter') {
+            // If viewing letter, scroll to letter section
+            setTimeout(() => {
+              document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 25);
+          }
         }
       }
     }
