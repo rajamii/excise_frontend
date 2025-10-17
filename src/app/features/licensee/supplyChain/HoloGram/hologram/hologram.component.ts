@@ -145,9 +145,7 @@ export class HologramComponent {
       list.unshift({ ...this.submittedData });
       localStorage.setItem(key, JSON.stringify(list));
     }
-    // Navigate to commissioner dashboard (dev)
-    this.router.navigate(['/dev-commissioner-dashboard']);
-    // Scroll preview into view for user visibility (for current page viewing if stays)
+    // Scroll preview into view for user visibility
     setTimeout(() => {
       document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 25);
@@ -158,8 +156,8 @@ export class HologramComponent {
     // keep current input values visible until the user edits/clears
     this.formData.refNo = `YB/${this.getNextSequenceNumber()}/BREW/${String(new Date().getFullYear()).slice(-2)}`;
 
-    // Save request locally for listing in Supply Chain → Hologram tab
-    // already saved above
+    // Show success message
+    alert('Hologram requisition submitted successfully! You can now view and print the letter below.');
   }
 
   openPrintPreview(): void {
