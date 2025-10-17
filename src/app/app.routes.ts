@@ -107,6 +107,18 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/letterView/commissionerletterview/requisition-letter-view.component').then(m => m.RequisitionLetterViewComponent)
   },
   {
+    path: 'dev-revalidation-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/Commiosnerrevalidationview/revalidation-letter-view.component').then(m => m.RevalidationLetterViewComponent)
+  },
+  {
+    path: 'dev-cancellation-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/commissionercancellationview/cancellation-letter-view.component').then(m => m.CancellationLetterViewComponent)
+  },
+  {
+    path: 'dev-transit-permit-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/commissionerTransitView/transit-permit-letter-view.component').then(m => m.TransitPermitLetterViewComponent)
+  },
+  {
     path: 'dev-officer-in-charge',
     loadComponent: () => import('./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component').then(m => m.OfficerInChargeComponent)
   },

@@ -1,0 +1,221 @@
+.transit-permit-letter-view {
+  background: #f8f9fa;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.header-section {
+  background: #fff;
+  padding: 1rem 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #dee2e6;
+  
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+  }
+}
+
+.letter-container {
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.letter-document {
+  background: #fff9e6; // Light yellow/cream background like the image
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #333;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+// Top left corner - Sole Distributor
+.sole-distributor {
+  position: absolute;
+  top: 20px;
+  left: 40px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+// Top right corner - Bill details
+.bill-details {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  text-align: right;
+  font-size: 14px;
+  
+  .bill-row {
+    margin-bottom: 5px;
+    
+    strong {
+      font-weight: bold;
+    }
+  }
+}
+
+// Recipient section
+.recipient-section {
+  margin-top: 80px;
+  margin-bottom: 20px;
+  
+  .to-label {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+  
+  .recipient-address {
+    margin-left: 20px;
+    
+    div {
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+  }
+}
+
+// Subject line
+.subject-section {
+  margin: 25px 0;
+  font-size: 14px;
+  
+  strong {
+    font-weight: bold;
+  }
+}
+
+// Salutation
+.salutation {
+  margin: 25px 0 20px 0;
+  font-size: 14px;
+}
+
+// Body content
+.body-content {
+  margin: 20px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+// Goods table
+.goods-table-section {
+  margin: 30px 0;
+  
+  .goods-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    
+    th, td {
+      border: 1px solid #333;
+      padding: 8px;
+      text-align: left;
+    }
+    
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    
+    td {
+      background-color: #fff;
+    }
+  }
+}
+
+// Additional details
+.additional-details {
+  margin: 25px 0;
+  
+  .detail-row {
+    margin-bottom: 8px;
+    font-size: 14px;
+    
+    strong {
+      font-weight: bold;
+    }
+  }
+}
+
+// Thank you message
+.thank-you {
+  margin: 30px 0;
+  font-size: 14px;
+  font-style: italic;
+}
+
+// Signatory section
+.signatory-section {
+  margin-top: 60px;
+  
+  .signatory-right {
+    text-align: right;
+    font-size: 14px;
+    font-weight: bold;
+  }
+}
+
+// Print button
+.print-button-section {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.no-print {
+  @media print {
+    display: none !important;
+  }
+}
+
+@media print {
+  .transit-permit-letter-view {
+    background: #fff;
+  }
+  
+  .header-section {
+    display: none;
+  }
+  
+  .letter-container {
+    padding: 0;
+  }
+  
+  .letter-document {
+    background: #fff9e6;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 20mm;
+    max-width: none;
+    margin: 0;
+  }
+  
+  .sole-distributor,
+  .bill-details {
+    position: static;
+    margin-bottom: 20px;
+  }
+  
+  .recipient-section {
+    margin-top: 20px;
+  }
+}

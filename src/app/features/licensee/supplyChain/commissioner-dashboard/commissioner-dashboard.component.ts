@@ -185,6 +185,57 @@ export class CommissionerDashboardComponent implements OnInit {
       exportQtyLakh: 6,
       defenceQtyLakh: 1,
       companyName: 'Mount Distilleries Ltd'
+    },
+    // Transit Permit Records
+    {
+      id: '13',
+      referenceNo: 'TP/001/2025',
+      submissionDate: new Date('2025-01-20'),
+      distilleryName: 'Sikkim Distilleries Ltd',
+      status: 'Pending',
+      brAmount: 0,
+      type: 'transit',
+      hasPaymentSlip: false
+    },
+    {
+      id: '14',
+      referenceNo: 'TP/002/2025',
+      submissionDate: new Date('2025-01-21'),
+      distilleryName: 'Mount Distilleries Ltd',
+      status: 'Approved',
+      brAmount: 0,
+      type: 'transit',
+      hasPaymentSlip: true
+    },
+    {
+      id: '15',
+      referenceNo: 'TP/003/2025',
+      submissionDate: new Date('2025-01-22'),
+      distilleryName: 'Darjeeling Artisan Pvt Ltd',
+      status: 'Forwarded',
+      brAmount: 0,
+      type: 'transit',
+      hasPaymentSlip: false
+    },
+    {
+      id: '16',
+      referenceNo: 'TP/004/2025',
+      submissionDate: new Date('2025-01-23'),
+      distilleryName: 'Yuksom Breweries Ltd',
+      status: 'Approved',
+      brAmount: 0,
+      type: 'transit',
+      hasPaymentSlip: true
+    },
+    {
+      id: '17',
+      referenceNo: 'TP/005/2025',
+      submissionDate: new Date('2025-01-24'),
+      distilleryName: 'Highland Breweries',
+      status: 'Pending',
+      brAmount: 0,
+      type: 'transit',
+      hasPaymentSlip: false
     }
   ];
 
@@ -352,8 +403,8 @@ export class CommissionerDashboardComponent implements OnInit {
         });
         break;
       case 'transit':
-        this.router.navigate(['/dev-transit-permit'], { 
-          queryParams: { ref: record.referenceNo } 
+        this.router.navigate(['/dev-transit-permit-letter-view'], { 
+          queryParams: { ref: record.referenceNo, source: 'commissioner-dashboard' } 
         });
         break;
       default:
@@ -389,12 +440,16 @@ export class CommissionerDashboardComponent implements OnInit {
   // Action methods for Revalidation
   viewPermit(record: PermitRecord): void {
     console.log('Viewing permit:', record.referenceNo);
-    alert(`Viewing permit for ${record.referenceNo}`);
+    this.router.navigate(['/dev-revalidation-letter-view'], { 
+      queryParams: { ref: record.referenceNo } 
+    });
   }
 
   viewRevalidationApplication(record: PermitRecord): void {
     console.log('Viewing revalidation application:', record.referenceNo);
-    alert(`Viewing revalidation application for ${record.referenceNo}`);
+    this.router.navigate(['/dev-revalidation-letter-view'], { 
+      queryParams: { ref: record.referenceNo } 
+    });
   }
 
   approveRevalidation(record: PermitRecord): void {
@@ -406,7 +461,9 @@ export class CommissionerDashboardComponent implements OnInit {
   // Action methods for Cancellation
   viewApprovalCancellation(record: PermitRecord): void {
     console.log('Viewing approval cancellation:', record.referenceNo);
-    alert(`Viewing approval cancellation for ${record.referenceNo}`);
+    this.router.navigate(['/dev-cancellation-letter-view'], { 
+      queryParams: { ref: record.referenceNo } 
+    });
   }
 
   viewCancellationBR(record: PermitRecord): void {

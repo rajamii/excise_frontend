@@ -1,0 +1,153 @@
+<div class="revalidation-letter-view">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Back to Commissioner Dashboard
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">Revalidation Application View</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Letter Content -->
+  <div class="letter-container">
+    @if (revalidationData) {
+    <div id="revalidationPrintSection" class="card shadow-sm border-0 printable-content">
+      <div class="letter-header text-center fw-bold mb-3 fs-5">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
+          <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
+        </div>
+      </div>
+      <div class="letter-content p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div><strong>Ref No:</strong> <span class="fw-bold">{{ revalidationData.referenceNo }}</span></div>
+          <div><strong>Date:</strong> <span class="fw-bold">{{ revalidationData.submissionDate | date:'dd-MM-yyyy' }}</span></div>
+        </div>
+
+        <p class="mb-1"><strong>To,</strong><br>
+          The Commissioner<br>
+          Excise (Abk) Department<br>
+          Government of Sikkim, Gangtok
+        </p>
+
+        <p class="mb-2"><strong>Sub:</strong> Application for Revalidation of Import Permit</p>
+
+        <div class="revalidation-details mb-3">
+          <p class="mb-2">
+            <strong>Subject:</strong> Request for revalidation of Import Permit 
+            <span class="fw-bold">{{ revalidationData.originalPermitNo }}</span> dated 
+            <span class="fw-bold">{{ revalidationData.originalPermitDate | date:'dd-MM-yyyy' }}</span>
+          </p>
+
+          <p class="mb-2">
+            We respectfully request the revalidation of our import permit 
+            <span class="fw-bold">{{ revalidationData.originalPermitNo }}</span> 
+            for the following reasons:
+          </p>
+
+          <div class="reason-box mb-3">
+            <p class="mb-1"><strong>Reason for Revalidation:</strong></p>
+            <p class="mb-0 ps-3">{{ revalidationData.reasonForRevalidation }}</p>
+          </div>
+        </div>
+
+        <div class="table-responsive mb-3">
+          <table class="table table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th colspan="2" class="text-center">REVALIDATION DETAILS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Revalidation Reference</strong></td>
+                <td>{{ revalidationData.referenceNo }}</td>
+              </tr>
+              <tr>
+                <td><strong>Distillery Name</strong></td>
+                <td>{{ revalidationData.distilleryName }}</td>
+              </tr>
+              <tr>
+                <td><strong>Original Permit No</strong></td>
+                <td>{{ revalidationData.originalPermitNo }}</td>
+              </tr>
+              <tr>
+                <td><strong>Original Permit Date</strong></td>
+                <td>{{ revalidationData.originalPermitDate | date:'dd-MM-yyyy' }}</td>
+              </tr>
+              <tr>
+                <td><strong>Current Expiry Date</strong></td>
+                <td>{{ revalidationData.expiryDate | date:'dd-MM-yyyy' }}</td>
+              </tr>
+              <tr>
+                <td><strong>Reason for Revalidation</strong></td>
+                <td>{{ revalidationData.reasonForRevalidation }}</td>
+              </tr>
+              @if (revalidationData.newQuantity) {
+              <tr>
+                <td><strong>New Quantity Requested</strong></td>
+                <td>{{ revalidationData.newQuantity }} BL</td>
+              </tr>
+              }
+              @if (revalidationData.newPurpose) {
+              <tr>
+                <td><strong>New Purpose</strong></td>
+                <td>{{ revalidationData.newPurpose }}</td>
+              </tr>
+              }
+              <tr>
+                <td><strong>Revalidation Fee</strong></td>
+                <td><strong>₹{{ revalidationData.revalidationAmount | number:'1.2-2' }}</strong></td>
+              </tr>
+              <tr>
+                <td><strong>Status</strong></td>
+                <td>
+                  <span [class]="getStatusBadgeClass(revalidationData.status)">
+                    {{ revalidationData.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="declaration-section mb-3">
+          <h6 class="fw-bold mb-2">DECLARATION:</h6>
+          <p class="mb-1">We hereby declare that:</p>
+          <ul class="mb-0">
+            <li>The information provided above is true and correct to the best of our knowledge</li>
+            <li>We understand that any false information may lead to cancellation of the permit</li>
+            <li>We agree to comply with all terms and conditions of the revalidated permit</li>
+            <li>We will pay the required revalidation fee as per department norms</li>
+          </ul>
+        </div>
+
+        <div class="mt-4">
+          <p>We request your kind consideration and approval for the revalidation of our import permit.</p>
+          <div style="height: 50px"></div>
+          <p class="mb-0">For {{ revalidationData.distilleryName }}</p>
+          <div style="height: 30px"></div>
+          <p class="mb-0">(Authorized Signatory)</p>
+        </div>
+
+        <div class="no-print d-flex justify-content-center mt-4">
+          <button class="btn btn-primary" (click)="printLetter()">
+            <i class="bi bi-printer me-1"></i>Print Application
+          </button>
+        </div>
+      </div>
+    </div>
+    } @else {
+    <div class="alert alert-warning text-center">
+      <h4>No Data Found</h4>
+      <p>The requested revalidation application could not be found.</p>
+      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
+    </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,130 @@
+<div class="transit-permit-letter-view">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Back to Commissioner Dashboard
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">Transit Permit Application View</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Letter Content -->
+  <div class="letter-container">
+    @if (transitPermitData) {
+    <div id="transitPermitPrintSection" class="letter-document printable-content">
+      <!-- Top Left: Sole Distributor -->
+      <div class="sole-distributor">
+        <strong>SOLE DISTRIBUTOR:</strong> M/s {{ transitPermitData.soleDistributor }}
+      </div>
+
+      <!-- Top Right: Bill No and Date -->
+      <div class="bill-details">
+        <div class="bill-row">
+          <strong>Bill No:</strong> {{ transitPermitData.referenceNo }}
+        </div>
+        <div class="bill-row">
+          <strong>Date:</strong> {{ transitPermitData.issuedDate | date:'dd-MMM-yyyy' }}
+        </div>
+      </div>
+
+      <!-- Recipient Information -->
+      <div class="recipient-section">
+        <div class="to-label"><strong>TO,</strong></div>
+        <div class="recipient-address">
+          <div>The Officer-in-charge</div>
+          <div>Excise (ABK) Department</div>
+          <div>Unit: {{ transitPermitData.distilleryName }}</div>
+          <div>{{ transitPermitData.unitLocation }}</div>
+        </div>
+      </div>
+
+      <!-- Subject Line -->
+      <div class="subject-section">
+        <strong>Sub:</strong> TRANSIT PERMIT
+      </div>
+
+      <!-- Salutation -->
+      <div class="salutation">
+        Dear Sir,
+      </div>
+
+      <!-- Body Content -->
+      <div class="body-content">
+        We would be ever grateful if you could kindly issue Transit permit to the following brands of liquor for our sales depot at {{ transitPermitData.salesDepotLocation }}.
+      </div>
+
+      <!-- Goods Details Table -->
+      <div class="goods-table-section">
+        <table class="goods-table">
+          <thead>
+            <tr>
+              <th>S.No.</th>
+              <th>Brand Name</th>
+              <th>Quantity</th>
+              <th>Unit</th>
+              <th>From</th>
+              <th>To</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>{{ transitPermitData.brandName }}</td>
+              <td>{{ transitPermitData.quantity }}</td>
+              <td>{{ transitPermitData.unit }}</td>
+              <td>{{ transitPermitData.fromLocation }}</td>
+              <td>{{ transitPermitData.toLocation }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Additional Details -->
+      <div class="additional-details">
+        <div class="detail-row">
+          <strong>Vehicle Number:</strong> {{ transitPermitData.vehicleNumber }}
+        </div>
+        <div class="detail-row">
+          <strong>Driver Name:</strong> {{ transitPermitData.driverName }}
+        </div>
+        <div class="detail-row">
+          <strong>Driver License:</strong> {{ transitPermitData.driverLicense }}
+        </div>
+        <div class="detail-row">
+          <strong>Route:</strong> {{ transitPermitData.routeDetails }}
+        </div>
+      </div>
+
+      <!-- Thank you message -->
+      <div class="thank-you">
+        Thanking you in anticipation.
+      </div>
+
+      <!-- Signatory -->
+      <div class="signatory-section">
+        <div class="signatory-right">
+          <strong>Authorised Signatory</strong>
+        </div>
+      </div>
+
+      <!-- Print Button -->
+      <div class="no-print print-button-section">
+        <button class="btn btn-primary" (click)="printLetter()">
+          <i class="bi bi-printer me-1"></i>Print Application
+        </button>
+      </div>
+    </div>
+    } @else {
+    <div class="alert alert-warning text-center">
+      <h4>No Data Found</h4>
+      <p>The requested transit permit application could not be found.</p>
+      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
+    </div>
+    }
+  </div>
+</div>
