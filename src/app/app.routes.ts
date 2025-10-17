@@ -10,6 +10,10 @@ import { PageNotFoundComponent } from './shared/components/page-not-found/page-n
 export const routes: Routes = [
   // Landing layout with nested children
   {
+    path: 'dev-permit-section-requisition-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-requisition-view/permit-section-requisition-view.component').then(m => m.PermitSectionRequisitionViewComponent)
+  },
+  {
     path: '',
     children: [
       {

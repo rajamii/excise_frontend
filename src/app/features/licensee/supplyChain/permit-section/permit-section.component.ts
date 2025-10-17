@@ -165,7 +165,7 @@ export class PermitSectionComponent implements OnInit {
     // Navigate based on permit type
     switch (permit.type) {
       case 'requisition':
-        this.router.navigate(['/dev-import-permit'], { 
+        this.router.navigate(['/dev-permit-section-requisition-letter-view'], { 
           queryParams: { ref: permit.referenceNo } 
         });
         break;

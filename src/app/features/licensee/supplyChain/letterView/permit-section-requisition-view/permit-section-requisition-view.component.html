@@ -1,0 +1,64 @@
+<div class="permit-section-requisition-letter-view">
+  <div class="header-section">
+    <div class="header-content d-flex justify-content-between align-items-center">
+      <button class="btn btn-outline-secondary" (click)="goBack()">
+        <i class="bi bi-arrow-left me-1"></i>Back to Permit Section
+      </button>
+      <h1 class="page-title m-0">Requisition Letter View</h1>
+    </div>
+  </div>
+
+  <div class="letter-container mt-3">
+    @if (requisitionData) {
+    <div id="permitSectionRequisitionPrint" class="card shadow-sm border-0 printable-content p-4">
+      <div class="letter-header text-center fw-bold mb-3 fs-5">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
+          <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
+        </div>
+      </div>
+
+      <div class="letter-content">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div><strong>Ref No:</strong> <span class="fw-bold">{{ requisitionData.referenceNo }}</span></div>
+          <div><strong>Date:</strong> <span class="fw-bold">{{ requisitionData.submissionDate | date:'dd-MM-yyyy' }}</span></div>
+        </div>
+
+        <p class="mb-2"><strong>Sub:</strong>
+          <span class="fw-bold">{{ requisitionData.numberOfPermits || 0 }}</span>
+          import permits of <strong>{{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}</strong>
+          for <span class="fw-bold">{{ requisitionData.quantity || 0 }}</span> x
+          <span class="fw-bold">{{ requisitionData.numberOfPermits || 0 }}</span>
+          = <span class="fw-bold">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }}</span> BL.
+        </p>
+
+        <p class="mb-2">
+          We request the issuance of <span class="fw-bold">{{ requisitionData.numberOfPermits || 0 }}</span>
+          import permits for <span class="fw-bold">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }}</span> BL
+          {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}, having strength of
+          <span class="fw-bold">{{ requisitionData.strengthFrom || '°' }}</span>° to
+          <span class="fw-bold">{{ requisitionData.strengthTo || '°' }}</span>°, to be lifted from
+          <span class="fw-bold">{{ requisitionData.liftedFrom }}</span>
+        </p>
+
+        <p class="mb-2">
+          {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }} shall be conveyed in destination via route:
+          <span class="fw-bold">{{ requisitionData.viaRoute }}</span>
+        </p>
+
+        <div class="mt-4">
+          <p>Thanking You</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="no-print d-flex justify-content-center mt-4">
+      <button class="btn btn-primary" (click)="printLetter()">
+        <i class="bi bi-printer me-1"></i>Print Letter
+      </button>
+    </div>
+    } @else {
+      <div class="alert alert-warning">No data found</div>
+    }
+  </div>
+</div>
