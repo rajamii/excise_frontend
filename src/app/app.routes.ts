@@ -22,6 +22,10 @@ export const routes: Routes = [
     loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-cancellation-view/permit-section-cancellation-view.component').then(m => m.PermitSectionCancellationViewComponent)
   },
   {
+    path: 'dev-permit-section-transit-letter-view',
+    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-transit-view/permit-section-transit-view.component').then(m => m.PermitSectionTransitViewComponent)
+  },
+  {
     path: '',
     children: [
       {

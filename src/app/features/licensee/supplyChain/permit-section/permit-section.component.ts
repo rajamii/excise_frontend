@@ -175,7 +175,7 @@ export class PermitSectionComponent implements OnInit {
         });
         break;
       case 'transit':
-        this.router.navigate(['/dev-transit-permit'], { 
+        this.router.navigate(['/dev-permit-section-transit-letter-view'], { 
           queryParams: { ref: permit.referenceNo } 
         });
         break;

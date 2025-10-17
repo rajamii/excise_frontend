@@ -1,0 +1,10 @@
+.permit-section-transit-letter-view {
+  .page-title { font-size: 1.25rem; }
+  .bg-soft-yellow { background: #fff6bf; }
+  .printable-content { background: #fff6bf; }
+  @media print {
+    .no-print { display: none !important; }
+  }
+}
+
+
