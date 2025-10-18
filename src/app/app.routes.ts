@@ -128,6 +128,10 @@ export const routes: Routes = [
     path: 'dev-officer-in-charge',
     loadComponent: () => import('./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component').then(m => m.OfficerInChargeComponent)
   },
+  {
+    path: 'dev-itcell',
+    loadComponent: () => import('./features/licensee/supplyChain/itcell/itcell.component').then(m => m.ITCELLComponent)
+  },
 
   // Role Protected modules
   {
