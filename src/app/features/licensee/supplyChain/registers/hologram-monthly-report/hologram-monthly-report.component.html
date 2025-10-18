@@ -16,8 +16,8 @@
       <div class="p-3">
         <h6 class="text-muted mb-3">Quick Actions</h6>
         <div class="d-grid gap-2">
-          <button class="btn btn-primary btn-sm" (click)="generateReport()">
-            <i class="bi bi-plus-circle me-1"></i>Generate New Report
+          <button class="btn btn-primary btn-sm" (click)="addNewRow()">
+            <i class="bi bi-plus-circle me-1"></i>Add New Row
           </button>
           <button class="btn btn-outline-secondary btn-sm" (click)="goBack()">
             <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
@@ -44,13 +44,13 @@
               </button>
             </div>
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold">Hologram Monthly Report</h1>
-              <p class="mb-0 small opacity-75">Monthly hologram requisition reports and analytics</p>
+              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit</h1>
+              <p class="mb-0 small opacity-75">Period: 2025-26 | M/s Yuksom Breweries Ltd. | Melli South Sikkim | Types of Hologram: LOCAL</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm" (click)="generateReport()">
-                  <i class="bi bi-plus-circle me-1"></i>Generate Report
+                <button class="btn btn-success btn-sm" (click)="addNewRow()">
+                  <i class="bi bi-plus-circle me-1"></i>Add Row
                 </button>
                 <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
                   <i class="bi bi-arrow-left me-1"></i>Back
@@ -65,23 +65,30 @@
       <div class="bg-white border-bottom">
         <div class="container-fluid py-3">
           <div class="row align-items-center g-3">
+            <!-- Date Filter -->
+            <div class="col-auto">
+              <label class="form-label small mb-1">Date</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="selectedDate" 
+                placeholder="e.g. Jul-25">
+            </div>
+
             <!-- Month Dropdown -->
             <div class="col-auto">
               <label class="form-label small mb-1">Month</label>
               <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
                 <option value="">All Months</option>
-                <option value="january">January</option>
-                <option value="february">February</option>
-                <option value="march">March</option>
-                <option value="april">April</option>
+                <option value="jan">Jan</option>
+                <option value="feb">Feb</option>
+                <option value="mar">Mar</option>
+                <option value="apr">Apr</option>
                 <option value="may">May</option>
-                <option value="june">June</option>
-                <option value="july">July</option>
-                <option value="august">August</option>
-                <option value="september">September</option>
-                <option value="october">October</option>
-                <option value="november">November</option>
-                <option value="december">December</option>
+                <option value="jun">Jun</option>
+                <option value="jul">Jul</option>
+                <option value="aug">Aug</option>
+                <option value="sep">Sep</option>
+                <option value="oct">Oct</option>
+                <option value="nov">Nov</option>
+                <option value="dec">Dec</option>
               </select>
             </div>
 
@@ -93,24 +100,6 @@
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
                 <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <!-- Company Filter -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Company</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="selectedCompany" 
-                placeholder="Search company...">
-            </div>
-
-            <!-- Status Filter -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Status</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
-                <option value="">All Status</option>
-                <option value="generated">Generated</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
               </select>
             </div>
 
@@ -134,74 +123,141 @@
       <div class="bg-white">
         <div class="container-fluid p-3">
           <div class="table-responsive">
-            <table class="table table-hover table-bordered">
+            <table class="table table-bordered table-hover">
               <thead class="table-success">
                 <tr>
-                  <th scope="col">Month/Year</th>
-                  <th scope="col">Company</th>
-                  <th scope="col">Local Qty (Lakh)</th>
-                  <th scope="col">Export Qty (Lakh)</th>
-                  <th scope="col">Defence Qty (Lakh)</th>
-                  <th scope="col">Total Qty (Lakh)</th>
-                  <th scope="col">Total Fee (₹)</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Generated Date</th>
-                  <th scope="col">Actions</th>
+                  <th rowspan="2" class="text-center align-middle">Date</th>
+                  <th rowspan="2" class="text-center align-middle">Opening Stock of Hologram with Manufacturing Unit</th>
+                  <th rowspan="2" class="text-center align-middle">Fresh Arrival of Hologram from Officer-in-charge</th>
+                  <th rowspan="2" class="text-center align-middle">Total</th>
+                  <th colspan="3" class="text-center">Hologram utilised during production</th>
+                  <th colspan="3" class="text-center">Wastage of Hologram</th>
+                  <th rowspan="2" class="text-center align-middle">No. Of wastage Hologramme</th>
+                  <th rowspan="2" class="text-center align-middle">Closing Balance</th>
+                  <th rowspan="2" class="text-center align-middle">Actions</th>
+                </tr>
+                <tr>
+                  <th class="text-center">From Serial No & EX-Series No</th>
+                  <th class="text-center">To Serial No & EX-Series No</th>
+                  <th class="text-center">No. Of Hologramme Utilize during production</th>
+                  <th class="text-center">From Serial No & EX-Series No</th>
+                  <th class="text-center">To Serial No & EX-Series No</th>
+                  <th class="text-center">No. Of wastage Hologramme</th>
                 </tr>
               </thead>
               <tbody>
-                @for (report of getPagedReports(); track report.id) {
-                <tr>
-                  <td>
-                    <div class="fw-bold">{{ report.month }} {{ report.year }}</div>
+                @for (row of getPagedRows(); track row.id) {
+                <tr [class.table-warning]="!row.isFixed">
+                  <td class="fw-bold text-center">{{ row.date }}</td>
+                  <td class="text-end">{{ row.openingStock | number }}</td>
+                  <td class="text-end">{{ row.freshArrival | number }}</td>
+                  <td class="text-end fw-bold">{{ row.total | number }}</td>
+                  
+                  <!-- Utilization Details -->
+                  <td colspan="3">
+                    <div class="utilization-details">
+                      @for (util of row.utilizations; track $index) {
+                      <div class="d-flex justify-content-between align-items-center mb-1 small">
+                        <span>{{ util.fromSerialNo }} - {{ util.toSerialNo }}</span>
+                        <span class="fw-bold">{{ util.quantity | number }}</span>
+                      </div>
+                      }
+                      <div class="border-top pt-1 mt-1">
+                        <strong>Total: {{ row.totalUtilized | number }}</strong>
+                      </div>
+                    </div>
                   </td>
-                  <td>{{ report.companyName }}</td>
-                  <td class="text-end">{{ report.totalLocalQty | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ report.totalExportQty | number:'1.2-2' }}</td>
-                  <td class="text-end">{{ report.totalDefenceQty | number:'1.2-2' }}</td>
-                  <td class="text-end fw-bold text-primary">{{ report.totalQuantity | number:'1.2-2' }}</td>
-                  <td class="text-end fw-bold text-success">₹{{ report.totalHologramFee | number:'1.2-2' }}</td>
-                  <td>
-                    <span [class]="getStatusClass(report.status)">{{ report.status }}</span>
+                  
+                  <!-- Wastage Details -->
+                  <td colspan="3">
+                    <div class="wastage-details">
+                      @for (waste of row.wastages; track $index) {
+                      <div class="d-flex justify-content-between align-items-center mb-1 small">
+                        <span>{{ waste.fromSerialNo }} - {{ waste.toSerialNo }}</span>
+                        <span class="fw-bold">{{ waste.quantity | number }}</span>
+                      </div>
+                      }
+                      <div class="border-top pt-1 mt-1">
+                        <strong>Total: {{ row.totalWastage | number }}</strong>
+                      </div>
+                    </div>
                   </td>
-                  <td>{{ report.generatedDate | date:'dd-MMM-yyyy' }}</td>
+                  
+                  <td class="text-end fw-bold">{{ row.totalWastage | number }}</td>
+                  <td class="text-end fw-bold text-primary">{{ row.closingBalance | number }}</td>
                   <td>
                     <div class="d-flex gap-1 flex-wrap">
-                      <button class="btn btn-primary btn-sm" (click)="viewReport(report)" title="View Report">
-                        <i class="bi bi-eye"></i>
-                      </button>
-                      <button class="btn btn-success btn-sm" (click)="downloadReport(report)" title="Download">
-                        <i class="bi bi-download"></i>
-                      </button>
-                      <button class="btn btn-warning btn-sm" (click)="editReport(report)" title="Edit" 
-                        *ngIf="report.status === 'Draft'">
+                      <button class="btn btn-warning btn-sm" (click)="editRow(row)" 
+                        [disabled]="row.isFixed" title="Edit" *ngIf="!row.isFixed">
                         <i class="bi bi-pencil"></i>
                       </button>
-                      <button class="btn btn-danger btn-sm" (click)="deleteReport(report)" title="Delete"
-                        *ngIf="report.status === 'Draft'">
+                      <button class="btn btn-danger btn-sm" (click)="deleteRow(row)" 
+                        [disabled]="row.isFixed" title="Delete" *ngIf="!row.isFixed">
                         <i class="bi bi-trash"></i>
                       </button>
+                      <span [class]="getStatusClass(row.isFixed)" *ngIf="row.isFixed">
+                        {{ row.isFixed ? 'Fixed' : 'Draft' }}
+                      </span>
                     </div>
                   </td>
                 </tr>
-                }
-                @empty {
+                } @empty {
                   <tr>
-                    <td colspan="10" class="text-center text-muted py-4">
+                    <td colspan="12" class="text-center text-muted py-4">
                       <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                      No monthly reports found. Generate a new report to get started.
+                      No hologram data found. Add a new row to get started.
                     </td>
                   </tr>
+                }
+                
+                <!-- Grand Total Row -->
+                @if (filteredRows.length > 0) {
+                <tr class="table-info fw-bold">
+                  <td class="text-center">Grand Total</td>
+                  <td class="text-end">{{ calculateGrandTotals().totalOpening | number }}</td>
+                  <td class="text-end">{{ calculateGrandTotals().totalFreshArrival | number }}</td>
+                  <td class="text-end">{{ calculateGrandTotals().totalTotal | number }}</td>
+                  <td colspan="3" class="text-center">{{ calculateGrandTotals().totalUtilized | number }}</td>
+                  <td colspan="3" class="text-center">{{ calculateGrandTotals().totalWastage | number }}</td>
+                  <td class="text-end">{{ calculateGrandTotals().totalWastage | number }}</td>
+                  <td class="text-end">{{ calculateGrandTotals().totalClosing | number }}</td>
+                  <td></td>
+                </tr>
                 }
               </tbody>
             </table>
 
+            <!-- Production Summary -->
+            @if (filteredRows.length > 0) {
+            <div class="mt-4">
+              <h6 class="fw-bold mb-3">Production Summary</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="card border-primary">
+                    <div class="card-body">
+                      <h6 class="card-title">Production Details</h6>
+                      <div class="d-flex justify-content-between">
+                        <span>Production:- {{ calculateProductionTotals().totalSikkim | number }} C/s. 650 ml. Sikkim,</span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span>{{ calculateProductionTotals().totalWB | number }} C/S. for W/B.</span>
+                      </div>
+                      <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <strong>Total: - {{ calculateProductionTotals().grandTotal | number }} C/S Production</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            }
+
             <!-- Pagination -->
-            <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredReports.length > 0">
+            <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredRows.length > 0">
               <div class="small text-muted">
                 Showing {{ (currentPage - 1) * pageSize + 1 }}-
-                {{ Math.min(currentPage * pageSize, filteredReports.length) }}
-                of {{ filteredReports.length }} reports
+                {{ Math.min(currentPage * pageSize, filteredRows.length) }}
+                of {{ filteredRows.length }} rows
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
@@ -225,4 +281,170 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- Add/Edit Row Modal -->
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.5);" *ngIf="showAddRowForm">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-plus-circle me-2"></i>
+          {{ editingRow ? 'Edit Row' : 'Add New Row' }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="cancelEdit()"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="row mb-3">
+            <div class="col-md-3">
+              <label class="form-label">Date</label>
+              <input type="text" class="form-control" [(ngModel)]="currentRowDate" 
+                name="date" placeholder="e.g. Jul-25" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Opening Stock</label>
+              <input type="number" class="form-control" [(ngModel)]="currentRowOpeningStock" 
+                name="openingStock">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Fresh Arrival</label>
+              <input type="number" class="form-control" [(ngModel)]="currentRowFreshArrival" 
+                name="freshArrival">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Total (Auto-calculated)</label>
+              <input type="number" class="form-control" [value]="currentRow?.total" readonly>
+            </div>
+          </div>
+
+          <!-- Utilization Section -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Hologram Utilized During Production</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="addUtilization()">
+                <i class="bi bi-plus"></i> Add Utilization
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>From Serial No</th>
+                    <th>To Serial No</th>
+                    <th>Quantity</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (util of currentRow?.utilizations; track $index) {
+                  <tr>
+                    <td><input type="text" class="form-control form-control-sm" [(ngModel)]="util.fromSerialNo" name="utilFrom{{$index}}"></td>
+                    <td><input type="text" class="form-control form-control-sm" [(ngModel)]="util.toSerialNo" name="utilTo{{$index}}"></td>
+                    <td><input type="number" class="form-control form-control-sm" [(ngModel)]="util.quantity" name="utilQty{{$index}}" (ngModelChange)="saveRow()"></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" (click)="removeUtilization($index)"><i class="bi bi-trash"></i></button></td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Wastage Section -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">Wastage of Hologram</h6>
+              <button type="button" class="btn btn-sm btn-outline-primary" (click)="addWastage()">
+                <i class="bi bi-plus"></i> Add Wastage
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>From Serial No</th>
+                    <th>To Serial No</th>
+                    <th>Quantity</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (waste of currentRow?.wastages; track $index) {
+                  <tr>
+                    <td><input type="text" class="form-control form-control-sm" [(ngModel)]="waste.fromSerialNo" name="wasteFrom{{$index}}"></td>
+                    <td><input type="text" class="form-control form-control-sm" [(ngModel)]="waste.toSerialNo" name="wasteTo{{$index}}"></td>
+                    <td><input type="number" class="form-control form-control-sm" [(ngModel)]="waste.quantity" name="wasteQty{{$index}}" (ngModelChange)="saveRow()"></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" (click)="removeWastage($index)"><i class="bi bi-trash"></i></button></td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Production Section -->
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Production - Sikkim 650ml (C/S)</label>
+              <input type="number" class="form-control" [(ngModel)]="currentRowProductionSikkim" 
+                name="sikkim650ml">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Production - W/B (C/S)</label>
+              <input type="number" class="form-control" [(ngModel)]="currentRowProductionWB" 
+                name="wb">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Total Production (Auto-calculated)</label>
+              <input type="number" class="form-control" [value]="currentRow?.production?.total" readonly>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div class="row">
+            <div class="col-md-3">
+              <div class="card border-info">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Total Utilized</h6>
+                  <h4 class="text-info">{{ currentRow?.totalUtilized | number }}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-warning">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Total Wastage</h6>
+                  <h4 class="text-warning">{{ currentRow?.totalWastage | number }}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-success">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Closing Balance</h6>
+                  <h4 class="text-success">{{ currentRow?.closingBalance | number }}</h4>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-primary">
+                <div class="card-body text-center">
+                  <h6 class="card-title">Formula</h6>
+                  <small class="text-muted">Closing = Total - (Used + Wastage)</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="cancelEdit()">
+          <i class="bi bi-x-circle me-1"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-success" (click)="saveRow()">
+          <i class="bi bi-check-circle me-1"></i>Save Row
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
