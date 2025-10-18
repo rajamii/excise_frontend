@@ -1,1 +1,321 @@
-<p>itcell works!</p>
+<div class="dashboard-layout">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <h1 class="dashboard-title">IT Cell Dashboard</h1>
+      </div>
+      <div class="right-section">
+        <button class="btn btn-success btn-sm distillery-btn">IT Cell</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-container">
+      <div class="filter-group">
+        <label class="filter-label">Select Date</label>
+        <input type="date" class="form-control filter-input" [(ngModel)]="selectedDate" (ngModelChange)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Month</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
+          <option value="">All Months</option>
+          <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Year</label>
+        <select class="form-select filter-input" [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
+          <option value="">All Years</option>
+          <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select class="form-select filter-input" [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
+          <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Company</label>
+        <input type="text" class="form-control filter-input" [(ngModel)]="companyFilter" (ngModelChange)="applyFilters()" placeholder="Search company...">
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-primary search-btn icon-button" title="Search" (click)="applyFilters()">
+          <i class="bi bi-search"></i>
+        </button>
+        <button class="btn btn-outline-secondary clear-btn icon-button" title="Clear" (click)="clearFilters()">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="tabs-section">
+    <div class="tabs-container">
+      <button class="tab-button" [class.active]="selectedTabIndex === 0" (click)="selectedTabIndex = 0">
+        <i class="bi bi-table me-2"></i>HOLOGRAM MANAGEMENT
+      </button>
+      <button class="tab-button" [class.active]="selectedTabIndex === 1" (click)="selectedTabIndex = 1">
+        <i class="bi bi-diagram-3 me-2"></i>PROCESS FLOW
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-content">
+    <!-- Hologram Management Tab -->
+    <div *ngIf="selectedTabIndex === 0" class="table-section">
+      <div class="table-header">
+        <span class="record-count">{{ filteredHologramData.length }} records found</span>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead class="color1">
+            <tr>
+              <th>Ref. No</th>
+              <th>Date</th>
+              <th>Company</th>
+              <th>Total Qty (Lakh)</th>
+              <th>Status</th>
+              <th>Upload File</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hologram of filteredHologramData">
+              <td class="ref-no">{{ hologram.refNo }}</td>
+              <td>{{ hologram.date | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ hologram.companyName }}</td>
+              <td class="total-qty-cell">
+                <div class="total-qty-display">
+                  <span class="total-qty-number">{{ getTotalHolograms(hologram) }}</span>
+                  <button class="btn btn-outline-primary btn-sm ms-2" (click)="viewHologramDetails(hologram)">
+                    <i class="bi bi-eye me-1"></i>View Details
+                  </button>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge">{{ hologram.status }}</span>
+              </td>
+              <td class="upload-cell">
+                <div *ngIf="hologram.status === 'Draft' || hologram.status === 'Submitted'">
+                  <input type="file" 
+                         #fileInput 
+                         [id]="'file-' + hologram.refNo"
+                         (change)="onFileSelected($event, hologram)"
+                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                         style="display: none;">
+                  <button class="btn btn-outline-primary btn-sm" (click)="fileInput.click()">
+                    <i class="bi bi-cloud-upload me-1"></i>Upload
+                  </button>
+                  <div *ngIf="hologram.uploadedFile" class="uploaded-file">
+                    <i class="bi bi-file-text text-success"></i>
+                    <span class="file-name">{{ hologram.uploadedFile.name }}</span>
+                    <button class="btn btn-sm btn-outline-danger ms-1" (click)="removeFile(hologram)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+                <div *ngIf="hologram.status === 'Under Review' || hologram.status === 'Approved'" class="uploaded-file">
+                  <i class="bi bi-file-text text-success"></i>
+                  <span class="file-name">{{ hologram.uploadedFile?.name || 'File uploaded' }}</span>
+                </div>
+              </td>
+              <td class="actions">
+                <button class="btn btn-primary btn-sm me-1" 
+                        (click)="updateHologramStatus(hologram, 'Under Review')" 
+                        [disabled]="hologram.status === 'Under Review' || hologram.status === 'Approved' || !hologram.uploadedFile">
+                  FORWARD
+                </button>
+                <button class="btn btn-warning btn-sm" 
+                        (click)="updateHologramStatus(hologram, 'Approved')" 
+                        [disabled]="hologram.status === 'Approved'">
+                  APPROVE
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredHologramData.length === 0">
+              <td colspan="7" class="empty-state">
+                <p>No records found for the selected criteria</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Process Flow Tab -->
+    <div *ngIf="selectedTabIndex === 1" class="process-flow-section">
+      <div class="process-flow-container">
+        <div class="flow-header">
+          <h4>IT Cell Process Flow</h4>
+          <p>Document processing workflow</p>
+        </div>
+
+        <div class="process-flow">
+          <div class="flow-step">
+            <div class="step-icon">
+              <i class="bi bi-upload"></i>
+            </div>
+            <div class="step-content">
+              <h5>1. Document Upload</h5>
+              <p>Files are uploaded to the IT Cell system</p>
+            </div>
+          </div>
+          
+          <div class="flow-arrow">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+          
+          <div class="flow-step">
+            <div class="step-icon">
+              <i class="bi bi-laptop"></i>
+            </div>
+            <div class="step-content">
+              <h5>2. IT Cell Processing</h5>
+              <p>IT Cell puts up the file and forwards it for processing</p>
+            </div>
+          </div>
+          
+          <div class="flow-arrow">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+          
+          <div class="flow-step">
+            <div class="step-icon">
+              <i class="bi bi-send"></i>
+            </div>
+            <div class="step-content">
+              <h5>3. Forward for Review</h5>
+              <p>Files are forwarded to the appropriate authority for review</p>
+            </div>
+          </div>
+          
+          <div class="flow-arrow">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+          
+          <div class="flow-step">
+            <div class="step-icon">
+              <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="step-content">
+              <h5>4. Final Processing</h5>
+              <p>Documents are processed and approved by the concerned authority</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hologram Details Modal -->
+  <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);" *ngIf="showHologramModal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-primary text-white">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-eye me-2"></i>
+            <h5 class="modal-title mb-0">Hologram Request Details</h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="closeHologramDetails()"></button>
+        </div>
+        <div class="modal-body bg-light">
+          <div class="mb-3">
+            <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo }}</span>
+            <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date | date:'dd-MMM-yyyy' }}</span>
+            <span class="badge bg-success-subtle text-success">{{ selectedHologram?.companyName }}</span>
+          </div>
+          
+          <!-- Quantity Breakdown Table -->
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-bordered mb-0 bg-white">
+              <thead class="table-success">
+                <tr>
+                  <th>Series</th>
+                  <th class="text-end">Quantity (Lakh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Local</td>
+                  <td class="text-end">{{ selectedHologram?.localQtyLakh || 0 }}</td>
+                </tr>
+                <tr>
+                  <td>Export</td>
+                  <td class="text-end">{{ selectedHologram?.exportQtyLakh || 0 }}</td>
+                </tr>
+                <tr>
+                  <td>Defence</td>
+                  <td class="text-end">{{ selectedHologram?.defenceQtyLakh || 0 }}</td>
+                </tr>
+                <tr class="table-light">
+                  <th>Total</th>
+                  <th class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) }}</th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Status and Review Information -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card border-0 bg-white shadow-sm">
+                <div class="card-body p-3">
+                  <h6 class="card-title text-primary mb-2">
+                    <i class="bi bi-info-circle me-1"></i>Status Information
+                  </h6>
+                  <p class="mb-1"><strong>Current Status:</strong> 
+                    <span class="badge bg-primary ms-1">{{ selectedHologram?.status }}</span>
+                  </p>
+                  <p class="mb-1"><strong>Submitted Date:</strong> {{ selectedHologram?.submittedDate || selectedHologram?.date | date:'dd-MMM-yyyy' }}</p>
+                  <p class="mb-0" *ngIf="selectedHologram?.reviewedBy">
+                    <strong>Reviewed By:</strong> {{ selectedHologram?.reviewedBy }}
+                  </p>
+                  <p class="mb-0" *ngIf="selectedHologram?.reviewedDate">
+                    <strong>Reviewed Date:</strong> {{ selectedHologram?.reviewedDate | date:'dd-MMM-yyyy' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card border-0 bg-white shadow-sm">
+                <div class="card-body p-3">
+                  <h6 class="card-title text-success mb-2">
+                    <i class="bi bi-file-earmark me-1"></i>File Information
+                  </h6>
+                  <p class="mb-1" *ngIf="selectedHologram?.uploadedFile">
+                    <strong>Uploaded File:</strong> 
+                    <span class="text-success">{{ selectedHologram?.uploadedFile?.name }}</span>
+                  </p>
+                  <p class="mb-1" *ngIf="!selectedHologram?.uploadedFile">
+                    <strong>File Status:</strong> 
+                    <span class="text-warning">No file uploaded</span>
+                  </p>
+                  <p class="mb-0" *ngIf="selectedHologram?.remarks">
+                    <strong>Remarks:</strong> {{ selectedHologram?.remarks }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeHologramDetails()">
+            <i class="bi bi-x-circle me-1"></i>Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
