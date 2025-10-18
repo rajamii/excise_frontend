@@ -10,22 +10,6 @@ import { PageNotFoundComponent } from './shared/components/page-not-found/page-n
 export const routes: Routes = [
   // Landing layout with nested children
   {
-    path: 'dev-permit-section-requisition-letter-view',
-    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-requisition-view/permit-section-requisition-view.component').then(m => m.PermitSectionRequisitionViewComponent)
-  },
-  {
-    path: 'dev-permit-section-revalidation-letter-view',
-    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-revalidation-view/permit-section-revalidation-view.component').then(m => m.PermitSectionRevalidationViewComponent)
-  },
-  {
-    path: 'dev-permit-section-cancellation-letter-view',
-    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-cancellation-view/permit-section-cancellation-view.component').then(m => m.PermitSectionCancellationViewComponent)
-  },
-  {
-    path: 'dev-permit-section-transit-letter-view',
-    loadComponent: () => import('./features/licensee/supplyChain/letterView/permit-section-transit-view/permit-section-transit-view.component').then(m => m.PermitSectionTransitViewComponent)
-  },
-  {
     path: '',
     children: [
       {
@@ -108,7 +92,13 @@ export const routes: Routes = [
   },
   {
     path: 'app-permit-section',
-    loadComponent: () => import('./features/licensee/supplyChain/permit-section/permit-section.component').then(m => m.PermitSectionComponent)
+    loadComponent: () => import('./features/licensee/supplyChain/permit-section/permit-section.component').then(m => m.PermitSectionComponent),
+    children: [
+      {
+        path: 'requisition/:ref',
+        loadComponent: () => import('./features/licensee/supplyChain/letterView/permitSectionRequisitionView/permit-section-requisition-view.component').then(m => m.PermitSectionRequisitionViewComponent)
+      }
+    ]
   },
   {
     path: 'dev-commissioner-dashboard',

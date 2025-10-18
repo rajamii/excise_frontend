@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 
 interface PermitData {
   referenceNo: string;
@@ -15,7 +15,7 @@ interface PermitData {
 @Component({
   selector: 'app-permit-section',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterOutlet],
   templateUrl: './permit-section.component.html',
   styleUrls: ['./permit-section.component.scss']
 })
@@ -27,7 +27,7 @@ export class PermitSectionComponent implements OnInit {
   selectedYear = '';
   selectedDistillery = '';
   selectedStatus = '';
-
+ 
   // Sample data matching the .NET dashboard image
   allPermits: PermitData[] = [
     {
@@ -165,27 +165,15 @@ export class PermitSectionComponent implements OnInit {
     // Navigate based on permit type
     switch (permit.type) {
       case 'requisition':
-        this.router.navigate(['/dev-permit-section-requisition-letter-view'], { 
-          queryParams: { ref: permit.referenceNo } 
-        });
-        break;
-      case 'revalidation':
-        this.router.navigate(['/dev-permit-section-revalidation-letter-view'], {
-          queryParams: { ref: permit.referenceNo }
-        });
+        this.router.navigate(['/app-permit-section/requisition', permit.referenceNo]);
         break;
       case 'transit':
-        this.router.navigate(['/dev-permit-section-transit-letter-view'], { 
+        this.router.navigate(['/dev-transit-permit'], { 
           queryParams: { ref: permit.referenceNo } 
-        });
-        break;
-      case 'cancellation':
-        this.router.navigate(['/dev-permit-section-cancellation-letter-view'], {
-          queryParams: { ref: permit.referenceNo }
         });
         break;
       default:
-        this.router.navigate(['/dev-supply-chain']);
+        this.router.navigate(['/app-permit-section']);
     }
   }
 

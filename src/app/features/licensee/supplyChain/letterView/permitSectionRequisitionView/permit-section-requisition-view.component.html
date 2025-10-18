@@ -1,0 +1,39 @@
+<div class="container p-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0">Requisition - Permit Section View</h5>
+    <button class="btn btn-outline-secondary btn-sm" (click)="backToList()">Back</button>
+  </div>
+
+  <div *ngIf="data as d; else notFound" class="card">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <div class="small text-muted">Reference No</div>
+          <div class="fw-semibold">{{ d.referenceNo }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Submission Date</div>
+          <div class="fw-semibold">{{ d.submissionDate | date: 'dd/MM/yyyy' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Distillery</div>
+          <div class="fw-semibold">{{ d.distilleryName }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Status</div>
+          <div class="fw-semibold">{{ d.status }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="small text-muted">Imp. Pass Fee</div>
+          <div class="fw-semibold text-success">₹ {{ d.amount | number: '1.2-2' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #notFound>
+    <div class="alert alert-warning">No requisition found for the given reference.</div>
+  </ng-template>
+</div>
+
+
