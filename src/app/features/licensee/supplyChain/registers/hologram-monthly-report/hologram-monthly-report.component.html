@@ -1,0 +1,228 @@
+<div class="d-flex min-vh-100">
+  <!-- Bootstrap Sidebar Navigation -->
+  <nav class="bg-light border-end sidebar-nav" [class.sidebar-hidden]="sidebarHidden"
+    [style.width]="sidebarHidden ? '0' : '280px'">
+    <!-- Sidebar Header -->
+    <div class="p-3 border-bottom text-black" style="background-color:#D1E7DD;">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-building me-2"></i>
+        Distillery Management 
+      </h5>
+    </div>
+
+    <!-- Sidebar Content -->
+    <div class="p-0">
+      <!-- Quick Navigation -->
+      <div class="p-3">
+        <h6 class="text-muted mb-3">Quick Actions</h6>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary btn-sm" (click)="generateReport()">
+            <i class="bi bi-plus-circle me-1"></i>Generate New Report
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="goBack()">
+            <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow-1 bg-light">
+    <div class="container-fluid p-0">
+      <!-- Header Section -->
+      <div class="header-section text-black">
+        <div class="container-fluid">
+          <div class="row align-items-center py-3">
+            <div class="col-auto">
+              <!-- Circular Hamburger Menu Button -->
+              <button class="hamburger-btn me-3" (click)="toggleSidebar()" title="Toggle Sidebar"
+                [class.active]="!sidebarHidden">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+              </button>
+            </div>
+            <div class="col">
+              <h1 class="h3 mb-1 fw-bold">Hologram Monthly Report</h1>
+              <p class="mb-0 small opacity-75">Monthly hologram requisition reports and analytics</p>
+            </div>
+            <div class="col-auto">
+              <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" (click)="generateReport()">
+                  <i class="bi bi-plus-circle me-1"></i>Generate Report
+                </button>
+                <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
+                  <i class="bi bi-arrow-left me-1"></i>Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Section -->
+      <div class="bg-white border-bottom">
+        <div class="container-fluid py-3">
+          <div class="row align-items-center g-3">
+            <!-- Month Dropdown -->
+            <div class="col-auto">
+              <label class="form-label small mb-1">Month</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
+                <option value="">All Months</option>
+                <option value="january">January</option>
+                <option value="february">February</option>
+                <option value="march">March</option>
+                <option value="april">April</option>
+                <option value="may">May</option>
+                <option value="june">June</option>
+                <option value="july">July</option>
+                <option value="august">August</option>
+                <option value="september">September</option>
+                <option value="october">October</option>
+                <option value="november">November</option>
+                <option value="december">December</option>
+              </select>
+            </div>
+
+            <!-- Year Dropdown -->
+            <div class="col-auto">
+              <label class="form-label small mb-1">Year</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedYear">
+                <option value="">All Years</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+
+            <!-- Company Filter -->
+            <div class="col-auto">
+              <label class="form-label small mb-1">Company</label>
+              <input type="text" class="form-control form-control-sm" [(ngModel)]="selectedCompany" 
+                placeholder="Search company...">
+            </div>
+
+            <!-- Status Filter -->
+            <div class="col-auto">
+              <label class="form-label small mb-1">Status</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
+                <option value="">All Status</option>
+                <option value="generated">Generated</option>
+                <option value="draft">Draft</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-auto">
+              <label class="form-label small mb-1 invisible">Actions</label>
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search" aria-label="Search">
+                  <i class="bi bi-search"></i>
+                </button>
+                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear" aria-label="Clear filters">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+              <thead class="table-success">
+                <tr>
+                  <th scope="col">Month/Year</th>
+                  <th scope="col">Company</th>
+                  <th scope="col">Local Qty (Lakh)</th>
+                  <th scope="col">Export Qty (Lakh)</th>
+                  <th scope="col">Defence Qty (Lakh)</th>
+                  <th scope="col">Total Qty (Lakh)</th>
+                  <th scope="col">Total Fee (₹)</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Generated Date</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (report of getPagedReports(); track report.id) {
+                <tr>
+                  <td>
+                    <div class="fw-bold">{{ report.month }} {{ report.year }}</div>
+                  </td>
+                  <td>{{ report.companyName }}</td>
+                  <td class="text-end">{{ report.totalLocalQty | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ report.totalExportQty | number:'1.2-2' }}</td>
+                  <td class="text-end">{{ report.totalDefenceQty | number:'1.2-2' }}</td>
+                  <td class="text-end fw-bold text-primary">{{ report.totalQuantity | number:'1.2-2' }}</td>
+                  <td class="text-end fw-bold text-success">₹{{ report.totalHologramFee | number:'1.2-2' }}</td>
+                  <td>
+                    <span [class]="getStatusClass(report.status)">{{ report.status }}</span>
+                  </td>
+                  <td>{{ report.generatedDate | date:'dd-MMM-yyyy' }}</td>
+                  <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                      <button class="btn btn-primary btn-sm" (click)="viewReport(report)" title="View Report">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-success btn-sm" (click)="downloadReport(report)" title="Download">
+                        <i class="bi bi-download"></i>
+                      </button>
+                      <button class="btn btn-warning btn-sm" (click)="editReport(report)" title="Edit" 
+                        *ngIf="report.status === 'Draft'">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-danger btn-sm" (click)="deleteReport(report)" title="Delete"
+                        *ngIf="report.status === 'Draft'">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                }
+                @empty {
+                  <tr>
+                    <td colspan="10" class="text-center text-muted py-4">
+                      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                      No monthly reports found. Generate a new report to get started.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-3" *ngIf="filteredReports.length > 0">
+              <div class="small text-muted">
+                Showing {{ (currentPage - 1) * pageSize + 1 }}-
+                {{ Math.min(currentPage * pageSize, filteredReports.length) }}
+                of {{ filteredReports.length }} reports
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+                  <span class="btn btn-light disabled">{{ currentPage }} / {{ getTotalPages() }}</span>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === getTotalPages()">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())" [disabled]="currentPage === getTotalPages()">»</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

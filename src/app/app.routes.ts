@@ -132,6 +132,10 @@ export const routes: Routes = [
     path: 'dev-itcell',
     loadComponent: () => import('./features/licensee/supplyChain/itcell/itcell.component').then(m => m.ITCELLComponent)
   },
+  {
+    path: 'dev-hologram-monthly-report',
+    loadComponent: () => import('./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component').then(m => m.HologramMonthlyReportComponent)
+  },
 
   // Role Protected modules
   {
