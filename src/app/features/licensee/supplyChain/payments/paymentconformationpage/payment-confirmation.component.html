@@ -111,6 +111,11 @@
         </button>
       </li>
       <li class="nav-item">
+        <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
+          <i class="bi bi-shield-check me-1"></i>Hologram
+        </button>
+      </li>
+      <li class="nav-item">
         <button class="nav-link" [class.active]="activeTab === 'recharge'" (click)="setActiveTab('recharge')">
           <i class="bi bi-credit-card me-1"></i>Wallet Recharge
         </button>
@@ -323,6 +328,86 @@
                   <i class="bi bi-credit-card me-2"></i>PAY ALL ITEMS
                 </button>
                 <small class="text-muted mt-2 d-block">Click to pay for all items in this bill</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Hologram Tab -->
+      @if (activeTab === 'hologram') {
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered">
+            <thead class="table-success">
+              <tr>
+                <th>Reference Number</th>
+                <th>Company Name</th>
+                <th>Total Quantity (Lakh)</th>
+                <th>Hologram Fee</th>
+                <th>HOA</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of hologramData; track item.id) {
+                <tr>
+                  <td>{{ item.referenceNo }}</td>
+                  <td>{{ item.companyName }}</td>
+                  <td class="text-end">{{ item.totalQuantity | number:'1.2-2' }}</td>
+                  <td class="text-end">₹{{ item.hologramFee | number:'1.2-2' }}</td>
+                  <td>{{ item.hoa }}</td>
+                  <td>
+                    <span [class]="getStatusClass(item.status)">{{ item.status }}</span>
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-success btn-sm" 
+                      *ngIf="canPayHologram(item)" 
+                      (click)="payHologramItem(item)">
+                      <i class="bi bi-credit-card me-1"></i>Pay
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Hologram Payment Summary -->
+        <div class="row mt-4" *ngIf="hologramData.length > 0">
+          <div class="col-md-6">
+            <div class="card border-primary">
+              <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calculator me-2"></i>Hologram Payment Summary</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Total Hologram Fee:</span>
+                  <span class="h4 text-primary">₹{{ getTotalHologramFee() | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                  <span class="fw-bold">Total Quantity (Lakh):</span>
+                  <span class="h5 text-info">{{ getTotalHologramQuantity() | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="fw-bold">Pending Payments:</span>
+                  <span class="badge bg-warning">{{ getPendingHologramCount() }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-success">
+              <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Payment Action</h5>
+              </div>
+              <div class="card-body text-center">
+                <p class="text-muted mb-3">Pay for all pending hologram requisitions</p>
+                <button class="btn btn-lg btn-success w-100" (click)="payAllHologram()" [disabled]="getPendingHologramCount() === 0">
+                  <i class="bi bi-credit-card me-2"></i>PAY ALL HOLOGRAM FEES
+                </button>
+                <small class="text-muted mt-2 d-block">Click to pay for all pending hologram requisitions</small>
               </div>
             </div>
           </div>

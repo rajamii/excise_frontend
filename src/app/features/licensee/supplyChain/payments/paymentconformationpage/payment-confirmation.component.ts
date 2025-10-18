@@ -45,6 +45,20 @@ interface HistoryItem {
   licenseeId: string;
 }
 
+interface HologramItem {
+  id: string;
+  referenceNo: string;
+  companyName: string;
+  totalQuantity: number;
+  hologramFee: number;
+  hoa: string;
+  status: string;
+  localQty: number;
+  exportQty: number;
+  defenceQty: number;
+  paymentDate: Date | null;
+}
+
 @Component({
   selector: 'app-payment-confirmation',
   standalone: true,
@@ -141,6 +155,48 @@ export class PaymentConfirmationComponent implements OnInit {
       status: 'Success',
       dateTime: new Date(),
       licenseeId: 'LIC001'
+    }
+  ];
+
+  hologramData: HologramItem[] = [
+    {
+      id: '7',
+      referenceNo: 'YB/1/BREW/25',
+      companyName: 'Yuksom Breweries Ltd.',
+      totalQuantity: 15.0,
+      hologramFee: 1500.00,
+      hoa: '0039-00-105-45-04',
+      status: 'ApprovedByCommissioner',
+      localQty: 15.0,
+      exportQty: 0.0,
+      defenceQty: 0.0,
+      paymentDate: null
+    },
+    {
+      id: '8',
+      referenceNo: 'YB/2/BREW/25',
+      companyName: 'Yuksom Breweries Ltd.',
+      totalQuantity: 25.5,
+      hologramFee: 2550.00,
+      hoa: '0039-00-105-45-04',
+      status: 'ApprovedByCommissioner',
+      localQty: 20.0,
+      exportQty: 5.5,
+      defenceQty: 0.0,
+      paymentDate: null
+    },
+    {
+      id: '9',
+      referenceNo: 'YB/3/BREW/25',
+      companyName: 'Yuksom Breweries Ltd.',
+      totalQuantity: 10.0,
+      hologramFee: 1000.00,
+      hoa: '0039-00-105-45-04',
+      status: 'Payment Successful',
+      localQty: 10.0,
+      exportQty: 0.0,
+      defenceQty: 0.0,
+      paymentDate: new Date('2025-01-15')
     }
   ];
 
@@ -384,5 +440,58 @@ export class PaymentConfirmationComponent implements OnInit {
   showInfoMessage(message: string): void {
     // Implementation for info toast/alert
     console.log('Info:', message);
+  }
+
+  // Hologram payment methods
+  canPayHologram(item: HologramItem): boolean {
+    const payableStatuses = [
+      'ApprovedByCommissioner',
+      'ApprovedByJointCommissioner'
+    ];
+    return payableStatuses.includes(item.status) && item.hologramFee > 0;
+  }
+
+  payHologramItem(item: HologramItem): void {
+    this.selectedItem = {
+      id: item.id,
+      referenceNo: item.referenceNo,
+      amount: item.hologramFee,
+      hoa: item.hoa,
+      status: item.status
+    };
+    // Show payment confirmation modal
+    const modal = document.getElementById('paymentModal');
+    if (modal) {
+      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
+      bootstrapModal.show();
+    }
+  }
+
+  payAllHologram(): void {
+    const totalHologramFee = this.getTotalHologramFee();
+    if (totalHologramFee > this.getTotalWalletBalance()) {
+      this.showInsufficientBalanceAlert();
+      return;
+    }
+
+    // Process all hologram payments
+    console.log('Processing all hologram payments');
+    this.showSuccessMessage('All hologram payments processed successfully!');
+  }
+
+  getTotalHologramFee(): number {
+    return this.hologramData
+      .filter(item => this.canPayHologram(item))
+      .reduce((total, item) => total + item.hologramFee, 0);
+  }
+
+  getTotalHologramQuantity(): number {
+    return this.hologramData
+      .filter(item => this.canPayHologram(item))
+      .reduce((total, item) => total + item.totalQuantity, 0);
+  }
+
+  getPendingHologramCount(): number {
+    return this.hologramData.filter(item => this.canPayHologram(item)).length;
   }
 }
