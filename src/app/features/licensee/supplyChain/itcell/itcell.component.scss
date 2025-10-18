@@ -260,15 +260,31 @@
             align-items: center;
             gap: 0.5rem;
             margin-top: 0.5rem;
-            padding: 0.25rem;
+            padding: 0.5rem;
             background: #f8f9fa;
             border-radius: 0.25rem;
             font-size: 0.75rem;
+            flex-wrap: wrap;
             
             .file-name {
               flex: 1;
               color: #28a745;
               font-weight: 500;
+              min-width: 120px;
+            }
+            
+            .btn {
+              padding: 0.2rem 0.4rem;
+              font-size: 0.7rem;
+              min-width: 32px;
+              height: 28px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              
+              i {
+                font-size: 0.8rem;
+              }
             }
           }
         }
@@ -728,6 +744,24 @@
 
     .upload-cell {
       min-width: 150px;
+      
+      .uploaded-file {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        
+        .file-name {
+          min-width: auto;
+          width: 100%;
+        }
+        
+        .btn {
+          font-size: 0.65rem;
+          padding: 0.15rem 0.3rem;
+          min-width: 28px;
+          height: 24px;
+        }
+      }
     }
 
     .total-qty-cell {

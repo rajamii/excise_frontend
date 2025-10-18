@@ -121,7 +121,13 @@
                   <div *ngIf="hologram.uploadedFile" class="uploaded-file">
                     <i class="bi bi-file-text text-success"></i>
                     <span class="file-name">{{ hologram.uploadedFile.name }}</span>
-                    <button class="btn btn-sm btn-outline-danger ms-1" (click)="removeFile(hologram)">
+                    <button class="btn btn-sm btn-outline-primary ms-1" (click)="viewUploadedFile(hologram)" title="View File">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-success ms-1" (click)="downloadUploadedFile(hologram)" title="Download File">
+                      <i class="bi bi-download"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger ms-1" (click)="removeFile(hologram)" title="Remove File">
                       <i class="bi bi-x"></i>
                     </button>
                   </div>
@@ -129,6 +135,14 @@
                 <div *ngIf="hologram.status === 'Under Review' || hologram.status === 'Approved'" class="uploaded-file">
                   <i class="bi bi-file-text text-success"></i>
                   <span class="file-name">{{ hologram.uploadedFile?.name || 'File uploaded' }}</span>
+                  <button class="btn btn-sm btn-outline-primary ms-1" (click)="viewUploadedFile(hologram)" 
+                          [disabled]="!hologram.uploadedFile" title="View File">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-success ms-1" (click)="downloadUploadedFile(hologram)" 
+                          [disabled]="!hologram.uploadedFile" title="Download File">
+                    <i class="bi bi-download"></i>
+                  </button>
                 </div>
               </td>
               <td class="actions">
@@ -294,10 +308,20 @@
                   <h6 class="card-title text-success mb-2">
                     <i class="bi bi-file-earmark me-1"></i>File Information
                   </h6>
-                  <p class="mb-1" *ngIf="selectedHologram?.uploadedFile">
-                    <strong>Uploaded File:</strong> 
-                    <span class="text-success">{{ selectedHologram?.uploadedFile?.name }}</span>
-                  </p>
+                  <div class="mb-1" *ngIf="selectedHologram?.uploadedFile">
+                    <p class="mb-2">
+                      <strong>Uploaded File:</strong> 
+                      <span class="text-success">{{ selectedHologram?.uploadedFile?.name }}</span>
+                    </p>
+                    <div class="mt-2">
+                      <button class="btn btn-outline-primary btn-sm me-2" (click)="viewUploadedFile(selectedHologram!)" title="View File">
+                        <i class="bi bi-eye me-1"></i>View
+                      </button>
+                      <button class="btn btn-outline-success btn-sm" (click)="downloadUploadedFile(selectedHologram!)" title="Download File">
+                        <i class="bi bi-download me-1"></i>Download
+                      </button>
+                    </div>
+                  </div>
                   <p class="mb-1" *ngIf="!selectedHologram?.uploadedFile">
                     <strong>File Status:</strong> 
                     <span class="text-warning">No file uploaded</span>

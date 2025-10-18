@@ -373,4 +373,46 @@ export class ITCELLComponent implements OnInit {
     this.showHologramModal = false;
     this.selectedHologram = null;
   }
+
+  viewUploadedFile(hologram: HologramFormData): void {
+    if (!hologram.uploadedFile) {
+      alert('No file uploaded for this hologram request.');
+      return;
+    }
+
+    // Create a file URL for viewing
+    const fileUrl = URL.createObjectURL(hologram.uploadedFile);
+    
+    // Open file in new tab/window
+    const newWindow = window.open(fileUrl, '_blank');
+    
+    if (!newWindow) {
+      alert('Please allow popups to view the file.');
+    }
+    
+    // Clean up the URL after a delay
+    setTimeout(() => {
+      URL.revokeObjectURL(fileUrl);
+    }, 10000);
+  }
+
+  downloadUploadedFile(hologram: HologramFormData): void {
+    if (!hologram.uploadedFile) {
+      alert('No file uploaded for this hologram request.');
+      return;
+    }
+
+    // Create download link
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(hologram.uploadedFile);
+    link.download = hologram.uploadedFile.name;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL
+    URL.revokeObjectURL(link.href);
+  }
 }
