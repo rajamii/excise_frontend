@@ -8,7 +8,8 @@
           <div class="row align-items-center py-3">
 
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit - {{ getCurrentHologramTypeDisplay() }}</h1>
+              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit - {{
+                getCurrentHologramTypeDisplay() }}</h1>
               <p class="mb-0 small opacity-75">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
             </div>
             <div class="col-auto">
@@ -25,43 +26,69 @@
       <!-- Search Section -->
       <div class="bg-white border-bottom">
         <div class="container-fluid py-3">
-          <div class="row align-items-center g-3">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <!-- Left side filters -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <!-- Month Dropdown -->
+              <div>
+                <label class="form-label small mb-1">Month</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedMonth"
+                  (ngModelChange)="onMonthYearChange()">
+                  <option value="jan">January</option>
+                  <option value="feb">February</option>
+                  <option value="mar">March</option>
+                  <option value="apr">April</option>
+                  <option value="may">May</option>
+                  <option value="jun">June</option>
+                  <option value="jul">July</option>
+                  <option value="aug">August</option>
+                  <option value="sep">September</option>
+                  <option value="oct">October</option>
+                  <option value="nov">November</option>
+                  <option value="dec">December</option>
+                </select>
+              </div>
 
+              <!-- Year Dropdown -->
+              <div>
+                <label class="form-label small mb-1">Year</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedYear"
+                  (ngModelChange)="onMonthYearChange()">
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
 
-            <!-- Month Dropdown -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Month</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
-                <option value="jan">January</option>
-                <option value="feb">February</option>
-                <option value="mar">March</option>
-                <option value="apr">April</option>
-                <option value="may">May</option>
-                <option value="jun">June</option>
-                <option value="jul">July</option>
-                <option value="aug">August</option>
-                <option value="sep">September</option>
-                <option value="oct">October</option>
-                <option value="nov">November</option>
-                <option value="dec">December</option>
-              </select>
+              <!-- Current Selection Display -->
+              <div>
+                <label class="form-label small mb-1">Current Register</label>
+                <div class="alert alert-info py-1 px-2 mb-0 small">
+                  {{ getCurrentHologramTypeDisplay() }}
+                </div>
+              </div>
             </div>
 
-            <!-- Year Dropdown -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Year</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <!-- Current Selection Display -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Current Register</label>
-              <div class="alert alert-info py-1 px-2 mb-0 small">
-                {{ getCurrentHologramTypeDisplay() }}
+            <!-- Right side - Previous Month Balance Info -->
+            <div class="ms-auto">
+              <label class="form-label small mb-1">Previous Month Balance</label>
+              <div class="card border-success" style="min-width: 320px;">
+                <div class="card-body py-2 px-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="small text-muted">{{ getPreviousMonthDisplay() }} - {{ selectedHologramType }}</div>
+                      <div class="fw-bold text-success">Closing Balance: {{ getPreviousMonthClosingBalance() | number }}
+                      </div>
+                    </div>
+                    <div class="text-success">
+                      <i class="bi bi-arrow-down-circle fs-4"></i>
+                    </div>
+                  </div>
+                  <div class="small text-info mt-1">
+                    <i class="bi bi-info-circle me-1"></i>
+                    This becomes current month's opening stock
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -73,23 +100,20 @@
         <div class="container-fluid">
           <ul class="nav nav-tabs">
             <li class="nav-item">
-              <button class="nav-link" 
-                      [class.active]="selectedHologramType === 'LOCAL'" 
-                      (click)="onHologramTypeChange('LOCAL')">
+              <button class="nav-link" [class.active]="selectedHologramType === 'LOCAL'"
+                (click)="onHologramTypeChange('LOCAL')">
                 <i class="bi bi-house-door me-1"></i>LOCAL
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" 
-                      [class.active]="selectedHologramType === 'EXPORT'" 
-                      (click)="onHologramTypeChange('EXPORT')">
+              <button class="nav-link" [class.active]="selectedHologramType === 'EXPORT'"
+                (click)="onHologramTypeChange('EXPORT')">
                 <i class="bi bi-globe me-1"></i>EXPORT
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" 
-                      [class.active]="selectedHologramType === 'DEFENCE'" 
-                      (click)="onHologramTypeChange('DEFENCE')">
+              <button class="nav-link" [class.active]="selectedHologramType === 'DEFENCE'"
+                (click)="onHologramTypeChange('DEFENCE')">
                 <i class="bi bi-shield-check me-1"></i>DEFENCE
               </button>
             </li>
@@ -104,6 +128,7 @@
             <table class="table table-bordered table-hover compact-table">
               <thead class="table-success">
                 <tr>
+                  <th rowspan="2" class="text-center align-middle col-date">Entry Date</th>
                   <th rowspan="2" class="text-center align-middle col-stock">Opening Stock</th>
                   <th rowspan="2" class="text-center align-middle col-arrival">Fresh Arrival</th>
                   <th rowspan="2" class="text-center align-middle col-total">Total</th>
@@ -126,82 +151,72 @@
                 @for (row of getPagedRows(); track row.id) {
                 <tr [class.table-warning]="!row.isFixed">
                   <td>
-                    <input type="number" 
-                           class="form-control form-control-sm text-end" 
-                           [class.bg-info]="row.isFirstRowOfMonth && !row.isFixed"
-                           [class.text-white]="row.isFirstRowOfMonth && !row.isFixed"
-                           [(ngModel)]="row.openingStock" 
-                           (ngModelChange)="onRowDataChange(row)"
-                           placeholder="0"
-                           [readonly]="isOpeningStockReadonly(row)"
-                           [title]="getOpeningStockTooltip(row)">
+                    <input type="date" class="form-control form-control-sm" [(ngModel)]="row.entryDate"
+                      [readonly]="row.isFixed" title="Date when this entry was made">
+                  </td>
+                  <td>
+                    <input type="number" class="form-control form-control-sm text-end"
+                      [class.bg-info]="row.isFirstRowOfMonth && !row.isFixed"
+                      [class.text-white]="row.isFirstRowOfMonth && !row.isFixed" [(ngModel)]="row.openingStock"
+                      (ngModelChange)="onRowDataChange(row)" placeholder="0" [readonly]="isOpeningStockReadonly(row)"
+                      [title]="getOpeningStockTooltip(row)">
                     @if (row.isFirstRowOfMonth) {
                     <small class="text-muted d-block">From prev month</small>
                     }
                   </td>
                   <td>
-                    <input type="number" 
-                           class="form-control form-control-sm text-end" 
-                           [(ngModel)]="row.freshArrival" 
-                           (ngModelChange)="onRowDataChange(row)"
-                           placeholder="0"
-                           [readonly]="row.isFixed">
+                    <input type="number" class="form-control form-control-sm text-end" [(ngModel)]="row.freshArrival"
+                      (ngModelChange)="onRowDataChange(row)" placeholder="0" [readonly]="row.isFixed">
                   </td>
                   <td class="text-end fw-bold bg-light">{{ row.total | number }}</td>
-                  
+
                   <!-- Utilization From Serial -->
                   <td>
                     <div class="utilization-inputs">
                       @for (util of row.utilizations; track $index) {
-                      <input type="text" 
-                             class="form-control form-control-sm mb-1" 
-                             [(ngModel)]="util.fromSerialNo" 
-                             (ngModelChange)="onUtilizationSerialChange(row, $index)"
-                             placeholder="From"
-                             [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="util.fromSerialNo"
+                        (ngModelChange)="onUtilizationSerialChange(row, $index)" placeholder="From"
+                        [readonly]="row.isFixed">
                       }
                       @if (!row.isFixed && row.utilizations.length === 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100" (click)="addUtilizationToRow(row)">
+                      <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                        (click)="addUtilizationToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
                       }
                     </div>
                   </td>
-                  
+
                   <!-- Utilization To Serial -->
                   <td>
                     <div class="utilization-inputs">
                       @for (util of row.utilizations; track $index) {
-                      <input type="text" 
-                             class="form-control form-control-sm mb-1" 
-                             [(ngModel)]="util.toSerialNo" 
-                             (ngModelChange)="onUtilizationSerialChange(row, $index)"
-                             placeholder="To"
-                             [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="util.toSerialNo"
+                        (ngModelChange)="onUtilizationSerialChange(row, $index)" placeholder="To"
+                        [readonly]="row.isFixed">
                       }
                     </div>
                   </td>
-                  
+
                   <!-- Utilization Quantity -->
                   <td>
                     <div class="utilization-inputs">
                       @for (util of row.utilizations; track $index) {
                       <div class="d-flex mb-1">
-                        <input type="number" 
-                               class="form-control form-control-sm text-end flex-grow-1 bg-light" 
-                               [ngModel]="util.quantity" 
-                               placeholder="0"
-                               readonly
-                               tabindex="-1">
+                        <input type="number" class="form-control form-control-sm text-end flex-grow-1 bg-light"
+                          [ngModel]="util.quantity" placeholder="0" readonly tabindex="-1">
                         @if (!row.isFixed) {
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" (click)="removeUtilizationFromRow(row, $index)" style="width: 20px; height: 20px; padding: 0;">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                          (click)="removeUtilizationFromRow(row, $index)"
+                          style="width: 20px; height: 20px; padding: 0;">
                           <i class="bi bi-x" style="font-size: 0.6rem;"></i>
                         </button>
                         }
                       </div>
                       }
                       @if (!row.isFixed && row.utilizations.length > 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1" (click)="addUtilizationToRow(row)">
+                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
+                        (click)="addUtilizationToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
                       }
@@ -212,17 +227,14 @@
                       }
                     </div>
                   </td>
-                  
+
                   <!-- Wastage From Serial -->
                   <td>
                     <div class="wastage-inputs">
                       @for (waste of row.wastages; track $index) {
-                      <input type="text" 
-                             class="form-control form-control-sm mb-1" 
-                             [(ngModel)]="waste.fromSerialNo" 
-                             (ngModelChange)="onWastageSerialChange(row, $index)"
-                             placeholder="From"
-                             [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="waste.fromSerialNo"
+                        (ngModelChange)="onWastageSerialChange(row, $index)" placeholder="From"
+                        [readonly]="row.isFixed">
                       }
                       @if (!row.isFixed && row.wastages.length === 0) {
                       <button type="button" class="btn btn-sm btn-outline-primary w-100" (click)="addWastageToRow(row)">
@@ -231,41 +243,35 @@
                       }
                     </div>
                   </td>
-                  
+
                   <!-- Wastage To Serial -->
                   <td>
                     <div class="wastage-inputs">
                       @for (waste of row.wastages; track $index) {
-                      <input type="text" 
-                             class="form-control form-control-sm mb-1" 
-                             [(ngModel)]="waste.toSerialNo" 
-                             (ngModelChange)="onWastageSerialChange(row, $index)"
-                             placeholder="To"
-                             [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="waste.toSerialNo"
+                        (ngModelChange)="onWastageSerialChange(row, $index)" placeholder="To" [readonly]="row.isFixed">
                       }
                     </div>
                   </td>
-                  
+
                   <!-- Wastage Quantity -->
                   <td>
                     <div class="wastage-inputs">
                       @for (waste of row.wastages; track $index) {
                       <div class="d-flex mb-1">
-                        <input type="number" 
-                               class="form-control form-control-sm text-end flex-grow-1 bg-light" 
-                               [ngModel]="waste.quantity" 
-                               placeholder="0"
-                               readonly
-                               tabindex="-1">
+                        <input type="number" class="form-control form-control-sm text-end flex-grow-1 bg-light"
+                          [ngModel]="waste.quantity" placeholder="0" readonly tabindex="-1">
                         @if (!row.isFixed) {
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" (click)="removeWastageFromRow(row, $index)" style="width: 20px; height: 20px; padding: 0;">
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                          (click)="removeWastageFromRow(row, $index)" style="width: 20px; height: 20px; padding: 0;">
                           <i class="bi bi-x" style="font-size: 0.6rem;"></i>
                         </button>
                         }
                       </div>
                       }
                       @if (!row.isFixed && row.wastages.length > 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1" (click)="addWastageToRow(row)">
+                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
+                        (click)="addWastageToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
                       }
@@ -276,18 +282,16 @@
                       }
                     </div>
                   </td>
-                  
+
                   <td class="text-end fw-bold bg-light">{{ row.totalWastage | number }}</td>
                   <td class="text-end fw-bold text-primary bg-light">{{ row.closingBalance | number }}</td>
                   <td>
                     <div class="d-flex gap-1 flex-column">
                       @if (!row.isFixed) {
-                      <button class="btn btn-success btn-sm" (click)="saveRow(row)" 
-                        title="Save & Lock">
+                      <button class="btn btn-success btn-sm" (click)="saveRow(row)" title="Save & Lock">
                         <i class="bi bi-check"></i>
                       </button>
-                      <button class="btn btn-danger btn-sm" (click)="deleteRow(row)" 
-                        title="Delete">
+                      <button class="btn btn-danger btn-sm" (click)="deleteRow(row)" title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
                       } @else {
@@ -297,16 +301,17 @@
                   </td>
                 </tr>
                 } @empty {
-                  <tr>
-                    <td colspan="11" class="text-center text-muted py-4">
-                      <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                      No hologram data found for {{ getCurrentHologramTypeDisplay() }}. Add a new row to get started.
-                    </td>
-                  </tr>
+                <tr>
+                  <td colspan="12" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    No hologram data found for {{ getCurrentHologramTypeDisplay() }}. Add a new row to get started.
+                  </td>
+                </tr>
                 }
-                
+
                 <!-- Grand Total Row -->
                 <tr class="table-info fw-bold">
+                  <td class="text-center">TOTAL</td>
                   <td class="text-end">{{ calculateGrandTotals().totalOpening | number }}</td>
                   <td class="text-end">{{ calculateGrandTotals().totalFreshArrival | number }}</td>
                   <td class="text-end">{{ calculateGrandTotals().totalTotal | number }}</td>
@@ -315,10 +320,7 @@
                   <td class="text-end">{{ calculateGrandTotals().totalWastage | number }}</td>
                   <td class="text-end">{{ calculateGrandTotals().totalClosing | number }}</td>
                   <td class="text-center">
-                    <button type="button" 
-                            class="btn btn-sm btn-primary" 
-                            (click)="addNewRow()"
-                            title="Add New Row">
+                    <button type="button" class="btn btn-sm btn-primary" (click)="addNewRow()" title="Add New Row">
                       <i class="bi bi-plus"></i>
                     </button>
                   </td>
@@ -336,7 +338,8 @@
                     <div class="card-body">
                       <h6 class="card-title">Production Details ({{ selectedHologramType }})</h6>
                       <div class="d-flex justify-content-between">
-                        <span>Production:- {{ calculateProductionTotals().totalSikkim | number }} C/s. 650 ml. Sikkim,</span>
+                        <span>Production:- {{ calculateProductionTotals().totalSikkim | number }} C/s. 650 ml.
+                          Sikkim,</span>
                       </div>
                       <div class="d-flex justify-content-between">
                         <span>{{ calculateProductionTotals().totalWB | number }} C/S. for W/B.</span>
@@ -396,18 +399,23 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="pageSize"
+                  (ngModelChange)="changePageSize($event)">
                   <option value="5">5</option>
                   <option value="10">10</option>
                   <option value="15">15</option>
                   <option value="20">20</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                    [disabled]="currentPage === 1">«</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+                    [disabled]="currentPage === 1">‹</button>
                   <span class="btn btn-light disabled">{{ currentPage }} / {{ getTotalPages() }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === getTotalPages()">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())" [disabled]="currentPage === getTotalPages()">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+                    [disabled]="currentPage === getTotalPages()">›</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
+                    [disabled]="currentPage === getTotalPages()">»</button>
                 </div>
               </div>
             </div>
@@ -418,4 +426,3 @@
     </div>
   </main>
 </div>
-

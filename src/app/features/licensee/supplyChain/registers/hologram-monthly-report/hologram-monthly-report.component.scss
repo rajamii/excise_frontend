@@ -53,6 +53,11 @@
   }
 
   // Column width constraints
+  .col-date {
+    width: 120px;
+    min-width: 120px;
+  }
+
   .col-stock {
     width: 100px;
     min-width: 100px;
@@ -161,6 +166,22 @@ td small.text-muted {
   margin-top: 2px;
 }
 
+// Previous month balance info box
+.card.border-success {
+  border-width: 2px !important;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.1);
+}
+
+.card.border-success .card-body {
+  background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+}
+
+// Date input styling
+input[type="date"].form-control-sm {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.3rem;
+}
+
 // Button sizing
 .btn-sm {
   padding: 0.2rem 0.4rem;
@@ -260,6 +281,11 @@ td small.text-muted {
       padding: 0.2rem !important;
     }
 
+    .col-date {
+      width: 110px;
+      min-width: 110px;
+    }
+
     .col-stock {
       width: 90px;
       min-width: 90px;
@@ -321,6 +347,11 @@ td small.text-muted {
     th,
     td {
       padding: 0.15rem !important;
+    }
+
+    .col-date {
+      width: 100px;
+      min-width: 100px;
     }
 
     .col-stock {
@@ -416,4 +447,45 @@ td small.text-muted {
 
 .table-responsive::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+// Filter section layout - ensures Previous Month Balance stays on rightmost side
+.d-flex.justify-content-between {
+  min-height: 60px;
+  width: 100%;
+}
+
+// Previous Month Balance positioning
+.ms-auto {
+  margin-left: auto !important;
+  flex-shrink: 0;
+}
+
+// Responsive adjustments for filter section
+@media (max-width: 1400px) {
+  .ms-auto {
+    margin-top: 1rem !important;
+    margin-left: 0 !important;
+  }
+  
+  .d-flex.justify-content-between {
+    flex-direction: column;
+    align-items: flex-start !important;
+  }
+  
+  .card.border-success {
+    min-width: 100% !important;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .d-flex.gap-3.flex-wrap {
+    flex-direction: column;
+    gap: 1rem !important;
+  }
+  
+  .card.border-success {
+    min-width: 100% !important;
+  }
 }

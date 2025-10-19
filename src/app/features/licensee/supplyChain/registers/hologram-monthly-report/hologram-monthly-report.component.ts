@@ -20,6 +20,7 @@ interface HologramReportRow {
   month: string; // e.g., 'jul'
   year: string; // e.g., '2025'
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Type of hologram
+  entryDate: string; // Date when this entry was made (ISO format)
   openingStock: number;
   freshArrival: number;
   total: number;
@@ -58,6 +59,7 @@ export class HologramMonthlyReportComponent {
       month: 'jun',
       year: '2025',
       hologramType: 'LOCAL',
+      entryDate: '2025-06-30',
       openingStock: 100000,
       freshArrival: 200000,
       total: 300000,
@@ -84,6 +86,7 @@ export class HologramMonthlyReportComponent {
       month: 'jul',
       year: '2025',
       hologramType: 'LOCAL',
+      entryDate: '2025-07-01',
       openingStock: 249899, // Carried from June closing balance
       freshArrival: 2300000,
       total: 2549899,
@@ -110,6 +113,7 @@ export class HologramMonthlyReportComponent {
       month: 'jul',
       year: '2025',
       hologramType: 'LOCAL',
+      entryDate: '2025-07-15',
       openingStock: 1000,
       freshArrival: 5000,
       total: 6000,
@@ -136,6 +140,7 @@ export class HologramMonthlyReportComponent {
       month: 'jul',
       year: '2025',
       hologramType: 'EXPORT',
+      entryDate: '2025-07-01',
       openingStock: 50000,
       freshArrival: 100000,
       total: 150000,
@@ -160,6 +165,7 @@ export class HologramMonthlyReportComponent {
       month: 'jul',
       year: '2025',
       hologramType: 'DEFENCE',
+      entryDate: '2025-07-01',
       openingStock: 25000,
       freshArrival: 75000,
       total: 100000,
@@ -184,6 +190,7 @@ export class HologramMonthlyReportComponent {
       month: 'aug',
       year: '2025',
       hologramType: 'LOCAL',
+      entryDate: '2025-08-01',
       openingStock: 2292079, // This should be calculated from July's closing balance
       freshArrival: 1000000,
       total: 3292079,
@@ -347,6 +354,7 @@ export class HologramMonthlyReportComponent {
       month: this.selectedMonth,
       year: this.selectedYear,
       hologramType: this.selectedHologramType,
+      entryDate: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
       openingStock: openingStock,
       freshArrival: 0,
       total: openingStock,
