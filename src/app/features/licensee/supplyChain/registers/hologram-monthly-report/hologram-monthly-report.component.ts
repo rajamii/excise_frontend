@@ -19,6 +19,7 @@ interface HologramReportRow {
   id: string;
   month: string; // e.g., 'jul'
   year: string; // e.g., '2025'
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Type of hologram
   openingStock: number;
   freshArrival: number;
   total: number;
@@ -46,13 +47,16 @@ export class HologramMonthlyReportComponent {
   Math = Math;
   selectedMonth = 'jul'; // Default to July
   selectedYear = '2025'; // Default to 2025
+  selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL'; // Default to LOCAL
 
-  // Sample data organized by month and year
+  // Sample data organized by month, year, and hologram type
   reportRows: HologramReportRow[] = [
+    // LOCAL data for July 2025
     {
       id: '1',
       month: 'jul',
       year: '2025',
+      hologramType: 'LOCAL',
       openingStock: 173506,
       freshArrival: 2300000,
       total: 2473506,
@@ -77,6 +81,7 @@ export class HologramMonthlyReportComponent {
       id: '2',
       month: 'jul',
       year: '2025',
+      hologramType: 'LOCAL',
       openingStock: 1000,
       freshArrival: 5000,
       total: 6000,
@@ -96,14 +101,41 @@ export class HologramMonthlyReportComponent {
         total: 0
       }
     },
+    // EXPORT data for July 2025
     {
       id: '3',
-      month: 'aug',
+      month: 'jul',
       year: '2025',
-      openingStock: 0,
-      freshArrival: 0,
-      total: 0,
-      utilizations: [],
+      hologramType: 'EXPORT',
+      openingStock: 50000,
+      freshArrival: 100000,
+      total: 150000,
+      utilizations: [
+        { fromSerialNo: 'EX1000', toSerialNo: 'EX1500', quantity: 0 }
+      ],
+      wastages: [],
+      totalUtilized: 0,
+      totalWastage: 0,
+      closingBalance: 0,
+      isFixed: false,
+      production: {
+        sikkim650ml: 0,
+        wb: 0,
+        total: 0
+      }
+    },
+    // DEFENCE data for July 2025
+    {
+      id: '4',
+      month: 'jul',
+      year: '2025',
+      hologramType: 'DEFENCE',
+      openingStock: 25000,
+      freshArrival: 75000,
+      total: 100000,
+      utilizations: [
+        { fromSerialNo: 'DEF500', toSerialNo: 'DEF600', quantity: 0 }
+      ],
       wastages: [],
       totalUtilized: 0,
       totalWastage: 0,
@@ -137,18 +169,26 @@ export class HologramMonthlyReportComponent {
 
   // Monthly data management
   loadMonthlyData(): void {
-    // Filter data for the selected month and year
+    // Filter data for the selected month, year, and hologram type
     this.filteredRows = this.reportRows.filter(row => 
-      row.month === this.selectedMonth && row.year === this.selectedYear
+      row.month === this.selectedMonth && 
+      row.year === this.selectedYear &&
+      row.hologramType === this.selectedHologramType
     );
     
-    // If no data exists for this month/year, create an empty row
+    // If no data exists for this month/year/type, create an empty row
     if (this.filteredRows.length === 0) {
       this.addNewRow();
     }
   }
 
   onMonthYearChange(): void {
+    this.loadMonthlyData();
+    this.currentPage = 1; // Reset pagination
+  }
+
+  onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
+    this.selectedHologramType = type;
     this.loadMonthlyData();
     this.currentPage = 1; // Reset pagination
   }
@@ -160,6 +200,10 @@ export class HologramMonthlyReportComponent {
       'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
     };
     return `${monthNames[this.selectedMonth]} ${this.selectedYear}`;
+  }
+
+  getCurrentHologramTypeDisplay(): string {
+    return `${this.getSelectedMonthYear()} - ${this.selectedHologramType}`;
   }
 
   // Navigation methods
@@ -174,6 +218,7 @@ export class HologramMonthlyReportComponent {
       id: newId,
       month: this.selectedMonth,
       year: this.selectedYear,
+      hologramType: this.selectedHologramType,
       openingStock: 0,
       freshArrival: 0,
       total: 0,

@@ -1,5 +1,38 @@
 // Hologram Monthly Report Component Styles
 
+// Tab styles
+.nav-tabs {
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 0;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  border-radius: 0;
+  color: #6c757d;
+  background: none;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  border-color: transparent;
+  color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.nav-tabs .nav-link.active {
+  color: #007bff;
+  background-color: #fff;
+  border-bottom: 3px solid #007bff;
+  font-weight: 600;
+}
+
+.nav-tabs .nav-link i {
+  font-size: 0.9rem;
+}
+
 // Table container without horizontal scroll
 .table-container {
   width: 100%;
