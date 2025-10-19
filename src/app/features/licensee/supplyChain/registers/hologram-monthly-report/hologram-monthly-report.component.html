@@ -3,14 +3,13 @@
   <main class="w-100">
     <div class="container-fluid p-0">
       <!-- Header Section -->
-      <div class="header-section text-black">
+      <div class="bg-light text-dark shadow-sm border-bottom">
         <div class="container-fluid">
           <div class="row align-items-center py-3">
-
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit - {{
+              <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturing Unit - {{
                 getCurrentHologramTypeDisplay() }}</h1>
-              <p class="mb-0 small opacity-75">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
+              <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
@@ -72,7 +71,8 @@
             <!-- Right side - Previous Month Balance Info -->
             <div class="ms-auto">
               <label class="form-label small mb-1">Previous Month Balance</label>
-              <div class="card border-success" style="min-width: 320px;">
+              <div class="card border-success border-2 shadow-sm"
+                style="min-width: 320px; background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);">
                 <div class="card-body py-2 px-3">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -98,23 +98,44 @@
       <!-- Hologram Type Tabs -->
       <div class="bg-white border-bottom">
         <div class="container-fluid">
-          <ul class="nav nav-tabs">
+          <ul class="nav nav-tabs border-0">
             <li class="nav-item">
-              <button class="nav-link" [class.active]="selectedHologramType === 'LOCAL'"
-                (click)="onHologramTypeChange('LOCAL')">
-                <i class="bi bi-house-door me-1"></i>LOCAL
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'LOCAL'"
+                [class.text-primary]="selectedHologramType === 'LOCAL'"
+                [class.bg-light]="selectedHologramType !== 'LOCAL'"
+                [class.border-bottom]="selectedHologramType === 'LOCAL'"
+                [class.border-primary]="selectedHologramType === 'LOCAL'"
+                [class.border-3]="selectedHologramType === 'LOCAL'"
+                [class.fw-semibold]="selectedHologramType === 'LOCAL'" (click)="onHologramTypeChange('LOCAL')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-house-door me-1 fs-6"></i>LOCAL
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="selectedHologramType === 'EXPORT'"
-                (click)="onHologramTypeChange('EXPORT')">
-                <i class="bi bi-globe me-1"></i>EXPORT
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'EXPORT'"
+                [class.text-primary]="selectedHologramType === 'EXPORT'"
+                [class.bg-light]="selectedHologramType !== 'EXPORT'"
+                [class.border-bottom]="selectedHologramType === 'EXPORT'"
+                [class.border-primary]="selectedHologramType === 'EXPORT'"
+                [class.border-3]="selectedHologramType === 'EXPORT'"
+                [class.fw-semibold]="selectedHologramType === 'EXPORT'" (click)="onHologramTypeChange('EXPORT')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-globe me-1 fs-6"></i>EXPORT
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="selectedHologramType === 'DEFENCE'"
-                (click)="onHologramTypeChange('DEFENCE')">
-                <i class="bi bi-shield-check me-1"></i>DEFENCE
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'DEFENCE'"
+                [class.text-primary]="selectedHologramType === 'DEFENCE'"
+                [class.bg-light]="selectedHologramType !== 'DEFENCE'"
+                [class.border-bottom]="selectedHologramType === 'DEFENCE'"
+                [class.border-primary]="selectedHologramType === 'DEFENCE'"
+                [class.border-3]="selectedHologramType === 'DEFENCE'"
+                [class.fw-semibold]="selectedHologramType === 'DEFENCE'" (click)="onHologramTypeChange('DEFENCE')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-shield-check me-1 fs-6"></i>DEFENCE
               </button>
             </li>
           </ul>
@@ -124,62 +145,83 @@
       <!-- Data Table Section -->
       <div class="bg-white">
         <div class="container-fluid p-3">
-          <div class="table-container">
-            <table class="table table-bordered table-hover compact-table">
+          <div class="table-responsive overflow-auto" style="max-width: 100vw;">
+            <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
               <thead class="table-success">
                 <tr>
-                  <th rowspan="2" class="text-center align-middle col-date">Entry Date</th>
-                  <th rowspan="2" class="text-center align-middle col-stock">Opening Stock</th>
-                  <th rowspan="2" class="text-center align-middle col-arrival">Fresh Arrival</th>
-                  <th rowspan="2" class="text-center align-middle col-total">Total</th>
-                  <th colspan="3" class="text-center">Utilization</th>
-                  <th colspan="3" class="text-center">Wastage</th>
-                  <th rowspan="2" class="text-center align-middle col-wastage-total">Total Wastage</th>
-                  <th rowspan="2" class="text-center align-middle col-closing">Closing Balance</th>
-                  <th rowspan="2" class="text-center align-middle col-actions">Actions</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Entry Date</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Opening Stock</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Fresh Arrival</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total</th>
+                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Utilization</th>
+                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total Wastage</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Closing Balance</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Actions</th>
                 </tr>
                 <tr>
-                  <th class="text-center col-serial">From Serial</th>
-                  <th class="text-center col-serial">To Serial</th>
-                  <th class="text-center col-qty">Qty</th>
-                  <th class="text-center col-serial">From Serial</th>
-                  <th class="text-center col-serial">To Serial</th>
-                  <th class="text-center col-qty">Qty</th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    From Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    To Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  </th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    From Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    To Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 @for (row of getPagedRows(); track row.id) {
-                <tr [class.table-warning]="!row.isFixed">
-                  <td>
-                    <input type="date" class="form-control form-control-sm" [(ngModel)]="row.entryDate"
+                <tr [class.table-warning]="!row.isFixed" class="animate__animated animate__fadeIn">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="date" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;" [(ngModel)]="row.entryDate"
                       [readonly]="row.isFixed" title="Date when this entry was made">
                   </td>
-                  <td>
-                    <input type="number" class="form-control form-control-sm text-end"
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="number" class="form-control form-control-sm text-end border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
                       [class.bg-info]="row.isFirstRowOfMonth && !row.isFixed"
-                      [class.text-white]="row.isFirstRowOfMonth && !row.isFixed" [(ngModel)]="row.openingStock"
+                      [class.text-white]="row.isFirstRowOfMonth && !row.isFixed"
+                      [class.fw-semibold]="row.isFirstRowOfMonth && !row.isFixed" [(ngModel)]="row.openingStock"
                       (ngModelChange)="onRowDataChange(row)" placeholder="0" [readonly]="isOpeningStockReadonly(row)"
                       [title]="getOpeningStockTooltip(row)">
                     @if (row.isFirstRowOfMonth) {
-                    <small class="text-muted d-block">From prev month</small>
+                    <small class="text-muted d-block lh-1 mt-1" style="font-size: 0.65rem;">From prev month</small>
                     }
                   </td>
-                  <td>
-                    <input type="number" class="form-control form-control-sm text-end" [(ngModel)]="row.freshArrival"
-                      (ngModelChange)="onRowDataChange(row)" placeholder="0" [readonly]="row.isFixed">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="number" class="form-control form-control-sm text-end border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="row.freshArrival" (ngModelChange)="onRowDataChange(row)" placeholder="0"
+                      [readonly]="row.isFixed">
                   </td>
-                  <td class="text-end fw-bold bg-light">{{ row.total | number }}</td>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{ row.total |
+                    number }}</td>
 
                   <!-- Utilization From Serial -->
-                  <td>
-                    <div class="utilization-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (util of row.utilizations; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="util.fromSerialNo"
-                        (ngModelChange)="onUtilizationSerialChange(row, $index)" placeholder="From"
-                        [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1 border-1"
+                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                        [(ngModel)]="util.fromSerialNo" (ngModelChange)="onUtilizationSerialChange(row, $index)"
+                        placeholder="From" [readonly]="row.isFixed">
                       }
                       @if (!row.isFixed && row.utilizations.length === 0) {
                       <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
                         (click)="addUtilizationToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
@@ -188,27 +230,31 @@
                   </td>
 
                   <!-- Utilization To Serial -->
-                  <td>
-                    <div class="utilization-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (util of row.utilizations; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="util.toSerialNo"
-                        (ngModelChange)="onUtilizationSerialChange(row, $index)" placeholder="To"
-                        [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1 border-1"
+                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                        [(ngModel)]="util.toSerialNo" (ngModelChange)="onUtilizationSerialChange(row, $index)"
+                        placeholder="To" [readonly]="row.isFixed">
                       }
                     </div>
                   </td>
 
                   <!-- Utilization Quantity -->
-                  <td>
-                    <div class="utilization-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (util of row.utilizations; track $index) {
                       <div class="d-flex mb-1">
-                        <input type="number" class="form-control form-control-sm text-end flex-grow-1 bg-light"
+                        <input type="number"
+                          class="form-control form-control-sm text-end flex-grow-1 bg-light border-1 fw-semibold"
+                          style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px; cursor: not-allowed;"
                           [ngModel]="util.quantity" placeholder="0" readonly tabindex="-1">
                         @if (!row.isFixed) {
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-1"
-                          (click)="removeUtilizationFromRow(row, $index)"
-                          style="width: 20px; height: 20px; padding: 0;">
+                        <button type="button"
+                          class="btn btn-sm btn-outline-danger ms-1 d-flex align-items-center justify-content-center"
+                          style="width: 20px; height: 20px; padding: 0;"
+                          (click)="removeUtilizationFromRow(row, $index)">
                           <i class="bi bi-x" style="font-size: 0.6rem;"></i>
                         </button>
                         }
@@ -216,6 +262,7 @@
                       }
                       @if (!row.isFixed && row.utilizations.length > 0) {
                       <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
                         (click)="addUtilizationToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
@@ -229,15 +276,18 @@
                   </td>
 
                   <!-- Wastage From Serial -->
-                  <td>
-                    <div class="wastage-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (waste of row.wastages; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="waste.fromSerialNo"
-                        (ngModelChange)="onWastageSerialChange(row, $index)" placeholder="From"
-                        [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1 border-1"
+                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                        [(ngModel)]="waste.fromSerialNo" (ngModelChange)="onWastageSerialChange(row, $index)"
+                        placeholder="From" [readonly]="row.isFixed">
                       }
                       @if (!row.isFixed && row.wastages.length === 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100" (click)="addWastageToRow(row)">
+                      <button type="button" class="btn btn-sm btn-outline-primary w-100"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
+                        (click)="addWastageToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
                       }
@@ -245,25 +295,30 @@
                   </td>
 
                   <!-- Wastage To Serial -->
-                  <td>
-                    <div class="wastage-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (waste of row.wastages; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1" [(ngModel)]="waste.toSerialNo"
-                        (ngModelChange)="onWastageSerialChange(row, $index)" placeholder="To" [readonly]="row.isFixed">
+                      <input type="text" class="form-control form-control-sm mb-1 border-1"
+                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                        [(ngModel)]="waste.toSerialNo" (ngModelChange)="onWastageSerialChange(row, $index)"
+                        placeholder="To" [readonly]="row.isFixed">
                       }
                     </div>
                   </td>
 
                   <!-- Wastage Quantity -->
-                  <td>
-                    <div class="wastage-inputs">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div style="min-width: 100px; max-width: 110px;">
                       @for (waste of row.wastages; track $index) {
                       <div class="d-flex mb-1">
-                        <input type="number" class="form-control form-control-sm text-end flex-grow-1 bg-light"
+                        <input type="number"
+                          class="form-control form-control-sm text-end flex-grow-1 bg-light border-1 fw-semibold"
+                          style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px; cursor: not-allowed;"
                           [ngModel]="waste.quantity" placeholder="0" readonly tabindex="-1">
                         @if (!row.isFixed) {
-                        <button type="button" class="btn btn-sm btn-outline-danger ms-1"
-                          (click)="removeWastageFromRow(row, $index)" style="width: 20px; height: 20px; padding: 0;">
+                        <button type="button"
+                          class="btn btn-sm btn-outline-danger ms-1 d-flex align-items-center justify-content-center"
+                          style="width: 20px; height: 20px; padding: 0;" (click)="removeWastageFromRow(row, $index)">
                           <i class="bi bi-x" style="font-size: 0.6rem;"></i>
                         </button>
                         }
@@ -271,6 +326,7 @@
                       }
                       @if (!row.isFixed && row.wastages.length > 0) {
                       <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
+                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
                         (click)="addWastageToRow(row)">
                         <i class="bi bi-plus"></i>
                       </button>
@@ -283,19 +339,26 @@
                     </div>
                   </td>
 
-                  <td class="text-end fw-bold bg-light">{{ row.totalWastage | number }}</td>
-                  <td class="text-end fw-bold text-primary bg-light">{{ row.closingBalance | number }}</td>
-                  <td>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
+                    row.totalWastage | number }}</td>
+                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
+                    row.closingBalance | number }}</td>
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
                     <div class="d-flex gap-1 flex-column">
                       @if (!row.isFixed) {
-                      <button class="btn btn-success btn-sm" (click)="saveRow(row)" title="Save & Lock">
+                      <button class="btn btn-success btn-sm"
+                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="saveRow(row)"
+                        title="Save & Lock">
                         <i class="bi bi-check"></i>
                       </button>
-                      <button class="btn btn-danger btn-sm" (click)="deleteRow(row)" title="Delete">
+                      <button class="btn btn-danger btn-sm"
+                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="deleteRow(row)"
+                        title="Delete">
                         <i class="bi bi-trash"></i>
                       </button>
                       } @else {
-                      <span class="badge bg-success small">Saved</span>
+                      <span class="badge bg-success small"
+                        style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">Saved</span>
                       }
                     </div>
                   </td>
@@ -399,7 +462,8 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="pageSize"
+                <select class="form-select form-select-sm w-auto"
+                  style="font-size: 0.875rem; padding: 0.375rem 0.75rem;" [ngModel]="pageSize"
                   (ngModelChange)="changePageSize($event)">
                   <option value="5">5</option>
                   <option value="10">10</option>
@@ -407,14 +471,17 @@
                   <option value="20">20</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                  <button class="btn btn-outline-secondary rounded-start"
+                    style="font-size: 0.75rem; padding: 0.375rem 0.75rem;" (click)="goToPage(1)"
                     [disabled]="currentPage === 1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
-                    [disabled]="currentPage === 1">‹</button>
-                  <span class="btn btn-light disabled">{{ currentPage }} / {{ getTotalPages() }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
-                    [disabled]="currentPage === getTotalPages()">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
+                  <button class="btn btn-outline-secondary" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;"
+                    (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+                  <span class="btn btn-light disabled" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">{{
+                    currentPage }} / {{ getTotalPages() }}</span>
+                  <button class="btn btn-outline-secondary" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;"
+                    (click)="goToPage(currentPage + 1)" [disabled]="currentPage === getTotalPages()">›</button>
+                  <button class="btn btn-outline-secondary rounded-end"
+                    style="font-size: 0.75rem; padding: 0.375rem 0.75rem;" (click)="goToPage(getTotalPages())"
                     [disabled]="currentPage === getTotalPages()">»</button>
                 </div>
               </div>
