@@ -29,6 +29,7 @@ interface HologramReportRow {
   totalWastage: number;
   closingBalance: number;
   isFixed: boolean;
+  isFirstRowOfMonth: boolean; // Indicates if this is the first row of the month
   production: {
     sikkim650ml: number;
     wb: number;
@@ -51,15 +52,41 @@ export class HologramMonthlyReportComponent {
 
   // Sample data organized by month, year, and hologram type
   reportRows: HologramReportRow[] = [
+    // June 2025 data (previous month) - for carry forward logic
+    {
+      id: '0',
+      month: 'jun',
+      year: '2025',
+      hologramType: 'LOCAL',
+      openingStock: 100000,
+      freshArrival: 200000,
+      total: 300000,
+      utilizations: [
+        { fromSerialNo: '200000', toSerialNo: '250000', quantity: 0 }
+      ],
+      wastages: [
+        { fromSerialNo: '250001', toSerialNo: '250100', quantity: 0 }
+      ],
+      totalUtilized: 50001,
+      totalWastage: 100,
+      closingBalance: 249899, // This will be July's opening stock
+      isFixed: true,
+      isFirstRowOfMonth: true,
+      production: {
+        sikkim650ml: 0,
+        wb: 0,
+        total: 0
+      }
+    },
     // LOCAL data for July 2025
     {
       id: '1',
       month: 'jul',
       year: '2025',
       hologramType: 'LOCAL',
-      openingStock: 173506,
+      openingStock: 249899, // Carried from June closing balance
       freshArrival: 2300000,
-      total: 2473506,
+      total: 2549899,
       utilizations: [
         { fromSerialNo: '275346495', toSerialNo: '275520000', quantity: 0 },
         { fromSerialNo: '275520001', toSerialNo: '275600000', quantity: 0 }
@@ -69,8 +96,9 @@ export class HologramMonthlyReportComponent {
       ],
       totalUtilized: 253506,
       totalWastage: 4314,
-      closingBalance: 2215686,
+      closingBalance: 2292079,
       isFixed: true,
+      isFirstRowOfMonth: true, // First row of July
       production: {
         sikkim650ml: 175263,
         wb: 1750,
@@ -95,6 +123,7 @@ export class HologramMonthlyReportComponent {
       totalWastage: 0,
       closingBalance: 0,
       isFixed: false,
+      isFirstRowOfMonth: false,
       production: {
         sikkim650ml: 0,
         wb: 0,
@@ -118,6 +147,7 @@ export class HologramMonthlyReportComponent {
       totalWastage: 0,
       closingBalance: 0,
       isFixed: false,
+      isFirstRowOfMonth: true, // First row of July EXPORT
       production: {
         sikkim650ml: 0,
         wb: 0,
@@ -141,6 +171,29 @@ export class HologramMonthlyReportComponent {
       totalWastage: 0,
       closingBalance: 0,
       isFixed: false,
+      isFirstRowOfMonth: true, // First row of July DEFENCE
+      production: {
+        sikkim650ml: 0,
+        wb: 0,
+        total: 0
+      }
+    },
+    // August 2025 LOCAL data - to demonstrate carry forward
+    {
+      id: '5',
+      month: 'aug',
+      year: '2025',
+      hologramType: 'LOCAL',
+      openingStock: 2292079, // This should be calculated from July's closing balance
+      freshArrival: 1000000,
+      total: 3292079,
+      utilizations: [],
+      wastages: [],
+      totalUtilized: 0,
+      totalWastage: 0,
+      closingBalance: 3292079,
+      isFixed: false,
+      isFirstRowOfMonth: true, // First row of August LOCAL
       production: {
         sikkim650ml: 0,
         wb: 0,
@@ -176,9 +229,63 @@ export class HologramMonthlyReportComponent {
       row.hologramType === this.selectedHologramType
     );
     
-    // If no data exists for this month/year/type, create an empty row
+    // If no data exists for this month/year/type, create the first row with previous month's closing balance
     if (this.filteredRows.length === 0) {
       this.addNewRow();
+    } else {
+      // Ensure the first row has the correct opening stock from previous month
+      this.updateFirstRowOpeningStock();
+    }
+  }
+
+  // Get previous month's closing balance for carry forward
+  getPreviousMonthClosingBalance(): number {
+    const { prevMonth, prevYear } = this.getPreviousMonthYear();
+    
+    // Find the last row of the previous month for the same hologram type
+    const prevMonthRows = this.reportRows.filter(row => 
+      row.month === prevMonth && 
+      row.year === prevYear &&
+      row.hologramType === this.selectedHologramType
+    );
+    
+    if (prevMonthRows.length === 0) {
+      return 0; // No previous month data, start with 0
+    }
+    
+    // Return the sum of all closing balances from previous month (total closing balance)
+    return prevMonthRows.reduce((total, row) => total + row.closingBalance, 0);
+  }
+
+  // Get previous month and year
+  getPreviousMonthYear(): { prevMonth: string, prevYear: string } {
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const currentMonthIndex = months.indexOf(this.selectedMonth);
+    
+    if (currentMonthIndex === 0) {
+      // January -> December of previous year
+      return {
+        prevMonth: 'dec',
+        prevYear: (parseInt(this.selectedYear) - 1).toString()
+      };
+    } else {
+      // Previous month of same year
+      return {
+        prevMonth: months[currentMonthIndex - 1],
+        prevYear: this.selectedYear
+      };
+    }
+  }
+
+  // Update the first row's opening stock with previous month's closing balance
+  updateFirstRowOpeningStock(): void {
+    if (this.filteredRows.length > 0) {
+      const firstRow = this.filteredRows.find(row => row.isFirstRowOfMonth);
+      if (firstRow) {
+        const prevClosingBalance = this.getPreviousMonthClosingBalance();
+        firstRow.openingStock = prevClosingBalance;
+        this.onRowDataChange(firstRow);
+      }
     }
   }
 
@@ -206,6 +313,16 @@ export class HologramMonthlyReportComponent {
     return `${this.getSelectedMonthYear()} - ${this.selectedHologramType}`;
   }
 
+  getPreviousMonthDisplay(): string {
+    const { prevMonth, prevYear } = this.getPreviousMonthYear();
+    const monthNames: { [key: string]: string } = {
+      'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
+      'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
+      'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+    };
+    return `${monthNames[prevMonth]} ${prevYear}`;
+  }
+
   // Navigation methods
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
@@ -214,20 +331,32 @@ export class HologramMonthlyReportComponent {
   // Data entry methods
   addNewRow(): void {
     const newId = (this.reportRows.length + 1).toString();
+    
+    // Check if this will be the first row for this month/year/type
+    const existingRows = this.reportRows.filter(row => 
+      row.month === this.selectedMonth && 
+      row.year === this.selectedYear &&
+      row.hologramType === this.selectedHologramType
+    );
+    
+    const isFirstRow = existingRows.length === 0;
+    const openingStock = isFirstRow ? this.getPreviousMonthClosingBalance() : 0;
+    
     const newRow: HologramReportRow = {
       id: newId,
       month: this.selectedMonth,
       year: this.selectedYear,
       hologramType: this.selectedHologramType,
-      openingStock: 0,
+      openingStock: openingStock,
       freshArrival: 0,
-      total: 0,
+      total: openingStock,
       utilizations: [],
       wastages: [],
       totalUtilized: 0,
       totalWastage: 0,
-      closingBalance: 0,
+      closingBalance: openingStock,
       isFixed: false,
+      isFirstRowOfMonth: isFirstRow,
       production: { sikkim650ml: 0, wb: 0, total: 0 }
     };
     
@@ -372,6 +501,25 @@ export class HologramMonthlyReportComponent {
 
   getStatusClass(isFixed: boolean): string {
     return isFixed ? 'badge bg-success' : 'badge bg-warning';
+  }
+
+  // Check if opening stock should be read-only (first row of month)
+  isOpeningStockReadonly(row: HologramReportRow): boolean {
+    return row.isFirstRowOfMonth || row.isFixed;
+  }
+
+  // Get tooltip text for opening stock field
+  getOpeningStockTooltip(row: HologramReportRow): string {
+    if (row.isFirstRowOfMonth) {
+      const { prevMonth, prevYear } = this.getPreviousMonthYear();
+      const monthNames: { [key: string]: string } = {
+        'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
+        'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
+        'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+      };
+      return `Carried forward from ${monthNames[prevMonth]} ${prevYear} closing balance`;
+    }
+    return '';
   }
 
   // Calculation helpers

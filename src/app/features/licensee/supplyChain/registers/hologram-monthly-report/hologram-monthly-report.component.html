@@ -128,10 +128,16 @@
                   <td>
                     <input type="number" 
                            class="form-control form-control-sm text-end" 
+                           [class.bg-info]="row.isFirstRowOfMonth && !row.isFixed"
+                           [class.text-white]="row.isFirstRowOfMonth && !row.isFixed"
                            [(ngModel)]="row.openingStock" 
                            (ngModelChange)="onRowDataChange(row)"
                            placeholder="0"
-                           [readonly]="row.isFixed">
+                           [readonly]="isOpeningStockReadonly(row)"
+                           [title]="getOpeningStockTooltip(row)">
+                    @if (row.isFirstRowOfMonth) {
+                    <small class="text-muted d-block">From prev month</small>
+                    }
                   </td>
                   <td>
                     <input type="number" 
@@ -346,11 +352,15 @@
                     <div class="card-body">
                       <h6 class="card-title">{{ selectedHologramType }} Summary</h6>
                       <div class="d-flex justify-content-between">
-                        <span>Total Opening Stock:</span>
+                        <span>Opening Stock:</span>
                         <strong>{{ calculateGrandTotals().totalOpening | number }}</strong>
                       </div>
-                      <div class="d-flex justify-content-between">
-                        <span>Total Fresh Arrival:</span>
+                      <small class="text-info">
+                        <i class="bi bi-arrow-right me-1"></i>
+                        Carried from {{ getPreviousMonthDisplay() }}: {{ getPreviousMonthClosingBalance() | number }}
+                      </small>
+                      <div class="d-flex justify-content-between mt-2">
+                        <span>Fresh Arrival:</span>
                         <strong>{{ calculateGrandTotals().totalFreshArrival | number }}</strong>
                       </div>
                       <div class="d-flex justify-content-between">
@@ -365,6 +375,10 @@
                         <span>Closing Balance:</span>
                         <strong class="text-primary">{{ calculateGrandTotals().totalClosing | number }}</strong>
                       </div>
+                      <small class="text-success">
+                        <i class="bi bi-arrow-right me-1"></i>
+                        Will carry to next month as opening stock
+                      </small>
                     </div>
                   </div>
                 </div>

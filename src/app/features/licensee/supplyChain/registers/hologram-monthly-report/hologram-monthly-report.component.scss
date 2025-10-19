@@ -141,6 +141,26 @@ input[readonly].bg-light {
   cursor: not-allowed;
 }
 
+// First row opening stock - carried from previous month
+input.bg-info {
+  background-color: #17a2b8 !important;
+  border-color: #138496 !important;
+  font-weight: 600;
+}
+
+input.bg-info:focus {
+  background-color: #17a2b8 !important;
+  border-color: #0c5460 !important;
+  box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25);
+}
+
+// Small text under first row opening stock
+td small.text-muted {
+  font-size: 0.65rem;
+  line-height: 1;
+  margin-top: 2px;
+}
+
 // Button sizing
 .btn-sm {
   padding: 0.2rem 0.4rem;
