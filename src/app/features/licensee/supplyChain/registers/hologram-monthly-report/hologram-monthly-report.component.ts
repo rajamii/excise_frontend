@@ -1,5 +1,5 @@
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
@@ -15,46 +15,8 @@ interface HologramWastage {
   quantity: number;
 }
 
-interface HologramMonthlyReport {
-  id: string;
-  date: string;
-  openingStock: number;
-  freshArrival: number;
-  total: number;
-  utilizations: HologramUtilization[];
-  wastages: HologramWastage[];
-  totalUtilized: number;
-  totalWastage: number;
-  closingBalance: number;
-  isFixed: boolean;
-  production: {
-    sikkim650ml: number;
-    wb: number;
-    total: number;
-  };
-}
-
 interface HologramReportRow {
   id: string;
-  date: string;
-  openingStock: number;
-  freshArrival: number;
-  total: number;
-  utilizations: HologramUtilization[];
-  wastages: HologramWastage[];
-  totalUtilized: number;
-  totalWastage: number;
-  closingBalance: number;
-  isFixed: boolean;
-  production: {
-    sikkim650ml: number;
-    wb: number;
-    total: number;
-  };
-}
-
-interface HologramReportRowPartial {
-  id?: string;
   date: string;
   openingStock: number;
   freshArrival: number;
@@ -84,12 +46,8 @@ export class HologramMonthlyReportComponent {
   selectedMonth = '';
   selectedYear = '';
   selectedDate = '';
-  sidebarHidden = true;
-  private isBrowser = false;
-  showAddRowForm = false;
-  editingRow: HologramReportRow | null = null;
 
-  // Sample data matching the image format
+  // Sample data with some pre-filled and some empty rows for the month
   reportRows: HologramReportRow[] = [
     {
       id: '1',
@@ -98,44 +56,73 @@ export class HologramMonthlyReportComponent {
       freshArrival: 2300000,
       total: 2473506,
       utilizations: [
-        { fromSerialNo: '275346495', toSerialNo: '275520000', quantity: 173506 },
-        { fromSerialNo: '275520001', toSerialNo: '275600000', quantity: 80000 },
-        { fromSerialNo: '275600001', toSerialNo: '275700000', quantity: 100000 }
+        { fromSerialNo: '275346495', toSerialNo: '275520000', quantity: 0 },
+        { fromSerialNo: '275520001', toSerialNo: '275600000', quantity: 0 }
       ],
       wastages: [
-        { fromSerialNo: '275455115', toSerialNo: '275459428', quantity: 4314 },
-        { fromSerialNo: '275459429', toSerialNo: '275465000', quantity: 5571 }
+        { fromSerialNo: '275455115', toSerialNo: '275459428', quantity: 0 }
       ],
-      totalUtilized: 2140191,
-      totalWastage: 37035,
-      closingBalance: 296280,
+      totalUtilized: 253506,
+      totalWastage: 4314,
+      closingBalance: 2215686,
       isFixed: true,
       production: {
         sikkim650ml: 175263,
         wb: 1750,
         total: 177013
       }
+    },
+    {
+      id: '2',
+      date: '',
+      openingStock: 0,
+      freshArrival: 0,
+      total: 0,
+      utilizations: [],
+      wastages: [],
+      totalUtilized: 0,
+      totalWastage: 0,
+      closingBalance: 0,
+      isFixed: false,
+      production: {
+        sikkim650ml: 0,
+        wb: 0,
+        total: 0
+      }
     }
   ];
 
   filteredRows: HologramReportRow[] = [];
-  newRow: HologramReportRowPartial = {
-    date: '',
-    openingStock: 0,
-    freshArrival: 0,
-    total: 0,
-    utilizations: [],
-    wastages: [],
-    totalUtilized: 0,
-    totalWastage: 0,
-    closingBalance: 0,
-    isFixed: false,
-    production: { sikkim650ml: 0, wb: 0, total: 0 }
-  };
 
-  constructor(private router: Router, @Inject(PLATFORM_ID) platformId: Object) {
-    this.isBrowser = isPlatformBrowser(platformId);
+  constructor(private router: Router) {
+    // Recalculate quantities for existing data
+    this.reportRows.forEach(row => {
+      row.utilizations.forEach(util => {
+        util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
+      });
+      row.wastages.forEach(waste => {
+        waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
+      });
+      this.onRowDataChange(row);
+    });
+    
     this.filteredRows = [...this.reportRows];
+    
+    // Test the calculation with sample data
+    this.testCalculation();
+  }
+
+  private testCalculation(): void {
+    // Test cases
+    const test1 = this.calculateQuantityFromSerials('275346495', '275520000');
+    const test2 = this.calculateQuantityFromSerials('1000', '1010');
+    const test3 = this.calculateQuantityFromSerials('ABC123', 'ABC133');
+    
+    console.log('Test calculations:', {
+      'From 275346495 to 275520000': test1, // Should be 173506
+      'From 1000 to 1010': test2, // Should be 11
+      'From ABC123 to ABC133': test3 // Should be 11
+    });
   }
 
   // Filter methods
@@ -163,9 +150,9 @@ export class HologramMonthlyReportComponent {
 
   // Data entry methods
   addNewRow(): void {
-    this.showAddRowForm = true;
-    this.editingRow = null;
-    this.newRow = {
+    const newId = (this.reportRows.length + 1).toString();
+    const newRow: HologramReportRow = {
+      id: newId,
       date: '',
       openingStock: 0,
       freshArrival: 0,
@@ -178,93 +165,126 @@ export class HologramMonthlyReportComponent {
       isFixed: false,
       production: { sikkim650ml: 0, wb: 0, total: 0 }
     };
-  }
-
-  editRow(row: HologramReportRow): void {
-    if (row.isFixed) return; // Cannot edit fixed rows
-    this.editingRow = { ...row } as HologramReportRow;
-    this.showAddRowForm = true;
-  }
-
-  saveRow(): void {
-    if (!this.editingRow && !this.newRow.date) {
-      alert('Please enter a date');
-      return;
-    }
-
-    const rowData = this.editingRow || this.newRow;
     
-    // Calculate totals
-    rowData.total = (rowData.openingStock || 0) + (rowData.freshArrival || 0);
-    rowData.totalUtilized = (rowData.utilizations || []).reduce((sum, util) => sum + util.quantity, 0);
-    rowData.totalWastage = (rowData.wastages || []).reduce((sum, waste) => sum + waste.quantity, 0);
-    rowData.closingBalance = rowData.total - (rowData.totalUtilized + rowData.totalWastage);
-    if (rowData.production) {
-      rowData.production.total = (rowData.production.sikkim650ml || 0) + (rowData.production.wb || 0);
-    }
-
-    if (this.editingRow) {
-      // Update existing row
-      const index = this.reportRows.findIndex(r => r.id === this.editingRow!.id);
-      if (index !== -1) {
-        this.reportRows[index] = { ...this.editingRow, isFixed: true };
-      }
-    } else {
-      // Add new row
-      const newId = (this.reportRows.length + 1).toString();
-      this.reportRows.push({
-        id: newId,
-        ...rowData,
-        isFixed: true
-      } as HologramReportRow);
-    }
-
-    this.cancelEdit();
+    this.reportRows.push(newRow);
     this.onSearch();
   }
 
-  cancelEdit(): void {
-    this.showAddRowForm = false;
-    this.editingRow = null;
-    this.newRow = {
-      date: '',
-      openingStock: 0,
-      freshArrival: 0,
-      total: 0,
-      utilizations: [],
-      wastages: [],
-      totalUtilized: 0,
-      totalWastage: 0,
-      closingBalance: 0,
-      isFixed: false,
-      production: { sikkim650ml: 0, wb: 0, total: 0 }
-    };
-  }
-
-  addUtilization(): void {
-    if (!this.editingRow && !this.newRow.utilizations) {
-      this.newRow.utilizations = [];
+  onRowDataChange(row: HologramReportRow): void {
+    // Calculate totals whenever data changes
+    row.total = (row.openingStock || 0) + (row.freshArrival || 0);
+    row.totalUtilized = (row.utilizations || []).reduce((sum, util) => sum + (util.quantity || 0), 0);
+    row.totalWastage = (row.wastages || []).reduce((sum, waste) => sum + (waste.quantity || 0), 0);
+    row.closingBalance = row.total - (row.totalUtilized + row.totalWastage);
+    if (row.production) {
+      row.production.total = (row.production.sikkim650ml || 0) + (row.production.wb || 0);
     }
-    const utilizations = this.editingRow?.utilizations || this.newRow.utilizations || [];
-    utilizations.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
   }
 
-  removeUtilization(index: number): void {
-    const utilizations = this.editingRow?.utilizations || this.newRow.utilizations || [];
-    utilizations.splice(index, 1);
-  }
-
-  addWastage(): void {
-    if (!this.editingRow && !this.newRow.wastages) {
-      this.newRow.wastages = [];
+  onUtilizationSerialChange(row: HologramReportRow, index: number): void {
+    if (row.utilizations && row.utilizations[index]) {
+      const util = row.utilizations[index];
+      util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
+      this.onRowDataChange(row);
     }
-    const wastages = this.editingRow?.wastages || this.newRow.wastages || [];
-    wastages.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
   }
 
-  removeWastage(index: number): void {
-    const wastages = this.editingRow?.wastages || this.newRow.wastages || [];
-    wastages.splice(index, 1);
+  onWastageSerialChange(row: HologramReportRow, index: number): void {
+    if (row.wastages && row.wastages[index]) {
+      const waste = row.wastages[index];
+      waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
+      this.onRowDataChange(row);
+    }
+  }
+
+  private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
+    if (!fromSerial || !toSerial) {
+      return 0;
+    }
+
+    // Trim whitespace
+    fromSerial = fromSerial.trim();
+    toSerial = toSerial.trim();
+
+    // Extract numeric parts from serial numbers
+    const fromNum = this.extractNumericPart(fromSerial);
+    const toNum = this.extractNumericPart(toSerial);
+
+    if (fromNum === null || toNum === null || toNum < fromNum) {
+      return 0;
+    }
+
+    // Calculate quantity as (To - From) + 1
+    const quantity = (toNum - fromNum) + 1;
+    return quantity;
+  }
+
+  private extractNumericPart(serial: string): number | null {
+    if (!serial) return null;
+    
+    // Try to extract the numeric part - handle different formats
+    // First try: pure numeric string
+    if (/^\d+$/.test(serial)) {
+      return parseInt(serial, 10);
+    }
+    
+    // Second try: extract trailing numbers (most common format)
+    const trailingNumbers = serial.match(/\d+$/);
+    if (trailingNumbers) {
+      return parseInt(trailingNumbers[0], 10);
+    }
+    
+    // Third try: extract all numbers and take the largest sequence
+    const allNumbers = serial.match(/\d+/g);
+    if (allNumbers && allNumbers.length > 0) {
+      // Take the longest numeric sequence
+      const longestNum = allNumbers.reduce((a, b) => a.length > b.length ? a : b);
+      return parseInt(longestNum, 10);
+    }
+    
+    return null;
+  }
+
+  saveRow(row: HologramReportRow): void {
+    if (!row.date) {
+      alert('Please enter a date');
+      return;
+    }
+    
+    // Final calculation before saving
+    this.onRowDataChange(row);
+    row.isFixed = true;
+    this.onSearch();
+  }
+
+  addUtilizationToRow(row: HologramReportRow): void {
+    if (!row.utilizations) {
+      row.utilizations = [];
+    }
+    row.utilizations.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
+    // No need to call onRowDataChange here as quantity will be 0 until serial numbers are entered
+  }
+
+  removeUtilizationFromRow(row: HologramReportRow, index: number): void {
+    if (row.utilizations) {
+      row.utilizations.splice(index, 1);
+      this.onRowDataChange(row);
+    }
+  }
+
+  addWastageToRow(row: HologramReportRow): void {
+    if (!row.wastages) {
+      row.wastages = [];
+    }
+    row.wastages.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
+    // No need to call onRowDataChange here as quantity will be 0 until serial numbers are entered
+  }
+
+  removeWastageFromRow(row: HologramReportRow, index: number): void {
+    if (row.wastages) {
+      row.wastages.splice(index, 1);
+      this.onRowDataChange(row);
+    }
   }
 
   deleteRow(row: HologramReportRow): void {
@@ -280,10 +300,6 @@ export class HologramMonthlyReportComponent {
 
   getStatusClass(isFixed: boolean): string {
     return isFixed ? 'badge bg-success' : 'badge bg-warning';
-  }
-
-  toggleSidebar(): void {
-    this.sidebarHidden = !this.sidebarHidden;
   }
 
   // Calculation helpers
@@ -333,62 +349,5 @@ export class HologramMonthlyReportComponent {
     this.currentPage = 1;
   }
 
-  // Getter methods for safe two-way binding
-  get currentRow() {
-    return this.editingRow || this.newRow;
-  }
 
-  get currentRowDate() {
-    return this.currentRow?.date || '';
-  }
-
-  set currentRowDate(value: string) {
-    if (this.currentRow) {
-      this.currentRow.date = value;
-    }
-  }
-
-  get currentRowOpeningStock() {
-    return this.currentRow?.openingStock || 0;
-  }
-
-  set currentRowOpeningStock(value: number) {
-    if (this.currentRow) {
-      this.currentRow.openingStock = value;
-      this.saveRow();
-    }
-  }
-
-  get currentRowFreshArrival() {
-    return this.currentRow?.freshArrival || 0;
-  }
-
-  set currentRowFreshArrival(value: number) {
-    if (this.currentRow) {
-      this.currentRow.freshArrival = value;
-      this.saveRow();
-    }
-  }
-
-  get currentRowProductionSikkim() {
-    return this.currentRow?.production?.sikkim650ml || 0;
-  }
-
-  set currentRowProductionSikkim(value: number) {
-    if (this.currentRow?.production) {
-      this.currentRow.production.sikkim650ml = value;
-      this.saveRow();
-    }
-  }
-
-  get currentRowProductionWB() {
-    return this.currentRow?.production?.wb || 0;
-  }
-
-  set currentRowProductionWB(value: number) {
-    if (this.currentRow?.production) {
-      this.currentRow.production.wb = value;
-      this.saveRow();
-    }
-  }
 }
