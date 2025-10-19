@@ -8,8 +8,8 @@
           <div class="row align-items-center py-3">
 
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit</h1>
-              <p class="mb-0 small opacity-75">Period: 2025-26 | M/s Yuksom Breweries Ltd. | Melli South Sikkim | Types of Hologram: LOCAL</p>
+              <h1 class="h3 mb-1 fw-bold">Monthly Statement of Hologram with Manufacturing Unit - {{ getSelectedMonthYear() }}</h1>
+              <p class="mb-0 small opacity-75">M/s Yuksom Breweries Ltd. | Melli South Sikkim | Types of Hologram: LOCAL</p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
@@ -26,56 +26,46 @@
       <div class="bg-white border-bottom">
         <div class="container-fluid py-3">
           <div class="row align-items-center g-3">
-            <!-- Date Filter -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Date</label>
-              <input type="text" class="form-control form-control-sm" [(ngModel)]="selectedDate" 
-                placeholder="e.g. Jul-25">
-            </div>
+
 
             <!-- Month Dropdown -->
             <div class="col-auto">
               <label class="form-label small mb-1">Month</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
-                <option value="">All Months</option>
-                <option value="jan">Jan</option>
-                <option value="feb">Feb</option>
-                <option value="mar">Mar</option>
-                <option value="apr">Apr</option>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
+                <option value="jan">January</option>
+                <option value="feb">February</option>
+                <option value="mar">March</option>
+                <option value="apr">April</option>
                 <option value="may">May</option>
-                <option value="jun">Jun</option>
-                <option value="jul">Jul</option>
-                <option value="aug">Aug</option>
-                <option value="sep">Sep</option>
-                <option value="oct">Oct</option>
-                <option value="nov">Nov</option>
-                <option value="dec">Dec</option>
+                <option value="jun">June</option>
+                <option value="jul">July</option>
+                <option value="aug">August</option>
+                <option value="sep">September</option>
+                <option value="oct">October</option>
+                <option value="nov">November</option>
+                <option value="dec">December</option>
               </select>
             </div>
 
             <!-- Year Dropdown -->
             <div class="col-auto">
               <label class="form-label small mb-1">Year</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedYear">
-                <option value="">All Years</option>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
                 <option value="2026">2026</option>
               </select>
             </div>
 
-            <!-- Action Buttons -->
+            <!-- Current Selection Display -->
             <div class="col-auto">
-              <label class="form-label small mb-1 invisible">Actions</label>
-              <div class="d-flex gap-2">
-                <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search" aria-label="Search">
-                  <i class="bi bi-search"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear" aria-label="Clear filters">
-                  <i class="bi bi-arrow-clockwise"></i>
-                </button>
+              <label class="form-label small mb-1">Current Register</label>
+              <div class="alert alert-info py-1 px-2 mb-0 small">
+                {{ getSelectedMonthYear() }}
               </div>
             </div>
+
+
           </div>
         </div>
       </div>
@@ -87,7 +77,6 @@
             <table class="table table-bordered table-hover compact-table">
               <thead class="table-success">
                 <tr>
-                  <th rowspan="2" class="text-center align-middle col-date">Date</th>
                   <th rowspan="2" class="text-center align-middle col-stock">Opening Stock</th>
                   <th rowspan="2" class="text-center align-middle col-arrival">Fresh Arrival</th>
                   <th rowspan="2" class="text-center align-middle col-total">Total</th>
@@ -109,14 +98,6 @@
               <tbody>
                 @for (row of getPagedRows(); track row.id) {
                 <tr [class.table-warning]="!row.isFixed">
-                  <td>
-                    <input type="text" 
-                           class="form-control form-control-sm text-center" 
-                           [(ngModel)]="row.date" 
-                           (ngModelChange)="onRowDataChange(row)"
-                           placeholder="Jul-25"
-                           [readonly]="row.isFixed">
-                  </td>
                   <td>
                     <input type="number" 
                            class="form-control form-control-sm text-end" 
@@ -175,7 +156,7 @@
                       <div class="d-flex mb-1">
                         <input type="number" 
                                class="form-control form-control-sm text-end flex-grow-1 bg-light" 
-                               [value]="util.quantity | number" 
+                               [ngModel]="util.quantity" 
                                placeholder="0"
                                readonly
                                tabindex="-1">
@@ -239,7 +220,7 @@
                       <div class="d-flex mb-1">
                         <input type="number" 
                                class="form-control form-control-sm text-end flex-grow-1 bg-light" 
-                               [value]="waste.quantity | number" 
+                               [ngModel]="waste.quantity" 
                                placeholder="0"
                                readonly
                                tabindex="-1">
@@ -284,16 +265,15 @@
                 </tr>
                 } @empty {
                   <tr>
-                    <td colspan="12" class="text-center text-muted py-4">
+                    <td colspan="11" class="text-center text-muted py-4">
                       <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                      No hologram data found. Add a new row to get started.
+                      No hologram data found for {{ getSelectedMonthYear() }}. Add a new row to get started.
                     </td>
                   </tr>
                 }
                 
                 <!-- Grand Total Row -->
                 <tr class="table-info fw-bold">
-                  <td class="text-center">TOTAL</td>
                   <td class="text-end">{{ calculateGrandTotals().totalOpening | number }}</td>
                   <td class="text-end">{{ calculateGrandTotals().totalFreshArrival | number }}</td>
                   <td class="text-end">{{ calculateGrandTotals().totalTotal | number }}</td>

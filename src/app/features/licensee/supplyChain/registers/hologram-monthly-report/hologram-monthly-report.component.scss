@@ -11,29 +11,61 @@
 .compact-table {
   font-size: 0.75rem;
   margin-bottom: 0;
-  
-  th, td {
+
+  th,
+  td {
     padding: 0.3rem !important;
     vertical-align: middle;
     white-space: nowrap;
   }
-  
+
   // Column width constraints
-  .col-date { width: 80px; min-width: 80px; }
-  .col-stock { width: 90px; min-width: 90px; }
-  .col-arrival { width: 90px; min-width: 90px; }
-  .col-total { width: 80px; min-width: 80px; }
-  .col-serial { width: 100px; min-width: 100px; }
-  .col-qty { width: 70px; min-width: 70px; }
-  .col-wastage-total { width: 80px; min-width: 80px; }
-  .col-closing { width: 90px; min-width: 90px; }
-  .col-actions { width: 80px; min-width: 80px; }
+  .col-stock {
+    width: 100px;
+    min-width: 100px;
+  }
+
+  .col-arrival {
+    width: 100px;
+    min-width: 100px;
+  }
+
+  .col-total {
+    width: 90px;
+    min-width: 90px;
+  }
+
+  .col-serial {
+    width: 110px;
+    min-width: 110px;
+  }
+
+  .col-qty {
+    width: 80px;
+    min-width: 80px;
+  }
+
+  .col-wastage-total {
+    width: 90px;
+    min-width: 90px;
+  }
+
+  .col-closing {
+    width: 100px;
+    min-width: 100px;
+  }
+
+  .col-actions {
+    width: 90px;
+    min-width: 90px;
+  }
 }
 
 // Inline editing styles
-.utilization-inputs, .wastage-inputs {
-  min-width: 90px;
-  max-width: 100px;
+.utilization-inputs,
+.wastage-inputs {
+  min-width: 100px;
+  max-width: 110px;
 }
 
 .utilization-inputs .form-control,
@@ -94,7 +126,7 @@ input[readonly].bg-light {
 .header-section {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .icon-btn {
@@ -147,7 +179,8 @@ input[readonly].bg-light {
   border-bottom-right-radius: 0.375rem;
 }
 
-.form-control-sm, .form-select-sm {
+.form-control-sm,
+.form-select-sm {
   font-size: 0.875rem;
   padding: 0.375rem 0.75rem;
 }
@@ -168,27 +201,59 @@ input[readonly].bg-light {
 @media (max-width: 1200px) {
   .compact-table {
     font-size: 0.65rem;
-    
-    th, td {
+
+    th,
+    td {
       padding: 0.2rem !important;
     }
-    
-    .col-date { width: 70px; min-width: 70px; }
-    .col-stock { width: 80px; min-width: 80px; }
-    .col-arrival { width: 80px; min-width: 80px; }
-    .col-total { width: 70px; min-width: 70px; }
-    .col-serial { width: 85px; min-width: 85px; }
-    .col-qty { width: 60px; min-width: 60px; }
-    .col-wastage-total { width: 70px; min-width: 70px; }
-    .col-closing { width: 80px; min-width: 80px; }
-    .col-actions { width: 70px; min-width: 70px; }
+
+    .col-stock {
+      width: 90px;
+      min-width: 90px;
+    }
+
+    .col-arrival {
+      width: 90px;
+      min-width: 90px;
+    }
+
+    .col-total {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    .col-serial {
+      width: 95px;
+      min-width: 95px;
+    }
+
+    .col-qty {
+      width: 70px;
+      min-width: 70px;
+    }
+
+    .col-wastage-total {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    .col-closing {
+      width: 90px;
+      min-width: 90px;
+    }
+
+    .col-actions {
+      width: 80px;
+      min-width: 80px;
+    }
   }
-  
-  .utilization-inputs, .wastage-inputs {
-    min-width: 80px;
-    max-width: 85px;
+
+  .utilization-inputs,
+  .wastage-inputs {
+    min-width: 90px;
+    max-width: 95px;
   }
-  
+
   .table td input.form-control-sm {
     font-size: 0.65rem;
     padding: 0.15rem 0.25rem;
@@ -199,33 +264,65 @@ input[readonly].bg-light {
 @media (max-width: 768px) {
   .compact-table {
     font-size: 0.6rem;
-    
-    th, td {
+
+    th,
+    td {
       padding: 0.15rem !important;
     }
-    
-    .col-date { width: 60px; min-width: 60px; }
-    .col-stock { width: 70px; min-width: 70px; }
-    .col-arrival { width: 70px; min-width: 70px; }
-    .col-total { width: 60px; min-width: 60px; }
-    .col-serial { width: 75px; min-width: 75px; }
-    .col-qty { width: 50px; min-width: 50px; }
-    .col-wastage-total { width: 60px; min-width: 60px; }
-    .col-closing { width: 70px; min-width: 70px; }
-    .col-actions { width: 60px; min-width: 60px; }
+
+    .col-stock {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    .col-arrival {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    .col-total {
+      width: 70px;
+      min-width: 70px;
+    }
+
+    .col-serial {
+      width: 85px;
+      min-width: 85px;
+    }
+
+    .col-qty {
+      width: 60px;
+      min-width: 60px;
+    }
+
+    .col-wastage-total {
+      width: 70px;
+      min-width: 70px;
+    }
+
+    .col-closing {
+      width: 80px;
+      min-width: 80px;
+    }
+
+    .col-actions {
+      width: 70px;
+      min-width: 70px;
+    }
   }
-  
-  .utilization-inputs, .wastage-inputs {
-    min-width: 70px;
-    max-width: 75px;
+
+  .utilization-inputs,
+  .wastage-inputs {
+    min-width: 80px;
+    max-width: 85px;
   }
-  
+
   .table td input.form-control-sm {
     font-size: 0.6rem;
     padding: 0.1rem 0.2rem;
     min-height: 20px;
   }
-  
+
   .btn-sm {
     padding: 0.1rem 0.3rem;
     font-size: 0.6rem;
@@ -238,6 +335,7 @@ input[readonly].bg-light {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

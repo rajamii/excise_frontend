@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,7 +17,8 @@ interface HologramWastage {
 
 interface HologramReportRow {
   id: string;
-  date: string;
+  month: string; // e.g., 'jul'
+  year: string; // e.g., '2025'
   openingStock: number;
   freshArrival: number;
   total: number;
@@ -43,15 +44,15 @@ interface HologramReportRow {
 })
 export class HologramMonthlyReportComponent {
   Math = Math;
-  selectedMonth = '';
-  selectedYear = '';
-  selectedDate = '';
+  selectedMonth = 'jul'; // Default to July
+  selectedYear = '2025'; // Default to 2025
 
-  // Sample data with some pre-filled and some empty rows for the month
+  // Sample data organized by month and year
   reportRows: HologramReportRow[] = [
     {
       id: '1',
-      date: 'Jul-25',
+      month: 'jul',
+      year: '2025',
       openingStock: 173506,
       freshArrival: 2300000,
       total: 2473506,
@@ -74,7 +75,31 @@ export class HologramMonthlyReportComponent {
     },
     {
       id: '2',
-      date: '',
+      month: 'jul',
+      year: '2025',
+      openingStock: 1000,
+      freshArrival: 5000,
+      total: 6000,
+      utilizations: [
+        { fromSerialNo: '1000', toSerialNo: '1010', quantity: 0 }
+      ],
+      wastages: [
+        { fromSerialNo: '2000', toSerialNo: '2005', quantity: 0 }
+      ],
+      totalUtilized: 0,
+      totalWastage: 0,
+      closingBalance: 0,
+      isFixed: false,
+      production: {
+        sikkim650ml: 0,
+        wb: 0,
+        total: 0
+      }
+    },
+    {
+      id: '3',
+      month: 'aug',
+      year: '2025',
       openingStock: 0,
       freshArrival: 0,
       total: 0,
@@ -94,7 +119,7 @@ export class HologramMonthlyReportComponent {
 
   filteredRows: HologramReportRow[] = [];
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private cdr: ChangeDetectorRef) {
     // Recalculate quantities for existing data
     this.reportRows.forEach(row => {
       row.utilizations.forEach(util => {
@@ -106,41 +131,35 @@ export class HologramMonthlyReportComponent {
       this.onRowDataChange(row);
     });
     
-    this.filteredRows = [...this.reportRows];
+    // Load data for the selected month/year
+    this.loadMonthlyData();
+  }
+
+  // Monthly data management
+  loadMonthlyData(): void {
+    // Filter data for the selected month and year
+    this.filteredRows = this.reportRows.filter(row => 
+      row.month === this.selectedMonth && row.year === this.selectedYear
+    );
     
-    // Test the calculation with sample data
-    this.testCalculation();
+    // If no data exists for this month/year, create an empty row
+    if (this.filteredRows.length === 0) {
+      this.addNewRow();
+    }
   }
 
-  private testCalculation(): void {
-    // Test cases
-    const test1 = this.calculateQuantityFromSerials('275346495', '275520000');
-    const test2 = this.calculateQuantityFromSerials('1000', '1010');
-    const test3 = this.calculateQuantityFromSerials('ABC123', 'ABC133');
-    
-    console.log('Test calculations:', {
-      'From 275346495 to 275520000': test1, // Should be 173506
-      'From 1000 to 1010': test2, // Should be 11
-      'From ABC123 to ABC133': test3 // Should be 11
-    });
+  onMonthYearChange(): void {
+    this.loadMonthlyData();
+    this.currentPage = 1; // Reset pagination
   }
 
-  // Filter methods
-  onSearch(): void {
-    this.filteredRows = this.reportRows.filter(row => {
-      const dateMatch = !this.selectedDate || row.date.toLowerCase().includes(this.selectedDate.toLowerCase());
-      const monthMatch = !this.selectedMonth || row.date.toLowerCase().includes(this.selectedMonth.toLowerCase());
-      const yearMatch = !this.selectedYear || row.date.includes(this.selectedYear);
-      
-      return dateMatch && monthMatch && yearMatch;
-    });
-  }
-
-  onClear(): void {
-    this.selectedMonth = '';
-    this.selectedYear = '';
-    this.selectedDate = '';
-    this.filteredRows = [...this.reportRows];
+  getSelectedMonthYear(): string {
+    const monthNames: { [key: string]: string } = {
+      'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
+      'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
+      'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+    };
+    return `${monthNames[this.selectedMonth]} ${this.selectedYear}`;
   }
 
   // Navigation methods
@@ -153,7 +172,8 @@ export class HologramMonthlyReportComponent {
     const newId = (this.reportRows.length + 1).toString();
     const newRow: HologramReportRow = {
       id: newId,
-      date: '',
+      month: this.selectedMonth,
+      year: this.selectedYear,
       openingStock: 0,
       freshArrival: 0,
       total: 0,
@@ -167,7 +187,7 @@ export class HologramMonthlyReportComponent {
     };
     
     this.reportRows.push(newRow);
-    this.onSearch();
+    this.loadMonthlyData();
   }
 
   onRowDataChange(row: HologramReportRow): void {
@@ -184,16 +204,22 @@ export class HologramMonthlyReportComponent {
   onUtilizationSerialChange(row: HologramReportRow, index: number): void {
     if (row.utilizations && row.utilizations[index]) {
       const util = row.utilizations[index];
+      const oldQuantity = util.quantity;
       util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
+
       this.onRowDataChange(row);
+      this.cdr.detectChanges(); // Force change detection
     }
   }
 
   onWastageSerialChange(row: HologramReportRow, index: number): void {
     if (row.wastages && row.wastages[index]) {
       const waste = row.wastages[index];
+      const oldQuantity = waste.quantity;
       waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
+
       this.onRowDataChange(row);
+      this.cdr.detectChanges(); // Force change detection
     }
   }
 
@@ -216,6 +242,12 @@ export class HologramMonthlyReportComponent {
 
     // Calculate quantity as (To - From) + 1
     const quantity = (toNum - fromNum) + 1;
+    
+    // Log successful calculations for debugging
+    if (quantity > 0) {
+      console.log(`Calculated: ${fromSerial} to ${toSerial} = ${quantity}`);
+    }
+    
     return quantity;
   }
 
@@ -246,15 +278,10 @@ export class HologramMonthlyReportComponent {
   }
 
   saveRow(row: HologramReportRow): void {
-    if (!row.date) {
-      alert('Please enter a date');
-      return;
-    }
-    
     // Final calculation before saving
     this.onRowDataChange(row);
     row.isFixed = true;
-    this.onSearch();
+    this.loadMonthlyData();
   }
 
   addUtilizationToRow(row: HologramReportRow): void {
@@ -294,7 +321,7 @@ export class HologramMonthlyReportComponent {
     }
     if (confirm('Are you sure you want to delete this row?')) {
       this.reportRows = this.reportRows.filter(r => r.id !== row.id);
-      this.onSearch();
+      this.loadMonthlyData();
     }
   }
 
@@ -349,5 +376,27 @@ export class HologramMonthlyReportComponent {
     this.currentPage = 1;
   }
 
+  // Test method to verify calculation
+  testCalculation(): void {
+    console.log('=== Testing Calculations ===');
+    
+    // Test simple numbers
+    const test1 = this.calculateQuantityFromSerials('1000', '1010');
+    console.log('Test 1 (1000 to 1010):', test1, 'Expected: 11');
+    
+    // Test with serial numbers
+    const test2 = this.calculateQuantityFromSerials('275346495', '275346500');
+    console.log('Test 2 (275346495 to 275346500):', test2, 'Expected: 6');
+    
+    // Test with prefix
+    const test3 = this.calculateQuantityFromSerials('ABC123', 'ABC133');
+    console.log('Test 3 (ABC123 to ABC133):', test3, 'Expected: 11');
+    
+    // Test empty values
+    const test4 = this.calculateQuantityFromSerials('', '1000');
+    console.log('Test 4 (empty to 1000):', test4, 'Expected: 0');
+    
+    console.log('=== End Tests ===');
+  }
 
 }

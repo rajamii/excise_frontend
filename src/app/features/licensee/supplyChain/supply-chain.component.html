@@ -4,11 +4,11 @@
     [style.width]="sidebarHidden ? '0' : '280px'">
     <!-- Sidebar Header -->
     <div class="p-3 border-bottom text-black" style="background-color:#D1E7DD;">
-  <h5 class="mb-0 fw-bold">
-    <i class="bi bi-building me-2"></i>
-    Distillery Management 
-  </h5>
-</div>
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-building me-2"></i>
+        Distillery Management
+      </h5>
+    </div>
 
 
     <!-- Sidebar Content -->
@@ -19,8 +19,8 @@
         <!-- Distillery Section -->
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed  text-black fw-semibold" type="button"
-              data-bs-toggle="collapse" data-bs-target="#distilleryCollapse">
+            <button class="accordion-button collapsed  text-black fw-semibold" type="button" data-bs-toggle="collapse"
+              data-bs-target="#distilleryCollapse">
               <i class="bi bi-building me-2"></i>
               Supply Chain
             </button>
@@ -43,59 +43,59 @@
                   <i class="bi bi-qr-code me-3 text-primary fs-5"></i>
                   <span>Hologram</span>
                 </li>
-               
+
               </ul>
             </div>
           </div>
         </div>
 
-          <!-- Register Section -->
-          <div class="accordion-item">
-            <h2 class="accordion-header">
-              <button class="accordion-button collapsed text-black fw-semibold" type="button"
-                data-bs-toggle="collapse" data-bs-target="#registerCollapse">
-                <i class="bi bi-journal-text me-2"></i>
-                Register
-              </button>
-            </h2>
-            <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
-              <div class="accordion-body p-0">
-                <ul class="list-group list-group-flush">
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('transit-permit-register')" style="cursor: pointer;">
-                    <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
-                    <span>Transit Permit Register</span>
-                  </li>
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('daily-record-register')" style="cursor: pointer;">
-                    <i class="bi bi-journal-check me-3 text-success fs-5"></i>
-                    <span>Daily Record Register</span>
-                  </li>
-                  
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('brands-details')" style="cursor: pointer;">
-                    <i class="bi bi-tags me-3 text-dark fs-5"></i>
-                    <span>Brands Details</span>
-                  </li>
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('yuksom-local-sales-register')" style="cursor: pointer;">
-                    <i class="bi bi-journal-text me-3 text-warning fs-5"></i>
-                    <span>Yuksom Local Sale</span>
-                  </li>
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('beer-production-register')" style="cursor: pointer;">
-                    <i class="bi bi-cup-hot me-3 text-info fs-5"></i>
-                    <span>Beer Production Register</span>
-                  </li>
-                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('hologram-monthly-report')" style="cursor: pointer;">
-                    <i class="bi bi-graph-up me-3 text-primary fs-5"></i>
-                    <span>Hologram Monthly Report</span>
-                  </li>
-                </ul>
-              </div>
+        <!-- Register Section -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
+              data-bs-target="#registerCollapse">
+              <i class="bi bi-journal-text me-2"></i>
+              Register
+            </button>
+          </h2>
+          <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+            <div class="accordion-body p-0">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('transit-permit-register')" style="cursor: pointer;">
+                  <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
+                  <span>Transit Permit Register</span>
+                </li>
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('daily-record-register')" style="cursor: pointer;">
+                  <i class="bi bi-journal-check me-3 text-success fs-5"></i>
+                  <span>Daily Record Register</span>
+                </li>
+
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('brands-details')" style="cursor: pointer;">
+                  <i class="bi bi-tags me-3 text-dark fs-5"></i>
+                  <span>Brands Details</span>
+                </li>
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('yuksom-local-sales-register')" style="cursor: pointer;">
+                  <i class="bi bi-journal-text me-3 text-warning fs-5"></i>
+                  <span>Yuksom Local Sale</span>
+                </li>
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('beer-production-register')" style="cursor: pointer;">
+                  <i class="bi bi-cup-hot me-3 text-info fs-5"></i>
+                  <span>Beer Production Register</span>
+                </li>
+                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('hologram-monthly-report')" style="cursor: pointer;">
+                  <i class="bi bi-graph-up me-3 text-primary fs-5"></i>
+                  <span>Hologram Monthly Report</span>
+                </li>
+              </ul>
             </div>
           </div>
+        </div>
       </div>
     </div>
   </nav>
@@ -194,7 +194,8 @@
                 <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search" aria-label="Search">
                   <i class="bi bi-search"></i>
                 </button>
-                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear" aria-label="Clear filters">
+                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear"
+                  aria-label="Clear filters">
                   <i class="bi bi-arrow-clockwise"></i>
                 </button>
               </div>
@@ -297,15 +298,24 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('requisition')" (ngModelChange)="changePageSize('requisition', $event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('requisition')"
+                  (ngModelChange)="changePageSize('requisition', $event)">
                   <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', 1, requisitionData)" [disabled]="getCurrentPage('requisition')===1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getCurrentPage('requisition')-1, requisitionData)" [disabled]="getCurrentPage('requisition')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('requisition') }} / {{ getTotalPages(requisitionData, 'requisition') }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getCurrentPage('requisition')+1, requisitionData)" [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', getTotalPages(requisitionData, 'requisition'), requisitionData)" [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', 1, requisitionData)"
+                    [disabled]="getCurrentPage('requisition')===1">«</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('requisition', getCurrentPage('requisition')-1, requisitionData)"
+                    [disabled]="getCurrentPage('requisition')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('requisition') }} / {{
+                    getTotalPages(requisitionData, 'requisition') }}</span>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('requisition', getCurrentPage('requisition')+1, requisitionData)"
+                    [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">›</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('requisition', getTotalPages(requisitionData, 'requisition'), requisitionData)"
+                    [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">»</button>
                 </div>
               </div>
             </div>
@@ -371,15 +381,24 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('revalidation')" (ngModelChange)="changePageSize('revalidation', $event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('revalidation')"
+                  (ngModelChange)="changePageSize('revalidation', $event)">
                   <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', 1, revlidationData)" [disabled]="getCurrentPage('revalidation')===1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getCurrentPage('revalidation')-1, revlidationData)" [disabled]="getCurrentPage('revalidation')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('revalidation') }} / {{ getTotalPages(revlidationData, 'revalidation') }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getCurrentPage('revalidation')+1, revlidationData)" [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', getTotalPages(revlidationData, 'revalidation'), revlidationData)" [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', 1, revlidationData)"
+                    [disabled]="getCurrentPage('revalidation')===1">«</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('revalidation', getCurrentPage('revalidation')-1, revlidationData)"
+                    [disabled]="getCurrentPage('revalidation')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('revalidation') }} / {{
+                    getTotalPages(revlidationData, 'revalidation') }}</span>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('revalidation', getCurrentPage('revalidation')+1, revlidationData)"
+                    [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">›</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('revalidation', getTotalPages(revlidationData, 'revalidation'), revlidationData)"
+                    [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">»</button>
                 </div>
               </div>
             </div>
@@ -433,15 +452,24 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('cancellation')" (ngModelChange)="changePageSize('cancellation', $event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('cancellation')"
+                  (ngModelChange)="changePageSize('cancellation', $event)">
                   <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', 1, cancellationData)" [disabled]="getCurrentPage('cancellation')===1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getCurrentPage('cancellation')-1, cancellationData)" [disabled]="getCurrentPage('cancellation')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('cancellation') }} / {{ getTotalPages(cancellationData, 'cancellation') }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getCurrentPage('cancellation')+1, cancellationData)" [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', getTotalPages(cancellationData, 'cancellation'), cancellationData)" [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', 1, cancellationData)"
+                    [disabled]="getCurrentPage('cancellation')===1">«</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('cancellation', getCurrentPage('cancellation')-1, cancellationData)"
+                    [disabled]="getCurrentPage('cancellation')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('cancellation') }} / {{
+                    getTotalPages(cancellationData, 'cancellation') }}</span>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('cancellation', getCurrentPage('cancellation')+1, cancellationData)"
+                    [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">›</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('cancellation', getTotalPages(cancellationData, 'cancellation'), cancellationData)"
+                    [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">»</button>
                 </div>
               </div>
             </div>
@@ -471,7 +499,8 @@
                     </span>
                   </td>
                   <td>
-                    <button class="btn btn-primary btn-sm" (click)="openTransitApplication(item.referenceNo)">View Application</button>
+                    <button class="btn btn-primary btn-sm" (click)="openTransitApplication(item.referenceNo)">View
+                      Application</button>
                   </td>
                 </tr>
                 }
@@ -486,15 +515,24 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('transit')" (ngModelChange)="changePageSize('transit', $event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('transit')"
+                  (ngModelChange)="changePageSize('transit', $event)">
                   <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', 1, transitData)" [disabled]="getCurrentPage('transit')===1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getCurrentPage('transit')-1, transitData)" [disabled]="getCurrentPage('transit')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('transit') }} / {{ getTotalPages(transitData, 'transit') }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getCurrentPage('transit')+1, transitData)" [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', getTotalPages(transitData, 'transit'), transitData)" [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', 1, transitData)"
+                    [disabled]="getCurrentPage('transit')===1">«</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('transit', getCurrentPage('transit')-1, transitData)"
+                    [disabled]="getCurrentPage('transit')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('transit') }} / {{ getTotalPages(transitData,
+                    'transit') }}</span>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('transit', getCurrentPage('transit')+1, transitData)"
+                    [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">›</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('transit', getTotalPages(transitData, 'transit'), transitData)"
+                    [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">»</button>
                 </div>
               </div>
             </div>
@@ -521,7 +559,8 @@
                   <td>{{ item.companyName }}</td>
                   <td>
                     {{ (item.localQtyLakh || 0) + (item.exportQtyLakh || 0) + (item.defenceQtyLakh || 0) }}
-                    <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="openHologramDetails(item)">
+                    <button class="btn btn-outline-warning btn-sm rounded-pill ms-2"
+                      (click)="openHologramDetails(item)">
                       <i class="bi bi-eye me-1"></i>View details
                     </button>
                   </td>
@@ -536,7 +575,9 @@
                 </tr>
                 }
                 @empty {
-                  <tr><td colspan="6" class="text-center text-muted">No hologram requests yet.</td></tr>
+                <tr>
+                  <td colspan="6" class="text-center text-muted">No hologram requests yet.</td>
+                </tr>
                 }
               </tbody>
             </table>
@@ -549,32 +590,45 @@
               </div>
               <div class="d-flex align-items-center gap-2">
                 <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('hologram')" (ngModelChange)="changePageSize('hologram', $event)">
+                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('hologram')"
+                  (ngModelChange)="changePageSize('hologram', $event)">
                   <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
                 </select>
                 <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', 1, hologramList)" [disabled]="getCurrentPage('hologram')===1">«</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', getCurrentPage('hologram')-1, hologramList)" [disabled]="getCurrentPage('hologram')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('hologram') }} / {{ getTotalPages(hologramList, 'hologram') }}</span>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', getCurrentPage('hologram')+1, hologramList)" [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">›</button>
-                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', getTotalPages(hologramList, 'hologram'), hologramList)" [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">»</button>
+                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', 1, hologramList)"
+                    [disabled]="getCurrentPage('hologram')===1">«</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('hologram', getCurrentPage('hologram')-1, hologramList)"
+                    [disabled]="getCurrentPage('hologram')===1">‹</button>
+                  <span class="btn btn-light disabled">{{ getCurrentPage('hologram') }} / {{ getTotalPages(hologramList,
+                    'hologram') }}</span>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('hologram', getCurrentPage('hologram')+1, hologramList)"
+                    [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">›</button>
+                  <button class="btn btn-outline-secondary"
+                    (click)="goToPage('hologram', getTotalPages(hologramList, 'hologram'), hologramList)"
+                    [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">»</button>
                 </div>
               </div>
             </div>
             }
 
             <!-- Hologram details modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);" *ngIf="showHologramModal">
+            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);"
+              *ngIf="showHologramModal">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content shadow-lg border-0">
                   <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Hologram Quantity Breakdown</h5>
-                    <button type="button" class="btn-close" aria-label="Close" (click)="closeHologramDetails()"></button>
+                    <button type="button" class="btn-close" aria-label="Close"
+                      (click)="closeHologramDetails()"></button>
                   </div>
                   <div class="modal-body bg-light">
                     <div class="mb-3">
-                      <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo }}</span>
-                      <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date | date:'dd-MMM-yyyy' }}</span>
+                      <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo
+                        }}</span>
+                      <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date |
+                        date:'dd-MMM-yyyy' }}</span>
                       <span class="badge bg-success-subtle text-success">{{ selectedHologram?.companyName }}</span>
                     </div>
                     <div class="table-responsive">
@@ -600,7 +654,9 @@
                           </tr>
                           <tr class="table-light">
                             <th>Total</th>
-                            <th class="text-end">{{ getHologramTotal(selectedHologram || {refNo:'',date:'',companyName:'',status:'',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) }}</th>
+                            <th class="text-end">{{ getHologramTotal(selectedHologram ||
+                              {refNo:'',date:'',companyName:'',status:'',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0})
+                              }}</th>
                           </tr>
                         </tbody>
                       </table>
