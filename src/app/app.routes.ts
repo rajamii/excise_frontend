@@ -81,35 +81,35 @@ export const routes: Routes = [
     path: "dev-supply-chain-application-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/applicationView/requisitionView/supply-chain-requisition-view.component"
+        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
       ).then((m) => m.SupplyChainRequisitionViewComponent),
   },
   {
     path: "dev-supply-chain-revalidation-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/applicationView/revalidationView/supply-chain-revalidation-view.component"
+        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
       ).then((m) => m.SupplyChainRevalidationViewComponent),
   },
   {
     path: "dev-supply-chain-cancellation-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/applicationView/cancellationView/supply-chain-cancellation-view.component"
+        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
       ).then((m) => m.SupplyChainCancellationViewComponent),
   },
   {
     path: "dev-supply-chain-transit-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/applicationView/transitView/supply-chain-transit-view.component"
+        "./features/licensee/supplyChain/letterView/transitView/supply-chain-transit-view.component"
       ).then((m) => m.SupplyChainTransitViewComponent),
   },
   {
     path: "dev-supply-chain-hologram-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/applicationView/hologramView/supply-chain-hologram-view.component"
+        "./features/licensee/supplyChain/letterView/hologramView/supply-chain-hologram-view.component"
       ).then((m) => m.SupplyChainHologramViewComponent),
   },
   {
