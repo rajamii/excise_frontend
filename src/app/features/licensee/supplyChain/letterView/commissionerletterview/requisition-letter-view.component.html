@@ -16,143 +16,206 @@
   <!-- Letter Content -->
   <div class="letter-container">
     @if (requisitionData) {
-    <div id="requisitionPrintSection" class="card shadow-sm border-0 printable-content">
-      <div class="letter-header text-center fw-bold mb-3 fs-5">
-        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
-          <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
+      <div
+        id="requisitionPrintSection"
+        class="card shadow-sm border-0 printable-content"
+      >
+        <div class="letter-header text-center fw-bold mb-3 fs-5">
+          <div
+            class="d-flex align-items-center justify-content-center gap-3 mb-2"
+          >
+            <img
+              src="assets/images/header/Seal_of_Sikkim_greyscale.png"
+              alt="Department Seal"
+              style="height: 60px; width: auto"
+            />
+            <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
+          </div>
+        </div>
+        <div class="letter-content p-3">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <strong>Ref No:</strong>
+              <span class="fw-bold">{{ requisitionData.referenceNo }}</span>
+            </div>
+            <div>
+              <strong>Date:</strong>
+              <span class="fw-bold">{{
+                requisitionData.submissionDate | date: "dd-MM-yyyy"
+              }}</span>
+            </div>
+          </div>
+
+          <p class="mb-1">
+            <strong>To,</strong><br />
+            The Commissioner<br />
+            Excise (Abk) Department<br />
+            Government of Sikkim, Gangtok
+          </p>
+
+          <p class="mb-2">
+            <strong>Sub:</strong> Requisition for ENA Import Permit
+          </p>
+
+          <div class="requisition-details mb-3">
+            <p class="mb-2">
+              <strong>Subject:</strong>
+              <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span>
+              import permits of
+              <strong>{{
+                getBulkSpiritTypeName(requisitionData.bulkSpiritType || "")
+              }}</strong>
+              for <span class="fw-bold">{{ requisitionData.quantity }}</span> x
+              <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span>
+              =
+              <span class="fw-bold">{{
+                (requisitionData.quantity || 0) *
+                  (requisitionData.numberOfPermits || 0)
+              }}</span>
+              BL.
+            </p>
+
+            <p class="mb-2">
+              We request the issuance of
+              <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span>
+              import permits for
+              <span class="fw-bold">{{
+                (requisitionData.quantity || 0) *
+                  (requisitionData.numberOfPermits || 0)
+              }}</span>
+              BL
+              {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || "") }},
+              having strength of
+              <span class="fw-bold">{{ requisitionData.strengthTo }}</span
+              >°, to be lifted from
+              <span class="fw-bold">{{
+                getDistilleryName(requisitionData.liftedFrom || "")
+              }}</span>
+            </p>
+
+            <p class="mb-2">
+              {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || "") }}
+              shall be conveyed in destination via route:
+              <span class="fw-bold">{{ requisitionData.viaRoute }}</span>
+            </p>
+
+            <p class="mb-2">
+              <strong>Checkpost Entry:</strong>
+              {{ getCheckpostName(requisitionData.checkpostEntry || "") }}
+            </p>
+
+            <p class="mb-2">
+              <strong>Purpose:</strong>
+              {{ getPurposeName(requisitionData.purpose || "") }}
+            </p>
+          </div>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th>Details</th>
+                  <th>Values</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Reference Number</strong></td>
+                  <td>{{ requisitionData.referenceNo }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Distillery Name</strong></td>
+                  <td>{{ requisitionData.distilleryName }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Bulk Spirit Type</strong></td>
+                  <td>
+                    {{
+                      getBulkSpiritTypeName(
+                        requisitionData.bulkSpiritType || ""
+                      )
+                    }}
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Quantity per Permit</strong></td>
+                  <td>{{ requisitionData.quantity }} BL</td>
+                </tr>
+                <tr>
+                  <td><strong>Number of Permits</strong></td>
+                  <td>{{ requisitionData.numberOfPermits }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Total Quantity</strong></td>
+                  <td>
+                    <strong
+                      >{{
+                        (requisitionData.quantity || 0) *
+                          (requisitionData.numberOfPermits || 0)
+                      }}
+                      BL</strong
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Strength To</strong></td>
+                  <td>{{ requisitionData.strengthTo }}°</td>
+                </tr>
+                <tr>
+                  <td><strong>Lifted From</strong></td>
+                  <td>
+                    {{ getDistilleryName(requisitionData.liftedFrom || "") }}
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Via Route</strong></td>
+                  <td>{{ requisitionData.viaRoute }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Checkpost Entry</strong></td>
+                  <td>
+                    {{ getCheckpostName(requisitionData.checkpostEntry || "") }}
+                  </td>
+                </tr>
+                <tr>
+                  <td><strong>Purpose</strong></td>
+                  <td>{{ getPurposeName(requisitionData.purpose || "") }}</td>
+                </tr>
+                <tr>
+                  <td><strong>Status</strong></td>
+                  <td>
+                    <span class="badge bg-success">{{
+                      requisitionData.status
+                    }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4">
+            <p>Thanking You</p>
+            <div style="height: 50px"></div>
+            <p class="mb-0">For {{ requisitionData.distilleryName }}</p>
+            <div style="height: 30px"></div>
+            <p class="mb-0">(Authorized Signatory)</p>
+          </div>
+
+          <div class="no-print d-flex justify-content-center mt-4">
+            <button class="btn btn-primary" (click)="printLetter()">
+              <i class="bi bi-printer me-1"></i>Print Letter
+            </button>
+          </div>
         </div>
       </div>
-      <div class="letter-content p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div><strong>Ref No:</strong> <span class="fw-bold">{{ requisitionData.referenceNo }}</span></div>
-          <div><strong>Date:</strong> <span class="fw-bold">{{ requisitionData.submissionDate | date:'dd-MM-yyyy' }}</span></div>
-        </div>
-
-        <p class="mb-1"><strong>To,</strong><br>
-          The Commissioner<br>
-          Excise (Abk) Department<br>
-          Government of Sikkim, Gangtok
-        </p>
-
-        <p class="mb-2"><strong>Sub:</strong> Requisition for ENA Import Permit</p>
-
-        <div class="requisition-details mb-3">
-          <p class="mb-2">
-            <strong>Subject:</strong>
-            <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span> import permits of
-            <strong>{{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}</strong> for
-            <span class="fw-bold">{{ requisitionData.quantity }}</span> x
-            <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span> = 
-            <span class="fw-bold">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }}</span> BL.
-          </p>
-
-          <p class="mb-2">
-            We request the issuance of
-            <span class="fw-bold">{{ requisitionData.numberOfPermits }}</span> import permits for
-            <span class="fw-bold">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }}</span> BL 
-            {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}, having strength of
-            <span class="fw-bold">{{ requisitionData.strengthTo }}</span>°,
-            to be lifted from
-            <span class="fw-bold">{{ getDistilleryName(requisitionData.liftedFrom || '') }}</span>
-          </p>
-
-          <p class="mb-2">
-            {{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }} shall be conveyed in destination via route:
-            <span class="fw-bold">{{ requisitionData.viaRoute }}</span>
-          </p>
-
-          <p class="mb-2">
-            <strong>Checkpost Entry:</strong> {{ getCheckpostName(requisitionData.checkpostEntry || '') }}
-          </p>
-
-          <p class="mb-2">
-            <strong>Purpose:</strong> {{ getPurposeName(requisitionData.purpose || '') }}
-          </p>
-        </div>
-
-        <div class="table-responsive mb-3">
-          <table class="table table-bordered">
-            <thead class="table-light">
-              <tr>
-                <th>Details</th>
-                <th>Values</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Reference Number</strong></td>
-                <td>{{ requisitionData.referenceNo }}</td>
-              </tr>
-              <tr>
-                <td><strong>Distillery Name</strong></td>
-                <td>{{ requisitionData.distilleryName }}</td>
-              </tr>
-              <tr>
-                <td><strong>Bulk Spirit Type</strong></td>
-                <td>{{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}</td>
-              </tr>
-              <tr>
-                <td><strong>Quantity per Permit</strong></td>
-                <td>{{ requisitionData.quantity }} BL</td>
-              </tr>
-              <tr>
-                <td><strong>Number of Permits</strong></td>
-                <td>{{ requisitionData.numberOfPermits }}</td>
-              </tr>
-              <tr>
-                <td><strong>Total Quantity</strong></td>
-                <td><strong>{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }} BL</strong></td>
-              </tr>
-              <tr>
-                <td><strong>Strength To</strong></td>
-                <td>{{ requisitionData.strengthTo }}°</td>
-              </tr>
-              <tr>
-                <td><strong>Lifted From</strong></td>
-                <td>{{ getDistilleryName(requisitionData.liftedFrom || '') }}</td>
-              </tr>
-              <tr>
-                <td><strong>Via Route</strong></td>
-                <td>{{ requisitionData.viaRoute }}</td>
-              </tr>
-              <tr>
-                <td><strong>Checkpost Entry</strong></td>
-                <td>{{ getCheckpostName(requisitionData.checkpostEntry || '') }}</td>
-              </tr>
-              <tr>
-                <td><strong>Purpose</strong></td>
-                <td>{{ getPurposeName(requisitionData.purpose || '') }}</td>
-              </tr>
-              <tr>
-                <td><strong>Status</strong></td>
-                <td><span class="badge bg-success">{{ requisitionData.status }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="mt-4">
-          <p>Thanking You</p>
-          <div style="height: 50px"></div>
-          <p class="mb-0">For {{ requisitionData.distilleryName }}</p>
-          <div style="height: 30px"></div>
-          <p class="mb-0">(Authorized Signatory)</p>
-        </div>
-
-        <div class="no-print d-flex justify-content-center mt-4">
-          <button class="btn btn-primary" (click)="printLetter()">
-            <i class="bi bi-printer me-1"></i>Print Letter
-          </button>
-        </div>
-      </div>
-    </div>
     } @else {
-    <div class="alert alert-warning text-center">
-      <h4>No Data Found</h4>
-      <p>The requested requisition letter could not be found.</p>
-      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
-    </div>
+      <div class="alert alert-warning text-center">
+        <h4>No Data Found</h4>
+        <p>The requested requisition letter could not be found.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          Return to Dashboard
+        </button>
+      </div>
     }
   </div>
 </div>

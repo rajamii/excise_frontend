@@ -1,49 +1,68 @@
 <div class="d-flex min-vh-100">
   <!-- Bootstrap Sidebar Navigation -->
-  <nav class="bg-light border-end sidebar-nav" [class.sidebar-hidden]="sidebarHidden"
-    [style.width]="sidebarHidden ? '0' : '280px'">
+  <nav
+    class="bg-light border-end sidebar-nav"
+    [class.sidebar-hidden]="sidebarHidden"
+    [style.width]="sidebarHidden ? '0' : '280px'"
+  >
     <!-- Sidebar Header -->
-    <div class="p-3 border-bottom text-black" style="background-color:#D1E7DD;">
+    <div class="p-3 border-bottom text-black" style="background-color: #d1e7dd">
       <h5 class="mb-0 fw-bold">
         <i class="bi bi-building me-2"></i>
         Distillery Management
       </h5>
     </div>
 
-
     <!-- Sidebar Content -->
     <div class="p-0">
       <!-- Accordion for Navigation -->
       <div class="accordion accordion-flush" id="sidebarAccordion">
-
         <!-- Distillery Section -->
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed  text-black fw-semibold" type="button" data-bs-toggle="collapse"
-              data-bs-target="#distilleryCollapse">
+            <button
+              class="accordion-button collapsed text-black fw-semibold"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#distilleryCollapse"
+            >
               <i class="bi bi-building me-2"></i>
               Supply Chain
             </button>
           </h2>
-          <div id="distilleryCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+          <div
+            id="distilleryCollapse"
+            class="accordion-collapse collapse"
+            data-bs-parent="#sidebarAccordion"
+          >
             <div class="accordion-body p-0">
               <ul class="list-group list-group-flush">
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('import-permit')" style="cursor: pointer;">
-                  <i class="bi bi-file-earmark-arrow-down me-3 text-black fs-5"></i>
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('import-permit')"
+                  style="cursor: pointer"
+                >
+                  <i
+                    class="bi bi-file-earmark-arrow-down me-3 text-black fs-5"
+                  ></i>
                   <span>Import Permit</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('transit-permit')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('transit-permit')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-truck me-3 text-info fs-5"></i>
                   <span>Transit Permit</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('hologram')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('hologram')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-qr-code me-3 text-primary fs-5"></i>
                   <span>Hologram</span>
                 </li>
-
               </ul>
             </div>
           </div>
@@ -52,43 +71,71 @@
         <!-- Register Section -->
         <div class="accordion-item">
           <h2 class="accordion-header">
-            <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
-              data-bs-target="#registerCollapse">
+            <button
+              class="accordion-button collapsed text-black fw-semibold"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#registerCollapse"
+            >
               <i class="bi bi-journal-text me-2"></i>
               Register
             </button>
           </h2>
-          <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
+          <div
+            id="registerCollapse"
+            class="accordion-collapse collapse"
+            data-bs-parent="#sidebarAccordion"
+          >
             <div class="accordion-body p-0">
               <ul class="list-group list-group-flush">
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('transit-permit-register')" style="cursor: pointer;">
-                  <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('transit-permit-register')"
+                  style="cursor: pointer"
+                >
+                  <i
+                    class="bi bi-journal-arrow-down me-3 text-primary fs-5"
+                  ></i>
                   <span>Transit Permit Register</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('daily-record-register')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('daily-record-register')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-journal-check me-3 text-success fs-5"></i>
                   <span>Daily Record Register</span>
                 </li>
 
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('brands-details')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('brands-details')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-tags me-3 text-dark fs-5"></i>
                   <span>Brands Details</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('yuksom-local-sales-register')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('yuksom-local-sales-register')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-journal-text me-3 text-warning fs-5"></i>
                   <span>Yuksom Local Sale</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('beer-production-register')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('beer-production-register')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-cup-hot me-3 text-info fs-5"></i>
                   <span>Beer Production Register</span>
                 </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('hologram-monthly-report')" style="cursor: pointer;">
+                <li
+                  class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                  (click)="navigateTo('hologram-monthly-report')"
+                  style="cursor: pointer"
+                >
                   <i class="bi bi-graph-up me-3 text-primary fs-5"></i>
                   <span>Hologram Monthly Report</span>
                 </li>
@@ -109,8 +156,12 @@
           <div class="row align-items-center py-3">
             <div class="col-auto">
               <!-- Circular Hamburger Menu Button -->
-              <button class="hamburger-btn me-3" (click)="toggleSidebar()" title="Toggle Sidebar"
-                [class.active]="!sidebarHidden">
+              <button
+                class="hamburger-btn me-3"
+                (click)="toggleSidebar()"
+                title="Toggle Sidebar"
+                [class.active]="!sidebarHidden"
+              >
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
                 <span class="hamburger-line"></span>
@@ -118,12 +169,19 @@
             </div>
             <div class="col">
               <h1 class="h3 mb-1 fw-bold">Dashboard</h1>
-              <p class="mb-0 small opacity-75">Licensees: Sikkim Distilleries Ltd (01202506012)</p>
+              <p class="mb-0 small opacity-75">
+                Licensees: Sikkim Distilleries Ltd (01202506012)
+              </p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
-                <button class="btn btn-light bg-success btn-sm text-white">Distillery</button>
-                <button class="btn btn-sm bg-success text-white" (click)="viewWallet()">
+                <button class="btn btn-light bg-success btn-sm text-white">
+                  Distillery
+                </button>
+                <button
+                  class="btn btn-sm bg-success text-white"
+                  (click)="viewWallet()"
+                >
                   <i class="bi bi-grid-3x3-gap me-1"></i> View Wallet
                 </button>
               </div>
@@ -139,14 +197,21 @@
             <!-- Date Picker -->
             <div class="col-auto">
               <label class="form-label small mb-1">Select Date</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate"
-                placeholder="Select Date">
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                [(ngModel)]="selectedDate"
+                placeholder="Select Date"
+              />
             </div>
 
             <!-- Month Dropdown -->
             <div class="col-auto">
               <label class="form-label small mb-1">Month</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="selectedMonth"
+              >
                 <option value="">All Months</option>
                 <option value="01">January</option>
                 <option value="02">February</option>
@@ -166,7 +231,10 @@
             <!-- Year Dropdown -->
             <div class="col-auto">
               <label class="form-label small mb-1">Year</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedYear">
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="selectedYear"
+              >
                 <option value="">All Years</option>
                 <option value="2024">2024</option>
                 <option value="2025">2025</option>
@@ -177,7 +245,10 @@
             <!-- Status Filter -->
             <div class="col-auto">
               <label class="form-label small mb-1">Status</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="selectedStatus"
+              >
                 <option value="">All Status</option>
                 <option value="approved">Approved</option>
                 <option value="pending">Pending</option>
@@ -191,11 +262,20 @@
             <div class="col-auto">
               <label class="form-label small mb-1 invisible">Actions</label>
               <div class="d-flex gap-2">
-                <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search" aria-label="Search">
+                <button
+                  class="btn btn-primary btn-sm icon-btn"
+                  (click)="onSearch()"
+                  title="Search"
+                  aria-label="Search"
+                >
                   <i class="bi bi-search"></i>
                 </button>
-                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear"
-                  aria-label="Clear filters">
+                <button
+                  class="btn btn-outline-secondary btn-sm icon-btn"
+                  (click)="onClear()"
+                  title="Clear"
+                  aria-label="Clear filters"
+                >
                   <i class="bi bi-arrow-clockwise"></i>
                 </button>
               </div>
@@ -209,30 +289,47 @@
         <div class="container-fluid">
           <ul class="nav nav-tabs border-0">
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'requisition'"
-                (click)="setActiveTab('requisition')">
+              <button
+                class="nav-link"
+                [class.active]="activeTab === 'requisition'"
+                (click)="setActiveTab('requisition')"
+              >
                 <i class="bi bi-file-text me-2"></i> REQUISITION
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'revalidation'"
-                (click)="setActiveTab('revalidation')">
+              <button
+                class="nav-link"
+                [class.active]="activeTab === 'revalidation'"
+                (click)="setActiveTab('revalidation')"
+              >
                 <i class="bi bi-arrow-repeat me-2"></i> REVALIDATION
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'cancellation'"
-                (click)="setActiveTab('cancellation')">
+              <button
+                class="nav-link"
+                [class.active]="activeTab === 'cancellation'"
+                (click)="setActiveTab('cancellation')"
+              >
                 <i class="bi bi-x-circle me-2"></i> CANCELLATION
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+              <button
+                class="nav-link"
+                [class.active]="activeTab === 'transit'"
+                (click)="setActiveTab('transit')"
+              >
                 <i class="bi bi-truck me-2"></i> TRANSIT
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
+              <button
+                class="nav-link"
+                [class.active]="activeTab === 'hologram'"
+                (click)="setActiveTab('hologram')"
+              >
                 <i class="bi bi-qr-code me-2"></i> HOLOGRAM
               </button>
             </li>
@@ -244,395 +341,770 @@
       <div class="bg-white">
         <div class="container-fluid p-3">
           <div class="table-responsive">
-
             <!-- Requisition Tab Content -->
-            @if (activeTab === 'requisition') {
-            <table class="table table-hover table-bordered">
-              <thead class="table-success">
-                <tr>
-                  <th scope="col">Ref. No</th>
-                  <th scope="col">App. Sub. Date</th>
-                  <th scope="col">Distillery Name</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Imp. Pass Fee Amt.</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of getPaged(requisitionData, 'requisition'); track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success amount">
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <span class="amount-value">{{ item.amount }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        View Application
-                      </button>
-                      <button class="btn btn-warning btn-sm" (click)="viewSlip(item)">
-                        Permit Slip
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            <!-- Pagination: requisition -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div class="small text-muted">Showing
-                {{ (getCurrentPage('requisition') - 1) * getPageSize('requisition') + 1 }}-
-                {{ Math.min(getCurrentPage('requisition') * getPageSize('requisition'), requisitionData.length) }}
-                of {{ requisitionData.length }}
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('requisition')"
-                  (ngModelChange)="changePageSize('requisition', $event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('requisition', 1, requisitionData)"
-                    [disabled]="getCurrentPage('requisition')===1">«</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('requisition', getCurrentPage('requisition')-1, requisitionData)"
-                    [disabled]="getCurrentPage('requisition')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('requisition') }} / {{
-                    getTotalPages(requisitionData, 'requisition') }}</span>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('requisition', getCurrentPage('requisition')+1, requisitionData)"
-                    [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">›</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('requisition', getTotalPages(requisitionData, 'requisition'), requisitionData)"
-                    [disabled]="getCurrentPage('requisition')===getTotalPages(requisitionData, 'requisition')">»</button>
+            @if (activeTab === "requisition") {
+              <table class="table table-hover table-bordered">
+                <thead class="table-success">
+                  <tr>
+                    <th scope="col">Ref. No</th>
+                    <th scope="col">App. Sub. Date</th>
+                    <th scope="col">Distillery Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Imp. Pass Fee Amt.</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    item of getPaged(requisitionData, "requisition");
+                    track item.referenceNo
+                  ) {
+                    <tr>
+                      <td>{{ item.referenceNo }}</td>
+                      <td>{{ item.submissionDate }}</td>
+                      <td>{{ item.distilleryName }}</td>
+                      <td>
+                        <span
+                          class="badge bg-success-subtle text-success rounded-pill px-3 py-2 small"
+                        >
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="fw-semibold text-success amount">
+                        <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <span class="amount-value">{{ item.amount }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex gap-2 flex-wrap">
+                          <button
+                            class="btn btn-primary btn-sm"
+                            (click)="viewApplication(item)"
+                          >
+                            View Application
+                          </button>
+                          <button
+                            class="btn btn-warning btn-sm"
+                            (click)="viewSlip(item)"
+                          >
+                            Permit Slip
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Pagination: requisition -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-2"
+              >
+                <div class="small text-muted">
+                  Showing
+                  {{
+                    (getCurrentPage("requisition") - 1) *
+                      getPageSize("requisition") +
+                      1
+                  }}-
+                  {{
+                    Math.min(
+                      getCurrentPage("requisition") *
+                        getPageSize("requisition"),
+                      requisitionData.length
+                    )
+                  }}
+                  of {{ requisitionData.length }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small me-1">Rows:</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    [ngModel]="getPageSize('requisition')"
+                    (ngModelChange)="changePageSize('requisition', $event)"
+                  >
+                    <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="goToPage('requisition', 1, requisitionData)"
+                      [disabled]="getCurrentPage('requisition') === 1"
+                    >
+                      «
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'requisition',
+                          getCurrentPage('requisition') - 1,
+                          requisitionData
+                        )
+                      "
+                      [disabled]="getCurrentPage('requisition') === 1"
+                    >
+                      ‹
+                    </button>
+                    <span class="btn btn-light disabled"
+                      >{{ getCurrentPage("requisition") }} /
+                      {{ getTotalPages(requisitionData, "requisition") }}</span
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'requisition',
+                          getCurrentPage('requisition') + 1,
+                          requisitionData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('requisition') ===
+                        getTotalPages(requisitionData, 'requisition')
+                      "
+                    >
+                      ›
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'requisition',
+                          getTotalPages(requisitionData, 'requisition'),
+                          requisitionData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('requisition') ===
+                        getTotalPages(requisitionData, 'requisition')
+                      "
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             }
 
             <!-- Revalidation Tab Content -->
-            @if (activeTab === 'revalidation') {
-            <table class="table table-hover table-bordered">
-              <thead class="table-success">
-                <tr>
-                  <th scope="col">Reference No</th>
-                  <th scope="col">Application Submission Date</th>
-                  <th scope="col">Distillery Name</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Import Pass Fee Amount</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of getPaged(revlidationData, 'revalidation'); track item.referenceNo) {
-                <tr>
-                  <td>
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="fw-medium">{{ item.referenceNo }}</span>
-                      @if (item.isLive) {
-                      <span class="badge bg-danger text-white">LIVE</span>
-                      }
-                    </div>
-                  </td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success amount">
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <span class="amount-value">{{ item.amount }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-success btn-sm" (click)="requestRevlidation(item)">
-                        Revalidate
-                      </button>
-                      <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                        View
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            <!-- Pagination: revalidation -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div class="small text-muted">Showing
-                {{ (getCurrentPage('revalidation') - 1) * getPageSize('revalidation') + 1 }}-
-                {{ Math.min(getCurrentPage('revalidation') * getPageSize('revalidation'), revlidationData.length) }}
-                of {{ revlidationData.length }}
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('revalidation')"
-                  (ngModelChange)="changePageSize('revalidation', $event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('revalidation', 1, revlidationData)"
-                    [disabled]="getCurrentPage('revalidation')===1">«</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('revalidation', getCurrentPage('revalidation')-1, revlidationData)"
-                    [disabled]="getCurrentPage('revalidation')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('revalidation') }} / {{
-                    getTotalPages(revlidationData, 'revalidation') }}</span>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('revalidation', getCurrentPage('revalidation')+1, revlidationData)"
-                    [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">›</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('revalidation', getTotalPages(revlidationData, 'revalidation'), revlidationData)"
-                    [disabled]="getCurrentPage('revalidation')===getTotalPages(revlidationData, 'revalidation')">»</button>
+            @if (activeTab === "revalidation") {
+              <table class="table table-hover table-bordered">
+                <thead class="table-success">
+                  <tr>
+                    <th scope="col">Reference No</th>
+                    <th scope="col">Application Submission Date</th>
+                    <th scope="col">Distillery Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Import Pass Fee Amount</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    item of getPaged(revlidationData, "revalidation");
+                    track item.referenceNo
+                  ) {
+                    <tr>
+                      <td>
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="fw-medium">{{ item.referenceNo }}</span>
+                          @if (item.isLive) {
+                            <span class="badge bg-danger text-white">LIVE</span>
+                          }
+                        </div>
+                      </td>
+                      <td>{{ item.submissionDate }}</td>
+                      <td>{{ item.distilleryName }}</td>
+                      <td>
+                        <span
+                          class="badge bg-danger-subtle text-danger rounded-pill px-3 py-2 small"
+                        >
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="fw-semibold text-success amount">
+                        <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <span class="amount-value">{{ item.amount }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="d-flex gap-2 flex-wrap">
+                          <button
+                            class="btn btn-success btn-sm"
+                            (click)="requestRevlidation(item)"
+                          >
+                            Revalidate
+                          </button>
+                          <button
+                            class="btn btn-primary btn-sm"
+                            (click)="viewApplication(item)"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Pagination: revalidation -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-2"
+              >
+                <div class="small text-muted">
+                  Showing
+                  {{
+                    (getCurrentPage("revalidation") - 1) *
+                      getPageSize("revalidation") +
+                      1
+                  }}-
+                  {{
+                    Math.min(
+                      getCurrentPage("revalidation") *
+                        getPageSize("revalidation"),
+                      revlidationData.length
+                    )
+                  }}
+                  of {{ revlidationData.length }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small me-1">Rows:</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    [ngModel]="getPageSize('revalidation')"
+                    (ngModelChange)="changePageSize('revalidation', $event)"
+                  >
+                    <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="goToPage('revalidation', 1, revlidationData)"
+                      [disabled]="getCurrentPage('revalidation') === 1"
+                    >
+                      «
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'revalidation',
+                          getCurrentPage('revalidation') - 1,
+                          revlidationData
+                        )
+                      "
+                      [disabled]="getCurrentPage('revalidation') === 1"
+                    >
+                      ‹
+                    </button>
+                    <span class="btn btn-light disabled"
+                      >{{ getCurrentPage("revalidation") }} /
+                      {{ getTotalPages(revlidationData, "revalidation") }}</span
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'revalidation',
+                          getCurrentPage('revalidation') + 1,
+                          revlidationData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('revalidation') ===
+                        getTotalPages(revlidationData, 'revalidation')
+                      "
+                    >
+                      ›
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'revalidation',
+                          getTotalPages(revlidationData, 'revalidation'),
+                          revlidationData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('revalidation') ===
+                        getTotalPages(revlidationData, 'revalidation')
+                      "
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             }
 
             <!-- Cancellation Tab Content -->
-            @if (activeTab === 'cancellation') {
-            <table class="table table-hover table-bordered">
-              <thead class="table-success">
-                <tr>
-                  <th scope="col">Reference No</th>
-                  <th scope="col">Application Submission Date</th>
-                  <th scope="col">Distillery Name</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Import Pass Fee Amount</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of getPaged(cancellationData, 'cancellation'); track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td class="fw-semibold text-success amount">
-                    <div class="input-group">
-                      <span class="input-group-text">₹</span>
-                      <span class="amount-value">{{ item.amount }}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <button class="btn btn-primary btn-sm" (click)="viewApplication(item)">
-                      View
+            @if (activeTab === "cancellation") {
+              <table class="table table-hover table-bordered">
+                <thead class="table-success">
+                  <tr>
+                    <th scope="col">Reference No</th>
+                    <th scope="col">Application Submission Date</th>
+                    <th scope="col">Distillery Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Import Pass Fee Amount</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    item of getPaged(cancellationData, "cancellation");
+                    track item.referenceNo
+                  ) {
+                    <tr>
+                      <td>{{ item.referenceNo }}</td>
+                      <td>{{ item.submissionDate }}</td>
+                      <td>{{ item.distilleryName }}</td>
+                      <td>
+                        <span
+                          class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-2 small"
+                        >
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td class="fw-semibold text-success amount">
+                        <div class="input-group">
+                          <span class="input-group-text">₹</span>
+                          <span class="amount-value">{{ item.amount }}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-primary btn-sm"
+                          (click)="viewApplication(item)"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Pagination: cancellation -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-2"
+              >
+                <div class="small text-muted">
+                  Showing
+                  {{
+                    (getCurrentPage("cancellation") - 1) *
+                      getPageSize("cancellation") +
+                      1
+                  }}-
+                  {{
+                    Math.min(
+                      getCurrentPage("cancellation") *
+                        getPageSize("cancellation"),
+                      cancellationData.length
+                    )
+                  }}
+                  of {{ cancellationData.length }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small me-1">Rows:</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    [ngModel]="getPageSize('cancellation')"
+                    (ngModelChange)="changePageSize('cancellation', $event)"
+                  >
+                    <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="goToPage('cancellation', 1, cancellationData)"
+                      [disabled]="getCurrentPage('cancellation') === 1"
+                    >
+                      «
                     </button>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            <!-- Pagination: cancellation -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div class="small text-muted">Showing
-                {{ (getCurrentPage('cancellation') - 1) * getPageSize('cancellation') + 1 }}-
-                {{ Math.min(getCurrentPage('cancellation') * getPageSize('cancellation'), cancellationData.length) }}
-                of {{ cancellationData.length }}
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('cancellation')"
-                  (ngModelChange)="changePageSize('cancellation', $event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('cancellation', 1, cancellationData)"
-                    [disabled]="getCurrentPage('cancellation')===1">«</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('cancellation', getCurrentPage('cancellation')-1, cancellationData)"
-                    [disabled]="getCurrentPage('cancellation')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('cancellation') }} / {{
-                    getTotalPages(cancellationData, 'cancellation') }}</span>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('cancellation', getCurrentPage('cancellation')+1, cancellationData)"
-                    [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">›</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('cancellation', getTotalPages(cancellationData, 'cancellation'), cancellationData)"
-                    [disabled]="getCurrentPage('cancellation')===getTotalPages(cancellationData, 'cancellation')">»</button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'cancellation',
+                          getCurrentPage('cancellation') - 1,
+                          cancellationData
+                        )
+                      "
+                      [disabled]="getCurrentPage('cancellation') === 1"
+                    >
+                      ‹
+                    </button>
+                    <span class="btn btn-light disabled"
+                      >{{ getCurrentPage("cancellation") }} /
+                      {{
+                        getTotalPages(cancellationData, "cancellation")
+                      }}</span
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'cancellation',
+                          getCurrentPage('cancellation') + 1,
+                          cancellationData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('cancellation') ===
+                        getTotalPages(cancellationData, 'cancellation')
+                      "
+                    >
+                      ›
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'cancellation',
+                          getTotalPages(cancellationData, 'cancellation'),
+                          cancellationData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('cancellation') ===
+                        getTotalPages(cancellationData, 'cancellation')
+                      "
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             }
 
             <!-- Transit Tab Content -->
-            @if (activeTab === 'transit') {
-            <table class="table table-hover table-bordered">
-              <thead class="table-success">
-                <tr>
-                  <th scope="col">Reference No</th>
-                  <th scope="col">Application Submission Date</th>
-                  <th scope="col">Distillery Name</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of getPaged(transitData, 'transit'); track item.referenceNo) {
-                <tr>
-                  <td>{{ item.referenceNo }}</td>
-                  <td>{{ item.submissionDate }}</td>
-                  <td>{{ item.distilleryName }}</td>
-                  <td>
-                    <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small">
-                      {{ item.status }}
-                    </span>
-                  </td>
-                  <td>
-                    <button class="btn btn-primary btn-sm" (click)="openTransitApplication(item.referenceNo)">View
-                      Application</button>
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            <!-- Pagination: transit -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div class="small text-muted">Showing
-                {{ (getCurrentPage('transit') - 1) * getPageSize('transit') + 1 }}-
-                {{ Math.min(getCurrentPage('transit') * getPageSize('transit'), transitData.length) }}
-                of {{ transitData.length }}
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('transit')"
-                  (ngModelChange)="changePageSize('transit', $event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('transit', 1, transitData)"
-                    [disabled]="getCurrentPage('transit')===1">«</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('transit', getCurrentPage('transit')-1, transitData)"
-                    [disabled]="getCurrentPage('transit')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('transit') }} / {{ getTotalPages(transitData,
-                    'transit') }}</span>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('transit', getCurrentPage('transit')+1, transitData)"
-                    [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">›</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('transit', getTotalPages(transitData, 'transit'), transitData)"
-                    [disabled]="getCurrentPage('transit')===getTotalPages(transitData, 'transit')">»</button>
+            @if (activeTab === "transit") {
+              <table class="table table-hover table-bordered">
+                <thead class="table-success">
+                  <tr>
+                    <th scope="col">Reference No</th>
+                    <th scope="col">Application Submission Date</th>
+                    <th scope="col">Distillery Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    item of getPaged(transitData, "transit");
+                    track item.referenceNo
+                  ) {
+                    <tr>
+                      <td>{{ item.referenceNo }}</td>
+                      <td>{{ item.submissionDate }}</td>
+                      <td>{{ item.distilleryName }}</td>
+                      <td>
+                        <span
+                          class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small"
+                        >
+                          {{ item.status }}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          class="btn btn-primary btn-sm"
+                          (click)="viewApplication(item)"
+                        >
+                          View Application
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Pagination: transit -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-2"
+              >
+                <div class="small text-muted">
+                  Showing
+                  {{
+                    (getCurrentPage("transit") - 1) * getPageSize("transit") +
+                      1
+                  }}-
+                  {{
+                    Math.min(
+                      getCurrentPage("transit") * getPageSize("transit"),
+                      transitData.length
+                    )
+                  }}
+                  of {{ transitData.length }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small me-1">Rows:</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    [ngModel]="getPageSize('transit')"
+                    (ngModelChange)="changePageSize('transit', $event)"
+                  >
+                    <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="goToPage('transit', 1, transitData)"
+                      [disabled]="getCurrentPage('transit') === 1"
+                    >
+                      «
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'transit',
+                          getCurrentPage('transit') - 1,
+                          transitData
+                        )
+                      "
+                      [disabled]="getCurrentPage('transit') === 1"
+                    >
+                      ‹
+                    </button>
+                    <span class="btn btn-light disabled"
+                      >{{ getCurrentPage("transit") }} /
+                      {{ getTotalPages(transitData, "transit") }}</span
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'transit',
+                          getCurrentPage('transit') + 1,
+                          transitData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('transit') ===
+                        getTotalPages(transitData, 'transit')
+                      "
+                    >
+                      ›
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'transit',
+                          getTotalPages(transitData, 'transit'),
+                          transitData
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('transit') ===
+                        getTotalPages(transitData, 'transit')
+                      "
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             }
 
             <!-- Hologram Tab Content -->
-            @if (activeTab === 'hologram') {
-            <table class="table table-hover table-bordered">
-              <thead class="table-success">
-                <tr>
-                  <th scope="col">Ref. No</th>
-                  <th scope="col">Date</th>
-                  <th scope="col">Company</th>
-                  <th scope="col">Total Qty (Lakh)</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of getPaged(hologramList, 'hologram'); track item.refNo) {
-                <tr>
-                  <td>{{ item.refNo }}</td>
-                  <td>{{ item.date | date:'dd-MMM-yyyy' }}</td>
-                  <td>{{ item.companyName }}</td>
-                  <td>
-                    {{ (item.localQtyLakh || 0) + (item.exportQtyLakh || 0) + (item.defenceQtyLakh || 0) }}
-                    <button class="btn btn-outline-warning btn-sm rounded-pill ms-2"
-                      (click)="openHologramDetails(item)">
-                      <i class="bi bi-eye me-1"></i>View details
+            @if (activeTab === "hologram") {
+              <table class="table table-hover table-bordered">
+                <thead class="table-success">
+                  <tr>
+                    <th scope="col">Ref. No</th>
+                    <th scope="col">Date</th>
+                    <th scope="col">Company</th>
+                    <th scope="col">Total Qty (Lakh)</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    item of getPaged(hologramList, "hologram");
+                    track item.refNo
+                  ) {
+                    <tr>
+                      <td>{{ item.refNo }}</td>
+                      <td>{{ item.date | date: "dd-MMM-yyyy" }}</td>
+                      <td>{{ item.companyName }}</td>
+                      <td>
+                        {{
+                          (item.localQtyLakh || 0) +
+                            (item.exportQtyLakh || 0) +
+                            (item.defenceQtyLakh || 0)
+                        }}
+                        <button
+                          class="btn btn-outline-warning btn-sm rounded-pill ms-2"
+                          (click)="openHologramDetails(item)"
+                        >
+                          <i class="bi bi-eye me-1"></i>View details
+                        </button>
+                      </td>
+                      <td>
+                        <span
+                          class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small"
+                          >{{ item.status }}</span
+                        >
+                      </td>
+                      <td>
+                        <div class="d-flex gap-2 flex-wrap">
+                          <button
+                            class="btn btn-primary btn-sm"
+                            (click)="viewHologramApplication(item)"
+                          >
+                            View Application
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6" class="text-center text-muted">
+                        No hologram requests yet.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Pagination: hologram -->
+              <div
+                class="d-flex justify-content-between align-items-center mt-2"
+              >
+                <div class="small text-muted">
+                  Showing
+                  {{
+                    (getCurrentPage("hologram") - 1) * getPageSize("hologram") +
+                      1
+                  }}-
+                  {{
+                    Math.min(
+                      getCurrentPage("hologram") * getPageSize("hologram"),
+                      hologramList.length
+                    )
+                  }}
+                  of {{ hologramList.length }}
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <label class="small me-1">Rows:</label>
+                  <select
+                    class="form-select form-select-sm w-auto"
+                    [ngModel]="getPageSize('hologram')"
+                    (ngModelChange)="changePageSize('hologram', $event)"
+                  >
+                    <option *ngFor="let opt of pageSizeOptions" [value]="opt">
+                      {{ opt }}
+                    </option>
+                  </select>
+                  <div class="btn-group btn-group-sm">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="goToPage('hologram', 1, hologramList)"
+                      [disabled]="getCurrentPage('hologram') === 1"
+                    >
+                      «
                     </button>
-                  </td>
-                  <td>
-                    <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2 small">{{ item.status }}</span>
-                  </td>
-                  <td>
-                    <div class="d-flex gap-2 flex-wrap">
-                      <button class="btn btn-primary btn-sm" (click)="viewHologram(item.refNo)">View Letter</button>
-                    </div>
-                  </td>
-                </tr>
-                }
-                @empty {
-                <tr>
-                  <td colspan="6" class="text-center text-muted">No hologram requests yet.</td>
-                </tr>
-                }
-              </tbody>
-            </table>
-            <!-- Pagination: hologram -->
-            <div class="d-flex justify-content-between align-items-center mt-2">
-              <div class="small text-muted">Showing
-                {{ (getCurrentPage('hologram') - 1) * getPageSize('hologram') + 1 }}-
-                {{ Math.min(getCurrentPage('hologram') * getPageSize('hologram'), hologramList.length) }}
-                of {{ hologramList.length }}
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <label class="small me-1">Rows:</label>
-                <select class="form-select form-select-sm w-auto" [ngModel]="getPageSize('hologram')"
-                  (ngModelChange)="changePageSize('hologram', $event)">
-                  <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-                </select>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-outline-secondary" (click)="goToPage('hologram', 1, hologramList)"
-                    [disabled]="getCurrentPage('hologram')===1">«</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('hologram', getCurrentPage('hologram')-1, hologramList)"
-                    [disabled]="getCurrentPage('hologram')===1">‹</button>
-                  <span class="btn btn-light disabled">{{ getCurrentPage('hologram') }} / {{ getTotalPages(hologramList,
-                    'hologram') }}</span>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('hologram', getCurrentPage('hologram')+1, hologramList)"
-                    [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">›</button>
-                  <button class="btn btn-outline-secondary"
-                    (click)="goToPage('hologram', getTotalPages(hologramList, 'hologram'), hologramList)"
-                    [disabled]="getCurrentPage('hologram')===getTotalPages(hologramList, 'hologram')">»</button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'hologram',
+                          getCurrentPage('hologram') - 1,
+                          hologramList
+                        )
+                      "
+                      [disabled]="getCurrentPage('hologram') === 1"
+                    >
+                      ‹
+                    </button>
+                    <span class="btn btn-light disabled"
+                      >{{ getCurrentPage("hologram") }} /
+                      {{ getTotalPages(hologramList, "hologram") }}</span
+                    >
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'hologram',
+                          getCurrentPage('hologram') + 1,
+                          hologramList
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('hologram') ===
+                        getTotalPages(hologramList, 'hologram')
+                      "
+                    >
+                      ›
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="
+                        goToPage(
+                          'hologram',
+                          getTotalPages(hologramList, 'hologram'),
+                          hologramList
+                        )
+                      "
+                      [disabled]="
+                        getCurrentPage('hologram') ===
+                        getTotalPages(hologramList, 'hologram')
+                      "
+                    >
+                      »
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             }
 
             <!-- Hologram details modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);"
-              *ngIf="showHologramModal">
+            <div
+              class="modal fade show"
+              tabindex="-1"
+              style="display: block; background: rgba(0, 0, 0, 0.35)"
+              *ngIf="showHologramModal"
+            >
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content shadow-lg border-0">
                   <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title">Hologram Quantity Breakdown</h5>
-                    <button type="button" class="btn-close" aria-label="Close"
-                      (click)="closeHologramDetails()"></button>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      aria-label="Close"
+                      (click)="closeHologramDetails()"
+                    ></button>
                   </div>
                   <div class="modal-body bg-light">
                     <div class="mb-3">
-                      <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo
-                        }}</span>
-                      <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date |
-                        date:'dd-MMM-yyyy' }}</span>
-                      <span class="badge bg-success-subtle text-success">{{ selectedHologram?.companyName }}</span>
+                      <span
+                        class="badge bg-secondary-subtle text-secondary me-2"
+                        >Ref: {{ selectedHologram?.refNo }}</span
+                      >
+                      <span class="badge bg-info-subtle text-info me-2"
+                        >Date:
+                        {{ selectedHologram?.date | date: "dd-MMM-yyyy" }}</span
+                      >
+                      <span class="badge bg-success-subtle text-success">{{
+                        selectedHologram?.companyName
+                      }}</span>
                     </div>
                     <div class="table-responsive">
-                      <table class="table table-sm table-bordered mb-0 bg-white">
+                      <table
+                        class="table table-sm table-bordered mb-0 bg-white"
+                      >
                         <thead class="table-success">
                           <tr>
                             <th>Series</th>
@@ -642,35 +1114,55 @@
                         <tbody>
                           <tr>
                             <td>Local</td>
-                            <td class="text-end">{{ selectedHologram?.localQtyLakh || 0 }}</td>
+                            <td class="text-end">
+                              {{ selectedHologram?.localQtyLakh || 0 }}
+                            </td>
                           </tr>
                           <tr>
                             <td>Export</td>
-                            <td class="text-end">{{ selectedHologram?.exportQtyLakh || 0 }}</td>
+                            <td class="text-end">
+                              {{ selectedHologram?.exportQtyLakh || 0 }}
+                            </td>
                           </tr>
                           <tr>
                             <td>Defence</td>
-                            <td class="text-end">{{ selectedHologram?.defenceQtyLakh || 0 }}</td>
+                            <td class="text-end">
+                              {{ selectedHologram?.defenceQtyLakh || 0 }}
+                            </td>
                           </tr>
                           <tr class="table-light">
                             <th>Total</th>
-                            <th class="text-end">{{ getHologramTotal(selectedHologram ||
-                              {refNo:'',date:'',companyName:'',status:'',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0})
-                              }}</th>
+                            <th class="text-end">
+                              {{
+                                getHologramTotal(
+                                  selectedHologram || {
+                                    refNo: "",
+                                    date: "",
+                                    companyName: "",
+                                    status: "",
+                                    localQtyLakh: 0,
+                                    exportQtyLakh: 0,
+                                    defenceQtyLakh: 0,
+                                  }
+                                )
+                              }}
+                            </th>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
                   <div class="modal-footer">
-                    <button class="btn btn-outline-secondary" (click)="closeHologramDetails()">
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="closeHologramDetails()"
+                    >
                       <i class="bi bi-x-circle me-1"></i>Close
                     </button>
                   </div>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>

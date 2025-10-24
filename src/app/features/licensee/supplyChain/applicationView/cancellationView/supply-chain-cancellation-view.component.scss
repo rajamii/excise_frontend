@@ -1,0 +1,505 @@
+.supply-chain-cancellation-view {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 20px 0;
+
+  .header-section {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .left-section {
+        .btn {
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          transition: all 0.3s ease;
+
+          &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            color: white;
+          }
+
+          i {
+            font-size: 1.1em;
+          }
+        }
+      }
+
+      .right-section {
+        .page-title {
+          margin: 0;
+          font-size: 1.8rem;
+          font-weight: 600;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+      }
+    }
+  }
+
+  .application-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+
+    .card {
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+      border: none;
+      background: white;
+
+      .application-header {
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        padding: 30px 20px 20px;
+        border-bottom: 3px solid #dc3545;
+
+        img {
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        span {
+          color: #2c3e50;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+          font-size: 0.95rem;
+        }
+
+        .text-danger {
+          color: #dc3545 !important;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+      }
+
+      .application-content {
+        background: white;
+        padding: 30px;
+
+        .info-card {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+          border-left: 4px solid #dc3545;
+          height: 100%;
+
+          h6 {
+            color: #dc3545;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          p {
+            margin-bottom: 8px;
+            color: #495057;
+
+            strong {
+              color: #2c3e50;
+              font-weight: 600;
+            }
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+
+          .badge {
+            font-size: 0.75em;
+            padding: 6px 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            border-radius: 6px;
+          }
+
+          .text-success {
+            color: #28a745 !important;
+          }
+        }
+
+        .section-card {
+          background: white;
+          border: 1px solid #dee2e6;
+          border-radius: 10px;
+          padding: 25px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+
+          .section-title {
+            color: #dc3545;
+            font-weight: 600;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dc3545;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+
+            .table {
+              margin-bottom: 0;
+              font-size: 0.95rem;
+
+              tbody {
+                tr {
+                  transition: all 0.2s ease;
+
+                  &:hover {
+                    background-color: rgba(220, 53, 69, 0.05);
+                  }
+
+                  td {
+                    padding: 15px 12px;
+                    vertical-align: middle;
+                    border-color: #dee2e6;
+
+                    &.bg-light {
+                      background-color: #f8f9fa !important;
+                      color: #495057;
+                      font-weight: 600;
+                    }
+
+                    &.text-primary {
+                      color: #007bff !important;
+                    }
+
+                    &.text-success {
+                      color: #28a745 !important;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        .financial-summary-card {
+          background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+          color: white;
+          padding: 25px;
+          border-radius: 12px;
+          margin-top: 30px;
+          box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+
+          h6 {
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+
+          .summary-item {
+            padding: 15px;
+
+            .summary-value {
+              font-size: 1.5rem;
+              font-weight: 700;
+              margin-bottom: 5px;
+
+              &.text-primary {
+                color: #ffc107 !important;
+              }
+
+              &.text-success {
+                color: #28a745 !important;
+              }
+
+              &.text-warning {
+                color: #ffc107 !important;
+              }
+
+              .small-badge {
+                font-size: 0.8rem;
+                padding: 4px 8px;
+              }
+            }
+
+            .summary-label {
+              font-size: 0.85rem;
+              opacity: 0.9;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+          }
+        }
+
+        .summary-section {
+          .summary-box {
+            background: #f8f9fa;
+            border: 2px solid #dc3545;
+            border-radius: 10px;
+            padding: 20px;
+            display: inline-block;
+            min-width: 300px;
+
+            h6 {
+              color: #dc3545;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+
+            .reference-no {
+              font-size: 1.2rem;
+              font-weight: 700;
+              color: #2c3e50;
+              margin-bottom: 5px;
+            }
+
+            .distillery-name {
+              color: #6c757d;
+              font-weight: 500;
+              margin-bottom: 0;
+            }
+          }
+        }
+
+        .text-center {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+          margin-top: 30px;
+
+          p {
+            margin-bottom: 8px;
+            color: #6c757d;
+
+            &:last-child {
+              margin-bottom: 0;
+            }
+
+            em {
+              font-style: italic;
+              color: #dc3545;
+            }
+
+            .text-muted {
+              font-size: 0.85rem;
+            }
+          }
+        }
+
+        .no-print {
+          .btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            padding: 15px 40px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+            transition: all 0.3s ease;
+            font-size: 1rem;
+
+            &:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+              background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+            }
+
+            i {
+              margin-right: 8px;
+            }
+          }
+        }
+      }
+    }
+
+    .alert {
+      border-radius: 10px;
+      border: none;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+
+      h4 {
+        color: #856404;
+        margin-bottom: 15px;
+        font-weight: 600;
+      }
+
+      p {
+        color: #6c757d;
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+      }
+
+      .btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border: none;
+        padding: 10px 25px;
+        font-weight: 600;
+        border-radius: 6px;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        transition: all 0.3s ease;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+      }
+    }
+  }
+}
+
+// Status badge colors
+.badge {
+  &.bg-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  }
+
+  &.bg-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%) !important;
+    color: #212529 !important;
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+  }
+
+  &.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+  }
+
+  &.bg-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%) !important;
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+  }
+}
+
+// Print styles
+@media print {
+  .supply-chain-cancellation-view {
+    background: white;
+    padding: 0;
+
+    .header-section {
+      display: none;
+    }
+
+    .application-container {
+      max-width: 100%;
+      padding: 0;
+
+      .card {
+        box-shadow: none;
+        border: 1px solid #000;
+
+        .application-header {
+          background: white;
+          border-bottom: 2px solid #000;
+
+          span {
+            color: #000;
+          }
+
+          .text-danger {
+            color: #000 !important;
+          }
+        }
+
+        .application-content {
+          .info-card {
+            background: #f0f0f0;
+            border-left: 3px solid #000;
+          }
+
+          .section-card {
+            border: 1px solid #000;
+            box-shadow: none;
+
+            .section-title {
+              color: #000;
+              border-bottom: 1px solid #000;
+            }
+          }
+
+          .financial-summary-card {
+            background: #f0f0f0;
+            color: #000;
+            border: 1px solid #000;
+          }
+
+          .summary-section .summary-box {
+            border: 1px solid #000;
+          }
+        }
+      }
+    }
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .supply-chain-cancellation-view {
+    .header-section {
+      .header-content {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+
+        .page-title {
+          font-size: 1.4rem;
+        }
+      }
+    }
+
+    .application-container {
+      padding: 0 10px;
+
+      .application-content {
+        padding: 20px;
+
+        .info-card {
+          margin-bottom: 20px;
+        }
+
+        .section-card {
+          padding: 20px;
+
+          .section-title {
+            font-size: 1rem;
+          }
+        }
+
+        .financial-summary-card {
+          .row {
+            .col-md-3 {
+              margin-bottom: 15px;
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+            }
+          }
+        }
+
+        .summary-section .summary-box {
+          min-width: auto;
+          width: 100%;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,312 @@
+<div class="supply-chain-application-view">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Back to Supply Chain
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">{{ getApplicationTypeTitle() }}</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Content -->
+  <div class="application-container">
+    @if (applicationData) {
+      <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
+        <div class="application-header text-center fw-bold mb-3 fs-5">
+          <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto" />
+            <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+          </div>
+        </div>
+
+        <div class="application-content p-3">
+          <!-- Basic Information -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <strong>Reference No:</strong>
+              <span class="fw-bold">{{ applicationData.referenceNo }}</span>
+            </div>
+            <div>
+              <strong>Date:</strong>
+              <span class="fw-bold">{{ applicationData.submissionDate | date: "dd-MM-yyyy" }}</span>
+            </div>
+          </div>
+
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <strong>Distillery:</strong> {{ applicationData.distilleryName }}
+            </div>
+            <div class="col-md-6">
+              <strong>Status:</strong>
+              <span [ngClass]="getStatusBadgeClass(applicationData.status)">
+                {{ applicationData.status }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Requisition Application Details -->
+          @if (applicationData.applicationType === 'requisition') {
+            <div class="requisition-details mb-4">
+              <h5 class="border-bottom pb-2 mb-3">Import Permit Details</h5>
+
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Field</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Bulk Spirit Type</strong></td>
+                      <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Quantity per Permit</strong></td>
+                      <td>{{ applicationData.quantity }} BL</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Number of Permits</strong></td>
+                      <td>{{ applicationData.numberOfPermits }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Total Quantity</strong></td>
+                      <td><strong>{{ (applicationData.quantity || 0) * (applicationData.numberOfPermits || 0) }} BL</strong></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Strength</strong></td>
+                      <td>{{ applicationData.strengthTo }}°</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Lifted From</strong></td>
+                      <td>{{ getDistilleryName(applicationData.liftedFrom || '') }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Via Route</strong></td>
+                      <td>{{ applicationData.viaRoute }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Checkpost Entry</strong></td>
+                      <td>{{ getCheckpostName(applicationData.checkpostEntry || '') }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Purpose</strong></td>
+                      <td>{{ getPurposeName(applicationData.purpose || '') }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Amount</strong></td>
+                      <td>₹{{ applicationData.brAmount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Revalidation Application Details -->
+          @if (applicationData.applicationType === 'revalidation') {
+            <div class="revalidation-details mb-4">
+              <h5 class="border-bottom pb-2 mb-3">Revalidation Details</h5>
+
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Field</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Original Permit No</strong></td>
+                      <td>{{ applicationData.originalPermitNo }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Original Permit Date</strong></td>
+                      <td>{{ applicationData.originalPermitDate | date: 'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Expiry Date</strong></td>
+                      <td>{{ applicationData.expiryDate | date: 'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Reason for Revalidation</strong></td>
+                      <td>{{ applicationData.reasonForRevalidation }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>New Quantity</strong></td>
+                      <td>{{ applicationData.newQuantity }} BL</td>
+                    </tr>
+                    <tr>
+                      <td><strong>New Purpose</strong></td>
+                      <td>{{ applicationData.newPurpose }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Revalidation Amount</strong></td>
+                      <td>₹{{ applicationData.revalidationAmount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Cancellation Application Details -->
+          @if (applicationData.applicationType === 'cancellation') {
+            <div class="cancellation-details mb-4">
+              <h5 class="border-bottom pb-2 mb-3">Cancellation Details</h5>
+
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Field</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Original Permit No</strong></td>
+                      <td>{{ applicationData.originalPermitNo }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Original Permit Date</strong></td>
+                      <td>{{ applicationData.originalPermitDate | date: 'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Cancellation Date</strong></td>
+                      <td>{{ applicationData.cancellationDate | date: 'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Reason for Cancellation</strong></td>
+                      <td>{{ applicationData.reasonForCancellation }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Requested By</strong></td>
+                      <td>{{ applicationData.requestedBy }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Authorized By</strong></td>
+                      <td>{{ applicationData.authorizedBy }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Cancellation Amount</strong></td>
+                      <td>₹{{ applicationData.cancellationAmount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Transit Application Details -->
+          @if (applicationData.applicationType === 'transit') {
+            <div class="transit-details mb-4">
+              <h5 class="border-bottom pb-2 mb-3">Transit Permit Details</h5>
+
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Field</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>Permit Type</strong></td>
+                      <td>{{ applicationData.permitType }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Vehicle Number</strong></td>
+                      <td>{{ applicationData.vehicleNumber }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Driver Name</strong></td>
+                      <td>{{ applicationData.driverName }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Driver License</strong></td>
+                      <td>{{ applicationData.driverLicense }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>From Location</strong></td>
+                      <td>{{ applicationData.fromLocation }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>To Location</strong></td>
+                      <td>{{ applicationData.toLocation }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Goods Description</strong></td>
+                      <td>{{ applicationData.goodsDescription }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Quantity</strong></td>
+                      <td>{{ applicationData.quantity }} {{ applicationData.unit }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Route Details</strong></td>
+                      <td>{{ applicationData.routeDetails }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Checkpost Entry</strong></td>
+                      <td>{{ applicationData.checkpostEntry }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Checkpost Exit</strong></td>
+                      <td>{{ applicationData.checkpostExit }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Validity Period</strong></td>
+                      <td>{{ applicationData.validityPeriod }} days</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Issued By</strong></td>
+                      <td>{{ applicationData.issuedBy }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Issued Date</strong></td>
+                      <td>{{ applicationData.issuedDate | date: 'dd-MM-yyyy' }}</td>
+                    </tr>
+                    <tr>
+                      <td><strong>Amount</strong></td>
+                      <td>₹{{ applicationData.brAmount }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+
+          <!-- Footer -->
+          <div class="mt-4 text-center">
+            <p class="mb-1"><em>This is a system generated application view</em></p>
+            <p class="mb-0"><small class="text-muted">Generated on {{ applicationData.submissionDate | date: 'dd-MM-yyyy' }} for {{ applicationData.distilleryName }}</small></p>
+          </div>
+
+          <!-- Print Button -->
+          <div class="no-print d-flex justify-content-center mt-4">
+            <button class="btn btn-primary" (click)="printApplication()">
+              <i class="bi bi-printer me-1"></i>Print Application
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="alert alert-warning text-center">
+        <h4>No Data Found</h4>
+        <p>The requested application could not be found.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          Return to Supply Chain
+        </button>
+      </div>
+    }
+  </div>
+</div>
