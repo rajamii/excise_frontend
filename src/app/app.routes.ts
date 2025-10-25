@@ -175,6 +175,27 @@ export const routes: Routes = [
             "./features/licensee/supplyChain/letterView/permitSectionRequisitionView/permit-section-requisition-view.component"
           ).then((m) => m.PermitSectionRequisitionViewComponent),
       },
+      {
+        path: "revalidation/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/permit-section-revalidation-application-view/permit-section-revalidation-application-view.component"
+          ).then((m) => m.PermitSectionRevalidationApplicationViewComponent),
+      },
+      {
+        path: "cancellation/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/permit-section-cancellation-application-view/permit-section-cancellation-application-view.component"
+          ).then((m) => m.PermitSectionCancellationApplicationViewComponent),
+      },
+      {
+        path: "transit/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/permit-section-transit-view/permit-section-transit-view.component"
+          ).then((m) => m.PermitSectionTransitViewComponent),
+      },
     ],
   },
   {

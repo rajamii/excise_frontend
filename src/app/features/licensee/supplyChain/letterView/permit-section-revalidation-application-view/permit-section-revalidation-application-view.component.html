@@ -1,4 +1,4 @@
-<div class="permit-section-requisition-application-view">
+<div class="permit-section-revalidation-application-view">
   <div class="header-section">
     <div
       class="header-content d-flex justify-content-between align-items-center"
@@ -6,7 +6,7 @@
       <button class="btn btn-outline-secondary" (click)="backToList()">
         <i class="bi bi-arrow-left me-1"></i>Back to Permit Section
       </button>
-      <h1 class="page-title m-0">Requisition Application View</h1>
+      <h1 class="page-title m-0">Revalidation Application View</h1>
     </div>
   </div>
 
@@ -15,7 +15,7 @@
       <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white">
           <h5 class="m-0">
-            <i class="bi bi-file-text me-2"></i>Application Details
+            <i class="bi bi-arrow-repeat me-2"></i>Revalidation Details
           </h5>
         </div>
         <div class="card-body">
@@ -37,6 +37,54 @@
             <div class="col-md-3">
               <div class="small text-muted">Current Status</div>
               <div class="badge bg-success fs-6">{{ data.status }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="m-0">
+            <i class="bi bi-file-earmark-check me-2"></i>Original Permit Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="small text-muted">Original Permit No</div>
+              <div class="fw-semibold text-warning">
+                {{ data.originalPermitNo || "N/A" }}
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="small text-muted">Original Issue Date</div>
+              <div class="fw-semibold">
+                {{ data.originalPermitDate | date: "dd-MMM-yyyy" }}
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="small text-muted">Expiry Date</div>
+              <div class="fw-semibold text-danger">
+                {{ data.expiryDate | date: "dd-MMM-yyyy" }}
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="small text-muted">Days Overdue</div>
+              <div class="fw-semibold fs-5">
+                <span class="badge bg-danger">{{ getDaysOverdue() }} days</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Requested Revalidation Period</div>
+              <div class="fw-semibold text-info">
+                {{ data.revalidationPeriod || "Not specified" }}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="small text-muted">Reason for Revalidation</div>
+              <div class="fw-semibold">
+                {{ data.reason || "Not specified" }}
+              </div>
             </div>
           </div>
         </div>
@@ -83,7 +131,7 @@
       </div>
 
       <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-warning text-dark">
+        <div class="card-header bg-success text-white">
           <h5 class="m-0">
             <i class="bi bi-truck me-2"></i>Transportation Details
           </h5>
@@ -115,7 +163,7 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-4">
-              <div class="small text-muted">Import Pass Fee Amount</div>
+              <div class="small text-muted">Revalidation Fee Amount</div>
               <div class="fw-semibold fs-5 text-success">
                 ₹ {{ data.amount | number: "1.2-2" }}
               </div>
@@ -134,12 +182,12 @@
 
       <!-- Letter Preview Section -->
       <div
-        id="permitSectionRequisitionPrint"
+        id="permitSectionRevalidationPrint"
         class="card shadow-sm border-0 printable-content mb-4"
       >
         <div class="card-header bg-dark text-white">
           <h5 class="m-0">
-            <i class="bi bi-file-earmark-text me-2"></i>Letter Preview
+            <i class="bi bi-file-earmark-text me-2"></i>Revalidation Letter Preview
           </h5>
         </div>
         <div class="card-body p-4">
@@ -180,23 +228,24 @@
             </p>
 
             <p class="mb-3">
-              <strong>Sub:</strong> Request for
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              import permits of
-              <strong>{{
-                getBulkSpiritTypeName(data.bulkSpiritType || "")
-              }}</strong>
-              for <span class="fw-bold">{{ data.quantity || 0 }}</span> x
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              = <span class="fw-bold">{{ getTotalQuantity() }}</span> BL.
+              <strong>Sub:</strong> Request for revalidation of Import Permit No.
+              <span class="fw-bold">{{ data.originalPermitNo }}</span> dated
+              <span class="fw-bold">{{
+                data.originalPermitDate | date: "dd-MM-yyyy"
+              }}</span>
+              for {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }} -
+              <span class="fw-bold">{{ getTotalQuantity() }}</span> BL.
             </p>
 
             <p class="mb-3">Sir/Madam,</p>
 
             <p class="mb-3">
-              We respectfully request the issuance of
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              import permits for
+              We respectfully submit that we had obtained Import Permit No.
+              <span class="fw-bold">{{ data.originalPermitNo }}</span> dated
+              <span class="fw-bold">{{
+                data.originalPermitDate | date: "dd-MM-yyyy"
+              }}</span>
+              for the import of
               <span class="fw-bold">{{ getTotalQuantity() }}</span> BL
               {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }}, having
               strength of
@@ -210,14 +259,27 @@
             </p>
 
             <p class="mb-3">
-              The {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }} shall
-              be conveyed to destination via route:
-              <span class="fw-bold">{{ data.viaRoute }}</span
+              The said permit was valid up to
+              <span class="fw-bold">{{
+                data.expiryDate | date: "dd-MM-yyyy"
+              }}</span
+              >. However, due to
+              <span class="fw-bold">{{ data.reason }}</span
+              >, we could not utilize the permit within the stipulated time
+              period.
+            </p>
+
+            <p class="mb-3">
+              We hereby request for the revalidation of the above-mentioned
+              permit for a period of
+              <span class="fw-bold">{{ data.revalidationPeriod }}</span> so
+              that we can complete the transportation of the spirit through the
+              route: <span class="fw-bold">{{ data.viaRoute }}</span
               >.
             </p>
 
             <p class="mb-3">
-              We have paid the requisite Import Pass Fee of ₹{{
+              We have paid the requisite Revalidation Fee of ₹{{
                 data.amount | number: "1.2-2"
               }}
               as per the prescribed rules and regulations.
@@ -226,7 +288,7 @@
             <div class="mt-4 mb-4">
               <p>
                 We request your kind consideration for the early approval of our
-                application.
+                revalidation request.
               </p>
               <p>Thanking You,</p>
             </div>
@@ -243,6 +305,15 @@
                   <p class="small">{{ data.distilleryName }}</p>
                 </div>
               </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-light border rounded">
+              <p class="mb-2"><strong>Attachments:</strong></p>
+              <ul class="mb-0">
+                <li>Copy of Original Import Permit</li>
+                <li>Payment Receipt for Revalidation Fee</li>
+                <li>Detailed explanation for delay</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -264,7 +335,7 @@
     } @else {
       <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
-        No requisition data found for the given reference.
+        No revalidation data found for the given reference.
       </div>
     }
   </div>

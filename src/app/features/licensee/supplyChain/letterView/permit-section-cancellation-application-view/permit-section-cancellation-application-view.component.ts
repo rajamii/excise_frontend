@@ -3,14 +3,16 @@ import { Component, OnInit, Inject, PLATFORM_ID } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { isPlatformBrowser } from "@angular/common";
 
-interface RequisitionData {
+interface CancellationData {
   referenceNo: string;
   submissionDate: Date;
   distilleryName: string;
   status: string;
   amount: number;
+  originalPermitNo?: string;
+  originalPermitDate?: Date;
   numberOfPermits?: number;
-  quantity?: number; // per permit BL
+  quantity?: number;
   bulkSpiritType?: string;
   strengthFrom?: string;
   strengthTo?: string;
@@ -18,17 +20,22 @@ interface RequisitionData {
   viaRoute?: string;
   transactionId?: string;
   paymentStatus?: string;
+  reason?: string;
+  cancellationType?: string; // 'full' | 'partial'
+  quantityCancelled?: number;
+  refundAmount?: number;
+  refundStatus?: string;
 }
 
 @Component({
-  selector: "app-permit-section-requisition-view",
+  selector: "app-permit-section-cancellation-application-view",
   standalone: true,
   imports: [CommonModule],
-  templateUrl: "./permit-section-requisition-view.component.html",
-  styleUrls: ["./permit-section-requisition-view.component.scss"],
+  templateUrl: "./permit-section-cancellation-application-view.component.html",
+  styleUrls: ["./permit-section-cancellation-application-view.component.scss"],
 })
-export class PermitSectionRequisitionViewComponent implements OnInit {
-  data?: RequisitionData;
+export class PermitSectionCancellationApplicationViewComponent implements OnInit {
+  data?: CancellationData;
   private isBrowser = false;
 
   constructor(
@@ -50,40 +57,52 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
 
   loadData(ref: string): void {
     // Sample data - replace with API call
-    const samples: RequisitionData[] = [
+    const samples: CancellationData[] = [
       {
-        referenceNo: "IBPS/02/EXCISE",
-        submissionDate: new Date("2025-09-22"),
-        distilleryName: "Sikkim Distilleries Ltd",
-        status:
-          "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: 8.0,
-        numberOfPermits: 1,
-        quantity: 1000,
-        bulkSpiritType: "grain-ena",
-        strengthFrom: "95",
-        strengthTo: "96",
-        liftedFrom: "sikkim-distilleries",
-        viaRoute: "Gangtok - Siliguri Highway via NH-10",
-        transactionId: "TXN202509220001",
-        paymentStatus: "PAID",
-      },
-      {
-        referenceNo: "IBPS/03/EXCISE",
-        submissionDate: new Date("2025-09-05"),
-        distilleryName: "Darjeeling Artisan Pvt Ltd",
-        status:
-          "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: 8.0,
+        referenceNo: "CAN/001/2025",
+        submissionDate: new Date("2025-09-08"),
+        distilleryName: "Mount Distilleries Ltd",
+        status: "CANCELLATION PENDING APPROVAL",
+        amount: 25.0,
+        originalPermitNo: "IBPS/007/2025",
+        originalPermitDate: new Date("2025-07-15"),
         numberOfPermits: 2,
         quantity: 500,
         bulkSpiritType: "molasses-ena",
         strengthFrom: "93",
         strengthTo: "95",
+        liftedFrom: "mount-distilleries",
+        viaRoute: "Pakyong - Siliguri via NH-10",
+        transactionId: "TXN202509080001",
+        paymentStatus: "PAID",
+        reason: "Change in business requirements - no longer needed",
+        cancellationType: "full",
+        quantityCancelled: 1000,
+        refundAmount: 15.0,
+        refundStatus: "PROCESSING",
+      },
+      {
+        referenceNo: "CAN/002/2025",
+        submissionDate: new Date("2025-08-30"),
+        distilleryName: "Darjeeling Artisan Pvt Ltd",
+        status: "CANCELLATION APPROVED",
+        amount: 15.0,
+        originalPermitNo: "IBPS/009/2025",
+        originalPermitDate: new Date("2025-06-20"),
+        numberOfPermits: 1,
+        quantity: 750,
+        bulkSpiritType: "grain-ena",
+        strengthFrom: "95",
+        strengthTo: "96",
         liftedFrom: "darjeeling-artisan",
         viaRoute: "Darjeeling - Siliguri via Hill Cart Road",
-        transactionId: "TXN202509050001",
+        transactionId: "TXN202508300001",
         paymentStatus: "PAID",
+        reason: "Regulatory compliance issues",
+        cancellationType: "partial",
+        quantityCancelled: 375,
+        refundAmount: 7.5,
+        refundStatus: "COMPLETED",
       },
     ];
 
@@ -96,6 +115,8 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
         distilleryName: "Unknown Distillery",
         status: "Data not found",
         amount: 0,
+        originalPermitNo: "",
+        originalPermitDate: new Date(),
         numberOfPermits: 0,
         quantity: 0,
         bulkSpiritType: "",
@@ -105,6 +126,11 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
         viaRoute: "",
         transactionId: "",
         paymentStatus: "UNKNOWN",
+        reason: "",
+        cancellationType: "full",
+        quantityCancelled: 0,
+        refundAmount: 0,
+        refundStatus: "UNKNOWN",
       };
     }
   }
@@ -144,11 +170,27 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     return this.data.paymentStatus || "UNKNOWN";
   }
 
+  getCancellationTypeName(): string {
+    if (!this.data?.cancellationType) return "Not specified";
+    return this.data.cancellationType === "full" ? "Full Cancellation" : "Partial Cancellation";
+  }
+
+  getRefundStatusBadgeClass(): string {
+    if (!this.data?.refundStatus) return "bg-secondary";
+    switch (this.data.refundStatus.toLowerCase()) {
+      case "completed": return "bg-success";
+      case "processing": return "bg-warning";
+      case "pending": return "bg-info";
+      case "failed": return "bg-danger";
+      default: return "bg-secondary";
+    }
+  }
+
   printLetter(): void {
     if (!this.isBrowser) return;
 
     const printable =
-      document.getElementById("permitSectionRequisitionPrint")?.innerHTML || "";
+      document.getElementById("permitSectionCancellationPrint")?.innerHTML || "";
     const styles = Array.from(
       document.querySelectorAll('link[rel="stylesheet"], style'),
     )
@@ -166,7 +208,7 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     win.document.write(`<!doctype html>
       <html>
         <head>
-          <title>Requisition Application - ${ref}</title>
+          <title>Cancellation Application - ${ref}</title>
           ${styles}
           <style>
             @page { size: A4; margin: 15mm; }
@@ -197,7 +239,6 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
 
   downloadPDF(): void {
     // Placeholder for PDF download functionality
-    // In a real application, this would generate and download a PDF
     alert(
       "PDF download functionality will be implemented with a PDF library like jsPDF or server-side PDF generation.",
     );
@@ -209,9 +250,15 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     this.router.navigate(["/dev-payment-receipt"], {
       queryParams: {
         transactionId: this.data.transactionId || this.data.referenceNo,
-        type: "requisition",
+        type: "cancellation",
         amount: this.data.amount,
       },
     });
+  }
+
+  viewRefundDetails(): void {
+    if (!this.data || !this.data.refundAmount) return;
+
+    alert(`Refund Details:\nAmount: ₹${this.data.refundAmount}\nStatus: ${this.data.refundStatus}\nRefund will be processed within 7-10 working days.`);
   }
 }

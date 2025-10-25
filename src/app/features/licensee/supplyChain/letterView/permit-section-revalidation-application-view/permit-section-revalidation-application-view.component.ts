@@ -3,14 +3,18 @@ import { Component, OnInit, Inject, PLATFORM_ID } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { isPlatformBrowser } from "@angular/common";
 
-interface RequisitionData {
+interface RevalidationData {
   referenceNo: string;
   submissionDate: Date;
   distilleryName: string;
   status: string;
   amount: number;
+  originalPermitNo?: string;
+  originalPermitDate?: Date;
+  expiryDate?: Date;
+  revalidationPeriod?: string;
   numberOfPermits?: number;
-  quantity?: number; // per permit BL
+  quantity?: number;
   bulkSpiritType?: string;
   strengthFrom?: string;
   strengthTo?: string;
@@ -18,17 +22,18 @@ interface RequisitionData {
   viaRoute?: string;
   transactionId?: string;
   paymentStatus?: string;
+  reason?: string;
 }
 
 @Component({
-  selector: "app-permit-section-requisition-view",
+  selector: "app-permit-section-revalidation-application-view",
   standalone: true,
   imports: [CommonModule],
-  templateUrl: "./permit-section-requisition-view.component.html",
-  styleUrls: ["./permit-section-requisition-view.component.scss"],
+  templateUrl: "./permit-section-revalidation-application-view.component.html",
+  styleUrls: ["./permit-section-revalidation-application-view.component.scss"],
 })
-export class PermitSectionRequisitionViewComponent implements OnInit {
-  data?: RequisitionData;
+export class PermitSectionRevalidationApplicationViewComponent implements OnInit {
+  data?: RevalidationData;
   private isBrowser = false;
 
   constructor(
@@ -50,14 +55,17 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
 
   loadData(ref: string): void {
     // Sample data - replace with API call
-    const samples: RequisitionData[] = [
+    const samples: RevalidationData[] = [
       {
-        referenceNo: "IBPS/02/EXCISE",
-        submissionDate: new Date("2025-09-22"),
+        referenceNo: "REV/001/2025",
+        submissionDate: new Date("2025-09-10"),
         distilleryName: "Sikkim Distilleries Ltd",
-        status:
-          "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: 8.0,
+        status: "REVALIDATION APPROVED BY COMMISSIONER",
+        amount: 50.0,
+        originalPermitNo: "IBPS/001/2025",
+        originalPermitDate: new Date("2025-06-15"),
+        expiryDate: new Date("2025-09-15"),
+        revalidationPeriod: "3 months",
         numberOfPermits: 1,
         quantity: 1000,
         bulkSpiritType: "grain-ena",
@@ -65,25 +73,30 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
         strengthTo: "96",
         liftedFrom: "sikkim-distilleries",
         viaRoute: "Gangtok - Siliguri Highway via NH-10",
-        transactionId: "TXN202509220001",
+        transactionId: "TXN202509100001",
         paymentStatus: "PAID",
+        reason: "Delay in transportation due to road conditions",
       },
       {
-        referenceNo: "IBPS/03/EXCISE",
-        submissionDate: new Date("2025-09-05"),
-        distilleryName: "Darjeeling Artisan Pvt Ltd",
-        status:
-          "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: 8.0,
-        numberOfPermits: 2,
-        quantity: 500,
+        referenceNo: "REV/002/2025",
+        submissionDate: new Date("2025-08-25"),
+        distilleryName: "Mount Distilleries Ltd",
+        status: "REVALIDATION PENDING APPROVAL",
+        amount: 25.0,
+        originalPermitNo: "IBPS/005/2025",
+        originalPermitDate: new Date("2025-05-20"),
+        expiryDate: new Date("2025-08-20"),
+        revalidationPeriod: "2 months",
+        numberOfPermits: 1,
+        quantity: 750,
         bulkSpiritType: "molasses-ena",
         strengthFrom: "93",
         strengthTo: "95",
-        liftedFrom: "darjeeling-artisan",
-        viaRoute: "Darjeeling - Siliguri via Hill Cart Road",
-        transactionId: "TXN202509050001",
+        liftedFrom: "mount-distilleries",
+        viaRoute: "Pakyong - Siliguri via NH-10",
+        transactionId: "TXN202508250001",
         paymentStatus: "PAID",
+        reason: "Administrative delays in processing",
       },
     ];
 
@@ -96,6 +109,10 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
         distilleryName: "Unknown Distillery",
         status: "Data not found",
         amount: 0,
+        originalPermitNo: "",
+        originalPermitDate: new Date(),
+        expiryDate: new Date(),
+        revalidationPeriod: "",
         numberOfPermits: 0,
         quantity: 0,
         bulkSpiritType: "",
@@ -105,6 +122,7 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
         viaRoute: "",
         transactionId: "",
         paymentStatus: "UNKNOWN",
+        reason: "",
       };
     }
   }
@@ -144,11 +162,19 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     return this.data.paymentStatus || "UNKNOWN";
   }
 
+  getDaysOverdue(): number {
+    if (!this.data?.expiryDate) return 0;
+    const today = new Date();
+    const expiry = new Date(this.data.expiryDate);
+    const diffTime = today.getTime() - expiry.getTime();
+    return Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+  }
+
   printLetter(): void {
     if (!this.isBrowser) return;
 
     const printable =
-      document.getElementById("permitSectionRequisitionPrint")?.innerHTML || "";
+      document.getElementById("permitSectionRevalidationPrint")?.innerHTML || "";
     const styles = Array.from(
       document.querySelectorAll('link[rel="stylesheet"], style'),
     )
@@ -166,7 +192,7 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     win.document.write(`<!doctype html>
       <html>
         <head>
-          <title>Requisition Application - ${ref}</title>
+          <title>Revalidation Application - ${ref}</title>
           ${styles}
           <style>
             @page { size: A4; margin: 15mm; }
@@ -197,7 +223,6 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
 
   downloadPDF(): void {
     // Placeholder for PDF download functionality
-    // In a real application, this would generate and download a PDF
     alert(
       "PDF download functionality will be implemented with a PDF library like jsPDF or server-side PDF generation.",
     );
@@ -209,7 +234,7 @@ export class PermitSectionRequisitionViewComponent implements OnInit {
     this.router.navigate(["/dev-payment-receipt"], {
       queryParams: {
         transactionId: this.data.transactionId || this.data.referenceNo,
-        type: "requisition",
+        type: "revalidation",
         amount: this.data.amount,
       },
     });

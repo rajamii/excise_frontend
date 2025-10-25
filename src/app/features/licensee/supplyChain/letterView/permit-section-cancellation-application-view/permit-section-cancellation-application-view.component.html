@@ -1,4 +1,4 @@
-<div class="permit-section-requisition-application-view">
+<div class="permit-section-cancellation-application-view">
   <div class="header-section">
     <div
       class="header-content d-flex justify-content-between align-items-center"
@@ -6,16 +6,16 @@
       <button class="btn btn-outline-secondary" (click)="backToList()">
         <i class="bi bi-arrow-left me-1"></i>Back to Permit Section
       </button>
-      <h1 class="page-title m-0">Requisition Application View</h1>
+      <h1 class="page-title m-0">Cancellation Application View</h1>
     </div>
   </div>
 
   <div class="application-container mt-3">
     @if (data) {
       <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-primary text-white">
+        <div class="card-header bg-danger text-white">
           <h5 class="m-0">
-            <i class="bi bi-file-text me-2"></i>Application Details
+            <i class="bi bi-x-circle me-2"></i>Cancellation Details
           </h5>
         </div>
         <div class="card-body">
@@ -36,7 +36,39 @@
             </div>
             <div class="col-md-3">
               <div class="small text-muted">Current Status</div>
-              <div class="badge bg-success fs-6">{{ data.status }}</div>
+              <div class="badge bg-warning fs-6">{{ data.status }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning text-dark">
+          <h5 class="m-0">
+            <i class="bi bi-file-earmark-x me-2"></i>Original Permit Information
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="small text-muted">Original Permit No</div>
+              <div class="fw-semibold text-warning">
+                {{ data.originalPermitNo || "N/A" }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted">Original Issue Date</div>
+              <div class="fw-semibold">
+                {{ data.originalPermitDate | date: "dd-MMM-yyyy" }}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="small text-muted">Cancellation Type</div>
+              <div class="fw-semibold">
+                <span class="badge" [class]="data.cancellationType === 'full' ? 'bg-danger' : 'bg-warning'">
+                  {{ getCancellationTypeName() }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -49,21 +81,21 @@
         <div class="card-body">
           <div class="row g-3">
             <div class="col-md-4">
-              <div class="small text-muted">Number of Permits</div>
+              <div class="small text-muted">Original Permits</div>
               <div class="fw-semibold fs-5 text-primary">
                 {{ data.numberOfPermits || "N/A" }}
               </div>
             </div>
             <div class="col-md-4">
-              <div class="small text-muted">Quantity per Permit (BL)</div>
+              <div class="small text-muted">Total Quantity (BL)</div>
               <div class="fw-semibold fs-5 text-success">
-                {{ data.quantity || "N/A" }}
+                {{ getTotalQuantity() }}
               </div>
             </div>
             <div class="col-md-4">
-              <div class="small text-muted">Total Quantity (BL)</div>
-              <div class="fw-semibold fs-5 text-warning">
-                {{ getTotalQuantity() }}
+              <div class="small text-muted">Quantity to Cancel (BL)</div>
+              <div class="fw-semibold fs-5 text-danger">
+                {{ data.quantityCancelled || "N/A" }}
               </div>
             </div>
             <div class="col-md-6">
@@ -83,7 +115,7 @@
       </div>
 
       <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-warning text-dark">
+        <div class="card-header bg-success text-white">
           <h5 class="m-0">
             <i class="bi bi-truck me-2"></i>Transportation Details
           </h5>
@@ -102,6 +134,12 @@
                 {{ data.viaRoute || "Not specified" }}
               </div>
             </div>
+            <div class="col-md-12">
+              <div class="small text-muted">Reason for Cancellation</div>
+              <div class="fw-semibold text-danger">
+                {{ data.reason || "Not specified" }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -109,37 +147,54 @@
       <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-secondary text-white">
           <h5 class="m-0">
-            <i class="bi bi-currency-rupee me-2"></i>Fee Information
+            <i class="bi bi-currency-rupee me-2"></i>Fee & Refund Information
           </h5>
         </div>
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-md-4">
-              <div class="small text-muted">Import Pass Fee Amount</div>
+            <div class="col-md-3">
+              <div class="small text-muted">Original Fee Paid</div>
               <div class="fw-semibold fs-5 text-success">
                 ₹ {{ data.amount | number: "1.2-2" }}
               </div>
             </div>
-            <div class="col-md-4">
-              <div class="small text-muted">Payment Status</div>
-              <div class="badge bg-success fs-6">{{ getPaymentStatus() }}</div>
+            <div class="col-md-3">
+              <div class="small text-muted">Refund Amount</div>
+              <div class="fw-semibold fs-5 text-warning">
+                ₹ {{ data.refundAmount | number: "1.2-2" }}
+              </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+              <div class="small text-muted">Refund Status</div>
+              <div class="badge fs-6" [class]="getRefundStatusBadgeClass()">
+                {{ data.refundStatus || "UNKNOWN" }}
+              </div>
+            </div>
+            <div class="col-md-3">
               <div class="small text-muted">Transaction ID</div>
               <div class="fw-semibold">{{ data.transactionId || "N/A" }}</div>
             </div>
           </div>
+          @if (data.refundAmount && data.refundAmount > 0) {
+            <div class="row mt-3">
+              <div class="col-12">
+                <button class="btn btn-outline-info btn-sm" (click)="viewRefundDetails()">
+                  <i class="bi bi-info-circle me-1"></i>View Refund Details
+                </button>
+              </div>
+            </div>
+          }
         </div>
       </div>
 
       <!-- Letter Preview Section -->
       <div
-        id="permitSectionRequisitionPrint"
+        id="permitSectionCancellationPrint"
         class="card shadow-sm border-0 printable-content mb-4"
       >
         <div class="card-header bg-dark text-white">
           <h5 class="m-0">
-            <i class="bi bi-file-earmark-text me-2"></i>Letter Preview
+            <i class="bi bi-file-earmark-text me-2"></i>Cancellation Letter Preview
           </h5>
         </div>
         <div class="card-body p-4">
@@ -180,23 +235,24 @@
             </p>
 
             <p class="mb-3">
-              <strong>Sub:</strong> Request for
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              import permits of
-              <strong>{{
-                getBulkSpiritTypeName(data.bulkSpiritType || "")
-              }}</strong>
-              for <span class="fw-bold">{{ data.quantity || 0 }}</span> x
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              = <span class="fw-bold">{{ getTotalQuantity() }}</span> BL.
+              <strong>Sub:</strong> Request for {{ getCancellationTypeName().toLowerCase() }} of Import Permit No.
+              <span class="fw-bold">{{ data.originalPermitNo }}</span> dated
+              <span class="fw-bold">{{
+                data.originalPermitDate | date: "dd-MM-yyyy"
+              }}</span>
+              for {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }} -
+              <span class="fw-bold">{{ data.quantityCancelled || getTotalQuantity() }}</span> BL.
             </p>
 
             <p class="mb-3">Sir/Madam,</p>
 
             <p class="mb-3">
-              We respectfully request the issuance of
-              <span class="fw-bold">{{ data.numberOfPermits || 0 }}</span>
-              import permits for
+              We respectfully submit that we had obtained Import Permit No.
+              <span class="fw-bold">{{ data.originalPermitNo }}</span> dated
+              <span class="fw-bold">{{
+                data.originalPermitDate | date: "dd-MM-yyyy"
+              }}</span>
+              for the import of
               <span class="fw-bold">{{ getTotalQuantity() }}</span> BL
               {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }}, having
               strength of
@@ -210,23 +266,49 @@
             </p>
 
             <p class="mb-3">
-              The {{ getBulkSpiritTypeName(data.bulkSpiritType || "") }} shall
-              be conveyed to destination via route:
-              <span class="fw-bold">{{ data.viaRoute }}</span
-              >.
+              Due to <span class="fw-bold">{{ data.reason }}</span>,
+              we are constrained to request for the
+              <span class="fw-bold text-danger">{{ getCancellationTypeName().toLowerCase() }}</span>
+              of the above-mentioned import permit.
+            </p>
+
+            @if (data.cancellationType === 'partial') {
+              <p class="mb-3">
+                We request the cancellation of
+                <span class="fw-bold text-danger">{{ data.quantityCancelled }}</span> BL
+                out of the total approved quantity of
+                <span class="fw-bold">{{ getTotalQuantity() }}</span> BL.
+                The remaining quantity of
+                <span class="fw-bold">{{ getTotalQuantity() - (data.quantityCancelled || 0) }}</span> BL
+                will be utilized as per the original permit conditions.
+              </p>
+            } @else {
+              <p class="mb-3">
+                We request the complete cancellation of the permit for the entire approved quantity of
+                <span class="fw-bold text-danger">{{ getTotalQuantity() }}</span> BL
+                as we will not be able to utilize the same.
+              </p>
+            }
+
+            <p class="mb-3">
+              We understand that upon approval of this cancellation request,
+              @if (data.refundAmount && data.refundAmount > 0) {
+                a refund amount of <span class="fw-bold text-success">₹{{ data.refundAmount | number: "1.2-2" }}</span>
+                will be processed as per the prescribed rules and regulations.
+              } @else {
+                the fees paid will be adjusted as per the prescribed rules and regulations.
+              }
             </p>
 
             <p class="mb-3">
-              We have paid the requisite Import Pass Fee of ₹{{
-                data.amount | number: "1.2-2"
-              }}
-              as per the prescribed rules and regulations.
+              We also undertake that the cancelled permit(s) will be surrendered to your office
+              immediately upon approval of this cancellation request.
             </p>
 
             <div class="mt-4 mb-4">
               <p>
                 We request your kind consideration for the early approval of our
-                application.
+                cancellation request.
               </p>
               <p>Thanking You,</p>
             </div>
@@ -244,6 +326,18 @@
                 </div>
               </div>
             </div>
+
+            <div class="mt-4 p-3 bg-light border rounded">
+              <p class="mb-2"><strong>Attachments:</strong></p>
+              <ul class="mb-0">
+                <li>Copy of Original Import Permit</li>
+                <li>Detailed reason for cancellation</li>
+                <li>Undertaking for permit surrender</li>
+                @if (data.refundAmount && data.refundAmount > 0) {
+                  <li>Bank details for refund processing</li>
+                }
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -260,11 +354,16 @@
             <i class="bi bi-receipt me-2"></i>View Payment Details
           </button>
         }
+        @if (data.refundAmount && data.refundAmount > 0) {
+          <button class="btn btn-info" (click)="viewRefundDetails()">
+            <i class="bi bi-cash-coin me-2"></i>View Refund Details
+          </button>
+        }
       </div>
     } @else {
       <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
-        No requisition data found for the given reference.
+        No cancellation data found for the given reference.
       </div>
     }
   </div>
