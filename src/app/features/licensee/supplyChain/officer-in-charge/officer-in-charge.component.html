@@ -25,24 +25,24 @@
     <div class="container-fluid">
       <ul class="nav nav-tabs border-0" id="officerTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link fw-bold" 
-                  [class.active]="activeTab === 'applications'" 
+          <button class="nav-link fw-bold"
+                  [class.active]="activeTab === 'applications'"
                   [class.text-danger]="activeTab === 'applications'"
                   (click)="setActiveTab('applications')" type="button">
             <i class="bi bi-file-text me-2"></i> TRANSIT PERMIT APPLICATIONS
           </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link fw-bold" 
-                  [class.active]="activeTab === 'brands'" 
+          <button class="nav-link fw-bold"
+                  [class.active]="activeTab === 'brands'"
                   [class.text-danger]="activeTab === 'brands'"
                   (click)="setActiveTab('brands')" type="button">
             <i class="bi bi-tags me-2"></i> BRANDS DETAILS
           </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link fw-bold" 
-                  [class.active]="activeTab === 'register'" 
+          <button class="nav-link fw-bold"
+                  [class.active]="activeTab === 'register'"
                   [class.text-danger]="activeTab === 'register'"
                   (click)="setActiveTab('register')" type="button">
             <i class="bi bi-journal-text me-2"></i> OFFICER REGISTER
@@ -62,7 +62,7 @@
       <div class="row g-2 align-items-end">
         <div class="col-md-3 col-sm-6">
           <label class="form-label small text-muted mb-1">Reference Number</label>
-          <input type="text" class="form-control form-control-sm" placeholder="Enter reference number" 
+          <input type="text" class="form-control form-control-sm" placeholder="Enter reference number"
                  [(ngModel)]="filters.referenceNumber" (input)="applyFilters()">
         </div>
         <div class="col-md-2 col-sm-6">
@@ -107,7 +107,7 @@
     <div class="container-fluid p-3">
       <div class="table-responsive">
         <table class="table table-hover table-striped">
-          <thead class="table-dark">
+          <thead>
             <tr>
               <th scope="col">Reference No.</th>
               <th scope="col">Submission Date</th>
@@ -140,16 +140,16 @@
               </td>
               <td>
                 <div class="btn-group btn-group-sm" role="group">
-                  <button class="btn btn-outline-primary" (click)="viewDetails(record)" 
+                  <button class="btn btn-outline-primary" (click)="viewDetails(record)"
                           title="View Details">
                     <i class="bi bi-eye"></i>
                   </button>
-                  <button *ngIf="record.status === 'PENDING_APPROVAL'" 
+                  <button *ngIf="record.status === 'PENDING_APPROVAL'"
                           class="btn btn-outline-success" (click)="approveApplication(record)"
                           title="Approve Application">
                     <i class="bi bi-check-circle"></i>
                   </button>
-                  <button *ngIf="record.status === 'PENDING_APPROVAL'" 
+                  <button *ngIf="record.status === 'PENDING_APPROVAL'"
                           class="btn btn-outline-danger" (click)="terminateApplication(record)"
                           title="Terminate Application">
                     <i class="bi bi-x-circle"></i>
@@ -161,13 +161,13 @@
         </table>
       </div>
 
-      
+
       <!-- Pagination -->
       <div class="d-flex justify-content-between align-items-center mt-3">
         <div>
           <span class="text-muted">
-            Showing {{ (currentPage - 1) * pageSize + 1 }} to 
-            {{ Math.min(currentPage * pageSize, filteredData.length) }} of 
+            Showing {{ (currentPage - 1) * pageSize + 1 }} to
+            {{ Math.min(currentPage * pageSize, filteredData.length) }} of
             {{ filteredData.length }} entries
           </span>
         </div>
@@ -178,7 +178,7 @@
                 <i class="bi bi-chevron-left"></i>
               </button>
             </li>
-            <li *ngFor="let page of getPageNumbers()" class="page-item" 
+            <li *ngFor="let page of getPageNumbers()" class="page-item"
                 [class.active]="page === currentPage">
               <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
             </li>
@@ -257,7 +257,7 @@
 
           <div class="table-responsive">
             <table class="table table-hover table-striped align-middle">
-              <thead class="table-dark">
+              <thead>
                 <tr>
                   <th scope="col" rowspan="2" class="align-middle">BRANDS</th>
                   <th scope="col" rowspan="2" class="align-middle">LIQUOR TYPE</th>
@@ -372,7 +372,7 @@
                 <div class="card-body">
                   <div class="table-responsive">
                     <table class="table table-hover table-striped">
-                      <thead class="table-dark">
+                      <thead>
                         <tr>
                           <th scope="col">Date & Time</th>
                           <th scope="col">Action</th>
@@ -410,7 +410,7 @@
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <!-- Empty state -->
                   <div *ngIf="officerActivities.length === 0" class="text-center py-5">
                     <i class="bi bi-journal-x display-4 text-muted"></i>
@@ -451,8 +451,8 @@
           </div>
           <div class="form-group">
             <label for="approvalComments" class="form-label">Approval Comments (Optional)</label>
-            <textarea class="form-control" id="approvalComments" rows="3" 
-                      placeholder="Enter any comments for approval..." 
+            <textarea class="form-control" id="approvalComments" rows="3"
+                      placeholder="Enter any comments for approval..."
                       [(ngModel)]="approvalComments"></textarea>
           </div>
         </div>
@@ -499,8 +499,8 @@
           </div>
           <div class="form-group">
             <label for="terminationReason" class="form-label">Termination Reason <span class="text-danger">*</span></label>
-            <textarea class="form-control" id="terminationReason" rows="3" 
-                      placeholder="Please provide a reason for termination..." 
+            <textarea class="form-control" id="terminationReason" rows="3"
+                      placeholder="Please provide a reason for termination..."
                       [(ngModel)]="terminationReason" required></textarea>
           </div>
         </div>
