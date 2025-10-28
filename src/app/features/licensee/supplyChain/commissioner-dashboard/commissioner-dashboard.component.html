@@ -6,7 +6,7 @@
         <h1 class="dashboard-title">Dashboard</h1>
       </div>
       <div class="right-section">
- 
+
         <button class="btn btn-success btn-sm distillery-btn">Commissioner</button>
       </div>
     </div>
@@ -178,6 +178,10 @@
               </button>
               }
 
+              <button class="btn btn-warning btn-sm me-1" (click)="printFinalApplication(record)">
+                PRINT ALL LETTERS
+              </button>
+
               @if (canShowPaymentSlip(record)) {
               <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(record)">
                 View Payment Slip
@@ -316,5 +320,5 @@
     </div>
   </div>
 
-  
+
 </div>

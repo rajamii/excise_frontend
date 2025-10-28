@@ -1,0 +1,199 @@
+<div class="forwarding-letter-container">
+  <!-- Back Button -->
+  <div class="header-actions">
+    <button class="btn btn-outline-secondary me-2" (click)="goBack()">
+      <i class="bi bi-arrow-left me-1"></i>Back to Commissioner Dashboard
+    </button>
+    <button class="btn btn-primary" (click)="printLetter()">
+      <i class="bi bi-printer me-1"></i>Print All Letters
+    </button>
+  </div>
+
+  <!-- Letter Content -->
+  <div class="main">
+    <div class="letter-header">
+      <div class="logo">
+        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+      </div>
+      GOVERNMENT OF SIKKIM<br />
+      SIKKIM EXCISE DEPARTMENT<br />
+      MG MARG, GANGTOK-737101
+    </div>
+
+    <div class="sub-header">
+      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
+      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+    </div>
+
+    <div class="flex">
+      <div>
+        No.
+        <span class="bold-text">{{ letterData.letterNo }}</span>/Excise
+      </div>
+      <div>
+        Date:
+        <span class="bold-text">{{ letterData.letterDate }}</span>
+      </div>
+    </div>
+
+    <div class="letter-content">
+      <p>
+        To,<br />
+        The Commissioner of Excise,<br />
+        Government of
+        <span class="bold-text">{{ letterData.liftedFromState }}</span>.
+      </p>
+
+      <p>
+        Sir/Madam,
+      </p>
+
+      <p>
+        Please find enclosed the import permit nos.
+        <span class="bold-text">{{ letterData.permitFrom }}</span>
+        , all dated:
+        <span class="bold-text">{{ letterData.permitDate }}</span>
+        issued to
+        <span class="bold-text">{{ letterData.issuedTo }}</span>
+        for granting export permit to import from the state of
+        <span class="bold-text">{{ letterData.liftedFromState }}</span>.
+      </p>
+    </div>
+
+    <div class="signature-section">
+      <p>
+        Commissioner<br />
+        Excise Headquarters, Gangtok<br />
+      </p>
+    </div>
+  </div>
+
+  <!-- Letter Separator -->
+  <div class="letter-separator">
+    <hr class="separator-line">
+    <span class="separator-text">Second Letter</span>
+    <hr class="separator-line">
+  </div>
+
+  <!-- Second Letter Content -->
+  <div class="main">
+    <div class="letter-header">
+      <div class="logo">
+        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+      </div>
+      GOVERNMENT OF SIKKIM<br />
+      SIKKIM EXCISE DEPARTMENT<br />
+      MG MARG, GANGTOK-737101
+    </div>
+
+    <div class="sub-header">
+      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
+      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+    </div>
+
+    <div class="flex">
+      <div>
+        No.
+        <span class="bold-text">{{ secondLetterData.letterNo }}</span>/Excise
+      </div>
+      <div>
+        Dated:
+        <span class="bold-text">{{ secondLetterData.letterDate }}</span>
+      </div>
+    </div>
+
+    <div class="letter-content">
+      <p>
+        To,<br />
+        The Excise Officer-in-Charge,<br />
+        <span class="bold-text">{{ secondLetterData.liftedFromDistilleryName }}</span><br />
+        <span class="bold-text">{{ secondLetterData.liftedFrom }}</span><br />
+        <span class="bold-text">{{ secondLetterData.state }}</span>.
+      </p>
+
+      <p>
+        Please find enclosed the import permit nos.
+        <span class="bold-text">{{ secondLetterData.requisitionNumberOfPermits }}</span>,<br />
+        all dated:
+        <span class="bold-text">{{ secondLetterData.permitDated }}</span> issued to
+        <span class="bold-text">{{ secondLetterData.issuedTo }}</span>
+        for granting export permit to import the state of
+        <span class="bold-text">{{ secondLetterData.stateName }}</span>.
+      </p>
+    </div>
+
+    <div class="signature-section">
+      <p>
+        N.D. Bhojuar SES<br />
+        Excise Headquarters, Gangtok
+      </p>
+    </div>
+  </div>
+
+  <!-- Third Letter Separator -->
+  <div class="letter-separator">
+    <hr class="separator-line">
+    <span class="separator-text">Third Letter</span>
+    <hr class="separator-line">
+  </div>
+
+  <!-- Third Letter Content -->
+  <div class="main">
+    <div class="letter-header">
+      <div class="logo">
+        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Sikkim Logo" onerror="this.style.display='none'">
+      </div>
+      GOVERNMENT OF SIKKIM<br />
+      SIKKIM EXCISE DEPARTMENT<br />
+      MG MARG, GANGTOK-737101
+    </div>
+
+    <div class="sub-header">
+      Website: <a href="http://www.excise.sikkim.gov.in">www.excise.sikkim.gov.in</a>
+      &nbsp;&nbsp; | &nbsp;&nbsp; E-Mail: <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a>
+    </div>
+
+    <div class="flex">
+      <div>
+        No.
+        <span class="bold-text">{{ thirdLetterData.letterNo }}</span>
+      </div>
+      <div>
+        Dated:
+        <span class="bold-text">{{ thirdLetterData.letterDate }}</span>
+      </div>
+    </div>
+
+    <div class="letter-content">
+      <p>
+        To,<br />
+        The Superintendent of Excise,<br />
+        Government of West Bengal,<br />
+        Darjeeling District.
+      </p>
+
+      <p>
+        Sir/Madam,
+      </p>
+
+      <p>
+        Please find enclosed the import permit nos.
+        <span class="bold-text">{{ thirdLetterData.permitFrom }}</span>,
+        all dated:
+        <span class="bold-text">{{ thirdLetterData.permitDated }}</span> issued to
+        <span class="bold-text underline">{{ thirdLetterData.issuedTo }}</span> to import
+        <span class="bold-text">{{ thirdLetterData.importTo }} BL</span> of Grain ENA having strength
+        (<span class="bold-text">{{ thirdLetterData.strength }}</span>) (Strength Value:
+        {{ thirdLetterData.strengthValue }}) from
+        <span class="bold-text">{{ thirdLetterData.importFrom }}</span>.
+      </p>
+    </div>
+
+    <div class="signature-section">
+      <p>
+        <span class="bold-text">Commissioner<br /></span>
+        <strong>Excise Headquarters, Gangtok</strong><br />
+      </p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,317 @@
+// Forwarding Letter Component Styles
+.forwarding-letter-container {
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.header-actions {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  @media print {
+    display: none;
+  }
+}
+
+.main {
+  border: 2px solid black;
+  padding: 15px;
+  background: white;
+  max-width: 210mm;
+  margin: 0 auto 30px auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  @media print {
+    border: 2px solid black !important;
+    box-shadow: none;
+    max-width: none;
+    margin: 0 0 20mm 0;
+    page-break-inside: avoid;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    &:not(:last-child) {
+      page-break-after: always;
+    }
+  }
+}
+
+.letter-separator {
+  display: flex;
+  align-items: center;
+  margin: 40px 0;
+  text-align: center;
+
+  @media print {
+    display: none;
+  }
+}
+
+.separator-line {
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+  border: none;
+  margin: 0 10px;
+}
+
+.separator-text {
+  padding: 0 20px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  background: #f8f9fa;
+}
+
+.letter-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: bold;
+  width: 90%;
+  margin: 0 auto;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 10px;
+
+  img {
+    height: 80px;
+    width: auto;
+    display: block;
+    margin: 0 auto;
+
+    @media print {
+      height: 80px !important;
+      display: block !important;
+      margin: 0 auto !important;
+    }
+  }
+}
+
+.sub-header {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 10px;
+  margin-bottom: 15px;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.flex {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-top: 15px;
+  margin-bottom: 10px;
+
+  @media (max-width: 576px) {
+    flex-direction: column;
+    gap: 5px;
+    text-align: left;
+  }
+}
+
+.letter-content {
+  margin-top: 20px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.6;
+
+  p {
+    margin-bottom: 15px;
+    text-align: justify;
+
+    &:last-child {
+      margin-bottom: 20px;
+    }
+  }
+
+  @media print {
+    text-align: left !important;
+  }
+}
+
+.signature-section {
+  margin-top: 50px;
+  text-align: right;
+  margin-right: 20px;
+  font-size: 14px;
+
+  p {
+    margin-bottom: 5px;
+    line-height: 1.4;
+  }
+}
+
+.bold-text {
+  font-weight: bold;
+}
+
+.underline {
+  text-decoration: underline;
+}
+
+// Button styles
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  i {
+    font-size: 14px;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: white;
+
+  &:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  border-color: #6c757d;
+  color: #6c757d;
+
+  &:hover {
+    background-color: #6c757d;
+    color: white;
+  }
+}
+
+// Print-specific styles
+@media print {
+  .forwarding-letter-container {
+    background: white;
+    padding: 0;
+    min-height: auto;
+  }
+
+  .main {
+    border: 2px solid black !important;
+    padding: 15px;
+    page-break-inside: avoid;
+    margin: 0 0 20mm 0;
+
+    &:not(:last-child) {
+      page-break-after: always;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .letter-header {
+    text-align: center !important;
+  }
+
+  .logo img {
+    display: block !important;
+    margin: 0 auto !important;
+    height: 80px !important;
+  }
+
+  .letter-content {
+    text-align: left !important;
+  }
+
+  // Hide non-printable elements
+  .header-actions {
+    display: none !important;
+  }
+
+  // Ensure page setup for multiple letters
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .forwarding-letter-container {
+    padding: 10px;
+  }
+
+  .main {
+    padding: 10px;
+    border-width: 1px;
+  }
+
+  .letter-header {
+    font-size: 14px;
+  }
+
+  .signature-section {
+    margin-top: 30px;
+    margin-right: 10px;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+      margin-bottom: 5px;
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .letter-content {
+    font-size: 13px;
+  }
+
+  .sub-header {
+    font-size: 11px;
+  }
+
+  .flex {
+    font-size: 11px;
+  }
+}

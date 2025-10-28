@@ -241,6 +241,13 @@ export const routes: Routes = [
       ).then((m) => m.TransitPermitLetterViewComponent),
   },
   {
+    path: "dev-final-requisition-letters",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
     path: "dev-officer-in-charge",
     loadComponent: () =>
       import(
