@@ -19,6 +19,11 @@ export class HologramDailyRegisterComponent {
   selectedYear = '2025';
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
 
+  // Helper method to get count of editable entries
+  getEditableEntriesCount(): number {
+    return this.filteredEntries.filter(e => !e.isFixed).length;
+  }
+
   // Sample daily entries
   dailyEntries: HologramDailyEntry[] = [
     {
@@ -65,13 +70,10 @@ export class HologramDailyRegisterComponent {
     private cdr: ChangeDetectorRef,
     private hologramDataService: HologramDataService
   ) {
-    // Load data from service or initialize with sample data
-    this.dailyEntries = this.hologramDataService.getDailyEntries();
+    console.log('HologramDailyRegisterComponent constructor called');
     
-    if (this.dailyEntries.length === 0) {
-      // Initialize with sample data if no data exists
-      this.initializeSampleData();
-    }
+    // Initialize with the hardcoded sample data first
+    // (We'll use the service later, but for now let's get the basic functionality working)
     
     // Calculate quantities for existing entries
     this.dailyEntries.forEach(entry => {
@@ -81,13 +83,31 @@ export class HologramDailyRegisterComponent {
     });
     
     this.loadFilteredData();
+    
+    console.log('Constructor completed. Daily entries:', this.dailyEntries.length);
+    console.log('Filtered entries:', this.filteredEntries.length);
   }
 
   loadFilteredData(): void {
-    this.filteredEntries = this.dailyEntries.filter(entry => 
-      entry.hologramType === this.selectedHologramType &&
-      entry.date.startsWith(`${this.selectedYear}-${this.getMonthNumber(this.selectedMonth)}`)
-    );
+    const monthNumber = this.getMonthNumber(this.selectedMonth);
+    const datePrefix = `${this.selectedYear}-${monthNumber}`;
+    
+    console.log('Filtering data with:', {
+      selectedType: this.selectedHologramType,
+      datePrefix: datePrefix,
+      totalEntries: this.dailyEntries.length
+    });
+    
+    this.filteredEntries = this.dailyEntries.filter(entry => {
+      const typeMatch = entry.hologramType === this.selectedHologramType;
+      const dateMatch = entry.date.startsWith(datePrefix);
+      
+      console.log(`Entry ${entry.id}: type=${entry.hologramType} (${typeMatch}), date=${entry.date} (${dateMatch}), isFixed=${entry.isFixed}`);
+      
+      return typeMatch && dateMatch;
+    });
+    
+    console.log('Filtered result:', this.filteredEntries.length, 'entries');
   }
 
   getMonthNumber(month: string): string {
@@ -156,8 +176,18 @@ export class HologramDailyRegisterComponent {
   }
 
   addNewEntry(): void {
+    console.log('=== ADD NEW ENTRY DEBUG ===');
+    console.log('Before adding:');
+    console.log('- Total entries:', this.dailyEntries.length);
+    console.log('- Filtered entries:', this.filteredEntries.length);
+    console.log('- Selected type:', this.selectedHologramType);
+    console.log('- Selected month/year:', this.selectedMonth, this.selectedYear);
+    
     const newId = Date.now().toString(); // Use timestamp for unique ID
-    const currentDate = new Date().toISOString().split('T')[0];
+    
+    // Create date that matches the current selected month/year
+    const monthNumber = this.getMonthNumber(this.selectedMonth);
+    const currentDate = `${this.selectedYear}-${monthNumber}-01`; // Use first day of selected month
     
     const newEntry: HologramDailyEntry = {
       id: newId,
@@ -175,16 +205,26 @@ export class HologramDailyRegisterComponent {
       isFixed: false // This makes the row editable
     };
     
+    console.log('New entry created:', newEntry);
+    
     // Add to the main array
     this.dailyEntries.push(newEntry);
+    
+    console.log('After adding to dailyEntries:');
+    console.log('- Total entries:', this.dailyEntries.length);
+    console.log('- Last entry:', this.dailyEntries[this.dailyEntries.length - 1]);
     
     // Refresh filtered data to show the new entry
     this.loadFilteredData();
     
-    // Update service (but don't save to localStorage until user saves)
-    // We'll save when user clicks the save button
+    console.log('After filtering:');
+    console.log('- Filtered entries:', this.filteredEntries.length);
+    console.log('- Editable entries:', this.getEditableEntriesCount());
     
-    console.log('New editable entry added:', newEntry);
+    // Force change detection to update the view
+    this.cdr.detectChanges();
+    
+    console.log('=== END DEBUG ===');
   }
 
   onEntryDataChange(entry: HologramDailyEntry): void {
@@ -245,7 +285,17 @@ export class HologramDailyRegisterComponent {
   saveEntry(entry: HologramDailyEntry): void {
     // Validate required fields
     if (!entry.date) {
-      alert('Please enter a date');
+      alert('Please enter a date before saving');
+      return;
+    }
+    
+    if (!entry.issuedFromSerial || !entry.issuedToSerial) {
+      alert('Please enter both From Serial and To Serial numbers');
+      return;
+    }
+    
+    if (entry.utilizedQuantity <= 0) {
+      alert('Please enter a valid utilized quantity');
       return;
     }
     
@@ -261,7 +311,10 @@ export class HologramDailyRegisterComponent {
     // Refresh the display
     this.loadFilteredData();
     
-    alert('Entry saved successfully!');
+    // Force change detection
+    this.cdr.detectChanges();
+    
+    console.log('Entry saved successfully:', entry);
   }
 
   deleteEntry(entry: HologramDailyEntry): void {
@@ -269,11 +322,13 @@ export class HologramDailyRegisterComponent {
       alert('Cannot delete saved entries');
       return;
     }
-    if (confirm('Are you sure you want to delete this entry?')) {
-      this.dailyEntries = this.dailyEntries.filter(e => e.id !== entry.id);
-      this.hologramDataService.updateDailyEntries(this.dailyEntries);
-      this.loadFilteredData();
-    }
+    
+    // For unsaved entries, just remove without confirmation
+    this.dailyEntries = this.dailyEntries.filter(e => e.id !== entry.id);
+    this.loadFilteredData();
+    this.cdr.detectChanges();
+    
+    console.log('Unsaved entry cancelled/deleted');
   }
 
   openMonthlyStatement(): void {
