@@ -44,10 +44,10 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   displayedColumns: string[] = ['serialNo', 'docType', 'upload', 'view'];
   documents = [
-    { key: 'passPhoto', name: 'Passport Size Photo', format: 'png, jpg, jpeg', accept: '.png,.jpg,.jpeg', required: true, file: null, fileUrl: '' },
-    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf', accept: '.pdf', required: true, file: null, fileUrl: '' },
-    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf', accept: '.pdf', required: true, file: null, fileUrl: '' },
-    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf', accept: '.pdf', required: true, file: null, fileUrl: '' }
+    { key: 'passPhoto', name: 'Passport Size Photo', format: 'png, jpg, jpeg', accept: '.png,.jpg,.jpeg', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'aadhaarCard', name: 'Aadhaar card', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'residentialCertificate', name: 'Sikkim Subject Certificate/ Certificate of Identification / Residential Certificate', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' },
+    { key: 'dateofBirthProof', name: 'Date of Birth proof', format: 'pdf', accept: '.pdf', required: true, file: null as File | null, fileUrl: '' }
   ];
 
   constructor(
@@ -81,6 +81,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     FormUtils.capitalize(this.detailsForm.get('pan')!, this.destroy$);
+    this.loadSavedDocuments();
   }
 
   ngOnDestroy() {
@@ -128,16 +129,53 @@ export class DetailsComponent implements OnInit, OnDestroy {
     return this.errorMessages[field]();
   }
 
+  // Load previously uploaded documents from service
+  private loadSavedDocuments() {
+    const savedDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+    
+    console.log('Loading saved documents:', savedDocs);
+    
+    this.documents.forEach(doc => {
+      const savedFile = savedDocs[doc.key as keyof SalesmanBarmanDocuments];
+      if (savedFile) {
+        doc.file = savedFile;
+        doc.fileUrl = URL.createObjectURL(savedFile);
+        console.log(`Loaded ${doc.key}:`, savedFile.name);
+      }
+    });
+  }
+
   onFileSelect(event: any, document: any) {
     const file = event.target.files[0];
     if (file) {
+      console.log(`File selected for ${document.key}:`, file.name);
+      
+      // Clear old URL if exists
+      if (document.fileUrl) {
+        URL.revokeObjectURL(document.fileUrl);
+      }
+      
+      // Update local document object
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
 
-      // Update the service with the selected file
-      this.salesmanBarmanService.setSalesmanBarmanDocuments({
+      // CRITICAL FIX: Get existing documents first, then add the new one
+      // This preserves all previously uploaded documents
+      const currentDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+      
+      // Create updated documents object with the new file
+      const updatedDocs = {
+        ...currentDocs,
         [document.key]: file
-      });
+      };
+      
+      // Set all documents back to service
+      this.salesmanBarmanService.setSalesmanBarmanDocuments(updatedDocs);
+      
+      // Log the current state
+      console.log('Document uploaded:', document.key);
+      const uploadedCount = Object.keys(this.salesmanBarmanService.getSalesmanBarmanDocuments()).length;
+      console.log('Current document count:', uploadedCount);
     }
   }
 
@@ -148,7 +186,15 @@ export class DetailsComponent implements OnInit, OnDestroy {
   }
 
   areDocumentsUploaded(): boolean {
-    return this.documents.every(doc => !doc.required || !!doc.file);
+    const allUploaded = this.documents.every(doc => !doc.required || !!doc.file);
+    console.log('All documents uploaded?', allUploaded);
+    
+    // Also verify with service
+    const serviceDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+    const serviceCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
+    console.log('Documents in service:', serviceCount);
+    
+    return allUploaded;
   }
 
   clearFileUrls() {
@@ -168,11 +214,31 @@ export class DetailsComponent implements OnInit, OnDestroy {
     this.detailsForm.reset();
     sessionStorage.removeItem('personalDetails');
     this.clearFileUrls();
+    
+    // Clear documents from service
+    this.salesmanBarmanService.clearSalesmanBarmanDocuments();
+    
+    // Clear local document files
+    this.documents.forEach(doc => {
+      doc.file = null;
+      doc.fileUrl = '';
+    });
   }
 
   proceedToNext() {
     if (this.detailsForm.valid && this.areDocumentsUploaded()) {
+      const serviceDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+      const uploadedCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
+      console.log('Proceeding to next step with documents:', uploadedCount);
       this.next.emit();
+    } else {
+      console.warn('Form invalid or documents missing');
+      if (!this.detailsForm.valid) {
+        console.warn('Form errors:', this.detailsForm.errors);
+      }
+      if (!this.areDocumentsUploaded()) {
+        console.warn('Missing documents');
+      }
     }
   }
 }

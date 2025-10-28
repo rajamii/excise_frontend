@@ -1,61 +1,282 @@
-mat-sidenav{
-    border-radius: 0;
-    border-right: 2px solid #cdcdcd;
-    .sidebar-content{
-        .profile{
-            background-color: #1C2B78;
-            color: #ffffff;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            .username{
-                font-size: 20px;
-                font-weight: 500;
-            }
-            .view-profile{
-                font-size: 13px;
-            }            
-        }
+/* licensee-home.component.scss */
+mat-sidenav {
+  border-radius: 0;
+  border-right: 2px solid #cdcdcd;
+  
+  .sidebar-content {
+    .profile {
+      background-color: #1C2B78;
+      color: #ffffff;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      
+      .username {
+        font-size: 20px;
+        font-weight: 500;
+      }
+      
+      .view-profile {
+        font-size: 13px;
+      }
     }
+  }
 }
 
-mat-nav-list{
-    padding: 0;
-    mat-expansion-panel{
-        border-bottom: 2px solid #e7e7e7;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        mat-expansion-panel-header{
-            padding: 24px;
-            font-weight: normal;
+mat-nav-list {
+  padding: 0;
+  
+  mat-expansion-panel {
+    border-bottom: 2px solid #e7e7e7;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    
+    mat-expansion-panel-header {
+      padding: 24px;
+      font-weight: 500; // Changed from 'normal' to '500' to match other nav items
+      font-size: 16px; // Added consistent font size
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: rgba(28, 43, 120, 0.03);
+      }
+      
+      span {
+        display: flex;
+        align-items: center;
+        font-weight: 500; // Ensure this matches other navigation items
+        font-size: 16px; // Added consistent font size
+        
+        mat-icon.nav-icon {
+          margin-right: 12px;
+          color: #1C2B78;
+          font-size: 20px;
+          vertical-align: middle;
+          transition: color 0.3s ease;
         }
-        ::ng-deep .mat-expansion-panel-body{
-            button{
-                color: rgb(0, 0, 144);
-            }     
+      }
+    }
+    
+    &:hover mat-expansion-panel-header span mat-icon.nav-icon {
+      color: #005CBB;
+    }
+    
+    ::ng-deep .mat-expansion-panel-body {
+      padding: 0;
+      
+      .button-column {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        
+        button {
+          color: #1C2B78;
+          padding: 14px 20px;
+          text-align: left;
+          justify-content: flex-start;
+          border-radius: 0;
+          transition: all 0.3s ease;
+          border-bottom: 1px solid #f0f0f0;
+          font-size: 14px;
+          
+          &:last-child {
+            border-bottom: none;
+          }
+          
+          &:hover {
+            background-color: rgba(28, 43, 120, 0.08);
+            color: #1C2B78;
+            font-weight: 500;
+            transform: translateX(4px);
+          }
+          
+          &.active-link {
+            background-color: #f4feff;
+            border-left: 4px solid #005CBB;
+            color: #005CBB;
+            font-weight: 600;
+          }
+          
+          mat-icon {
+            margin-right: 12px;
+            font-size: 18px;
+            vertical-align: middle;
+            color: inherit;
+            transition: color 0.3s ease;
+          }
         }
+      }
     }
-    mat-list-item{
-        padding: 25px;
-        border-radius: 0 !important;
-        border-bottom: 2px solid #e7e7e7;
+  }
+  
+  mat-list-item {
+    padding: 25px;
+    border-radius: 0 !important;
+    border-bottom: 2px solid #e7e7e7;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: rgba(28, 43, 120, 0.05);
+      
+      .nav-header-cus .nav-icon {
+        color: #005CBB;
+        transform: scale(1.1);
+      }
     }
+    
+    .nav-header-cus {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      font-size: 16px; // Added consistent font size to match accordion
+      width: 100%;
+      
+      .nav-icon {
+        margin-right: 12px;
+        color: #1C2B78;
+        font-size: 20px;
+        vertical-align: middle;
+        transition: all 0.3s ease;
+      }
+    }
+    
+    // Special styling for the salesman/barman item
+    &.salesman-barman-item {
+      background-color: #f8f9ff;
+      border-left: 4px solid #1C2B78;
+      
+      &:hover {
+        background-color: #f0f2ff;
+      }
+      
+      .nav-header-cus {
+        color: #1C2B78;
+        font-weight: 600;
+      }
+    }
+  }
 }
+
 .active-link {
-    background-color: #f4feff !important;
-    border-left: 5px solid #005CBB;
-    span{
-        font-weight: 500;
-    } 
+  background-color: #f4feff !important;
+  border-left: 5px solid #005CBB;
+  
+  span {
+    font-weight: 500;
+  }
+  
+  .nav-icon {
+    color: #005CBB !important;
+  }
 }
 
 .hidden {
-    visibility: hidden; /* Hides the button but maintains its space */
-    opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }
-  
+
 .toggle-btn, .sidenav-header {
-    border-bottom: 2px solid #cdcdcd;
+  border-bottom: 2px solid #cdcdcd;
+}
+
+// Enhanced expansion panel styling
+mat-accordion {
+  mat-expansion-panel {
+    &.mat-expanded {
+      mat-expansion-panel-header {
+        background-color: rgba(28, 43, 120, 0.05);
+        
+        span mat-icon.nav-icon {
+          color: #005CBB;
+          transform: scale(1.1);
+        }
+      }
+    }
+  }
+}
+
+// Professional animation for smooth transitions
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.button-column button {
+  animation: slideIn 0.4s ease-out;
+}
+
+// Responsive design adjustments
+@media (max-width: 768px) {
+  mat-nav-list {
+    mat-list-item {
+      padding: 20px 15px;
+      
+      .nav-header-cus {
+        font-size: 14px; // Smaller font size for mobile
+        
+        .nav-icon {
+          font-size: 18px;
+          margin-right: 8px;
+        }
+      }
+    }
+    
+    mat-expansion-panel {
+      mat-expansion-panel-header {
+        padding: 20px 15px;
+        font-size: 14px; // Smaller font size for mobile
+        
+        span {
+          font-size: 14px; // Ensure span also gets smaller font
+          
+          mat-icon.nav-icon {
+            font-size: 18px;
+            margin-right: 8px;
+          }
+        }
+      }
+      
+      ::ng-deep .mat-expansion-panel-body {
+        .button-column button {
+          padding: 12px 16px;
+          font-size: 13px;
+          
+          mat-icon {
+            font-size: 16px;
+            margin-right: 8px;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Custom scrollbar for sidebar
+.sidebar-content {
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #1C2B78;
+    border-radius: 2px;
+    
+    &:hover {
+      background: #005CBB;
+    }
+  }
 }

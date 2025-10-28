@@ -1,0 +1,139 @@
+<form [formGroup]="applicantDetailsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Applicant Details</div>
+      <div class="validation">
+        * Marked Fields Are Mandatory
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select formControlName="status" required>
+            @for (status of statuses; track status) {
+              <mat-option [value]="status">{{ status }}</mat-option>
+            }
+          </mat-select>
+          @if (applicantDetailsForm.controls['status'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('status') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Applicant Name</mat-label>
+          <input matInput placeholder="Enter Your Name" type="text" formControlName="applicantName" required/>
+          @if (applicantDetailsForm.controls['applicantName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicantName') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Father's / Husband's Name</mat-label>
+          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="fatherHusbandName" required/>
+          @if (applicantDetailsForm.controls['fatherHusbandName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('fatherHusbandName') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nationality</mat-label>
+          <mat-select formControlName="nationality" required>
+            @for (nationality of nationalities; track nationality) {
+              <mat-option [value]="nationality">{{ nationality }}</mat-option>
+            }
+          </mat-select>
+          @if (applicantDetailsForm.controls['nationality'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('nationality') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <div class="radio-group-container">
+          <label class="field-label">Gender <span class="required">*</span></label>
+          <mat-radio-group formControlName="gender" required>
+            <mat-radio-button value="Male">Male</mat-radio-button>
+            <mat-radio-button value="Female">Female</mat-radio-button>
+          </mat-radio-group>
+          @if (applicantDetailsForm.controls['gender'].invalid && applicantDetailsForm.controls['gender'].touched) {
+            <mat-error class="radio-error">
+              {{ getErrorMessage('gender') }}
+            </mat-error>
+          }
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>PAN</mat-label>
+          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required/>
+          @if (applicantDetailsForm.controls['pan'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('pan') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Phone Number</mat-label>
+          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="applicantMobileNumber" required/>
+          @if (applicantDetailsForm.controls['applicantMobileNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicantMobileNumber') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email Id</mat-label>
+          <input matInput placeholder="Enter Email" type="email" formControlName="applicantEmail" required/>
+          @if (applicantDetailsForm.controls['applicantEmail'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('applicantEmail') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <div class="upload-section">
+          <label class="upload-label">
+            Passport Size Photo <span class="required">*</span>
+            <span class="file-format">(png, jpg, jpeg)</span>
+          </label>
+          <div class="upload-actions">
+            <input
+              type="file"
+              id="photoUpload"
+              (change)="onPhotoSelect($event)"
+              accept=".png,.jpg,.jpeg"
+              style="display: none"
+            />
+            <label for="photoUpload" mat-raised-button color="primary" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;">
+              <mat-icon style="margin-right: 4px;">upload</mat-icon>
+              Upload Photo
+            </label>
+            @if (passPhoto.fileUrl) {
+              <button mat-icon-button color="accent" (click)="viewPhoto()" type="button" aria-label="View Uploaded Photo">
+                <mat-icon>visibility</mat-icon>
+              </button>
+            }
+            @if (passPhoto.file) {
+              <span class="uploaded-file-name">{{ passPhoto.file.name }}</span>
+            }
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!applicantDetailsForm.valid || !isPhotoUploaded()" type="button">Next</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

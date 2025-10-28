@@ -1,0 +1,34 @@
+<mat-horizontal-stepper [linear]="true" #stepper>
+
+    <mat-step label="Bottler Details"> 
+      <app-bottler-details (next)="stepper.next()"></app-bottler-details>
+    </mat-step>
+  
+    <mat-step label="Company Details">
+      <app-company-details 
+        (back)="stepper.previous()" 
+        (next)="stepper.next()">
+      </app-company-details>
+    </mat-step>
+    <mat-step label="Select Brands">
+      <app-select-brands 
+        (back)="stepper.previous()" 
+        (next)="stepper.next()">
+      </app-select-brands>
+    </mat-step>
+
+    <mat-step label="Brand Overview">
+      <app-brand-overview 
+        (back)="stepper.previous()" 
+        (next)="stepper.next()">
+      </app-brand-overview>
+    </mat-step>
+
+    <mat-step label="Submit Application">
+     
+      <app-submit-application 
+        (back)="stepper.previous()">
+      </app-submit-application>
+    </mat-step>
+  
+</mat-horizontal-stepper>
