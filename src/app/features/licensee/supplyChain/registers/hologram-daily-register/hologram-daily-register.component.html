@@ -1,0 +1,455 @@
+<div class="min-vh-100 bg-light">
+  <!-- Main Content Area -->
+  <main class="w-100">
+    <div class="container-fluid p-0">
+      <!-- Header Section -->
+      <div class="bg-light text-dark shadow-sm border-bottom">
+        <div class="container-fluid">
+          <div class="row align-items-center py-3">
+            <div class="col">
+              <h1 class="h3 mb-1 fw-bold text-dark">Daily Hologram Manufacturing Register - {{
+                getCurrentHologramTypeDisplay() }}</h1>
+              <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
+            </div>
+            <div class="col-auto">
+              <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" (click)="openMonthlyStatement()">
+                  <i class="bi bi-graph-up me-1"></i>Check Monthly Statement
+                </button>
+                <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
+                  <i class="bi bi-arrow-left me-1"></i>Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Section -->
+      <div class="bg-white border-bottom">
+        <div class="container-fluid py-3">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <!-- Left side filters -->
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <!-- Month Dropdown -->
+              <div>
+                <label class="form-label small mb-1">Month</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedMonth"
+                  (ngModelChange)="onMonthYearChange()">
+                  <option value="jan">January</option>
+                  <option value="feb">February</option>
+                  <option value="mar">March</option>
+                  <option value="apr">April</option>
+                  <option value="may">May</option>
+                  <option value="jun">June</option>
+                  <option value="jul">July</option>
+                  <option value="aug">August</option>
+                  <option value="sep">September</option>
+                  <option value="oct">October</option>
+                  <option value="nov">November</option>
+                  <option value="dec">December</option>
+                </select>
+              </div>
+
+              <!-- Year Dropdown -->
+              <div>
+                <label class="form-label small mb-1">Year</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedYear"
+                  (ngModelChange)="onMonthYearChange()">
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
+
+              <!-- Current Selection Display -->
+              <div>
+                <label class="form-label small mb-1">Current Register</label>
+                <div class="alert alert-info py-1 px-2 mb-0 small">
+                  {{ getCurrentHologramTypeDisplay() }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Right side - Previous Month Balance Info -->
+            <div class="ms-auto">
+              <label class="form-label small mb-1">Previous Month Balance</label>
+              <div class="card border-success border-2 shadow-sm"
+                style="min-width: 280px; background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);">
+                <div class="card-body py-2 px-3">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="small text-muted">Previous Month - {{ selectedHologramType }}</div>
+                      <div class="fw-bold text-success">Balance: {{ previousMonthBalance | number }}</div>
+                    </div>
+                    <div class="text-success">
+                      <i class="bi bi-arrow-down-circle fs-4"></i>
+                    </div>
+                  </div>
+                  <div class="small text-info mt-1">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Available for current month
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hologram Type Tabs -->
+      <div class="bg-white border-bottom">
+        <div class="container-fluid">
+          <ul class="nav nav-tabs border-0">
+            <li class="nav-item">
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'LOCAL'"
+                [class.text-primary]="selectedHologramType === 'LOCAL'"
+                [class.bg-light]="selectedHologramType !== 'LOCAL'"
+                [class.border-bottom]="selectedHologramType === 'LOCAL'"
+                [class.border-primary]="selectedHologramType === 'LOCAL'"
+                [class.border-3]="selectedHologramType === 'LOCAL'"
+                [class.fw-semibold]="selectedHologramType === 'LOCAL'" (click)="onHologramTypeChange('LOCAL')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-house-door me-1 fs-6"></i>LOCAL
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'EXPORT'"
+                [class.text-primary]="selectedHologramType === 'EXPORT'"
+                [class.bg-light]="selectedHologramType !== 'EXPORT'"
+                [class.border-bottom]="selectedHologramType === 'EXPORT'"
+                [class.border-primary]="selectedHologramType === 'EXPORT'"
+                [class.border-3]="selectedHologramType === 'EXPORT'"
+                [class.fw-semibold]="selectedHologramType === 'EXPORT'" (click)="onHologramTypeChange('EXPORT')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-globe me-1 fs-6"></i>EXPORT
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
+                [class.active]="selectedHologramType === 'DEFENCE'"
+                [class.text-primary]="selectedHologramType === 'DEFENCE'"
+                [class.bg-light]="selectedHologramType !== 'DEFENCE'"
+                [class.border-bottom]="selectedHologramType === 'DEFENCE'"
+                [class.border-primary]="selectedHologramType === 'DEFENCE'"
+                [class.border-3]="selectedHologramType === 'DEFENCE'"
+                [class.fw-semibold]="selectedHologramType === 'DEFENCE'" (click)="onHologramTypeChange('DEFENCE')"
+                style="border-bottom-width: 3px !important;">
+                <i class="bi bi-shield-check me-1 fs-6"></i>DEFENCE
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <div class="table-responsive overflow-auto" style="max-width: 100vw;">
+            <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
+              <thead class="table-success">
+                <tr>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Date</th>
+                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Hologram Issued</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Utilized Qty</th>
+                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Left Over</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 150px; min-width: 150px; font-size: 0.875rem;">Damage Reason</th>
+                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Actions</th>
+                </tr>
+                <tr>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    From Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    To Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  </th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    From Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                    To Serial</th>
+                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of getPagedEntries(); track entry.id) {
+                <tr [class.table-warning]="!entry.isFixed" 
+                    [class.table-success]="entry.isFixed"
+                    class="animate__animated animate__fadeIn"
+                    [title]="entry.isFixed ? 'Saved Entry' : 'New Entry - Click Save to confirm'">
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="date" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;" [(ngModel)]="entry.date"
+                      [readonly]="entry.isFixed" title="Date when hologram was used">
+                  </td>
+
+                  <!-- Issued From Serial -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="text" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="entry.issuedFromSerial" (ngModelChange)="onSerialChange(entry)"
+                      placeholder="e.g. 275346495" [readonly]="entry.isFixed"
+                      [class.border-primary]="!entry.isFixed">
+                  </td>
+
+                  <!-- Issued To Serial -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="text" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="entry.issuedToSerial" (ngModelChange)="onSerialChange(entry)"
+                      placeholder="e.g. 275520000" [readonly]="entry.isFixed"
+                      [class.border-primary]="!entry.isFixed">
+                  </td>
+
+                  <!-- Issued Quantity (Auto-calculated) -->
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ entry.issuedQuantity | number }}
+                  </td>
+
+                  <!-- Utilized Quantity -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="number" class="form-control form-control-sm text-end border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="entry.utilizedQuantity" (ngModelChange)="onEntryDataChange(entry)" 
+                      placeholder="Enter quantity" [readonly]="entry.isFixed"
+                      [class.border-primary]="!entry.isFixed" min="0">
+                  </td>
+
+                  <!-- Wastage From Serial -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="text" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="entry.wastageFromSerial" (ngModelChange)="onSerialChange(entry)"
+                      placeholder="Optional" [readonly]="entry.isFixed"
+                      [class.border-primary]="!entry.isFixed">
+                  </td>
+
+                  <!-- Wastage To Serial -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <input type="text" class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                      [(ngModel)]="entry.wastageToSerial" (ngModelChange)="onSerialChange(entry)"
+                      placeholder="Optional" [readonly]="entry.isFixed"
+                      [class.border-primary]="!entry.isFixed">
+                  </td>
+
+                  <!-- Wastage Quantity (Auto-calculated) -->
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ entry.wastageQuantity | number }}
+                  </td>
+
+                  <!-- Left Over (Auto-calculated) -->
+                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ entry.leftOverQuantity | number }}
+                  </td>
+
+                  <!-- Damage Reason -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <textarea class="form-control form-control-sm border-1"
+                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 40px; resize: vertical;"
+                      [(ngModel)]="entry.damageReason" placeholder="Optional: Reason for damage/wastage"
+                      [readonly]="entry.isFixed" rows="2"
+                      [class.border-primary]="!entry.isFixed"></textarea>
+                  </td>
+
+                  <!-- Actions -->
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <div class="d-flex gap-1 flex-column">
+                      @if (!entry.isFixed) {
+                      <button class="btn btn-success btn-sm"
+                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="saveEntry(entry)"
+                        title="Save Entry">
+                        <i class="bi bi-floppy me-1"></i>Save
+                      </button>
+                      <button class="btn btn-danger btn-sm"
+                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="deleteEntry(entry)"
+                        title="Cancel/Delete">
+                        <i class="bi bi-x me-1"></i>Cancel
+                      </button>
+                      } @else {
+                      <div class="text-center">
+                        <span class="badge bg-success small d-block mb-1"
+                          style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
+                          <i class="bi bi-check-circle me-1"></i>Saved
+                        </span>
+                        <small class="text-muted" style="font-size: 0.6rem;">{{ entry.date }}</small>
+                      </div>
+                      }
+                    </div>
+                  </td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="11" class="text-center text-muted py-5">
+                    <i class="bi bi-calendar-plus fs-1 d-block mb-3 text-primary"></i>
+                    <h6 class="mb-2">No Daily Entries Found</h6>
+                    <p class="mb-3">No daily hologram entries found for {{ getCurrentHologramTypeDisplay() }}.</p>
+                    <p class="small text-muted mb-3">Click "Add New Daily Entry" below to create your first entry.</p>
+                    <div class="d-flex justify-content-center">
+                      <button type="button" class="btn btn-primary btn-sm" (click)="addNewEntry()">
+                        <i class="bi bi-plus me-1"></i>Add First Entry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                }
+
+                <!-- Add New Entry Row -->
+                <tr class="table-info">
+                  <td colspan="11" class="text-center py-3">
+                    <button type="button" 
+                            class="btn btn-primary px-4 py-2" 
+                            (click)="addNewEntry()" 
+                            title="Add a new daily hologram entry"
+                            style="font-size: 0.875rem; font-weight: 500;">
+                      <i class="bi bi-plus-circle me-2"></i>Add New Daily Entry
+                    </button>
+                    <div class="small text-muted mt-2">
+                      Click to add a new row where you can enter daily hologram usage data
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Monthly Summary for Auto-calculation -->
+            @if (filteredEntries.length > 0) {
+            <div class="mt-4">
+              <div class="alert alert-success d-flex align-items-center mb-3">
+                <i class="bi bi-check-circle me-2"></i>
+                <div>
+                  <strong>Integration Active:</strong> These daily entries automatically populate the Monthly Statement of Hologram with Manufacturing Unit.
+                </div>
+              </div>
+              <h6 class="fw-bold mb-3">Monthly Summary for Auto-calculation - {{ selectedHologramType }}</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="card border-primary">
+                    <div class="card-body">
+                      <h6 class="card-title">Utilization Summary</h6>
+                      <div class="d-flex justify-content-between">
+                        <span>From Serial:</span>
+                        <strong>{{ calculateMonthlyTotals().utilizationFromSerial }}</strong>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span>To Serial:</span>
+                        <strong>{{ calculateMonthlyTotals().utilizationToSerial }}</strong>
+                      </div>
+                      <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <span>Total Utilized:</span>
+                        <strong class="text-primary">{{ calculateMonthlyTotals().totalUtilized | number }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card border-warning">
+                    <div class="card-body">
+                      <h6 class="card-title">Wastage Summary</h6>
+                      <div class="d-flex justify-content-between">
+                        <span>From Serial:</span>
+                        <strong>{{ calculateMonthlyTotals().wastageFromSerial }}</strong>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span>To Serial:</span>
+                        <strong>{{ calculateMonthlyTotals().wastageToSerial }}</strong>
+                      </div>
+                      <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                        <span>Total Wastage:</span>
+                        <strong class="text-warning">{{ calculateMonthlyTotals().totalWastage | number }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row mt-3">
+                <div class="col-12">
+                  <div class="card border-success">
+                    <div class="card-body">
+                      <h6 class="card-title">Overall Monthly Totals</h6>
+                      <div class="row">
+                        <div class="col-md-3">
+                          <div class="d-flex justify-content-between">
+                            <span>Total Issued:</span>
+                            <strong>{{ calculateMonthlyTotals().totalIssued | number }}</strong>
+                          </div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="d-flex justify-content-between">
+                            <span>Total Utilized:</span>
+                            <strong>{{ calculateMonthlyTotals().totalUtilized | number }}</strong>
+                          </div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="d-flex justify-content-between">
+                            <span>Total Wastage:</span>
+                            <strong>{{ calculateMonthlyTotals().totalWastage | number }}</strong>
+                          </div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="d-flex justify-content-between">
+                            <span>Total Left Over:</span>
+                            <strong class="text-success">{{ calculateMonthlyTotals().totalLeftOver | number }}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="small text-info mt-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        These totals will automatically populate the monthly register
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            }
+
+            <!-- Pagination -->
+            @if (filteredEntries.length > 0) {
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="small text-muted">
+                Showing {{ (currentPage - 1) * pageSize + 1 }}-
+                {{ Math.min(currentPage * pageSize, filteredEntries.length) }}
+                of {{ filteredEntries.length }} entries
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="small me-1">Rows:</label>
+                <select class="form-select form-select-sm w-auto"
+                  style="font-size: 0.875rem; padding: 0.375rem 0.75rem;" [ngModel]="pageSize"
+                  (ngModelChange)="changePageSize($event)">
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                </select>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary rounded-start"
+                    style="font-size: 0.75rem; padding: 0.375rem 0.75rem;" (click)="goToPage(1)"
+                    [disabled]="currentPage === 1">«</button>
+                  <button class="btn btn-outline-secondary" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;"
+                    (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">‹</button>
+                  <span class="btn btn-light disabled" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">{{
+                    currentPage }} / {{ getTotalPages() }}</span>
+                  <button class="btn btn-outline-secondary" style="font-size: 0.75rem; padding: 0.375rem 0.75rem;"
+                    (click)="goToPage(currentPage + 1)" [disabled]="currentPage === getTotalPages()">›</button>
+                  <button class="btn btn-outline-secondary rounded-end"
+                    style="font-size: 0.75rem; padding: 0.375rem 0.75rem;" (click)="goToPage(getTotalPages())"
+                    [disabled]="currentPage === getTotalPages()">»</button>
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

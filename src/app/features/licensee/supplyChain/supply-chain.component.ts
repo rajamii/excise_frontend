@@ -423,6 +423,9 @@ export class SupplyChainComponent {
       case "beer-production-register":
         this.router.navigate(["/dev-beer-production-register"]);
         break;
+      case "hologram-daily-register":
+        this.router.navigate(["/dev-hologram-daily-register"]);
+        break;
       case "hologram-monthly-report":
         this.router.navigate(["/dev-hologram-monthly-report"]);
         break;

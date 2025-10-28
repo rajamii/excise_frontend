@@ -1,7 +1,8 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import { HologramDataService } from '../../../supplyChain/services/hologram-data.service';
 
 interface HologramUtilization {
   fromSerialNo: string;
@@ -45,7 +46,7 @@ interface HologramReportRow {
   templateUrl: './hologram-monthly-report.component.html',
   styleUrls: ['./hologram-monthly-report.component.scss']
 })
-export class HologramMonthlyReportComponent {
+export class HologramMonthlyReportComponent implements OnInit {
   Math = Math;
   selectedMonth = 'jul'; // Default to July
   selectedYear = '2025'; // Default to 2025
@@ -211,20 +212,26 @@ export class HologramMonthlyReportComponent {
 
   filteredRows: HologramReportRow[] = [];
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {
-    // Recalculate quantities for existing data
-    this.reportRows.forEach(row => {
-      row.utilizations.forEach(util => {
-        util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
-      });
-      row.wastages.forEach(waste => {
-        waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
-      });
-      this.onRowDataChange(row);
+  constructor(
+    private router: Router, 
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+    private hologramDataService: HologramDataService
+  ) {}
+
+  ngOnInit(): void {
+    // Check for query parameters
+    this.route.queryParams.subscribe(params => {
+      if (params['month']) this.selectedMonth = params['month'];
+      if (params['year']) this.selectedYear = params['year'];
+      if (params['type']) this.selectedHologramType = params['type'];
     });
-    
+
     // Load data for the selected month/year
     this.loadMonthlyData();
+    
+    // Auto-calculate from daily register on initialization
+    this.calculateFromDailyRegister();
   }
 
   // Monthly data management
@@ -264,6 +271,49 @@ export class HologramMonthlyReportComponent {
     return prevMonthRows.reduce((total, row) => total + row.closingBalance, 0);
   }
 
+  // Auto-calculate monthly totals from daily register data
+  private calculateFromDailyRegister(): void {
+    // This method would integrate with the daily register component
+    // For now, we'll simulate the auto-calculation logic
+    const monthlyTotals = this.getMonthlyTotalsFromDailyRegister();
+    
+    if (monthlyTotals && this.filteredRows.length > 0) {
+      // Update the first row with calculated values from daily register
+      const firstRow = this.filteredRows[0];
+      if (firstRow && !firstRow.isFixed) {
+        // Auto-populate utilization data
+        if (monthlyTotals.utilizationFromSerial && monthlyTotals.utilizationToSerial) {
+          firstRow.utilizations = [{
+            fromSerialNo: monthlyTotals.utilizationFromSerial,
+            toSerialNo: monthlyTotals.utilizationToSerial,
+            quantity: monthlyTotals.totalUtilized
+          }];
+        }
+        
+        // Auto-populate wastage data
+        if (monthlyTotals.wastageFromSerial && monthlyTotals.wastageToSerial) {
+          firstRow.wastages = [{
+            fromSerialNo: monthlyTotals.wastageFromSerial,
+            toSerialNo: monthlyTotals.wastageToSerial,
+            quantity: monthlyTotals.totalWastage
+          }];
+        }
+        
+        // Recalculate row totals
+        this.onRowDataChange(firstRow);
+      }
+    }
+  }
+
+  // Get monthly totals from daily register
+  getMonthlyTotalsFromDailyRegister(): any {
+    return this.hologramDataService.getMonthlyTotals(
+      this.selectedMonth,
+      this.selectedYear,
+      this.selectedHologramType
+    );
+  }
+
   // Get previous month and year
   getPreviousMonthYear(): { prevMonth: string, prevYear: string } {
     const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -299,6 +349,25 @@ export class HologramMonthlyReportComponent {
   onMonthYearChange(): void {
     this.loadMonthlyData();
     this.currentPage = 1; // Reset pagination
+  }
+
+  // Public method to trigger auto-calculation
+  autoCalculateFromDaily(): void {
+    this.calculateFromDailyRegister();
+    alert('Monthly totals have been refreshed from daily register data!');
+  }
+
+  // Navigate to daily register
+  goToDailyRegister(): void {
+    this.router.navigate(['/dev-hologram-daily-register']);
+  }
+
+  // Get monthly closing balance
+  getMonthlyClosingBalance(): number {
+    const openingStock = this.getPreviousMonthClosingBalance();
+    const monthlyTotals = this.getMonthlyTotalsFromDailyRegister();
+    const total = openingStock + monthlyTotals.totalIssued;
+    return total - monthlyTotals.totalUtilized - monthlyTotals.totalWastage;
   }
 
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {

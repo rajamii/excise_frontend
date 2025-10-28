@@ -1,0 +1,99 @@
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: #f8f9fa !important;
+}
+
+.table-responsive {
+  border-radius: 0.375rem;
+}
+
+.form-control:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.btn-sm {
+  font-size: 0.75rem;
+}
+
+.animate__animated {
+  animation-duration: 0.3s;
+}
+
+.animate__fadeIn {
+  animation-name: fadeIn;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.table th {
+  background-color: #d1e7dd !important;
+  border-color: #badbcc !important;
+}
+
+.table-success th {
+  color: #0f5132 !important;
+}
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.badge {
+  font-weight: 500;
+}
+
+.text-muted {
+  color: #6c757d !important;
+}
+
+.border-3 {
+  border-width: 3px !important;
+}
+
+.fw-semibold {
+  font-weight: 600 !important;
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.table-warning {
+  --bs-table-bg: #fff3cd;
+  --bs-table-striped-bg: #f9ecb7;
+  --bs-table-striped-color: #000;
+  --bs-table-active-bg: #f1e5a1;
+  --bs-table-active-color: #000;
+  --bs-table-hover-bg: #f5e8a3;
+  --bs-table-hover-color: #000;
+  color: #000;
+  border-color: #f9ecb7;
+}
+
+.table-info {
+  --bs-table-bg: #cff4fc;
+  --bs-table-striped-bg: #c2e7ef;
+  --bs-table-striped-color: #000;
+  --bs-table-active-bg: #b6dde8;
+  --bs-table-active-color: #000;
+  --bs-table-hover-bg: #bce0e6;
+  --bs-table-hover-color: #000;
+  color: #000;
+  border-color: #b8dadf;
+}

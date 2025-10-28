@@ -13,6 +13,12 @@
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" (click)="goToDailyRegister()" title="Go to Daily Register">
+                  <i class="bi bi-calendar-day me-1"></i>Daily Register
+                </button>
+                <button class="btn btn-info btn-sm" (click)="autoCalculateFromDaily()" title="Refresh data from daily register">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
                 <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
                   <i class="bi bi-arrow-left me-1"></i>Back
                 </button>
@@ -142,6 +148,22 @@
         </div>
       </div>
 
+      <!-- Auto-Generated Monthly Report Notice -->
+      <div class="bg-info bg-opacity-10 border border-info rounded mx-3 mb-3">
+        <div class="p-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle text-info fs-4 me-3"></i>
+            <div>
+              <h6 class="mb-1 text-info fw-bold">Auto-Generated Monthly Report</h6>
+              <p class="mb-0 small text-muted">
+                This monthly statement is automatically calculated from the Daily Hologram Manufacturing Register. 
+                All data is read-only and reflects the consolidated daily entries for the selected month.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Data Table Section -->
       <div class="bg-white">
         <div class="container-fluid p-3">
@@ -149,24 +171,26 @@
             <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
               <thead class="table-success">
                 <tr>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Entry Date</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                  <th class="text-center align-middle fw-semibold p-2"
+                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Month</th>
+                  <th class="text-center align-middle fw-semibold p-2"
                     style="width: 100px; min-width: 100px; font-size: 0.875rem;">Opening Stock</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                  <th class="text-center align-middle fw-semibold p-2"
                     style="width: 100px; min-width: 100px; font-size: 0.875rem;">Fresh Arrival</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                  <th class="text-center align-middle fw-semibold p-2"
                     style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total</th>
                   <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Utilization</th>
                   <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                  <th class="text-center align-middle fw-semibold p-2"
                     style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total Wastage</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
+                  <th class="text-center align-middle fw-semibold p-2"
                     style="width: 100px; min-width: 100px; font-size: 0.875rem;">Closing Balance</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Actions</th>
                 </tr>
                 <tr>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
                   <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
                     From Serial</th>
                   <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
@@ -179,215 +203,79 @@
                     To Serial</th>
                   <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
                   </th>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
                 </tr>
               </thead>
               <tbody>
-                @for (row of getPagedRows(); track row.id) {
-                <tr [class.table-warning]="!row.isFixed" class="animate__animated animate__fadeIn">
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="date" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;" [(ngModel)]="row.entryDate"
-                      [readonly]="row.isFixed" title="Date when this entry was made">
+                <!-- Auto-calculated monthly summary row -->
+                <tr class="table-light">
+                  <td class="p-2 align-middle fw-bold text-center" style="font-size: 0.875rem;">
+                    {{ getCurrentHologramTypeDisplay() }}
                   </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="number" class="form-control form-control-sm text-end border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                      [class.bg-info]="row.isFirstRowOfMonth && !row.isFixed"
-                      [class.text-white]="row.isFirstRowOfMonth && !row.isFixed"
-                      [class.fw-semibold]="row.isFirstRowOfMonth && !row.isFixed" [(ngModel)]="row.openingStock"
-                      (ngModelChange)="onRowDataChange(row)" placeholder="0" [readonly]="isOpeningStockReadonly(row)"
-                      [title]="getOpeningStockTooltip(row)">
-                    @if (row.isFirstRowOfMonth) {
-                    <small class="text-muted d-block lh-1 mt-1" style="font-size: 0.65rem;">From prev month</small>
-                    }
+                  <td class="text-end fw-bold p-2 align-middle bg-info bg-opacity-25" style="font-size: 0.875rem;">
+                    {{ getPreviousMonthClosingBalance() | number }}
+                    <small class="d-block text-muted" style="font-size: 0.65rem;">From prev month</small>
                   </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="number" class="form-control form-control-sm text-end border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                      [(ngModel)]="row.freshArrival" (ngModelChange)="onRowDataChange(row)" placeholder="0"
-                      [readonly]="row.isFixed">
+                  <td class="text-end fw-bold p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().totalIssued | number }}
+                    <small class="d-block text-muted" style="font-size: 0.65rem;">Fresh arrival</small>
                   </td>
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{ row.total |
-                    number }}</td>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ (getPreviousMonthClosingBalance() + getMonthlyTotalsFromDailyRegister().totalIssued) | number }}
+                  </td>
 
                   <!-- Utilization From Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (util of row.utilizations; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1 border-1"
-                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                        [(ngModel)]="util.fromSerialNo" (ngModelChange)="onUtilizationSerialChange(row, $index)"
-                        placeholder="From" [readonly]="row.isFixed">
-                      }
-                      @if (!row.isFixed && row.utilizations.length === 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100"
-                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
-                        (click)="addUtilizationToRow(row)">
-                        <i class="bi bi-plus"></i>
-                      </button>
-                      }
-                    </div>
+                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().utilizationFromSerial || '-' }}
                   </td>
 
                   <!-- Utilization To Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (util of row.utilizations; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1 border-1"
-                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                        [(ngModel)]="util.toSerialNo" (ngModelChange)="onUtilizationSerialChange(row, $index)"
-                        placeholder="To" [readonly]="row.isFixed">
-                      }
-                    </div>
+                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().utilizationToSerial || '-' }}
                   </td>
 
                   <!-- Utilization Quantity -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (util of row.utilizations; track $index) {
-                      <div class="d-flex mb-1">
-                        <input type="number"
-                          class="form-control form-control-sm text-end flex-grow-1 bg-light border-1 fw-semibold"
-                          style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px; cursor: not-allowed;"
-                          [ngModel]="util.quantity" placeholder="0" readonly tabindex="-1">
-                        @if (!row.isFixed) {
-                        <button type="button"
-                          class="btn btn-sm btn-outline-danger ms-1 d-flex align-items-center justify-content-center"
-                          style="width: 20px; height: 20px; padding: 0;"
-                          (click)="removeUtilizationFromRow(row, $index)">
-                          <i class="bi bi-x" style="font-size: 0.6rem;"></i>
-                        </button>
-                        }
-                      </div>
-                      }
-                      @if (!row.isFixed && row.utilizations.length > 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
-                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
-                        (click)="addUtilizationToRow(row)">
-                        <i class="bi bi-plus"></i>
-                      </button>
-                      }
-                      @if (row.utilizations.length > 0) {
-                      <div class="border-top pt-1 mt-1 small fw-bold text-center">
-                        {{ row.totalUtilized | number }}
-                      </div>
-                      }
-                    </div>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().totalUtilized | number }}
                   </td>
 
                   <!-- Wastage From Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (waste of row.wastages; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1 border-1"
-                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                        [(ngModel)]="waste.fromSerialNo" (ngModelChange)="onWastageSerialChange(row, $index)"
-                        placeholder="From" [readonly]="row.isFixed">
-                      }
-                      @if (!row.isFixed && row.wastages.length === 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100"
-                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
-                        (click)="addWastageToRow(row)">
-                        <i class="bi bi-plus"></i>
-                      </button>
-                      }
-                    </div>
+                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().wastageFromSerial || '-' }}
                   </td>
 
                   <!-- Wastage To Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (waste of row.wastages; track $index) {
-                      <input type="text" class="form-control form-control-sm mb-1 border-1"
-                        style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
-                        [(ngModel)]="waste.toSerialNo" (ngModelChange)="onWastageSerialChange(row, $index)"
-                        placeholder="To" [readonly]="row.isFixed">
-                      }
-                    </div>
+                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().wastageToSerial || '-' }}
                   </td>
 
                   <!-- Wastage Quantity -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div style="min-width: 100px; max-width: 110px;">
-                      @for (waste of row.wastages; track $index) {
-                      <div class="d-flex mb-1">
-                        <input type="number"
-                          class="form-control form-control-sm text-end flex-grow-1 bg-light border-1 fw-semibold"
-                          style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px; cursor: not-allowed;"
-                          [ngModel]="waste.quantity" placeholder="0" readonly tabindex="-1">
-                        @if (!row.isFixed) {
-                        <button type="button"
-                          class="btn btn-sm btn-outline-danger ms-1 d-flex align-items-center justify-content-center"
-                          style="width: 20px; height: 20px; padding: 0;" (click)="removeWastageFromRow(row, $index)">
-                          <i class="bi bi-x" style="font-size: 0.6rem;"></i>
-                        </button>
-                        }
-                      </div>
-                      }
-                      @if (!row.isFixed && row.wastages.length > 0) {
-                      <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-1"
-                        style="padding: 0.1rem 0.3rem; font-size: 0.6rem; line-height: 1;"
-                        (click)="addWastageToRow(row)">
-                        <i class="bi bi-plus"></i>
-                      </button>
-                      }
-                      @if (row.wastages.length > 0) {
-                      <div class="border-top pt-1 mt-1 small fw-bold text-center">
-                        {{ row.totalWastage | number }}
-                      </div>
-                      }
-                    </div>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().totalWastage | number }}
                   </td>
 
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
-                    row.totalWastage | number }}</td>
-                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
-                    row.closingBalance | number }}</td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div class="d-flex gap-1 flex-column">
-                      @if (!row.isFixed) {
-                      <button class="btn btn-success btn-sm"
-                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="saveRow(row)"
-                        title="Save & Lock">
-                        <i class="bi bi-check"></i>
-                      </button>
-                      <button class="btn btn-danger btn-sm"
-                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="deleteRow(row)"
-                        title="Delete">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                      } @else {
-                      <span class="badge bg-success small"
-                        style="font-size: 0.75rem; padding: 0.375rem 0.75rem;">Saved</span>
-                      }
-                    </div>
+                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ getMonthlyTotalsFromDailyRegister().totalWastage | number }}
+                  </td>
+                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ getMonthlyClosingBalance() | number }}
                   </td>
                 </tr>
-                } @empty {
+
+                @if (getMonthlyTotalsFromDailyRegister().totalIssued === 0) {
                 <tr>
                   <td colspan="12" class="text-center text-muted py-4">
-                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                    No hologram data found for {{ getCurrentHologramTypeDisplay() }}. Add a new row to get started.
-                  </td>
-                </tr>
-                }
-
-                <!-- Grand Total Row -->
-                <tr class="table-info fw-bold">
-                  <td class="text-center">TOTAL</td>
-                  <td class="text-end">{{ calculateGrandTotals().totalOpening | number }}</td>
-                  <td class="text-end">{{ calculateGrandTotals().totalFreshArrival | number }}</td>
-                  <td class="text-end">{{ calculateGrandTotals().totalTotal | number }}</td>
-                  <td colspan="3" class="text-center">{{ calculateGrandTotals().totalUtilized | number }}</td>
-                  <td colspan="3" class="text-center">{{ calculateGrandTotals().totalWastage | number }}</td>
-                  <td class="text-end">{{ calculateGrandTotals().totalWastage | number }}</td>
-                  <td class="text-end">{{ calculateGrandTotals().totalClosing | number }}</td>
-                  <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-primary" (click)="addNewRow()" title="Add New Row">
-                      <i class="bi bi-plus"></i>
+                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-2 text-warning"></i>
+                    <h6 class="mb-2">No Daily Register Data Found</h6>
+                    <p class="mb-0">No daily hologram entries found for {{ getCurrentHologramTypeDisplay() }}.</p>
+                    <p class="small text-muted">Please add entries in the Daily Hologram Manufacturing Register first.</p>
+                    <button class="btn btn-primary btn-sm mt-2" (click)="goToDailyRegister()">
+                      <i class="bi bi-calendar-day me-1"></i>Go to Daily Register
                     </button>
                   </td>
                 </tr>
+                }
               </tbody>
             </table>
 
