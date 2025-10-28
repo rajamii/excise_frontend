@@ -12,6 +12,7 @@ import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { SiteEnquiryFormModel } from '../../../../../core/models/site-enquiry.model';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
+import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -34,6 +35,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   feeForm!: FormGroup;
   licenseCategoryForm!: FormGroup;
   objectionForm!: FormGroup;
+  objectionResolveForm!: FormGroup;
 
   application: any;
   tableType: string = '';
@@ -159,6 +161,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     this.licenseCategoryForm = this.fb.group({ licenseCategory: [null] });
 
     this.objectionForm = this.fb.group({});
+    
     // Dynamically add a checkbox and remark control for each objectionable field
     this.objectionFields.forEach(field => {
       this.objectionForm.addControl(field.key, new FormControl(false));
@@ -562,11 +565,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   onSubmitObjection() {
     const applicationId = this.application.applicationId;
 
-    if (!this.stageID) {
-      Swal.fire('Error', 'No valid stage selected for objection.', 'error');
-      return;
-    }
-
     // Collect selected objection fields with remarks
     const selectedFields = this.objectionFields
       .filter(f => this.objectionForm.get(f.key)?.value && this.objectionForm.get(f.key + '_remarks')?.value)
@@ -580,18 +578,21 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       return;
     }
 
-    // Directly raise objection (confirmation already shown earlier in stepper)
-    this.licenseAppService.advanceApplication(
-      applicationId,
-      this.stageID,
-      undefined,
-      undefined,
-      'raise_objection',
-      undefined,
-      selectedFields
-    ).subscribe({
-      next: () => Swal.fire('Success', 'Objection raised.', 'success').then(() => location.reload()),
-      error: () => Swal.fire('Error', 'Objection failed.', 'error')
+    // Get general remarks from remarksForm if provided
+    const remarks = this.remarksForm.value.remarks || undefined;
+
+    // Call the new raiseObjection service method
+    this.licenseAppService.raiseObjection(applicationId, selectedFields, remarks).subscribe({
+      next: () => {
+        Swal.fire('Success', 'Objection raised.', 'success').then(() => {
+          this.dialogRef.close(true);
+          location.reload();
+        });
+      },
+      error: (err) => {
+        console.error('Objection error:', err);
+        Swal.fire('Error', 'Failed to raise objection.', 'error');
+      }
     });
   }
 }

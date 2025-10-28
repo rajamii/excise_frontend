@@ -62,6 +62,18 @@
             <mat-list-item routerLink="roads" routerLinkActive="active-link">
               <span class="nav-header-cus">Road</span>
             </mat-list-item>
+            <mat-list-item routerLink="workflow" routerLinkActive="active-link">
+              <span class="nav-header-cus">Workflow</span>
+            </mat-list-item>
+            <mat-list-item routerLink="stages" routerLinkActive="active-link">
+              <span class="nav-header-cus">Workflow Stages</span>
+            </mat-list-item>
+            <mat-list-item routerLink="transitions" routerLinkActive="active-link">
+              <span class="nav-header-cus">Workflow Transitions</span>
+            </mat-list-item>
+            <mat-list-item routerLink="permissions" routerLinkActive="active-link">
+              <span class="nav-header-cus">Workflow Permissions</span>
+            </mat-list-item>
           }
           @if (accountService.hasAnyRole('single_window')) {
             <mat-list-item routerLink="users" routerLinkActive="active-link">

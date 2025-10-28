@@ -1,0 +1,46 @@
+<div class="container-fluid">
+    <mat-card>
+      <mat-card-header>
+        <div class="page-title">Workflows List</div>
+        <button matButton="filled" (click)="onAdd()">
+          <mat-icon>add</mat-icon> Add Workflow
+        </button>
+      </mat-card-header>
+  
+      <mat-card-content>
+        <div class="table-container">
+          <mat-table [dataSource]="workflows">
+  
+            <!-- Workflow Name -->
+            <ng-container matColumnDef="name">
+              <mat-header-cell *matHeaderCellDef class="small-column"> Name </mat-header-cell>
+              <mat-cell *matCellDef="let workflow" class="small-column"> {{ workflow.name }} </mat-cell>
+            </ng-container>
+  
+            <!-- Workflow Description -->
+            <ng-container matColumnDef="description">
+              <mat-header-cell *matHeaderCellDef> Description </mat-header-cell>
+              <mat-cell *matCellDef="let workflow"> {{ workflow.description || '-' }} </mat-cell>
+            </ng-container>
+  
+            <!-- Actions -->
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="action-column"> Actions </mat-header-cell>
+              <mat-cell *matCellDef="let workflow" class="action-column">
+                <button matIconButton color="primary" (click)="onEdit(workflow)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button matIconButton color="warn" (click)="onDelete(workflow)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+  
+            <!-- Table Header and Rows -->
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+          </mat-table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>

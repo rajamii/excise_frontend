@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ApplicationStatus, DashboardCount } from '../models/dashboard.model';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -113,6 +113,16 @@ export class LicenseApplicationService {
     return this.http.post(`${this.baseUrl}/${encodedId}/advance/${encodedStageId}/`, body);
   }
 
+  //Method to raise objections for a given application
+  raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], remarks?: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    const body: any = {
+      objections: objections.map(obj => ({ field: obj.field, remarks: obj.remarks })), // Map 'field' to 'field_name' for backend compatibility
+      remarks
+    };
+    return this.http.post(`${this.baseUrl}/${encodedId}/raise-objection/`, body);
+  }
+  
   // Retrieves all objections raised against a given application
   getObjections(applicationId: string): Observable<any[]> {
     const encodedId = encodeURIComponent(applicationId);
@@ -121,12 +131,34 @@ export class LicenseApplicationService {
 
   /* Resolves previously raised objections for a given application.
   FormData contains only the corrected fields and possibly a photo. */
-  resolveObjections(applicationId: string, formData: FormData): Observable<any> {
+  resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post<any>(
-      `${this.baseUrl}/${encodedId}/resolve-objections/`,
-      formData
-    );
+    const formData = new FormData();
+
+    // Append fields to FormData
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== null && value !== undefined) {
+        // Handle dropdowns (e.g., licenseCategory, siteSubdivision) by sending the ID or code
+        if (['licenseCategory', 'licenseType', 'exciseDistrict', 'exciseSubdivision', 'siteSubdivision', 'policeStation'].includes(key)) {
+          formData.append(key, value.id || value.subdivisionCode || value.districtCode || value.policeStationCode || value.toString());
+        } else {
+          formData.append(key, value.toString());
+        }
+      }
+    }
+
+    // Append photo if provided
+    if (photo) {
+      formData.append('photo', photo, photo.name);
+    }
+
+    // Log FormData for debugging
+    console.log('FormData entries:');
+    for (const pair of formData.entries()) {
+      console.log(`${pair[0]}: ${pair[1]}`);
+    }
+
+    return this.http.post(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
   }
   
   /* Submits the site enquiry report associated with the application.
