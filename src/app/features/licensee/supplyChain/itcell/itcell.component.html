@@ -1,4 +1,4 @@
-<div class="min-vh-100 bg-light">
+<div class="bg-light">
   <!-- Header Section -->
   <div class="bg-white border-bottom shadow-sm">
     <div class="container-fluid px-4 py-3">
@@ -19,14 +19,14 @@
       <div class="d-flex align-items-end gap-3 flex-wrap">
         <div class="d-flex flex-column" style="min-width: 120px;">
           <label class="form-label small fw-medium text-secondary mb-1">Select Date</label>
-          <input type="date" class="form-control form-control-sm border-1" 
+          <input type="date" class="form-control form-control-sm border-1"
                  style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                  [(ngModel)]="selectedDate" (ngModelChange)="applyFilters()">
         </div>
 
         <div class="d-flex flex-column" style="min-width: 120px;">
           <label class="form-label small fw-medium text-secondary mb-1">Month</label>
-          <select class="form-select form-select-sm border-1" 
+          <select class="form-select form-select-sm border-1"
                   style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                   [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
             <option value="">All Months</option>
@@ -36,7 +36,7 @@
 
         <div class="d-flex flex-column" style="min-width: 120px;">
           <label class="form-label small fw-medium text-secondary mb-1">Year</label>
-          <select class="form-select form-select-sm border-1" 
+          <select class="form-select form-select-sm border-1"
                   style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                   [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
             <option value="">All Years</option>
@@ -46,7 +46,7 @@
 
         <div class="d-flex flex-column" style="min-width: 120px;">
           <label class="form-label small fw-medium text-secondary mb-1">Status</label>
-          <select class="form-select form-select-sm border-1" 
+          <select class="form-select form-select-sm border-1"
                   style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                   [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
             <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
@@ -55,18 +55,18 @@
 
         <div class="d-flex flex-column" style="min-width: 120px;">
           <label class="form-label small fw-medium text-secondary mb-1">Company</label>
-          <input type="text" class="form-control form-control-sm border-1" 
+          <input type="text" class="form-control form-control-sm border-1"
                  style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                  [(ngModel)]="companyFilter" (ngModelChange)="applyFilters()" placeholder="Search company...">
         </div>
 
         <div class="d-flex gap-2 mt-4">
-          <button class="btn btn-primary btn-sm d-flex align-items-center justify-content-center" 
+          <button class="btn btn-primary btn-sm d-flex align-items-center justify-content-center"
                   style="width: 40px; height: 40px; padding: 0;"
                   title="Search" (click)="applyFilters()">
             <i class="bi bi-search"></i>
           </button>
-          <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center" 
+          <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
                   style="width: 40px; height: 40px; padding: 0;"
                   title="Clear" (click)="clearFilters()">
             <i class="bi bi-arrow-clockwise"></i>
@@ -80,7 +80,7 @@
   <div class="bg-white border-bottom">
     <div class="container-fluid px-4">
       <div class="d-flex">
-        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase" 
+        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase"
                 [class.text-danger]="selectedTabIndex === 0"
                 [class.text-muted]="selectedTabIndex !== 0"
                 [class.border-bottom]="selectedTabIndex === 0"
@@ -91,7 +91,7 @@
                 (click)="selectedTabIndex = 0">
           <i class="bi bi-table me-2"></i>HOLOGRAM MANAGEMENT
         </button>
-        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase" 
+        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase"
                 [class.text-danger]="selectedTabIndex === 1"
                 [class.text-muted]="selectedTabIndex !== 1"
                 [class.border-bottom]="selectedTabIndex === 1"
@@ -134,7 +134,7 @@
               <td class="px-3 py-3 align-middle">{{ hologram.companyName }}</td>
               <td class="px-3 py-3 align-middle" style="min-width: 180px;">
                 <div class="d-flex align-items-center justify-content-between">
-                  <span class="fs-6 fw-bold text-primary bg-light px-2 py-1 rounded text-center d-inline-block" 
+                  <span class="fs-6 fw-bold text-primary bg-light px-2 py-1 rounded text-center d-inline-block"
                         style="min-width: 50px; background: #e3f2fd !important;">{{ getTotalHolograms(hologram) }}</span>
                   <button class="btn btn-outline-primary btn-sm ms-2" (click)="viewHologramDetails(hologram)">
                     <i class="bi bi-eye me-1"></i>View Details
@@ -142,13 +142,13 @@
                 </div>
               </td>
               <td class="px-3 py-3 align-middle">
-                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" 
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"
                       style="font-size: 0.75rem; font-weight: 500; line-height: 1.2; max-width: 300px; word-wrap: break-word;">{{ hologram.status }}</span>
               </td>
               <td class="px-3 py-3 align-middle" style="min-width: 200px;">
                 <div *ngIf="hologram.status === 'Draft' || hologram.status === 'Submitted'">
-                  <input type="file" 
-                         #fileInput 
+                  <input type="file"
+                         #fileInput
                          [id]="'file-' + hologram.refNo"
                          (change)="onFileSelected($event, hologram)"
                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
@@ -156,38 +156,38 @@
                   <button class="btn btn-outline-primary btn-sm" (click)="fileInput.click()">
                     <i class="bi bi-cloud-upload me-1"></i>Upload
                   </button>
-                  <div *ngIf="hologram.uploadedFile" class="d-flex align-items-center gap-2 mt-2 p-2 bg-light rounded flex-wrap" 
+                  <div *ngIf="hologram.uploadedFile" class="d-flex align-items-center gap-2 mt-2 p-2 bg-light rounded flex-wrap"
                        style="font-size: 0.75rem;">
                     <i class="bi bi-file-text text-success"></i>
                     <span class="text-success fw-medium flex-grow-1" style="min-width: 120px;">{{ hologram.uploadedFile.name }}</span>
-                    <button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" 
+                    <button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
                             style="padding: 0.2rem 0.4rem; font-size: 0.7rem; min-width: 32px; height: 28px;"
                             (click)="viewUploadedFile(hologram)" title="View File">
                       <i class="bi bi-eye" style="font-size: 0.8rem;"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center" 
+                    <button class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center"
                             style="padding: 0.2rem 0.4rem; font-size: 0.7rem; min-width: 32px; height: 28px;"
                             (click)="downloadUploadedFile(hologram)" title="Download File">
                       <i class="bi bi-download" style="font-size: 0.8rem;"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center" 
+                    <button class="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
                             style="padding: 0.2rem 0.4rem; font-size: 0.7rem; min-width: 32px; height: 28px;"
                             (click)="removeFile(hologram)" title="Remove File">
                       <i class="bi bi-x" style="font-size: 0.8rem;"></i>
                     </button>
                   </div>
                 </div>
-                <div *ngIf="hologram.status === 'Under Review' || hologram.status === 'Approved'" 
-                     class="d-flex align-items-center gap-2 p-2 bg-light rounded flex-wrap" 
+                <div *ngIf="hologram.status === 'Under Review' || hologram.status === 'Approved'"
+                     class="d-flex align-items-center gap-2 p-2 bg-light rounded flex-wrap"
                      style="font-size: 0.75rem;">
                   <i class="bi bi-file-text text-success"></i>
                   <span class="text-success fw-medium flex-grow-1" style="min-width: 120px;">{{ hologram.uploadedFile?.name || 'File uploaded' }}</span>
-                  <button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center" 
+                  <button class="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
                           style="padding: 0.2rem 0.4rem; font-size: 0.7rem; min-width: 32px; height: 28px;"
                           (click)="viewUploadedFile(hologram)" [disabled]="!hologram.uploadedFile" title="View File">
                     <i class="bi bi-eye" style="font-size: 0.8rem;"></i>
                   </button>
-                  <button class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center" 
+                  <button class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center"
                           style="padding: 0.2rem 0.4rem; font-size: 0.7rem; min-width: 32px; height: 28px;"
                           (click)="downloadUploadedFile(hologram)" [disabled]="!hologram.uploadedFile" title="Download File">
                     <i class="bi bi-download" style="font-size: 0.8rem;"></i>
@@ -195,15 +195,15 @@
                 </div>
               </td>
               <td class="px-3 py-3 align-middle" style="white-space: nowrap;">
-                <button class="btn btn-primary btn-sm me-1" 
+                <button class="btn btn-primary btn-sm me-1"
                         style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
-                        (click)="updateHologramStatus(hologram, 'Under Review')" 
+                        (click)="updateHologramStatus(hologram, 'Under Review')"
                         [disabled]="hologram.status === 'Under Review' || hologram.status === 'Approved' || !hologram.uploadedFile">
                   FORWARD
                 </button>
-                <button class="btn btn-warning btn-sm" 
+                <button class="btn btn-warning btn-sm"
                         style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
-                        (click)="updateHologramStatus(hologram, 'Approved')" 
+                        (click)="updateHologramStatus(hologram, 'Approved')"
                         [disabled]="hologram.status === 'Approved'">
                   APPROVE
                 </button>
@@ -229,7 +229,7 @@
 
         <div class="d-flex flex-column align-items-center gap-4">
           <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
-            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                  style="width: 50px; height: 50px;">
               <i class="bi bi-upload fs-5"></i>
             </div>
@@ -238,13 +238,13 @@
               <p class="mb-0 text-muted small lh-sm">Files are uploaded to the IT Cell system</p>
             </div>
           </div>
-          
+
           <div class="text-primary fs-4">
             <i class="bi bi-arrow-down"></i>
           </div>
-          
+
           <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
-            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                  style="width: 50px; height: 50px;">
               <i class="bi bi-laptop fs-5"></i>
             </div>
@@ -253,13 +253,13 @@
               <p class="mb-0 text-muted small lh-sm">IT Cell puts up the file and forwards it for processing</p>
             </div>
           </div>
-          
+
           <div class="text-primary fs-4">
             <i class="bi bi-arrow-down"></i>
           </div>
-          
+
           <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
-            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                  style="width: 50px; height: 50px;">
               <i class="bi bi-send fs-5"></i>
             </div>
@@ -268,13 +268,13 @@
               <p class="mb-0 text-muted small lh-sm">Files are forwarded to the appropriate authority for review</p>
             </div>
           </div>
-          
+
           <div class="text-primary fs-4">
             <i class="bi bi-arrow-down"></i>
           </div>
-          
+
           <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
-            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" 
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
                  style="width: 50px; height: 50px;">
               <i class="bi bi-check-circle fs-5"></i>
             </div>
@@ -305,7 +305,7 @@
             <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date | date:'dd-MMM-yyyy' }}</span>
             <span class="badge bg-success-subtle text-success">{{ selectedHologram?.companyName }}</span>
           </div>
-          
+
           <!-- Quantity Breakdown Table -->
           <div class="table-responsive mb-3">
             <table class="table table-sm table-bordered mb-0 bg-white">
@@ -344,7 +344,7 @@
                   <h6 class="card-title text-primary mb-2">
                     <i class="bi bi-info-circle me-1"></i>Status Information
                   </h6>
-                  <p class="mb-1"><strong>Current Status:</strong> 
+                  <p class="mb-1"><strong>Current Status:</strong>
                     <span class="badge bg-primary ms-1">{{ selectedHologram?.status }}</span>
                   </p>
                   <p class="mb-1"><strong>Submitted Date:</strong> {{ selectedHologram?.submittedDate || selectedHologram?.date | date:'dd-MMM-yyyy' }}</p>
@@ -365,7 +365,7 @@
                   </h6>
                   <div class="mb-1" *ngIf="selectedHologram?.uploadedFile">
                     <p class="mb-2">
-                      <strong>Uploaded File:</strong> 
+                      <strong>Uploaded File:</strong>
                       <span class="text-success">{{ selectedHologram?.uploadedFile?.name }}</span>
                     </p>
                     <div class="mt-2">
@@ -378,7 +378,7 @@
                     </div>
                   </div>
                   <p class="mb-1" *ngIf="!selectedHologram?.uploadedFile">
-                    <strong>File Status:</strong> 
+                    <strong>File Status:</strong>
                     <span class="text-warning">No file uploaded</span>
                   </p>
                   <p class="mb-0" *ngIf="selectedHologram?.remarks">
