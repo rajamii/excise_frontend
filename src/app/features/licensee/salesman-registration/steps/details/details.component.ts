@@ -2,12 +2,12 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { PatternConstants } from '../../../../../../shared/constants/pattern.constants';
-import { FormUtils } from '../../../../../../shared/utils/capitalize.util';
-import { MaterialModule } from '../../../../../../shared/material.module';
-import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../../core/models/salesman-barman.model';
+import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
+import { FormUtils } from '../../../../../shared/utils/capitalize.util';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../core/models/salesman-barman.model';
 import { DatePipe } from '@angular/common';
-import { SalesmanBarmanRegistrationService } from '../../../../../../core/services/salesman-barman-registration.service';
+import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
 
 @Component({
   selector: 'app-details',

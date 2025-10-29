@@ -1,7 +1,7 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
-import { MaterialModule } from '../../../../../../shared/material.module';
-import { SalesmanBarmanRegistrationService } from '../../../../../../core/services/salesman-barman-registration.service';
-import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../../core/models/salesman-barman.model';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../core/models/salesman-barman.model';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';

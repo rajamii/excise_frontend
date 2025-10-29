@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import { MaterialModule } from '../../../../shared/material.module'; // Import Material Module for Material Design components
+import { MaterialModule } from '../../../shared/material.module'; // Import Material Module for Material Design components
 import { LicenseComponent } from './steps/license/license.component'; // Import License step component
-import { DetailsComponent } from "./steps/details/details.component"; // Import Details step component
+import { DetailsComponent } from './steps/details/details.component'; // Import Details step component
 import { MakePaymentComponent } from "./steps/make-payment/make-payment.component"; // Import Make Payment step component
 import { SubmitApplicationComponent } from "./steps/submit-application/submit-application.component"; // Import Submit Application step component
 
