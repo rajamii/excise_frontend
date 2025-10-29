@@ -20,6 +20,7 @@ const routes: Routes = [
             Authority.LEVEL_3, 
             Authority.LEVEL_4, 
             Authority.LEVEL_5, 
+            Authority.SINGLE_WINDOW
           ]
         }, 
       },

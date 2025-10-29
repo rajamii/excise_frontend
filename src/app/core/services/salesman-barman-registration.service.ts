@@ -56,7 +56,7 @@ export class SalesmanBarmanRegistrationService {
 
   // New: Fetch aggregated counts
   getDashboardCounts(): Observable<DashboardCount> {
-    return this.http.get<DashboardCount>(`${this.baseUrl}/dashboard-counts/`); // New backend endpoint (see below)
+    return this.http.get<DashboardCount>(`${this.baseUrl}/dashboard-counts/`);
   }
 
   // New: Fetch apps grouped by status
@@ -66,6 +66,6 @@ export class SalesmanBarmanRegistrationService {
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
   }> {
-    return this.http.get<any>(`${this.baseUrl}/applications-by-status/`); // New backend endpoint
+    return this.http.get<any>(`${this.baseUrl}/applications-by-status/`);
   }
 }
