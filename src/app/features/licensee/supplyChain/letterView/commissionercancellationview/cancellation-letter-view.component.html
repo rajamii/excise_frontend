@@ -1,4 +1,4 @@
-<div class="cancellation-letter-view">
+<div class="supply-chain-cancellation-view">
   <!-- Header Section -->
   <div class="header-section">
     <div class="header-content">
@@ -8,153 +8,160 @@
         </button>
       </div>
       <div class="right-section">
-        <h1 class="page-title">Cancellation Application View</h1>
+        <h1 class="page-title">ENA Import Permit Cancellation Details</h1>
       </div>
     </div>
   </div>
 
-  <!-- Letter Content -->
-  <div class="letter-container">
+  <!-- Application Content -->
+  <div class="application-container">
     @if (cancellationData) {
     <div id="cancellationPrintSection" class="card shadow-sm border-0 printable-content">
-      <div class="letter-header text-center fw-bold mb-3 fs-5">
+      <div class="application-header text-center fw-bold mb-3 fs-5">
         <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
-          <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+            style="height: 60px; width: auto" />
+          <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
         </div>
+        <div class="text-danger fs-4 mt-2">PERMIT CANCELLATION APPLICATION</div>
       </div>
-      <div class="letter-content p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div><strong>Ref No:</strong> <span class="fw-bold">{{ cancellationData.referenceNo }}</span></div>
-          <div><strong>Date:</strong> <span class="fw-bold">{{ cancellationData.submissionDate | date:'dd-MM-yyyy' }}</span></div>
-        </div>
 
-        <p class="mb-1"><strong>To,</strong><br>
-          The Commissioner<br>
-          Excise (Abk) Department<br>
-          Government of Sikkim, Gangtok
-        </p>
-
-        <p class="mb-2"><strong>Sub:</strong> Application for Cancellation of Import Permit</p>
-
-        <div class="cancellation-details mb-3">
-          <p class="mb-2">
-            <strong>Subject:</strong> Request for cancellation of Import Permit 
-            <span class="fw-bold">{{ cancellationData.originalPermitNo }}</span> dated 
-            <span class="fw-bold">{{ cancellationData.originalPermitDate | date:'dd-MM-yyyy' }}</span>
-          </p>
-
-          <p class="mb-2">
-            We respectfully request the cancellation of our import permit 
-            <span class="fw-bold">{{ cancellationData.originalPermitNo }}</span> 
-            for the following reasons:
-          </p>
-
-          <div class="reason-box mb-3">
-            <p class="mb-1"><strong>Reason for Cancellation:</strong></p>
-            <p class="mb-0 ps-3">{{ cancellationData.reasonForCancellation }}</p>
+      <div class="application-content p-4">
+        <!-- Basic Information -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="info-card">
+              <h6 class="text-danger mb-2">Cancellation Details</h6>
+              <p><strong>Reference No:</strong> {{ cancellationData.referenceNo }}</p>
+              <p><strong>Submission Date:</strong> {{ cancellationData.submissionDate | date: "dd-MM-yyyy" }}</p>
+              <p><strong>Distillery:</strong> {{ cancellationData.distilleryName }}</p>
+              <p><strong>Cancellation Date:</strong> {{ cancellationData.cancellationDate | date: "dd-MM-yyyy" }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="info-card">
+              <h6 class="text-danger mb-2">Status & Financial</h6>
+              <p><strong>Current Status:</strong></p>
+              <span [ngClass]="getStatusBadgeClass(cancellationData.status)" class="d-block mt-1">
+                {{ cancellationData.status }}
+              </span>
+              <p class="mt-2"><strong>Cancellation Fee:</strong> ₹{{ cancellationData.cancellationAmount | number }}</p>
+              @if (cancellationData.brAmount) {
+              <p><strong>Refund Amount:</strong>
+                <span class="text-success fw-bold">₹{{ cancellationData.brAmount | number }}</span>
+                <span class="badge bg-warning ms-2">PROCESSING</span>
+              </p>
+              }
+            </div>
           </div>
         </div>
 
-        <div class="table-responsive mb-3">
-          <table class="table table-bordered">
-            <thead class="table-light">
-              <tr>
-                <th colspan="2" class="text-center">CANCELLATION DETAILS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Cancellation Reference</strong></td>
-                <td>{{ cancellationData.referenceNo }}</td>
-              </tr>
-              <tr>
-                <td><strong>Distillery Name</strong></td>
-                <td>{{ cancellationData.distilleryName }}</td>
-              </tr>
-              <tr>
-                <td><strong>Original Permit No</strong></td>
-                <td>{{ cancellationData.originalPermitNo }}</td>
-              </tr>
-              <tr>
-                <td><strong>Original Permit Date</strong></td>
-                <td>{{ cancellationData.originalPermitDate | date:'dd-MM-yyyy' }}</td>
-              </tr>
-              <tr>
-                <td><strong>Cancellation Request Date</strong></td>
-                <td>{{ cancellationData.cancellationDate | date:'dd-MM-yyyy' }}</td>
-              </tr>
-              <tr>
-                <td><strong>Reason for Cancellation</strong></td>
-                <td>{{ cancellationData.reasonForCancellation }}</td>
-              </tr>
-              <tr>
-                <td><strong>Requested By</strong></td>
-                <td>{{ cancellationData.requestedBy }}</td>
-              </tr>
-              <tr>
-                <td><strong>Authorized By</strong></td>
-                <td>{{ cancellationData.authorizedBy }}</td>
-              </tr>
-              <tr>
-                <td><strong>Cancellation Fee</strong></td>
-                <td><strong>₹{{ cancellationData.cancellationAmount | number:'1.2-2' }}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>Status</strong></td>
-                <td>
-                  <span [class]="getStatusBadgeClass(cancellationData.status)">
-                    {{ cancellationData.status }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Original Permit Details -->
+        <div class="section-card mb-4">
+          <h5 class="section-title">Original Permit Information</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered">
+              <tbody>
+                <tr>
+                  <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
+                  <td>{{ cancellationData.originalPermitNo }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Original Issue Date</td>
+                  <td>{{ cancellationData.originalPermitDate | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Original Amount Paid</td>
+                  <td class="text-primary fw-bold">₹{{ cancellationData.brAmount | number }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Distillery Name</td>
+                  <td>{{ cancellationData.distilleryName }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cancellation Request Details -->
+        <div class="section-card mb-4">
+          <h5 class="section-title">Cancellation Request Information</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered">
+              <tbody>
+                <tr>
+                  <td class="fw-semibold bg-light" style="width: 30%;">Reason for Cancellation</td>
+                  <td>{{ cancellationData.reasonForCancellation || 'Change in business requirements - no longer needed the permit' }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Cancellation Type</td>
+                  <td>Full Cancellation</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Requested By</td>
+                  <td>{{ cancellationData.requestedBy || cancellationData.distilleryName }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Authorized By</td>
+                  <td>{{ cancellationData.authorizedBy || 'Authorized Signatory' }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Cancellation Date</td>
+                  <td>{{ cancellationData.cancellationDate | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+                @if (cancellationData.cancellationAmount) {
+                <tr>
+                  <td class="fw-semibold bg-light">Cancellation Fee</td>
+                  <td class="text-danger fw-bold">₹{{ cancellationData.cancellationAmount | number }}</td>
+                </tr>
+                }
+                <tr>
+                  <td class="fw-semibold bg-light">Status</td>
+                  <td>
+                    <span [ngClass]="getStatusBadgeClass(cancellationData.status)">
+                      {{ cancellationData.status }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         @if (cancellationData.cancellationBRFilePath) {
-        <div class="br-section mb-3">
-          <h6 class="fw-bold mb-2">CANCELLATION BANK RECEIPT:</h6>
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-info">BR Available</span>
-            <button class="btn btn-outline-primary btn-sm" (click)="viewCancellationBR()">
-              <i class="bi bi-file-pdf me-1"></i>View BR
-            </button>
+        <!-- Bank Receipt Section -->
+        <div class="section-card mb-4">
+          <h5 class="section-title">Bank Receipt Information</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered">
+              <tbody>
+                <tr>
+                  <td class="fw-semibold bg-light" style="width: 30%;">Bank Receipt Status</td>
+                  <td>
+                    <span class="badge bg-success">Available</span>
+                    <button class="btn btn-outline-primary btn-sm ms-2" (click)="viewCancellationBR()">
+                      <i class="bi bi-file-pdf me-1"></i>View BR
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Receipt Amount</td>
+                  <td class="text-success fw-bold">₹{{ cancellationData.cancellationAmount | number }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light">Payment Date</td>
+                  <td>{{ cancellationData.submissionDate | date: 'dd-MM-yyyy' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
         }
 
-        <div class="declaration-section mb-3">
-          <h6 class="fw-bold mb-2">DECLARATION:</h6>
-          <p class="mb-1">We hereby declare that:</p>
-          <ul class="mb-0">
-            <li>The information provided above is true and correct to the best of our knowledge</li>
-            <li>We understand that cancellation is irrevocable and cannot be undone</li>
-            <li>We agree to pay the required cancellation fee as per department norms</li>
-            <li>We will return any unused permits or documents related to this permit</li>
-            <li>We understand that any outstanding obligations must be fulfilled before cancellation</li>
-          </ul>
-        </div>
-
-        <div class="undertaking-section mb-3">
-          <h6 class="fw-bold mb-2">UNDERTAKING:</h6>
-          <p class="mb-0">
-            We undertake that we will not use the cancelled permit for any purpose and understand 
-            that any violation will result in legal action as per the Excise Act.
-          </p>
-        </div>
-
-        <div class="mt-4">
-          <p>We request your kind consideration and approval for the cancellation of our import permit.</p>
-          <div style="height: 50px"></div>
-          <p class="mb-0">For {{ cancellationData.distilleryName }}</p>
-          <div style="height: 30px"></div>
-          <p class="mb-0">(Authorized Signatory)</p>
-        </div>
-
+        <!-- Print Button -->
         <div class="no-print d-flex justify-content-center mt-4">
-          <button class="btn btn-primary" (click)="printLetter()">
-            <i class="bi bi-printer me-1"></i>Print Application
+          <button class="btn btn-danger btn-lg" (click)="printLetter()">
+            <i class="bi bi-printer me-2"></i>Print Cancellation Application
           </button>
         </div>
       </div>
@@ -163,7 +170,9 @@
     <div class="alert alert-warning text-center">
       <h4>No Data Found</h4>
       <p>The requested cancellation application could not be found.</p>
-      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
+      <button class="btn btn-primary" (click)="goBack()">
+        Return to Commissioner Dashboard
+      </button>
     </div>
     }
   </div>
