@@ -3,110 +3,97 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { LicenseType } from '../../../../../core/models/license-type.model';
-import { LicenseCategory } from '../../../../../core/models/license-category.model';
-import { LicenseSubcategory } from '../../../../../core/models/license-subcategory.model';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
-import { DatePipe } from '@angular/common';
 import { MasterService } from '../../../../../core/services/master.service';
+
+interface LicenseCategory {
+  id: number;
+  name: string;
+}
+
+interface District {
+  id: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-key-info',
   standalone: true,
   imports: [MaterialModule],
   templateUrl: './key-info.component.html',
-  styleUrl: './key-info.component.scss',
-  providers: [DatePipe]
+  styleUrl: './key-info.component.scss'
 })
 export class KeyInfoComponent implements OnInit, OnDestroy {
-  keyInfoForm: FormGroup;
- 
-  licenseCategories: LicenseCategory[] = [];
-  licenseSubcategories: LicenseSubcategory[] = [];
-  filteredSubcategories: LicenseSubcategory[] = [];
-  licenseNatures: string[] = ['Regular', 'Temporary', 'Seasonal', 'Special Event'];
-  functioningStatuses: string[] = ['Yes', 'No'];
-  modeOfOperations: string[] = ['Self', 'Salesman', 'Barman'];
 
+  // Reactive form group
+  keyInfoForm: FormGroup;
+
+  // Dropdown options
+  licenseCategories: LicenseCategory[] = [];
+  licenseSubCategories: LicenseCategory[] = [];
+  districts: District[] = [];
+
+  // Event emitters for navigation
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
+  // Subject for managing subscriptions
   private destroy$ = new Subject<void>();
 
+  // Signal-based error messages for reactive display
   errorMessages = {
-
     licenseCategory: signal(''),
     licenseSubCategory: signal(''),
     establishmentName: signal(''),
-    // mobileNumber: signal(''),
-    // email: signal(''),
-    // licenseNo: signal(''),
-    // initialGrantDate: signal(''),
-    // renewedFrom: signal(''),
-    // validUpTo: signal(''),
-    // yearlyLicenseFee: signal(''),
-    licenseNature: signal(''),
-    functioningStatus: signal(''),
-    modeOfOperation: signal('')
+    locationDistrict: signal(''),
+    siteType: signal('')
   };
 
   constructor(
     private fb: FormBuilder,
-    private masterService: MasterService,
-    private datePipe: DatePipe
+    private masterService: MasterService
   ) {
+    // Retrieve data from session storage if available
     const storedValues = this.getFromSessionStorage();
 
+    // Initialize reactive form with validation
     this.keyInfoForm = this.fb.group({
-      
-      licenseCategory: new FormControl(storedValues.licenseCategory || '', [Validators.required]),
-      licenseSubCategory: new FormControl(storedValues.licenseSubCategory || '', [Validators.required]),
-      establishmentName: new FormControl(storedValues.establishmentName || '', [
+      licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
+      licenseSubCategory: new FormControl(storedValues.licenseSubCategory, [Validators.required]),
+      establishmentName: new FormControl(storedValues.establishmentName, [
         Validators.required,
         Validators.maxLength(150),
         Validators.pattern(PatternConstants.ORGANISATION_NAME),
       ]),
-      // mobileNumber: new FormControl(storedValues.mobileNumber || '', [
-      //   Validators.required,
-      //   Validators.pattern(PatternConstants.MOBILE)
-      // ]),
-      // email: new FormControl(storedValues.email || '', [
-      //   Validators.required,
-      //   Validators.pattern(PatternConstants.EMAIL)
-      // ]),
-      // licenseNo: new FormControl(storedValues.licenseNo || '', [
-      //   Validators.pattern(PatternConstants.CODE),
-      //   Validators.maxLength(50)
-      // ]),
-      // initialGrantDate: new FormControl(storedValues.initialGrantDate || null),
-      // renewedFrom: new FormControl(storedValues.renewedFrom || null),
-      // validUpTo: new FormControl(storedValues.validUpTo || null),
-      // yearlyLicenseFee: new FormControl(storedValues.yearlyLicenseFee || '', [
-      //   Validators.pattern(PatternConstants.NUMBER)
-      // ]),
-      licenseNature: new FormControl(storedValues.licenseNature || '', [Validators.required]),
-      functioningStatus: new FormControl(storedValues.functioningStatus || '', [Validators.required]),
-      modeOfOperation: new FormControl(storedValues.modeOfOperation || '', [Validators.required])
+      locationDistrict: new FormControl(storedValues.locationDistrict, [Validators.required]),
+      siteType: new FormControl(storedValues.siteType, [Validators.required])
     });
 
+    // Subscribe to form changes to update session storage and errors
     this.keyInfoForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.saveToSessionStorage();
         this.updateAllErrorMessages();
       });
-
-    // Listen for licenseCategory changes to update subcategories
-    this.keyInfoForm.get('licenseCategory')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(categoryId => {
-        this.onCategoryChange(categoryId);
-      });
   }
 
   ngOnInit() {
     this.loadDropdownData();
+
+    // Watch for category changes to load sub-categories
+    this.keyInfoForm.get('licenseCategory')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((categoryId) => {
+        if (categoryId) {
+          this.loadSubCategories(categoryId);
+        } else {
+          // Clear subcategories if no category selected
+          this.licenseSubCategories = [];
+          this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
+        }
+      });
   }
 
   ngOnDestroy() {
@@ -115,92 +102,106 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   }
 
   private loadDropdownData(): void {
-    
+    // Load license categories
+    this.masterService.getLicenseCategories().subscribe(
+      (data: any[]) => {
+        console.log(' Backend license categories:', data);
 
-    this.masterService.getLicenseCategories().subscribe({
-      next: (data: LicenseCategory[]) => {
-        this.licenseCategories = data;
-        const storedCategoryId = this.keyInfoForm.get('licenseCategory')?.value;
-        if (storedCategoryId) {
-          this.onCategoryChange(storedCategoryId);
-        }
-      },
-      error: (error) => {
-        console.error('Failed to load license categories.', error);
-      }
-    });
+        this.licenseCategories = data.map(item => ({
+          id: item.id,
+          name: item.licenseCategory || item.license_category || item.name
+        }));
 
-    this.masterService.getLicenseSubcategories().subscribe({
-      next: (data: LicenseSubcategory[]) => {
-        this.licenseSubcategories = data;
-        const storedCategoryId = this.keyInfoForm.get('licenseCategory')?.value;
-        if (storedCategoryId) {
-          this.filteredSubcategories = this.filterSubcategories(storedCategoryId);
-          const storedSubCategoryId = this.keyInfoForm.get('licenseSubCategory')?.value;
-          if (storedSubCategoryId && !this.filteredSubcategories.find(sub => sub.id === storedSubCategoryId)) {
-            this.keyInfoForm.get('licenseSubCategory')?.setValue('');
-          }
-        }
+        console.log(' Mapped categories:', this.licenseCategories);
       },
-      error: (error) => {
-        console.error('Failed to load license subcategories.', error);
+      error => {
+        console.error(' Failed to load license categories:', error);
       }
-    });
+    );
+
+    // Load districts
+    this.masterService.getDistrict().subscribe(
+      (data: any[]) => {
+        console.log(' Backend districts:', data);
+
+        this.districts = data.map(item => ({
+          id: item.id,
+          name: item.district || item.name
+        }));
+
+        console.log(' Mapped districts:', this.districts);
+      },
+      error => {
+        console.error(' Failed to load districts:', error);
+      }
+    );
   }
 
-  onCategoryChange(categoryId: number | string): void {
-    const id = Number(categoryId);
-    if (!isNaN(id)) {
-      this.filteredSubcategories = this.filterSubcategories(id);
-      // Reset subcategory if the current value is invalid for the new category
-      const currentSubCategoryId = this.keyInfoForm.get('licenseSubCategory')?.value;
-      if (currentSubCategoryId && !this.filteredSubcategories.find(sub => sub.id === currentSubCategoryId)) {
-        this.keyInfoForm.get('licenseSubCategory')?.setValue('');
-      }
-    } else {
-      this.filteredSubcategories = [];
-      this.keyInfoForm.get('licenseSubCategory')?.setValue('');
-    }
-    this.saveToSessionStorage();
-  }
+  private loadSubCategories(categoryId: number): void {
+    console.log(' Loading subcategories for category:', categoryId);
 
-  private filterSubcategories(categoryId: number): LicenseSubcategory[] {
-    return this.licenseSubcategories.filter(sub => {
-      // Handle cases where category is a number or LicenseCategory object
-      if (typeof sub.category === 'number') {
-        return sub.category === categoryId;
-      } else if (sub.category && typeof sub.category === 'object' && 'id' in sub.category) {
-        return sub.category.id === categoryId;
+    this.masterService.getLicenseSubcategories().subscribe(
+      (data: any[]) => {
+        console.log(' Raw subcategories from backend:', data);
+
+        if (data.length > 0) {
+          console.log(' First item structure:', JSON.stringify(data[0], null, 2));
+        }
+
+        // ✅ FRONTEND-ONLY FIX: Handle multiple possible backend formats
+        this.licenseSubCategories = data
+          .filter(item => {
+            // Extract category ID from various possible formats:
+            // 1. item.categoryId (if backend returns flat structure)
+            // 2. item.category_id (snake_case)
+            // 3. item.category.id (nested object)
+            // 4. item.category (if it's just the ID)
+            let itemCategoryId;
+
+            if (item.categoryId !== undefined) {
+              itemCategoryId = item.categoryId;
+            } else if (item.category_id !== undefined) {
+              itemCategoryId = item.category_id;
+            } else if (item.category && typeof item.category === 'object' && item.category.id) {
+              itemCategoryId = item.category.id;
+            } else if (item.category && typeof item.category === 'number') {
+              itemCategoryId = item.category;
+            }
+
+            const matches = Number(itemCategoryId) === Number(categoryId);
+            console.log(`  Item ${item.id}: categoryId=${itemCategoryId}, matches=${matches}`);
+
+            return matches;
+          })
+          .map(item => ({
+            id: item.id,
+            name: item.description || item.name || item.subcategory
+          }));
+
+        console.log(' Filtered subcategories:', this.licenseSubCategories);
+
+        if (this.licenseSubCategories.length === 0) {
+          console.warn(' No subcategories found for category:', categoryId);
+          console.warn(' Check the logs above to see the data structure');
+        }
+
+        // Reset subcategory selection
+        this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
+      },
+      error => {
+        console.error('❌ Failed to load subcategories:', error);
       }
-      return false;
-    });
+    );
   }
 
   private getFromSessionStorage(): Partial<LicenseApplication> {
     const storedData = sessionStorage.getItem('keyInfoData');
-    return storedData ? JSON.parse(storedData) as Partial<LicenseApplication> : {};
+    return storedData ? JSON.parse(storedData) : {};
   }
 
   private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.keyInfoForm.getRawValue();
-    const parsedDates = {
-      initialGrantDate: this.transformValidDate(formData.initialGrantDate),
-      renewedFrom: this.transformValidDate(formData.renewedFrom),
-      validUpTo: this.transformValidDate(formData.validUpTo),
-    };
-    sessionStorage.setItem(
-      'keyInfoData',
-      JSON.stringify({
-        ...formData,
-        ...parsedDates
-      })
-    );
-  }
-
-  private transformValidDate(dateValue: unknown): string | null {
-    if (!dateValue) return null;
-    const date = new Date(dateValue as string);
-    return isNaN(date.getTime()) ? null : this.datePipe.transform(date, 'yyyy-MM-dd');
+    const formData = this.keyInfoForm.getRawValue();
+    sessionStorage.setItem('keyInfoData', JSON.stringify(formData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
@@ -210,7 +211,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     } else if (control?.hasError('pattern')) {
       this.errorMessages[field].set('Invalid format');
     } else if (control?.hasError('maxlength')) {
-      this.errorMessages[field].set('Input exceeds maximum length');
+      this.errorMessages[field].set('Maximum 150 characters allowed');
     } else {
       this.errorMessages[field].set('');
     }
@@ -234,7 +235,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   resetForm() {
     this.keyInfoForm.reset();
-    this.filteredSubcategories = [];
     sessionStorage.removeItem('keyInfoData');
   }
 

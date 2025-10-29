@@ -1,0 +1,37 @@
+<form [formGroup]="selectLicenseForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Apply new License</div>
+      <div class="validation">
+        * Marked Fields Are Mandatory
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+        <div class="application-type-section">
+          <label class="section-label">Application Type <span class="required">*</span></label>
+          <mat-radio-group formControlName="licenseType" required>
+            @for (licenseType of licenseTypes; track licenseType.id) {
+              <mat-radio-button [value]="licenseType.id">
+                {{ licenseType.licenseType }}
+              </mat-radio-button>
+            }
+          </mat-radio-group>
+          @if (selectLicenseForm.get('licenseType')?.invalid && (selectLicenseForm.get('licenseType')?.touched || selectLicenseForm.get('licenseType')?.dirty)) {
+            <div class="error-text">
+              This field is required
+            </div>
+          }
+        </div>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!selectLicenseForm.valid" type="button">
+        Proceed
+      </button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

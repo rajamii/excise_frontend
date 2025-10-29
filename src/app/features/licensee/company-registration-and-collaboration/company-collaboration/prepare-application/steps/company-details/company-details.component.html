@@ -1,0 +1,130 @@
+<form [formGroup]="companyDetailsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Company Details</div>
+      <div class="validation">
+        * Marked Fields Are Mandatory
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Licensee Name</mat-label>
+          <input matInput placeholder="Enter Licensee Name" formControlName="licenseeName" required>
+          @if (companyDetailsForm.controls['licenseeName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseeName') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Licensee Address</mat-label>
+          <textarea matInput
+            placeholder="Enter complete licensee address"
+            formControlName="licenseeAddress"
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="4"
+            required>
+          </textarea>
+          @if (companyDetailsForm.controls['licenseeAddress'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseeAddress') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact Person</mat-label>
+          <input matInput placeholder="Enter Contact Person Name" formControlName="contactPerson" required>
+          @if (companyDetailsForm.controls['contactPerson'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('contactPerson') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Contact Number</mat-label>
+          <input matInput placeholder="Enter Contact Number" formControlName="contactNumber" type="tel" required>
+          @if (companyDetailsForm.controls['contactNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('contactNumber') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Email Address</mat-label>
+          <input matInput placeholder="Enter Email Address" formControlName="emailAddress" type="email" required>
+          @if (companyDetailsForm.controls['emailAddress'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('emailAddress') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>License Number</mat-label>
+          <input matInput placeholder="Enter License Number" formControlName="licenseNumber" required>
+          @if (companyDetailsForm.controls['licenseNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseNumber') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>License Type</mat-label>
+          <mat-select formControlName="licenseType" required>
+            <mat-option value="">-- Select License Type --</mat-option>
+            @for (type of licenseTypes; track type.value) {
+              <mat-option [value]="type.value">{{ type.label }}</mat-option>
+            }
+          </mat-select>
+          @if (companyDetailsForm.controls['licenseType'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseType') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Establishment Type</mat-label>
+          <mat-select formControlName="establishmentType" required>
+            <mat-option value="">-- Select Establishment Type --</mat-option>
+            @for (type of establishmentTypes; track type.value) {
+              <mat-option [value]="type.value">{{ type.label }}</mat-option>
+            }
+          </mat-select>
+          @if (companyDetailsForm.controls['establishmentType'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('establishmentType') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Business Registration Number</mat-label>
+          <input matInput placeholder="Enter Business Registration Number" formControlName="businessRegNumber" required>
+          @if (companyDetailsForm.controls['businessRegNumber'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('businessRegNumber') }}
+            </mat-error>
+          }
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!companyDetailsForm.valid">
+        Next
+      </button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

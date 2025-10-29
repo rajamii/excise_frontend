@@ -34,37 +34,30 @@
             <mat-list-item (click)="openLicenseInfo()" class="nav-header-cus">
               <span class="nav-header-cus">Apply For License</span>
             </mat-list-item>
-             <!-- Apply License link with dialog trigger -->
+             <!-- Apply New License link with dialog trigger -->
             <mat-list-item (click)="openNewLicenseInfo()" class="nav-header-cus">
               <span class="nav-header-cus">Apply New License</span>
             </mat-list-item>
-            <!-- Accordion Menu for Company Registration -->
+      <!-- Accordion Menu for Company Registration/Collaboration -->
             <mat-accordion>
               <mat-expansion-panel>
                 <mat-expansion-panel-header>
-                  Company Registration
-                </mat-expansion-panel-header>
-                <div class="button-column">
-                  <button mat-menu-item routerLink="company/prepare-application" routerLinkActive="active-link">Prepare Application</button>
-                  <button mat-menu-item routerLink="company/application-action" routerLinkActive="active-link">Act On Application</button>
-                  <button mat-menu-item routerLink="company/print-certificate" routerLinkActive="active-link">Print Certificate</button>
-                </div>
-              </mat-expansion-panel>
-            </mat-accordion>
-            <!-- Accordion Menu for Salesman/Barman Registration -->
-            <mat-accordion>
-              <mat-expansion-panel>
-                <mat-expansion-panel-header>
-                  Salesman/Barman Registration
-                </mat-expansion-panel-header>
-                <div class="button-column">
-                  <button mat-menu-item routerLink="salesman-barman/prepare-application" routerLinkActive="active-link">Prepare Application</button>
-                  <button mat-menu-item routerLink="salesman-barman/application-action" routerLinkActive="active-link">Act On Draft Application</button>
-                  <button mat-menu-item routerLink="salesman-barman/print-certificate" routerLinkActive="active-link">Print Certificate</button>
-                  <button mat-menu-item routerLink="salesman-barman/application-status" routerLinkActive="active-link">Application Status</button>
-                </div>
-              </mat-expansion-panel>
-            </mat-accordion>
+            Company Registration/Collaboration
+    </mat-expansion-panel-header>
+    <div class="button-column">
+      <button mat-menu-item routerLink="company-registration-and-collaboration/company-registration/prepare-application" routerLinkActive="active-link">Company Registration</button>
+      <button mat-menu-item routerLink="company-registration-and-collaboration/company-collaboration/prepare-application" routerLinkActive="active-link">Company Collaboration</button>
+    </div>
+  </mat-expansion-panel>
+</mat-accordion>
+            
+            <!-- Simplified Salesman/Barman Registration - Direct Navigation -->
+            <mat-list-item routerLink="salesman-barman/prepare-application" routerLinkActive="active-link">
+              <span class="nav-header-cus">
+                Salesman/Barman Registration
+              </span>
+            </mat-list-item>
+            
           </mat-nav-list>
         }
       </div>

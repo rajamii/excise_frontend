@@ -6,7 +6,7 @@
 
     <!-- Card Header with title and mandatory note -->
     <mat-card-header>
-      <div class="heading">Company Form</div>
+      <div class="heading">Company Details</div>
       <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
@@ -29,7 +29,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Registered Office Address</mat-label>
           <textarea matInput
-            placeholder="Enter License Number if any (max 50 characters)"
+            placeholder="Enter Registered Office Address (max 500 characters)"
             formControlName="companyAddress"
             cdkTextareaAutosize
             #autosize="cdkTextareaAutosize"
@@ -107,13 +107,13 @@
     <!-- Action Buttons -->
     <mat-card-actions>
       <!-- Go back to previous step -->
-      <button matButton="outlined" (click)="goBack()">Back</button>
+      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
 
       <!-- Reset form values -->
-      <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
 
       <!-- Proceed to next step, disabled if form is invalid -->
-      <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!unitDetailsForm.valid">Next</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!unitDetailsForm.valid" type="button">Next</button>
     </mat-card-actions>
 
   </mat-card>
