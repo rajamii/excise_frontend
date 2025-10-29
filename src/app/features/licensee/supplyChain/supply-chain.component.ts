@@ -225,6 +225,7 @@ export class SupplyChainComponent {
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.refreshHologramList();
+    this.loadRequisitionData();
   }
 
   private refreshHologramList(): void {
@@ -285,6 +286,86 @@ export class SupplyChainComponent {
     this.hologramList = mapped;
   }
 
+  private loadRequisitionData(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Load import permit requests from localStorage
+    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    
+    // Sort by submission time (newest first) to ensure proper ordering
+    importPermitRequests.sort((a: any, b: any) => {
+      const dateA = new Date(a.submittedAt || a.date).getTime();
+      const dateB = new Date(b.submittedAt || b.date).getTime();
+      return dateB - dateA; // Newest first
+    });
+    
+    // Convert import permit data to requisition format
+    const importPermitData: TableData[] = importPermitRequests.map((permit: any) => ({
+      referenceNo: permit.refNo,
+      submissionDate: new Date(permit.date).toLocaleDateString('en-GB'),
+      distilleryName: this.getDistilleryDisplayName(permit.liftedFrom),
+      status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
+      amount: "8.00"
+    }));
+
+    // Get the original sample data (without any previously added import permits)
+    const originalSampleData: TableData[] = [
+      {
+        referenceNo: "BF502/EXCISE",
+        submissionDate: "22-Sep-2025",
+        distilleryName: "Sikkim Distilleries Ltd",
+        status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
+        amount: "8.00",
+      },
+      {
+        referenceNo: "BF503/EXCISE",
+        submissionDate: "21-Sep-2025",
+        distilleryName: "Himalayan Distilleries Pvt Ltd",
+        status: "APPLICATION UNDER REVIEW BY DEPARTMENT.",
+        amount: "12.50",
+      },
+      {
+        referenceNo: "BF504/EXCISE",
+        submissionDate: "20-Sep-2025",
+        distilleryName: "Royal Sikkim Brewery",
+        status: "PERMIT APPROVED AND READY FOR COLLECTION.",
+        amount: "15.75",
+      },
+      {
+        referenceNo: "BF505/EXCISE",
+        submissionDate: "19-Sep-2025",
+        distilleryName: "Mountain View Distilleries",
+        status: "DOCUMENTATION VERIFICATION IN PROGRESS.",
+        amount: "9.25",
+      },
+      {
+        referenceNo: "BF506/EXCISE",
+        submissionDate: "18-Sep-2025",
+        distilleryName: "Eastern Himalaya Distillery",
+        status: "PERMIT PROCESSING - AWAITING FINAL APPROVAL.",
+        amount: "11.00",
+      }
+    ];
+
+    // Combine with sample data, putting new submissions at the top
+    this.requisitionData = [...importPermitData, ...originalSampleData];
+  }
+
+  private getDistilleryDisplayName(value: string): string {
+    switch (value) {
+      case 'sikkim-distilleries':
+        return 'Sikkim Distilleries Ltd';
+      case 'mountain-spirits':
+        return 'Mountain Spirits Pvt Ltd';
+      case 'highland-breweries':
+        return 'Highland Breweries';
+      default:
+        return 'Unknown Distillery';
+    }
+  }
+
   // UI interaction methods only
   onSearch(): void {
     // Frontend search logic only
@@ -303,6 +384,9 @@ export class SupplyChainComponent {
     if (tab === "hologram") {
       // refresh list on each visit
       this.refreshHologramList();
+    } else if (tab === "requisition") {
+      // refresh requisition data on each visit
+      this.loadRequisitionData();
     }
   }
 
