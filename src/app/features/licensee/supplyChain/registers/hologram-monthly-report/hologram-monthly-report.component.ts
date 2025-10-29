@@ -216,7 +216,7 @@ export class HologramMonthlyReportComponent implements OnInit {
     private router: Router, 
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private hologramDataService: HologramDataService
+    public hologramDataService: HologramDataService
   ) {}
 
   ngOnInit(): void {
@@ -232,6 +232,14 @@ export class HologramMonthlyReportComponent implements OnInit {
     
     // Auto-calculate from daily register on initialization
     this.calculateFromDailyRegister();
+    
+    // Subscribe to daily entries changes for real-time updates
+    this.hologramDataService.dailyEntries$.subscribe((entries) => {
+      console.log('Monthly report received daily entries update:', entries.length, 'entries');
+      // Recalculate when daily entries change
+      this.calculateFromDailyRegister();
+      this.cdr.detectChanges();
+    });
   }
 
   // Monthly data management
@@ -273,36 +281,59 @@ export class HologramMonthlyReportComponent implements OnInit {
 
   // Auto-calculate monthly totals from daily register data
   private calculateFromDailyRegister(): void {
-    // This method would integrate with the daily register component
-    // For now, we'll simulate the auto-calculation logic
+    console.log('=== CALCULATING FROM DAILY REGISTER ===');
+    console.log('Selected filters:', this.selectedMonth, this.selectedYear, this.selectedHologramType);
+    
     const monthlyTotals = this.getMonthlyTotalsFromDailyRegister();
+    console.log('Monthly totals from service:', monthlyTotals);
     
     if (monthlyTotals && this.filteredRows.length > 0) {
+      console.log('Filtered rows available:', this.filteredRows.length);
+      
       // Update the first row with calculated values from daily register
       const firstRow = this.filteredRows[0];
+      console.log('First row:', firstRow);
+      
       if (firstRow && !firstRow.isFixed) {
+        console.log('First row is not fixed, updating...');
+        let hasUpdates = false;
+        
         // Auto-populate utilization data
-        if (monthlyTotals.utilizationFromSerial && monthlyTotals.utilizationToSerial) {
+        if (monthlyTotals.utilizationFromSerial && monthlyTotals.utilizationToSerial && monthlyTotals.totalUtilized > 0) {
+          console.log('Updating utilization data:', monthlyTotals.utilizationFromSerial, 'to', monthlyTotals.utilizationToSerial, '=', monthlyTotals.totalUtilized);
           firstRow.utilizations = [{
             fromSerialNo: monthlyTotals.utilizationFromSerial,
             toSerialNo: monthlyTotals.utilizationToSerial,
             quantity: monthlyTotals.totalUtilized
           }];
+          hasUpdates = true;
         }
         
         // Auto-populate wastage data
-        if (monthlyTotals.wastageFromSerial && monthlyTotals.wastageToSerial) {
+        if (monthlyTotals.wastageFromSerial && monthlyTotals.wastageToSerial && monthlyTotals.totalWastage > 0) {
+          console.log('Updating wastage data:', monthlyTotals.wastageFromSerial, 'to', monthlyTotals.wastageToSerial, '=', monthlyTotals.totalWastage);
           firstRow.wastages = [{
             fromSerialNo: monthlyTotals.wastageFromSerial,
             toSerialNo: monthlyTotals.wastageToSerial,
             quantity: monthlyTotals.totalWastage
           }];
+          hasUpdates = true;
         }
         
         // Recalculate row totals
-        this.onRowDataChange(firstRow);
+        if (hasUpdates) {
+          this.onRowDataChange(firstRow);
+          console.log('Monthly statement automatically updated from daily register data');
+        } else {
+          console.log('No updates needed - no valid data from daily register');
+        }
+      } else {
+        console.log('First row is fixed or not available');
       }
+    } else {
+      console.log('No monthly totals or filtered rows available');
     }
+    console.log('=== END CALCULATION ===');
   }
 
   // Get monthly totals from daily register
@@ -353,8 +384,20 @@ export class HologramMonthlyReportComponent implements OnInit {
 
   // Public method to trigger auto-calculation
   autoCalculateFromDaily(): void {
+    console.log('Manual refresh triggered');
+    
+    // Force reload data from service
+    const serviceEntries = this.hologramDataService.getDailyEntries();
+    console.log('Service has', serviceEntries.length, 'entries');
+    
+    // Recalculate
     this.calculateFromDailyRegister();
-    alert('Monthly totals have been refreshed from daily register data!');
+    this.cdr.detectChanges();
+    
+    const monthlyTotals = this.getMonthlyTotalsFromDailyRegister();
+    const message = `Monthly totals refreshed!\n\nFrom Daily Register:\n- Total Utilized: ${monthlyTotals.totalUtilized}\n- Total Wastage: ${monthlyTotals.totalWastage}\n- Utilization Serials: ${monthlyTotals.utilizationFromSerial} to ${monthlyTotals.utilizationToSerial}`;
+    
+    alert(message);
   }
 
   // Navigate to daily register

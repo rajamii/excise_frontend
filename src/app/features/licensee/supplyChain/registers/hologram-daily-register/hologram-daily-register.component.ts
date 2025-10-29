@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { HologramDataService, HologramDailyEntry } from '../../../supplyChain/se
   templateUrl: './hologram-daily-register.component.html',
   styleUrls: ['./hologram-daily-register.component.scss']
 })
-export class HologramDailyRegisterComponent {
+export class HologramDailyRegisterComponent implements OnInit {
   Math = Math;
   selectedMonth = 'jul';
   selectedYear = '2025';
@@ -72,8 +72,19 @@ export class HologramDailyRegisterComponent {
   ) {
     console.log('HologramDailyRegisterComponent constructor called');
     
-    // Initialize with the hardcoded sample data first
-    // (We'll use the service later, but for now let's get the basic functionality working)
+    // Load existing data from service first
+    const existingEntries = this.hologramDataService.getDailyEntries();
+    
+    if (existingEntries.length > 0) {
+      // Use existing service data
+      this.dailyEntries = existingEntries;
+      console.log('Loaded existing entries from service:', this.dailyEntries.length);
+    } else {
+      // Initialize service with sample data if no data exists
+      console.log('No existing data, initializing with sample data');
+      this.initializeSampleData();
+      this.hologramDataService.updateDailyEntries(this.dailyEntries);
+    }
     
     // Calculate quantities for existing entries
     this.dailyEntries.forEach(entry => {
@@ -86,6 +97,12 @@ export class HologramDailyRegisterComponent {
     
     console.log('Constructor completed. Daily entries:', this.dailyEntries.length);
     console.log('Filtered entries:', this.filteredEntries.length);
+  }
+
+  ngOnInit(): void {
+    // Ensure data is properly loaded and service is updated
+    this.hologramDataService.updateDailyEntries(this.dailyEntries);
+    console.log('ngOnInit: Service updated with current entries');
   }
 
   loadFilteredData(): void {
@@ -210,6 +227,9 @@ export class HologramDailyRegisterComponent {
     // Add to the main array
     this.dailyEntries.push(newEntry);
     
+    // Update the service immediately
+    this.hologramDataService.updateDailyEntries(this.dailyEntries);
+    
     console.log('After adding to dailyEntries:');
     console.log('- Total entries:', this.dailyEntries.length);
     console.log('- Last entry:', this.dailyEntries[this.dailyEntries.length - 1]);
@@ -221,7 +241,7 @@ export class HologramDailyRegisterComponent {
     console.log('- Filtered entries:', this.filteredEntries.length);
     console.log('- Editable entries:', this.getEditableEntriesCount());
     
-    // Force change detection to update the view
+    // Force change detection to update the view and summary
     this.cdr.detectChanges();
     
     console.log('=== END DEBUG ===');
@@ -232,10 +252,12 @@ export class HologramDailyRegisterComponent {
     entry.wastageQuantity = this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
     entry.leftOverQuantity = entry.issuedQuantity - entry.utilizedQuantity - entry.wastageQuantity;
     
-    // Update the service with the changed data
-    if (!entry.isFixed) {
-      this.hologramDataService.updateDailyEntry(entry);
-    }
+    // Update the service with the changed data immediately
+    this.hologramDataService.updateDailyEntry(entry);
+    console.log('Daily register updated entry in service:', entry.id, entry);
+    
+    // Force change detection to update summary
+    this.cdr.detectChanges();
   }
 
   onSerialChange(entry: HologramDailyEntry): void {
@@ -307,12 +329,16 @@ export class HologramDailyRegisterComponent {
     
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
+    console.log('Daily register updated all entries in service:', this.dailyEntries.length, 'entries');
     
-    // Refresh the display
+    // Refresh the display and summary
     this.loadFilteredData();
     
-    // Force change detection
+    // Force change detection to update summary
     this.cdr.detectChanges();
+    
+    // Show success message
+    alert('Entry saved successfully! Monthly statement will be automatically updated.');
     
     console.log('Entry saved successfully:', entry);
   }
@@ -357,6 +383,7 @@ export class HologramDailyRegisterComponent {
     wastageFromSerial: string;
     wastageToSerial: string;
   } {
+    // Always recalculate from current filtered entries
     const monthEntries = this.filteredEntries.filter(entry => entry.isFixed);
     
     let totalIssued = 0;
@@ -370,26 +397,32 @@ export class HologramDailyRegisterComponent {
     let wastageToSerial = '';
 
     if (monthEntries.length > 0) {
+      // Sort entries by date to get correct first and last serials
+      const sortedEntries = monthEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
       // Find first and last utilization serials
-      const utilizationEntries = monthEntries.filter(e => e.utilizedQuantity > 0);
+      const utilizationEntries = sortedEntries.filter(e => e.utilizedQuantity > 0 && e.issuedFromSerial && e.issuedToSerial);
       if (utilizationEntries.length > 0) {
         utilizationFromSerial = utilizationEntries[0].issuedFromSerial;
         utilizationToSerial = utilizationEntries[utilizationEntries.length - 1].issuedToSerial;
       }
 
       // Find first and last wastage serials
-      const wastageEntries = monthEntries.filter(e => e.wastageQuantity > 0);
+      const wastageEntries = sortedEntries.filter(e => e.wastageQuantity > 0 && e.wastageFromSerial && e.wastageToSerial);
       if (wastageEntries.length > 0) {
         wastageFromSerial = wastageEntries[0].wastageFromSerial;
         wastageToSerial = wastageEntries[wastageEntries.length - 1].wastageToSerial;
       }
 
       // Calculate totals
-      totalIssued = monthEntries.reduce((sum, entry) => sum + entry.issuedQuantity, 0);
-      totalUtilized = monthEntries.reduce((sum, entry) => sum + entry.utilizedQuantity, 0);
-      totalWastage = monthEntries.reduce((sum, entry) => sum + entry.wastageQuantity, 0);
-      totalLeftOver = monthEntries.reduce((sum, entry) => sum + entry.leftOverQuantity, 0);
+      totalIssued = sortedEntries.reduce((sum, entry) => sum + entry.issuedQuantity, 0);
+      totalUtilized = sortedEntries.reduce((sum, entry) => sum + entry.utilizedQuantity, 0);
+      totalWastage = sortedEntries.reduce((sum, entry) => sum + entry.wastageQuantity, 0);
+      totalLeftOver = sortedEntries.reduce((sum, entry) => sum + entry.leftOverQuantity, 0);
     }
+
+    // Update the service with latest totals
+    this.hologramDataService.updateDailyEntries(this.dailyEntries);
 
     return {
       totalIssued,
@@ -401,6 +434,22 @@ export class HologramDailyRegisterComponent {
       wastageFromSerial,
       wastageToSerial
     };
+  }
+
+  // Force refresh summary
+  refreshSummary(): void {
+    this.loadFilteredData();
+    this.cdr.detectChanges();
+  }
+
+  // Get current timestamp for display
+  getCurrentTimestamp(): string {
+    return new Date().toLocaleString();
+  }
+
+  // Check if there are any fixed entries for live data indicator
+  hasFixedEntries(): boolean {
+    return this.filteredEntries.filter(e => e.isFixed).length > 0;
   }
 
   // Pagination methods

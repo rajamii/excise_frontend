@@ -167,6 +167,19 @@
       <!-- Data Table Section -->
       <div class="bg-white">
         <div class="container-fluid p-3">
+          <!-- Debug Panel -->
+          <div class="mb-3 p-2 bg-light border rounded">
+            <small class="text-muted">
+              <strong>Integration Debug:</strong> 
+              Service Entries: {{ hologramDataService.getDailyEntries().length }} | 
+              Monthly Totals: Utilized={{ getMonthlyTotalsFromDailyRegister().totalUtilized }}, 
+              Wastage={{ getMonthlyTotalsFromDailyRegister().totalWastage }} |
+              Filtered Rows: {{ filteredRows.length }}
+            </small>
+            <button class="btn btn-sm btn-outline-info ms-2" (click)="autoCalculateFromDaily()">
+              Test Integration
+            </button>
+          </div>
           <div class="table-responsive overflow-auto" style="max-width: 100vw;">
             <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
               <thead class="table-success">
