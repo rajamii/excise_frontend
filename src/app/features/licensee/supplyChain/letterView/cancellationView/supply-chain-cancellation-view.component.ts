@@ -125,37 +125,242 @@ export class SupplyChainCancellationViewComponent implements OnInit {
   }
 
   printApplication(): void {
-    const printable = document.getElementById('cancellationPrintSection')?.innerHTML || '';
+    if (!this.isBrowser) {
+      console.warn('Print functionality not available in server-side rendering');
+      return;
+    }
+
+    const printSection = document.getElementById('cancellationPrintSection');
+    if (!printSection) {
+      console.error('Print section not found');
+      alert('Print section not found. Please try again.');
+      return;
+    }
+
+    const printable = printSection.innerHTML;
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map(el => (el as HTMLElement).outerHTML)
       .join('');
-    const win = window.open('', '_blank', 'width=900,height=1000');
-    if (!win) return;
+
+    const win = window.open('', '_blank', 'width=1200,height=1400,scrollbars=yes,resizable=yes');
+    if (!win) {
+      alert('Pop-up blocked. Please allow pop-ups for this site to enable printing.');
+      return;
+    }
+
+    const ref = this.cancellationData?.referenceNo || 'Unknown';
+    
     win.document.open();
-    const ref = this.cancellationData?.referenceNo || '';
     win.document.write(`<!doctype html>
       <html>
         <head>
           <title>Cancellation Application - ${ref}</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           ${styles}
           <style>
-            @page { size: A4; margin: 12mm; }
-            body { background: #fff; }
-            .no-print { display:none !important; }
-            .printable-content, .printable-content * { visibility: visible !important; }
+            @page { 
+              size: A4; 
+              margin: 8mm; 
+            }
+            * {
+              box-sizing: border-box;
+            }
+            html, body { 
+              background: #fff !important; 
+              font-family: Arial, sans-serif;
+              line-height: 1.1;
+              color: #000 !important;
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: auto;
+              overflow-x: hidden;
+              font-size: 11px !important;
+            }
+            .no-print { 
+              display: none !important; 
+            }
+            .printable-content { 
+              width: 100% !important;
+              max-width: none !important;
+              padding: 5px;
+            }
+            .card {
+              border: 1px solid #000 !important;
+              box-shadow: none !important;
+              margin: 0 !important;
+              width: 100% !important;
+            }
+            .application-header {
+              background: white !important;
+              border-bottom: 2px solid #000 !important;
+              padding: 8px !important;
+              text-align: center;
+            }
+            .application-header img {
+              height: 35px !important;
+              width: auto !important;
+            }
+            .application-header span {
+              font-size: 12px !important;
+              font-weight: bold !important;
+            }
+            .application-header .fs-4 {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              margin-top: 3px !important;
+            }
+            .text-danger {
+              color: #000 !important;
+              font-weight: bold !important;
+            }
+            .summary-card {
+              background: #f5f5f5 !important;
+              color: #000 !important;
+              border: 1px solid #000 !important;
+              margin: 5px 0 !important;
+              padding: 8px !important;
+            }
+            .info-card {
+              background: #f9f9f9 !important;
+              border-left: 3px solid #000 !important;
+              margin: 5px 0 !important;
+              padding: 8px !important;
+            }
+            .section-card {
+              border: 1px solid #000 !important;
+              margin: 5px 0 !important;
+              padding: 8px !important;
+            }
+            .section-title {
+              color: #000 !important;
+              border-bottom: 1px solid #000 !important;
+              font-weight: bold !important;
+              margin-bottom: 5px !important;
+              padding-bottom: 2px !important;
+              font-size: 12px !important;
+            }
+            .summary-box {
+              border: 1px solid #000 !important;
+              padding: 8px !important;
+              margin: 5px 0 !important;
+              text-align: center;
+            }
+            .table {
+              border-collapse: collapse !important;
+              width: 100% !important;
+              margin: 5px 0 !important;
+              font-size: 10px !important;
+            }
+            .table td, .table th {
+              border: 1px solid #000 !important;
+              padding: 4px !important;
+              text-align: left !important;
+              line-height: 1.1 !important;
+            }
+            .table th {
+              background: #f0f0f0 !important;
+              font-weight: bold !important;
+            }
+            .row {
+              display: flex !important;
+              flex-wrap: wrap !important;
+              margin: 0 !important;
+            }
+            .col-md-6, .col-md-3 {
+              flex: 1 !important;
+              padding: 3px !important;
+              min-width: 150px !important;
+            }
+            .d-flex {
+              display: flex !important;
+            }
+            .justify-content-between {
+              justify-content: space-between !important;
+            }
+            .text-center {
+              text-align: center !important;
+            }
+            .fw-bold, .fw-semibold {
+              font-weight: bold !important;
+            }
+            .mb-2, .mb-3, .mb-4 {
+              margin-bottom: 5px !important;
+            }
+            .mt-2, .mt-3, .mt-4 {
+              margin-top: 5px !important;
+            }
+            .p-4 {
+              padding: 8px !important;
+            }
+            .badge {
+              background: #f0f0f0 !important;
+              color: #000 !important;
+              border: 1px solid #000 !important;
+              padding: 2px 5px !important;
+              border-radius: 2px !important;
+              font-size: 9px !important;
+            }
+            .summary-item {
+              margin: 3px 0 !important;
+            }
+            .summary-value {
+              font-size: 11px !important;
+              font-weight: bold !important;
+            }
+            .summary-label {
+              font-size: 9px !important;
+              color: #666 !important;
+            }
+            h6 {
+              font-size: 11px !important;
+              margin: 3px 0 !important;
+            }
+            p {
+              margin: 2px 0 !important;
+              font-size: 10px !important;
+            }
+            strong {
+              font-weight: bold !important;
+            }
+            /* Compact layout for single page */
+            .application-content {
+              padding: 5px !important;
+            }
+            .info-card h6 {
+              margin-bottom: 3px !important;
+            }
+            .info-card p {
+              margin-bottom: 2px !important;
+            }
+            /* Ensure content fits on one page */
+            .application-content > * {
+              page-break-inside: avoid;
+            }
+            /* Reduce spacing between sections */
+            .section-card + .section-card {
+              margin-top: 3px !important;
+            }
           </style>
         </head>
         <body>
-          ${printable}
+          <div class="printable-content">
+            ${printable}
+          </div>
         </body>
       </html>`);
     win.document.close();
-    win.onload = () => {
+
+    // Wait for content to load before printing
+    setTimeout(() => {
       win.focus();
       win.print();
-      win.close();
-    };
+      // Don't auto-close to allow user to see the print preview
+    }, 1000);
   }
+
+
 
   getDistilleryName(code: string): string {
     const distilleryMap: { [key: string]: string } = {
