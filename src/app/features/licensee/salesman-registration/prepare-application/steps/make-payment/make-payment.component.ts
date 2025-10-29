@@ -20,9 +20,10 @@ export class MakePaymentComponent {
   }
 
   proceedToNext() {
-    if (this.makePaymentForm.valid) {
-      this.next.emit();
-    }
+    // if (this.makePaymentForm.valid) {
+    //   this.next.emit();
+    // }
+    this.next.emit(); // Skip payment for now
   }
 
   goBack() {

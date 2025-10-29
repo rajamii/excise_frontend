@@ -5,8 +5,6 @@ import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../../shared/material.module';
 import { SalesmanBarman } from '../../../../../../core/models/salesman-barman.model';
 import { DatePipe } from '@angular/common';
-import { BaseDependency } from '../../../../../../base/dependency/base.dependency';
-import { BaseComponent } from '../../../../../../base/base.components';
 import { MasterService } from '../../../../../../core/services/master.service';
 
 @Component({
@@ -48,7 +46,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
       this.licenseForm = this.fb.group({
         applicationYear: new FormControl(storedValues.applicationYear, [Validators.required]),
-        applicationId: new FormControl(storedValues.applicationId, [Validators.required]),
+        // applicationId: new FormControl(storedValues.applicationId, [Validators.required]),
         applicationDate: new FormControl(storedValues.applicationDate, [Validators.required]),
         district: new FormControl(storedValues.district, [Validators.required]),
         licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
@@ -89,15 +87,14 @@ export class LicenseComponent implements OnInit, OnDestroy {
   }
 
   private saveToSessionStorage() {
-    const formData: Partial<SalesmanBarman> = this.licenseForm.getRawValue();
-    const rawDate = new Date(formData.applicationDate as string);
-
-    if (!isNaN(rawDate.getTime())) {
-      formData.applicationDate = this.datePipe.transform(rawDate, 'yyyy-MM-dd')!;
-    }
-    
-    sessionStorage.setItem('licenseDetails', JSON.stringify(formData));
+  const formData: Partial<SalesmanBarman> = this.licenseForm.getRawValue();
+  const rawDate = new Date(formData.applicationDate as string);
+  if (!isNaN(rawDate.getTime())) {
+    formData.applicationDate = this.datePipe.transform(rawDate, 'yyyy-MM-dd')!;
   }
+  // Don't include applicationId
+  sessionStorage.setItem('licenseDetails', JSON.stringify(formData));
+}
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.licenseForm.get(field);

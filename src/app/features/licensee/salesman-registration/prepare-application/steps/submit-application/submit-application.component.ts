@@ -116,74 +116,65 @@ export class SubmitApplicationComponent {
   }
 
   // Submit the full application: company, member, payment, and documents
-  async submit(): Promise<void> {
-    const confirm = await Swal.fire({
-      // Show confirmation dialog
-      title: 'Are you sure?',
-      text: 'Do you want to submit this application?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel',
-    });
+  async submit() {
+  const confirm = await Swal.fire({
+    title: 'Submit Application?',
+    text: 'Are you sure you want to submit this application?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Submit',
+    cancelButtonText: 'Cancel',
+  });
 
-    if (!confirm.isConfirmed) {
+  if (!confirm.isConfirmed) return;
+
+  try {
+    const licenseDetails: Partial<SalesmanBarman> = JSON.parse(sessionStorage.getItem('licenseDetails') || '{}');
+    const personalDetails: Partial<SalesmanBarman> = JSON.parse(sessionStorage.getItem('personalDetails') || '{}');
+    const documents = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+
+    if (!licenseDetails.role || !personalDetails.firstName || Object.keys(documents).length < 4) {
+      Swal.fire('Incomplete', 'Please fill all steps.', 'warning');
       return;
     }
 
-    try {
-      // Parse all stored data from sessionStorage
-      const licenseDetails: Partial<SalesmanBarman> = JSON.parse(sessionStorage.getItem('licenseDetails') || '{}');
-      const personalDetails: Partial<SalesmanBarman> = JSON.parse(sessionStorage.getItem('personalDetails') || '{}');
+    const formData = new FormData();
+    const combined = { ...licenseDetails, ...personalDetails };
 
-      // Get uploaded files from service
-      const salesmanBarmanDocuments = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-
-      if (!licenseDetails || !personalDetails || !salesmanBarmanDocuments) {
-        alert('Missing application data. Please complete the form.');
-        return;
+    Object.entries(combined).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        formData.append(key, value.toString());
       }
+    });
 
-      // Build the FormData object for the API
-      const formData = new FormData();
-      const combinedDetails = { ...licenseDetails, ...personalDetails };
+    Object.keys(documents).forEach(key => {
+      const file = documents[key as keyof SalesmanBarmanDocuments];
+      if (file) formData.append(key, file, file.name);
+    });
 
-      // Append form fields to FormData
-      Object.entries(combinedDetails).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          formData.append(key, value.toString());
-        }
-      });
-
-      for (const [key, file] of Object.entries(salesmanBarmanDocuments)) {
-        if (file) {
-          formData.append(key, file);
-        }
+    this.salesmanBarmanService.createSalesmanBarman(formData).subscribe({
+      next: (response) => {
+        Swal.fire({
+          title: 'Success!',
+          text: `Application submitted! ID: ${response.applicationId}`,
+          icon: 'success'
+        }).then(() => {
+          sessionStorage.clear();
+          this.salesmanBarmanService.clearSalesmanBarmanDocuments();
+          this.router.navigate(['/site-admin/dashboard']);
+        });
+      },
+      error: (err) => {
+        const msg = err.error?.detail || err.error?.non_field_errors?.[0] || 'Submission failed';
+        Swal.fire('Error', msg, 'error');
       }
+    });
 
-      // Make API call to submit form
-      this.salesmanBarmanService.createSalesmanBarman(formData).subscribe({
-        next: () => {
-          // On success: notify user, clear data, redirect
-          Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
-            sessionStorage.clear();
-            this.salesmanBarmanService.clearSalesmanBarmanDocuments();
-            this.router.navigate(['/site-admin/dashboard']);
-          });
-        },
-        error: (err) => {
-          // On failure: show error message
-          console.error('❌ Submission failed:', err.error);
-          const message = err?.error?.detail || 'Failed to submit application.';
-          Swal.fire('Error', message, 'error');
-        }
-      });
-
-    } catch (error) {
-      console.error('Unexpected error during submission:', error);
-      Swal.fire('Error', 'An unexpected error occurred.', 'error');
-    }
+  } catch (error) {
+    console.error(error);
+    Swal.fire('Error', 'Unexpected error.', 'error');
   }
+}
 
   // Emit "back" event to previous step
   goBack() {
