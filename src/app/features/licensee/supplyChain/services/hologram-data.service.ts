@@ -91,14 +91,14 @@ export class HologramDataService {
   }
 
   getMonthlyTotals(
-    month: string, 
-    year: string, 
+    month: string,
+    year: string,
     hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
   ): MonthlyTotals {
     const entries = this.getDailyEntries();
     const monthNumber = this.getMonthNumber(month);
-    
-    const filteredEntries = entries.filter(entry => 
+
+    const filteredEntries = entries.filter(entry =>
       entry.hologramType === hologramType &&
       entry.date.startsWith(`${year}-${monthNumber}`) &&
       entry.isFixed // Only include saved entries
@@ -108,7 +108,7 @@ export class HologramDataService {
     let totalUtilized = 0;
     let totalWastage = 0;
     let totalLeftOver = 0;
-    
+
     let utilizationFromSerial = '';
     let utilizationToSerial = '';
     let wastageFromSerial = '';

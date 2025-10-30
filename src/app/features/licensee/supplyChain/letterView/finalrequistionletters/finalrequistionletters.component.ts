@@ -35,6 +35,27 @@ interface ThirdLetterData {
   importFrom: string;
 }
 
+interface PermitData {
+  letterNo: string;
+  letterDate: string;
+  branchName: string;
+  branchAddress: string;
+  importDistilleryName: string;
+  importDistilleryAddress: string;
+  importFrom: string;
+  branchAddress1: string;
+  branchPurpose: string;
+  displayTotalENA: string;
+  strengthFrom: string;
+  strengthTo: string;
+  importPassFee: string;
+  brNumber: string;
+  route: string;
+  branchAddress2: string;
+  branchOfficer: string;
+  numberOfPermits: number;
+}
+
 @Component({
   selector: "app-finalrequistionletters",
   standalone: true,
@@ -75,6 +96,29 @@ export class FinalrequistionlettersComponent implements OnInit {
     strengthValue: "",
     importFrom: "",
   };
+
+  permitData: PermitData = {
+    letterNo: "_________",
+    letterDate: "_________",
+    branchName: "",
+    branchAddress: "",
+    importDistilleryName: "",
+    importDistilleryAddress: "",
+    importFrom: "",
+    branchAddress1: "",
+    branchPurpose: "",
+    displayTotalENA: "",
+    strengthFrom: "",
+    strengthTo: "",
+    importPassFee: "",
+    brNumber: "",
+    route: "",
+    branchAddress2: "",
+    branchOfficer: "",
+    numberOfPermits: 1,
+  };
+
+  copyNames: string[] = ["ORIGINAL", "DUPLICATE", "TRIPLICATE", "QUADRUPLICATE"];
 
   constructor(
     private router: Router,
@@ -144,10 +188,35 @@ export class FinalrequistionlettersComponent implements OnInit {
       strengthValue: "Extra Neutral Alcohol",
       importFrom: "West Bengal",
     };
+
+    this.permitData = {
+      letterNo: "EXC/2024/004",
+      letterDate: new Date().toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+      branchName: "Sikkim Distilleries Ltd",
+      branchAddress: "Rangpo, East Sikkim",
+      importDistilleryName: "Mount Distilleries Ltd",
+      importDistilleryAddress: "Kalimpong",
+      importFrom: "West Bengal",
+      branchAddress1: "Rangpo Check Post",
+      branchPurpose: "Manufacturing of IMFL",
+      displayTotalENA: "500",
+      strengthFrom: "95",
+      strengthTo: "96.5",
+      importPassFee: "25000",
+      brNumber: "BR/2024/001/15-01-2024",
+      route: "Siliguri-Rangpo",
+      branchAddress2: "Rangpo Check Post",
+      branchOfficer: "Excise Inspector, Rangpo",
+      numberOfPermits: 3, // This will generate 12 total copies (3 permits × 4 copies each)
+    };
   }
 
   printLetter(): void {
-    const printContents = document.querySelectorAll(".main");
+    const printContents = document.querySelectorAll(".main, .permit-copy");
 
     if (!printContents || printContents.length === 0) {
       console.error("Print content not found");
@@ -161,7 +230,7 @@ export class FinalrequistionlettersComponent implements OnInit {
       return;
     }
 
-    // Combine all .main elements content
+    // Combine all .main and .permit-copy elements content
     let allContent = "";
     printContents.forEach((element, index) => {
       allContent += element.outerHTML;
@@ -226,12 +295,57 @@ export class FinalrequistionlettersComponent implements OnInit {
               text-align: right;
               margin-right: 20px;
             }
-            .main {
+            .main, .permit-copy {
               border: 2px solid black !important;
               padding: 15px;
               margin-bottom: 30px;
               page-break-inside: avoid;
               background: white;
+            }
+            .permit-copy {
+              page-break-before: always;
+            }
+            .permit-copy.last-copy {
+              page-break-after: auto;
+            }
+            .copy-number {
+              font-size: 18px;
+              text-align: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid black;
+              padding-bottom: 10px;
+              font-weight: bold;
+            }
+            .permit-section {
+              margin-top: 20px;
+              font-size: 14px;
+              line-height: 1.6;
+              text-align: justify;
+            }
+            .permit-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+              font-size: 12px;
+            }
+            .permit-table td {
+              border: 1px solid black;
+              text-align: center;
+              padding: 8px 5px;
+              vertical-align: middle;
+            }
+            .permit-table tr:first-child td {
+              font-weight: bold;
+              background-color: #f5f5f5;
+              text-align: center;
+              font-size: 11px;
+              padding: 10px 5px;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            .permit-table td:first-child {
+              text-align: left;
+              width: 20%;
             }
             .logo {
               text-align: center;
@@ -305,5 +419,48 @@ export class FinalrequistionlettersComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(["/dev-commissioner-dashboard"]);
+  }
+
+  generatePermitCopies(): any[] {
+    const permitCopies: any[] = [];
+    const baseRefNo = this.permitData.letterNo;
+    const numberOfPermits = this.permitData.numberOfPermits;
+
+    // Generate copies by copy type first, then by permit number
+    // For each copy type (ORIGINAL, DUPLICATE, TRIPLICATE, QUADRUPLICATE)
+    for (let copyTypeIndex = 0; copyTypeIndex < 4; copyTypeIndex++) {
+      // For each permit number (1, 2, 3, etc.)
+      for (let permitNumber = 0; permitNumber < numberOfPermits; permitNumber++) {
+        const currentRefNo = permitNumber === 0 ? baseRefNo : this.incrementReferenceNumber(baseRefNo, permitNumber);
+        
+        permitCopies.push({
+          ...this.permitData,
+          letterNo: currentRefNo,
+          copyType: this.copyNames[copyTypeIndex],
+          copyNumber: copyTypeIndex + 1,
+          permitNumber: permitNumber + 1,
+          isMainPermit: copyTypeIndex === 0 && permitNumber === 0,
+          isLastCopy: copyTypeIndex === 3 && permitNumber === numberOfPermits - 1,
+        });
+      }
+    }
+
+    return permitCopies;
+  }
+
+  private incrementReferenceNumber(baseRefNo: string, increment: number): string {
+    if (!baseRefNo) return baseRefNo;
+
+    const refNo = baseRefNo.replace("/Excise", "");
+    const match = refNo.match(/(\d+)(\D*)$/);
+
+    if (!match) return refNo;
+
+    const number = parseInt(match[1], 10);
+    const suffix = match[2];
+    const prefix = refNo.substring(0, refNo.length - match[0].length);
+    const paddingLength = match[1].length;
+
+    return prefix + (number + increment).toString().padStart(paddingLength, "0") + suffix;
   }
 }
