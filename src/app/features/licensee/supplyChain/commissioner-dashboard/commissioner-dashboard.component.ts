@@ -598,11 +598,7 @@ export class CommissionerDashboardComponent implements OnInit {
     }
   }
 
-  viewHologramLetter(record: PermitRecord): void {
-    this.router.navigate(["/dev-hologram-letter-view"], {
-      queryParams: { ref: record.referenceNo },
-    });
-  }
+
 
   printFinalApplication(record: PermitRecord): void {
     this.router.navigate(["/dev-final-requisition-letters"], {
