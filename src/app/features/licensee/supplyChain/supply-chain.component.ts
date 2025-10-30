@@ -294,14 +294,14 @@ export class SupplyChainComponent {
 
     // Load import permit requests from localStorage
     const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-    
+
     // Sort by submission time (newest first) to ensure proper ordering
     importPermitRequests.sort((a: any, b: any) => {
       const dateA = new Date(a.submittedAt || a.date).getTime();
       const dateB = new Date(b.submittedAt || b.date).getTime();
       return dateB - dateA; // Newest first
     });
-    
+
     // Convert import permit data to requisition format
     const importPermitData: TableData[] = importPermitRequests
       .filter((permit: any) => permit.type !== 'transit-permit') // Exclude transit permits from requisition tab
@@ -363,21 +363,21 @@ export class SupplyChainComponent {
 
     // Load transit permit requests from localStorage
     const transitPermitRequests = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-    
+
     // Also check importPermitRequests for transit permits (for backward compatibility)
     const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
     const transitFromImport = importPermitRequests.filter((permit: any) => permit.type === 'transit-permit');
-    
+
     // Combine both sources
     const allTransitRequests = [...transitPermitRequests, ...transitFromImport];
-    
+
     // Sort by submission time (newest first)
     allTransitRequests.sort((a: any, b: any) => {
       const dateA = new Date(a.submissionDate || a.date).getTime();
       const dateB = new Date(b.submissionDate || b.date).getTime();
       return dateB - dateA; // Newest first
     });
-    
+
     // Convert transit permit data to table format
     const transitPermitData: TableData[] = allTransitRequests.map((permit: any) => ({
       referenceNo: permit.billNo || permit.refNo,
@@ -457,7 +457,13 @@ export class SupplyChainComponent {
     }
   }
 
-  viewApplication(item: TableData): void {
+  viewApplication(item: TableData, event?: Event): void {
+    // Prevent form submission
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
     // Navigate to specific application view based on reference number type
     const refNo = item.referenceNo;
 
@@ -543,6 +549,22 @@ export class SupplyChainComponent {
       (row.exportQtyLakh || 0) +
       (row.defenceQtyLakh || 0)
     );
+  }
+
+  openApplicationView(): void {
+    // Navigate to transit application view
+    console.log('Application View button clicked');
+    this.router.navigate(["/dev-supply-chain-transit-view"], {
+      queryParams: { ref: "TRP/12/EXCISE" },
+    });
+  }
+
+  applicationCheck(item: TableData): void {
+    // Navigate to transit view level 1 component
+    console.log('Application Check clicked for:', item.referenceNo);
+    this.router.navigate(["/dev-supply-chain-transit-view-level1"], {
+      queryParams: { ref: item.referenceNo },
+    });
   }
 
   navigateTo(route: string): void {

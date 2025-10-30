@@ -106,6 +106,13 @@ export const routes: Routes = [
       ).then((m) => m.SupplyChainTransitViewComponent),
   },
   {
+    path: "dev-supply-chain-transit-view-level1",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
+  },
+  {
     path: "dev-supply-chain-hologram-view",
     loadComponent: () =>
       import(
