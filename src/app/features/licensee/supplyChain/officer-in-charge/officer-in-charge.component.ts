@@ -788,7 +788,8 @@ export class OfficerInChargeComponent implements OnInit {
 
   viewDetails(record: TransitPermitRecord) {
     console.log('Viewing details for:', record);
-    alert(`Viewing details for ${record.referenceNo}. This will open a detailed view modal.`);
+    // Navigate to transit view level 2 component
+    window.open(`/dev-supply-chain-transit-view-level2?ref=${record.referenceNo}`, '_blank');
   }
 
   approveApplication(record: TransitPermitRecord) {
