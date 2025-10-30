@@ -5,5 +5,6 @@ export const ADMIN_ROLES = [
   'level_4',
   'level_5',
   'site_admin',
+  'supply_chain',
   'dev',
 ];
