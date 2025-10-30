@@ -29,6 +29,16 @@ interface TransitPermitData {
   unitLocation?: string;
   salesDepotLocation?: string;
   brandName?: string;
+  // New fields for product details
+  size?: string;
+  cases?: string;
+  educationCess?: string;
+  exciseDuty?: string;
+  additionalExcise?: string;
+  educationCessTotal?: string;
+  exciseDutyTotal?: string;
+  additionalExciseTotal?: string;
+  permitFee?: string;
 }
 
 @Component({
@@ -85,31 +95,41 @@ export class TransitPermitLetterViewComponent implements OnInit {
     const sampleData: TransitPermitData[] = [
       {
         id: "13",
-        referenceNo: "TP/001/2025",
-        submissionDate: new Date("2025-01-20"),
+        referenceNo: "TRP/14/EXCISE",
+        submissionDate: new Date("2025-10-30"),
         distilleryName: "Sikkim Distilleries Ltd",
-        status: "Pending",
+        status: "TRANSIT PERMIT ISSUED",
         brAmount: 0,
         permitType: "Alcohol Transit Permit",
-        vehicleNumber: "SK-01-AB-1234",
+        vehicleNumber: "SK 01 AB 1234",
         driverName: "Rajesh Kumar",
         driverLicense: "DL-1234567890",
         fromLocation: "Gangtok, Sikkim",
-        toLocation: "Siliguri, West Bengal",
-        goodsDescription: "Grain ENA (95.5% strength)",
-        quantity: 1000,
-        unit: "BL",
+        toLocation: "Gangtok, Sikkim",
+        goodsDescription: "Royal Stag 180ml",
+        quantity: 1,
+        unit: "Cases",
         routeDetails: "Gangtok - Siliguri Highway via Rangpo",
         checkpostEntry: "Rangpo Checkpost",
         checkpostExit: "Melli Checkpost",
         validityPeriod: 7,
         issuedBy: "Excise Officer",
-        issuedDate: new Date("2025-01-20"),
+        issuedDate: new Date("2025-10-30"),
         // New fields for letter format
-        soleDistributor: "Karma Chopel Bhutia",
+        soleDistributor: "M/s Karma Chopel Bhutia",
         unitLocation: "Rangpo (Sikkim)",
         salesDepotLocation: "Siliguri, West Bengal",
-        brandName: "Sikkim Premium ENA",
+        brandName: "Royal Stag",
+        // Product details
+        size: "180ml",
+        cases: "1",
+        educationCess: "15.5",
+        exciseDuty: "125",
+        additionalExcise: "45",
+        educationCessTotal: "15.50",
+        exciseDutyTotal: "125.00",
+        additionalExciseTotal: "45.00",
+        permitFee: "185.5",
       },
       {
         id: "14",
@@ -138,6 +158,16 @@ export class TransitPermitLetterViewComponent implements OnInit {
         unitLocation: "Namchi (Sikkim)",
         salesDepotLocation: "Darjeeling, West Bengal",
         brandName: "Mount Heritage ENA",
+        // Product details
+        size: "750ml",
+        cases: "2",
+        educationCess: "20.0",
+        exciseDuty: "150.0",
+        additionalExcise: "50.0",
+        educationCessTotal: "40.00",
+        exciseDutyTotal: "300.00",
+        additionalExciseTotal: "100.00",
+        permitFee: "440.0",
       },
       {
         id: "15",
@@ -166,6 +196,16 @@ export class TransitPermitLetterViewComponent implements OnInit {
         unitLocation: "Pelling (Sikkim)",
         salesDepotLocation: "Kolkata, West Bengal",
         brandName: "Artisan Premium Spirit",
+        // Product details
+        size: "375ml",
+        cases: "3",
+        educationCess: "18.0",
+        exciseDuty: "140.0",
+        additionalExcise: "42.0",
+        educationCessTotal: "54.00",
+        exciseDutyTotal: "420.00",
+        additionalExciseTotal: "126.00",
+        permitFee: "600.0",
       },
     ];
 
@@ -183,43 +223,32 @@ export class TransitPermitLetterViewComponent implements OnInit {
   }
 
   printLetter(): void {
-    const printable =
-      document.getElementById("transitPermitPrintSection")?.innerHTML || "";
-    const styles = Array.from(
-      document.querySelectorAll('link[rel="stylesheet"], style'),
-    )
-      .map((el) => (el as HTMLElement).outerHTML)
-      .join("");
-    const win = window.open("", "_blank", "width=900,height=1000");
-    if (!win) return;
-    win.document.open();
-    const ref = this.transitPermitData?.referenceNo || "";
-    win.document.write(`<!doctype html>
-      <html>
-        <head>
-          <title>Transit Permit - ${ref}</title>
-          ${styles}
-          <style>
-            @page { size: A4; margin: 12mm; }
-            body { background: #fff; }
-            .no-print { display:none !important; }
-            .printable-content, .printable-content * { visibility: visible !important; }
-          </style>
-        </head>
-        <body>
-          ${printable}
-        </body>
-      </html>`);
-    win.document.close();
-    win.onload = () => {
-      win.focus();
-      win.print();
-      win.close();
-    };
+    if (this.isBrowser) {
+      // Use the browser's built-in print functionality with optimized CSS
+      window.print();
+    }
+  }
+
+  getStatusText(status: string): string {
+    switch (status) {
+      case "TRANSIT PERMIT ISSUED":
+        return "TRANSIT PERMIT ISSUED";
+      case "Approved":
+        return "APPROVED";
+      case "Forwarded":
+        return "FORWARDED";
+      case "Pending":
+        return "PENDING APPROVAL";
+      case "Rejected":
+        return "REJECTED";
+      default:
+        return status;
+    }
   }
 
   getStatusBadgeClass(status: string): string {
     switch (status) {
+      case "TRANSIT PERMIT ISSUED":
       case "Approved":
         return "badge bg-success";
       case "Forwarded":

@@ -13,117 +13,154 @@
     </div>
   </div>
 
-  <!-- Letter Content -->
-  <div class="letter-container">
+  <!-- Application Content -->
+  <div class="application-container">
     @if (transitPermitData) {
-    <div id="transitPermitPrintSection" class="letter-document printable-content">
-      <!-- Top Left: Sole Distributor -->
-      <div class="sole-distributor">
-        <strong>SOLE DISTRIBUTOR:</strong> M/s {{ transitPermitData.soleDistributor }}
-      </div>
-
-      <!-- Top Right: Bill No and Date -->
-      <div class="bill-details">
-        <div class="bill-row">
-          <strong>Bill No:</strong> {{ transitPermitData.referenceNo }}
+    <div id="transitPermitPrintSection" class="card shadow-sm border-0 printable-content">
+      <!-- Header with Government Seal -->
+      <div class="application-header text-center mb-4">
+        <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+            style="height: 60px; width: auto" />
+          <div class="header-text">
+            <div class="fw-bold fs-5 text-dark">GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</div>
+          </div>
         </div>
-        <div class="bill-row">
-          <strong>Date:</strong> {{ transitPermitData.issuedDate | date:'dd-MMM-yyyy' }}
+        <div class="text-success fs-3 fw-bold">TRANSIT PERMIT APPLICATION</div>
+        <hr class="border-success border-2 mx-auto" style="width: 100%;">
+      </div>
+
+      <div class="application-content p-4">
+        <!-- Transit Details and Status Section -->
+        <div class="row mb-4">
+          <div class="col-md-6">
+            <div class="border border-success rounded p-3 h-100">
+              <h5 class="text-success fw-bold mb-3 border-bottom border-success pb-2">TRANSIT DETAILS</h5>
+              <div class="transit-info">
+                <p class="mb-2"><span class="text-muted">Reference No:</span><strong>{{ transitPermitData.referenceNo
+                    }}</strong></p>
+                <p class="mb-2"><span class="text-muted">Submission Date:</span><strong>{{
+                    transitPermitData.submissionDate | date:'dd-MM-yyyy' }}</strong></p>
+                <p class="mb-2"><span class="text-muted">Distillery:</span><strong>{{ transitPermitData.soleDistributor
+                    }}</strong></p>
+                <p class="mb-0"><span class="text-muted">Permit Type:</span><strong>{{ transitPermitData.permitType ||
+                    'Alcohol Transit Permit' }}</strong></p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="border border-success rounded p-3 h-100">
+              <h5 class="text-success fw-bold mb-3 border-bottom border-success pb-2">STATUS & VALIDITY</h5>
+              <div class="status-info">
+                <p class="mb-2"><span class="text-muted">Current Status:</span></p>
+                <span class="badge bg-success fs-6 mb-3">{{ getStatusText(transitPermitData.status) }}</span>
+                <p class="mb-2"><span class="text-muted">Permit Fee:</span><strong>₹{{ transitPermitData.permitFee ||
+                    '185.5' }}</strong></p>
+                <p class="mb-0">
+                  <span class="text-muted">Validity Status:</span>
+                  <span class="badge bg-success ms-2">Active</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Route & Transport Information -->
+        <div class="mb-4">
+          <h5 class="text-success fw-bold mb-3">ROUTE & TRANSPORT INFORMATION</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered border-success">
+              <tbody>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark" style="width: 25%">From Location</td>
+                  <td class="fw-normal">{{ transitPermitData.fromLocation }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark">To Location</td>
+                  <td class="fw-normal">{{ transitPermitData.toLocation }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark">Route Details</td>
+                  <td class="fw-normal">{{ transitPermitData.routeDetails }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark">Entry Checkpost</td>
+                  <td class="fw-normal">{{ transitPermitData.checkpostEntry }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark">Exit Checkpost</td>
+                  <td class="fw-normal">{{ transitPermitData.checkpostExit }}</td>
+                </tr>
+                <tr>
+                  <td class="fw-semibold bg-light text-dark">Vehicle Number</td>
+                  <td class="fw-normal">{{ transitPermitData.vehicleNumber }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Product Details -->
+        <div class="mb-4">
+          <h5 class="text-primary fw-bold mb-3">PRODUCT DETAILS</h5>
+          <div class="table-responsive">
+            <table class="table table-bordered border-primary product-table">
+              <thead class="table-info">
+                <tr>
+                  <th class="fw-bold text-center text-white">BRAND</th>
+                  <th class="fw-bold text-center text-white">SIZE</th>
+                  <th class="fw-bold text-center text-white">CASES</th>
+                  <th class="fw-bold text-center bg-info text-white">EDUCATION CESS<br>(₹ PER CASE)</th>
+                  <th class="fw-bold text-center bg-info text-white">EXCISE DUTY<br>(₹ PER CASE)</th>
+                  <th class="fw-bold text-center bg-info text-white">ADDITIONAL EXCISE<br>(₹ PER CASE)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="fw-normal">{{ transitPermitData.brandName || 'Royal Stag' }}</td>
+                  <td class="fw-normal text-center">{{ transitPermitData.size || '180ml' }}</td>
+                  <td class="fw-normal text-center">{{ transitPermitData.cases || '1' }}</td>
+                  <td class="fw-normal text-center">₹{{ transitPermitData.educationCess || '15.5' }}</td>
+                  <td class="fw-normal text-center">₹{{ transitPermitData.exciseDuty || '125' }}</td>
+                  <td class="fw-normal text-center">₹{{ transitPermitData.additionalExcise || '45' }}</td>
+                </tr>
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="3" class="fw-bold">Education Cess Total:</td>
+                  <td class="fw-bold text-center">₹{{ transitPermitData.educationCessTotal || '15.50' }}</td>
+                  <td colspan="2"></td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="fw-bold">Excise Duty Total:</td>
+                  <td colspan="2" class="fw-bold text-center">₹{{ transitPermitData.exciseDutyTotal || '125.00' }}</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="fw-bold">Additional Excise Total:</td>
+                  <td colspan="3" class="fw-bold text-center">₹{{ transitPermitData.additionalExciseTotal || '45.00' }}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- Recipient Information -->
-      <div class="recipient-section">
-        <div class="to-label"><strong>TO,</strong></div>
-        <div class="recipient-address">
-          <div>The Officer-in-charge</div>
-          <div>Excise (ABK) Department</div>
-          <div>Unit: {{ transitPermitData.distilleryName }}</div>
-          <div>{{ transitPermitData.unitLocation }}</div>
-        </div>
-      </div>
-
-      <!-- Subject Line -->
-      <div class="subject-section">
-        <strong>Sub:</strong> TRANSIT PERMIT
-      </div>
-
-      <!-- Salutation -->
-      <div class="salutation">
-        Dear Sir,
-      </div>
-
-      <!-- Body Content -->
-      <div class="body-content">
-        We would be ever grateful if you could kindly issue Transit permit to the following brands of liquor for our sales depot at {{ transitPermitData.salesDepotLocation }}.
-      </div>
-
-      <!-- Goods Details Table -->
-      <div class="goods-table-section">
-        <table class="goods-table">
-          <thead>
-            <tr>
-              <th>S.No.</th>
-              <th>Brand Name</th>
-              <th>Quantity</th>
-              <th>Unit</th>
-              <th>From</th>
-              <th>To</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td>{{ transitPermitData.brandName }}</td>
-              <td>{{ transitPermitData.quantity }}</td>
-              <td>{{ transitPermitData.unit }}</td>
-              <td>{{ transitPermitData.fromLocation }}</td>
-              <td>{{ transitPermitData.toLocation }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Additional Details -->
-      <div class="additional-details">
-        <div class="detail-row">
-          <strong>Vehicle Number:</strong> {{ transitPermitData.vehicleNumber }}
-        </div>
-        <div class="detail-row">
-          <strong>Driver Name:</strong> {{ transitPermitData.driverName }}
-        </div>
-        <div class="detail-row">
-          <strong>Driver License:</strong> {{ transitPermitData.driverLicense }}
-        </div>
-        <div class="detail-row">
-          <strong>Route:</strong> {{ transitPermitData.routeDetails }}
-        </div>
-      </div>
-
-      <!-- Thank you message -->
-      <div class="thank-you">
-        Thanking you in anticipation.
-      </div>
-
-      <!-- Signatory -->
-      <div class="signatory-section">
-        <div class="signatory-right">
-          <strong>Authorised Signatory</strong>
-        </div>
-      </div>
-
-      <!-- Print Button -->
-      <div class="no-print print-button-section">
-        <button class="btn btn-primary" (click)="printLetter()">
-          <i class="bi bi-printer me-1"></i>Print Application
-        </button>
-      </div>
+    <!-- Print Button - Outside Print Section -->
+    <div class="no-print d-flex justify-content-center gap-3 mt-4">
+      <button type="button" class="btn btn-info btn-lg px-4 py-2" (click)="printLetter()">
+        <i class="bi bi-printer me-2"></i>Print Application
+      </button>
     </div>
     } @else {
     <div class="alert alert-warning text-center">
       <h4>No Data Found</h4>
       <p>The requested transit permit application could not be found.</p>
-      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
+      <button type="button" class="btn btn-primary" (click)="goBack()">
+        Return to Commissioner Dashboard
+      </button>
     </div>
     }
   </div>

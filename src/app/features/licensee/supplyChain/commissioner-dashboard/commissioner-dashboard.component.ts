@@ -428,6 +428,17 @@ export class CommissionerDashboardComponent implements OnInit {
     }
   }
 
+  viewTransitApplication(record: PermitRecord): void {
+    console.log("Viewing transit application view:", record.referenceNo);
+    // Navigate to the transitviewlevel3 component
+    this.router.navigate(["/dev-supply-chain-transit-view-level3"], {
+      queryParams: {
+        ref: record.referenceNo,
+        source: "commissioner-dashboard"
+      },
+    });
+  }
+
   approveApplication(record: PermitRecord): void {
     console.log("Approving application:", record.referenceNo);
     alert(`Approving application ${record.referenceNo} and printing permit`);
