@@ -17,7 +17,7 @@
     background: linear-gradient(135deg, #6c757d, #495057);
     color: white;
     border-radius: 8px 8px 0 0;
-    
+
     h4 {
       margin: 0;
       font-weight: 600;
@@ -54,14 +54,16 @@
     .table {
       margin-bottom: 0;
 
-      th, td {
+      th,
+      td {
         padding: 0.75rem;
         vertical-align: middle;
         border: 1px solid #dee2e6;
         text-align: center;
       }
 
-      th:nth-child(2), td:nth-child(2) {
+      th:nth-child(2),
+      td:nth-child(2) {
         text-align: left;
       }
 
@@ -100,10 +102,10 @@
 
 // Government Form Styles - This is the main design from your image
 .government-form-container {
-  max-width: 900px;
-  margin: 2rem auto;
+  max-width: auto;
+  margin: 1.5rem auto;
   background: white;
-  padding: 3rem;
+  padding: 2rem;
   border: 2px solid #ddd;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
   font-family: Arial, sans-serif;
@@ -114,13 +116,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
 
     .gov-seal {
       .seal-image {
-        height: 100px;
+        height: 80px;
         width: auto;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
       }
@@ -130,28 +132,28 @@
       text-align: center;
 
       .gov-main-title {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
         font-weight: bold;
         color: #2c3e50;
         margin: 0;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
       }
 
       .gov-dept-title {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
         font-weight: 600;
         color: #28a745;
-        margin: 0.5rem 0;
-        letter-spacing: 1px;
+        margin: 0.25rem 0;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
       }
 
       .gov-location {
-        font-size: 1rem;
+        font-size: 0.9rem;
         color: #6c757d;
         margin: 0;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         text-transform: uppercase;
       }
     }
@@ -160,68 +162,68 @@
   // Main divider line
   .gov-divider {
     border: none;
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, #2c3e50 0%, #28a745 50%, #2c3e50 100%);
-    margin: 2rem 0;
+    margin: 1.5rem 0;
   }
 
   // Section divider
   .section-divider {
     border: none;
-    height: 2px;
+    height: 1px;
     background: #28a745;
-    margin: 1.5rem 0;
+    margin: 1rem 0;
   }
 
   // Form Title - "HOLOGRAM REQUISITION APPLICATION"
   .form-title-section {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 
     .form-title {
-      font-size: 1.5rem;
+      font-size: 1.3rem;
       font-weight: bold;
       color: #28a745;
       text-decoration: underline;
       margin: 0;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      padding: 1rem 0;
+      padding: 0.75rem 0;
     }
   }
 
   // Application Details Section
   .application-details {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 
     .detail-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
+      gap: 1.5rem;
 
       .detail-box {
         border: 2px solid #007bff;
-        padding: 1.5rem;
-        border-radius: 8px;
+        padding: 1rem;
+        border-radius: 6px;
         background: #f8f9fa;
         position: relative;
 
         .detail-label {
           font-weight: 600;
           color: #495057;
-          font-size: 1rem;
+          font-size: 0.9rem;
           display: block;
-          margin-bottom: 0.75rem;
+          margin-bottom: 0.5rem;
         }
 
         .detail-value {
-          font-size: 1.3rem;
+          font-size: 1.1rem;
           font-weight: bold;
           color: #2c3e50;
 
           &.ref-value {
             color: #007bff;
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             font-weight: 800;
           }
         }
@@ -231,45 +233,45 @@
 
   // Applicant Details Section
   .applicant-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 
     .section-header {
       background: #e9ecef;
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1rem;
       font-weight: bold;
       color: #495057;
       border: 2px solid #28a745;
-      border-radius: 8px 8px 0 0;
+      border-radius: 6px 6px 0 0;
       margin-bottom: 0;
-      font-size: 1.1rem;
+      font-size: 1rem;
     }
 
     .applicant-info {
       border: 2px solid #28a745;
       border-top: none;
-      padding: 1.5rem;
-      border-radius: 0 0 8px 8px;
+      padding: 1rem;
+      border-radius: 0 0 6px 6px;
       background: #f8f9fa;
 
       .info-row {
         display: flex;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1rem;
 
         .info-label {
           font-weight: 600;
           color: #495057;
-          min-width: 140px;
-          font-size: 1rem;
+          min-width: 120px;
+          font-size: 0.9rem;
         }
 
         .info-value {
           font-weight: bold;
           color: #28a745;
-          font-size: 1.2rem;
+          font-size: 1.1rem;
 
           &.company-name {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
             font-weight: 800;
           }
         }
@@ -279,31 +281,33 @@
 
   // Quantities Section - Main table
   .quantities-section {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 
     .section-title {
       font-weight: bold;
       color: #2c3e50;
-      margin-bottom: 1.5rem;
-      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
     }
 
     .quantities-table {
       .gov-table {
         width: 100%;
         border-collapse: collapse;
-        border: 3px solid #2c3e50;
+        border: 2px solid #2c3e50;
         background: white;
 
-        th, td {
+        th,
+        td {
           border: 1px solid #2c3e50;
-          padding: 1rem;
+          padding: 0.75rem;
           text-align: center;
-          font-size: 1rem;
+          font-size: 0.9rem;
           font-weight: 500;
         }
 
-        th:nth-child(2), td:nth-child(2) {
+        th:nth-child(2),
+        td:nth-child(2) {
           text-align: left;
         }
 
@@ -330,7 +334,8 @@
           border-top: 3px solid #2c3e50;
           font-size: 1.1rem;
 
-          td, th {
+          td,
+          th {
             font-weight: bold;
             color: #2c3e50;
           }
@@ -365,8 +370,8 @@
   .summary-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    margin-bottom: 2rem;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
 
     .summary-card {
       border: 2px solid #dee2e6;
@@ -393,21 +398,21 @@
       }
 
       .card-header {
-        padding: 1rem 1.5rem;
+        padding: 0.75rem 1rem;
         font-weight: bold;
-        font-size: 1rem;
-        letter-spacing: 1px;
+        font-size: 0.9rem;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
       }
 
       .card-content {
-        padding: 1.5rem;
+        padding: 1rem;
 
         .summary-row {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 0.75rem;
-          font-size: 1rem;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
 
           &:last-child {
             margin-bottom: 0;
@@ -441,28 +446,28 @@
   // Official Remarks Section
   .remarks-section {
     border: 2px solid #28a745;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
     background: #f8f9fa;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
     .remarks-header {
       background: #e9ecef;
-      padding: 1rem 1.5rem;
+      padding: 0.75rem 1rem;
       font-weight: bold;
       color: #495057;
-      border-bottom: 2px solid #28a745;
-      font-size: 1.1rem;
+      border-bottom: 1px solid #28a745;
+      font-size: 1rem;
     }
 
     .remarks-content {
-      padding: 1.5rem;
+      padding: 1rem;
 
       p {
-        margin-bottom: 1rem;
-        line-height: 1.6;
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
         color: #2c3e50;
-        font-size: 1rem;
+        font-size: 0.9rem;
 
         &:last-child {
           margin-bottom: 0;
@@ -515,55 +520,245 @@
   }
 }
 
-// Print styles for government form
+// Print styles - Clean layout matching your image
 @media print {
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+
+  // Hide everything except the government form
+  body * {
+    visibility: hidden;
+  }
+
+  .government-form-container,
+  .government-form-container * {
+    visibility: visible;
+  }
+
   .government-form-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
     margin: 0;
-    padding: 1.5rem;
+    padding: 0;
     box-shadow: none;
     border: none;
-    max-width: none;
+    background: white;
+    font-family: Arial, sans-serif;
 
-    .no-print {
+    // Hide print buttons and complex sections
+    .no-print,
+    .print-actions,
+    .summary-section,
+    .remarks-section {
       display: none !important;
     }
 
+    // Header with seal and title - centered layout
     .gov-header {
-      .gov-seal .seal-image {
-        height: 80px;
+      text-align: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+
+      .gov-seal {
+        text-align: center;
+        margin-bottom: 0.5rem;
+
+        .seal-image {
+          height: 150px;
+          width: auto;
+        }
       }
 
       .gov-title {
+        text-align: center;
+
         .gov-main-title {
-          font-size: 1.4rem;
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #000;
+          margin: 0.3rem 0;
+          letter-spacing: 1px;
         }
+
         .gov-dept-title {
           font-size: 1.1rem;
+          font-weight: bold;
+          color: #000;
+          margin: 0.3rem 0;
+          letter-spacing: 0.5px;
         }
+
         .gov-location {
-          font-size: 0.9rem;
+          font-size: 1rem;
+          color: #000;
+          margin: 0.3rem 0;
         }
       }
     }
 
-    .form-title-section .form-title {
-      font-size: 1.2rem;
+    // Main divider
+    .gov-divider {
+      border: none;
+      height: 2px;
+      background: #000;
+      margin: 1rem 0;
     }
 
-    .summary-section {
-      grid-template-columns: 1fr;
-      gap: 1rem;
+    // Form title
+    .form-title-section {
+      text-align: center;
+      margin-bottom: 1.5rem;
+
+      .form-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #000;
+        text-decoration: underline;
+        margin: 0;
+        letter-spacing: 1px;
+      }
     }
 
-    .application-details .detail-row {
-      grid-template-columns: 1fr;
-      gap: 1rem;
+    .section-divider {
+      border: none;
+      height: 1px;
+      background: #000;
+      margin: 0.75rem 0;
     }
 
-    .quantities-table .gov-table {
-      th, td {
-        padding: 0.5rem;
-        font-size: 0.9rem;
+    // Application details - simple text layout
+    .application-details {
+      margin-bottom: 1.5rem;
+
+      .detail-row {
+        display: block;
+
+        .detail-box {
+          border: none;
+          padding: 0;
+          background: none;
+          margin-bottom: 0.75rem;
+          text-align: left;
+
+          .detail-label {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+            margin-right: 0.5rem;
+          }
+
+          .detail-value {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #000;
+            display: inline;
+
+            &.ref-value {
+              color: #000;
+              font-size: 1rem;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+
+    // Applicant section - simple text
+    .applicant-section {
+      margin-bottom: 1.5rem;
+
+      .section-header {
+        background: none;
+        padding: 0;
+        font-weight: normal;
+        color: #000;
+        border: none;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        text-align: left;
+      }
+
+      .applicant-info {
+        border: none;
+        padding: 0;
+        background: none;
+
+        .info-row {
+          display: block;
+          text-align: left;
+
+          .info-label {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+            margin-right: 0.5rem;
+          }
+
+          .info-value {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+
+            &.company-name {
+              font-size: 1rem;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+
+    // Show only basic table if needed
+    .quantities-section {
+      margin-bottom: 1.5rem;
+
+      .section-title {
+        font-size: 1rem;
+        font-weight: normal;
+        color: #000;
+        margin-bottom: 0.75rem;
+      }
+
+      .quantities-table .gov-table {
+        border: 1px solid #000;
+        width: 100%;
+
+        th,
+        td {
+          padding: 0.5rem;
+          font-size: 0.9rem;
+          border: 1px solid #000;
+          color: #000;
+        }
+
+        thead th {
+          font-size: 0.9rem;
+          font-weight: normal;
+          background: none;
+        }
+
+        .total-row {
+          border-top: 2px solid #000;
+          font-size: 0.9rem;
+          font-weight: normal;
+          background: none;
+        }
+
+        .status-approved,
+        .status-total {
+          background: none;
+          color: #000;
+          font-size: 0.8rem;
+          padding: 0.2rem;
+          border-radius: 0;
+        }
       }
     }
   }
@@ -587,6 +782,7 @@
         .gov-main-title {
           font-size: 1.4rem;
         }
+
         .gov-dept-title {
           font-size: 1.1rem;
         }
@@ -616,7 +812,8 @@
     .quantities-table .gov-table {
       font-size: 0.9rem;
 
-      th, td {
+      th,
+      td {
         padding: 0.5rem;
       }
     }

@@ -1,7 +1,7 @@
-import { Component, Inject, PLATFORM_ID } from "@angular/core";
+import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
-import { Router } from "@angular/router";
+import { Router, ActivatedRoute } from "@angular/router";
 
 interface TableData {
   referenceNo: string;
@@ -30,7 +30,7 @@ interface HologramRow {
   templateUrl: "./supply-chain.component.html",
   styleUrls: ["./supply-chain.component.scss"],
 })
-export class SupplyChainComponent {
+export class SupplyChainComponent implements OnInit {
   Math = Math;
   selectedDate = "";
   selectedMonth = "";
@@ -221,6 +221,7 @@ export class SupplyChainComponent {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -229,13 +230,28 @@ export class SupplyChainComponent {
     this.loadTransitData();
   }
 
+  ngOnInit(): void {
+    // Check for tab query parameter
+    if (this.isBrowser) {
+      const tab = this.route.snapshot.queryParamMap.get('tab');
+      if (tab) {
+        this.setActiveTab(tab);
+      }
+    }
+  }
+
   private refreshHologramList(): void {
     if (!this.isBrowser) {
       this.hologramList = [];
       return;
     }
-    const stored = JSON.parse(localStorage.getItem("hologramRequests") || "[]");
-    const mapped: HologramRow[] = (stored || []).map((r: any) => ({
+    
+    // Load from both old hologramRequests and new hologramApplications
+    const storedRequests = JSON.parse(localStorage.getItem("hologramRequests") || "[]");
+    const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
+    
+    // Map old format
+    const mappedRequests: HologramRow[] = (storedRequests || []).map((r: any) => ({
       refNo: r.refNo,
       date: r.date,
       companyName: r.companyName,
@@ -244,6 +260,28 @@ export class SupplyChainComponent {
       defenceQtyLakh: r.defenceQtyLakh,
       status: "Submitted",
     }));
+    
+    // Map new format from dashboard
+    const mappedApplications: HologramRow[] = (storedApplications || []).map((a: any) => ({
+      refNo: a.refNo,
+      date: a.date,
+      companyName: a.companyName,
+      localQtyLakh: a.localQtyLakh,
+      exportQtyLakh: a.exportQtyLakh,
+      defenceQtyLakh: a.defenceQtyLakh,
+      status: a.status || "Submitted",
+    }));
+    
+    // Combine both lists and remove duplicates by refNo
+    const combined = [...mappedApplications, ...mappedRequests];
+    const uniqueMap = new Map();
+    combined.forEach(item => {
+      if (!uniqueMap.has(item.refNo)) {
+        uniqueMap.set(item.refNo, item);
+      }
+    });
+    
+    let mapped = Array.from(uniqueMap.values());
 
     if (!mapped.length) {
       // Seed with demo rows so user can see how it looks
@@ -282,6 +320,9 @@ export class SupplyChainComponent {
           })),
         ),
       );
+    } else {
+      // Sort by date (newest first)
+      mapped = mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
 
     this.hologramList = mapped;
