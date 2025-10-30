@@ -298,7 +298,10 @@
       </div>
     </div>
 
-    <!-- Payment Section -->
+  </div>
+
+  <!-- Payment Section (Outside print area) -->
+  <div class="container no-print" *ngIf="isSubmitted">
     <div class="payment-section mb-4">
       <div class="row">
         <div class="col-md-6">
@@ -345,7 +348,7 @@
     </div>
 
     <!-- Print Button -->
-    <div class="no-print d-flex justify-content-center mt-4">
+    <div class="d-flex justify-content-center mt-4">
       <button class="btn btn-success btn-lg px-5" (click)="printApplication()">
         <i class="bi bi-printer me-2"></i>Print Transit Permit Application
       </button>

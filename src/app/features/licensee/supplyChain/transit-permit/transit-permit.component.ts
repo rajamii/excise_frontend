@@ -70,6 +70,7 @@ export class TransitPermitComponent implements OnInit {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
+    
     // Load by ref if provided
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
@@ -78,8 +79,12 @@ export class TransitPermitComponent implements OnInit {
       if (found) {
         this.formData = { ...this.formData, ...found };
         this.products = found.products || [];
+        return; // Don't generate new bill number if loading existing
       }
     }
+    
+    // Generate next sequential bill number
+    this.generateNextBillNumber();
   }
 
   onBrandChange(): void {
@@ -204,6 +209,42 @@ export class TransitPermitComponent implements OnInit {
     alert('Transit Permit Application submitted successfully!');
   }
 
+  private generateNextBillNumber(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Get all existing transit permit requests to find the highest bill number
+    const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+    const importList: any[] = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    
+    // Combine both lists and filter for transit permits
+    const allTransitPermits = [
+      ...transitList,
+      ...importList.filter((item: any) => item.type === 'transit-permit')
+    ];
+
+    // Extract bill numbers and find the highest sequence number
+    let maxSequence = 1; // Start from 1 if no existing bills
+    
+    allTransitPermits.forEach((permit: any) => {
+      const billNo = permit.billNo || permit.refNo;
+      if (billNo && billNo.startsWith('TRP/')) {
+        // Extract number from format like "TRP/2/EXCISE"
+        const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
+        if (match) {
+          const sequence = parseInt(match[1], 10);
+          if (sequence >= maxSequence) {
+            maxSequence = sequence + 1;
+          }
+        }
+      }
+    });
+
+    // Generate the next bill number
+    this.formData.billNo = `TRP/${maxSequence}/EXCISE`;
+  }
+
   private saveToSupplyChainDashboard(): void {
     if (this.isBrowser) {
       // Save to transitPermitRequests for transit permit dashboard
@@ -238,6 +279,9 @@ export class TransitPermitComponent implements OnInit {
       const supplyChainIdx = supplyChainList.findIndex(r => r.refNo === this.formData.billNo);
       if (supplyChainIdx >= 0) supplyChainList[supplyChainIdx] = supplyChainEntry; else supplyChainList.unshift(supplyChainEntry);
       localStorage.setItem(supplyChainKey, JSON.stringify(supplyChainList));
+
+      // DON'T generate next bill number here - keep the current bill number for the generated document
+      // Bill number will only change when clearing form or starting new application
     }
   }
 
@@ -255,7 +299,7 @@ export class TransitPermitComponent implements OnInit {
   }
 
   clearForm(): void {
-    // Reset form data (keep bill no and distributor)
+    // Reset form data
     this.formData.date = new Date().toISOString().split('T')[0];
     this.formData.depotAddress = '';
     this.formData.brand = '';
@@ -268,6 +312,9 @@ export class TransitPermitComponent implements OnInit {
     this.validationErrors = [];
     this.isLocked = false;
     this.isSubmitted = false;
+
+    // Generate new bill number for next application
+    this.generateNextBillNumber();
 
     console.log('Form cleared');
   }

@@ -226,6 +226,7 @@ export class SupplyChainComponent {
     this.isBrowser = isPlatformBrowser(platformId);
     this.refreshHologramList();
     this.loadRequisitionData();
+    this.loadTransitData();
   }
 
   private refreshHologramList(): void {
@@ -302,13 +303,15 @@ export class SupplyChainComponent {
     });
     
     // Convert import permit data to requisition format
-    const importPermitData: TableData[] = importPermitRequests.map((permit: any) => ({
-      referenceNo: permit.refNo,
-      submissionDate: new Date(permit.date).toLocaleDateString('en-GB'),
-      distilleryName: this.getDistilleryDisplayName(permit.liftedFrom),
-      status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-      amount: "8.00"
-    }));
+    const importPermitData: TableData[] = importPermitRequests
+      .filter((permit: any) => permit.type !== 'transit-permit') // Exclude transit permits from requisition tab
+      .map((permit: any) => ({
+        referenceNo: permit.refNo,
+        submissionDate: new Date(permit.date).toLocaleDateString('en-GB'),
+        distilleryName: this.getDistilleryDisplayName(permit.liftedFrom),
+        status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
+        amount: "8.00"
+      }));
 
     // Get the original sample data (without any previously added import permits)
     const originalSampleData: TableData[] = [
@@ -353,6 +356,59 @@ export class SupplyChainComponent {
     this.requisitionData = [...importPermitData, ...originalSampleData];
   }
 
+  private loadTransitData(): void {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Load transit permit requests from localStorage
+    const transitPermitRequests = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+    
+    // Also check importPermitRequests for transit permits (for backward compatibility)
+    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    const transitFromImport = importPermitRequests.filter((permit: any) => permit.type === 'transit-permit');
+    
+    // Combine both sources
+    const allTransitRequests = [...transitPermitRequests, ...transitFromImport];
+    
+    // Sort by submission time (newest first)
+    allTransitRequests.sort((a: any, b: any) => {
+      const dateA = new Date(a.submissionDate || a.date).getTime();
+      const dateB = new Date(b.submissionDate || b.date).getTime();
+      return dateB - dateA; // Newest first
+    });
+    
+    // Convert transit permit data to table format
+    const transitPermitData: TableData[] = allTransitRequests.map((permit: any) => ({
+      referenceNo: permit.billNo || permit.refNo,
+      submissionDate: new Date(permit.submissionDate || permit.date).toLocaleDateString('en-GB'),
+      distilleryName: permit.soleDistributor || permit.distilleryName || 'Unknown Distributor',
+      status: permit.status || 'TRANSIT PERMIT ISSUED',
+      amount: (permit.totalAmount || permit.brAmount || 0).toFixed(2)
+    }));
+
+    // Get the original sample data
+    const originalTransitData: TableData[] = [
+      {
+        referenceNo: "TRN/BF801",
+        submissionDate: "13-Sep-2025",
+        distilleryName: "Royal Sikkim Brewery",
+        status: "TRANSIT PERMIT ISSUED",
+        amount: "10.00",
+      },
+      {
+        referenceNo: "TRN/BF802",
+        submissionDate: "12-Sep-2025",
+        distilleryName: "Mountain View Distilleries",
+        status: "TRANSIT APPLICATION PROCESSING",
+        amount: "8.50",
+      },
+    ];
+
+    // Combine with sample data, putting new submissions at the top
+    this.transitData = [...transitPermitData, ...originalTransitData];
+  }
+
   private getDistilleryDisplayName(value: string): string {
     switch (value) {
       case 'sikkim-distilleries':
@@ -361,8 +417,16 @@ export class SupplyChainComponent {
         return 'Mountain Spirits Pvt Ltd';
       case 'highland-breweries':
         return 'Highland Breweries';
+      case 'gangtok':
+        return 'Gangtok Depot';
+      case 'namchi':
+        return 'Namchi Depot';
+      case 'gyalshing':
+        return 'Gyalshing Depot';
+      case 'mangan':
+        return 'Mangan Depot';
       default:
-        return 'Unknown Distillery';
+        return value || 'Unknown Distillery';
     }
   }
 
@@ -387,6 +451,9 @@ export class SupplyChainComponent {
     } else if (tab === "requisition") {
       // refresh requisition data on each visit
       this.loadRequisitionData();
+    } else if (tab === "transit") {
+      // refresh transit data on each visit
+      this.loadTransitData();
     }
   }
 
