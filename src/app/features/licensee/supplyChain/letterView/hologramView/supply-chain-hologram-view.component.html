@@ -83,55 +83,39 @@
           <!-- Hologram Quantity Details -->
           <div class="mb-4">
             <h5 class="fw-bold mb-3">Requested Hologram Quantities</h5>
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped">
-                <thead class="table-success">
-                  <tr class="text-center">
-                    <th style="width: 100px">Sl. No.</th>
+            <div class="simple-table">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Sl. No.</th>
                     <th>Hologram Series</th>
-                    <th style="width: 200px">Quantity (In Lakh)</th>
-                    <th style="width: 150px">Status</th>
+                    <th>Quantity (In Lakh)</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="text-center">
-                    <td class="fw-semibold">1</td>
-                    <td class="text-start fw-semibold">Local Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.localQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  <tr>
+                    <td>1</td>
+                    <td>Local Series</td>
+                    <td>{{ submittedData.localQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
-                  <tr class="text-center">
-                    <td class="fw-semibold">2</td>
-                    <td class="text-start fw-semibold">Export Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.exportQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  <tr>
+                    <td>2</td>
+                    <td>Export Series</td>
+                    <td>{{ submittedData.exportQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
-                  <tr class="text-center">
-                    <td class="fw-semibold">3</td>
-                    <td class="text-start fw-semibold">Defence Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.defenceQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  <tr>
+                    <td>3</td>
+                    <td>Defence Series</td>
+                    <td>{{ submittedData.defenceQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
-                  <tr class="table-warning text-center fw-bold">
-                    <th colspan="2" class="text-end">
-                      TOTAL HOLOGRAMS REQUESTED:
-                    </th>
-                    <th class="fs-4 text-primary">{{ getTotalQuantity() }}</th>
-                    <th>
-                      <span class="badge bg-primary text-white">APPROVED</span>
-                    </th>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
+                    <td><strong>{{ getTotalQuantity() }}</strong></td>
+                    <td><span class="status-total">APPROVED</span></td>
                   </tr>
                 </tbody>
               </table>

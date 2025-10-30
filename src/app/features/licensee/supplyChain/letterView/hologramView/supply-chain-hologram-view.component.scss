@@ -107,38 +107,57 @@
           border: 2px solid #198754 !important;
         }
 
-        .table {
-          margin-bottom: 0;
+        .simple-table {
+          .table {
+            margin-bottom: 0;
+            background: white;
 
-          th, td {
-            padding: 1rem;
-            vertical-align: middle;
-            border: 1px solid #dee2e6;
-          }
-
-          thead th {
-            background: linear-gradient(135deg, #198754 0%, #20c997 100%);
-            color: white;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-
-          tbody tr {
-            transition: all 0.3s ease;
-
-            &:hover {
-              background-color: rgba(25, 135, 84, 0.05);
-              transform: scale(1.01);
+            th, td {
+              padding: 0.75rem;
+              vertical-align: middle;
+              border: 1px solid #dee2e6;
+              text-align: center;
             }
-          }
 
-          .table-warning {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            th:nth-child(2), td:nth-child(2) {
+              text-align: left;
+            }
 
-            th {
-              font-size: 1.1rem;
-              color: #856404;
+            thead th {
+              background-color: #f8f9fa;
+              color: #495057;
+              font-weight: 600;
+              border-bottom: 2px solid #dee2e6;
+            }
+
+            tbody tr {
+              &:nth-child(odd) {
+                background-color: #f9f9f9;
+              }
+
+              &.total-row {
+                background-color: #e9ecef;
+                font-weight: bold;
+                border-top: 2px solid #495057;
+              }
+            }
+
+            .status-approved {
+              background-color: #d4edda;
+              color: #155724;
+              padding: 0.25rem 0.5rem;
+              border-radius: 0.25rem;
+              font-size: 0.875rem;
+              font-weight: 500;
+            }
+
+            .status-total {
+              background-color: #cce5ff;
+              color: #004085;
+              padding: 0.25rem 0.5rem;
+              border-radius: 0.25rem;
+              font-size: 0.875rem;
+              font-weight: 600;
             }
           }
         }
@@ -309,38 +328,293 @@
 
 // Print Styles
 @media print {
+  @page {
+    size: A4;
+    margin: 0.3in;
+  }
+
+  // Hide all footers, headers, and navigation elements globally
+  footer,
+  .footer,
+  header,
+  .header,
+  nav,
+  .nav,
+  .navbar,
+  .sidebar,
+  .no-print {
+    display: none !important;
+  }
+
+  // Hide any element with footer-related classes
+  [class*="footer"],
+  [class*="Footer"],
+  [id*="footer"],
+  [id*="Footer"] {
+    display: none !important;
+  }
+
   .supply-chain-hologram-view {
+    background: white !important;
+    
     .header-section,
     .no-print {
       display: none !important;
     }
 
     .application-container {
-      max-width: none;
-      padding: 0;
+      max-width: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
 
       .card {
-        border: none;
-        box-shadow: none;
-        border-radius: 0;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+
+        .letter-header {
+          padding: 0.3rem !important;
+          margin-bottom: 0.3rem !important;
+          border-bottom: 1px solid #198754 !important;
+          background: white !important;
+
+          .d-flex {
+            gap: 0.3rem !important;
+            margin-bottom: 0.2rem !important;
+          }
+
+          img {
+            height: 30px !important;
+          }
+
+          h3 {
+            font-size: 0.75rem !important;
+            margin-bottom: 0.05rem !important;
+            line-height: 1 !important;
+          }
+
+          h4 {
+            font-size: 0.7rem !important;
+            margin-bottom: 0.05rem !important;
+            line-height: 1 !important;
+
+            &:last-of-type {
+              font-size: 0.8rem !important;
+              margin-top: 0.2rem !important;
+              padding: 0.1rem 0 !important;
+              border-top: 1px solid #dee2e6 !important;
+              border-bottom: 1px solid #dee2e6 !important;
+            }
+          }
+
+          p {
+            font-size: 0.6rem !important;
+            margin-bottom: 0 !important;
+          }
+
+          hr {
+            margin: 0.15rem 0 !important;
+            height: 1px !important;
+          }
+        }
 
         .letter-content {
-          padding: 1rem;
+          padding: 0.3rem !important;
 
-          .table {
+          // Ultra compact reference and date section
+          .row.mb-4 {
+            margin-bottom: 0.4rem !important;
+
+            .col-6 .border {
+              padding: 0.3rem !important;
+              border: 1px solid #dee2e6 !important;
+              border-radius: 0.2rem !important;
+
+              strong {
+                font-size: 0.65rem !important;
+              }
+
+              .fs-5 {
+                font-size: 0.8rem !important;
+                margin-top: 0.1rem !important;
+              }
+            }
+          }
+
+          // Ultra compact company information
+          .bg-light {
+            padding: 0.4rem !important;
+            margin-bottom: 0.4rem !important;
+            border: 1px solid #198754 !important;
+            background: #f8f9fa !important;
+
+            h5 {
+              font-size: 0.7rem !important;
+              margin-bottom: 0.3rem !important;
+            }
+
+            .fs-5 {
+              font-size: 0.8rem !important;
+            }
+          }
+
+          // Ultra compact table section
+          .mb-4 {
+            margin-bottom: 0.4rem !important;
+
+            h5 {
+              font-size: 0.7rem !important;
+              margin-bottom: 0.3rem !important;
+            }
+          }
+
+          .simple-table .table {
+            margin-bottom: 0.3rem !important;
+
             th, td {
-              padding: 0.5rem;
-              font-size: 0.9rem;
+              padding: 0.25rem !important;
+              font-size: 0.65rem !important;
+              line-height: 1.1 !important;
+              border: 1px solid #dee2e6 !important;
+            }
+
+            thead th {
+              background-color: #f8f9fa !important;
+              font-weight: 600 !important;
+              font-size: 0.6rem !important;
+            }
+
+            .total-row {
+              background-color: #e9ecef !important;
+              font-weight: bold !important;
+              border-top: 2px solid #495057 !important;
+            }
+
+            .status-approved,
+            .status-total {
+              font-size: 0.55rem !important;
+              padding: 0.1rem 0.2rem !important;
+              border-radius: 0.15rem !important;
+            }
+          }
+
+          // Ultra compact summary cards - make them horizontal
+          .row.mb-4:has(.card) {
+            margin-bottom: 0.4rem !important;
+
+            .col-md-6 {
+              margin-bottom: 0.2rem !important;
             }
           }
 
           .card {
-            break-inside: avoid;
-            margin-bottom: 1rem;
+            margin-bottom: 0.3rem !important;
+            border: 1px solid #dee2e6 !important;
+
+            .card-header {
+              padding: 0.25rem !important;
+              font-size: 0.6rem !important;
+              background: #f8f9fa !important;
+              color: #495057 !important;
+
+              h6 {
+                font-size: 0.6rem !important;
+                margin-bottom: 0 !important;
+              }
+            }
+
+            .card-body {
+              padding: 0.4rem !important;
+
+              .row {
+                font-size: 0.6rem !important;
+                margin-bottom: 0.1rem !important;
+
+                > div {
+                  padding: 0.05rem 0 !important;
+                }
+              }
+
+              .badge {
+                font-size: 0.5rem !important;
+                padding: 0.1rem 0.2rem !important;
+              }
+            }
+          }
+
+          // Ultra compact official remarks
+          .border.p-3.bg-light {
+            padding: 0.4rem !important;
+            margin-bottom: 0.4rem !important;
+            border: 1px solid #dee2e6 !important;
+            background: #f8f9fa !important;
+
+            h6 {
+              font-size: 0.65rem !important;
+              margin-bottom: 0.3rem !important;
+            }
+
+            p {
+              font-size: 0.6rem !important;
+              line-height: 1.2 !important;
+              margin-bottom: 0.3rem !important;
+            }
+          }
+
+          // Ultra compact signature section
+          .row.mt-5 {
+            margin-top: 0.6rem !important;
+
+            .text-center {
+              div[style*="height: 60px"] {
+                height: 25px !important;
+                margin-bottom: 2px !important;
+              }
+
+              p {
+                font-size: 0.65rem !important;
+                margin-bottom: 0.1rem !important;
+              }
+
+              small {
+                font-size: 0.55rem !important;
+              }
+            }
           }
         }
       }
     }
+  }
+
+  // Remove page breaks to force single page
+  * {
+    page-break-inside: auto !important;
+    page-break-before: auto !important;
+    page-break-after: auto !important;
+  }
+
+  // Ensure content fits on single page
+  .printable-content {
+    max-height: 10.2in !important;
+    overflow: hidden !important;
+    transform: scale(0.9);
+    transform-origin: top left;
+  }
+
+  // Force single page by hiding overflow
+  body {
+    overflow: hidden !important;
+  }
+
+  // Ensure only the hologram content is visible
+  body * {
+    visibility: hidden !important;
+  }
+
+  .supply-chain-hologram-view,
+  .supply-chain-hologram-view * {
+    visibility: visible !important;
   }
 }
 
