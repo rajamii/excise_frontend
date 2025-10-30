@@ -1,0 +1,241 @@
+<div class="supply-chain-hologram-view">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Back to IT Cell
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">Hologram Application View</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Content -->
+  <div class="application-container">
+    @if (hologramData) {
+      <div
+        id="hologramPrintSection"
+        class="card shadow-sm border-0 printable-content"
+      >
+        <!-- Government Header -->
+        <div class="letter-header text-center mb-3">
+          <div
+            class="d-flex align-items-center justify-content-center gap-2 mb-2"
+          >
+            <img
+              src="assets/images/header/Seal_of_Sikkim_greyscale.png"
+              alt="Government of Sikkim Seal"
+              style="height: 60px; width: auto"
+            />
+            <div class="text-center">
+              <h3 class="fw-bold mb-0">GOVERNMENT OF SIKKIM</h3>
+              <h4 class="fw-semibold mb-0">EXCISE DEPARTMENT</h4>
+              <p class="mb-0 small">GANGTOK, SIKKIM</p>
+            </div>
+          </div>
+          <hr class="border-dark" />
+          <h4 class="fw-bold text-decoration-underline">
+            HOLOGRAM REQUISITION APPLICATION
+          </h4>
+        </div>
+
+        <div class="letter-content p-3">
+          <!-- Reference and Date -->
+          <div class="row mb-3">
+            <div class="col-6">
+              <div class="border p-2">
+                <strong>Application Ref. No:</strong>
+                <div class="fs-6 fw-bold text-primary">
+                  {{ hologramData.refNo }}
+                </div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="border p-2">
+                <strong>Application Date:</strong>
+                <div class="fs-6 fw-bold">
+                  {{ hologramData.date | date: "dd-MM-yyyy" }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Company Information -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <div class="border p-2 bg-light">
+                <h6 class="fw-bold mb-1">Applicant Details</h6>
+                <div class="row">
+                  <div class="col-12">
+                    <strong>Company Name:</strong>
+                    <div class="fs-6 fw-semibold text-success">
+                      {{ hologramData.companyName }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hologram Quantity Details -->
+          <div class="mb-3">
+            <h6 class="fw-bold mb-2">Requested Hologram Quantities</h6>
+            <div class="simple-table">
+              <table class="table table-bordered table-sm">
+                <thead>
+                  <tr>
+                    <th>Sl. No.</th>
+                    <th>Hologram Series</th>
+                    <th>Quantity (In Lakh)</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Local Series</td>
+                    <td>{{ hologramData.localQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Export Series</td>
+                    <td>{{ hologramData.exportQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>Defence Series</td>
+                    <td>{{ hologramData.defenceQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
+                  </tr>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
+                    <td><strong>{{ getTotalQuantity() }}</strong></td>
+                    <td><span class="status-total">APPROVED</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Application Summary -->
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <div class="card border-info">
+                <div class="card-header bg-info text-white py-1">
+                  <h6 class="mb-0 fw-bold">Application Summary</h6>
+                </div>
+                <div class="card-body py-2">
+                  <div class="row g-1">
+                    <div class="col-6"><strong>Total Quantity:</strong></div>
+                    <div class="col-6">{{ getTotalQuantity() }} Lakh</div>
+                    <div class="col-6"><strong>Series Count:</strong></div>
+                    <div class="col-6">3 Series</div>
+                    <div class="col-6"><strong>Status:</strong></div>
+                    <div class="col-6">
+                      <span class="badge bg-success">{{ hologramData.status }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card border-warning">
+                <div class="card-header bg-warning text-dark py-1">
+                  <h6 class="mb-0 fw-bold">Processing Information</h6>
+                </div>
+                <div class="card-body py-2">
+                  <div class="row g-1">
+                    <div class="col-6"><strong>Processed Date:</strong></div>
+                    <div class="col-6">
+                      {{ hologramData.date | date: "dd-MM-yyyy" }}
+                    </div>
+                    <div class="col-6"><strong>Processing Time:</strong></div>
+                    <div class="col-6">Same Day</div>
+                    <div class="col-6"><strong>Officer:</strong></div>
+                    <div class="col-6">IT Cell Officer</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Official Remarks -->
+          <div class="border p-2 bg-light mb-3">
+            <h6 class="fw-bold mb-1">Official Remarks:</h6>
+            <p class="mb-1 small">
+              @if (hologramData.remarks) {
+                {{ hologramData.remarks }}
+              } @else {
+                The hologram requisition application has been reviewed and
+                approved by the Excise Department. The requested quantities for
+                all series (Local, Export, Defence) are within the permitted
+                limits and comply with the regulatory requirements.
+              }
+            </p>
+            <p class="mb-0 small">
+              <strong>Approval Status:</strong>
+              <span class="text-success fw-bold">{{ hologramData.status }}</span>
+            </p>
+          </div>
+
+          <!-- Signature Section -->
+          <div class="row mt-3">
+            <div class="col-6">
+              <div class="text-center">
+                <div
+                  style="
+                    height: 40px;
+                    border-bottom: 1px solid #000;
+                    margin-bottom: 3px;
+                  "
+                ></div>
+                <p class="mb-0 fw-semibold small">Applicant Signature</p>
+                <small class="text-muted">{{
+                  hologramData.companyName
+                }}</small>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="text-center">
+                <div
+                  style="
+                    height: 40px;
+                    border-bottom: 1px solid #000;
+                    margin-bottom: 3px;
+                  "
+                ></div>
+                <p class="mb-0 fw-semibold small">Approving Officer</p>
+                <small class="text-muted"
+                  >IT Cell, Excise Department, Government of Sikkim</small
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="no-print d-flex justify-content-center gap-2 mt-3">
+            <button class="btn btn-primary" (click)="printLetter()">
+              <i class="bi bi-printer me-1"></i>Print Application
+            </button>
+            <button class="btn btn-outline-secondary" (click)="goBack()">
+              <i class="bi bi-arrow-left me-1"></i>Back to IT Cell
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="alert alert-warning text-center">
+        <h4><i class="bi bi-exclamation-triangle me-2"></i>No Data Found</h4>
+        <p>The requested hologram application could not be found or loaded.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-2"></i>Return to IT Cell
+        </button>
+      </div>
+    }
+  </div>
+</div>

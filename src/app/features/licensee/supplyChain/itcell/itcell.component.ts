@@ -1,6 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 interface HologramFormData {
   refNo: string;
@@ -85,7 +86,7 @@ export class ITCELLComponent implements OnInit {
   
   private isBrowser = false;
 
-  constructor(@Inject(PLATFORM_ID) platformId: Object) {
+  constructor(@Inject(PLATFORM_ID) platformId: Object, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
@@ -414,5 +415,15 @@ export class ITCELLComponent implements OnInit {
     
     // Clean up the URL
     URL.revokeObjectURL(link.href);
+  }
+
+  viewApplication(hologram: HologramFormData): void {
+    // Navigate to hologram application view page
+    const applicationUrl = `/dev-hologram-application-view?ref=${encodeURIComponent(hologram.refNo)}`;
+    
+    // Open in new tab/window
+    window.open(applicationUrl, '_blank');
+    
+    console.log('Viewing application for:', hologram.refNo);
   }
 }
