@@ -45,6 +45,7 @@ export class TransitPermitComponent implements OnInit {
   products: Product[] = [];
   validationErrors: string[] = [];
   isLocked = false;
+  isSubmitted = false;
 
   // Sample rates for calculation
   private rates = {
@@ -177,57 +178,70 @@ export class TransitPermitComponent implements OnInit {
       total + (product.additionalExcise * product.cases), 0);
   }
 
-  showDeclarationModal(): void {
+  submitApplication(): void {
     if (this.products.length === 0) {
-      this.validationErrors = ['Please add at least one product before saving'];
+      this.validationErrors = ['Please add at least one product before submitting'];
       return;
     }
 
-    // Show Bootstrap modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
+    // Validate all required fields
+    if (!this.formData.date || !this.formData.depotAddress || !this.formData.vehicleNumber) {
+      this.validationErrors = ['Please fill all required fields: Date, Depot Address, and Vehicle Number'];
+      return;
     }
-  }
 
-  cancelDeclaration(): void {
-    // Hide modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      if (modal) {
-        modal.hide();
-      }
-    }
-    console.log('Declaration cancelled');
-  }
-
-  acceptDeclaration(): void {
-    // Lock the bill
-    this.isLocked = true;
+    // Clear validation errors
+    this.validationErrors = [];
     
-    // Hide modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      if (modal) {
-        modal.hide();
-      }
-    }
+    // Mark as submitted and locked
+    this.isSubmitted = true;
+    this.isLocked = true;
 
-    console.log('Bill locked successfully');
-    alert('Bill has been locked successfully and is ready for payment processing.');
-    // Save to local storage for later viewing
+    // Save to localStorage for supply chain dashboard
+    this.saveToSupplyChainDashboard();
+
+    // Show success message
+    alert('Transit Permit Application submitted successfully!');
+  }
+
+  private saveToSupplyChainDashboard(): void {
     if (this.isBrowser) {
-      const key = 'transitPermitRequests';
-      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const entry = { ...this.formData, products: this.products };
-      const idx = list.findIndex(r => r.billNo === this.formData.billNo);
-      if (idx >= 0) list[idx] = entry; else list.unshift(entry);
-      localStorage.setItem(key, JSON.stringify(list));
+      // Save to transitPermitRequests for transit permit dashboard
+      const transitKey = 'transitPermitRequests';
+      const transitList: any[] = JSON.parse(localStorage.getItem(transitKey) || '[]');
+      const transitEntry = { 
+        ...this.formData, 
+        products: this.products,
+        submissionDate: new Date().toISOString(),
+        status: 'TRANSIT PERMIT ISSUED',
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+      };
+      const transitIdx = transitList.findIndex(r => r.billNo === this.formData.billNo);
+      if (transitIdx >= 0) transitList[transitIdx] = transitEntry; else transitList.unshift(transitEntry);
+      localStorage.setItem(transitKey, JSON.stringify(transitList));
+
+      // Also save to supply chain dashboard (importPermitRequests for compatibility)
+      const supplyChainKey = 'importPermitRequests';
+      const supplyChainList: any[] = JSON.parse(localStorage.getItem(supplyChainKey) || '[]');
+      const supplyChainEntry = {
+        refNo: this.formData.billNo,
+        date: this.formData.date,
+        distilleryName: this.formData.soleDistributor,
+        status: 'TRANSIT PERMIT ISSUED',
+        brAmount: this.getTotalEducationCess(),
+        type: 'transit-permit',
+        depotAddress: this.formData.depotAddress,
+        vehicleNumber: this.formData.vehicleNumber,
+        products: this.products,
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+      };
+      const supplyChainIdx = supplyChainList.findIndex(r => r.refNo === this.formData.billNo);
+      if (supplyChainIdx >= 0) supplyChainList[supplyChainIdx] = supplyChainEntry; else supplyChainList.unshift(supplyChainEntry);
+      localStorage.setItem(supplyChainKey, JSON.stringify(supplyChainList));
     }
   }
+
+
 
   payAllItems(): void {
     // Navigate to payment confirmation page
@@ -253,11 +267,63 @@ export class TransitPermitComponent implements OnInit {
     this.products = [];
     this.validationErrors = [];
     this.isLocked = false;
+    this.isSubmitted = false;
 
     console.log('Form cleared');
   }
 
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
+  }
+
+  getDepotDisplayName(depotValue: string): string {
+    const depotNames: { [key: string]: string } = {
+      'gangtok': 'Gangtok, Sikkim',
+      'namchi': 'Namchi, Sikkim',
+      'gyalshing': 'Gyalshing, Sikkim',
+      'mangan': 'Mangan, Sikkim'
+    };
+    return depotNames[depotValue] || depotValue;
+  }
+
+  printApplication(): void {
+    const printable = document.getElementById('transitPermitPrintSection')?.innerHTML || '';
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) return;
+    win.document.open();
+    const ref = this.formData.billNo || 'TRN/BF801';
+    win.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>Transit Permit Application - ${ref}</title>
+          ${styles}
+          <style>
+            @page { size: A4; margin: 12mm; }
+            body { background: #fff; color: #000; }
+            .no-print { display:none !important; }
+            .container { max-width: 100%; padding: 20px; }
+            .government-header .text-success { color: #000 !important; }
+            .details-card h6 { color: #000 !important; }
+            .route-section h5 { color: #000 !important; }
+            .form-section h5 { color: #000 !important; }
+            .products-section h5 { color: #000 !important; }
+            .table { border: 1px solid #000; }
+            .table td, .table th { border-color: #000; }
+            .bg-light { background-color: #f0f0f0 !important; }
+          </style>
+        </head>
+        <body>
+          ${printable}
+        </body>
+      </html>`);
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+      win.close();
+    };
   }
 }
