@@ -415,14 +415,6 @@ export class CommissionerDashboardComponent implements OnInit {
           queryParams: { ref: record.referenceNo },
         });
         break;
-      case "transit":
-        this.router.navigate(["/dev-transit-permit-letter-view"], {
-          queryParams: {
-            ref: record.referenceNo,
-            source: "commissioner-dashboard",
-          },
-        });
-        break;
       default:
         alert(`Viewing application for ${record.referenceNo}`);
     }
