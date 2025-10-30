@@ -43,21 +43,24 @@
                       <td>1</td>
                       <td>Local</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0" step="0.01" placeholder="e.g. 15">
+                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0"
+                          step="0.01" placeholder="e.g. 15">
                       </td>
                     </tr>
                     <tr>
                       <td>2</td>
                       <td>Export</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0" step="0.01">
+                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0"
+                          step="0.01">
                       </td>
                     </tr>
                     <tr>
                       <td>3</td>
                       <td>Defence</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0" step="0.01">
+                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0"
+                          step="0.01">
                       </td>
                     </tr>
                     <tr>
@@ -88,78 +91,163 @@
           </div>
         </div>
 
-        <!-- Letter Preview -->
-        <div id="hologramPrintSection" class="card shadow-sm border-0 printable-content" *ngIf="showPreview" style="max-width: 1150px; margin: 0 auto;">
-          <div class="letter-header text-center fw-bold mb-3 fs-5">
-            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
-              <span>Yuksom Breweries Ltd.</span>
+        <!-- Government Form Preview - Only shows after submit -->
+        @if (isSubmitted && showPreview) {
+        <div id="hologramPrintSection" class="government-form-container">
+          <!-- Government Header -->
+          <div class="gov-header">
+            <div class="gov-seal">
+              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal" class="seal-image">
+            </div>
+            <div class="gov-title">
+              <h2 class="gov-main-title">GOVERNMENT OF SIKKIM</h2>
+              <h3 class="gov-dept-title">EXCISE DEPARTMENT</h3>
+              <p class="gov-location">GANGTOK, SIKKIM</p>
             </div>
           </div>
-          <div class="letter-content p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <div><strong>Our Ref:</strong> <span class="fw-bold">{{ submittedData?.refNo || formData.refNo }}</span></div>
-              <div><strong>Date:</strong> <span class="fw-bold">{{ (submittedData?.date || formData.date) | date:'dd-MM-yyyy' }}</span></div>
+
+          <hr class="gov-divider">
+
+          <!-- Form Title -->
+          <div class="form-title-section">
+            <h3 class="form-title">HOLOGRAM REQUISITION APPLICATION</h3>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Application Details -->
+          <div class="application-details">
+            <div class="detail-row">
+              <div class="detail-box">
+                <label class="detail-label">Application Ref. No:</label>
+                <div class="detail-value ref-value">{{ submittedData?.refNo }}</div>
+              </div>
+              <div class="detail-box">
+                <label class="detail-label">Application Date:</label>
+                <div class="detail-value">{{ submittedData?.date | date:'dd-MM-yyyy' }}</div>
+              </div>
             </div>
+          </div>
 
-            
-            <p class="mb-1"><strong>To,</strong><br>
-              The Commissioner<br>
-              Excise (Abk) Department<br>
-              Government of Sikkim, Gangtok
-            </p>
+          <!-- Applicant Details -->
+          <div class="applicant-section">
+            <div class="section-header">Applicant Details</div>
+            <div class="applicant-info">
+              <div class="info-row">
+                <label class="info-label">Company Name:</label>
+                <div class="info-value company-name">{{ submittedData?.companyName }}</div>
+              </div>
+            </div>
+          </div>
 
-            <p class="mb-2"><strong>Sub:</strong> Requisition for Security Holograms</p>
-
-            <p class="mb-3">Dear Madam, Kindly issue us the following quantities of Security Hologram:</p>
-
-            <div class="table-responsive mb-3">
-              <table class="table table-bordered">
-                <thead class="table-light">
+          <!-- Requested Quantities -->
+          <div class="quantities-section">
+            <h4 class="section-title">Requested Hologram Quantities</h4>
+            <div class="quantities-table">
+              <table class="gov-table">
+                <thead>
                   <tr>
-                    <th style="width: 120px;">Sl. No.</th>
-                    <th>Series</th>
-                    <th style="width: 260px;">Quantity (In Lakh)</th>
+                    <th>Sl. No.</th>
+                    <th>Hologram Series</th>
+                    <th>Quantity (In Lakh)</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td>1</td>
-                    <td>Local</td>
-                    <td>{{ submittedData?.localQtyLakh ?? '-' }}</td>
+                    <td>Local Series</td>
+                    <td>{{ submittedData?.localQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
                   <tr>
                     <td>2</td>
-                    <td>Export</td>
-                    <td>{{ submittedData?.exportQtyLakh ?? '-' }}</td>
+                    <td>Export Series</td>
+                    <td>{{ submittedData?.exportQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
                   <tr>
                     <td>3</td>
-                    <td>Defence</td>
-                    <td>{{ submittedData?.defenceQtyLakh ?? '-' }}</td>
+                    <td>Defence Series</td>
+                    <td>{{ submittedData?.defenceQtyLakh || 0 }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
-                  <tr>
-                    <th colspan="2" class="text-end">Total No. of Holograms</th>
-                    <th>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) + (submittedData?.defenceQtyLakh || 0)) || 0 }} Lakh</th>
+                  <tr class="total-row">
+                    <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
+                    <td><strong>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) +
+                        (submittedData?.defenceQtyLakh || 0)) }}</strong></td>
+                    <td><span class="status-total">APPROVED</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </div>
 
-            <div class="mt-4">
-              <p>Thanking You,</p>
-              <p class="mb-0">For {{ submittedData?.companyName || formData.companyName }}</p>
-              <div style="height: 50px"></div>
-              <p class="mb-0">(Jr. Sales Officer)</p>
+          <!-- Summary Cards -->
+          <div class="summary-section">
+            <div class="summary-card application-summary">
+              <div class="card-header">APPLICATION SUMMARY</div>
+              <div class="card-content">
+                <div class="summary-row">
+                  <span class="summary-label">Total Quantity:</span>
+                  <span class="summary-value">{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh ||
+                    0) + (submittedData?.defenceQtyLakh || 0)) }} Lakh</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Series Count:</span>
+                  <span class="summary-value">3 Series</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Status:</span>
+                  <span class="summary-value"><span class="badge-approved">APPROVED</span></span>
+                </div>
+              </div>
             </div>
 
-            <div class="no-print d-flex justify-content-center mt-4">
-              <button class="btn btn-secondary" (click)="openPrintPreview()">
-                <i class="bi bi-printer me-1"></i>Print Letter
-              </button>
+            <div class="summary-card processing-info">
+              <div class="card-header">PROCESSING INFORMATION</div>
+              <div class="card-content">
+                <div class="summary-row">
+                  <span class="summary-label">Processed Date:</span>
+                  <span class="summary-value">{{ submittedData?.date | date:'dd-MM-yyyy' }}</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Processing Time:</span>
+                  <span class="summary-value">Same Day</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Officer:</span>
+                  <span class="summary-value">Excise Officer</span>
+                </div>
+              </div>
             </div>
           </div>
+
+          <!-- Official Remarks -->
+          <div class="remarks-section">
+            <div class="remarks-header">Official Remarks:</div>
+            <div class="remarks-content">
+              <p>The hologram requisition application has been reviewed and approved by the Excise Department. The
+                requested quantities for all series (Local, Export, Defence) are within the permitted limits and comply
+                with the regulatory requirements.</p>
+              <p class="approval-status">
+                <strong>Approval Status: </strong>
+                <span class="status-approved-text">APPROVED</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Print Actions -->
+          <div class="print-actions no-print">
+            <button class="btn btn-primary btn-lg" (click)="openPrintPreview()">
+              <i class="bi bi-printer me-2"></i>Print Application
+            </button>
+            <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
+              <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </button>
+          </div>
         </div>
+        }
 
       </div>
     </div>

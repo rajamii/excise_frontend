@@ -25,6 +25,8 @@ export class HologramComponent {
   errorMessage = '';
   showPreview = false;
   submittedData?: HologramFormData;
+  isSubmitted = false;
+  showSuccessMessage = false;
 
   formData: HologramFormData = {
     refNo: '',
@@ -100,6 +102,20 @@ export class HologramComponent {
     this.errorMessage = '';
     this.showPreview = false;
     this.submittedData = undefined;
+    this.isSubmitted = false;
+    this.showSuccessMessage = false;
+  }
+
+  createNewApplication(): void {
+    this.clearForm();
+    // Scroll back to form
+    setTimeout(() => {
+      document.querySelector('.card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  viewInDashboard(): void {
+    this.router.navigate(['/dev-hologram-daily-register']);
   }
 
   get totalQtyLakh(): number {
@@ -139,20 +155,23 @@ export class HologramComponent {
     if (!confirmed) {
       return;
     }
+    
     // Lock the submitted data for preview/print and mark as submitted
     this.submittedData = { ...this.formData };
+    this.isSubmitted = true;
+    this.showSuccessMessage = true;
     this.showPreview = true;
+    
     // Persist to list as forwarded
     if (this.isBrowser) {
       const key = 'hologramRequests';
       const list: HologramFormData[] = JSON.parse(localStorage.getItem(key) || '[]');
       list.unshift({ ...this.submittedData });
       localStorage.setItem(key, JSON.stringify(list));
+      
+      // Also register in hologram dashboard/daily register
+      this.registerInHologramDashboard();
     }
-    // Scroll preview into view for user visibility
-    setTimeout(() => {
-      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 25);
 
     // Only after successful submit, advance the sequence for the next request
     this.incrementSequenceNumber();
@@ -160,8 +179,37 @@ export class HologramComponent {
     // keep current input values visible until the user edits/clears
     this.formData.refNo = `YB/${this.getNextSequenceNumber()}/BREW/${String(new Date().getFullYear()).slice(-2)}`;
 
-    // Show success message
-    alert('Hologram requisition submitted successfully! You can now view and print the letter below.');
+    // Scroll to government form
+    setTimeout(() => {
+      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  private registerInHologramDashboard(): void {
+    if (!this.submittedData || !this.isBrowser) return;
+
+    // Register the application in the hologram dashboard
+    const dashboardKey = 'hologramApplications';
+    const applications = JSON.parse(localStorage.getItem(dashboardKey) || '[]');
+    
+    const newApplication = {
+      id: Date.now().toString(),
+      refNo: this.submittedData.refNo,
+      date: this.submittedData.date,
+      companyName: this.submittedData.companyName,
+      localQtyLakh: this.submittedData.localQtyLakh || 0,
+      exportQtyLakh: this.submittedData.exportQtyLakh || 0,
+      defenceQtyLakh: this.submittedData.defenceQtyLakh || 0,
+      totalQtyLakh: (this.submittedData.localQtyLakh || 0) + (this.submittedData.exportQtyLakh || 0) + (this.submittedData.defenceQtyLakh || 0),
+      status: 'Submitted',
+      submittedAt: new Date().toISOString(),
+      type: 'Hologram Application'
+    };
+    
+    applications.unshift(newApplication);
+    localStorage.setItem(dashboardKey, JSON.stringify(applications));
+    
+    console.log('Application registered in hologram dashboard:', newApplication);
   }
 
   openPrintPreview(): void {
