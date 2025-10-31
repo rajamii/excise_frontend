@@ -15,19 +15,10 @@ interface HologramFormData {
   reviewedBy?: string;
   reviewedDate?: string;
   remarks?: string;
-  uploadedFile?: File;
+
 }
 
-interface UploadedDocument {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  uploadDate: Date;
-  fileType: string;
-  status: 'Uploaded' | 'Processing' | 'Processed' | 'Error';
-  description?: string;
-  category: 'Hologram' | 'Permit' | 'License' | 'Other';
-}
+
 
 @Component({
   selector: 'app-itcell',
@@ -58,11 +49,7 @@ export class ITCELLComponent implements OnInit {
   statusFilter: string = '';
   companyFilter: string = '';
   
-  // Upload Documents
-  uploadedDocuments: UploadedDocument[] = [];
-  selectedFiles: File[] = [];
-  uploadProgress: number = 0;
-  isUploading: boolean = false;
+
   
   // Available options
   months = [
@@ -82,7 +69,7 @@ export class ITCELLComponent implements OnInit {
   
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   statusOptions = ['All', 'Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
-  documentCategories = ['Hologram', 'Permit', 'License', 'Other'];
+
   
   private isBrowser = false;
 
@@ -92,7 +79,6 @@ export class ITCELLComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadHologramData();
-    this.loadUploadedDocuments();
     this.applyFilters();
   }
 
@@ -158,44 +144,7 @@ export class ITCELLComponent implements OnInit {
     }
   }
 
-  private loadUploadedDocuments(): void {
-    if (!this.isBrowser) {
-      this.uploadedDocuments = [];
-      return;
-    }
-    
-    const stored = JSON.parse(localStorage.getItem('uploadedDocuments') || '[]');
-    this.uploadedDocuments = stored.map((item: any) => ({
-      ...item,
-      uploadDate: new Date(item.uploadDate)
-    }));
 
-    // Add sample data if none exists
-    if (this.uploadedDocuments.length === 0) {
-      this.uploadedDocuments = [
-        {
-          id: '1',
-          fileName: 'hologram_requisition_001.pdf',
-          fileSize: 245760,
-          uploadDate: new Date('2024-01-15'),
-          fileType: 'PDF',
-          status: 'Processed',
-          description: 'Hologram requisition form',
-          category: 'Hologram'
-        },
-        {
-          id: '2',
-          fileName: 'permit_application_002.pdf',
-          fileSize: 189440,
-          uploadDate: new Date('2024-01-20'),
-          fileType: 'PDF',
-          status: 'Processing',
-          description: 'Import permit application',
-          category: 'Permit'
-        }
-      ];
-    }
-  }
 
   applyFilters(): void {
     let filtered = [...this.hologramData];
@@ -240,25 +189,7 @@ export class ITCELLComponent implements OnInit {
     this.applyFilters();
   }
 
-  onFileSelected(event: any, hologram?: HologramFormData): void {
-    if (hologram) {
-      // File upload for specific hologram record
-      const file = event.target.files[0];
-      if (file) {
-        hologram.uploadedFile = file;
-        // Update the hologram data
-        this.updateHologramInStorage(hologram);
-      }
-    } else {
-      // General file selection (for bulk upload if needed)
-      this.selectedFiles = Array.from(event.target.files);
-    }
-  }
 
-  removeFile(hologram: HologramFormData): void {
-    hologram.uploadedFile = undefined;
-    this.updateHologramInStorage(hologram);
-  }
 
   private updateHologramInStorage(hologram: HologramFormData): void {
     if (!this.isBrowser) return;
@@ -271,58 +202,7 @@ export class ITCELLComponent implements OnInit {
     }
   }
 
-  uploadFiles(): void {
-    if (this.selectedFiles.length === 0) return;
 
-    this.isUploading = true;
-    this.uploadProgress = 0;
-
-    // Simulate file upload progress
-    const interval = setInterval(() => {
-      this.uploadProgress += 10;
-      if (this.uploadProgress >= 100) {
-        clearInterval(interval);
-        this.processUploadedFiles();
-      }
-    }, 200);
-  }
-
-  private processUploadedFiles(): void {
-    this.selectedFiles.forEach(file => {
-      const document: UploadedDocument = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        fileName: file.name,
-        fileSize: file.size,
-        uploadDate: new Date(),
-        fileType: file.type.split('/')[1].toUpperCase(),
-        status: 'Processed',
-        description: '',
-        category: 'Other'
-      };
-
-      this.uploadedDocuments.unshift(document);
-    });
-
-    if (this.isBrowser) {
-      localStorage.setItem('uploadedDocuments', JSON.stringify(this.uploadedDocuments));
-    }
-
-    this.selectedFiles = [];
-    this.isUploading = false;
-    this.uploadProgress = 0;
-  }
-
-  downloadDocument(document: UploadedDocument): void {
-    // Simulate file download
-    console.log('Downloading:', document.fileName);
-  }
-
-  deleteDocument(document: UploadedDocument): void {
-    this.uploadedDocuments = this.uploadedDocuments.filter(doc => doc.id !== document.id);
-    if (this.isBrowser) {
-      localStorage.setItem('uploadedDocuments', JSON.stringify(this.uploadedDocuments));
-    }
-  }
 
   updateHologramStatus(hologram: HologramFormData, status: string): void {
     hologram.status = status as any;
@@ -375,47 +255,7 @@ export class ITCELLComponent implements OnInit {
     this.selectedHologram = null;
   }
 
-  viewUploadedFile(hologram: HologramFormData): void {
-    if (!hologram.uploadedFile) {
-      alert('No file uploaded for this hologram request.');
-      return;
-    }
 
-    // Create a file URL for viewing
-    const fileUrl = URL.createObjectURL(hologram.uploadedFile);
-    
-    // Open file in new tab/window
-    const newWindow = window.open(fileUrl, '_blank');
-    
-    if (!newWindow) {
-      alert('Please allow popups to view the file.');
-    }
-    
-    // Clean up the URL after a delay
-    setTimeout(() => {
-      URL.revokeObjectURL(fileUrl);
-    }, 10000);
-  }
-
-  downloadUploadedFile(hologram: HologramFormData): void {
-    if (!hologram.uploadedFile) {
-      alert('No file uploaded for this hologram request.');
-      return;
-    }
-
-    // Create download link
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(hologram.uploadedFile);
-    link.download = hologram.uploadedFile.name;
-    
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up the URL
-    URL.revokeObjectURL(link.href);
-  }
 
   viewApplication(hologram: HologramFormData): void {
     // Navigate to hologram application view page
