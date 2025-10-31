@@ -21,6 +21,23 @@
       &.sunday-row {
         background-color: #f3f4f6;
       }
+      &.current-date-row {
+        background-color: #e8f5e8 !important;
+        border-left: 4px solid #28a745;
+        
+        &:hover {
+          background-color: #d4edda !important;
+        }
+      }
+      &.disabled-row {
+        background-color: #f8f9fa;
+        opacity: 0.7;
+        
+        input {
+          background-color: #e9ecef !important;
+          cursor: not-allowed;
+        }
+      }
     }
 
     input[type="number"] { width: 100%; }
