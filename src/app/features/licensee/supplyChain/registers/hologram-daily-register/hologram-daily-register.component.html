@@ -209,105 +209,103 @@
                     [class.table-success]="entry.isFixed"
                     class="animate__animated animate__fadeIn"
                     [title]="entry.isFixed ? 'Saved Entry - ' + entry.date : 'New Entry - Fill in the data and click Save'">
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="date" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;" [(ngModel)]="entry.date"
+                  
+                  <!-- Date Column - MUST align with Date header -->
+                  <td style="width: 120px; min-width: 120px; max-width: 120px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="date" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem;" [(ngModel)]="entry.date"
                       [readonly]="entry.isFixed" title="Date when hologram was used">
                   </td>
 
-                  <!-- Issued From Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="text" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                  <!-- Issued From Serial - MUST align with From Serial header -->
+                  <td style="width: 110px; min-width: 110px; max-width: 110px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="text" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem;"
                       [(ngModel)]="entry.issuedFromSerial" (ngModelChange)="onSerialChange(entry)"
                       placeholder="e.g. 275346495" [readonly]="entry.isFixed"
                       [class.border-primary]="!entry.isFixed">
                   </td>
 
-                  <!-- Issued To Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="text" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                  <!-- Issued To Serial - MUST align with To Serial header -->
+                  <td style="width: 110px; min-width: 110px; max-width: 110px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="text" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem;"
                       [(ngModel)]="entry.issuedToSerial" (ngModelChange)="onSerialChange(entry)"
                       placeholder="e.g. 275520000" [readonly]="entry.isFixed"
                       [class.border-primary]="!entry.isFixed">
                   </td>
 
-                  <!-- Issued Quantity (Auto-calculated) -->
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                  <!-- Issued Quantity (Auto-calculated) - MUST align with Qty header -->
+                  <td style="width: 80px; min-width: 80px; max-width: 80px; padding: 0.25rem; vertical-align: middle; text-align: right; background-color: #f8f9fa; font-weight: bold;">
                     {{ entry.issuedQuantity | number }}
                   </td>
 
-                  <!-- Utilized Quantity -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="number" class="form-control form-control-sm text-end border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                  <!-- Utilized Quantity - MUST align with Utilized Qty header -->
+                  <td style="width: 100px; min-width: 100px; max-width: 100px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="number" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem; text-align: right;"
                       [(ngModel)]="entry.utilizedQuantity" (ngModelChange)="onEntryDataChange(entry)" 
-                      placeholder="Enter quantity" [readonly]="entry.isFixed"
+                      placeholder="0" [readonly]="entry.isFixed"
                       [class.border-primary]="!entry.isFixed" min="0">
                   </td>
 
-                  <!-- Wastage From Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="text" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                  <!-- Wastage From Serial - MUST align with Wastage From Serial header -->
+                  <td style="width: 110px; min-width: 110px; max-width: 110px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="text" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem;"
                       [(ngModel)]="entry.wastageFromSerial" (ngModelChange)="onSerialChange(entry)"
                       placeholder="Optional" [readonly]="entry.isFixed"
                       [class.border-primary]="!entry.isFixed">
                   </td>
 
-                  <!-- Wastage To Serial -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <input type="text" class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 24px;"
+                  <!-- Wastage To Serial - MUST align with Wastage To Serial header -->
+                  <td style="width: 110px; min-width: 110px; max-width: 110px; padding: 0.25rem; vertical-align: middle;">
+                    <input type="text" class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem;"
                       [(ngModel)]="entry.wastageToSerial" (ngModelChange)="onSerialChange(entry)"
                       placeholder="Optional" [readonly]="entry.isFixed"
                       [class.border-primary]="!entry.isFixed">
                   </td>
 
-                  <!-- Wastage Quantity (Auto-calculated) -->
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                  <!-- Wastage Quantity (Auto-calculated) - MUST align with Wastage Qty header -->
+                  <td style="width: 80px; min-width: 80px; max-width: 80px; padding: 0.25rem; vertical-align: middle; text-align: right; background-color: #f8f9fa; font-weight: bold;">
                     {{ entry.wastageQuantity | number }}
                   </td>
 
-                  <!-- Left Over (Auto-calculated) -->
-                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                  <!-- Left Over (Auto-calculated) - MUST align with Left Over header -->
+                  <td style="width: 100px; min-width: 100px; max-width: 100px; padding: 0.25rem; vertical-align: middle; text-align: right; background-color: #f8f9fa; font-weight: bold; color: #0d6efd;">
                     {{ entry.leftOverQuantity | number }}
                   </td>
 
-                  <!-- Damage Reason -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <textarea class="form-control form-control-sm border-1"
-                      style="font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 40px; resize: vertical;"
-                      [(ngModel)]="entry.damageReason" placeholder="Optional: Reason for damage/wastage"
+                  <!-- Damage Reason - MUST align with Damage Reason header -->
+                  <td style="width: 150px; min-width: 150px; max-width: 150px; padding: 0.25rem; vertical-align: middle;">
+                    <textarea class="form-control form-control-sm"
+                      style="width: 100%; font-size: 0.7rem; padding: 0.2rem 0.3rem; min-height: 40px; resize: vertical;"
+                      [(ngModel)]="entry.damageReason" placeholder="Reason..."
                       [readonly]="entry.isFixed" rows="2"
                       [class.border-primary]="!entry.isFixed"></textarea>
                   </td>
 
-                  <!-- Actions -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div class="d-flex gap-1 flex-column">
-                      @if (!entry.isFixed) {
-                      <button class="btn btn-success btn-sm"
-                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="saveEntry(entry)"
-                        title="Save Entry">
-                        <i class="bi bi-floppy me-1"></i>Save
+                  <!-- Actions - MUST align with Actions header -->
+                  <td style="width: 90px; min-width: 90px; max-width: 90px; padding: 0.25rem; vertical-align: middle; text-align: center;">
+                    @if (!entry.isFixed) {
+                    <div style="display: flex; gap: 2px; justify-content: center;">
+                      <button class="btn btn-success" 
+                        style="width: 35px; height: 24px; padding: 0; font-size: 0.6rem; line-height: 1;" 
+                        (click)="saveEntry(entry)" title="Save Entry">
+                        Save
                       </button>
-                      <button class="btn btn-danger btn-sm"
-                        style="padding: 0.2rem 0.4rem; font-size: 0.7rem; line-height: 1;" (click)="deleteEntry(entry)"
-                        title="Cancel/Delete">
-                        <i class="bi bi-x me-1"></i>Cancel
+                      <button class="btn btn-danger" 
+                        style="width: 35px; height: 24px; padding: 0; font-size: 0.6rem; line-height: 1;" 
+                        (click)="deleteEntry(entry)" title="Cancel/Delete">
+                        Cancel
                       </button>
-                      } @else {
-                      <div class="text-center">
-                        <span class="badge bg-success small d-block mb-1"
-                          style="font-size: 0.65rem; padding: 0.25rem 0.5rem;">
-                          <i class="bi bi-check-circle me-1"></i>Saved
-                        </span>
-                        <small class="text-muted" style="font-size: 0.6rem;">{{ entry.date }}</small>
-                      </div>
-                      }
                     </div>
+                    } @else {
+                    <span class="badge bg-success" style="font-size: 0.6rem; padding: 0.2rem 0.4rem;">
+                      ✓
+                    </span>
+                    }
                   </td>
                 </tr>
                 } @empty {

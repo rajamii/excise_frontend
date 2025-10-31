@@ -105,7 +105,7 @@ export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
   activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
-  
+
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
     name: 'Rajesh Kumar',
@@ -237,7 +237,7 @@ export class OfficerInChargeComponent implements OnInit {
   };
 
   private originalBrandById: Record<string, BrandRow> = {};
-  
+
   // Sample data for development - only applications for current officer's distillery
   allData: TransitPermitRecord[] = [
     {
@@ -324,7 +324,7 @@ export class OfficerInChargeComponent implements OnInit {
 
   filteredData: TransitPermitRecord[] = [];
   paginatedData: TransitPermitRecord[] = [];
-  
+
   filters: FilterOptions = {
     referenceNumber: '',
     status: '',
@@ -621,11 +621,11 @@ export class OfficerInChargeComponent implements OnInit {
     const changed = orig ? (orig as any)[field] !== value : true;
     (brand.changes as any)[field] = changed;
     // recalc closings for qty changes
-    if (['qtyInHandLocal','qtyProducedLocal','qtyIssuedLocal'].includes(field as string)) {
-      brand.closingLocal = (Number(brand.qtyInHandLocal)||0) + (Number(brand.qtyProducedLocal)||0) - (Number(brand.qtyIssuedLocal)||0);
+    if (['qtyInHandLocal', 'qtyProducedLocal', 'qtyIssuedLocal'].includes(field as string)) {
+      brand.closingLocal = (Number(brand.qtyInHandLocal) || 0) + (Number(brand.qtyProducedLocal) || 0) - (Number(brand.qtyIssuedLocal) || 0);
     }
-    if (['qtyInHandExport','qtyProducedExport','qtyIssuedExport'].includes(field as string)) {
-      brand.closingExport = (Number(brand.qtyInHandExport)||0) + (Number(brand.qtyProducedExport)||0) - (Number(brand.qtyIssuedExport)||0);
+    if (['qtyInHandExport', 'qtyProducedExport', 'qtyIssuedExport'].includes(field as string)) {
+      brand.closingExport = (Number(brand.qtyInHandExport) || 0) + (Number(brand.qtyProducedExport) || 0) - (Number(brand.qtyIssuedExport) || 0);
     }
   }
 
@@ -665,22 +665,22 @@ export class OfficerInChargeComponent implements OnInit {
 
   applyFilters() {
     this.filteredData = this.allData.filter(record => {
-      const matchesReference = !this.filters.referenceNumber || 
+      const matchesReference = !this.filters.referenceNumber ||
         record.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
-      
-      const matchesStatus = !this.filters.status || 
+
+      const matchesStatus = !this.filters.status ||
         record.status === this.filters.status;
-      
-      const matchesDateFrom = !this.filters.dateFrom || 
+
+      const matchesDateFrom = !this.filters.dateFrom ||
         new Date(record.submissionDate) >= new Date(this.filters.dateFrom);
-      
-      const matchesDateTo = !this.filters.dateTo || 
+
+      const matchesDateTo = !this.filters.dateTo ||
         new Date(record.submissionDate) <= new Date(this.filters.dateTo);
 
-      return matchesReference && matchesStatus && 
-             matchesDateFrom && matchesDateTo;
+      return matchesReference && matchesStatus &&
+        matchesDateFrom && matchesDateTo;
     });
-    
+
     this.currentPage = 1;
     this.updatePagination();
   }
@@ -722,15 +722,15 @@ export class OfficerInChargeComponent implements OnInit {
     const maxPagesToShow = 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(this.totalPages, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
+
     return pages;
   }
 
@@ -824,7 +824,7 @@ export class OfficerInChargeComponent implements OnInit {
         this.allData[recordIndex].status = 'APPROVED';
         this.applyFilters();
       }
-      
+
       // Add activity to register
       const newActivity: OfficerActivity = {
         dateTime: new Date().toLocaleString(),
@@ -835,11 +835,11 @@ export class OfficerInChargeComponent implements OnInit {
         comments: this.approvalComments || 'Application approved'
       };
       this.officerActivities.unshift(newActivity);
-      
+
       console.log('Application approved:', this.selectedRecord.referenceNo);
       console.log('Comments:', this.approvalComments);
       alert(`Application ${this.selectedRecord.referenceNo} has been approved!`);
-      
+
       this.selectedRecord = null;
       this.approvalComments = '';
     }
@@ -853,7 +853,7 @@ export class OfficerInChargeComponent implements OnInit {
         this.allData[recordIndex].status = 'TERMINATED';
         this.applyFilters();
       }
-      
+
       // Add activity to register
       const newActivity: OfficerActivity = {
         dateTime: new Date().toLocaleString(),
@@ -864,12 +864,12 @@ export class OfficerInChargeComponent implements OnInit {
         comments: this.terminationReason
       };
       this.officerActivities.unshift(newActivity);
-      
+
       console.log('Application terminated:', this.selectedRecord.referenceNo);
       console.log('Reason:', this.terminationReason);
       console.log('Amount to be refunded:', this.selectedRecord.amount);
       alert(`Application ${this.selectedRecord.referenceNo} has been terminated. Amount ₹${this.selectedRecord.amount} will be credited to distillery wallet.`);
-      
+
       this.selectedRecord = null;
       this.terminationReason = '';
     }
@@ -886,8 +886,8 @@ export class OfficerInChargeComponent implements OnInit {
   }
 
   getHologramCurrentDisplay(): string {
-    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
     const monthMap: { [key: string]: number } = {
       'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
       'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
@@ -897,21 +897,21 @@ export class OfficerInChargeComponent implements OnInit {
   }
 
   getHologramPreviousMonthDisplay(): string {
-    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'];
     const monthMap: { [key: string]: number } = {
       'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
       'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
     };
     let monthIndex = monthMap[this.selectedHologramMonth] || 1;
     let year = parseInt(this.selectedHologramYear);
-    
+
     monthIndex--;
     if (monthIndex === 0) {
       monthIndex = 12;
       year--;
     }
-    
+
     return `${monthNames[monthIndex]} ${year}`;
   }
 
@@ -937,7 +937,7 @@ export class OfficerInChargeComponent implements OnInit {
   }
 
   filterHologramRows() {
-    this.filteredHologramRows = this.hologramRows.filter(row => 
+    this.filteredHologramRows = this.hologramRows.filter(row =>
       row.hologramType === this.selectedHologramType &&
       row.month === this.selectedHologramMonth &&
       row.year === this.selectedHologramYear
@@ -1047,15 +1047,15 @@ export class OfficerInChargeComponent implements OnInit {
 
     // Recalculate totals when relevant fields change
     if (field === 'openingStock' || field === 'freshArrival') {
-      this.selectedHologramRow.total = 
-        (this.selectedHologramRow.openingStock || 0) + 
+      this.selectedHologramRow.total =
+        (this.selectedHologramRow.openingStock || 0) +
         (this.selectedHologramRow.freshArrival || 0);
     }
 
     // Recalculate closing balance
-    this.selectedHologramRow.closingBalance = 
-      this.selectedHologramRow.total - 
-      this.selectedHologramRow.totalUtilized - 
+    this.selectedHologramRow.closingBalance =
+      this.selectedHologramRow.total -
+      this.selectedHologramRow.totalUtilized -
       this.selectedHologramRow.totalWastage;
   }
 
