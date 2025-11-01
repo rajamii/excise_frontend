@@ -362,12 +362,10 @@
                       <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
                         <i class="bi bi-x-lg"></i>
                       </button>
-                      <button class="btn btn-outline-success" (click)="approveBrand(brand)"
-                        [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-check-circle"></i>
                       </button>
-                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)"
-                        [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-x-circle"></i>
                       </button>
                     </div>
