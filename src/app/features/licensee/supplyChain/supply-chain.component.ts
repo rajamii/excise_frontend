@@ -619,6 +619,9 @@ export class SupplyChainComponent implements OnInit {
       case "hologram":
         this.router.navigate(["/dev-hologram"]);
         break;
+      case "request-hologram":
+        this.router.navigate(["/dev-hologramrequestlevel1"]);
+        break;
       case "transit-permit-register":
         this.router.navigate(["/dev-transit-permit-register"]);
         break;

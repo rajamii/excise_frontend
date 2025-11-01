@@ -162,6 +162,13 @@ export const routes: Routes = [
       ).then((m) => m.HologramComponent),
   },
   {
+    path: "dev-hologramrequestlevel1",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component"
+      ).then((m) => m.Hologramrequestlevel1Component),
+  },
+  {
     path: "dev-daily-record-register",
     loadComponent: () =>
       import(
