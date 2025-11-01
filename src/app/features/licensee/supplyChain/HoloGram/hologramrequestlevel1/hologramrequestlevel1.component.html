@@ -1,1 +1,255 @@
-<p>hologramrequestlevel1 works!</p>
+<div class="hologram-request-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col">
+          <h2 class="page-title">
+            <i class="bi bi-qr-code me-3"></i>
+            Hologram Request Application
+          </h2>
+          <p class="page-subtitle">Submit your hologram requirement for factory use</p>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="bi bi-arrow-left me-2"></i>
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Request Form Section -->
+  <div class="form-section">
+    <div class="container-fluid">
+      <div class="form-card">
+        <div class="form-header">
+          <h4 class="form-title">
+            <i class="bi bi-clipboard-data me-2"></i>
+            Hologram Request Details
+          </h4>
+          <p class="form-description">Please fill in all required information for your hologram request</p>
+        </div>
+
+        <div class="form-body">
+          <form #hologramForm="ngForm" (ngSubmit)="onSubmit()">
+            <div class="row g-4">
+              <!-- Date to use hologram in factory -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label required">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    Date to Use Hologram in Factory
+                  </label>
+                  <input 
+                    type="date" 
+                    class="form-control" 
+                    [(ngModel)]="requestData.usageDate"
+                    name="usageDate"
+                    required
+                    [min]="minDate"
+                    placeholder="Select usage date">
+                  <small class="form-text">Select the date when holograms will be used in production</small>
+                </div>
+              </div>
+
+              <!-- Hologram to use for which Brand -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label required">
+                    <i class="bi bi-tag me-2"></i>
+                    Hologram to Use for Which Brand
+                  </label>
+                  <select 
+                    class="form-select" 
+                    [(ngModel)]="requestData.brandName"
+                    name="brandName"
+                    required>
+                    <option value="">Select Brand</option>
+                    <option *ngFor="let brand of availableBrands" [value]="brand.value">
+                      {{ brand.label }}
+                    </option>
+                  </select>
+                  <small class="form-text">Choose the brand for which holograms will be used</small>
+                </div>
+              </div>
+
+              <!-- Quantity (Bottle Size) -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label required">
+                    <i class="bi bi-cup me-2"></i>
+                    Bottle Size (Quantity)
+                  </label>
+                  <select 
+                    class="form-select" 
+                    [(ngModel)]="requestData.bottleSize"
+                    name="bottleSize"
+                    required
+                    (change)="onBottleSizeChange()">
+                    <option value="">Select Bottle Size</option>
+                    <option value="180ml">180 ml</option>
+                    <option value="375ml">375 ml</option>
+                    <option value="750ml">750 ml</option>
+                    <option value="1000ml">1000 ml (1 Liter)</option>
+                  </select>
+                  <small class="form-text">Select the bottle size for hologram application</small>
+                </div>
+              </div>
+
+              <!-- Total Numbers of Hologram -->
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label class="form-label required">
+                    <i class="bi bi-hash me-2"></i>
+                    Total Number of Holograms
+                  </label>
+                  <input 
+                    type="number" 
+                    class="form-control" 
+                    [(ngModel)]="requestData.totalHolograms"
+                    name="totalHolograms"
+                    required
+                    min="1"
+                    max="100000"
+                    placeholder="Enter total number"
+                    (input)="calculateEstimatedCost()">
+                  <small class="form-text">Enter the total number of holograms required</small>
+                </div>
+              </div>
+
+              <!-- Additional Information -->
+              <div class="col-12">
+                <div class="form-group">
+                  <label class="form-label">
+                    <i class="bi bi-chat-text me-2"></i>
+                    Additional Information / Remarks
+                  </label>
+                  <textarea 
+                    class="form-control" 
+                    [(ngModel)]="requestData.remarks"
+                    name="remarks"
+                    rows="3"
+                    placeholder="Enter any additional information or special requirements..."></textarea>
+                  <small class="form-text">Optional: Provide any additional details or special requirements</small>
+                </div>
+              </div>
+
+              <!-- Estimated Cost Display -->
+              <div class="col-12" *ngIf="estimatedCost > 0">
+                <div class="cost-summary">
+                  <div class="cost-card">
+                    <h5 class="cost-title">
+                      <i class="bi bi-calculator me-2"></i>
+                      Estimated Cost Summary
+                    </h5>
+                    <div class="cost-details">
+                      <div class="cost-row">
+                        <span class="cost-label">Number of Holograms:</span>
+                        <span class="cost-value">{{ requestData.totalHolograms | number }}</span>
+                      </div>
+                      <div class="cost-row">
+                        <span class="cost-label">Cost per Hologram:</span>
+                        <span class="cost-value">₹{{ costPerHologram }}</span>
+                      </div>
+                      <div class="cost-row total">
+                        <span class="cost-label">Total Estimated Cost:</span>
+                        <span class="cost-value">₹{{ estimatedCost | number:'1.2-2' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="form-info">
+                  <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    All fields marked with * are required
+                  </small>
+                </div>
+                <div class="action-buttons">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary me-3"
+                    (click)="resetForm()">
+                    <i class="bi bi-arrow-clockwise me-2"></i>
+                    Reset Form
+                  </button>
+                  <button 
+                    type="submit" 
+                    class="btn btn-primary"
+                    [disabled]="!hologramForm.valid || isSubmitting">
+                    <i class="bi bi-check-circle me-2" *ngIf="!isSubmitting"></i>
+                    <i class="bi bi-hourglass-split me-2" *ngIf="isSubmitting"></i>
+                    {{ isSubmitting ? 'Processing...' : 'Submit Request' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade show" 
+       tabindex="-1" 
+       style="display: block; background: rgba(0, 0, 0, 0.5);" 
+       *ngIf="showSuccessModal">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-check-circle me-2"></i>
+            Request Submitted Successfully
+          </h5>
+        </div>
+        <div class="modal-body">
+          <div class="success-content">
+            <div class="success-icon">
+              <i class="bi bi-check-circle-fill"></i>
+            </div>
+            <h4 class="success-title">Hologram Request Submitted!</h4>
+            <p class="success-message">
+              Your hologram request has been successfully submitted with reference number: 
+              <strong class="ref-number">{{ generatedRefNumber }}</strong>
+            </p>
+            
+            <div class="request-summary">
+              <h6>Request Summary:</h6>
+              <ul class="summary-list">
+                <li><strong>Usage Date:</strong> {{ requestData.usageDate | date:'dd MMM yyyy' }}</li>
+                <li><strong>Brand:</strong> {{ requestData.brandName }}</li>
+                <li><strong>Bottle Size:</strong> {{ requestData.bottleSize }}</li>
+                <li><strong>Total Holograms:</strong> {{ requestData.totalHolograms | number }}</li>
+                <li><strong>Estimated Cost:</strong> ₹{{ estimatedCost | number:'1.2-2' }}</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button 
+            type="button" 
+            class="btn btn-success me-2"
+            (click)="downloadApplication()">
+            <i class="bi bi-download me-2"></i>
+            Download Application
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-outline-secondary"
+            (click)="closeModal()">
+            <i class="bi bi-x-circle me-2"></i>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
