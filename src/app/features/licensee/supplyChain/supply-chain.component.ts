@@ -40,6 +40,7 @@ export class SupplyChainComponent implements OnInit {
   activeTab = "requisition";
   sidebarHidden = true;
   hologramList: HologramRow[] = [];
+  hologramRequestList: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
@@ -228,6 +229,7 @@ export class SupplyChainComponent implements OnInit {
     this.refreshHologramList();
     this.loadRequisitionData();
     this.loadTransitData();
+    this.loadHologramRequests();
   }
 
   ngOnInit(): void {
@@ -485,10 +487,15 @@ export class SupplyChainComponent implements OnInit {
   }
 
   setActiveTab(tab: string): void {
+    console.log('setActiveTab called with:', tab);
     this.activeTab = tab;
     if (tab === "hologram") {
       // refresh list on each visit
       this.refreshHologramList();
+    } else if (tab === "hologram-request") {
+      console.log('Loading hologram requests for tab');
+      // refresh hologram requests on each visit
+      this.loadHologramRequests();
     } else if (tab === "requisition") {
       // refresh requisition data on each visit
       this.loadRequisitionData();
@@ -672,6 +679,7 @@ export class SupplyChainComponent implements OnInit {
     cancellation: 5,
     transit: 5,
     hologram: 5,
+    'hologram-request': 5,
   };
   currentPageByTab: Record<string, number> = {
     requisition: 1,
@@ -679,6 +687,7 @@ export class SupplyChainComponent implements OnInit {
     cancellation: 1,
     transit: 1,
     hologram: 1,
+    'hologram-request': 1,
   };
 
   getCurrentPage(tab: string): number {
@@ -712,5 +721,246 @@ export class SupplyChainComponent implements OnInit {
     if (!s) return;
     this.pageSizeByTab[tab] = s;
     this.currentPageByTab[tab] = 1;
+  }
+
+  // Hologram Request Methods
+  loadHologramRequests(): void {
+    console.log('loadHologramRequests called, isBrowser:', this.isBrowser);
+    
+    if (!this.isBrowser) {
+      this.hologramRequestList = [];
+      return;
+    }
+
+    // Load hologram requests from localStorage
+    let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    console.log('Stored requests from localStorage:', storedRequests);
+    
+    // Add sample data if no requests exist (for demonstration)
+    // Force sample data for testing - remove this condition later
+    if (storedRequests.length === 0 || true) {
+      const sampleRequests = [
+        {
+          refNumber: 'HRQ/241101/001',
+          usageDate: '2024-11-15',
+          brandName: 'sikkim-supreme',
+          bottleSize: '375ml',
+          totalHolograms: 5000,
+          remarks: 'Urgent requirement for festival season',
+          submissionDate: '2024-11-01T10:30:00.000Z',
+          status: 'APPROVED',
+          estimatedCost: 12500.00
+        },
+        {
+          refNumber: 'HRQ/241031/002',
+          usageDate: '2024-11-20',
+          brandName: 'himalayan-gold',
+          bottleSize: '180ml',
+          totalHolograms: 3000,
+          remarks: 'Regular monthly requirement',
+          submissionDate: '2024-10-31T14:15:00.000Z',
+          status: 'PENDING',
+          estimatedCost: 7500.00
+        },
+        {
+          refNumber: 'HRQ/241030/003',
+          usageDate: '2024-11-25',
+          brandName: 'royal-sikkim',
+          bottleSize: '750ml',
+          totalHolograms: 2000,
+          remarks: 'Premium brand production',
+          submissionDate: '2024-10-30T09:45:00.000Z',
+          status: 'PROCESSING',
+          estimatedCost: 5000.00
+        }
+      ];
+      
+      // Save sample data to localStorage
+      localStorage.setItem('hologramRequests', JSON.stringify(sampleRequests));
+      storedRequests = sampleRequests;
+    }
+    
+    // Sort by submission date (newest first)
+    this.hologramRequestList = storedRequests.sort((a: any, b: any) => {
+      const dateA = new Date(a.submissionDate).getTime();
+      const dateB = new Date(b.submissionDate).getTime();
+      return dateB - dateA; // Newest first
+    });
+    
+    console.log('Final hologramRequestList:', this.hologramRequestList);
+  }
+
+  navigateToHologramRequest(): void {
+    this.router.navigate(['/dev-hologramrequestlevel1']);
+  }
+
+  getBrandLabel(brandValue: string): string {
+    const brandMap: { [key: string]: string } = {
+      'sikkim-supreme': 'Sikkim Supreme Whisky',
+      'himalayan-gold': 'Himalayan Gold Rum',
+      'royal-sikkim': 'Royal Sikkim Brandy',
+      'mountain-dew': 'Mountain Dew Vodka',
+      'gangtok-special': 'Gangtok Special Whisky',
+      'teesta-valley': 'Teesta Valley Rum',
+      'khangchendzonga': 'Khangchendzonga Premium',
+      'yuksom-heritage': 'Yuksom Heritage Whisky'
+    };
+    return brandMap[brandValue] || brandValue;
+  }
+
+  getRequestStatusClass(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return 'bg-warning-subtle text-warning';
+      case 'APPROVED':
+        return 'bg-success-subtle text-success';
+      case 'REJECTED':
+        return 'bg-danger-subtle text-danger';
+      case 'PROCESSING':
+        return 'bg-info-subtle text-info';
+      default:
+        return 'bg-secondary-subtle text-secondary';
+    }
+  }
+
+  viewHologramRequestApplication(request: any): void {
+    // Create a modal or navigate to a detailed view
+    // For now, we'll show an alert with the request details
+    const brandLabel = this.getBrandLabel(request.brandName);
+    const details = `
+Hologram Request Details:
+
+Reference Number: ${request.refNumber}
+Submission Date: ${new Date(request.submissionDate).toLocaleDateString('en-IN')}
+Usage Date: ${new Date(request.usageDate).toLocaleDateString('en-IN')}
+Brand: ${brandLabel}
+Bottle Size: ${request.bottleSize}
+Total Holograms: ${request.totalHolograms.toLocaleString('en-IN')}
+Estimated Cost: ₹${request.estimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+Status: ${request.status}
+${request.remarks ? `\nRemarks: ${request.remarks}` : ''}
+    `;
+    
+    alert(details);
+  }
+
+  downloadRequestApplication(request: any): void {
+    const applicationContent = this.generateRequestApplicationTemplate(request);
+    const filename = `Hologram_Request_${request.refNumber.replace(/\//g, '_')}.txt`;
+    this.downloadFile(applicationContent, filename);
+  }
+
+  private generateRequestApplicationTemplate(request: any): string {
+    const submissionDate = new Date(request.submissionDate).toLocaleDateString('en-IN');
+    const usageDate = new Date(request.usageDate).toLocaleDateString('en-IN');
+    const brandLabel = this.getBrandLabel(request.brandName);
+    
+    return `
+HOLOGRAM REQUEST APPLICATION
+============================
+
+Reference Number: ${request.refNumber}
+Application Date: ${submissionDate}
+
+APPLICANT DETAILS:
+------------------
+Company Name: Sikkim Distilleries Ltd
+License Number: SDL/2024/001
+Address: Industrial Area, Rangpo, East Sikkim - 737132
+Contact: +91-3592-252001
+Email: info@sikkimdistilleries.com
+
+REQUEST DETAILS:
+----------------
+Date to Use Hologram in Factory: ${usageDate}
+Brand Name: ${brandLabel}
+Bottle Size: ${request.bottleSize}
+Total Number of Holograms Required: ${request.totalHolograms.toLocaleString('en-IN')}
+Estimated Cost: ₹${request.estimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+${request.remarks ? `Additional Information:\n${request.remarks}\n` : ''}
+
+DECLARATION:
+------------
+I hereby declare that the information provided above is true and correct to the best of my knowledge. 
+I understand that any false information may lead to rejection of this application and/or legal action.
+
+The holograms requested will be used solely for the production of the specified brand and bottle size 
+mentioned in this application. Any misuse or unauthorized use of holograms will be reported immediately 
+to the concerned authorities.
+
+I agree to comply with all rules and regulations set forth by the Excise Department, Government of Sikkim, 
+regarding the use and handling of security holograms.
+
+
+Signature: _____________________
+Name: [Authorized Signatory]
+Designation: [Managing Director/Authorized Representative]
+Date: ${submissionDate}
+
+
+FOR OFFICE USE ONLY:
+--------------------
+Application Received Date: ___________
+Received By: ___________
+Processing Fee: ₹___________
+Approval Status: ${request.status}
+Approved By: ___________
+Date of Approval: ___________
+Hologram Dispatch Date: ___________
+
+Remarks: ________________________________
+________________________________________
+________________________________________
+
+Signature of Approving Authority: ___________
+Name: ___________
+Designation: ___________
+Date: ___________
+
+============================
+End of Application
+============================
+`;
+  }
+
+  private downloadFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+
+  // Additional methods for register view
+  getRequestStatusCount(status: string): number {
+    return this.hologramRequestList.filter(request => request.status === status).length;
+  }
+
+  getTotalRequestedHolograms(): number {
+    return this.hologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
+  }
+
+  getTotalEstimatedCost(): number {
+    return this.hologramRequestList.reduce((total, request) => total + (request.estimatedCost || 0), 0);
+  }
+
+  getStatusIcon(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return 'bi bi-clock';
+      case 'APPROVED':
+        return 'bi bi-check-circle';
+      case 'REJECTED':
+        return 'bi bi-x-circle';
+      case 'PROCESSING':
+        return 'bi bi-hourglass-split';
+      default:
+        return 'bi bi-question-circle';
+    }
   }
 }
