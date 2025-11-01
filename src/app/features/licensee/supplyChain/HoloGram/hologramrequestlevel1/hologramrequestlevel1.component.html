@@ -75,7 +75,7 @@
                                         Bottle Size (Quantity)
                                     </label>
                                     <select class="form-select" [(ngModel)]="requestData.bottleSize" name="bottleSize"
-                                        required (change)="onBottleSizeChange()">
+                                        required>
                                         <option value="">Select Bottle Size</option>
                                         <option value="180ml">180 ml</option>
                                         <option value="375ml">375 ml</option>
@@ -95,7 +95,7 @@
                                     </label>
                                     <input type="number" class="form-control" [(ngModel)]="requestData.totalHolograms"
                                         name="totalHolograms" required min="1" max="100000"
-                                        placeholder="Enter total number" (input)="calculateEstimatedCost()">
+                                        placeholder="Enter total number">
                                     <small class="form-text">Enter the total number of holograms required</small>
                                 </div>
                             </div>
@@ -115,32 +115,7 @@
                                 </div>
                             </div>
 
-                            <!-- Estimated Cost Display -->
-                            <div class="col-12" *ngIf="estimatedCost > 0">
-                                <div class="cost-summary">
-                                    <div class="cost-card">
-                                        <h5 class="cost-title">
-                                            <i class="bi bi-calculator me-2"></i>
-                                            Estimated Cost Summary
-                                        </h5>
-                                        <div class="cost-details">
-                                            <div class="cost-row">
-                                                <span class="cost-label">Number of Holograms:</span>
-                                                <span class="cost-value">{{ requestData.totalHolograms | number
-                                                    }}</span>
-                                            </div>
-                                            <div class="cost-row">
-                                                <span class="cost-label">Cost per Hologram:</span>
-                                                <span class="cost-value">₹{{ costPerHologram }}</span>
-                                            </div>
-                                            <div class="cost-row total">
-                                                <span class="cost-label">Total Estimated Cost:</span>
-                                                <span class="cost-value">₹{{ estimatedCost | number:'1.2-2' }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
 
                         <!-- Form Actions -->
@@ -201,7 +176,6 @@
                                 <li><strong>Brand:</strong> {{ requestData.brandName }}</li>
                                 <li><strong>Bottle Size:</strong> {{ requestData.bottleSize }}</li>
                                 <li><strong>Total Holograms:</strong> {{ requestData.totalHolograms | number }}</li>
-                                <li><strong>Estimated Cost:</strong> ₹{{ estimatedCost | number:'1.2-2' }}</li>
                             </ul>
                         </div>
                     </div>

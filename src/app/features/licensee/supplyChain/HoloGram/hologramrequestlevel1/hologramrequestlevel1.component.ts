@@ -44,8 +44,6 @@ export class Hologramrequestlevel1Component implements OnInit {
   ];
 
   minDate: string = '';
-  costPerHologram: number = 2.50; // Cost per hologram in rupees
-  estimatedCost: number = 0;
   isSubmitting: boolean = false;
   showSuccessModal: boolean = false;
   generatedRefNumber: string = '';
@@ -63,18 +61,7 @@ export class Hologramrequestlevel1Component implements OnInit {
     this.requestData.usageDate = tomorrow.toISOString().split('T')[0];
   }
 
-  onBottleSizeChange(): void {
-    // Recalculate cost when bottle size changes
-    this.calculateEstimatedCost();
-  }
 
-  calculateEstimatedCost(): void {
-    if (this.requestData.totalHolograms > 0) {
-      this.estimatedCost = this.requestData.totalHolograms * this.costPerHologram;
-    } else {
-      this.estimatedCost = 0;
-    }
-  }
 
   onSubmit(): void {
     if (this.isValidForm()) {
@@ -116,8 +103,7 @@ export class Hologramrequestlevel1Component implements OnInit {
       ...this.requestData,
       refNumber: this.generatedRefNumber,
       submissionDate: new Date().toISOString(),
-      status: 'PENDING',
-      estimatedCost: this.estimatedCost
+      status: 'PENDING'
     };
 
     // Save to localStorage (in real app, this would be an API call)
@@ -156,7 +142,6 @@ Date to Use Hologram in Factory: ${new Date(this.requestData.usageDate).toLocale
 Brand Name: ${brandLabel}
 Bottle Size: ${this.requestData.bottleSize}
 Total Number of Holograms Required: ${this.requestData.totalHolograms.toLocaleString('en-IN')}
-Estimated Cost: ₹${this.estimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
 ${this.requestData.remarks ? `Additional Information:\n${this.requestData.remarks}\n` : ''}
 
@@ -224,7 +209,6 @@ End of Application
       totalHolograms: 0,
       remarks: ''
     };
-    this.estimatedCost = 0;
     
     // Reset to tomorrow's date
     const tomorrow = new Date();

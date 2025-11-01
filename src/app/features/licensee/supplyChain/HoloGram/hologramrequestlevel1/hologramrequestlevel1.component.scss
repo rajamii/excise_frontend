@@ -138,59 +138,7 @@
     }
   }
 
-  // Cost Summary
-  .cost-summary {
-    margin-top: 1rem;
 
-    .cost-card {
-      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-      border: 2px solid #0ea5e9;
-      border-radius: 16px;
-      padding: 1.5rem;
-
-      .cost-title {
-        color: #0c4a6e;
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        text-align: center;
-      }
-
-      .cost-details {
-        .cost-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 0.75rem 0;
-          border-bottom: 1px solid #bae6fd;
-
-          &:last-child {
-            border-bottom: none;
-          }
-
-          &.total {
-            border-top: 2px solid #0ea5e9;
-            margin-top: 0.5rem;
-            padding-top: 1rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: #0c4a6e;
-          }
-
-          .cost-label {
-            color: #0f172a;
-            font-weight: 600;
-          }
-
-          .cost-value {
-            color: #0c4a6e;
-            font-weight: 700;
-            font-size: 1.1rem;
-          }
-        }
-      }
-    }
-  }
 
   // Form Actions
   .form-actions {
@@ -417,12 +365,6 @@
       }
     }
 
-    .cost-summary .cost-card {
-      padding: 1rem;
 
-      .cost-title {
-        font-size: 1.1rem;
-      }
-    }
   }
 }

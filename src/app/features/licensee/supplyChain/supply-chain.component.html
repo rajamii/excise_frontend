@@ -946,6 +946,74 @@
               </div>
             </div>
 
+            <!-- Compact Filter Section -->
+            <div class="compact-filter-section mb-3">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                  <i class="bi bi-funnel me-1"></i>
+                  <small class="text-muted">Filters:</small>
+                </div>
+                
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                  <input 
+                    type="date" 
+                    class="form-control form-control-sm" 
+                    [(ngModel)]="dateFilter"
+                    (change)="onDateFilterChange()"
+                    placeholder="Date"
+                    title="Filter by date">
+                </div>
+                
+                <!-- Month Filter -->
+                <div class="compact-filter">
+                  <input 
+                    type="month" 
+                    class="form-control form-control-sm" 
+                    [(ngModel)]="monthFilter"
+                    (change)="onMonthFilterChange()"
+                    placeholder="Month"
+                    title="Filter by month">
+                </div>
+                
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                  <select 
+                    class="form-select form-select-sm" 
+                    [(ngModel)]="statusFilter"
+                    (change)="onStatusFilterChange()"
+                    title="Filter by status">
+                    <option value="">All Status</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PROCESSING">Processing</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </div>
+                
+                <!-- Clear Button - only show when filters are active -->
+                <button 
+                  class="btn btn-outline-danger btn-sm" 
+                  (click)="clearFilters()"
+                  *ngIf="dateFilter || monthFilter || statusFilter"
+                  title="Clear all filters">
+                  <i class="bi bi-x-circle"></i>
+                  Clear
+                </button>
+              </div>
+              
+              <!-- Filter Results Summary -->
+              <div class="filter-results-compact mt-2" *ngIf="dateFilter || monthFilter || statusFilter">
+                <small class="text-info">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Showing <strong>{{ filteredHologramRequestList.length }}</strong> of <strong>{{ hologramRequestList.length }}</strong> requests
+                  <span *ngIf="dateFilter" class="filter-tag">Date: {{ dateFilter | date:'dd MMM yyyy' }}</span>
+                  <span *ngIf="monthFilter" class="filter-tag">Month: {{ monthFilter | date:'MMM yyyy' }}</span>
+                  <span *ngIf="statusFilter" class="filter-tag">Status: {{ statusFilter }}</span>
+                </small>
+              </div>
+            </div>
+
             <!-- Register Table -->
             <div class="hologram-request-register-table">
               <div class="register-container">
@@ -955,11 +1023,11 @@
                     Request Register Entries
                   </h5>
                   <div class="register-info">
-                    <span class="entries-count">{{ hologramRequestList.length }} Entries</span>
+                    <span class="entries-count">{{ filteredHologramRequestList.length }} Entries</span>
                   </div>
                 </div>
 
-                <div class="table-responsive" *ngIf="hologramRequestList.length > 0">
+                <div class="table-responsive" *ngIf="filteredHologramRequestList.length > 0">
                   <table class="table register-table">
                     <thead>
                       <tr>
@@ -976,7 +1044,7 @@
                     </thead>
                     <tbody>
                       @for (
-                      request of getPaged(hologramRequestList, "hologram-request");
+                      request of getPaged(filteredHologramRequestList, "hologram-request");
                       track request.refNumber;
                       let i = $index
                       ) {
@@ -1041,13 +1109,18 @@
                 </div>
 
                 <!-- Empty State -->
-                <div class="empty-state" *ngIf="hologramRequestList.length === 0">
+                <div class="empty-state" *ngIf="filteredHologramRequestList.length === 0">
                   <div class="empty-icon">
                     <i class="bi bi-journal-x"></i>
                   </div>
-                  <h5 class="empty-title">No Hologram Requests Found</h5>
-                  <p class="empty-message">You haven't submitted any hologram requests yet. Start by creating your first
-                    request.</p>
+                  <h5 class="empty-title">
+                    {{ (dateFilter || monthFilter || statusFilter) ? 'No Matching Requests Found' : 'No Hologram Requests Found' }}
+                  </h5>
+                  <p class="empty-message">
+                    {{ (dateFilter || monthFilter || statusFilter) ? 
+                       'No requests match your current filter criteria. Try adjusting your filters or clear them to see all requests.' : 
+                       'You haven\'t submitted any hologram requests yet. Start by creating your first request.' }}
+                  </p>
                   <button class="btn btn-primary" (click)="navigateToHologramRequest()">
                     <i class="bi bi-plus-circle me-2"></i>
                     Create First Request
@@ -1055,11 +1128,11 @@
                 </div>
 
                 <!-- Register Summary Footer -->
-                <div class="register-footer" *ngIf="hologramRequestList.length > 0">
+                <div class="register-footer" *ngIf="filteredHologramRequestList.length > 0">
                   <div class="summary-row">
                     <div class="summary-item">
                       <span class="summary-label">Total Requests:</span>
-                      <span class="summary-value">{{ hologramRequestList.length }}</span>
+                      <span class="summary-value">{{ filteredHologramRequestList.length }}</span>
                     </div>
                     <div class="summary-item">
                       <span class="summary-label">Total Holograms:</span>
@@ -1074,13 +1147,13 @@
                 </div>
 
                 <!-- Pagination -->
-                <div class="register-pagination" *ngIf="hologramRequestList.length > 0">
+                <div class="register-pagination" *ngIf="filteredHologramRequestList.length > 0">
                   <div class="d-flex justify-content-between align-items-center">
                     <div class="pagination-info">
                       <span class="info-text">
                         Showing {{ (getCurrentPage("hologram-request") - 1) * getPageSize("hologram-request") + 1 }}-{{
                         Math.min(getCurrentPage("hologram-request") * getPageSize("hologram-request"),
-                        hologramRequestList.length) }} of {{ hologramRequestList.length }} entries
+                        filteredHologramRequestList.length) }} of {{ filteredHologramRequestList.length }} entries
                       </span>
                     </div>
                     <div class="pagination-controls">
@@ -1093,27 +1166,27 @@
                         </select>
                         <div class="btn-group btn-group-sm pagination-buttons">
                           <button class="btn btn-outline-secondary"
-                            (click)="goToPage('hologram-request', 1, hologramRequestList)"
+                            (click)="goToPage('hologram-request', 1, filteredHologramRequestList)"
                             [disabled]="getCurrentPage('hologram-request') === 1">
                             «
                           </button>
                           <button class="btn btn-outline-secondary"
-                            (click)="goToPage('hologram-request', getCurrentPage('hologram-request') - 1, hologramRequestList)"
+                            (click)="goToPage('hologram-request', getCurrentPage('hologram-request') - 1, filteredHologramRequestList)"
                             [disabled]="getCurrentPage('hologram-request') === 1">
                             ‹
                           </button>
                           <span class="btn btn-light disabled">
-                            {{ getCurrentPage("hologram-request") }} / {{ getTotalPages(hologramRequestList,
+                            {{ getCurrentPage("hologram-request") }} / {{ getTotalPages(filteredHologramRequestList,
                             "hologram-request") }}
                           </span>
                           <button class="btn btn-outline-secondary"
-                            (click)="goToPage('hologram-request', getCurrentPage('hologram-request') + 1, hologramRequestList)"
-                            [disabled]="getCurrentPage('hologram-request') === getTotalPages(hologramRequestList, 'hologram-request')">
+                            (click)="goToPage('hologram-request', getCurrentPage('hologram-request') + 1, filteredHologramRequestList)"
+                            [disabled]="getCurrentPage('hologram-request') === getTotalPages(filteredHologramRequestList, 'hologram-request')">
                             ›
                           </button>
                           <button class="btn btn-outline-secondary"
-                            (click)="goToPage('hologram-request', getTotalPages(hologramRequestList, 'hologram-request'), hologramRequestList)"
-                            [disabled]="getCurrentPage('hologram-request') === getTotalPages(hologramRequestList, 'hologram-request')">
+                            (click)="goToPage('hologram-request', getTotalPages(filteredHologramRequestList, 'hologram-request'), filteredHologramRequestList)"
+                            [disabled]="getCurrentPage('hologram-request') === getTotalPages(filteredHologramRequestList, 'hologram-request')">
                             »
                           </button>
                         </div>
@@ -1218,52 +1291,7 @@
                             </div>
                           </div>
 
-                          <!-- Quantity & Cost Information -->
-                          <div class="col-12">
-                            <div class="detail-group">
-                              <h6 class="group-title">
-                                <i class="bi bi-calculator me-2"></i>
-                                Quantity & Cost Information
-                              </h6>
-                              <div class="cost-summary-modal">
-                                <div class="row g-3">
-                                  <div class="col-md-4">
-                                    <div class="cost-card holograms">
-                                      <div class="cost-icon">
-                                        <i class="bi bi-qr-code"></i>
-                                      </div>
-                                      <div class="cost-details">
-                                        <span class="cost-value">{{ selectedRequest.totalHolograms | number }}</span>
-                                        <span class="cost-label">Total Holograms</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div class="col-md-4">
-                                    <div class="cost-card rate">
-                                      <div class="cost-icon">
-                                        <i class="bi bi-currency-rupee"></i>
-                                      </div>
-                                      <div class="cost-details">
-                                        <span class="cost-value">₹2.50</span>
-                                        <span class="cost-label">Cost per Hologram</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div class="col-md-4">
-                                    <div class="cost-card total">
-                                      <div class="cost-icon">
-                                        <i class="bi bi-calculator"></i>
-                                      </div>
-                                      <div class="cost-details">
-                                        <span class="cost-value">₹{{ selectedRequest.estimatedCost | number:'1.2-2' }}</span>
-                                        <span class="cost-label">Estimated Cost</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+
 
                           <!-- Additional Information -->
                           <div class="col-12" *ngIf="selectedRequest.remarks">

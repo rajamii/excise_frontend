@@ -41,8 +41,14 @@ export class SupplyChainComponent implements OnInit {
   sidebarHidden = true;
   hologramList: HologramRow[] = [];
   hologramRequestList: any[] = [];
+  filteredHologramRequestList: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
+  
+  // Filter properties
+  dateFilter: string = '';
+  monthFilter: string = '';
+  statusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
@@ -718,6 +724,17 @@ export class SupplyChainComponent implements OnInit {
     this.currentPageByTab[tab] = page;
   }
 
+  resetPagination(tab: string): void {
+    this.currentPageByTab[tab] = 1;
+  }
+
+  // Debug method - can be called from browser console
+  testDateFilter(dateString: string): void {
+    console.log('Testing date filter with:', dateString);
+    this.dateFilter = dateString;
+    this.applyFilters();
+  }
+
   changePageSize(tab: string, size: string | number): void {
     const s = typeof size === "string" ? parseInt(size, 10) : size;
     if (!s) return;
@@ -749,8 +766,7 @@ export class SupplyChainComponent implements OnInit {
           totalHolograms: 5000,
           remarks: 'Urgent requirement for festival season',
           submissionDate: '2024-11-01T10:30:00.000Z',
-          status: 'APPROVED',
-          estimatedCost: 12500.00
+          status: 'APPROVED'
         },
         {
           refNumber: 'HRQ/241031/002',
@@ -760,8 +776,7 @@ export class SupplyChainComponent implements OnInit {
           totalHolograms: 3000,
           remarks: 'Regular monthly requirement',
           submissionDate: '2024-10-31T14:15:00.000Z',
-          status: 'PENDING',
-          estimatedCost: 7500.00
+          status: 'PENDING'
         },
         {
           refNumber: 'HRQ/241030/003',
@@ -771,8 +786,7 @@ export class SupplyChainComponent implements OnInit {
           totalHolograms: 2000,
           remarks: 'Premium brand production',
           submissionDate: '2024-10-30T09:45:00.000Z',
-          status: 'PROCESSING',
-          estimatedCost: 5000.00
+          status: 'PROCESSING'
         }
       ];
       
@@ -788,7 +802,19 @@ export class SupplyChainComponent implements OnInit {
       return dateB - dateA; // Newest first
     });
     
+    // Initialize filtered list
+    this.filteredHologramRequestList = [...this.hologramRequestList];
+    
     console.log('Final hologramRequestList:', this.hologramRequestList);
+    
+    // Debug: Log all submission dates for testing
+    this.hologramRequestList.forEach(request => {
+      const date = new Date(request.submissionDate);
+      const dateString = date.getUTCFullYear() + '-' + 
+        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+        String(date.getUTCDate()).padStart(2, '0');
+      console.log('Request:', request.refNumber, 'Date:', request.submissionDate, 'Formatted:', dateString);
+    });
   }
 
   navigateToHologramRequest(): void {
@@ -866,7 +892,6 @@ Date to Use Hologram in Factory: ${usageDate}
 Brand Name: ${brandLabel}
 Bottle Size: ${request.bottleSize}
 Total Number of Holograms Required: ${request.totalHolograms.toLocaleString('en-IN')}
-Estimated Cost: ₹${request.estimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
 ${request.remarks ? `Additional Information:\n${request.remarks}\n` : ''}
 
@@ -931,13 +956,96 @@ End of Application
     return this.hologramRequestList.filter(request => request.status === status).length;
   }
 
+  getFilteredRequestStatusCount(status: string): number {
+    return this.filteredHologramRequestList.filter(request => request.status === status).length;
+  }
+
   getTotalRequestedHolograms(): number {
     return this.hologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
   }
 
-  getTotalEstimatedCost(): number {
-    return this.hologramRequestList.reduce((total, request) => total + (request.estimatedCost || 0), 0);
+  // Filter methods
+  applyFilters(): void {
+    console.log('Applying filters:', { dateFilter: this.dateFilter, monthFilter: this.monthFilter, statusFilter: this.statusFilter });
+    
+    this.filteredHologramRequestList = this.hologramRequestList.filter(request => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesStatus = true;
+
+      // Date filter (exact date match)
+      if (this.dateFilter) {
+        const requestDate = new Date(request.submissionDate);
+        // Handle timezone by using UTC date
+        const requestDateString = requestDate.getUTCFullYear() + '-' + 
+          String(requestDate.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+          String(requestDate.getUTCDate()).padStart(2, '0');
+        matchesDate = requestDateString === this.dateFilter;
+        console.log('Date comparison:', { 
+          originalDate: request.submissionDate,
+          requestDateString, 
+          dateFilter: this.dateFilter, 
+          matches: matchesDate 
+        });
+      }
+
+      // Month filter (month and year match)
+      if (this.monthFilter) {
+        const requestDate = new Date(request.submissionDate);
+        const filterDate = new Date(this.monthFilter + '-01');
+        matchesMonth = requestDate.getFullYear() === filterDate.getFullYear() && 
+                     requestDate.getMonth() === filterDate.getMonth();
+        console.log('Month comparison:', { 
+          requestYear: requestDate.getFullYear(), 
+          requestMonth: requestDate.getMonth(),
+          filterYear: filterDate.getFullYear(),
+          filterMonth: filterDate.getMonth(),
+          matches: matchesMonth 
+        });
+      }
+
+      // Status filter
+      if (this.statusFilter) {
+        matchesStatus = request.status === this.statusFilter;
+        console.log('Status comparison:', { requestStatus: request.status, statusFilter: this.statusFilter, matches: matchesStatus });
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesStatus;
+      console.log('Final match for request:', request.refNumber, finalMatch);
+      
+      return finalMatch;
+    });
+    
+    console.log('Filtered results:', this.filteredHologramRequestList.length, 'out of', this.hologramRequestList.length);
+    
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('hologram-request');
   }
+
+  clearFilters(): void {
+    this.dateFilter = '';
+    this.monthFilter = '';
+    this.statusFilter = '';
+    this.filteredHologramRequestList = [...this.hologramRequestList];
+    this.resetPagination('hologram-request');
+  }
+
+  onDateFilterChange(): void {
+    console.log('Date filter changed to:', this.dateFilter);
+    this.applyFilters();
+  }
+
+  onMonthFilterChange(): void {
+    console.log('Month filter changed to:', this.monthFilter);
+    this.applyFilters();
+  }
+
+  onStatusFilterChange(): void {
+    console.log('Status filter changed to:', this.statusFilter);
+    this.applyFilters();
+  }
+
+
 
   getStatusIcon(status: string): string {
     switch (status?.toUpperCase()) {
