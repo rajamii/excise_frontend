@@ -874,12 +874,12 @@
 
             <!-- Hologram Request Tab Content -->
             @if (activeTab === "hologram-request") {
-            <!-- Debug message -->
-            <div class="alert alert-info mb-3">
-              <strong>Debug:</strong> Hologram Request tab is active. Found {{ hologramRequestList.length }} requests.
-            </div>
+              <!-- Test message -->
+              <div class="alert alert-success mb-3">
+                <strong>Tab Working!</strong> Hologram Request tab is active. Found {{ hologramRequestList.length }} requests.
+              </div>
 
-            <!-- Header Section -->
+              <!-- Header Section -->
             <div class="hologram-request-register-header">
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="header-info">
@@ -970,7 +970,6 @@
                         <th class="brand-details">Brand Details</th>
                         <th class="bottle-size">Bottle Size</th>
                         <th class="hologram-qty">Hologram Qty</th>
-                        <th class="estimated-cost">Estimated Cost</th>
                         <th class="status">Status</th>
                         <th class="actions">Actions</th>
                       </tr>
@@ -1015,12 +1014,6 @@
                           <div class="qty-display">
                             <span class="qty-number">{{ request.totalHolograms | number }}</span>
                             <span class="qty-label">units</span>
-                          </div>
-                        </td>
-                        <td class="estimated-cost">
-                          <div class="cost-display">
-                            <span class="cost-currency">₹</span>
-                            <span class="cost-amount">{{ request.estimatedCost | number:'1.2-2' }}</span>
                           </div>
                         </td>
                         <td class="status">
@@ -1072,10 +1065,7 @@
                       <span class="summary-label">Total Holograms:</span>
                       <span class="summary-value">{{ getTotalRequestedHolograms() | number }}</span>
                     </div>
-                    <div class="summary-item">
-                      <span class="summary-label">Total Estimated Cost:</span>
-                      <span class="summary-value highlight">₹{{ getTotalEstimatedCost() | number:'1.2-2' }}</span>
-                    </div>
+
                     <div class="summary-item">
                       <span class="summary-label">Pending Requests:</span>
                       <span class="summary-value">{{ getRequestStatusCount('PENDING') }}</span>
@@ -1134,6 +1124,180 @@
               </div>
             </div>
             }
+
+            <!-- Hologram Request Details Modal -->
+            <div class="modal fade show" 
+                 tabindex="-1" 
+                 style="display: block; background: rgba(0, 0, 0, 0.5);" 
+                 *ngIf="showRequestModal">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                      <i class="bi bi-eye me-2"></i>
+                      Hologram Request Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" 
+                            aria-label="Close" 
+                            (click)="closeRequestModal()"></button>
+                  </div>
+                  <div class="modal-body p-0">
+                    <div class="request-details-container" *ngIf="selectedRequest">
+                      <!-- Header Info -->
+                      <div class="request-header">
+                        <div class="row g-3">
+                          <div class="col-md-6">
+                            <div class="info-card ref-info">
+                              <div class="info-icon">
+                                <i class="bi bi-hash"></i>
+                              </div>
+                              <div class="info-content">
+                                <h6 class="info-label">Reference Number</h6>
+                                <p class="info-value">{{ selectedRequest.refNumber }}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-6">
+                            <div class="info-card status-info">
+                              <div class="info-icon">
+                                <i [class]="getStatusIcon(selectedRequest.status)"></i>
+                              </div>
+                              <div class="info-content">
+                                <h6 class="info-label">Status</h6>
+                                <p class="info-value">
+                                  <span class="status-badge" [ngClass]="getRequestStatusClass(selectedRequest.status)">
+                                    {{ selectedRequest.status }}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Request Details -->
+                      <div class="request-body">
+                        <div class="row g-4">
+                          <!-- Date Information -->
+                          <div class="col-md-6">
+                            <div class="detail-group">
+                              <h6 class="group-title">
+                                <i class="bi bi-calendar-event me-2"></i>
+                                Date Information
+                              </h6>
+                              <div class="detail-items">
+                                <div class="detail-item">
+                                  <span class="detail-label">Submission Date:</span>
+                                  <span class="detail-value">{{ selectedRequest.submissionDate | date:'dd MMM yyyy, HH:mm' }}</span>
+                                </div>
+                                <div class="detail-item">
+                                  <span class="detail-label">Usage Date:</span>
+                                  <span class="detail-value">{{ selectedRequest.usageDate | date:'dd MMM yyyy' }}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Product Information -->
+                          <div class="col-md-6">
+                            <div class="detail-group">
+                              <h6 class="group-title">
+                                <i class="bi bi-tag me-2"></i>
+                                Product Information
+                              </h6>
+                              <div class="detail-items">
+                                <div class="detail-item">
+                                  <span class="detail-label">Brand Name:</span>
+                                  <span class="detail-value">{{ getBrandLabel(selectedRequest.brandName) }}</span>
+                                </div>
+                                <div class="detail-item">
+                                  <span class="detail-label">Bottle Size:</span>
+                                  <span class="detail-value">{{ selectedRequest.bottleSize }}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Quantity & Cost Information -->
+                          <div class="col-12">
+                            <div class="detail-group">
+                              <h6 class="group-title">
+                                <i class="bi bi-calculator me-2"></i>
+                                Quantity & Cost Information
+                              </h6>
+                              <div class="cost-summary-modal">
+                                <div class="row g-3">
+                                  <div class="col-md-4">
+                                    <div class="cost-card holograms">
+                                      <div class="cost-icon">
+                                        <i class="bi bi-qr-code"></i>
+                                      </div>
+                                      <div class="cost-details">
+                                        <span class="cost-value">{{ selectedRequest.totalHolograms | number }}</span>
+                                        <span class="cost-label">Total Holograms</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="col-md-4">
+                                    <div class="cost-card rate">
+                                      <div class="cost-icon">
+                                        <i class="bi bi-currency-rupee"></i>
+                                      </div>
+                                      <div class="cost-details">
+                                        <span class="cost-value">₹2.50</span>
+                                        <span class="cost-label">Cost per Hologram</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div class="col-md-4">
+                                    <div class="cost-card total">
+                                      <div class="cost-icon">
+                                        <i class="bi bi-calculator"></i>
+                                      </div>
+                                      <div class="cost-details">
+                                        <span class="cost-value">₹{{ selectedRequest.estimatedCost | number:'1.2-2' }}</span>
+                                        <span class="cost-label">Estimated Cost</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Additional Information -->
+                          <div class="col-12" *ngIf="selectedRequest.remarks">
+                            <div class="detail-group">
+                              <h6 class="group-title">
+                                <i class="bi bi-chat-text me-2"></i>
+                                Additional Information
+                              </h6>
+                              <div class="remarks-content">
+                                <p class="remarks-text">{{ selectedRequest.remarks }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" 
+                            class="btn btn-success me-2"
+                            (click)="downloadRequestApplication(selectedRequest)">
+                      <i class="bi bi-download me-2"></i>
+                      Download Application
+                    </button>
+                    <button type="button" 
+                            class="btn btn-outline-secondary"
+                            (click)="closeRequestModal()">
+                      <i class="bi bi-x-circle me-2"></i>
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Hologram details modal -->
             <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"

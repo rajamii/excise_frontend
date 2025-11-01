@@ -44,6 +44,8 @@ export class SupplyChainComponent implements OnInit {
   private isBrowser = false;
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
+  showRequestModal = false;
+  selectedRequest: any = null;
 
   // Sample data for display only
   requisitionData: TableData[] = [
@@ -734,11 +736,10 @@ export class SupplyChainComponent implements OnInit {
 
     // Load hologram requests from localStorage
     let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    console.log('Stored requests from localStorage:', storedRequests);
+    console.log('Stored requests:', storedRequests);
     
     // Add sample data if no requests exist (for demonstration)
-    // Force sample data for testing - remove this condition later
-    if (storedRequests.length === 0 || true) {
+    if (storedRequests.length === 0) {
       const sampleRequests = [
         {
           refNumber: 'HRQ/241101/001',
@@ -824,24 +825,13 @@ export class SupplyChainComponent implements OnInit {
   }
 
   viewHologramRequestApplication(request: any): void {
-    // Create a modal or navigate to a detailed view
-    // For now, we'll show an alert with the request details
-    const brandLabel = this.getBrandLabel(request.brandName);
-    const details = `
-Hologram Request Details:
+    this.selectedRequest = request;
+    this.showRequestModal = true;
+  }
 
-Reference Number: ${request.refNumber}
-Submission Date: ${new Date(request.submissionDate).toLocaleDateString('en-IN')}
-Usage Date: ${new Date(request.usageDate).toLocaleDateString('en-IN')}
-Brand: ${brandLabel}
-Bottle Size: ${request.bottleSize}
-Total Holograms: ${request.totalHolograms.toLocaleString('en-IN')}
-Estimated Cost: ₹${request.estimatedCost.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-Status: ${request.status}
-${request.remarks ? `\nRemarks: ${request.remarks}` : ''}
-    `;
-    
-    alert(details);
+  closeRequestModal(): void {
+    this.showRequestModal = false;
+    this.selectedRequest = null;
   }
 
   downloadRequestApplication(request: any): void {

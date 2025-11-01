@@ -10,12 +10,12 @@
   border-radius: 0 !important;
   color: #666 !important;
   font-weight: 500;
-  
+
   &:hover {
     color: #333 !important;
     background-color: #f5f5f5 !important;
   }
-  
+
   &.active {
     color: #fb0000 !important;
     border-bottom-color: #ff0000 !important;
@@ -33,6 +33,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -50,7 +51,9 @@
 }
 
 // Tighter padding for small icon buttons
-.btn.icon-btn.btn-sm { padding: 0; }
+.btn.icon-btn.btn-sm {
+  padding: 0;
+}
 
 // Sidebar Navigation Styles
 .sidebar-nav {
@@ -58,7 +61,7 @@
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   overflow: hidden;
-  
+
   &.sidebar-hidden {
     width: 0 !important;
     min-width: 0;
@@ -72,7 +75,7 @@
   &:not(.collapsed) {
     box-shadow: none;
   }
-  
+
   &:focus {
     box-shadow: none;
     border-color: transparent;
@@ -82,7 +85,7 @@
 // List Group Item Hover Effects
 .list-group-item-action {
   transition: all 0.3s ease;
-  
+
   &:hover {
     background-color: #f8f9fa;
     transform: translateX(5px);
@@ -110,34 +113,34 @@
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  
+
   &:hover {
     background: rgba(255, 255, 255, 1);
     border-color: rgba(255, 255, 255, 0.8);
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
-  
+
   &:focus {
     outline: none;
     box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
   }
-  
+
   &.active {
     background: rgba(40, 167, 69, 0.9);
     border-color: rgba(40, 167, 69, 0.8);
-    
+
     .hamburger-line {
       background-color: white;
-      
+
       &:nth-child(1) {
         transform: rotate(45deg) translate(6px, 6px);
       }
-      
+
       &:nth-child(2) {
         opacity: 0;
       }
-      
+
       &:nth-child(3) {
         transform: rotate(-45deg) translate(6px, -6px);
       }
@@ -163,12 +166,13 @@
     height: 100vh;
     z-index: 1050;
     transition: left 0.3s ease;
-    
+
     &.show {
       left: 0;
     }
   }
 }
+
 //Hologram Request Register Styles
 .hologram-request-register-header {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
@@ -258,6 +262,7 @@
       .card-icon {
         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
       }
+
       .card-value {
         color: #3b82f6;
       }
@@ -267,6 +272,7 @@
       .card-icon {
         background: linear-gradient(135deg, #f59e0b, #d97706);
       }
+
       .card-value {
         color: #f59e0b;
       }
@@ -276,6 +282,7 @@
       .card-icon {
         background: linear-gradient(135deg, #10b981, #059669);
       }
+
       .card-value {
         color: #10b981;
       }
@@ -285,6 +292,7 @@
       .card-icon {
         background: linear-gradient(135deg, #8b5cf6, #7c3aed);
       }
+
       .card-value {
         color: #8b5cf6;
       }
@@ -351,16 +359,46 @@
           }
 
           // Column widths
-          &.sl-no { width: 60px; text-align: center; }
-          &.ref-number { width: 140px; }
-          &.submission-date { width: 120px; }
-          &.usage-date { width: 120px; }
-          &.brand-details { width: 180px; }
-          &.bottle-size { width: 100px; text-align: center; }
-          &.hologram-qty { width: 120px; text-align: center; }
-          &.estimated-cost { width: 120px; text-align: center; }
-          &.status { width: 120px; text-align: center; }
-          &.actions { width: 100px; text-align: center; }
+          &.sl-no {
+            width: 60px;
+            text-align: center;
+          }
+
+          &.ref-number {
+            width: 140px;
+          }
+
+          &.submission-date {
+            width: 120px;
+          }
+
+          &.usage-date {
+            width: 120px;
+          }
+
+          &.brand-details {
+            width: 180px;
+          }
+
+          &.bottle-size {
+            width: 100px;
+            text-align: center;
+          }
+
+          &.hologram-qty {
+            width: 120px;
+            text-align: center;
+          }
+
+          &.status {
+            width: 120px;
+            text-align: center;
+          }
+
+          &.actions {
+            width: 100px;
+            text-align: center;
+          }
         }
       }
 
@@ -490,27 +528,7 @@
               }
             }
 
-            &.estimated-cost {
-              text-align: center;
 
-              .cost-display {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.25rem;
-
-                .cost-currency {
-                  color: #6b7280;
-                  font-size: 0.9rem;
-                }
-
-                .cost-amount {
-                  font-weight: 700;
-                  color: #059669;
-                  font-size: 1rem;
-                }
-              }
-            }
 
             &.status {
               text-align: center;
@@ -763,6 +781,346 @@
 
             &.highlight {
               font-size: 1.25rem;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Hologram Request Details Modal Styles 
+.modal-content {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+
+  .modal-header {
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding: 1.5rem 2rem;
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+  }
+
+  .modal-body {
+    .request-details-container {
+      .request-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+
+        .info-card {
+          background: white;
+          border-radius: 12px;
+          padding: 1.5rem;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+
+          .info-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+          }
+
+          .info-content {
+            flex: 1;
+
+            .info-label {
+              font-size: 0.85rem;
+              color: #6b7280;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 0.25rem;
+            }
+
+            .info-value {
+              font-size: 1.1rem;
+              font-weight: 700;
+              color: #1f2937;
+              margin: 0;
+              font-family: 'Courier New', monospace;
+            }
+          }
+
+          &.ref-info .info-icon {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+          }
+
+          &.status-info .info-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+          }
+        }
+      }
+
+      .request-body {
+        padding: 2rem;
+
+        .detail-group {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 1.5rem;
+          border: 1px solid #e2e8f0;
+
+          .group-title {
+            color: #374151;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+
+            i {
+              color: #3b82f6;
+            }
+          }
+
+          .detail-items {
+            .detail-item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 0.75rem 0;
+              border-bottom: 1px solid #e5e7eb;
+
+              &:last-child {
+                border-bottom: none;
+              }
+
+              .detail-label {
+                font-weight: 600;
+                color: #6b7280;
+                font-size: 0.9rem;
+              }
+
+              .detail-value {
+                font-weight: 700;
+                color: #1f2937;
+                font-size: 0.95rem;
+              }
+            }
+          }
+
+          .cost-summary-modal {
+            .cost-card {
+              background: white;
+              border-radius: 12px;
+              padding: 1.5rem;
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+              border: 1px solid #e2e8f0;
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              transition: all 0.3s ease;
+
+              &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+              }
+
+              .cost-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.25rem;
+                color: white;
+              }
+
+              .cost-details {
+                flex: 1;
+                text-align: center;
+
+                .cost-value {
+                  display: block;
+                  font-size: 1.5rem;
+                  font-weight: 700;
+                  margin-bottom: 0.25rem;
+                }
+
+                .cost-label {
+                  font-size: 0.85rem;
+                  color: #6b7280;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                }
+              }
+
+              &.holograms {
+                .cost-icon {
+                  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+                }
+
+                .cost-value {
+                  color: #8b5cf6;
+                }
+              }
+
+              &.rate {
+                .cost-icon {
+                  background: linear-gradient(135deg, #f59e0b, #d97706);
+                }
+
+                .cost-value {
+                  color: #f59e0b;
+                }
+              }
+
+              &.total {
+                .cost-icon {
+                  background: linear-gradient(135deg, #10b981, #059669);
+                }
+
+                .cost-value {
+                  color: #10b981;
+                  font-size: 1.75rem;
+                }
+              }
+            }
+          }
+
+          .remarks-content {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+
+            .remarks-text {
+              color: #4b5563;
+              font-size: 0.95rem;
+              line-height: 1.6;
+              margin: 0;
+              font-style: italic;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .modal-footer {
+    border-top: none;
+    padding: 1.5rem 2rem;
+    justify-content: center;
+
+    .btn {
+      padding: 0.75rem 2rem;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+
+      &.btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      &.btn-outline-secondary {
+        border: 2px solid #6b7280;
+        color: #6b7280;
+
+        &:hover {
+          background-color: #6b7280;
+          color: white;
+        }
+      }
+    }
+  }
+}
+
+// Status badge in modal
+.status-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  &.bg-warning-subtle {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.bg-success-subtle {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &.bg-danger-subtle {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  &.bg-info-subtle {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+}
+
+// Responsive modal
+@media (max-width: 768px) {
+  .modal-content {
+    .request-details-container {
+      .request-header {
+        padding: 1.5rem;
+
+        .info-card {
+          padding: 1rem;
+          flex-direction: column;
+          text-align: center;
+          gap: 0.75rem;
+
+          .info-icon {
+            width: 40px;
+            height: 40px;
+          }
+        }
+      }
+
+      .request-body {
+        padding: 1.5rem;
+
+        .detail-group {
+          padding: 1rem;
+
+          .cost-summary-modal {
+            .cost-card {
+              padding: 1rem;
+              flex-direction: column;
+              text-align: center;
+              gap: 0.75rem;
+
+              .cost-icon {
+                width: 40px;
+                height: 40px;
+              }
+
+              .cost-details {
+                .cost-value {
+                  font-size: 1.25rem;
+                }
+              }
             }
           }
         }
