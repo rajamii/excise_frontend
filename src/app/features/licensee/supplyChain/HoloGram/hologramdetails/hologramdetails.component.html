@@ -7,18 +7,122 @@
           <i class="bi bi-shield-check me-2"></i>
           Register of Hologram
         </h5>
-        <p class="mb-0 text-muted small">Track and manage hologram receipts and serial numbers</p>
+        <p class="mb-0 text-muted small">Officer-in-charge hologram entry and management system</p>
       </div>
-      <div class="d-flex gap-3">
-        <span class="badge bg-warning text-dark">
-          <i class="bi bi-clock me-1"></i>Pending: {{ getStatusCount('PENDING') }}
-        </span>
-        <span class="badge bg-success">
-          <i class="bi bi-check-circle me-1"></i>Approved: {{ getStatusCount('APPROVED') }}
-        </span>
-        <span class="badge bg-danger">
-          <i class="bi bi-x-circle me-1"></i>Rejected: {{ getStatusCount('REJECTED') }}
-        </span>
+      <div class="d-flex gap-2 align-items-center">
+        <button class="btn btn-primary btn-sm" (click)="showAddNewRecord()" *ngIf="!showAddForm">
+          <i class="bi bi-plus-circle me-1"></i>
+          Add New Hologram Entry
+        </button>
+        <div class="d-flex gap-3">
+          <span class="badge bg-warning text-dark">
+            <i class="bi bi-clock me-1"></i>Pending: {{ getStatusCount('PENDING') }}
+          </span>
+          <span class="badge bg-success">
+            <i class="bi bi-check-circle me-1"></i>Approved: {{ getStatusCount('APPROVED') }}
+          </span>
+          <span class="badge bg-danger">
+            <i class="bi bi-x-circle me-1"></i>Rejected: {{ getStatusCount('REJECTED') }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hologram Stock Summary -->
+  <div class="bg-light border-bottom p-3">
+    <div class="row text-center">
+      <div class="col-md-3">
+        <div class="card border-info h-100">
+          <div class="card-body py-2">
+            <h6 class="card-title text-info mb-1">Previous Stock</h6>
+            <div class="fs-4 fw-bold text-info">{{ getTotalPreviousStock() | number }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-success h-100">
+          <div class="card-body py-2">
+            <h6 class="card-title text-success mb-1">New Arrivals</h6>
+            <div class="fs-4 fw-bold text-success">{{ getTotalNewArrivals() | number }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-primary h-100">
+          <div class="card-body py-2">
+            <h6 class="card-title text-primary mb-1">Current Total</h6>
+            <div class="fs-4 fw-bold text-primary">{{ getCurrentTotalStock() | number }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-secondary h-100">
+          <div class="card-body py-2">
+            <h6 class="card-title text-secondary mb-1">Total Records</h6>
+            <div class="fs-4 fw-bold text-secondary">{{ filteredRecords.length }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Record Form -->
+  <div class="bg-warning bg-opacity-10 border-bottom p-3" *ngIf="showAddForm">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h6 class="mb-0">
+          <i class="bi bi-plus-circle me-2"></i>
+          Add New Hologram Entry
+        </h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" [(ngModel)]="newRecord.date" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">From Serial <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" placeholder="e.g., HG001001" 
+                   [(ngModel)]="newRecord.fromSerial" 
+                   (input)="calculateHologramCount()" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">To Serial <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" placeholder="e.g., HG001500" 
+                   [(ngModel)]="newRecord.toSerial" 
+                   (input)="calculateHologramCount()" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Number of Holograms</label>
+            <input type="number" class="form-control" [(ngModel)]="newRecord.numberOfHolograms" 
+                   (input)="newRecord.newArrival = newRecord.numberOfHolograms; calculateTotalStock()" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Previous Stock</label>
+            <input type="number" class="form-control" [(ngModel)]="newRecord.previousStock" 
+                   (input)="calculateTotalStock()" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">New Arrival</label>
+            <input type="number" class="form-control" [(ngModel)]="newRecord.newArrival" readonly>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Total Stock</label>
+            <input type="number" class="form-control" [(ngModel)]="newRecord.totalStock" readonly>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex gap-2 align-items-end h-100">
+              <button class="btn btn-success" (click)="saveNewRecord()">
+                <i class="bi bi-check-lg me-1"></i>Save
+              </button>
+              <button class="btn btn-secondary" (click)="hideAddForm()">
+                <i class="bi bi-x-lg me-1"></i>Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -26,14 +130,31 @@
   <!-- Filter Section -->
   <div class="bg-light border-bottom p-3">
     <div class="row g-3 align-items-end">
-      <div class="col-md-3">
-        <label class="form-label small text-muted mb-1">Filter by Date</label>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Specific Date</label>
         <input type="date" class="form-control form-control-sm" 
                [(ngModel)]="selectedDate" 
                (change)="applyFilters()">
       </div>
-      <div class="col-md-3">
-        <label class="form-label small text-muted mb-1">Filter by Status</label>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Month</label>
+        <select class="form-select form-select-sm" 
+                [(ngModel)]="selectedMonth" 
+                (change)="applyFilters()">
+          <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Year</label>
+        <select class="form-select form-select-sm" 
+                [(ngModel)]="selectedYear" 
+                (change)="applyFilters()">
+          <option value="">All Years</option>
+          <option *ngFor="let year of years" [value]="year.value">{{ year.label }}</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small text-muted mb-1">Status</label>
         <select class="form-select form-select-sm" 
                 [(ngModel)]="selectedStatus" 
                 (change)="applyFilters()">
@@ -43,15 +164,15 @@
           <option value="REJECTED">Rejected</option>
         </select>
       </div>
-      <div class="col-md-6">
+      <div class="col-md-4">
         <div class="d-flex gap-2 justify-content-end">
           <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
             <i class="bi bi-arrow-clockwise me-1"></i>
             Clear Filters
           </button>
           <div class="ms-3 d-flex align-items-center">
-            <span class="small text-muted me-2">Total Holograms:</span>
-            <span class="badge bg-info">{{ getTotalHolograms() | number }}</span>
+            <span class="small text-muted me-2">Filtered Records:</span>
+            <span class="badge bg-info">{{ filteredRecords.length }}</span>
           </div>
         </div>
       </div>
@@ -65,10 +186,9 @@
         <thead class="table-primary">
           <tr>
             <th scope="col" class="fw-semibold">Date</th>
-            <th scope="col" class="fw-semibold">Hologram Received</th>
-            <th scope="col" class="fw-semibold text-center">No. of Holograms</th>
+            <th scope="col" class="fw-semibold">Hologram Serial Range</th>
+            <th scope="col" class="fw-semibold text-center">Stock Summary</th>
             <th scope="col" class="fw-semibold text-center">Status</th>
-            <th scope="col" class="fw-semibold">Submitted By</th>
             <th scope="col" class="fw-semibold text-center">Actions</th>
           </tr>
         </thead>
@@ -86,27 +206,51 @@
                   <span class="badge bg-light text-dark me-2">From:</span>
                   <span class="fw-semibold text-primary">{{ record.fromSerial }}</span>
                 </div>
-                <div>
+                <div class="mb-1">
                   <span class="badge bg-light text-dark me-2">To:</span>
                   <span class="fw-semibold text-primary">{{ record.toSerial }}</span>
                 </div>
+                <div>
+                  <span class="badge bg-success text-white">{{ record.numberOfHolograms | number }} Holograms</span>
+                </div>
               </div>
             </td>
-            <td class="text-center align-middle">
-              <span class="fs-5 fw-bold text-success">{{ record.numberOfHolograms | number }}</span>
+            <td class="align-middle">
+              <div class="row text-center g-1">
+                <div class="col-12">
+                  <div class="card border-info mb-1">
+                    <div class="card-body py-1 px-2">
+                      <small class="text-muted d-block">Previous Stock</small>
+                      <span class="fw-bold text-info">{{ record.previousStock | number }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="card border-success mb-1">
+                    <div class="card-body py-1 px-2">
+                      <small class="text-muted d-block">New Arrival</small>
+                      <span class="fw-bold text-success">{{ record.newArrival | number }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <div class="card border-primary">
+                    <div class="card-body py-1 px-2">
+                      <small class="text-muted d-block">Total Stock</small>
+                      <span class="fw-bold text-primary fs-6">{{ record.totalStock | number }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </td>
             <td class="text-center align-middle">
               <span class="badge" [ngClass]="getStatusClass(record.status)">
                 <i [class]="getStatusIcon(record.status)" class="me-1"></i>
                 {{ record.status }}
               </span>
-            </td>
-            <td class="align-middle">
-              <div class="fw-semibold">{{ record.submittedBy }}</div>
-              <small class="text-muted">
-                <i class="bi bi-calendar3 me-1"></i>
-                {{ record.submissionDate | date:'dd/MM/yyyy' }}
-              </small>
+              <div class="mt-1">
+                <small class="text-muted">{{ record.entryType === 'NEW_ARRIVAL' ? 'New Entry' : 'Existing' }}</small>
+              </div>
             </td>
             <td class="text-center align-middle">
               <div class="btn-group btn-group-sm" role="group">
@@ -143,20 +287,28 @@
     <!-- Summary Footer -->
     <div class="border-top p-3 bg-light" *ngIf="filteredRecords.length > 0">
       <div class="row text-center">
-        <div class="col-md-3">
-          <div class="fw-bold text-primary fs-4">{{ filteredRecords.length }}</div>
+        <div class="col-md-2">
+          <div class="fw-bold text-secondary fs-5">{{ filteredRecords.length }}</div>
           <small class="text-muted">Total Records</small>
         </div>
-        <div class="col-md-3">
-          <div class="fw-bold text-success fs-4">{{ getTotalHolograms() | number }}</div>
-          <small class="text-muted">Total Holograms</small>
+        <div class="col-md-2">
+          <div class="fw-bold text-info fs-5">{{ getTotalPreviousStock() | number }}</div>
+          <small class="text-muted">Previous Stock</small>
         </div>
-        <div class="col-md-3">
-          <div class="fw-bold text-warning fs-4">{{ getStatusCount('PENDING') }}</div>
-          <small class="text-muted">Pending Approval</small>
+        <div class="col-md-2">
+          <div class="fw-bold text-success fs-5">{{ getTotalNewArrivals() | number }}</div>
+          <small class="text-muted">New Arrivals</small>
         </div>
-        <div class="col-md-3">
-          <div class="fw-bold text-success fs-4">{{ getStatusCount('APPROVED') }}</div>
+        <div class="col-md-2">
+          <div class="fw-bold text-primary fs-5">{{ getCurrentTotalStock() | number }}</div>
+          <small class="text-muted">Current Total</small>
+        </div>
+        <div class="col-md-2">
+          <div class="fw-bold text-warning fs-5">{{ getStatusCount('PENDING') }}</div>
+          <small class="text-muted">Pending</small>
+        </div>
+        <div class="col-md-2">
+          <div class="fw-bold text-success fs-5">{{ getStatusCount('APPROVED') }}</div>
           <small class="text-muted">Approved</small>
         </div>
       </div>
