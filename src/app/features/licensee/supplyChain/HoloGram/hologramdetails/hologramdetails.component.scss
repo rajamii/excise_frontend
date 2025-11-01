@@ -203,6 +203,29 @@
           }
         }
 
+        .declaration-notice {
+          margin-bottom: 1.5rem;
+
+          .alert {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            color: #92400e;
+            font-size: 0.95rem;
+            margin: 0;
+
+            i {
+              color: #f59e0b;
+              font-size: 1.1rem;
+            }
+
+            strong {
+              color: #78350f;
+            }
+          }
+        }
+
         .form-actions {
           display: flex;
           gap: 1rem;
@@ -373,7 +396,7 @@
 
         .register-table {
           width: 100%;
-          min-width: 1200px;
+          min-width: 1100px;
           border-collapse: collapse;
           font-size: 0.9rem;
 
@@ -406,7 +429,6 @@
               &.new-arrival { width: 120px; text-align: center; }
               &.total-stock { width: 120px; text-align: center; }
               &.remarks { width: 200px; }
-              &.actions { width: 100px; text-align: center; }
             }
           }
 
@@ -534,49 +556,6 @@
                     font-size: 0.85rem;
                   }
                 }
-
-                &.actions {
-                  text-align: center;
-
-                  .action-buttons {
-                    display: flex;
-                    gap: 0.5rem;
-                    justify-content: center;
-
-                    .btn-action {
-                      width: 32px;
-                      height: 32px;
-                      border: none;
-                      border-radius: 6px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      cursor: pointer;
-                      transition: all 0.2s ease;
-                      font-size: 0.85rem;
-
-                      &.view {
-                        background: #eff6ff;
-                        color: #1d4ed8;
-
-                        &:hover {
-                          background: #dbeafe;
-                          transform: translateY(-1px);
-                        }
-                      }
-
-                      &.edit {
-                        background: #f0fdf4;
-                        color: #059669;
-
-                        &:hover {
-                          background: #dcfce7;
-                          transform: translateY(-1px);
-                        }
-                      }
-                    }
-                  }
-                }
               }
             }
           }
@@ -697,7 +676,7 @@
 
     .register-table-wrapper {
       .register-table {
-        min-width: 800px;
+        min-width: 700px;
         font-size: 0.8rem;
 
         thead th {
@@ -732,7 +711,7 @@
   @media (max-width: 480px) {
     .register-table-wrapper {
       .register-table {
-        min-width: 600px;
+        min-width: 500px;
         font-size: 0.75rem;
 
         thead th {
@@ -751,15 +730,7 @@
             }
           }
 
-          &.actions {
-            .action-buttons {
-              .btn-action {
-                width: 28px;
-                height: 28px;
-                font-size: 0.75rem;
-              }
-            }
-          }
+
         }
       }
     }
