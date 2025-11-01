@@ -328,254 +328,296 @@
     }
   }
 
-  // Records Section
-  .records-section {
+  // Register Section
+  .register-section {
     padding: 0 2rem 2rem;
 
-    .records-container {
-      .records-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-        gap: 1.5rem;
+    .register-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
 
-        .record-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e2e8f0;
-          transition: all 0.3s ease;
-          overflow: hidden;
+      .register-header {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        color: white;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
 
-          &:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        .register-title {
+          margin: 0;
+          font-size: 1.25rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+        }
+
+        .register-info {
+          .register-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
           }
+        }
+      }
 
-          .record-header {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            padding: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e5e7eb;
+      .register-table-wrapper {
+        overflow-x: auto;
+        max-width: 100%;
 
-            .record-date {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
+        .register-table {
+          width: 100%;
+          min-width: 1200px;
+          border-collapse: collapse;
+          font-size: 0.9rem;
 
-              i {
-                color: #667eea;
-                font-size: 1.1rem;
-              }
+          thead {
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
 
-              .date-text {
-                font-weight: 700;
-                color: #1f2937;
-                font-size: 1.1rem;
-              }
-
-              .day-text {
-                color: #6b7280;
-                font-size: 0.9rem;
-                margin-left: 0.5rem;
-              }
-            }
-
-            .record-status {
-              .status-badge {
-                background: linear-gradient(135deg, #10b981, #059669);
-                color: white;
-                padding: 0.5rem 1rem;
-                border-radius: 20px;
-                font-size: 0.85rem;
-                font-weight: 600;
-                display: flex;
-                align-items: center;
-                gap: 0.25rem;
-              }
-            }
-          }
-
-          .record-content {
-            padding: 1.5rem;
-
-            .section-title {
-              font-size: 0.9rem;
+            th {
+              padding: 1rem 0.75rem;
+              text-align: left;
               font-weight: 700;
               color: #374151;
-              margin-bottom: 1rem;
+              border-right: 1px solid #e5e7eb;
+              white-space: nowrap;
               text-transform: uppercase;
+              font-size: 0.8rem;
               letter-spacing: 0.5px;
+
+              &:last-child {
+                border-right: none;
+              }
+
+              // Column widths
+              &.sl-no { width: 60px; text-align: center; }
+              &.date-col { width: 120px; }
+              &.serial-from { width: 140px; }
+              &.serial-to { width: 140px; }
+              &.hologram-count { width: 120px; text-align: center; }
+              &.previous-stock { width: 120px; text-align: center; }
+              &.new-arrival { width: 120px; text-align: center; }
+              &.total-stock { width: 120px; text-align: center; }
+              &.remarks { width: 200px; }
+              &.actions { width: 100px; text-align: center; }
             }
+          }
 
-            .serial-info {
-              margin-bottom: 2rem;
+          tbody {
+            .register-row {
+              border-bottom: 1px solid #e5e7eb;
+              transition: all 0.2s ease;
 
-              .serial-range {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                margin-bottom: 1rem;
+              &:hover {
+                background-color: #f8fafc;
+              }
 
-                .serial-item {
-                  flex: 1;
-                  background: #f8fafc;
-                  padding: 1rem;
-                  border-radius: 8px;
-                  border: 1px solid #e2e8f0;
+              &:nth-child(even) {
+                background-color: #fafbfc;
 
-                  .serial-label {
-                    display: block;
-                    font-size: 0.8rem;
-                    color: #6b7280;
-                    font-weight: 600;
-                    margin-bottom: 0.25rem;
+                &:hover {
+                  background-color: #f1f5f9;
+                }
+              }
+
+              td {
+                padding: 1rem 0.75rem;
+                vertical-align: middle;
+                border-right: 1px solid #f1f5f9;
+
+                &:last-child {
+                  border-right: none;
+                }
+
+                &.sl-no {
+                  text-align: center;
+                  font-weight: 600;
+                  color: #6b7280;
+                }
+
+                &.date-col {
+                  .date-display {
+                    .date-main {
+                      display: block;
+                      font-weight: 600;
+                      color: #1f2937;
+                      font-size: 0.9rem;
+                    }
+
+                    .date-day {
+                      display: block;
+                      color: #6b7280;
+                      font-size: 0.75rem;
+                      text-transform: uppercase;
+                      margin-top: 0.25rem;
+                    }
                   }
+                }
 
-                  .serial-value {
-                    font-size: 1.1rem;
+                &.serial-from,
+                &.serial-to {
+                  .serial-number {
+                    font-family: 'Courier New', monospace;
                     font-weight: 700;
                     color: #1f2937;
-                    font-family: 'Courier New', monospace;
+                    background: #f3f4f6;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 4px;
+                    font-size: 0.85rem;
                   }
                 }
 
-                .serial-divider {
-                  color: #667eea;
-                  font-size: 1.2rem;
-                }
-              }
-
-              .hologram-count {
-                .count-badge {
-                  background: linear-gradient(135deg, #667eea, #764ba2);
-                  color: white;
-                  padding: 0.75rem 1.5rem;
-                  border-radius: 25px;
-                  font-weight: 700;
-                  font-size: 1rem;
-                  display: inline-block;
-                }
-              }
-            }
-
-            .stock-info {
-              .stock-grid {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 1rem;
-
-                .stock-item {
+                &.hologram-count {
                   text-align: center;
-                  padding: 1rem;
-                  border-radius: 12px;
-                  border: 2px solid;
-                  transition: all 0.3s ease;
 
-                  &:hover {
-                    transform: translateY(-2px);
-                  }
-
-                  .stock-icon {
-                    font-size: 1.5rem;
-                    margin-bottom: 0.5rem;
-                  }
-
-                  .stock-details {
-                    .stock-value {
+                  .count-display {
+                    .count-number {
                       display: block;
-                      font-size: 1.5rem;
                       font-weight: 700;
-                      margin-bottom: 0.25rem;
+                      color: #667eea;
+                      font-size: 1rem;
                     }
 
-                    .stock-label {
-                      font-size: 0.8rem;
-                      font-weight: 600;
+                    .count-label {
+                      display: block;
+                      color: #6b7280;
+                      font-size: 0.7rem;
                       text-transform: uppercase;
-                      letter-spacing: 0.5px;
                     }
                   }
+                }
 
-                  &.previous {
-                    border-color: #3b82f6;
-                    background: #eff6ff;
+                &.previous-stock,
+                &.new-arrival,
+                &.total-stock {
+                  text-align: center;
 
-                    .stock-icon, .stock-value {
-                      color: #3b82f6;
+                  .stock-display {
+                    .stock-number {
+                      font-weight: 700;
+                      font-size: 1rem;
+                      padding: 0.25rem 0.5rem;
+                      border-radius: 4px;
+                      display: inline-block;
+                      min-width: 60px;
                     }
 
-                    .stock-label {
-                      color: #1e40af;
+                    &.previous .stock-number {
+                      background: #eff6ff;
+                      color: #1d4ed8;
+                    }
+
+                    &.arrival .stock-number {
+                      background: #ecfdf5;
+                      color: #059669;
+                    }
+
+                    &.total .stock-number {
+                      background: #f3e8ff;
+                      color: #7c3aed;
+                      font-weight: 800;
                     }
                   }
+                }
 
-                  &.arrival {
-                    border-color: #10b981;
-                    background: #ecfdf5;
-
-                    .stock-icon, .stock-value {
-                      color: #10b981;
-                    }
-
-                    .stock-label {
-                      color: #047857;
-                    }
+                &.remarks {
+                  .remarks-text {
+                    color: #6b7280;
+                    font-style: italic;
+                    font-size: 0.85rem;
                   }
+                }
 
-                  &.total {
-                    border-color: #8b5cf6;
-                    background: #f3e8ff;
+                &.actions {
+                  text-align: center;
 
-                    .stock-icon, .stock-value {
-                      color: #8b5cf6;
-                    }
+                  .action-buttons {
+                    display: flex;
+                    gap: 0.5rem;
+                    justify-content: center;
 
-                    .stock-label {
-                      color: #6d28d9;
+                    .btn-action {
+                      width: 32px;
+                      height: 32px;
+                      border: none;
+                      border-radius: 6px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      cursor: pointer;
+                      transition: all 0.2s ease;
+                      font-size: 0.85rem;
+
+                      &.view {
+                        background: #eff6ff;
+                        color: #1d4ed8;
+
+                        &:hover {
+                          background: #dbeafe;
+                          transform: translateY(-1px);
+                        }
+                      }
+
+                      &.edit {
+                        background: #f0fdf4;
+                        color: #059669;
+
+                        &:hover {
+                          background: #dcfce7;
+                          transform: translateY(-1px);
+                        }
+                      }
                     }
                   }
                 }
               }
             }
           }
+        }
+      }
 
-          .record-actions {
-            padding: 1rem 1.5rem;
-            background: #f8fafc;
-            border-top: 1px solid #e5e7eb;
+      .register-footer {
+        background: #f8fafc;
+        border-top: 2px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+
+          .summary-item {
             display: flex;
-            gap: 0.75rem;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
 
-            .btn {
-              flex: 1;
-              padding: 0.75rem;
-              border-radius: 8px;
+            .summary-label {
+              font-size: 0.8rem;
+              color: #6b7280;
               font-weight: 600;
-              font-size: 0.9rem;
-              transition: all 0.3s ease;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 0.25rem;
+            }
 
-              &.btn-outline-primary {
-                border: 2px solid #667eea;
-                color: #667eea;
+            .summary-value {
+              font-size: 1.25rem;
+              font-weight: 700;
+              color: #1f2937;
 
-                &:hover {
-                  background-color: #667eea;
-                  color: white;
-                  transform: translateY(-2px);
-                }
-              }
-
-              &.btn-outline-secondary {
-                border: 2px solid #6b7280;
-                color: #6b7280;
-
-                &:hover {
-                  background-color: #6b7280;
-                  color: white;
-                  transform: translateY(-2px);
-                }
+              &.highlight {
+                color: #7c3aed;
+                font-size: 1.5rem;
               }
             }
           }
@@ -585,9 +627,6 @@
       .empty-state {
         text-align: center;
         padding: 4rem 2rem;
-        background: white;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 
         .empty-icon {
           font-size: 4rem;
@@ -647,27 +686,82 @@
     .stock-summary-section,
     .add-form-section,
     .filter-section,
-    .records-section {
+    .register-section {
       padding-left: 1rem;
       padding-right: 1rem;
     }
 
-    .records-grid {
-      grid-template-columns: 1fr !important;
-    }
-
-    .stock-grid {
-      grid-template-columns: 1fr !important;
-      gap: 0.75rem !important;
-    }
-
-    .serial-range {
-      flex-direction: column !important;
-      gap: 0.75rem !important;
-    }
-
     .form-actions {
       flex-direction: column !important;
+    }
+
+    .register-table-wrapper {
+      .register-table {
+        min-width: 800px;
+        font-size: 0.8rem;
+
+        thead th {
+          padding: 0.75rem 0.5rem;
+          font-size: 0.7rem;
+        }
+
+        tbody td {
+          padding: 0.75rem 0.5rem;
+        }
+      }
+    }
+
+    .register-footer {
+      .summary-row {
+        flex-direction: column;
+        gap: 0.75rem;
+
+        .summary-item {
+          .summary-value {
+            font-size: 1.1rem !important;
+
+            &.highlight {
+              font-size: 1.25rem !important;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    .register-table-wrapper {
+      .register-table {
+        min-width: 600px;
+        font-size: 0.75rem;
+
+        thead th {
+          padding: 0.5rem 0.25rem;
+          font-size: 0.65rem;
+        }
+
+        tbody td {
+          padding: 0.5rem 0.25rem;
+
+          &.serial-from,
+          &.serial-to {
+            .serial-number {
+              font-size: 0.75rem;
+              padding: 0.125rem 0.25rem;
+            }
+          }
+
+          &.actions {
+            .action-buttons {
+              .btn-action {
+                width: 28px;
+                height: 28px;
+                font-size: 0.75rem;
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

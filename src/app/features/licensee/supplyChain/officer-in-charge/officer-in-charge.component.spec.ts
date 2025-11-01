@@ -10,7 +10,7 @@ describe('OfficerInChargeComponent', () => {
     await TestBed.configureTestingModule({
       imports: [OfficerInChargeComponent]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(OfficerInChargeComponent);
     component = fixture.componentInstance;
