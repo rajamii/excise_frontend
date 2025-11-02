@@ -63,7 +63,6 @@
     <!-- Data Table Section -->
     <div class="bg-white">
       <div class="container-fluid p-3">
-        <div class="table-responsive">
 
           <!-- Permit Register Header -->
           <div class="permit-register-header">
@@ -71,14 +70,14 @@
               <div class="header-info">
                 <h4 class="register-title">
                   <i class="bi bi-file-earmark-text me-2"></i>
-                  {{ getActiveTabTitle() }} Applications
+                  {{ getActiveTabTitle() }} Register
                 </h4>
-                <p class="register-subtitle">Manage and track {{ getActiveTabTitle().toLowerCase() }} applications</p>
+                <p class="register-subtitle">Track and manage all {{ getActiveTabTitle().toLowerCase() }} applications</p>
               </div>
               <div class="header-actions">
                 <button class="btn btn-success">
-                  <i class="bi bi-download me-2"></i>
-                  Export Report
+                  <i class="bi bi-plus-circle me-2"></i>
+                  New {{ getActiveTabTitle() }}
                 </button>
               </div>
             </div>
@@ -203,6 +202,20 @@
                 Clear
               </button>
             </div>
+
+            <!-- Filter Results Summary -->
+            <div class="filter-results-compact mt-2"
+              *ngIf="selectedDate || selectedMonth || selectedYear || selectedDistillery || selectedStatus">
+              <small class="text-info">
+                <i class="bi bi-info-circle me-1"></i>
+                Showing <strong>{{ getFilteredData().length }}</strong> of <strong>{{ getTotalCountForActiveTab() }}</strong> {{ getActiveTabTitle().toLowerCase() }} records
+                <span *ngIf="selectedDate" class="filter-tag">Date: {{ selectedDate | date:'dd MMM yyyy' }}</span>
+                <span *ngIf="selectedMonth" class="filter-tag">Month: {{ getMonthName(selectedMonth) }}</span>
+                <span *ngIf="selectedYear" class="filter-tag">Year: {{ selectedYear }}</span>
+                <span *ngIf="selectedDistillery" class="filter-tag">Distillery: {{ getDistilleryName(selectedDistillery) }}</span>
+                <span *ngIf="selectedStatus" class="filter-tag">Status: {{ selectedStatus | titlecase }}</span>
+              </small>
+            </div>
           </div>
 
           <!-- Permit Register Table -->
@@ -211,14 +224,14 @@
               <div class="register-header-bar">
                 <h5 class="register-table-title">
                   <i class="bi bi-table me-2"></i>
-                  {{ getActiveTabTitle() }} Applications
+                  {{ getActiveTabTitle() }} Register Entries
                 </h5>
                 <div class="register-info">
-                  <span class="entries-count">{{ getFilteredData().length }} Applications</span>
+                  <span class="entries-count">{{ getFilteredData().length }} Entries</span>
                 </div>
               </div>
 
-              <div class="table-responsive" *ngIf="getFilteredData().length > 0">
+              <div *ngIf="getFilteredData().length > 0">
                 <table class="table register-table">
                   <thead>
                     <tr>
@@ -230,7 +243,7 @@
                       @if (activeTab !== "transit") {
                         <th class="amount">Imp. Pass Fee Amt.</th>
                       }
-                      <th class="actions">Actions</th>
+                      <th class="actions">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -283,15 +296,14 @@
                 <div class="empty-icon">
                   <i class="bi bi-journal-x"></i>
                 </div>
-                <h5 class="empty-title">No Applications Found</h5>
+                <h5 class="empty-title">No {{ getActiveTabTitle() }} Records Found</h5>
                 <p class="empty-message">
-                  No {{ getActiveTabTitle().toLowerCase() }} applications match your current filter criteria.
+                  No {{ getActiveTabTitle().toLowerCase() }} records match your current filter criteria.
                 </p>
               </div>
             </div>
           </div>
 
-        </div>
       </div>
     </div>
   }

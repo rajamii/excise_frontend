@@ -308,4 +308,27 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     }
     return status;
   }
+
+  // Helper methods for filter display
+  getMonthName(monthNumber: string): string {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const index = parseInt(monthNumber) - 1;
+    return months[index] || monthNumber;
+  }
+
+  getDistilleryName(distilleryKey: string): string {
+    const distilleryMap: { [key: string]: string } = {
+      'sikkim-distilleries': 'Sikkim Distilleries Ltd',
+      'mount-distilleries': 'Mount Distilleries Ltd',
+      'darjeeling-artisan': 'Darjeeling Artisan Pvt Ltd',
+    };
+    return distilleryMap[distilleryKey] || distilleryKey;
+  }
+
+  getTotalCountForActiveTab(): number {
+    return this.allPermits.filter(permit => permit.type === this.activeTab).length;
+  }
 }
