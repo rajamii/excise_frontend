@@ -16,6 +16,38 @@ export interface HologramRecord {
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
+export interface HologramRoll {
+  rollNumber: string;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  fromSerial: string;
+  toSerial: string;
+  totalCount: number;
+  availableCount: number;
+  usedCount: number;
+  damagedCount: number;
+  status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
+  receivedDate: string;
+  usageHistory: UsageHistory[];
+}
+
+export interface UsageHistory {
+  date: string;
+  batchNumber: string;
+  brandName: string;
+  fromSerial: string;
+  toSerial: string;
+  quantity: number;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'DAMAGED';
+}
+
+export interface SerialFilters {
+  rollStatus: string;
+  hologramType: string;
+  dateFrom: string;
+  dateTo: string;
+  serialSearch: string;
+}
+
 @Component({
   selector: 'app-hologramdetails',
   imports: [CommonModule, FormsModule],
@@ -48,6 +80,21 @@ export class HologramdetailsComponent implements OnInit {
   showAddForm: boolean = false;
   newRecord: Partial<HologramRecord> = {};
 
+  // Hologram Serial Numbers Data properties
+  showHologramSerialModal: boolean = false;
+  showUsageDetailsModal: boolean = false;
+  hologramRolls: HologramRoll[] = [];
+  filteredSerialData: HologramRoll[] = [];
+  selectedRoll: HologramRoll | null = null;
+  
+  serialFilters: SerialFilters = {
+    rollStatus: '',
+    hologramType: '',
+    dateFrom: '',
+    dateTo: '',
+    serialSearch: ''
+  };
+
   // Date filter options
   months = [
     { value: '', label: 'All Months' },
@@ -69,6 +116,7 @@ export class HologramdetailsComponent implements OnInit {
 
   ngOnInit() {
     this.loadHologramRecords();
+    this.loadHologramRolls();
   }
 
   loadHologramRecords() {
@@ -311,5 +359,195 @@ export class HologramdetailsComponent implements OnInit {
 
   openHologramRequests(): void {
     this.hologramRequestsClicked.emit();
+  }
+
+  // Hologram Serial Numbers Data Methods
+  loadHologramRolls(): void {
+    // Sample data - replace with actual API call
+    this.hologramRolls = [
+      {
+        rollNumber: 'ROLL-001',
+        hologramType: 'LOCAL',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001500',
+        totalCount: 500,
+        availableCount: 350,
+        usedCount: 120,
+        damagedCount: 30,
+        status: 'IN_USE',
+        receivedDate: '2024-11-01',
+        usageHistory: [
+          {
+            date: '2024-11-02',
+            batchNumber: 'BATCH-001',
+            brandName: 'Premium Whisky',
+            fromSerial: 'HG001001',
+            toSerial: 'HG001050',
+            quantity: 50,
+            status: 'COMPLETED'
+          },
+          {
+            date: '2024-11-03',
+            batchNumber: 'BATCH-002',
+            brandName: 'Royal Rum',
+            fromSerial: 'HG001051',
+            toSerial: 'HG001120',
+            quantity: 70,
+            status: 'COMPLETED'
+          }
+        ]
+      },
+      {
+        rollNumber: 'ROLL-002',
+        hologramType: 'EXPORT',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002500',
+        totalCount: 500,
+        availableCount: 500,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: '2024-10-28',
+        usageHistory: []
+      },
+      {
+        rollNumber: 'ROLL-003',
+        hologramType: 'DEFENCE',
+        fromSerial: 'HG003001',
+        toSerial: 'HG003300',
+        totalCount: 300,
+        availableCount: 0,
+        usedCount: 280,
+        damagedCount: 20,
+        status: 'COMPLETED',
+        receivedDate: '2024-10-15',
+        usageHistory: [
+          {
+            date: '2024-10-20',
+            batchNumber: 'DEF-001',
+            brandName: 'Military Special',
+            fromSerial: 'HG003001',
+            toSerial: 'HG003280',
+            quantity: 280,
+            status: 'COMPLETED'
+          }
+        ]
+      }
+    ];
+
+    this.applySerialFilters();
+  }
+
+  openHologramSerialData(): void {
+    this.showHologramSerialModal = true;
+  }
+
+  closeHologramSerialModal(): void {
+    this.showHologramSerialModal = false;
+  }
+
+  applySerialFilters(): void {
+    this.filteredSerialData = this.hologramRolls.filter(roll => {
+      const rollDate = new Date(roll.receivedDate);
+
+      // Status filter
+      const statusMatch = !this.serialFilters.rollStatus || roll.status === this.serialFilters.rollStatus;
+
+      // Type filter
+      const typeMatch = !this.serialFilters.hologramType || roll.hologramType === this.serialFilters.hologramType;
+
+      // Date from filter
+      const dateFromMatch = !this.serialFilters.dateFrom || rollDate >= new Date(this.serialFilters.dateFrom);
+
+      // Date to filter
+      const dateToMatch = !this.serialFilters.dateTo || rollDate <= new Date(this.serialFilters.dateTo);
+
+      // Serial search filter
+      const serialMatch = !this.serialFilters.serialSearch ||
+        roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
+        roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
+        roll.rollNumber.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase());
+
+      return statusMatch && typeMatch && dateFromMatch && dateToMatch && serialMatch;
+    });
+  }
+
+  clearSerialFilters(): void {
+    this.serialFilters = {
+      rollStatus: '',
+      hologramType: '',
+      dateFrom: '',
+      dateTo: '',
+      serialSearch: ''
+    };
+    this.applySerialFilters();
+  }
+
+  getTotalRolls(): number {
+    return this.hologramRolls.length;
+  }
+
+  getAvailableHolograms(): number {
+    return this.hologramRolls.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  getUsedHolograms(): number {
+    return this.hologramRolls.reduce((total, roll) => total + roll.usedCount, 0);
+  }
+
+  getDamagedHolograms(): number {
+    return this.hologramRolls.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  viewUsageDetails(roll: HologramRoll): void {
+    this.selectedRoll = roll;
+    this.showUsageDetailsModal = true;
+  }
+
+  closeUsageDetailsModal(): void {
+    this.showUsageDetailsModal = false;
+    this.selectedRoll = null;
+  }
+
+  viewRollDetails(roll: HologramRoll): void {
+    console.log('Viewing roll details:', roll);
+    // Implement detailed view logic
+  }
+
+  markDamaged(roll: HologramRoll): void {
+    if (confirm(`Are you sure you want to mark roll ${roll.rollNumber} as damaged?`)) {
+      roll.status = 'DAMAGED';
+      console.log('Roll marked as damaged:', roll);
+    }
+  }
+
+  getUsagePercentage(roll: HologramRoll, type: 'available' | 'used' | 'damaged'): number {
+    if (roll.totalCount === 0) return 0;
+    
+    switch (type) {
+      case 'available':
+        return (roll.availableCount / roll.totalCount) * 100;
+      case 'used':
+        return (roll.usedCount / roll.totalCount) * 100;
+      case 'damaged':
+        return (roll.damagedCount / roll.totalCount) * 100;
+      default:
+        return 0;
+    }
+  }
+
+  exportSerialData(): void {
+    console.log('Exporting serial data...');
+    // Implement export functionality
+  }
+
+  generateSerialReport(): void {
+    console.log('Generating serial report...');
+    // Implement report generation
+  }
+
+  exportUsageReport(roll: HologramRoll): void {
+    console.log('Exporting usage report for roll:', roll.rollNumber);
+    // Implement usage report export
   }
 }
