@@ -56,7 +56,7 @@ export class RequisitionLetterViewComponent implements OnInit {
     if (this.isBrowser) {
       const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
       const importPermitData = importPermitRequests.find((permit: any) => permit.refNo === refNo);
-      
+
       if (importPermitData) {
         // Convert import permit data to requisition format
         this.requisitionData = {
@@ -165,7 +165,7 @@ export class RequisitionLetterViewComponent implements OnInit {
     if (!win) return;
     win.document.open();
     const ref = this.requisitionData?.referenceNo || '';
-    
+
     // Create the exact template content optimized for single page
     const printContent = `
       <div style="text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #007bff;">
