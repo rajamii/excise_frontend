@@ -35,11 +35,12 @@ interface PermitRecord {
   styleUrl: "./commissioner-dashboard.component.scss",
 })
 export class CommissionerDashboardComponent implements OnInit {
-  activeTab = "requisition";
+  activeTab = "revalidation"; // Start with revalidation tab as requested
   searchFilter = "";
   currentPage = 1;
   pageSize = 10;
   totalRecords = 0;
+  sidebarHidden = true;
 
   // Filter properties
   selectedDate = "";
@@ -604,5 +605,82 @@ export class CommissionerDashboardComponent implements OnInit {
     this.router.navigate(["/dev-final-requisition-letters"], {
       queryParams: { ref: record.referenceNo },
     });
+  }
+
+  // New professional dashboard methods
+  toggleSidebar(): void {
+    this.sidebarHidden = !this.sidebarHidden;
+  }
+
+  navigateTo(route: string): void {
+    switch (route) {
+      case "requisition-review":
+        this.setActiveTab('requisition');
+        break;
+      case "revalidation-review":
+        this.setActiveTab('revalidation');
+        break;
+      case "cancellation-review":
+        this.setActiveTab('cancellation');
+        break;
+      case "transit-review":
+        this.setActiveTab('transit');
+        break;
+      case "monthly-report":
+        // Navigate to monthly report page
+        break;
+      case "annual-report":
+        // Navigate to annual report page
+        break;
+      case "compliance-report":
+        // Navigate to compliance report page
+        break;
+      default:
+        break;
+    }
+  }
+
+  viewReports(): void {
+    // Navigate to reports dashboard
+    console.log('View Reports clicked');
+  }
+
+  // Status count methods for summary cards
+  getStatusCount(status: string): number {
+    return this.getFilteredRecords().filter(record => {
+      if (status === 'Pending') {
+        return record.status === 'Pending' || record.status === 'ForwardedToCommissioner' || record.status === 'ForwardedRevalidationToCommissioner';
+      }
+      return record.status === status;
+    }).length;
+  }
+
+  getUrgentCount(): number {
+    // For revalidation, count records that might be urgent or expired
+    return this.getFilteredRecords().filter(record => 
+      record.status.includes('Pending') || record.status.includes('Forwarded')
+    ).length;
+  }
+
+  // Status class helper for styling
+  getStatusClass(status: string): string {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+      case 'forwardedtocommissioner':
+      case 'forwardedrevalidationtocommissioner':
+        return 'pending';
+      case 'approved':
+      case 'import permit generated':
+      case 'approvedrevalidationbycommissioner':
+        return 'approved';
+      case 'terminated':
+      case 'cancelled':
+        return 'terminated';
+      case 'forwarded':
+      case 'forwarded to it cell':
+        return 'forwarded';
+      default:
+        return 'generated';
+    }
   }
 }
