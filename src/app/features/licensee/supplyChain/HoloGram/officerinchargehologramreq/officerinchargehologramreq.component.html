@@ -1,1 +1,502 @@
-<p>officerinchargehologramreq works!</p>
+<!-- Hologram Request Register - Matching Supply Chain Design -->
+<div class="bg-white">
+    <div class="container-fluid p-3">
+        <!-- Hologram Request Register Header -->
+        <div class="hologram-request-register-header">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                    <h4 class="register-title">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Hologram Request Register
+                    </h4>
+                    <p class="register-subtitle">Track and manage all hologram requests from supply chain users</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-success">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        New Request
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="summary-card total-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-list-ul"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ filteredRequests.length }}</h3>
+                            <p class="card-label">Total Requests</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card pending-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('PENDING') }}</h3>
+                            <p class="card-label">Pending Review</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card approved-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('APPROVED') }}</h3>
+                            <p class="card-label">Approved</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-card total-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getTotalRequestedHolograms() }}</h3>
+                            <p class="card-label">Total Holograms</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Filter Section -->
+        <div class="compact-filter-section mb-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                    <i class="bi bi-funnel me-1"></i>
+                    <small class="text-muted">Filters:</small>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                    <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateFrom"
+                        (change)="applyFilters()" placeholder="Date" title="Filter by date">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()"
+                        title="Filter by status">
+                        <option value="">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+
+                <!-- Request Type Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.requestType"
+                        (change)="applyFilters()" title="Filter by request type">
+                        <option value="">All Types</option>
+                        <option value="NEW_ALLOCATION">New Allocation</option>
+                        <option value="ADDITIONAL_STOCK">Additional Stock</option>
+                        <option value="REPLACEMENT">Replacement</option>
+                    </select>
+                </div>
+
+                <!-- Hologram Type Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.hologramType"
+                        (change)="applyFilters()" title="Filter by hologram type">
+                        <option value="">All Types</option>
+                        <option value="LOCAL">Local</option>
+                        <option value="EXPORT">Export</option>
+                        <option value="DEFENCE">Defence</option>
+                    </select>
+                </div>
+
+                <!-- Clear Button -->
+                <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
+                    *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType"
+                    title="Clear all filters">
+                    <i class="bi bi-x-circle"></i>
+                    Clear
+                </button>
+            </div>
+
+            <!-- Filter Results Summary -->
+            <div class="filter-results-compact mt-2"
+                *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType">
+                <small class="text-info">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Showing <strong>{{ filteredRequests.length }}</strong> of <strong>{{ hologramRequests.length
+                        }}</strong> requests
+                    <span *ngIf="filters.dateFrom" class="filter-tag">Date: {{ filters.dateFrom | date:'dd MMM yyyy'
+                        }}</span>
+                    <span *ngIf="filters.status" class="filter-tag">Status: {{ filters.status }}</span>
+                    <span *ngIf="filters.requestType" class="filter-tag">Type: {{ filters.requestType }}</span>
+                    <span *ngIf="filters.hologramType" class="filter-tag">Hologram: {{ filters.hologramType }}</span>
+                </small>
+            </div>
+        </div>
+
+        <!-- Hologram Request Register Table -->
+        <div class="hologram-request-register-table">
+            <div class="register-container">
+                <div class="register-header-bar">
+                    <h5 class="register-table-title">
+                        <i class="bi bi-table me-2"></i>
+                        Request Register Entries
+                    </h5>
+                    <div class="register-info">
+                        <span class="entries-count">{{ filteredRequests.length }} Entries</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive" *ngIf="filteredRequests.length > 0">
+                    <table class="table register-table">
+                        <thead>
+                            <tr>
+                                <th class="sl-no">SL. NO.</th>
+                                <th class="ref-number">REFERENCE NO.</th>
+                                <th class="submission-date">SUBMISSION DATE</th>
+                                <th class="usage-date">USAGE DATE</th>
+                                <th class="brand-details">BRAND DETAILS</th>
+                                <th class="bottle-size">BOTTLE SIZE</th>
+                                <th class="hologram-qty">HOLOGRAM QTY</th>
+                                <th class="status">STATUS</th>
+                                <th class="actions">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let request of paginatedRequests; let i = index" class="register-row">
+                                <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                                <td class="ref-number">
+                                    <div class="ref-display">
+                                        <span class="ref-text">{{ request.referenceNo }}</span>
+                                        <span class="ref-type">{{ request.requestType.replace('_', ' ') }}</span>
+                                    </div>
+                                </td>
+                                <td class="submission-date">
+                                    <div class="date-display">
+                                        <span class="date-main">{{ request.submissionDate | date:'dd/MM/yyyy' }}</span>
+                                        <span class="date-time">{{ request.submissionDate | date:'HH:mm' }}</span>
+                                    </div>
+                                </td>
+                                <td class="usage-date">
+                                    <div class="date-display">
+                                        <span class="date-main">{{ request.submissionDate | date:'dd/MM/yyyy' }}</span>
+                                        <span class="date-day">{{ request.submissionDate | date:'EEE' }}</span>
+                                    </div>
+                                </td>
+                                <td class="brand-details">
+                                    <div class="brand-info">
+                                        <span class="brand-name">{{ request.brandDetails.brandName }}</span>
+                                        <span class="brand-code">{{ request.brandDetails.liquorType }} - {{
+                                            request.brandDetails.alcoholPercent }}</span>
+                                    </div>
+                                </td>
+                                <td class="bottle-size">
+                                    <span class="size-badge">{{ request.brandDetails.sizeMl }}ml</span>
+                                </td>
+                                <td class="hologram-qty">
+                                    <div class="qty-display">
+                                        <span class="qty-number">{{ request.requestedQuantity | number }}</span>
+                                        <span class="qty-label">units</span>
+                                    </div>
+                                </td>
+                                <td class="status">
+                                    <span class="status-badge" [class.bg-warning-subtle]="request.status === 'PENDING'"
+                                        [class.bg-success-subtle]="request.status === 'APPROVED'"
+                                        [class.bg-danger-subtle]="request.status === 'REJECTED'">
+                                        <i [class]="getStatusIcon(request.status)"></i>
+                                        {{ request.status }}
+                                    </span>
+                                </td>
+                                <td class="actions">
+                                    <div class="action-buttons">
+                                        <button class="btn-action view" (click)="viewRequestDetails(request)"
+                                            title="View Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action approve"
+                                            (click)="approveRequest(request)" title="Approve Request">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action reject"
+                                            (click)="rejectRequest(request)" title="Reject Request">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" *ngIf="filteredRequests.length === 0">
+                    <div class="empty-icon">
+                        <i class="bi bi-file-earmark-x"></i>
+                    </div>
+                    <h5 class="empty-title">
+                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        'No Matching Requests Found' : 'No Hologram Requests Found' }}
+                    </h5>
+                    <p class="empty-message">
+                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        'No requests match your current filter criteria. Try adjusting your filters or clear them to see
+                        all requests.' :
+                        'No hologram requests have been submitted yet.' }}
+                    </p>
+                    <button class="btn btn-primary"
+                        *ngIf="filteredRequests.length === 0 && !filters.dateFrom && !filters.status && !filters.requestType && !filters.hologramType">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Create New Request
+                    </button>
+                </div>
+
+                <!-- Register Summary Footer -->
+                <div class="register-footer" *ngIf="filteredRequests.length > 0">
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Requests:</span>
+                            <span class="summary-value">{{ filteredRequests.length }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Pending Review:</span>
+                            <span class="summary-value">{{ getRequestCount('PENDING') }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Holograms:</span>
+                            <span class="summary-value highlight">{{ getTotalRequestedHolograms() | number }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="register-pagination" *ngIf="filteredRequests.length > 0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    <span class="info-text">
+                        Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize,
+                        filteredRequests.length) }}
+                        of {{ filteredRequests.length }} entries
+                    </span>
+                </div>
+                <div class="pagination-controls">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="page-size-selector">
+                            <label class="selector-label">Show:</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="pageSize"
+                                (ngModelChange)="updatePagination()">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                        <div class="btn-group btn-group-sm pagination-buttons">
+                            <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                                [disabled]="currentPage === 1">«</button>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+                                [disabled]="currentPage === 1">‹</button>
+                            <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+                                [disabled]="currentPage === totalPages">›</button>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)"
+                                [disabled]="currentPage === totalPages">»</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request Details Modal -->
+<div class="modal fade" id="requestDetailsModal" tabindex="-1" *ngIf="selectedRequest">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Hologram Request Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="selectedRequest = null"></button>
+            </div>
+            <div class="modal-body">
+                <div class="request-details-container">
+                    <div class="request-header">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="info-card ref-info">
+                                    <div class="info-icon">
+                                        <i class="bi bi-hash"></i>
+                                    </div>
+                                    <div class="info-content">
+                                        <div class="info-label">Reference Number</div>
+                                        <div class="info-value">{{ selectedRequest.referenceNo }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-card status-info">
+                                    <div class="info-icon">
+                                        <i class="bi bi-flag"></i>
+                                    </div>
+                                    <div class="info-content">
+                                        <div class="info-label">Current Status</div>
+                                        <div class="info-value">
+                                            <span class="status-badge"
+                                                [class.bg-warning-subtle]="selectedRequest.status === 'PENDING'"
+                                                [class.bg-success-subtle]="selectedRequest.status === 'APPROVED'"
+                                                [class.bg-danger-subtle]="selectedRequest.status === 'REJECTED'">
+                                                {{ selectedRequest.status }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="request-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6 class="group-title">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Request Information
+                                    </h6>
+                                    <div class="detail-items">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Submission Date:</span>
+                                            <span class="detail-value">{{ selectedRequest.submissionDate |
+                                                date:'dd/MM/yyyy HH:mm' }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Submitted By:</span>
+                                            <span class="detail-value">{{ selectedRequest.submittedBy }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Request Type:</span>
+                                            <span class="detail-value">{{ selectedRequest.requestType.replace('_', ' ')
+                                                }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Urgency Level:</span>
+                                            <span class="detail-value">{{ selectedRequest.urgencyLevel }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="detail-group">
+                                    <h6 class="group-title">
+                                        <i class="bi bi-box me-2"></i>
+                                        Product Details
+                                    </h6>
+                                    <div class="detail-items">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Brand Name:</span>
+                                            <span class="detail-value">{{ selectedRequest.brandDetails.brandName
+                                                }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Liquor Type:</span>
+                                            <span class="detail-value">{{ selectedRequest.brandDetails.liquorType
+                                                }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Alcohol %:</span>
+                                            <span class="detail-value">{{ selectedRequest.brandDetails.alcoholPercent
+                                                }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Bottle Size:</span>
+                                            <span class="detail-value">{{ selectedRequest.brandDetails.sizeMl
+                                                }}ml</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Hologram Type:</span>
+                                            <span class="detail-value">{{ selectedRequest.hologramType }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Requested Quantity:</span>
+                                            <span class="detail-value">{{ selectedRequest.requestedQuantity | number
+                                                }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-12">
+                                <div class="detail-group">
+                                    <h6 class="group-title">
+                                        <i class="bi bi-chat-text me-2"></i>
+                                        Justification
+                                    </h6>
+                                    <div class="remarks-content">
+                                        <p class="remarks-text">{{ selectedRequest.justification }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2" *ngIf="selectedRequest.status !== 'PENDING'">
+                            <div class="col-12">
+                                <div class="detail-group">
+                                    <h6 class="group-title">
+                                        <i class="bi bi-person-check me-2"></i>
+                                        Officer Decision
+                                    </h6>
+                                    <div class="detail-items">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Decision Date:</span>
+                                            <span class="detail-value">{{ selectedRequest.approvalDate |
+                                                date:'dd/MM/yyyy' }}</span>
+                                        </div>
+                                        <div class="detail-item" *ngIf="selectedRequest.officerComments">
+                                            <span class="detail-label">Comments:</span>
+                                            <span class="detail-value">{{ selectedRequest.officerComments }}</span>
+                                        </div>
+                                        <div class="detail-item" *ngIf="selectedRequest.approvedQuantity">
+                                            <span class="detail-label">Approved Quantity:</span>
+                                            <span class="detail-value">{{ selectedRequest.approvedQuantity | number
+                                                }}</span>
+                                        </div>
+                                        <div class="detail-item" *ngIf="selectedRequest.rejectionReason">
+                                            <span class="detail-label">Rejection Reason:</span>
+                                            <span class="detail-value">{{ selectedRequest.rejectionReason }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="selectedRequest = null">
+                    <i class="bi bi-x-lg me-1"></i>
+                    Close
+                </button>
+                <button *ngIf="selectedRequest.status === 'PENDING'" type="button" class="btn btn-success"
+                    (click)="approveRequest(selectedRequest)">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Approve Request
+                </button>
+                <button *ngIf="selectedRequest.status === 'PENDING'" type="button" class="btn btn-danger"
+                    (click)="rejectRequest(selectedRequest)">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Reject Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
