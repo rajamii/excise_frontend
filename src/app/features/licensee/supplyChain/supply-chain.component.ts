@@ -44,6 +44,7 @@ export class SupplyChainComponent implements OnInit {
   filteredHologramRequestList: any[] = [];
   filteredRequisitionData: TableData[] = [];
   filteredRevalidationData: TableData[] = [];
+  filteredCancellationData: TableData[] = [];
   private isBrowser = false;
   showHologramModal = false;
 
@@ -63,6 +64,12 @@ export class SupplyChainComponent implements OnInit {
   revalidationMonthFilter: string = '';
   revalidationYearFilter: string = '';
   revalidationStatusFilter: string = '';
+  
+  // Filter properties for cancellation
+  cancellationDateFilter: string = '';
+  cancellationMonthFilter: string = '';
+  cancellationYearFilter: string = '';
+  cancellationStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
@@ -258,6 +265,7 @@ export class SupplyChainComponent implements OnInit {
     // Initialize filtered data
     this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revlidationData];
+    this.filteredCancellationData = [...this.cancellationData];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -1413,5 +1421,115 @@ End of Application
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  }
+
+  // Cancellation filter methods
+  applyCancellationFilters(): void {
+    console.log('Applying cancellation filters:', {
+      dateFilter: this.cancellationDateFilter,
+      monthFilter: this.cancellationMonthFilter,
+      yearFilter: this.cancellationYearFilter,
+      statusFilter: this.cancellationStatusFilter
+    });
+
+    this.filteredCancellationData = this.cancellationData.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      // Parse the date from the format "15-Sep-2025"
+      const dateParts = item.submissionDate.split('-');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const monthName = dateParts[1];
+        const year = parseInt(dateParts[2]);
+
+        // Convert month name to number
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames.indexOf(monthName) + 1;
+
+        if (month > 0) {
+          const itemDate = new Date(year, month - 1, day);
+
+          // Date filter (exact date match)
+          if (this.cancellationDateFilter) {
+            const filterDate = new Date(this.cancellationDateFilter);
+            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth() &&
+              itemDate.getDate() === filterDate.getDate();
+          }
+
+          // Month filter (month and year match)
+          if (this.cancellationMonthFilter) {
+            const filterDate = new Date(this.cancellationMonthFilter + '-01');
+            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth();
+          }
+
+          // Year filter
+          if (this.cancellationYearFilter) {
+            const filterYear = parseInt(this.cancellationYearFilter);
+            matchesYear = itemDate.getFullYear() === filterYear;
+          }
+        }
+      }
+
+      // Status filter (partial match for long status messages)
+      if (this.cancellationStatusFilter) {
+        matchesStatus = item.status.toLowerCase().includes(this.cancellationStatusFilter.toLowerCase());
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+      console.log('Cancellation match for:', item.referenceNo, finalMatch);
+
+      return finalMatch;
+    });
+
+    console.log('Filtered cancellation results:', this.filteredCancellationData.length, 'out of', this.cancellationData.length);
+
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('cancellation');
+  }
+
+  clearCancellationFilters(): void {
+    this.cancellationDateFilter = '';
+    this.cancellationMonthFilter = '';
+    this.cancellationYearFilter = '';
+    this.cancellationStatusFilter = '';
+    this.filteredCancellationData = [...this.cancellationData];
+    this.resetPagination('cancellation');
+  }
+
+  onCancellationDateFilterChange(): void {
+    console.log('Cancellation date filter changed to:', this.cancellationDateFilter);
+    this.applyCancellationFilters();
+  }
+
+  onCancellationMonthFilterChange(): void {
+    console.log('Cancellation month filter changed to:', this.cancellationMonthFilter);
+    this.applyCancellationFilters();
+  }
+
+  onCancellationYearFilterChange(): void {
+    console.log('Cancellation year filter changed to:', this.cancellationYearFilter);
+    this.applyCancellationFilters();
+  }
+
+  onCancellationStatusFilterChange(): void {
+    console.log('Cancellation status filter changed to:', this.cancellationStatusFilter);
+    this.applyCancellationFilters();
+  }
+
+  // Cancellation summary methods
+  getCancellationStatusCount(status: string): number {
+    return this.cancellationData.filter(item =>
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  getTotalCancellationAmount(): number {
+    return this.cancellationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
   }
 }
