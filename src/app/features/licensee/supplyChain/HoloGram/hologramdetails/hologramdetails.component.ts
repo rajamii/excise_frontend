@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -23,6 +23,8 @@ export interface HologramRecord {
   styleUrl: './hologramdetails.component.scss'
 })
 export class HologramdetailsComponent implements OnInit {
+  @Output() hologramRequestsClicked = new EventEmitter<void>();
+  
   hologramRecords: HologramRecord[] = [];
   filteredRecords: HologramRecord[] = [];
 
@@ -305,5 +307,9 @@ export class HologramdetailsComponent implements OnInit {
   rejectRecord(record: HologramRecord): void {
     record.status = 'REJECTED';
     console.log('Record rejected:', record);
+  }
+
+  openHologramRequests(): void {
+    this.hologramRequestsClicked.emit();
   }
 }

@@ -10,6 +10,10 @@
                 <p class="page-subtitle">Hologram inventory management and tracking system</p>
             </div>
             <div class="header-actions">
+                <button class="btn btn-outline-primary me-2" (click)="openHologramRequests()">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Hologram Requests
+                </button>
                 <button class="btn btn-primary" (click)="showAddNewRecord()" *ngIf="!showAddForm">
                     <i class="bi bi-plus-circle me-2"></i>
                     Add New Entry

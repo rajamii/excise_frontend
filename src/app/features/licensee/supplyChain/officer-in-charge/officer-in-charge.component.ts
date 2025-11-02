@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
+import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -98,7 +99,7 @@ interface BrandRow {
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
-  imports: [CommonModule, FormsModule, HologramdetailsComponent],
+  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent],
   templateUrl: './officer-in-charge.component.html',
   styleUrl: './officer-in-charge.component.scss'
 })
@@ -106,6 +107,7 @@ export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
   activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
+  showHologramRequests = false;
 
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
@@ -519,6 +521,18 @@ export class OfficerInChargeComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+    // Reset hologram requests view when switching tabs
+    if (tab !== 'hologram-register') {
+      this.showHologramRequests = false;
+    }
+  }
+
+  openHologramRequests() {
+    this.showHologramRequests = true;
+  }
+
+  closeHologramRequests() {
+    this.showHologramRequests = false;
   }
 
   // Brands helpers
