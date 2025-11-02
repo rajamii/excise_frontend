@@ -97,7 +97,8 @@
               </tr>
               <tr class="total-row">
                 <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
-                <td><strong>{{ ((submittedData.localQtyLakh || 0) + (submittedData.exportQtyLakh || 0) + (submittedData.defenceQtyLakh || 0)) }}</strong></td>
+                <td><strong>{{ ((submittedData.localQtyLakh || 0) + (submittedData.exportQtyLakh || 0) +
+                    (submittedData.defenceQtyLakh || 0)) }}</strong></td>
                 <td><span class="status-total">APPROVED</span></td>
               </tr>
             </tbody>
@@ -112,7 +113,8 @@
           <div class="card-content">
             <div class="summary-row">
               <span class="summary-label">Total Quantity:</span>
-              <span class="summary-value">{{ ((submittedData.localQtyLakh || 0) + (submittedData.exportQtyLakh || 0) + (submittedData.defenceQtyLakh || 0)) }} Lakh</span>
+              <span class="summary-value">{{ ((submittedData.localQtyLakh || 0) + (submittedData.exportQtyLakh || 0) +
+                (submittedData.defenceQtyLakh || 0)) }} Lakh</span>
             </div>
             <div class="summary-row">
               <span class="summary-label">Series Count:</span>
@@ -148,7 +150,9 @@
       <div class="remarks-section">
         <div class="remarks-header">Official Remarks:</div>
         <div class="remarks-content">
-          <p>The hologram requisition application has been reviewed and approved by the Excise Department. The requested quantities for all series (Local, Export, Defence) are within the permitted limits and comply with the regulatory requirements.</p>
+          <p>The hologram requisition application has been reviewed and approved by the Excise Department. The requested
+            quantities for all series (Local, Export, Defence) are within the permitted limits and comply with the
+            regulatory requirements.</p>
           <p class="approval-status">
             <strong>Approval Status: </strong>
             <span class="status-approved-text">APPROVED</span>
