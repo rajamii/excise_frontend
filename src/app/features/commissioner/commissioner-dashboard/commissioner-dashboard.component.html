@@ -821,19 +821,477 @@
             </div>
             }
 
+            <!-- Transit Tab Content -->
             @if (activeTab === "transit") {
-            <div class="text-center py-5">
-              <i class="bi bi-truck display-1 text-muted"></i>
-              <h4 class="mt-3">Transit Review</h4>
-              <p class="text-muted">Transit permit review functionality coming soon...</p>
+            <!-- Transit Register Header -->
+            <div class="transit-register-header">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                  <h4 class="register-title">
+                    <i class="bi bi-truck me-2"></i>
+                    Transit Permit Applications Review
+                  </h4>
+                  <p class="register-subtitle">Review and process transit permit applications from licensees</p>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-success">
+                    <i class="bi bi-download me-2"></i>
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <div class="summary-card total-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ filteredTransitData.length }}</h3>
+                      <p class="card-label">Total Transit Permits</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card urgent-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getUrgentTransitCount() }}</h3>
+                      <p class="card-label">Urgent/High Priority</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card pending-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getTransitStatusCount('PENDING') }}</h3>
+                      <p class="card-label">Pending Review</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card total-amount">
+                    <div class="card-icon">
+                      <i class="bi bi-currency-rupee"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</h3>
+                      <p class="card-label">Total Amount</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compact Filter Section for Transit -->
+            <div class="compact-filter-section mb-3">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                  <i class="bi bi-funnel me-1"></i>
+                  <small class="text-muted">Filters:</small>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                  <input type="date" class="form-control form-control-sm" [(ngModel)]="transitDateFilter"
+                    (change)="onTransitDateFilterChange()" placeholder="Date" title="Filter by date">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="transitStatusFilter"
+                    (change)="onTransitStatusFilterChange()" title="Filter by status">
+                    <option value="">All Status</option>
+                    <option value="PENDING">Pending Review</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="ISSUED">Issued</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="PROCESSING">Processing</option>
+                  </select>
+                </div>
+
+                <!-- Destination Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="transitDestinationFilter"
+                    (change)="onTransitDestinationFilterChange()" title="Filter by destination">
+                    <option value="">All Destinations</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Mumbai">Mumbai</option>
+                    <option value="Kolkata">Kolkata</option>
+                    <option value="Bangalore">Bangalore</option>
+                    <option value="Chennai">Chennai</option>
+                    <option value="Guwahati">Guwahati</option>
+                  </select>
+                </div>
+
+                <!-- Clear Button -->
+                <button class="btn btn-outline-danger btn-sm" (click)="clearTransitFilters()"
+                  *ngIf="transitDateFilter || transitStatusFilter || transitDestinationFilter"
+                  title="Clear all filters">
+                  <i class="bi bi-x-circle"></i>
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Transit Register Table -->
+            <div class="transit-register-table">
+              <div class="register-container">
+                <div class="register-header-bar">
+                  <h5 class="register-table-title">
+                    <i class="bi bi-table me-2"></i>
+                    Transit Permit Applications
+                  </h5>
+                  <div class="register-info">
+                    <span class="entries-count">{{ filteredTransitData.length }} Applications</span>
+                  </div>
+                </div>
+
+                <div class="table-responsive" *ngIf="filteredTransitData.length > 0">
+                  <table class="table register-table">
+                    <thead>
+                      <tr>
+                        <th class="sl-no">Sl.</th>
+                        <th class="ref-number">Ref. No</th>
+                        <th class="submission-date">App. Date</th>
+                        <th class="licensee-name">Licensee</th>
+                        <th class="destination">Destination</th>
+                        <th class="vehicle-number">Vehicle No</th>
+                        <th class="amount">Amount</th>
+                        <th class="status">Status</th>
+                        <th class="priority">Priority</th>
+                        <th class="actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (
+                      item of getPaged(filteredTransitData, "transit");
+                      track item.referenceNo;
+                      let i = $index
+                      ) {
+                      <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+                        <td class="sl-no">{{ (getCurrentPage('transit') - 1) * getPageSize('transit') + i + 1 }}</td>
+                        <td class="ref-number">
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="ref-text">{{ item.referenceNo }}</span>
+                            @if (item.priority === 'urgent') {
+                            <span class="badge bg-danger text-white">URGENT</span>
+                            }
+                          </div>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ item.submissionDate }}</span>
+                        </td>
+                        <td class="licensee-name">
+                          <span class="company-name">{{ item.distilleryName }}</span>
+                        </td>
+                        <td class="destination">
+                          <span class="destination-badge">{{ item.destination }}</span>
+                        </td>
+                        <td class="vehicle-number">
+                          <span class="vehicle-text">{{ item.vehicleNumber }}</span>
+                        </td>
+                        <td class="amount">
+                          <span class="amount-value">₹{{ item.amount }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(item.status) }}">
+                            {{ item.status }}
+                          </span>
+                        </td>
+                        <td class="priority">
+                          <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                            {{ (item.priority || 'normal') | titlecase }}
+                          </span>
+                        </td>
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)"
+                              title="Review Application">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)"
+                              title="Approve" *ngIf="item.status === 'PENDING'">
+                              <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" (click)="issueTransit(item)"
+                              title="Issue Permit" *ngIf="item.status === 'APPROVED'">
+                              <i class="bi bi-file-earmark-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)"
+                              title="Reject" *ngIf="item.status === 'PENDING'">
+                              <i class="bi bi-x"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" *ngIf="filteredTransitData.length === 0">
+                  <div class="empty-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+                  <h5 class="empty-title">No Transit Applications Found</h5>
+                  <p class="empty-message">
+                    No transit permit applications match your current filter criteria.
+                  </p>
+                </div>
+              </div>
             </div>
             }
 
+            <!-- Hologram Tab Content -->
             @if (activeTab === "hologram") {
-            <div class="text-center py-5">
-              <i class="bi bi-qr-code display-1 text-muted"></i>
-              <h4 class="mt-3">Hologram Review</h4>
-              <p class="text-muted">Hologram request review functionality coming soon...</p>
+            <!-- Hologram Register Header -->
+            <div class="hologram-register-header">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                  <h4 class="register-title">
+                    <i class="bi bi-qr-code me-2"></i>
+                    Hologram Applications Review
+                  </h4>
+                  <p class="register-subtitle">Review and process hologram applications from licensees</p>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-success">
+                    <i class="bi bi-download me-2"></i>
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <div class="summary-card total-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ filteredHologramData.length }}</h3>
+                      <p class="card-label">Total Holograms</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card urgent-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getUrgentHologramCount() }}</h3>
+                      <p class="card-label">Urgent/High Priority</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card pending-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getHologramStatusCount('PENDING') }}</h3>
+                      <p class="card-label">Pending Review</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card total-quantity">
+                    <div class="card-icon">
+                      <i class="bi bi-boxes"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getTotalHologramQuantity() | number:'1.1-1' }}</h3>
+                      <p class="card-label">Total Qty (Lakh)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compact Filter Section for Hologram -->
+            <div class="compact-filter-section mb-3">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                  <i class="bi bi-funnel me-1"></i>
+                  <small class="text-muted">Filters:</small>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                  <input type="date" class="form-control form-control-sm" [(ngModel)]="hologramDateFilter"
+                    (change)="onHologramDateFilterChange()" placeholder="Date" title="Filter by date">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="hologramStatusFilter"
+                    (change)="onHologramStatusFilterChange()" title="Filter by status">
+                    <option value="">All Status</option>
+                    <option value="PENDING">Pending Review</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="ISSUED">Issued</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="PROCESSING">Processing</option>
+                  </select>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="hologramTypeFilter"
+                    (change)="onHologramTypeFilterChange()" title="Filter by type">
+                    <option value="">All Types</option>
+                    <option value="Security Hologram">Security Hologram</option>
+                    <option value="Premium Hologram">Premium Hologram</option>
+                    <option value="Standard Hologram">Standard Hologram</option>
+                  </select>
+                </div>
+
+                <!-- Clear Button -->
+                <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
+                  *ngIf="hologramDateFilter || hologramStatusFilter || hologramTypeFilter"
+                  title="Clear all filters">
+                  <i class="bi bi-x-circle"></i>
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Hologram Register Table -->
+            <div class="hologram-register-table">
+              <div class="register-container">
+                <div class="register-header-bar">
+                  <h5 class="register-table-title">
+                    <i class="bi bi-table me-2"></i>
+                    Hologram Applications
+                  </h5>
+                  <div class="register-info">
+                    <span class="entries-count">{{ filteredHologramData.length }} Applications</span>
+                  </div>
+                </div>
+
+                <div class="table-responsive" *ngIf="filteredHologramData.length > 0">
+                  <table class="table register-table">
+                    <thead>
+                      <tr>
+                        <th class="sl-no">Sl.</th>
+                        <th class="ref-number">Ref. No</th>
+                        <th class="submission-date">App. Date</th>
+                        <th class="licensee-name">Licensee Name</th>
+                        <th class="hologram-type">Type</th>
+                        <th class="local-qty">Local (L)</th>
+                        <th class="export-qty">Export (L)</th>
+                        <th class="defence-qty">Defence (L)</th>
+                        <th class="total-qty">Total (L)</th>
+                        <th class="amount">Amount</th>
+                        <th class="status">Status</th>
+                        <th class="priority">Priority</th>
+                        <th class="actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (
+                      item of getPaged(filteredHologramData, "hologram");
+                      track item.referenceNo;
+                      let i = $index
+                      ) {
+                      <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+                        <td class="sl-no">{{ (getCurrentPage('hologram') - 1) * getPageSize('hologram') + i + 1 }}</td>
+                        <td class="ref-number">
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="ref-text">{{ item.referenceNo }}</span>
+                            @if (item.priority === 'urgent') {
+                            <span class="badge bg-danger text-white">URGENT</span>
+                            }
+                          </div>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ item.submissionDate }}</span>
+                        </td>
+                        <td class="licensee-name">
+                          <span class="company-name">{{ item.distilleryName }}</span>
+                        </td>
+                        <td class="hologram-type">
+                          <span class="type-badge">{{ 
+                            item.hologramType === 'Security Hologram' ? 'Security' :
+                            item.hologramType === 'Premium Hologram' ? 'Premium' :
+                            item.hologramType === 'Standard Hologram' ? 'Standard' :
+                            item.hologramType
+                          }}</span>
+                        </td>
+                        <td class="local-qty">
+                          <span class="qty-value">{{ item.localQtyLakh | number:'1.1-1' }}</span>
+                        </td>
+                        <td class="export-qty">
+                          <span class="qty-value">{{ item.exportQtyLakh | number:'1.1-1' }}</span>
+                        </td>
+                        <td class="defence-qty">
+                          <span class="qty-value">{{ item.defenceQtyLakh | number:'1.1-1' }}</span>
+                        </td>
+                        <td class="total-qty">
+                          <span class="qty-value total">{{ item.totalQtyLakh | number:'1.1-1' }}</span>
+                        </td>
+                        <td class="amount">
+                          <span class="amount-value">₹{{ item.amount }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(item.status) }}">
+                            {{ item.status }}
+                          </span>
+                        </td>
+                        <td class="priority">
+                          <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                            {{ (item.priority || 'normal') | titlecase }}
+                          </span>
+                        </td>
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
+                              title="Review Application">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
+                              title="Approve" *ngIf="item.status === 'PENDING'">
+                              <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" (click)="issueHologram(item)"
+                              title="Issue Hologram" *ngIf="item.status === 'APPROVED'">
+                              <i class="bi bi-qr-code"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)"
+                              title="Reject" *ngIf="item.status === 'PENDING'">
+                              <i class="bi bi-x"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" *ngIf="filteredHologramData.length === 0">
+                  <div class="empty-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+                  <h5 class="empty-title">No Hologram Applications Found</h5>
+                  <p class="empty-message">
+                    No hologram applications match your current filter criteria.
+                  </p>
+                </div>
+              </div>
             </div>
             }
 
@@ -922,6 +1380,54 @@
             </div>
           </div>
 
+          <!-- Additional fields for transit -->
+          <div class="row mb-3" *ngIf="activeTab === 'transit'">
+            <div class="col-md-6" *ngIf="selectedApplication.destination">
+              <strong>Destination:</strong>
+              <span class="destination-badge">{{ selectedApplication.destination }}</span>
+            </div>
+            <div class="col-md-6" *ngIf="selectedApplication.transportMode">
+              <strong>Transport Mode:</strong>
+              <span class="transport-badge">{{ selectedApplication.transportMode }}</span>
+            </div>
+          </div>
+          <div class="row mb-3" *ngIf="activeTab === 'transit'">
+            <div class="col-md-6" *ngIf="selectedApplication.vehicleNumber">
+              <strong>Vehicle Number:</strong>
+              <span class="vehicle-text">{{ selectedApplication.vehicleNumber }}</span>
+            </div>
+            <div class="col-md-6" *ngIf="selectedApplication.permitValidUntil">
+              <strong>Permit Valid Until:</strong>
+              <span>{{ selectedApplication.permitValidUntil }}</span>
+            </div>
+          </div>
+
+          <!-- Additional fields for hologram -->
+          <div class="row mb-3" *ngIf="activeTab === 'hologram'">
+            <div class="col-md-6" *ngIf="selectedApplication.hologramType">
+              <strong>Hologram Type:</strong>
+              <span class="type-badge">{{ selectedApplication.hologramType }}</span>
+            </div>
+            <div class="col-md-6" *ngIf="selectedApplication.totalQtyLakh">
+              <strong>Total Quantity:</strong>
+              <span class="qty-value">{{ selectedApplication.totalQtyLakh | number:'1.1-1' }} Lakh</span>
+            </div>
+          </div>
+          <div class="row mb-3" *ngIf="activeTab === 'hologram'">
+            <div class="col-md-4" *ngIf="selectedApplication.localQtyLakh !== undefined">
+              <strong>Local Qty:</strong>
+              <span class="qty-value">{{ selectedApplication.localQtyLakh | number:'1.1-1' }} Lakh</span>
+            </div>
+            <div class="col-md-4" *ngIf="selectedApplication.exportQtyLakh !== undefined">
+              <strong>Export Qty:</strong>
+              <span class="qty-value">{{ selectedApplication.exportQtyLakh | number:'1.1-1' }} Lakh</span>
+            </div>
+            <div class="col-md-4" *ngIf="selectedApplication.defenceQtyLakh !== undefined">
+              <strong>Defence Qty:</strong>
+              <span class="qty-value">{{ selectedApplication.defenceQtyLakh | number:'1.1-1' }} Lakh</span>
+            </div>
+          </div>
+
           <!-- Review Actions -->
           <div class="mt-4" *ngIf="selectedApplication.status === 'PENDING'">
             <h6>Review Actions:</h6>
@@ -935,6 +1441,26 @@
               <button class="btn btn-warning" *ngIf="activeTab === 'revalidation' && selectedApplication.isExpired"
                 (click)="extendFromModal()">
                 <i class="bi bi-calendar-plus me-1"></i> Extend
+              </button>
+            </div>
+          </div>
+
+          <!-- Transit Issue Action -->
+          <div class="mt-4" *ngIf="activeTab === 'transit' && selectedApplication.status === 'APPROVED'">
+            <h6>Issue Permit:</h6>
+            <div class="d-flex gap-2">
+              <button class="btn btn-info" (click)="issueFromModal()">
+                <i class="bi bi-file-earmark-check me-1"></i> Issue Transit Permit
+              </button>
+            </div>
+          </div>
+
+          <!-- Hologram Issue Action -->
+          <div class="mt-4" *ngIf="activeTab === 'hologram' && selectedApplication.status === 'APPROVED'">
+            <h6>Issue Hologram:</h6>
+            <div class="d-flex gap-2">
+              <button class="btn btn-info" (click)="issueFromModal()">
+                <i class="bi bi-qr-code me-1"></i> Issue Hologram
               </button>
             </div>
           </div>

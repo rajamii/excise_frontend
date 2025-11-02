@@ -16,6 +16,15 @@ interface CommissionerTableData {
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
+  destination?: string;
+  transportMode?: string;
+  vehicleNumber?: string;
+  permitValidUntil?: string;
+  localQtyLakh?: number;
+  exportQtyLakh?: number;
+  defenceQtyLakh?: number;
+  totalQtyLakh?: number;
+  hologramType?: string;
 }
 
 @Component({
@@ -46,10 +55,22 @@ export class CommissionerDashboardComponent implements OnInit {
   cancellationStatusFilter: string = '';
   cancellationReasonFilter: string = '';
 
+  // Filter properties for transit
+  transitDateFilter: string = '';
+  transitStatusFilter: string = '';
+  transitDestinationFilter: string = '';
+
+  // Filter properties for hologram
+  hologramDateFilter: string = '';
+  hologramStatusFilter: string = '';
+  hologramTypeFilter: string = '';
+
   // Filtered data arrays
   filteredRequisitionData: CommissionerTableData[] = [];
   filteredRevalidationData: CommissionerTableData[] = [];
   filteredCancellationData: CommissionerTableData[] = [];
+  filteredTransitData: CommissionerTableData[] = [];
+  filteredHologramData: CommissionerTableData[] = [];
 
   // Modal properties
   showReviewModal = false;
@@ -228,6 +249,164 @@ export class CommissionerDashboardComponent implements OnInit {
     }
   ];
 
+  // Sample data for transit permit applications (from commissioner's perspective)
+  transitData: CommissionerTableData[] = [
+    {
+      referenceNo: "TRN/BF801",
+      submissionDate: "22-Sep-2025",
+      distilleryName: "Sikkim Distilleries Ltd",
+      status: "PENDING",
+      amount: "2500.00",
+      priority: "high",
+      destination: "Delhi",
+      transportMode: "Road",
+      vehicleNumber: "SK01AB1234",
+      permitValidUntil: "30-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF802",
+      submissionDate: "21-Sep-2025",
+      distilleryName: "Himalayan Distilleries Pvt Ltd",
+      status: "APPROVED",
+      amount: "3200.00",
+      priority: "normal",
+      destination: "Mumbai",
+      transportMode: "Road",
+      vehicleNumber: "MH12CD5678",
+      permitValidUntil: "28-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF803",
+      submissionDate: "20-Sep-2025",
+      distilleryName: "Royal Sikkim Brewery",
+      status: "ISSUED",
+      amount: "1800.00",
+      priority: "urgent",
+      destination: "Kolkata",
+      transportMode: "Road",
+      vehicleNumber: "WB03EF9012",
+      permitValidUntil: "25-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF804",
+      submissionDate: "19-Sep-2025",
+      distilleryName: "Mountain View Distilleries",
+      status: "PROCESSING",
+      amount: "2100.00",
+      priority: "normal",
+      destination: "Bangalore",
+      transportMode: "Road",
+      vehicleNumber: "KA05GH3456",
+      permitValidUntil: "27-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF805",
+      submissionDate: "18-Sep-2025",
+      distilleryName: "Eastern Himalaya Distillery",
+      status: "PENDING",
+      amount: "2800.00",
+      priority: "high",
+      destination: "Chennai",
+      transportMode: "Road",
+      vehicleNumber: "TN09IJ7890",
+      permitValidUntil: "26-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF806",
+      submissionDate: "17-Sep-2025",
+      distilleryName: "Gangtok Premium Spirits",
+      status: "REJECTED",
+      amount: "1500.00",
+      priority: "normal",
+      destination: "Guwahati",
+      transportMode: "Road",
+      vehicleNumber: "AS01KL2345",
+      permitValidUntil: "24-Sep-2025"
+    }
+  ];
+
+  // Sample data for hologram applications (from commissioner's perspective)
+  hologramData: CommissionerTableData[] = [
+    {
+      referenceNo: "HOL/BF901",
+      submissionDate: "23-Sep-2025",
+      distilleryName: "Sikkim Distilleries Ltd",
+      status: "PENDING",
+      amount: "15000.00",
+      priority: "high",
+      localQtyLakh: 2.5,
+      exportQtyLakh: 1.0,
+      defenceQtyLakh: 0.5,
+      totalQtyLakh: 4.0,
+      hologramType: "Security Hologram"
+    },
+    {
+      referenceNo: "HOL/BF902",
+      submissionDate: "22-Sep-2025",
+      distilleryName: "Himalayan Distilleries Pvt Ltd",
+      status: "APPROVED",
+      amount: "22000.00",
+      priority: "normal",
+      localQtyLakh: 3.2,
+      exportQtyLakh: 1.8,
+      defenceQtyLakh: 0.0,
+      totalQtyLakh: 5.0,
+      hologramType: "Premium Hologram"
+    },
+    {
+      referenceNo: "HOL/BF903",
+      submissionDate: "21-Sep-2025",
+      distilleryName: "Royal Sikkim Brewery",
+      status: "ISSUED",
+      amount: "18500.00",
+      priority: "urgent",
+      localQtyLakh: 2.8,
+      exportQtyLakh: 0.7,
+      defenceQtyLakh: 1.0,
+      totalQtyLakh: 4.5,
+      hologramType: "Standard Hologram"
+    },
+    {
+      referenceNo: "HOL/BF904",
+      submissionDate: "20-Sep-2025",
+      distilleryName: "Mountain View Distilleries",
+      status: "PROCESSING",
+      amount: "12000.00",
+      priority: "normal",
+      localQtyLakh: 2.0,
+      exportQtyLakh: 0.5,
+      defenceQtyLakh: 0.0,
+      totalQtyLakh: 2.5,
+      hologramType: "Security Hologram"
+    },
+    {
+      referenceNo: "HOL/BF905",
+      submissionDate: "19-Sep-2025",
+      distilleryName: "Eastern Himalaya Distillery",
+      status: "PENDING",
+      amount: "25000.00",
+      priority: "high",
+      localQtyLakh: 4.0,
+      exportQtyLakh: 2.0,
+      defenceQtyLakh: 0.5,
+      totalQtyLakh: 6.5,
+      hologramType: "Premium Hologram"
+    },
+    {
+      referenceNo: "HOL/BF906",
+      submissionDate: "18-Sep-2025",
+      distilleryName: "Gangtok Premium Spirits",
+      status: "REJECTED",
+      amount: "8000.00",
+      priority: "normal",
+      localQtyLakh: 1.5,
+      exportQtyLakh: 0.0,
+      defenceQtyLakh: 0.0,
+      totalQtyLakh: 1.5,
+      hologramType: "Standard Hologram"
+    }
+  ];
+
   // Pagination state per tab
   pageSizeOptions: number[] = [5, 10, 15];
   pageSizeByTab: Record<string, number> = {
@@ -258,6 +437,8 @@ export class CommissionerDashboardComponent implements OnInit {
     this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revalidationData];
     this.filteredCancellationData = [...this.cancellationData];
+    this.filteredTransitData = [...this.transitData];
+    this.filteredHologramData = [...this.hologramData];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -333,6 +514,38 @@ export class CommissionerDashboardComponent implements OnInit {
     return this.filteredCancellationData.filter(item => 
       item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
+  }
+
+  getTransitStatusCount(status: string): number {
+    return this.filteredTransitData.filter(item => item.status === status).length;
+  }
+
+  getUrgentTransitCount(): number {
+    return this.filteredTransitData.filter(item => 
+      item.priority === 'urgent' || item.priority === 'high'
+    ).length;
+  }
+
+  getTotalTransitAmount(): number {
+    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  getHologramStatusCount(status: string): number {
+    return this.filteredHologramData.filter(item => item.status === status).length;
+  }
+
+  getUrgentHologramCount(): number {
+    return this.filteredHologramData.filter(item => 
+      item.priority === 'urgent' || item.priority === 'high'
+    ).length;
+  }
+
+  getTotalHologramQuantity(): number {
+    return this.filteredHologramData.reduce((total, item) => total + (item.totalQtyLakh || 0), 0);
+  }
+
+  getTotalHologramAmount(): number {
+    return this.filteredHologramData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
   }
 
   // Status class helper
@@ -482,6 +695,92 @@ export class CommissionerDashboardComponent implements OnInit {
     this.resetPagination('cancellation');
   }
 
+  // Filter methods for transit
+  onTransitDateFilterChange(): void {
+    this.applyTransitFilters();
+  }
+
+  onTransitStatusFilterChange(): void {
+    this.applyTransitFilters();
+  }
+
+  onTransitDestinationFilterChange(): void {
+    this.applyTransitFilters();
+  }
+
+  clearTransitFilters(): void {
+    this.transitDateFilter = '';
+    this.transitStatusFilter = '';
+    this.transitDestinationFilter = '';
+    this.applyTransitFilters();
+  }
+
+  private applyTransitFilters(): void {
+    let filtered = [...this.transitData];
+
+    if (this.transitDateFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        const filterDate = new Date(this.transitDateFilter);
+        return itemDate.toDateString() === filterDate.toDateString();
+      });
+    }
+
+    if (this.transitStatusFilter) {
+      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
+    }
+
+    if (this.transitDestinationFilter) {
+      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
+    }
+
+    this.filteredTransitData = filtered;
+    this.resetPagination('transit');
+  }
+
+  // Filter methods for hologram
+  onHologramDateFilterChange(): void {
+    this.applyHologramFilters();
+  }
+
+  onHologramStatusFilterChange(): void {
+    this.applyHologramFilters();
+  }
+
+  onHologramTypeFilterChange(): void {
+    this.applyHologramFilters();
+  }
+
+  clearHologramFilters(): void {
+    this.hologramDateFilter = '';
+    this.hologramStatusFilter = '';
+    this.hologramTypeFilter = '';
+    this.applyHologramFilters();
+  }
+
+  private applyHologramFilters(): void {
+    let filtered = [...this.hologramData];
+
+    if (this.hologramDateFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        const filterDate = new Date(this.hologramDateFilter);
+        return itemDate.toDateString() === filterDate.toDateString();
+      });
+    }
+
+    if (this.hologramStatusFilter) {
+      filtered = filtered.filter(item => item.status === this.hologramStatusFilter);
+    }
+
+    if (this.hologramTypeFilter) {
+      filtered = filtered.filter(item => item.hologramType === this.hologramTypeFilter);
+    }
+
+    this.filteredHologramData = filtered;
+    this.resetPagination('hologram');
+  }
+
   // Utility method to parse date
   private parseDate(dateString: string): Date {
     const parts = dateString.split('-');
@@ -503,6 +802,16 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   reviewCancellation(item: CommissionerTableData): void {
+    this.selectedApplication = item;
+    this.showReviewModal = true;
+  }
+
+  reviewTransit(item: CommissionerTableData): void {
+    this.selectedApplication = item;
+    this.showReviewModal = true;
+  }
+
+  reviewHologram(item: CommissionerTableData): void {
     this.selectedApplication = item;
     this.showReviewModal = true;
   }
@@ -550,6 +859,36 @@ export class CommissionerDashboardComponent implements OnInit {
     console.log('Rejected cancellation:', item.referenceNo);
   }
 
+  approveTransit(item: CommissionerTableData): void {
+    item.status = 'APPROVED';
+    console.log('Approved transit permit:', item.referenceNo);
+  }
+
+  rejectTransit(item: CommissionerTableData): void {
+    item.status = 'REJECTED';
+    console.log('Rejected transit permit:', item.referenceNo);
+  }
+
+  issueTransit(item: CommissionerTableData): void {
+    item.status = 'ISSUED';
+    console.log('Issued transit permit:', item.referenceNo);
+  }
+
+  approveHologram(item: CommissionerTableData): void {
+    item.status = 'APPROVED';
+    console.log('Approved hologram application:', item.referenceNo);
+  }
+
+  rejectHologram(item: CommissionerTableData): void {
+    item.status = 'REJECTED';
+    console.log('Rejected hologram application:', item.referenceNo);
+  }
+
+  issueHologram(item: CommissionerTableData): void {
+    item.status = 'ISSUED';
+    console.log('Issued hologram:', item.referenceNo);
+  }
+
   // Modal methods
   closeReviewModal(): void {
     this.showReviewModal = false;
@@ -562,6 +901,10 @@ export class CommissionerDashboardComponent implements OnInit {
         this.approveRevalidation(this.selectedApplication);
       } else if (this.activeTab === 'cancellation') {
         this.approveCancellation(this.selectedApplication);
+      } else if (this.activeTab === 'transit') {
+        this.approveTransit(this.selectedApplication);
+      } else if (this.activeTab === 'hologram') {
+        this.approveHologram(this.selectedApplication);
       } else {
         this.approveApplication(this.selectedApplication);
       }
@@ -575,8 +918,23 @@ export class CommissionerDashboardComponent implements OnInit {
         this.rejectRevalidation(this.selectedApplication);
       } else if (this.activeTab === 'cancellation') {
         this.rejectCancellation(this.selectedApplication);
+      } else if (this.activeTab === 'transit') {
+        this.rejectTransit(this.selectedApplication);
+      } else if (this.activeTab === 'hologram') {
+        this.rejectHologram(this.selectedApplication);
       } else {
         this.rejectApplication(this.selectedApplication);
+      }
+      this.closeReviewModal();
+    }
+  }
+
+  issueFromModal(): void {
+    if (this.selectedApplication) {
+      if (this.activeTab === 'transit') {
+        this.issueTransit(this.selectedApplication);
+      } else if (this.activeTab === 'hologram') {
+        this.issueHologram(this.selectedApplication);
       }
       this.closeReviewModal();
     }

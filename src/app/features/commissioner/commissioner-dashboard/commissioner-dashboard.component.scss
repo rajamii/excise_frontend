@@ -21,6 +21,13 @@
 // Smooth fade animation for tab content
 .table-responsive {
   animation: fadeIn 0.3s ease-in-out;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+// Prevent horizontal scroll on main container
+.container-fluid {
+  overflow-x: hidden;
 }
 
 @keyframes fadeIn {
@@ -40,13 +47,25 @@
   min-height: 100vh;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 1100;
+  background: white !important;
+  flex-shrink: 0;
 
   &.sidebar-hidden {
     width: 0 !important;
-    min-width: 0;
+    min-width: 0 !important;
     border: none;
     box-shadow: none;
+    overflow: hidden;
+  }
+  
+  &:not(.sidebar-hidden) {
+    width: 280px !important;
+    min-width: 280px !important;
+    overflow: visible;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -135,7 +154,9 @@
 // Commissioner Dashboard Register Styles
 .requisition-register-header,
 .revalidation-register-header,
-.cancellation-register-header {
+.cancellation-register-header,
+.transit-register-header,
+.hologram-register-header {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 2rem;
   border-radius: 16px 16px 0 0;
@@ -268,12 +289,34 @@
         color: #f59e0b;
       }
     }
+
+    &.total-amount {
+      .card-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .card-value {
+        color: #10b981;
+      }
+    }
+
+    &.total-quantity {
+      .card-icon {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+
+      .card-value {
+        color: #8b5cf6;
+      }
+    }
   }
 }
 
 .requisition-register-table,
 .revalidation-register-table,
-.cancellation-register-table {
+.cancellation-register-table,
+.transit-register-table,
+.hologram-register-table {
   .register-container {
     background: white;
     border-radius: 0 0 16px 16px;
@@ -307,7 +350,7 @@
 
     .register-table {
       width: 100%;
-      min-width: 1200px;
+      min-width: 900px;
       border-collapse: collapse;
       font-size: 0.9rem;
       margin: 0;
@@ -333,50 +376,74 @@
 
           // Column widths
           &.sl-no {
-            width: 60px;
+            width: 50px;
             text-align: center;
           }
 
           &.ref-number {
-            width: 140px;
+            width: 120px;
           }
 
           &.submission-date,
           &.expiry-date {
-            width: 120px;
+            width: 100px;
           }
 
           &.distillery-name,
           &.licensee-name {
-            width: 180px;
+            width: 150px;
           }
 
           &.status {
-            width: 120px;
+            width: 100px;
             text-align: center;
           }
 
           &.amount {
-            width: 100px;
+            width: 90px;
             text-align: center;
           }
 
           &.priority {
-            width: 100px;
+            width: 80px;
             text-align: center;
           }
 
           &.days-left {
-            width: 100px;
+            width: 80px;
             text-align: center;
           }
 
           &.license-type {
-            width: 140px;
+            width: 120px;
           }
 
           &.cancellation-reason {
-            width: 160px;
+            width: 130px;
+          }
+
+          &.destination {
+            width: 100px;
+          }
+
+          &.transport-mode {
+            width: 100px;
+          }
+
+          &.vehicle-number {
+            width: 120px;
+          }
+
+          &.hologram-type {
+            width: 110px;
+          }
+
+          &.local-qty,
+          &.export-qty,
+          &.defence-qty,
+          &.total-qty {
+            width: 80px;
+            text-align: center;
           }
 
           &.actions {
@@ -575,6 +642,76 @@
               }
             }
 
+            &.destination {
+              .destination-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #dbeafe;
+                color: #1e40af;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.transport-mode {
+              .transport-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #f0fdf4;
+                color: #166534;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.vehicle-number {
+              .vehicle-text {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+                color: #374151;
+                font-size: 0.85rem;
+              }
+            }
+
+            &.hologram-type {
+              .type-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #fef3c7;
+                color: #92400e;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.local-qty,
+            &.export-qty,
+            &.defence-qty,
+            &.total-qty {
+              text-align: center;
+
+              .qty-value {
+                font-weight: 600;
+                color: #374151;
+                font-size: 0.85rem;
+
+                &.total {
+                  font-weight: 700;
+                  color: #059669;
+                  font-size: 0.9rem;
+                }
+              }
+            }
+
             &.actions {
               text-align: center;
 
@@ -636,6 +773,17 @@
 
                     &:hover {
                       background: #fed7aa;
+                      transform: translateY(-1px);
+                    }
+                  }
+
+                  &.btn-outline-info {
+                    background: #f0f9ff;
+                    color: #0369a1;
+                    border: 1px solid #bae6fd;
+
+                    &:hover {
+                      background: #bae6fd;
                       transform: translateY(-1px);
                     }
                   }
@@ -790,6 +938,105 @@
   }
 }
 
+// Transit table specific responsive design
+.transit-register-table {
+  .register-table {
+    min-width: 900px;
+    
+    // Adjust font sizes for better fit
+    thead th {
+      font-size: 0.75rem;
+      padding: 0.75rem 0.4rem;
+    }
+    
+    tbody td {
+      font-size: 0.8rem;
+      padding: 0.75rem 0.4rem;
+    }
+  }
+}
+
+// Hologram table specific responsive design
+.hologram-register-table {
+  .register-table {
+    min-width: 1100px;
+    
+    // Adjust font sizes for better fit
+    thead th {
+      font-size: 0.75rem;
+      padding: 0.75rem 0.5rem;
+    }
+    
+    tbody td {
+      font-size: 0.8rem;
+      padding: 0.75rem 0.5rem;
+    }
+  }
+}
+
+// Ensure sidebar is always visible on larger screens
+@media (min-width: 769px) {
+  .sidebar-nav {
+    position: relative;
+    z-index: 1100;
+    
+    &:not(.sidebar-hidden) {
+      position: relative;
+      z-index: 1100;
+    }
+  }
+  
+  // Ensure main content doesn't overlap sidebar
+  main.flex-grow-1 {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    overflow-x: auto;
+  }
+  
+  // Ensure proper flexbox behavior
+  .d-flex.min-vh-100 {
+    overflow-x: hidden;
+  }
+}
+
+// Medium screens
+@media (max-width: 1200px) {
+  .transit-register-table {
+    .register-table {
+      min-width: 800px;
+      font-size: 0.8rem;
+      
+      thead th {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.3rem;
+      }
+      
+      tbody td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.3rem;
+      }
+    }
+  }
+  
+  .hologram-register-table {
+    .register-table {
+      min-width: 950px;
+      font-size: 0.8rem;
+      
+      thead th {
+        font-size: 0.7rem;
+        padding: 0.6rem 0.4rem;
+      }
+      
+      tbody td {
+        font-size: 0.75rem;
+        padding: 0.6rem 0.4rem;
+      }
+    }
+  }
+}
+
 // Responsive Design
 @media (max-width: 768px) {
   .sidebar-nav {
@@ -797,49 +1044,70 @@
     left: -280px;
     top: 0;
     height: 100vh;
-    z-index: 1050;
+    z-index: 1100;
     transition: left 0.3s ease;
+    background: white;
 
     &.show {
       left: 0;
+    }
+    
+    &:not(.sidebar-hidden) {
+      box-shadow: 2px 0 15px rgba(0, 0, 0, 0.2);
     }
   }
 
   .requisition-register-header,
   .revalidation-register-header,
-  .cancellation-register-header {
-    padding: 1.5rem;
+  .cancellation-register-header,
+  .transit-register-header,
+  .hologram-register-header {
+    padding: 1rem;
 
     .header-info .register-title {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
     }
 
     .summary-card {
+      margin-bottom: 1rem;
+      
       .card-content .card-value {
-        font-size: 1.5rem;
+        font-size: 1.25rem;
+      }
+      
+      .card-content .card-label {
+        font-size: 0.8rem;
       }
     }
   }
 
   .requisition-register-table,
   .revalidation-register-table,
-  .cancellation-register-table {
+  .cancellation-register-table,
+  .transit-register-table,
+  .hologram-register-table {
     .register-container {
       .register-table {
-        min-width: 800px;
-        font-size: 0.8rem;
+        min-width: 700px;
+        font-size: 0.75rem;
 
         thead th {
-          padding: 0.75rem 0.5rem;
-          font-size: 0.7rem;
+          padding: 0.5rem 0.25rem;
+          font-size: 0.65rem;
         }
 
         tbody td {
-          padding: 0.75rem 0.5rem;
+          padding: 0.5rem 0.25rem;
 
           &.actions .action-buttons {
             flex-direction: column;
             gap: 0.25rem;
+            
+            .btn {
+              width: 28px;
+              height: 28px;
+              font-size: 0.75rem;
+            }
           }
         }
       }
@@ -858,6 +1126,48 @@
     .compact-filter {
       min-width: 120px;
       flex: 1;
+    }
+  }
+}
+
+// Extra small screens
+@media (max-width: 576px) {
+  .hologram-register-header,
+  .transit-register-header,
+  .cancellation-register-header,
+  .revalidation-register-header,
+  .requisition-register-header {
+    .row.g-3 {
+      .col-md-3 {
+        margin-bottom: 0.75rem;
+      }
+    }
+    
+    .summary-card {
+      padding: 1rem;
+      
+      .card-content .card-value {
+        font-size: 1.1rem;
+      }
+      
+      .card-content .card-label {
+        font-size: 0.75rem;
+      }
+    }
+  }
+  
+  .register-table {
+    min-width: 600px !important;
+    font-size: 0.7rem !important;
+    
+    thead th {
+      padding: 0.4rem 0.2rem !important;
+      font-size: 0.6rem !important;
+    }
+    
+    tbody td {
+      padding: 0.4rem 0.2rem !important;
+      font-size: 0.65rem !important;
     }
   }
 }
