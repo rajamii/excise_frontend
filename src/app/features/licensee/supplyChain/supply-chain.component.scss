@@ -1031,6 +1031,7 @@
     }
   }
 }
+
 // Compact Filter Section Styles
 .compact-filter-section {
   background: #f8fafc;
@@ -1042,12 +1043,12 @@
     display: flex;
     align-items: center;
     font-weight: 500;
-    
+
     i {
       color: #6b7280;
       font-size: 0.9rem;
     }
-    
+
     small {
       font-size: 0.85rem;
     }
@@ -1183,7 +1184,9 @@
       min-width: 130px;
     }
   }
-}// Requisition Modal Specific Styles
+}
+
+// Requisition Modal Specific Styles
 .modal-header.bg-success {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 }
@@ -1555,13 +1558,36 @@
             letter-spacing: 0.5px;
             white-space: nowrap;
 
-            &.sl-no { width: 60px; text-align: center; }
-            &.ref-number { width: 140px; }
-            &.submission-date { width: 120px; }
-            &.distillery-name { min-width: 200px; }
-            &.status { min-width: 150px; }
-            &.amount { width: 120px; text-align: right; }
-            &.actions { width: 100px; text-align: center; }
+            &.sl-no {
+              width: 60px;
+              text-align: center;
+            }
+
+            &.ref-number {
+              width: 140px;
+            }
+
+            &.submission-date {
+              width: 120px;
+            }
+
+            &.distillery-name {
+              min-width: 200px;
+            }
+
+            &.status {
+              min-width: 150px;
+            }
+
+            &.amount {
+              width: 120px;
+              text-align: right;
+            }
+
+            &.actions {
+              width: 100px;
+              text-align: center;
+            }
           }
         }
 
@@ -1947,8 +1973,9 @@
       }
     }
   }
-}// Reva
-lidation Register Styles
+}
+
+// Revalidation Register Styles
 .revalidation-register-header {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 2rem;
@@ -2461,9 +2488,11 @@ lidation Register Styles
   0% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
