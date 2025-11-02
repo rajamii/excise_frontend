@@ -59,8 +59,6 @@ export class SupplyChainComponent implements OnInit {
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
-  showRequisitionModal = false;
-  selectedRequisition: any = null;
 
   // Sample data for display only
   requisitionData: TableData[] = [
@@ -1186,14 +1184,13 @@ End of Application
 
   // Requisition modal methods
   viewRequisitionApplication(requisition: any): void {
-    this.selectedRequisition = requisition;
-    this.showRequisitionModal = true;
+    // Navigate to the dedicated requisition view component
+    this.router.navigate(['/dev-supply-chain-application-view'], {
+      queryParams: { ref: requisition.referenceNo }
+    });
   }
 
-  closeRequisitionModal(): void {
-    this.showRequisitionModal = false;
-    this.selectedRequisition = null;
-  }
+
 
   getRequisitionStatusClass(status: string): string {
     if (status.toLowerCase().includes('approved')) return 'status-approved';
