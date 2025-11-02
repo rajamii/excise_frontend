@@ -134,7 +134,8 @@
 
 // Commissioner Dashboard Register Styles
 .requisition-register-header,
-.revalidation-register-header {
+.revalidation-register-header,
+.cancellation-register-header {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   padding: 2rem;
   border-radius: 16px 16px 0 0;
@@ -271,7 +272,8 @@
 }
 
 .requisition-register-table,
-.revalidation-register-table {
+.revalidation-register-table,
+.cancellation-register-table {
   .register-container {
     background: white;
     border-radius: 0 0 16px 16px;
@@ -367,6 +369,14 @@
           &.days-left {
             width: 100px;
             text-align: center;
+          }
+
+          &.license-type {
+            width: 140px;
+          }
+
+          &.cancellation-reason {
+            width: 160px;
           }
 
           &.actions {
@@ -531,6 +541,37 @@
               .days-badge {
                 font-weight: 600;
                 font-size: 0.85rem;
+              }
+            }
+
+            &.license-type {
+              .license-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #e0f2fe;
+                color: #0c4a6e;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.cancellation-reason {
+              .reason-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #f3f4f6;
+                color: #374151;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                
+                &.text-danger {
+                  background: #fee2e2;
+                  color: #991b1b;
+                }
               }
             }
 
@@ -765,7 +806,8 @@
   }
 
   .requisition-register-header,
-  .revalidation-register-header {
+  .revalidation-register-header,
+  .cancellation-register-header {
     padding: 1.5rem;
 
     .header-info .register-title {
@@ -780,7 +822,8 @@
   }
 
   .requisition-register-table,
-  .revalidation-register-table {
+  .revalidation-register-table,
+  .cancellation-register-table {
     .register-container {
       .register-table {
         min-width: 800px;

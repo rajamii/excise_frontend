@@ -13,6 +13,9 @@ interface CommissionerTableData {
   expiryDate?: string;
   isExpired?: boolean;
   daysLeft?: number;
+  cancellationReason?: string;
+  requestDate?: string;
+  licenseType?: string;
 }
 
 @Component({
@@ -38,9 +41,15 @@ export class CommissionerDashboardComponent implements OnInit {
   revalidationStatusFilter: string = '';
   revalidationPriorityFilter: string = '';
 
+  // Filter properties for cancellation
+  cancellationDateFilter: string = '';
+  cancellationStatusFilter: string = '';
+  cancellationReasonFilter: string = '';
+
   // Filtered data arrays
   filteredRequisitionData: CommissionerTableData[] = [];
   filteredRevalidationData: CommissionerTableData[] = [];
+  filteredCancellationData: CommissionerTableData[] = [];
 
   // Modal properties
   showReviewModal = false;
@@ -149,6 +158,76 @@ export class CommissionerDashboardComponent implements OnInit {
     }
   ];
 
+  // Sample data for cancellation applications (from commissioner's perspective)
+  cancellationData: CommissionerTableData[] = [
+    {
+      referenceNo: "CAN/BF701",
+      submissionDate: "20-Sep-2025",
+      requestDate: "20-Sep-2025",
+      distilleryName: "Sikkim Distilleries Ltd",
+      status: "PENDING",
+      amount: "0.00",
+      priority: "high",
+      cancellationReason: "Business Closure",
+      licenseType: "Manufacturing License"
+    },
+    {
+      referenceNo: "CAN/BF702",
+      submissionDate: "19-Sep-2025",
+      requestDate: "19-Sep-2025",
+      distilleryName: "Mountain View Distilleries",
+      status: "PENDING",
+      amount: "0.00",
+      priority: "normal",
+      cancellationReason: "Voluntary Surrender",
+      licenseType: "Retail License"
+    },
+    {
+      referenceNo: "CAN/BF703",
+      submissionDate: "18-Sep-2025",
+      requestDate: "18-Sep-2025",
+      distilleryName: "Royal Sikkim Brewery",
+      status: "APPROVED",
+      amount: "0.00",
+      priority: "urgent",
+      cancellationReason: "Non-Compliance",
+      licenseType: "Manufacturing License"
+    },
+    {
+      referenceNo: "CAN/BF704",
+      submissionDate: "17-Sep-2025",
+      requestDate: "17-Sep-2025",
+      distilleryName: "Himalayan Distilleries Pvt Ltd",
+      status: "PROCESSING",
+      amount: "0.00",
+      priority: "high",
+      cancellationReason: "License Transfer",
+      licenseType: "Wholesale License"
+    },
+    {
+      referenceNo: "CAN/BF705",
+      submissionDate: "16-Sep-2025",
+      requestDate: "16-Sep-2025",
+      distilleryName: "Eastern Himalaya Distillery",
+      status: "REJECTED",
+      amount: "0.00",
+      priority: "normal",
+      cancellationReason: "Financial Issues",
+      licenseType: "Manufacturing License"
+    },
+    {
+      referenceNo: "CAN/BF706",
+      submissionDate: "15-Sep-2025",
+      requestDate: "15-Sep-2025",
+      distilleryName: "Gangtok Premium Spirits",
+      status: "PENDING",
+      amount: "0.00",
+      priority: "urgent",
+      cancellationReason: "Regulatory Violation",
+      licenseType: "Retail License"
+    }
+  ];
+
   // Pagination state per tab
   pageSizeOptions: number[] = [5, 10, 15];
   pageSizeByTab: Record<string, number> = {
@@ -178,6 +257,7 @@ export class CommissionerDashboardComponent implements OnInit {
     // Initialize filtered data
     this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revalidationData];
+    this.filteredCancellationData = [...this.cancellationData];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -242,6 +322,16 @@ export class CommissionerDashboardComponent implements OnInit {
   getUrgentRevalidationCount(): number {
     return this.filteredRevalidationData.filter(item => 
       item.priority === 'urgent' || item.isExpired || (item.daysLeft !== undefined && item.daysLeft <= 7)
+    ).length;
+  }
+
+  getCancellationStatusCount(status: string): number {
+    return this.filteredCancellationData.filter(item => item.status === status).length;
+  }
+
+  getUrgentCancellationCount(): number {
+    return this.filteredCancellationData.filter(item => 
+      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
   }
 
@@ -349,6 +439,49 @@ export class CommissionerDashboardComponent implements OnInit {
     this.resetPagination('revalidation');
   }
 
+  // Filter methods for cancellation
+  onCancellationDateFilterChange(): void {
+    this.applyCancellationFilters();
+  }
+
+  onCancellationStatusFilterChange(): void {
+    this.applyCancellationFilters();
+  }
+
+  onCancellationReasonFilterChange(): void {
+    this.applyCancellationFilters();
+  }
+
+  clearCancellationFilters(): void {
+    this.cancellationDateFilter = '';
+    this.cancellationStatusFilter = '';
+    this.cancellationReasonFilter = '';
+    this.applyCancellationFilters();
+  }
+
+  private applyCancellationFilters(): void {
+    let filtered = [...this.cancellationData];
+
+    if (this.cancellationDateFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        const filterDate = new Date(this.cancellationDateFilter);
+        return itemDate.toDateString() === filterDate.toDateString();
+      });
+    }
+
+    if (this.cancellationStatusFilter) {
+      filtered = filtered.filter(item => item.status === this.cancellationStatusFilter);
+    }
+
+    if (this.cancellationReasonFilter) {
+      filtered = filtered.filter(item => item.cancellationReason === this.cancellationReasonFilter);
+    }
+
+    this.filteredCancellationData = filtered;
+    this.resetPagination('cancellation');
+  }
+
   // Utility method to parse date
   private parseDate(dateString: string): Date {
     const parts = dateString.split('-');
@@ -365,6 +498,11 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   reviewRevalidation(item: CommissionerTableData): void {
+    this.selectedApplication = item;
+    this.showReviewModal = true;
+  }
+
+  reviewCancellation(item: CommissionerTableData): void {
     this.selectedApplication = item;
     this.showReviewModal = true;
   }
@@ -402,6 +540,16 @@ export class CommissionerDashboardComponent implements OnInit {
     console.log('Extended revalidation:', item.referenceNo);
   }
 
+  approveCancellation(item: CommissionerTableData): void {
+    item.status = 'APPROVED';
+    console.log('Approved cancellation:', item.referenceNo);
+  }
+
+  rejectCancellation(item: CommissionerTableData): void {
+    item.status = 'REJECTED';
+    console.log('Rejected cancellation:', item.referenceNo);
+  }
+
   // Modal methods
   closeReviewModal(): void {
     this.showReviewModal = false;
@@ -412,6 +560,8 @@ export class CommissionerDashboardComponent implements OnInit {
     if (this.selectedApplication) {
       if (this.activeTab === 'revalidation') {
         this.approveRevalidation(this.selectedApplication);
+      } else if (this.activeTab === 'cancellation') {
+        this.approveCancellation(this.selectedApplication);
       } else {
         this.approveApplication(this.selectedApplication);
       }
@@ -423,6 +573,8 @@ export class CommissionerDashboardComponent implements OnInit {
     if (this.selectedApplication) {
       if (this.activeTab === 'revalidation') {
         this.rejectRevalidation(this.selectedApplication);
+      } else if (this.activeTab === 'cancellation') {
+        this.rejectCancellation(this.selectedApplication);
       } else {
         this.rejectApplication(this.selectedApplication);
       }
