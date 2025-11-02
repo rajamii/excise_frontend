@@ -42,16 +42,25 @@ export class SupplyChainComponent implements OnInit {
   hologramList: HologramRow[] = [];
   hologramRequestList: any[] = [];
   filteredHologramRequestList: any[] = [];
+  filteredRequisitionData: TableData[] = [];
   private isBrowser = false;
   showHologramModal = false;
-  
-  // Filter properties
+
+  // Filter properties for hologram requests
   dateFilter: string = '';
   monthFilter: string = '';
   statusFilter: string = '';
+
+  // Filter properties for requisition
+  requisitionDateFilter: string = '';
+  requisitionMonthFilter: string = '';
+  requisitionYearFilter: string = '';
+  requisitionStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
+  showRequisitionModal = false;
+  selectedRequisition: any = null;
 
   // Sample data for display only
   requisitionData: TableData[] = [
@@ -241,6 +250,9 @@ export class SupplyChainComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Initialize filtered data
+    this.filteredRequisitionData = [...this.requisitionData];
+
     // Check for tab query parameter
     if (this.isBrowser) {
       const tab = this.route.snapshot.queryParamMap.get('tab');
@@ -255,11 +267,11 @@ export class SupplyChainComponent implements OnInit {
       this.hologramList = [];
       return;
     }
-    
+
     // Load from both old hologramRequests and new hologramApplications
     const storedRequests = JSON.parse(localStorage.getItem("hologramRequests") || "[]");
     const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
-    
+
     // Map old format
     const mappedRequests: HologramRow[] = (storedRequests || []).map((r: any) => ({
       refNo: r.refNo,
@@ -270,7 +282,7 @@ export class SupplyChainComponent implements OnInit {
       defenceQtyLakh: r.defenceQtyLakh,
       status: "Submitted",
     }));
-    
+
     // Map new format from dashboard
     const mappedApplications: HologramRow[] = (storedApplications || []).map((a: any) => ({
       refNo: a.refNo,
@@ -281,7 +293,7 @@ export class SupplyChainComponent implements OnInit {
       defenceQtyLakh: a.defenceQtyLakh,
       status: a.status || "Submitted",
     }));
-    
+
     // Combine both lists and remove duplicates by refNo
     const combined = [...mappedApplications, ...mappedRequests];
     const uniqueMap = new Map();
@@ -290,7 +302,7 @@ export class SupplyChainComponent implements OnInit {
         uniqueMap.set(item.refNo, item);
       }
     });
-    
+
     let mapped = Array.from(uniqueMap.values());
 
     if (!mapped.length) {
@@ -745,7 +757,7 @@ export class SupplyChainComponent implements OnInit {
   // Hologram Request Methods
   loadHologramRequests(): void {
     console.log('loadHologramRequests called, isBrowser:', this.isBrowser);
-    
+
     if (!this.isBrowser) {
       this.hologramRequestList = [];
       return;
@@ -754,7 +766,7 @@ export class SupplyChainComponent implements OnInit {
     // Load hologram requests from localStorage
     let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     console.log('Stored requests:', storedRequests);
-    
+
     // Add sample data if no requests exist (for demonstration)
     if (storedRequests.length === 0) {
       const sampleRequests = [
@@ -789,29 +801,29 @@ export class SupplyChainComponent implements OnInit {
           status: 'PROCESSING'
         }
       ];
-      
+
       // Save sample data to localStorage
       localStorage.setItem('hologramRequests', JSON.stringify(sampleRequests));
       storedRequests = sampleRequests;
     }
-    
+
     // Sort by submission date (newest first)
     this.hologramRequestList = storedRequests.sort((a: any, b: any) => {
       const dateA = new Date(a.submissionDate).getTime();
       const dateB = new Date(b.submissionDate).getTime();
       return dateB - dateA; // Newest first
     });
-    
+
     // Initialize filtered list
     this.filteredHologramRequestList = [...this.hologramRequestList];
-    
+
     console.log('Final hologramRequestList:', this.hologramRequestList);
-    
+
     // Debug: Log all submission dates for testing
     this.hologramRequestList.forEach(request => {
       const date = new Date(request.submissionDate);
-      const dateString = date.getUTCFullYear() + '-' + 
-        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+      const dateString = date.getUTCFullYear() + '-' +
+        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
         String(date.getUTCDate()).padStart(2, '0');
       console.log('Request:', request.refNumber, 'Date:', request.submissionDate, 'Formatted:', dateString);
     });
@@ -870,7 +882,7 @@ export class SupplyChainComponent implements OnInit {
     const submissionDate = new Date(request.submissionDate).toLocaleDateString('en-IN');
     const usageDate = new Date(request.usageDate).toLocaleDateString('en-IN');
     const brandLabel = this.getBrandLabel(request.brandName);
-    
+
     return `
 HOLOGRAM REQUEST APPLICATION
 ============================
@@ -967,7 +979,7 @@ End of Application
   // Filter methods
   applyFilters(): void {
     console.log('Applying filters:', { dateFilter: this.dateFilter, monthFilter: this.monthFilter, statusFilter: this.statusFilter });
-    
+
     this.filteredHologramRequestList = this.hologramRequestList.filter(request => {
       let matchesDate = true;
       let matchesMonth = true;
@@ -977,15 +989,15 @@ End of Application
       if (this.dateFilter) {
         const requestDate = new Date(request.submissionDate);
         // Handle timezone by using UTC date
-        const requestDateString = requestDate.getUTCFullYear() + '-' + 
-          String(requestDate.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+        const requestDateString = requestDate.getUTCFullYear() + '-' +
+          String(requestDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
           String(requestDate.getUTCDate()).padStart(2, '0');
         matchesDate = requestDateString === this.dateFilter;
-        console.log('Date comparison:', { 
+        console.log('Date comparison:', {
           originalDate: request.submissionDate,
-          requestDateString, 
-          dateFilter: this.dateFilter, 
-          matches: matchesDate 
+          requestDateString,
+          dateFilter: this.dateFilter,
+          matches: matchesDate
         });
       }
 
@@ -993,14 +1005,14 @@ End of Application
       if (this.monthFilter) {
         const requestDate = new Date(request.submissionDate);
         const filterDate = new Date(this.monthFilter + '-01');
-        matchesMonth = requestDate.getFullYear() === filterDate.getFullYear() && 
-                     requestDate.getMonth() === filterDate.getMonth();
-        console.log('Month comparison:', { 
-          requestYear: requestDate.getFullYear(), 
+        matchesMonth = requestDate.getFullYear() === filterDate.getFullYear() &&
+          requestDate.getMonth() === filterDate.getMonth();
+        console.log('Month comparison:', {
+          requestYear: requestDate.getFullYear(),
           requestMonth: requestDate.getMonth(),
           filterYear: filterDate.getFullYear(),
           filterMonth: filterDate.getMonth(),
-          matches: matchesMonth 
+          matches: matchesMonth
         });
       }
 
@@ -1012,12 +1024,12 @@ End of Application
 
       const finalMatch = matchesDate && matchesMonth && matchesStatus;
       console.log('Final match for request:', request.refNumber, finalMatch);
-      
+
       return finalMatch;
     });
-    
+
     console.log('Filtered results:', this.filteredHologramRequestList.length, 'out of', this.hologramRequestList.length);
-    
+
     // Reset pagination to first page when filters are applied
     this.resetPagination('hologram-request');
   }
@@ -1060,5 +1072,227 @@ End of Application
       default:
         return 'bi bi-question-circle';
     }
+  }
+
+  // Requisition summary methods
+  getTotalRequisitionAmount(): number {
+    return this.requisitionData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  getRequisitionStatusCount(status: string): number {
+    return this.requisitionData.filter(item =>
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  // Requisition filter methods
+  applyRequisitionFilters(): void {
+    console.log('Applying requisition filters:', {
+      dateFilter: this.requisitionDateFilter,
+      monthFilter: this.requisitionMonthFilter,
+      yearFilter: this.requisitionYearFilter,
+      statusFilter: this.requisitionStatusFilter
+    });
+
+    this.filteredRequisitionData = this.requisitionData.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      // Parse the date from the format "22-Sep-2025"
+      const dateParts = item.submissionDate.split('-');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const monthName = dateParts[1];
+        const year = parseInt(dateParts[2]);
+
+        // Convert month name to number
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames.indexOf(monthName) + 1;
+
+        if (month > 0) {
+          const itemDate = new Date(year, month - 1, day);
+
+          // Date filter (exact date match)
+          if (this.requisitionDateFilter) {
+            const filterDate = new Date(this.requisitionDateFilter);
+            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth() &&
+              itemDate.getDate() === filterDate.getDate();
+          }
+
+          // Month filter (month and year match)
+          if (this.requisitionMonthFilter) {
+            const filterDate = new Date(this.requisitionMonthFilter + '-01');
+            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth();
+          }
+
+          // Year filter
+          if (this.requisitionYearFilter) {
+            const filterYear = parseInt(this.requisitionYearFilter);
+            matchesYear = itemDate.getFullYear() === filterYear;
+          }
+        }
+      }
+
+      // Status filter (partial match for long status messages)
+      if (this.requisitionStatusFilter) {
+        matchesStatus = item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+      console.log('Requisition match for:', item.referenceNo, finalMatch);
+
+      return finalMatch;
+    });
+
+    console.log('Filtered requisition results:', this.filteredRequisitionData.length, 'out of', this.requisitionData.length);
+
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('requisition');
+  }
+
+  clearRequisitionFilters(): void {
+    this.requisitionDateFilter = '';
+    this.requisitionMonthFilter = '';
+    this.requisitionYearFilter = '';
+    this.requisitionStatusFilter = '';
+    this.filteredRequisitionData = [...this.requisitionData];
+    this.resetPagination('requisition');
+  }
+
+  onRequisitionDateFilterChange(): void {
+    console.log('Requisition date filter changed to:', this.requisitionDateFilter);
+    this.applyRequisitionFilters();
+  }
+
+  onRequisitionMonthFilterChange(): void {
+    console.log('Requisition month filter changed to:', this.requisitionMonthFilter);
+    this.applyRequisitionFilters();
+  }
+
+  onRequisitionYearFilterChange(): void {
+    console.log('Requisition year filter changed to:', this.requisitionYearFilter);
+    this.applyRequisitionFilters();
+  }
+
+  onRequisitionStatusFilterChange(): void {
+    console.log('Requisition status filter changed to:', this.requisitionStatusFilter);
+    this.applyRequisitionFilters();
+  }
+
+  // Requisition modal methods
+  viewRequisitionApplication(requisition: any): void {
+    this.selectedRequisition = requisition;
+    this.showRequisitionModal = true;
+  }
+
+  closeRequisitionModal(): void {
+    this.showRequisitionModal = false;
+    this.selectedRequisition = null;
+  }
+
+  getRequisitionStatusClass(status: string): string {
+    if (status.toLowerCase().includes('approved')) return 'status-approved';
+    if (status.toLowerCase().includes('review')) return 'status-pending';
+    if (status.toLowerCase().includes('processing')) return 'status-processing';
+    if (status.toLowerCase().includes('verification')) return 'status-processing';
+    return 'status-default';
+  }
+
+  getRequisitionStatusIcon(status: string): string {
+    if (status.toLowerCase().includes('approved')) return 'bi bi-check-circle-fill';
+    if (status.toLowerCase().includes('review')) return 'bi bi-clock-fill';
+    if (status.toLowerCase().includes('processing')) return 'bi bi-gear-fill';
+    if (status.toLowerCase().includes('verification')) return 'bi bi-search';
+    return 'bi bi-info-circle-fill';
+  }
+
+  downloadRequisitionApplication(requisition: any): void {
+    const applicationContent = this.generateRequisitionApplicationTemplate(requisition);
+    this.downloadRequisitionFile(applicationContent, `Requisition_Application_${requisition.referenceNo.replace(/\//g, '_')}.txt`);
+  }
+
+  private generateRequisitionApplicationTemplate(requisition: any): string {
+    const currentDate = new Date().toLocaleDateString('en-IN');
+
+    return `
+REQUISITION APPLICATION
+=======================
+
+Reference Number: ${requisition.referenceNo}
+Application Date: ${currentDate}
+
+APPLICANT DETAILS:
+------------------
+Company Name: ${requisition.distilleryName}
+License Number: SDL/2024/001
+Address: Industrial Area, Rangpo, East Sikkim - 737132
+Contact: +91-3592-252001
+Email: info@sikkimdistilleries.com
+
+APPLICATION DETAILS:
+--------------------
+Submission Date: ${requisition.submissionDate}
+Import Pass Fee Amount: ₹${requisition.amount}
+Current Status: ${requisition.status}
+
+DECLARATION:
+------------
+I hereby declare that the information provided above is true and correct to the best of my knowledge. 
+I understand that any false information may lead to rejection of this application and/or legal action.
+
+I agree to comply with all rules and regulations set forth by the Excise Department, Government of Sikkim, 
+regarding the requisition process and import procedures.
+
+I undertake to pay all applicable fees and charges as determined by the department and understand that 
+the approval of this requisition is subject to verification of all submitted documents and compliance 
+with statutory requirements.
+
+
+Signature: _____________________
+Name: [Authorized Signatory]
+Designation: [Managing Director/Authorized Representative]
+Date: ${currentDate}
+
+
+FOR OFFICE USE ONLY:
+--------------------
+Application Received Date: ___________
+Received By: ___________
+Processing Fee: ₹${requisition.amount}
+Approval Status: ${requisition.status}
+Approved By: ___________
+Date of Approval: ___________
+Permit Issue Date: ___________
+
+Remarks: ________________________________
+________________________________________
+________________________________________
+
+Signature of Approving Authority: ___________
+Name: ___________
+Designation: ___________
+Date: ___________
+
+============================
+End of Application
+============================
+`;
+  }
+
+  private downloadRequisitionFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
 }
