@@ -282,7 +282,7 @@
       }
 
       &.actions {
-        width: 200px;
+        width: 100px;
         text-align: center;
       }
     }
@@ -416,9 +416,10 @@
   display: flex;
   gap: 0.5rem;
   justify-content: center;
-  flex-direction: column;
 
   .btn {
+    width: 32px;
+    height: 32px;
     border: none;
     border-radius: 6px;
     display: flex;
@@ -426,11 +427,8 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 0.7rem;
-    padding: 0.25rem 0.5rem;
-    white-space: nowrap;
-    line-height: 1.2;
-    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0;
 
     &.btn-outline-primary {
       background: #eff6ff;
@@ -469,7 +467,7 @@
     }
 
     i {
-      font-size: 0.7rem;
+      font-size: 0.85rem;
     }
   }
 }
@@ -632,13 +630,15 @@
   }
 
   .action-buttons {
-    flex-direction: column;
     gap: 0.25rem;
 
     .btn {
-      font-size: 0.65rem;
-      padding: 0.2rem 0.4rem;
-      width: 100%;
+      width: 28px;
+      height: 28px;
+
+      i {
+        font-size: 0.75rem;
+      }
     }
   }
 }
