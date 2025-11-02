@@ -45,6 +45,7 @@ export class SupplyChainComponent implements OnInit {
   filteredRequisitionData: TableData[] = [];
   filteredRevalidationData: TableData[] = [];
   filteredCancellationData: TableData[] = [];
+  filteredTransitData: TableData[] = [];
   private isBrowser = false;
   showHologramModal = false;
 
@@ -70,6 +71,12 @@ export class SupplyChainComponent implements OnInit {
   cancellationMonthFilter: string = '';
   cancellationYearFilter: string = '';
   cancellationStatusFilter: string = '';
+  
+  // Filter properties for transit
+  transitDateFilter: string = '';
+  transitMonthFilter: string = '';
+  transitYearFilter: string = '';
+  transitStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
@@ -266,6 +273,7 @@ export class SupplyChainComponent implements OnInit {
     this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revlidationData];
     this.filteredCancellationData = [...this.cancellationData];
+    this.filteredTransitData = [...this.transitData];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -1531,5 +1539,115 @@ End of Application
 
   getTotalCancellationAmount(): number {
     return this.cancellationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  // Transit filter methods
+  applyTransitFilters(): void {
+    console.log('Applying transit filters:', {
+      dateFilter: this.transitDateFilter,
+      monthFilter: this.transitMonthFilter,
+      yearFilter: this.transitYearFilter,
+      statusFilter: this.transitStatusFilter
+    });
+
+    this.filteredTransitData = this.transitData.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      // Parse the date from the format "13-Sep-2025"
+      const dateParts = item.submissionDate.split('-');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const monthName = dateParts[1];
+        const year = parseInt(dateParts[2]);
+
+        // Convert month name to number
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames.indexOf(monthName) + 1;
+
+        if (month > 0) {
+          const itemDate = new Date(year, month - 1, day);
+
+          // Date filter (exact date match)
+          if (this.transitDateFilter) {
+            const filterDate = new Date(this.transitDateFilter);
+            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth() &&
+              itemDate.getDate() === filterDate.getDate();
+          }
+
+          // Month filter (month and year match)
+          if (this.transitMonthFilter) {
+            const filterDate = new Date(this.transitMonthFilter + '-01');
+            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth();
+          }
+
+          // Year filter
+          if (this.transitYearFilter) {
+            const filterYear = parseInt(this.transitYearFilter);
+            matchesYear = itemDate.getFullYear() === filterYear;
+          }
+        }
+      }
+
+      // Status filter (partial match for long status messages)
+      if (this.transitStatusFilter) {
+        matchesStatus = item.status.toLowerCase().includes(this.transitStatusFilter.toLowerCase());
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+      console.log('Transit match for:', item.referenceNo, finalMatch);
+
+      return finalMatch;
+    });
+
+    console.log('Filtered transit results:', this.filteredTransitData.length, 'out of', this.transitData.length);
+
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('transit');
+  }
+
+  clearTransitFilters(): void {
+    this.transitDateFilter = '';
+    this.transitMonthFilter = '';
+    this.transitYearFilter = '';
+    this.transitStatusFilter = '';
+    this.filteredTransitData = [...this.transitData];
+    this.resetPagination('transit');
+  }
+
+  onTransitDateFilterChange(): void {
+    console.log('Transit date filter changed to:', this.transitDateFilter);
+    this.applyTransitFilters();
+  }
+
+  onTransitMonthFilterChange(): void {
+    console.log('Transit month filter changed to:', this.transitMonthFilter);
+    this.applyTransitFilters();
+  }
+
+  onTransitYearFilterChange(): void {
+    console.log('Transit year filter changed to:', this.transitYearFilter);
+    this.applyTransitFilters();
+  }
+
+  onTransitStatusFilterChange(): void {
+    console.log('Transit status filter changed to:', this.transitStatusFilter);
+    this.applyTransitFilters();
+  }
+
+  // Transit summary methods
+  getTransitStatusCount(status: string): number {
+    return this.transitData.filter(item =>
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  getTotalTransitAmount(): number {
+    return this.transitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
   }
 }
