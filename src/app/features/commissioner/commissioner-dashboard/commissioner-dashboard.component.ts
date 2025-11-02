@@ -76,6 +76,10 @@ export class CommissionerDashboardComponent implements OnInit {
   showReviewModal = false;
   selectedApplication: CommissionerTableData | null = null;
 
+  // Hologram details modal properties
+  showHologramDetailsModal = false;
+  selectedHologramApplication: CommissionerTableData | null = null;
+
   // Sample data for requisition applications (from commissioner's perspective)
   requisitionData: CommissionerTableData[] = [
     {
@@ -955,6 +959,19 @@ export class CommissionerDashboardComponent implements OnInit {
       this.extendRevalidation(this.selectedApplication);
       this.closeReviewModal();
     }
+  }
+
+  // Hologram details modal methods
+  viewHologramDetails(item: CommissionerTableData): void {
+    console.log('viewHologramDetails called with:', item);
+    this.selectedHologramApplication = item;
+    this.showHologramDetailsModal = true;
+    console.log('Modal should be visible now:', this.showHologramDetailsModal);
+  }
+
+  closeHologramDetailsModal(): void {
+    this.showHologramDetailsModal = false;
+    this.selectedHologramApplication = null;
   }
 
   // Pagination methods

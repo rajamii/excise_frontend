@@ -34,38 +34,98 @@ export class HologramLetterViewComponent implements OnInit {
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
       if (ref) {
-        // Check both storage locations for hologram data
-        const hologramRequests: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-        const hologramApplications: any[] = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-        
-        // First try to find in hologramRequests
-        let found = hologramRequests.find(r => r.refNo === ref);
-        
-        // If not found, try hologramApplications
-        if (!found) {
-          const appFound = hologramApplications.find(a => a.refNo === ref);
-          if (appFound) {
-            found = {
-              refNo: appFound.refNo,
-              date: appFound.date,
-              companyName: appFound.companyName,
-              localQtyLakh: appFound.localQtyLakh,
-              exportQtyLakh: appFound.exportQtyLakh,
-              defenceQtyLakh: appFound.defenceQtyLakh
-            };
-          }
-        }
-        
-        if (found) {
-          this.submittedData = found;
-        } else {
-          // If not found, redirect back to commissioner dashboard
-          this.router.navigate(['/dev-commissioner-dashboard']);
-        }
+        this.loadHologramData(ref);
       } else {
         // If no ref provided, redirect back to commissioner dashboard
         this.router.navigate(['/dev-commissioner-dashboard']);
       }
+    }
+  }
+
+  private loadHologramData(refNo: string): void {
+    // Check both storage locations for hologram data
+    const hologramRequests: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const hologramApplications: any[] = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    
+    // First try to find in hologramRequests
+    let found = hologramRequests.find(r => r.refNo === refNo);
+    
+    // If not found, try hologramApplications
+    if (!found) {
+      const appFound = hologramApplications.find(a => a.refNo === refNo);
+      if (appFound) {
+        found = {
+          refNo: appFound.refNo,
+          date: appFound.date,
+          companyName: appFound.companyName,
+          localQtyLakh: appFound.localQtyLakh,
+          exportQtyLakh: appFound.exportQtyLakh,
+          defenceQtyLakh: appFound.defenceQtyLakh
+        };
+      }
+    }
+
+    // If still not found, check sample data from commissioner dashboard
+    if (!found) {
+      const sampleData: HologramFormData[] = [
+        {
+          refNo: "HOL/BF901",
+          date: "2025-09-23",
+          companyName: "Sikkim Distilleries Ltd",
+          localQtyLakh: 2.5,
+          exportQtyLakh: 1.0,
+          defenceQtyLakh: 0.5
+        },
+        {
+          refNo: "HOL/BF902",
+          date: "2025-09-22",
+          companyName: "Himalayan Distilleries Pvt Ltd",
+          localQtyLakh: 3.2,
+          exportQtyLakh: 1.8,
+          defenceQtyLakh: 0.0
+        },
+        {
+          refNo: "HOL/BF903",
+          date: "2025-09-21",
+          companyName: "Royal Sikkim Brewery",
+          localQtyLakh: 2.8,
+          exportQtyLakh: 0.7,
+          defenceQtyLakh: 1.0
+        },
+        {
+          refNo: "HOL/BF904",
+          date: "2025-09-20",
+          companyName: "Mountain View Distilleries",
+          localQtyLakh: 2.0,
+          exportQtyLakh: 0.5,
+          defenceQtyLakh: 0.0
+        },
+        {
+          refNo: "HOL/BF905",
+          date: "2025-09-19",
+          companyName: "Eastern Himalaya Distillery",
+          localQtyLakh: 4.0,
+          exportQtyLakh: 2.0,
+          defenceQtyLakh: 0.5
+        },
+        {
+          refNo: "HOL/BF906",
+          date: "2025-09-18",
+          companyName: "Gangtok Premium Spirits",
+          localQtyLakh: 1.5,
+          exportQtyLakh: 0.0,
+          defenceQtyLakh: 0.0
+        }
+      ];
+
+      found = sampleData.find(r => r.refNo === refNo);
+    }
+    
+    if (found) {
+      this.submittedData = found;
+    } else {
+      // If not found, redirect back to commissioner dashboard
+      this.router.navigate(['/dev-commissioner-dashboard']);
     }
   }
 

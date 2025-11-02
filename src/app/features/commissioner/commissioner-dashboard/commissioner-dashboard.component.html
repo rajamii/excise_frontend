@@ -1185,18 +1185,12 @@
                   <table class="table register-table">
                     <thead>
                       <tr>
-                        <th class="sl-no">Sl.</th>
+                        <th class="sl-no">Sl. No.</th>
                         <th class="ref-number">Ref. No</th>
-                        <th class="submission-date">App. Date</th>
-                        <th class="licensee-name">Licensee Name</th>
-                        <th class="hologram-type">Type</th>
-                        <th class="local-qty">Local (L)</th>
-                        <th class="export-qty">Export (L)</th>
-                        <th class="defence-qty">Defence (L)</th>
-                        <th class="total-qty">Total (L)</th>
-                        <th class="amount">Amount</th>
+                        <th class="submission-date">Date</th>
+                        <th class="company-name">Company</th>
+                        <th class="total-qty">Total Qty (Lakh)</th>
                         <th class="status">Status</th>
-                        <th class="priority">Priority</th>
                         <th class="actions">Actions</th>
                       </tr>
                     </thead>
@@ -1206,59 +1200,36 @@
                       track item.referenceNo;
                       let i = $index
                       ) {
-                      <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+                      <tr class="register-row">
                         <td class="sl-no">{{ (getCurrentPage('hologram') - 1) * getPageSize('hologram') + i + 1 }}</td>
                         <td class="ref-number">
-                          <div class="d-flex align-items-center gap-2">
-                            <span class="ref-text">{{ item.referenceNo }}</span>
-                            @if (item.priority === 'urgent') {
-                            <span class="badge bg-danger text-white">URGENT</span>
-                            }
-                          </div>
+                          <span class="ref-text">{{ item.referenceNo }}</span>
                         </td>
                         <td class="submission-date">
                           <span class="date-text">{{ item.submissionDate }}</span>
                         </td>
-                        <td class="licensee-name">
+                        <td class="company-name">
                           <span class="company-name">{{ item.distilleryName }}</span>
                         </td>
-                        <td class="hologram-type">
-                          <span class="type-badge">{{ 
-                            item.hologramType === 'Security Hologram' ? 'Security' :
-                            item.hologramType === 'Premium Hologram' ? 'Premium' :
-                            item.hologramType === 'Standard Hologram' ? 'Standard' :
-                            item.hologramType
-                          }}</span>
-                        </td>
-                        <td class="local-qty">
-                          <span class="qty-value">{{ item.localQtyLakh | number:'1.1-1' }}</span>
-                        </td>
-                        <td class="export-qty">
-                          <span class="qty-value">{{ item.exportQtyLakh | number:'1.1-1' }}</span>
-                        </td>
-                        <td class="defence-qty">
-                          <span class="qty-value">{{ item.defenceQtyLakh | number:'1.1-1' }}</span>
-                        </td>
                         <td class="total-qty">
-                          <span class="qty-value total">{{ item.totalQtyLakh | number:'1.1-1' }}</span>
-                        </td>
-                        <td class="amount">
-                          <span class="amount-value">₹{{ item.amount }}</span>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="qty-value total">{{ item.totalQtyLakh | number:'1.1-1' }}</span>
+                            <button class="btn btn-outline-info btn-xs" (click)="viewHologramDetails(item)"
+                              title="View Quantity Breakdown">
+                              <i class="bi bi-info-circle"></i>
+                              Details
+                            </button>
+                          </div>
                         </td>
                         <td class="status">
                           <span class="status-badge status-{{ getStatusClass(item.status) }}">
                             {{ item.status }}
                           </span>
                         </td>
-                        <td class="priority">
-                          <span class="priority-badge priority-{{ item.priority || 'normal' }}">
-                            {{ (item.priority || 'normal') | titlecase }}
-                          </span>
-                        </td>
                         <td class="actions">
                           <div class="action-buttons">
                             <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
-                              title="Review Application">
+                              title="Preview Application">
                               <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
@@ -1468,6 +1439,83 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="closeReviewModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hologram Quantity Details Modal -->
+<div class="modal-overlay" *ngIf="showHologramDetailsModal" (click)="closeHologramDetailsModal()">
+  <div class="modal-dialog modal-md" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-bar-chart me-2"></i>
+          Hologram Quantity Breakdown
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeHologramDetailsModal()"></button>
+      </div>
+      <div class="modal-body" *ngIf="selectedHologramApplication">
+        <div class="hologram-details-container">
+          <!-- Application Info -->
+          <div class="application-info mb-4">
+            <div class="row">
+              <div class="col-4">
+                <div class="info-badge ref-badge">
+                  <small class="text-muted">Ref:</small>
+                  <div class="fw-bold">{{ selectedHologramApplication.referenceNo }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="info-badge date-badge">
+                  <small class="text-muted">Date:</small>
+                  <div class="fw-bold">{{ selectedHologramApplication.submissionDate }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="info-badge company-badge">
+                  <small class="text-muted">Company:</small>
+                  <div class="fw-bold text-truncate" [title]="selectedHologramApplication.distilleryName">{{ selectedHologramApplication.distilleryName }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quantity Breakdown Table -->
+          <div class="quantity-breakdown">
+            <table class="table table-bordered">
+              <thead class="table-light">
+                <tr>
+                  <th class="series-header">Series</th>
+                  <th class="quantity-header text-end">Quantity (Lakh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="series-name">Local</td>
+                  <td class="quantity-value text-end">{{ selectedHologramApplication.localQtyLakh | number:'1.0-1' }}</td>
+                </tr>
+                <tr>
+                  <td class="series-name">Export</td>
+                  <td class="quantity-value text-end">{{ selectedHologramApplication.exportQtyLakh | number:'1.0-1' }}</td>
+                </tr>
+                <tr>
+                  <td class="series-name">Defence</td>
+                  <td class="quantity-value text-end">{{ selectedHologramApplication.defenceQtyLakh | number:'1.0-1' }}</td>
+                </tr>
+                <tr class="table-primary">
+                  <td class="series-name fw-bold">Total</td>
+                  <td class="quantity-value text-end fw-bold">{{ selectedHologramApplication.totalQtyLakh | number:'1.0-1' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeHologramDetailsModal()">
+          <i class="bi bi-x-circle me-1"></i> Close
+        </button>
       </div>
     </div>
   </div>
