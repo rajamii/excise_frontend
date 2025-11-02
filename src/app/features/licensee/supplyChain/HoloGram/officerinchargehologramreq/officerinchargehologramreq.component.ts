@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -44,6 +44,8 @@ interface FilterOptions {
   styleUrl: './officerinchargehologramreq.component.scss'
 })
 export class OfficerinchargehologramreqComponent implements OnInit {
+  @Output() backToRegister = new EventEmitter<void>();
+  
   Math = Math;
   
   // Officer information - same as officer-in-charge component
@@ -377,5 +379,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   exportData() {
     console.log('Exporting hologram requests data:', this.filteredRequests);
     alert('Export functionality will be implemented with backend integration');
+  }
+
+  backToHologramRegister() {
+    this.backToRegister.emit();
   }
 }

@@ -24,17 +24,33 @@
 
   .header-actions {
     .btn {
-      background: linear-gradient(135deg, #10b981, #059669);
-      border: none;
-      color: white;
       font-weight: 600;
       padding: 0.75rem 1.5rem;
       border-radius: 12px;
       transition: all 0.3s ease;
 
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      &.btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+        color: white;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      &.btn-outline-secondary {
+        border: 2px solid #6b7280;
+        color: #6b7280;
+        background: white;
+
+        &:hover {
+          background: #6b7280;
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+        }
       }
     }
   }
