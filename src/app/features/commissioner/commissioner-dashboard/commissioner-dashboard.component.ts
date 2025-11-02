@@ -36,7 +36,7 @@ interface CommissionerTableData {
 })
 export class CommissionerDashboardComponent implements OnInit {
   Math = Math;
-  activeTab = "revalidation"; // Start with revalidation tab as requested
+  activeTab = "requisition"; // Start with requisition tab as default
   sidebarHidden = true;
   private isBrowser = false;
 
