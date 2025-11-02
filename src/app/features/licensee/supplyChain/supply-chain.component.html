@@ -165,77 +165,7 @@
         </div>
       </div>
 
-      <!-- Search Section -->
-      <div class="bg-white border-bottom">
-        <div class="container-fluid py-3">
-          <div class="row align-items-center g-3">
-            <!-- Date Picker -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Select Date</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate"
-                placeholder="Select Date" />
-            </div>
 
-            <!-- Month Dropdown -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Month</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth">
-                <option value="">All Months</option>
-                <option value="01">January</option>
-                <option value="02">February</option>
-                <option value="03">March</option>
-                <option value="04">April</option>
-                <option value="05">May</option>
-                <option value="06">June</option>
-                <option value="07">July</option>
-                <option value="08">August</option>
-                <option value="09">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-              </select>
-            </div>
-
-            <!-- Year Dropdown -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Year</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedYear">
-                <option value="">All Years</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <!-- Status Filter -->
-            <div class="col-auto">
-              <label class="form-label small mb-1">Status</label>
-              <select class="form-select form-select-sm" [(ngModel)]="selectedStatus">
-                <option value="">All Status</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-                <option value="invalid">Invalid</option>
-                <option value="generated">Generated</option>
-              </select>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="col-auto">
-              <label class="form-label small mb-1 invisible">Actions</label>
-              <div class="d-flex gap-2">
-                <button class="btn btn-primary btn-sm icon-btn" (click)="onSearch()" title="Search" aria-label="Search">
-                  <i class="bi bi-search"></i>
-                </button>
-                <button class="btn btn-outline-secondary btn-sm icon-btn" (click)="onClear()" title="Clear"
-                  aria-label="Clear filters">
-                  <i class="bi bi-arrow-clockwise"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Tabs Section -->
       <div class="bg-white border-bottom">
