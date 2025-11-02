@@ -43,6 +43,7 @@ export class SupplyChainComponent implements OnInit {
   hologramRequestList: any[] = [];
   filteredHologramRequestList: any[] = [];
   filteredRequisitionData: TableData[] = [];
+  filteredRevalidationData: TableData[] = [];
   private isBrowser = false;
   showHologramModal = false;
 
@@ -56,6 +57,12 @@ export class SupplyChainComponent implements OnInit {
   requisitionMonthFilter: string = '';
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
+  
+  // Filter properties for revalidation
+  revalidationDateFilter: string = '';
+  revalidationMonthFilter: string = '';
+  revalidationYearFilter: string = '';
+  revalidationStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
@@ -250,6 +257,7 @@ export class SupplyChainComponent implements OnInit {
   ngOnInit(): void {
     // Initialize filtered data
     this.filteredRequisitionData = [...this.requisitionData];
+    this.filteredRevalidationData = [...this.revlidationData];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -1180,6 +1188,120 @@ End of Application
   onRequisitionStatusFilterChange(): void {
     console.log('Requisition status filter changed to:', this.requisitionStatusFilter);
     this.applyRequisitionFilters();
+  }
+
+  // Revalidation filter methods
+  applyRevalidationFilters(): void {
+    console.log('Applying revalidation filters:', { 
+      dateFilter: this.revalidationDateFilter, 
+      monthFilter: this.revalidationMonthFilter, 
+      yearFilter: this.revalidationYearFilter,
+      statusFilter: this.revalidationStatusFilter 
+    });
+    
+    this.filteredRevalidationData = this.revlidationData.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      // Parse the date from the format "22-Sep-2025"
+      const dateParts = item.submissionDate.split('-');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const monthName = dateParts[1];
+        const year = parseInt(dateParts[2]);
+        
+        // Convert month name to number
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames.indexOf(monthName) + 1;
+        
+        if (month > 0) {
+          const itemDate = new Date(year, month - 1, day);
+          
+          // Date filter (exact date match)
+          if (this.revalidationDateFilter) {
+            const filterDate = new Date(this.revalidationDateFilter);
+            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+                         itemDate.getMonth() === filterDate.getMonth() &&
+                         itemDate.getDate() === filterDate.getDate();
+          }
+
+          // Month filter (month and year match)
+          if (this.revalidationMonthFilter) {
+            const filterDate = new Date(this.revalidationMonthFilter + '-01');
+            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() && 
+                          itemDate.getMonth() === filterDate.getMonth();
+          }
+
+          // Year filter
+          if (this.revalidationYearFilter) {
+            const filterYear = parseInt(this.revalidationYearFilter);
+            matchesYear = itemDate.getFullYear() === filterYear;
+          }
+        }
+      }
+
+      // Status filter (partial match for long status messages)
+      if (this.revalidationStatusFilter) {
+        matchesStatus = item.status.toLowerCase().includes(this.revalidationStatusFilter.toLowerCase());
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+      console.log('Revalidation match for:', item.referenceNo, finalMatch);
+      
+      return finalMatch;
+    });
+    
+    console.log('Filtered revalidation results:', this.filteredRevalidationData.length, 'out of', this.revlidationData.length);
+    
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('revalidation');
+  }
+
+  clearRevalidationFilters(): void {
+    this.revalidationDateFilter = '';
+    this.revalidationMonthFilter = '';
+    this.revalidationYearFilter = '';
+    this.revalidationStatusFilter = '';
+    this.filteredRevalidationData = [...this.revlidationData];
+    this.resetPagination('revalidation');
+  }
+
+  onRevalidationDateFilterChange(): void {
+    console.log('Revalidation date filter changed to:', this.revalidationDateFilter);
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationMonthFilterChange(): void {
+    console.log('Revalidation month filter changed to:', this.revalidationMonthFilter);
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationYearFilterChange(): void {
+    console.log('Revalidation year filter changed to:', this.revalidationYearFilter);
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationStatusFilterChange(): void {
+    console.log('Revalidation status filter changed to:', this.revalidationStatusFilter);
+    this.applyRevalidationFilters();
+  }
+
+  // Revalidation summary methods
+  getRevalidationStatusCount(status: string): number {
+    return this.revlidationData.filter(item => 
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  getLiveRevalidationCount(): number {
+    return this.revlidationData.filter(item => item.isLive).length;
+  }
+
+  getTotalRevalidationAmount(): number {
+    return this.revlidationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
   }
 
   // Requisition modal methods
