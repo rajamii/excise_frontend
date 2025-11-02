@@ -792,28 +792,38 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Action methods
   reviewApplication(item: CommissionerTableData): void {
-    this.selectedApplication = item;
-    this.showReviewModal = true;
+    // Navigate to requisition letter view with reference number
+    this.router.navigate(['/dev-requisition-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
   }
 
   reviewRevalidation(item: CommissionerTableData): void {
-    this.selectedApplication = item;
-    this.showReviewModal = true;
+    // Navigate to revalidation letter view with reference number
+    this.router.navigate(['/dev-revalidation-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
   }
 
   reviewCancellation(item: CommissionerTableData): void {
-    this.selectedApplication = item;
-    this.showReviewModal = true;
+    // Navigate to cancellation letter view with reference number
+    this.router.navigate(['/dev-cancellation-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
   }
 
   reviewTransit(item: CommissionerTableData): void {
-    this.selectedApplication = item;
-    this.showReviewModal = true;
+    // Navigate to transit permit letter view with reference number
+    this.router.navigate(['/dev-transit-permit-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
   }
 
   reviewHologram(item: CommissionerTableData): void {
-    this.selectedApplication = item;
-    this.showReviewModal = true;
+    // Navigate to hologram letter view with reference number
+    this.router.navigate(['/dev-hologram-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
   }
 
   approveApplication(item: CommissionerTableData): void {
