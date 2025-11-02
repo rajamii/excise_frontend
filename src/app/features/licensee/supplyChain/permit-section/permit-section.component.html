@@ -1,240 +1,296 @@
-<div class="dashboard-layout">
+<div class="permit-dashboard-layout">
   <!-- Router Outlet for Child Views -->
   <router-outlet></router-outlet>
 
   <!-- Main Dashboard Content - Only show when not viewing individual applications -->
   @if (!isViewingApplication) {
     <!-- Header Section -->
-    <div class="header-section">
-      <div class="header-content">
-        <div class="left-section">
-          <h1 class="dashboard-title">Dashboard</h1>
-        </div>
-        <div class="right-section">
-          <button class="btn btn-success btn-sm distillery-btn">
-            Permit Section
-          </button>
+    <div class="header-section text-black">
+      <div class="container-fluid">
+        <div class="row align-items-center py-3">
+          <div class="col">
+            <h1 class="h3 mb-1 fw-bold">Permit Section Dashboard</h1>
+            <p class="mb-0 small opacity-75">
+              Department of Excise - Sikkim Government
+            </p>
+          </div>
+          <div class="col-auto">
+            <div class="d-flex gap-2">
+              <button class="btn btn-light bg-success btn-sm text-white">
+                Permit Section
+              </button>
+              <button class="btn btn-sm bg-success text-white">
+                <i class="bi bi-download me-1"></i> Export Report
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Area -->
-    <div class="main-content">
-      <!-- Left Sidebar -->
-      <div class="left-sidebar">
-        <!-- Filters Section (Now at the top) -->
-        <div class="filters-section">
-          <div class="filters-container">
-            <div class="filter-group">
-              <label class="filter-label">Select Date</label>
-              <input
-                type="date"
-                class="form-control filter-input"
-                [(ngModel)]="selectedDate"
-              />
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Month</label>
-              <select
-                class="form-select filter-input"
-                [(ngModel)]="selectedMonth"
-              >
-                <option value="">All Months</option>
-                <option value="01">January</option>
-                <option value="02">February</option>
-                <option value="03">March</option>
-                <option value="04">April</option>
-                <option value="05">May</option>
-                <option value="06">June</option>
-                <option value="07">July</option>
-                <option value="08">August</option>
-                <option value="09">September</option>
-                <option value="10">October</option>
-                <option value="11">November</option>
-                <option value="12">December</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Year</label>
-              <select
-                class="form-select filter-input"
-                [(ngModel)]="selectedYear"
-              >
-                <option value="">All Years</option>
-                <option value="2024">2024</option>
-                <option value="2025">2025</option>
-                <option value="2026">2026</option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Distillery</label>
-              <select
-                class="form-select filter-input"
-                [(ngModel)]="selectedDistillery"
-              >
-                <option value="">All Distilleries</option>
-                <option value="sikkim-distilleries">
-                  Sikkim Distilleries Ltd
-                </option>
-                <option value="mount-distilleries">
-                  Mount Distilleries Ltd
-                </option>
-                <option value="darjeeling-artisan">
-                  Darjeeling Artisan Pvt Ltd
-                </option>
-              </select>
-            </div>
-
-            <div class="filter-group">
-              <label class="filter-label">Status</label>
-              <select
-                class="form-select filter-input"
-                [(ngModel)]="selectedStatus"
-              >
-                <option value="">All Status</option>
-                <option value="approved">Approved</option>
-                <option value="pending">Pending</option>
-                <option value="generated">Generated</option>
-              </select>
-            </div>
-
-            <div class="filter-actions">
-              <button
-                class="btn btn-primary search-btn icon-button mb-2"
-                title="Search"
-                aria-label="Search"
-                (click)="onSearch()"
-              >
-                <i class="bi bi-search"></i>
-              </button>
-              <button
-                class="btn btn-outline-secondary clear-btn icon-button"
-                title="Clear"
-                aria-label="Clear filters"
-                (click)="onClear()"
-              >
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Permit Types Section (Now below filters) -->
-        <div class="tabs-section">
-          <div class="tabs-container">
-            <button
-              class="tab-button"
-              [class.active]="activeTab === 'requisition'"
-              title="Requisition"
-              aria-label="Requisition"
-              (click)="setActiveTab('requisition')"
-            >
-              <i class="bi bi-file-text me-2"></i>REQUISITION
+    <!-- Tabs Section -->
+    <div class="bg-white border-bottom">
+      <div class="container-fluid">
+        <ul class="nav nav-tabs border-0">
+          <li class="nav-item">
+            <button class="nav-link" [class.active]="activeTab === 'requisition'"
+              (click)="setActiveTab('requisition')">
+              <i class="bi bi-file-text me-2"></i> REQUISITION
             </button>
-            <button
-              class="tab-button"
-              [class.active]="activeTab === 'revalidation'"
-              title="Revalidation"
-              aria-label="Revalidation"
-              (click)="setActiveTab('revalidation')"
-            >
-              <i class="bi bi-arrow-repeat me-2"></i>REVALIDATION
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" [class.active]="activeTab === 'revalidation'"
+              (click)="setActiveTab('revalidation')">
+              <i class="bi bi-arrow-repeat me-2"></i> REVALIDATION
             </button>
-            <button
-              class="tab-button"
-              [class.active]="activeTab === 'cancellation'"
-              title="Cancellation"
-              aria-label="Cancellation"
-              (click)="setActiveTab('cancellation')"
-            >
-              <i class="bi bi-x-circle me-2"></i>CANCELLATION
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" [class.active]="activeTab === 'cancellation'"
+              (click)="setActiveTab('cancellation')">
+              <i class="bi bi-x-circle me-2"></i> CANCELLATION
             </button>
-            <button
-              class="tab-button"
-              [class.active]="activeTab === 'transit'"
-              title="Transit"
-              aria-label="Transit"
-              (click)="setActiveTab('transit')"
-            >
-              <i class="bi bi-truck me-2"></i>TRANSIT
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" [class.active]="activeTab === 'transit'"
+              (click)="setActiveTab('transit')">
+              <i class="bi bi-truck me-2"></i> TRANSIT
             </button>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
+          </li>
+        </ul>
       </div>
+    </div>
 
-      <!-- Right Content Area -->
-      <div class="right-content">
-        <!-- Table Section -->
-        <div class="table-section">
-          <div class="table-header">
-            <!-- <h4 class="table-title">{{ getActiveTabTitle() }} Records</h4> -->
-            <span class="record-count"
-              >{{ getFilteredData().length }} records found</span
-            >
+    <!-- Data Table Section -->
+    <div class="bg-white">
+      <div class="container-fluid p-3">
+        <div class="table-responsive">
+
+          <!-- Permit Register Header -->
+          <div class="permit-register-header">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <div class="header-info">
+                <h4 class="register-title">
+                  <i class="bi bi-file-earmark-text me-2"></i>
+                  {{ getActiveTabTitle() }} Applications
+                </h4>
+                <p class="register-subtitle">Manage and track {{ getActiveTabTitle().toLowerCase() }} applications</p>
+              </div>
+              <div class="header-actions">
+                <button class="btn btn-success">
+                  <i class="bi bi-download me-2"></i>
+                  Export Report
+                </button>
+              </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-3">
+                <div class="summary-card total-requests">
+                  <div class="card-icon">
+                    <i class="bi bi-list-ul"></i>
+                  </div>
+                  <div class="card-content">
+                    <h3 class="card-value">{{ getFilteredData().length }}</h3>
+                    <p class="card-label">Total Applications</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card pending-requests">
+                  <div class="card-icon">
+                    <i class="bi bi-clock"></i>
+                  </div>
+                  <div class="card-content">
+                    <h3 class="card-value">{{ getPendingCount() }}</h3>
+                    <p class="card-label">Pending</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card approved-requests">
+                  <div class="card-icon">
+                    <i class="bi bi-check-circle"></i>
+                  </div>
+                  <div class="card-content">
+                    <h3 class="card-value">{{ getApprovedCount() }}</h3>
+                    <p class="card-label">Approved</p>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="summary-card total-amount">
+                  <div class="card-icon">
+                    <i class="bi bi-currency-rupee"></i>
+                  </div>
+                  <div class="card-content">
+                    <h3 class="card-value">₹{{ getTotalAmount() | number:'1.2-2' }}</h3>
+                    <p class="card-label">Total Amount</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="table-container">
-            <table class="data-table">
-              <thead class="color1">
-                <tr>
-                  <th>Ref. No</th>
-                  <th>App. Sub. Date</th>
-                  <th>Distillery Name</th>
-                  <th>Status</th>
-                  @if (activeTab !== "transit") {
-                    <th>Imp. Pass Fee Amt.</th>
-                  }
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (permit of getFilteredData(); track permit.referenceNo) {
-                  <tr>
-                    <td class="ref-no">{{ permit.referenceNo }}</td>
-                    <td>{{ permit.submissionDate | date: "dd-MMM-yyyy" }}</td>
-                    <td>{{ permit.distilleryName }}</td>
-                    <td>
-                      <span class="status-badge">
-                        {{ permit.status }}
-                      </span>
-                    </td>
-                    @if (activeTab !== "transit") {
-                      <td class="amount">
-                        {{ permit.amount | number: "1.2-2" }}
-                      </td>
-                    }
-                    <td class="actions">
-                      <button
-                        class="btn btn-primary btn-sm me-1"
-                        (click)="viewApplication(permit)"
-                      >
-                        VIEW APPLICATION
-                      </button>
-                      @if (canViewPaymentSlip(permit)) {
-                        <button
-                          class="btn btn-warning btn-sm"
-                          (click)="viewPermitSlip(permit)"
-                        >
-                          View Permit Slip
-                        </button>
+          <!-- Compact Filter Section -->
+          <div class="compact-filter-section mb-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+              <div class="filter-label-text">
+                <i class="bi bi-funnel me-1"></i>
+                <small class="text-muted">Filters:</small>
+              </div>
+
+              <!-- Date Filter -->
+              <div class="compact-filter">
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate"
+                  placeholder="Date" title="Filter by date">
+              </div>
+
+              <!-- Month Filter -->
+              <div class="compact-filter">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" title="Filter by month">
+                  <option value="">All Months</option>
+                  <option value="01">January</option>
+                  <option value="02">February</option>
+                  <option value="03">March</option>
+                  <option value="04">April</option>
+                  <option value="05">May</option>
+                  <option value="06">June</option>
+                  <option value="07">July</option>
+                  <option value="08">August</option>
+                  <option value="09">September</option>
+                  <option value="10">October</option>
+                  <option value="11">November</option>
+                  <option value="12">December</option>
+                </select>
+              </div>
+
+              <!-- Year Filter -->
+              <div class="compact-filter">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedYear" title="Filter by year">
+                  <option value="">All Years</option>
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
+
+              <!-- Distillery Filter -->
+              <div class="compact-filter">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedDistillery" title="Filter by distillery">
+                  <option value="">All Distilleries</option>
+                  <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
+                  <option value="mount-distilleries">Mount Distilleries Ltd</option>
+                  <option value="darjeeling-artisan">Darjeeling Artisan Pvt Ltd</option>
+                </select>
+              </div>
+
+              <!-- Status Filter -->
+              <div class="compact-filter">
+                <select class="form-select form-select-sm" [(ngModel)]="selectedStatus" title="Filter by status">
+                  <option value="">All Status</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="generated">Generated</option>
+                </select>
+              </div>
+
+              <!-- Clear Button -->
+              <button class="btn btn-outline-danger btn-sm" (click)="onClear()"
+                *ngIf="selectedDate || selectedMonth || selectedYear || selectedDistillery || selectedStatus"
+                title="Clear all filters">
+                <i class="bi bi-x-circle"></i>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Permit Register Table -->
+          <div class="permit-register-table">
+            <div class="register-container">
+              <div class="register-header-bar">
+                <h5 class="register-table-title">
+                  <i class="bi bi-table me-2"></i>
+                  {{ getActiveTabTitle() }} Applications
+                </h5>
+                <div class="register-info">
+                  <span class="entries-count">{{ getFilteredData().length }} Applications</span>
+                </div>
+              </div>
+
+              <div class="table-responsive" *ngIf="getFilteredData().length > 0">
+                <table class="table register-table">
+                  <thead>
+                    <tr>
+                      <th class="sl-no">Sl. No.</th>
+                      <th class="ref-number">Ref. No</th>
+                      <th class="submission-date">App. Sub. Date</th>
+                      <th class="distillery-name">Distillery Name</th>
+                      <th class="status">Status</th>
+                      @if (activeTab !== "transit") {
+                        <th class="amount">Imp. Pass Fee Amt.</th>
                       }
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="6" class="empty-state">
-                      <p>No records found for the selected criteria</p>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+                      <th class="actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (permit of getFilteredData(); track permit.referenceNo; let i = $index) {
+                      <tr class="register-row">
+                        <td class="sl-no">{{ i + 1 }}</td>
+                        <td class="ref-number">
+                          <span class="ref-text">{{ permit.referenceNo }}</span>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ permit.submissionDate | date: "dd-MMM-yyyy" }}</span>
+                        </td>
+                        <td class="distillery-name">
+                          <span class="company-name">{{ permit.distilleryName }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(permit.status) }}">
+                            {{ getStatusDisplay(permit.status) }}
+                          </span>
+                        </td>
+                        @if (activeTab !== "transit") {
+                          <td class="amount">
+                            <span class="amount-value">₹{{ permit.amount | number: "1.2-2" }}</span>
+                          </td>
+                        }
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="viewApplication(permit)"
+                              title="View Application">
+                              <i class="bi bi-eye me-1"></i>
+                              VIEW APPLICATION
+                            </button>
+                            @if (canViewPaymentSlip(permit)) {
+                              <button class="btn btn-outline-warning btn-sm" (click)="viewPermitSlip(permit)"
+                                title="View Permit Slip">
+                                <i class="bi bi-file-earmark-text me-1"></i>
+                                View Permit Slip
+                              </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Empty State -->
+              <div class="empty-state" *ngIf="getFilteredData().length === 0">
+                <div class="empty-icon">
+                  <i class="bi bi-journal-x"></i>
+                </div>
+                <h5 class="empty-title">No Applications Found</h5>
+                <p class="empty-message">
+                  No {{ getActiveTabTitle().toLowerCase() }} applications match your current filter criteria.
+                </p>
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
     </div>

@@ -274,4 +274,38 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     };
     return titles[this.activeTab] || "Permit";
   }
+
+  // Summary card methods
+  getPendingCount(): number {
+    return this.getFilteredData().filter(permit => 
+      permit.status.toLowerCase().includes('pending')
+    ).length;
+  }
+
+  getApprovedCount(): number {
+    return this.getFilteredData().filter(permit => 
+      permit.status.toLowerCase().includes('approved') || 
+      permit.status.toLowerCase().includes('generated')
+    ).length;
+  }
+
+  getTotalAmount(): number {
+    return this.getFilteredData().reduce((total, permit) => total + permit.amount, 0);
+  }
+
+  // Status display methods
+  getStatusClass(status: string): string {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('pending')) return 'pending';
+    if (statusLower.includes('approved') || statusLower.includes('generated')) return 'approved';
+    if (statusLower.includes('rejected')) return 'rejected';
+    return 'default';
+  }
+
+  getStatusDisplay(status: string): string {
+    if (status.length > 50) {
+      return status.substring(0, 50) + '...';
+    }
+    return status;
+  }
 }
