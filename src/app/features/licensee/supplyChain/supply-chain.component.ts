@@ -46,6 +46,7 @@ export class SupplyChainComponent implements OnInit {
   filteredRevalidationData: TableData[] = [];
   filteredCancellationData: TableData[] = [];
   filteredTransitData: TableData[] = [];
+  filteredHologramData: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
 
@@ -77,6 +78,12 @@ export class SupplyChainComponent implements OnInit {
   transitMonthFilter: string = '';
   transitYearFilter: string = '';
   transitStatusFilter: string = '';
+  
+  // Filter properties for hologram
+  hologramDateFilter: string = '';
+  hologramMonthFilter: string = '';
+  hologramYearFilter: string = '';
+  hologramStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
@@ -274,6 +281,7 @@ export class SupplyChainComponent implements OnInit {
     this.filteredRevalidationData = [...this.revlidationData];
     this.filteredCancellationData = [...this.cancellationData];
     this.filteredTransitData = [...this.transitData];
+    this.filteredHologramData = [...this.hologramList];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -370,6 +378,7 @@ export class SupplyChainComponent implements OnInit {
     }
 
     this.hologramList = mapped;
+    this.filteredHologramData = [...this.hologramList];
   }
 
   private loadRequisitionData(): void {
@@ -1649,5 +1658,103 @@ End of Application
 
   getTotalTransitAmount(): number {
     return this.transitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  // Hologram filter methods
+  applyHologramFilters(): void {
+    console.log('Applying hologram filters:', {
+      dateFilter: this.hologramDateFilter,
+      monthFilter: this.hologramMonthFilter,
+      yearFilter: this.hologramYearFilter,
+      statusFilter: this.hologramStatusFilter
+    });
+
+    this.filteredHologramData = this.hologramList.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      // Parse the date from ISO format
+      const itemDate = new Date(item.date);
+
+      // Date filter (exact date match)
+      if (this.hologramDateFilter) {
+        const filterDate = new Date(this.hologramDateFilter);
+        matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+          itemDate.getMonth() === filterDate.getMonth() &&
+          itemDate.getDate() === filterDate.getDate();
+      }
+
+      // Month filter (month and year match)
+      if (this.hologramMonthFilter) {
+        const filterDate = new Date(this.hologramMonthFilter + '-01');
+        matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
+          itemDate.getMonth() === filterDate.getMonth();
+      }
+
+      // Year filter
+      if (this.hologramYearFilter) {
+        const filterYear = parseInt(this.hologramYearFilter);
+        matchesYear = itemDate.getFullYear() === filterYear;
+      }
+
+      // Status filter (exact match)
+      if (this.hologramStatusFilter) {
+        matchesStatus = item.status.toUpperCase() === this.hologramStatusFilter.toUpperCase();
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+      console.log('Hologram match for:', item.refNo, finalMatch);
+
+      return finalMatch;
+    });
+
+    console.log('Filtered hologram results:', this.filteredHologramData.length, 'out of', this.hologramList.length);
+
+    // Reset pagination to first page when filters are applied
+    this.resetPagination('hologram');
+  }
+
+  clearHologramFilters(): void {
+    this.hologramDateFilter = '';
+    this.hologramMonthFilter = '';
+    this.hologramYearFilter = '';
+    this.hologramStatusFilter = '';
+    this.filteredHologramData = [...this.hologramList];
+    this.resetPagination('hologram');
+  }
+
+  onHologramDateFilterChange(): void {
+    console.log('Hologram date filter changed to:', this.hologramDateFilter);
+    this.applyHologramFilters();
+  }
+
+  onHologramMonthFilterChange(): void {
+    console.log('Hologram month filter changed to:', this.hologramMonthFilter);
+    this.applyHologramFilters();
+  }
+
+  onHologramYearFilterChange(): void {
+    console.log('Hologram year filter changed to:', this.hologramYearFilter);
+    this.applyHologramFilters();
+  }
+
+  onHologramStatusFilterChange(): void {
+    console.log('Hologram status filter changed to:', this.hologramStatusFilter);
+    this.applyHologramFilters();
+  }
+
+  // Hologram summary methods
+  getHologramStatusCount(status: string): number {
+    return this.hologramList.filter(item =>
+      item.status.toUpperCase() === status.toUpperCase()
+    ).length;
+  }
+
+  getTotalHologramQuantity(): number {
+    return this.hologramList.reduce((total, item) => {
+      return total + (item.localQtyLakh || 0) + (item.exportQtyLakh || 0) + (item.defenceQtyLakh || 0);
+    }, 0);
   }
 }
