@@ -668,10 +668,12 @@ export class CommissionerDashboardComponent implements OnInit {
       case 'pending':
       case 'forwardedtocommissioner':
       case 'forwardedrevalidationtocommissioner':
+      case 'cancellation pending':
         return 'pending';
       case 'approved':
       case 'import permit generated':
       case 'approvedrevalidationbycommissioner':
+      case 'approved cancellation':
         return 'approved';
       case 'terminated':
       case 'cancelled':
@@ -682,5 +684,10 @@ export class CommissionerDashboardComponent implements OnInit {
       default:
         return 'generated';
     }
+  }
+
+  // Helper method for refund eligible count
+  getRefundEligibleCount(): number {
+    return this.getFilteredRecords().filter(record => record.brAmount > 0).length;
   }
 }

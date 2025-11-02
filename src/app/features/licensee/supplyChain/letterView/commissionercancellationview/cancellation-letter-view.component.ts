@@ -57,7 +57,7 @@ export class CancellationLetterViewComponent implements OnInit {
       {
         id: "8",
         referenceNo: "CAN/001/2025",
-        submissionDate: new Date("2025-09-08"),
+        submissionDate: new Date("2025-09-20"),
         distilleryName: "Sikkim Distilleries Ltd",
         status: "Cancellation Pending",
         brAmount: 25.0,
@@ -65,16 +65,16 @@ export class CancellationLetterViewComponent implements OnInit {
         originalPermitNo: "IBPS/02/EXCISE",
         originalPermitDate: new Date("2025-08-15"),
         reasonForCancellation:
-          "Change in business requirements - no longer need the permit",
+          "Business Closure",
         cancellationBRFilePath: "/assets/documents/cancellation-br-001.pdf",
         requestedBy: "Mr. Rajesh Kumar, Operations Manager",
         authorizedBy: "Mrs. Priya Sharma, Director",
-        cancellationDate: new Date("2025-09-08"),
+        cancellationDate: new Date("2025-09-20"),
       },
       {
         id: "9",
         referenceNo: "CAN/002/2025",
-        submissionDate: new Date("2025-09-14"),
+        submissionDate: new Date("2025-09-19"),
         distilleryName: "Darjeeling Artisan Pvt Ltd",
         status: "Approved Cancellation",
         brAmount: 40.0,
@@ -82,11 +82,79 @@ export class CancellationLetterViewComponent implements OnInit {
         originalPermitNo: "IBPS/04/EXCISE",
         originalPermitDate: new Date("2025-08-20"),
         reasonForCancellation:
-          "Permit no longer required due to project cancellation",
+          "Voluntary Surrender",
         cancellationBRFilePath: "/assets/documents/cancellation-br-002.pdf",
         requestedBy: "Mr. Amit Singh, General Manager",
         authorizedBy: "Mr. Vikram Das, Managing Director",
-        cancellationDate: new Date("2025-09-14"),
+        cancellationDate: new Date("2025-09-19"),
+      },
+      {
+        id: "10",
+        referenceNo: "CAN/003/2025",
+        submissionDate: new Date("2025-09-18"),
+        distilleryName: "Royal Sikkim Brewery",
+        status: "Approved Cancellation",
+        brAmount: 30.0,
+        cancellationAmount: 0.0,
+        originalPermitNo: "IBPS/05/EXCISE",
+        originalPermitDate: new Date("2025-08-10"),
+        reasonForCancellation:
+          "Non-Compliance",
+        cancellationBRFilePath: "/assets/documents/cancellation-br-003.pdf",
+        requestedBy: "Mr. Suresh Rai, Manager",
+        authorizedBy: "Mrs. Kamala Devi, Director",
+        cancellationDate: new Date("2025-09-18"),
+      },
+      {
+        id: "11",
+        referenceNo: "CAN/004/2025",
+        submissionDate: new Date("2025-09-17"),
+        distilleryName: "Himalayan Distilleries Pvt Ltd",
+        status: "Cancellation Pending",
+        brAmount: 35.0,
+        cancellationAmount: 0.0,
+        originalPermitNo: "IBPS/06/EXCISE",
+        originalPermitDate: new Date("2025-08-05"),
+        reasonForCancellation:
+          "License Transfer",
+        cancellationBRFilePath: "/assets/documents/cancellation-br-004.pdf",
+        requestedBy: "Mr. Deepak Sharma, Operations Head",
+        authorizedBy: "Mr. Ravi Kumar, CEO",
+        cancellationDate: new Date("2025-09-17"),
+      },
+      {
+        id: "12",
+        referenceNo: "CAN/005/2025",
+        submissionDate: new Date("2025-09-16"),
+        distilleryName: "Eastern Himalaya Distillery",
+        status: "Rejected Cancellation",
+        brAmount: 20.0,
+        cancellationAmount: 0.0,
+        originalPermitNo: "IBPS/07/EXCISE",
+        originalPermitDate: new Date("2025-07-30"),
+        reasonForCancellation:
+          "Financial Issues",
+        cancellationBRFilePath: "/assets/documents/cancellation-br-005.pdf",
+        requestedBy: "Mr. Binod Thapa, Manager",
+        authorizedBy: "Mrs. Sunita Rai, Director",
+        cancellationDate: new Date("2025-09-16"),
+      },
+      {
+        id: "13",
+        referenceNo: "CAN/006/2025",
+        submissionDate: new Date("2025-09-15"),
+        distilleryName: "Gangtok Premium Spirits",
+        status: "Cancellation Pending",
+        brAmount: 15.0,
+        cancellationAmount: 0.0,
+        originalPermitNo: "IBPS/08/EXCISE",
+        originalPermitDate: new Date("2025-07-25"),
+        reasonForCancellation:
+          "Regulatory Violation",
+        cancellationBRFilePath: "/assets/documents/cancellation-br-006.pdf",
+        requestedBy: "Mr. Tenzin Norbu, Operations Manager",
+        authorizedBy: "Mr. Lobsang Tashi, Managing Director",
+        cancellationDate: new Date("2025-09-15"),
       },
     ];
 
@@ -103,7 +171,7 @@ export class CancellationLetterViewComponent implements OnInit {
     this.router.navigate(["/dev-commissioner-dashboard"]);
   }
 
-  printLetter(): void {
+  printApplication(): void {
     if (!this.isBrowser) {
       console.warn('Print functionality not available in server-side rendering');
       return;

@@ -182,29 +182,29 @@ export class CommissionerDashboardComponent implements OnInit {
   // Sample data for cancellation applications (from commissioner's perspective)
   cancellationData: CommissionerTableData[] = [
     {
-      referenceNo: "CAN/BF701",
+      referenceNo: "CAN/001/2025",
       submissionDate: "20-Sep-2025",
       requestDate: "20-Sep-2025",
       distilleryName: "Sikkim Distilleries Ltd",
       status: "PENDING",
-      amount: "0.00",
+      amount: "15.00",
       priority: "high",
       cancellationReason: "Business Closure",
       licenseType: "Manufacturing License"
     },
     {
-      referenceNo: "CAN/BF702",
+      referenceNo: "CAN/002/2025",
       submissionDate: "19-Sep-2025",
       requestDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PENDING",
-      amount: "0.00",
+      distilleryName: "Darjeeling Artisan Pvt Ltd",
+      status: "APPROVED",
+      amount: "20.00",
       priority: "normal",
       cancellationReason: "Voluntary Surrender",
       licenseType: "Retail License"
     },
     {
-      referenceNo: "CAN/BF703",
+      referenceNo: "CAN/003/2025",
       submissionDate: "18-Sep-2025",
       requestDate: "18-Sep-2025",
       distilleryName: "Royal Sikkim Brewery",
@@ -215,7 +215,7 @@ export class CommissionerDashboardComponent implements OnInit {
       licenseType: "Manufacturing License"
     },
     {
-      referenceNo: "CAN/BF704",
+      referenceNo: "CAN/004/2025",
       submissionDate: "17-Sep-2025",
       requestDate: "17-Sep-2025",
       distilleryName: "Himalayan Distilleries Pvt Ltd",
@@ -226,7 +226,7 @@ export class CommissionerDashboardComponent implements OnInit {
       licenseType: "Wholesale License"
     },
     {
-      referenceNo: "CAN/BF705",
+      referenceNo: "CAN/005/2025",
       submissionDate: "16-Sep-2025",
       requestDate: "16-Sep-2025",
       distilleryName: "Eastern Himalaya Distillery",
@@ -237,7 +237,7 @@ export class CommissionerDashboardComponent implements OnInit {
       licenseType: "Manufacturing License"
     },
     {
-      referenceNo: "CAN/BF706",
+      referenceNo: "CAN/006/2025",
       submissionDate: "15-Sep-2025",
       requestDate: "15-Sep-2025",
       distilleryName: "Gangtok Premium Spirits",

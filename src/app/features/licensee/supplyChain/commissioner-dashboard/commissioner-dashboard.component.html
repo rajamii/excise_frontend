@@ -556,28 +556,516 @@
             </div>
             }
 
-            <!-- Other tabs content -->
+            <!-- Cancellation Tab Content -->
             @if (activeTab === "cancellation") {
-            <div class="text-center py-5">
-              <i class="bi bi-x-circle display-1 text-muted"></i>
-              <h4 class="mt-3">Cancellation Review</h4>
-              <p class="text-muted">Cancellation applications review functionality...</p>
+            <!-- Cancellation Register Header -->
+            <div class="cancellation-register-header">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                  <h4 class="register-title">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Cancellation Applications Review
+                  </h4>
+                  <p class="register-subtitle">Review and process permit cancellation requests from licensees</p>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-success">
+                    <i class="bi bi-download me-2"></i>
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <div class="summary-card total-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getFilteredRecords().length }}</h3>
+                      <p class="card-label">Total Cancellations</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card pending-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Cancellation Pending') }}</h3>
+                      <p class="card-label">Pending Review</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card approved-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Approved Cancellation') }}</h3>
+                      <p class="card-label">Approved</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card refund-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-currency-rupee"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getRefundEligibleCount() }}</h3>
+                      <p class="card-label">Refund Eligible</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compact Filter Section for Cancellation -->
+            <div class="compact-filter-section mb-3">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                  <i class="bi bi-funnel me-1"></i>
+                  <small class="text-muted">Filters:</small>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                  <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate"
+                    (change)="onSearch()" placeholder="Date" title="Filter by date">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="selectedStatus"
+                    (change)="onSearch()" title="Filter by status">
+                    <option value="">All Status</option>
+                    <option value="pending">Cancellation Pending</option>
+                    <option value="approved">Approved Cancellation</option>
+                    <option value="processing">Processing</option>
+                  </select>
+                </div>
+
+                <!-- Licensee Filter -->
+                <div class="compact-filter">
+                  <select class="form-select form-select-sm" [(ngModel)]="selectedDistillery"
+                    (change)="onSearch()" title="Filter by licensee">
+                    <option value="">All Licensees</option>
+                    <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
+                    <option value="mount-distilleries">Mount Distilleries Ltd</option>
+                    <option value="darjeeling-artisan">Darjeeling Artisan Pvt Ltd</option>
+                  </select>
+                </div>
+
+                <!-- Clear Button -->
+                @if (selectedDate || selectedStatus || selectedDistillery) {
+                <button class="btn btn-outline-danger btn-sm" (click)="onClear()"
+                  title="Clear all filters">
+                  <i class="bi bi-x-circle"></i>
+                  Clear
+                </button>
+                }
+              </div>
+            </div>
+
+            <!-- Cancellation Register Table -->
+            <div class="cancellation-register-table">
+              <div class="register-container">
+                <div class="register-header-bar">
+                  <h5 class="register-table-title">
+                    <i class="bi bi-table me-2"></i>
+                    Cancellation Applications
+                  </h5>
+                  <div class="register-info">
+                    <span class="entries-count">{{ getFilteredRecords().length }} Applications</span>
+                  </div>
+                </div>
+
+                @if (getFilteredRecords().length > 0) {
+                <div class="table-responsive">
+                  <table class="table register-table">
+                    <thead>
+                      <tr>
+                        <th class="sl-no">Sl. No.</th>
+                        <th class="ref-number">Reference No</th>
+                        <th class="submission-date">Submission Date</th>
+                        <th class="licensee-name">Licensee Name</th>
+                        <th class="status">Status</th>
+                        <th class="refund-amount">Refund Amount</th>
+                        <th class="cancellation-fee">Cancellation Fee</th>
+                        <th class="actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (record of getPaginatedRecords(); track record.id; let i = $index) {
+                      <tr class="register-row">
+                        <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                        <td class="ref-number">
+                          <span class="ref-text">{{ record.referenceNo }}</span>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ record.submissionDate | date:'dd-MMM-yyyy' }}</span>
+                        </td>
+                        <td class="licensee-name">
+                          <span class="company-name">{{ record.distilleryName }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(record.status) }}">
+                            {{ record.status }}
+                          </span>
+                        </td>
+                        <td class="refund-amount">
+                          <span class="amount-value text-success">₹{{ record.brAmount | number:'1.2-2' }}</span>
+                        </td>
+                        <td class="cancellation-fee">
+                          <span class="amount-value text-danger">₹{{ record.cancellationAmount | number:'1.2-2' }}</span>
+                        </td>
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="viewApprovalCancellation(record)"
+                              title="Review Application">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            @if (record.status === 'Cancellation Pending') {
+                            <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(record)"
+                              title="Approve Cancellation">
+                              <i class="bi bi-check"></i>
+                            </button>
+                            }
+                            @if (record.cancellationBRFilePath) {
+                            <button class="btn btn-outline-info btn-sm" (click)="viewCancellationBR(record)"
+                              title="View Bank Receipt">
+                              <i class="bi bi-receipt"></i>
+                            </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                }
+
+                <!-- Empty State -->
+                <div class="empty-state" @if (getFilteredRecords().length === 0)>
+                  <div class="empty-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+                  <h5 class="empty-title">No Cancellation Applications Found</h5>
+                  <p class="empty-message">
+                    No cancellation applications match your current filter criteria.
+                  </p>
+                </div>
+              </div>
             </div>
             }
 
+            <!-- Transit Tab Content -->
             @if (activeTab === "transit") {
-            <div class="text-center py-5">
-              <i class="bi bi-truck display-1 text-muted"></i>
-              <h4 class="mt-3">Transit Review</h4>
-              <p class="text-muted">Transit permit review functionality...</p>
+            <!-- Transit Register Header -->
+            <div class="transit-register-header">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                  <h4 class="register-title">
+                    <i class="bi bi-truck me-2"></i>
+                    Transit Permit Applications Review
+                  </h4>
+                  <p class="register-subtitle">Review and process transit permit requests from licensees</p>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-success">
+                    <i class="bi bi-download me-2"></i>
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <div class="summary-card total-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getFilteredRecords().length }}</h3>
+                      <p class="card-label">Total Transit Permits</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card pending-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Pending') }}</h3>
+                      <p class="card-label">Pending Review</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card approved-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Approved') }}</h3>
+                      <p class="card-label">Approved</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card forwarded-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-arrow-right-circle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Forwarded') }}</h3>
+                      <p class="card-label">Forwarded</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transit Register Table -->
+            <div class="transit-register-table">
+              <div class="register-container">
+                <div class="register-header-bar">
+                  <h5 class="register-table-title">
+                    <i class="bi bi-table me-2"></i>
+                    Transit Permit Applications
+                  </h5>
+                  <div class="register-info">
+                    <span class="entries-count">{{ getFilteredRecords().length }} Applications</span>
+                  </div>
+                </div>
+
+                @if (getFilteredRecords().length > 0) {
+                <div class="table-responsive">
+                  <table class="table register-table">
+                    <thead>
+                      <tr>
+                        <th class="sl-no">Sl. No.</th>
+                        <th class="ref-number">Reference No</th>
+                        <th class="submission-date">Submission Date</th>
+                        <th class="licensee-name">Licensee Name</th>
+                        <th class="status">Status</th>
+                        <th class="actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (record of getPaginatedRecords(); track record.id; let i = $index) {
+                      <tr class="register-row">
+                        <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                        <td class="ref-number">
+                          <span class="ref-text">{{ record.referenceNo }}</span>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ record.submissionDate | date:'dd-MMM-yyyy' }}</span>
+                        </td>
+                        <td class="licensee-name">
+                          <span class="company-name">{{ record.distilleryName }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(record.status) }}">
+                            {{ record.status }}
+                          </span>
+                        </td>
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="viewTransitApplication(record)"
+                              title="View Application">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            @if (record.status === 'Pending') {
+                            <button class="btn btn-outline-success btn-sm" (click)="approveApplication(record)"
+                              title="Approve">
+                              <i class="bi bi-check"></i>
+                            </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                }
+
+                <!-- Empty State -->
+                @if (getFilteredRecords().length === 0) {
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+                  <h5 class="empty-title">No Transit Applications Found</h5>
+                  <p class="empty-message">
+                    No transit permit applications match your current filter criteria.
+                  </p>
+                </div>
+                }
+              </div>
             </div>
             }
 
+            <!-- Hologram Tab Content -->
             @if (activeTab === "hologram") {
-            <div class="text-center py-5">
-              <i class="bi bi-qr-code display-1 text-muted"></i>
-              <h4 class="mt-3">Hologram Review</h4>
-              <p class="text-muted">Hologram request review functionality...</p>
+            <!-- Hologram Register Header -->
+            <div class="hologram-register-header">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                  <h4 class="register-title">
+                    <i class="bi bi-qr-code me-2"></i>
+                    Hologram Applications Review
+                  </h4>
+                  <p class="register-subtitle">Review and process hologram requests from licensees</p>
+                </div>
+                <div class="header-actions">
+                  <button class="btn btn-success">
+                    <i class="bi bi-download me-2"></i>
+                    Export Report
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <div class="summary-card total-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-list-ul"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getFilteredRecords().length }}</h3>
+                      <p class="card-label">Total Hologram Requests</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card pending-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-clock"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Pending') }}</h3>
+                      <p class="card-label">Pending Review</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card approved-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Approved') }}</h3>
+                      <p class="card-label">Approved</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="summary-card it-cell-requests">
+                    <div class="card-icon">
+                      <i class="bi bi-arrow-right-circle"></i>
+                    </div>
+                    <div class="card-content">
+                      <h3 class="card-value">{{ getStatusCount('Forwarded to IT Cell') }}</h3>
+                      <p class="card-label">Forwarded to IT Cell</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Hologram Register Table -->
+            <div class="hologram-register-table">
+              <div class="register-container">
+                <div class="register-header-bar">
+                  <h5 class="register-table-title">
+                    <i class="bi bi-table me-2"></i>
+                    Hologram Applications
+                  </h5>
+                  <div class="register-info">
+                    <span class="entries-count">{{ getFilteredRecords().length }} Applications</span>
+                  </div>
+                </div>
+
+                @if (getFilteredRecords().length > 0) {
+                <div class="table-responsive">
+                  <table class="table register-table">
+                    <thead>
+                      <tr>
+                        <th class="sl-no">Sl. No.</th>
+                        <th class="ref-number">Reference No</th>
+                        <th class="submission-date">Submission Date</th>
+                        <th class="company-name">Company Name</th>
+                        <th class="total-qty">Total Qty (Lakh)</th>
+                        <th class="status">Status</th>
+                        <th class="actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (record of getPaginatedRecords(); track record.id; let i = $index) {
+                      <tr class="register-row">
+                        <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                        <td class="ref-number">
+                          <span class="ref-text">{{ record.referenceNo }}</span>
+                        </td>
+                        <td class="submission-date">
+                          <span class="date-text">{{ record.submissionDate | date:'dd-MMM-yyyy' }}</span>
+                        </td>
+                        <td class="company-name">
+                          <span class="company-name">{{ record.companyName }}</span>
+                        </td>
+                        <td class="total-qty">
+                          <span class="qty-value">{{ getHologramTotalQty(record) }}</span>
+                        </td>
+                        <td class="status">
+                          <span class="status-badge status-{{ getStatusClass(record.status) }}">
+                            {{ record.status }}
+                          </span>
+                        </td>
+                        <td class="actions">
+                          <div class="action-buttons">
+                            <button class="btn btn-outline-primary btn-sm" (click)="viewHologramApplication(record)"
+                              title="View Application">
+                              <i class="bi bi-eye"></i>
+                            </button>
+                            @if (record.status === 'Pending') {
+                            <button class="btn btn-outline-info btn-sm" (click)="forwardToITCell(record)"
+                              title="Forward to IT Cell">
+                              <i class="bi bi-arrow-right"></i>
+                            </button>
+                            }
+                          </div>
+                        </td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                }
+
+                <!-- Empty State -->
+                @if (getFilteredRecords().length === 0) {
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <i class="bi bi-journal-x"></i>
+                  </div>
+                  <h5 class="empty-title">No Hologram Applications Found</h5>
+                  <p class="empty-message">
+                    No hologram applications match your current filter criteria.
+                  </p>
+                </div>
+                }
+              </div>
             </div>
             }
 
