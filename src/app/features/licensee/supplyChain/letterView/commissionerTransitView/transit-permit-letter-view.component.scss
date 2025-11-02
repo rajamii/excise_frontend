@@ -1,4 +1,4 @@
-.transit-permit-letter-view {
+.transitviewlevel1-container {
   min-height: 100vh;
   background-color: #f8f9fa;
 }
@@ -69,17 +69,6 @@
   font-weight: 600;
 }
 
-.product-table {
-  .table-info th {
-    background-color: #17a2b8 !important;
-    color: white !important;
-  }
-  
-  .bg-info {
-    background-color: #17a2b8 !important;
-  }
-}
-
 .table-light td {
   background-color: #f8f9fa !important;
 }
@@ -105,14 +94,14 @@
   padding: 0.5rem 1rem;
 }
 
-.btn-info {
-  background-color: #17a2b8;
-  border-color: #17a2b8;
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
 }
 
-.btn-info:hover {
-  background-color: #138496;
-  border-color: #117a8b;
+.btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
 }
 
 .printable-content {
@@ -121,17 +110,7 @@
   overflow: hidden;
 }
 
-.card {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 @media print {
-  @page {
-    size: A4;
-    margin: 0.4in;
-  }
-
   .no-print {
     display: none !important;
   }
@@ -140,230 +119,18 @@
     display: none !important;
   }
   
-  .transit-permit-letter-view {
+  .transitviewlevel1-container {
     background: white !important;
-    min-height: auto !important;
   }
   
   .application-container {
     max-width: none !important;
     padding: 0 !important;
-    margin: 0 !important;
   }
   
   .printable-content {
     box-shadow: none !important;
     border: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    page-break-inside: avoid;
-  }
-
-  .application-header {
-    margin-bottom: 0.5rem !important;
-    padding: 0.5rem !important;
-  }
-
-  .application-content {
-    padding: 0.25rem !important;
-  }
-
-  // Ultra compact header
-  .application-header .d-flex {
-    gap: 1rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-
-  .application-header .d-flex img {
-    height: 35px !important;
-  }
-
-  .application-header .fs-5 {
-    font-size: 0.8rem !important;
-    line-height: 1.1 !important;
-  }
-
-  .application-header .fs-3 {
-    font-size: 1rem !important;
-    margin-bottom: 0.25rem !important;
-    line-height: 1.1 !important;
-  }
-
-  .application-header hr {
-    margin: 0.25rem auto !important;
-  }
-
-  // Ultra compact sections
-  .row.mb-4 {
-    margin-bottom: 0.5rem !important;
-  }
-
-  .mb-4 {
-    margin-bottom: 0.5rem !important;
-  }
-
-  .mb-3 {
-    margin-bottom: 0.25rem !important;
-  }
-
-  .p-3 {
-    padding: 0.5rem !important;
-  }
-
-  .pb-2 {
-    padding-bottom: 0.1rem !important;
-  }
-
-  // Ultra compact tables
-  .table td,
-  .table th {
-    padding: 0.25rem !important;
-    font-size: 0.75rem !important;
-    line-height: 1.1 !important;
-  }
-
-  .table-info th {
-    font-size: 0.65rem !important;
-    padding: 0.2rem !important;
-    line-height: 1 !important;
-  }
-
-  // Ultra compact text
-  h5 {
-    font-size: 0.9rem !important;
-    margin-bottom: 0.25rem !important;
-    line-height: 1.1 !important;
-  }
-
-  p {
-    margin-bottom: 0.15rem !important;
-    font-size: 0.75rem !important;
-    line-height: 1.2 !important;
-  }
-
-  .badge {
-    font-size: 0.65rem !important;
-    padding: 0.15rem 0.3rem !important;
-  }
-
-  // Compact the transit info
-  .transit-info p,
-  .status-info p {
-    margin-bottom: 0.1rem !important;
-  }
-
-  .transit-info span.text-muted,
-  .status-info span.text-muted {
-    width: 100px !important;
-    font-size: 0.7rem !important;
-  }
-
-  // Ultra compact product details table
-  .table-bordered {
-    border-width: 1px !important;
-  }
-
-  .table-light td {
-    font-size: 0.7rem !important;
-  }
-
-  // Remove extra spacing
-  .border.rounded {
-    border-radius: 0.2rem !important;
-  }
-
-  // Ensure content fits on single page
-  .printable-content {
-    max-height: 9.5in;
-    overflow: hidden;
-  }
-
-  // Compact borders
-  .border {
-    border-width: 1px !important;
-  }
-
-  // Reduce table footer spacing
-  .table tfoot tr {
-    line-height: 1 !important;
-  }
-
-  .table tfoot td {
-    padding: 0.2rem !important;
-    font-size: 0.7rem !important;
-  }
-
-  // Compact column headers in product table
-  .table thead th {
-    font-size: 0.6rem !important;
-    padding: 0.2rem !important;
-    line-height: 1 !important;
-  }
-
-  // Remove unnecessary margins
-  .text-center.mb-4 {
-    margin-bottom: 0.5rem !important;
-  }
-
-  // Compact the status badges
-  .bg-success,
-  .bg-info,
-  .bg-warning {
-    font-size: 0.6rem !important;
-    padding: 0.1rem 0.25rem !important;
-  }
-
-  // Force single page layout
-  * {
-    page-break-inside: avoid !important;
-  }
-
-  // Optimize table layout
-  .table-responsive {
-    overflow: visible !important;
-  }
-
-  // Compact the product table headers
-  .table thead th br {
-    display: none !important;
-  }
-
-  .table thead th {
-    white-space: nowrap !important;
-    text-overflow: ellipsis !important;
-    overflow: hidden !important;
-  }
-
-  // Ensure footer totals are compact
-  .table tfoot {
-    font-size: 0.65rem !important;
-  }
-
-  // Remove any extra spacing from Bootstrap classes
-  .gap-3 {
-    gap: 0.25rem !important;
-  }
-
-  .me-1,
-  .me-2,
-  .me-3 {
-    margin-right: 0.1rem !important;
-  }
-
-  .ms-2 {
-    margin-left: 0.1rem !important;
-  }
-
-  // Compact the two-column layout
-  .col-md-6 {
-    padding-left: 0.25rem !important;
-    padding-right: 0.25rem !important;
-  }
-
-  // Ensure the entire content fits
-  .application-content {
-    max-height: 8.5in !important;
-    overflow: hidden !important;
   }
 }
 
@@ -387,10 +154,5 @@
     width: auto;
     display: block;
     margin-bottom: 0.25rem;
-  }
-  
-  .btn-lg {
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
   }
 }

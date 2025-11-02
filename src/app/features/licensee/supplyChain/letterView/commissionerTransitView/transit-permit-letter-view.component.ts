@@ -94,118 +94,220 @@ export class TransitPermitLetterViewComponent implements OnInit {
     // Sample data - in a real application, this would be fetched from an API
     const sampleData: TransitPermitData[] = [
       {
-        id: "13",
-        referenceNo: "TRP/14/EXCISE",
-        submissionDate: new Date("2025-10-30"),
+        id: "1",
+        referenceNo: "TRN/BF801",
+        submissionDate: new Date("2025-09-22"),
         distilleryName: "Sikkim Distilleries Ltd",
-        status: "TRANSIT PERMIT ISSUED",
-        brAmount: 0,
+        status: "PENDING",
+        brAmount: 2500,
         permitType: "Alcohol Transit Permit",
-        vehicleNumber: "SK 01 AB 1234",
+        vehicleNumber: "SK01AB1234",
         driverName: "Rajesh Kumar",
         driverLicense: "DL-1234567890",
         fromLocation: "Gangtok, Sikkim",
-        toLocation: "Gangtok, Sikkim",
+        toLocation: "Delhi",
         goodsDescription: "Royal Stag 180ml",
-        quantity: 1,
+        quantity: 100,
         unit: "Cases",
-        routeDetails: "Gangtok - Siliguri Highway via Rangpo",
+        routeDetails: "Gangtok - Delhi via Rangpo and NH-31",
         checkpostEntry: "Rangpo Checkpost",
         checkpostExit: "Melli Checkpost",
         validityPeriod: 7,
         issuedBy: "Excise Officer",
-        issuedDate: new Date("2025-10-30"),
-        // New fields for letter format
+        issuedDate: new Date("2025-09-22"),
         soleDistributor: "M/s Karma Chopel Bhutia",
-        unitLocation: "Rangpo (Sikkim)",
-        salesDepotLocation: "Siliguri, West Bengal",
+        unitLocation: "Gangtok (Sikkim)",
+        salesDepotLocation: "Delhi",
         brandName: "Royal Stag",
-        // Product details
         size: "180ml",
-        cases: "1",
+        cases: "100",
         educationCess: "15.5",
         exciseDuty: "125",
         additionalExcise: "45",
-        educationCessTotal: "15.50",
-        exciseDutyTotal: "125.00",
-        additionalExciseTotal: "45.00",
-        permitFee: "185.5",
+        educationCessTotal: "1550.00",
+        exciseDutyTotal: "12500.00",
+        additionalExciseTotal: "4500.00",
+        permitFee: "2500.00",
       },
       {
-        id: "14",
-        referenceNo: "TP/002/2025",
-        submissionDate: new Date("2025-01-21"),
-        distilleryName: "Mount Distilleries Ltd",
-        status: "Approved",
-        brAmount: 0,
+        id: "2",
+        referenceNo: "TRN/BF802",
+        submissionDate: new Date("2025-09-21"),
+        distilleryName: "Himalayan Distilleries Pvt Ltd",
+        status: "APPROVED",
+        brAmount: 3200,
         permitType: "Alcohol Transit Permit",
-        vehicleNumber: "SK-02-CD-5678",
+        vehicleNumber: "MH12CD5678",
         driverName: "Amit Singh",
         driverLicense: "DL-9876543210",
         fromLocation: "Namchi, Sikkim",
-        toLocation: "Darjeeling, West Bengal",
-        goodsDescription: "Molasses ENA (96.0% strength)",
-        quantity: 1500,
-        unit: "BL",
-        routeDetails: "Namchi - Darjeeling via Melli",
+        toLocation: "Mumbai",
+        goodsDescription: "Premium Whiskey 750ml",
+        quantity: 150,
+        unit: "Cases",
+        routeDetails: "Namchi - Mumbai via Siliguri and NH-6",
         checkpostEntry: "Melli Checkpost",
         checkpostExit: "Kurseong Checkpost",
         validityPeriod: 10,
         issuedBy: "Senior Excise Officer",
-        issuedDate: new Date("2025-01-21"),
-        // New fields for letter format
-        soleDistributor: "Mount Distributors Pvt Ltd",
+        issuedDate: new Date("2025-09-21"),
+        soleDistributor: "Himalayan Distributors Pvt Ltd",
         unitLocation: "Namchi (Sikkim)",
-        salesDepotLocation: "Darjeeling, West Bengal",
-        brandName: "Mount Heritage ENA",
-        // Product details
+        salesDepotLocation: "Mumbai, Maharashtra",
+        brandName: "Himalayan Premium",
         size: "750ml",
-        cases: "2",
+        cases: "150",
         educationCess: "20.0",
         exciseDuty: "150.0",
         additionalExcise: "50.0",
-        educationCessTotal: "40.00",
-        exciseDutyTotal: "300.00",
-        additionalExciseTotal: "100.00",
-        permitFee: "440.0",
+        educationCessTotal: "3000.00",
+        exciseDutyTotal: "22500.00",
+        additionalExciseTotal: "7500.00",
+        permitFee: "3200.0",
       },
       {
-        id: "15",
-        referenceNo: "TP/003/2025",
-        submissionDate: new Date("2025-01-22"),
-        distilleryName: "Darjeeling Artisan Pvt Ltd",
-        status: "Forwarded",
-        brAmount: 0,
+        id: "3",
+        referenceNo: "TRN/BF803",
+        submissionDate: new Date("2025-09-20"),
+        distilleryName: "Royal Sikkim Brewery",
+        status: "ISSUED",
+        brAmount: 1800,
         permitType: "Alcohol Transit Permit",
-        vehicleNumber: "SK-03-EF-9012",
+        vehicleNumber: "WB03EF9012",
         driverName: "Vikram Das",
         driverLicense: "DL-1122334455",
         fromLocation: "Pelling, Sikkim",
-        toLocation: "Kolkata, West Bengal",
-        goodsDescription: "Rectified Spirit (94.5% strength)",
-        quantity: 800,
-        unit: "BL",
-        routeDetails: "Pelling - Kolkata via Rangpo and Siliguri",
+        toLocation: "Kolkata",
+        goodsDescription: "Beer Bottles 650ml",
+        quantity: 200,
+        unit: "Cases",
+        routeDetails: "Pelling - Kolkata via Rangpo and NH-31A",
         checkpostEntry: "Rangpo Checkpost",
         checkpostExit: "Panitanki Checkpost",
         validityPeriod: 15,
         issuedBy: "Excise Inspector",
-        issuedDate: new Date("2025-01-22"),
-        // New fields for letter format
-        soleDistributor: "Artisan Distributors",
+        issuedDate: new Date("2025-09-20"),
+        soleDistributor: "Royal Distributors",
         unitLocation: "Pelling (Sikkim)",
         salesDepotLocation: "Kolkata, West Bengal",
-        brandName: "Artisan Premium Spirit",
-        // Product details
+        brandName: "Royal Beer",
+        size: "650ml",
+        cases: "200",
+        educationCess: "8.0",
+        exciseDuty: "75.0",
+        additionalExcise: "25.0",
+        educationCessTotal: "1600.00",
+        exciseDutyTotal: "15000.00",
+        additionalExciseTotal: "5000.00",
+        permitFee: "1800.0",
+      },
+      {
+        id: "4",
+        referenceNo: "TRN/BF804",
+        submissionDate: new Date("2025-09-19"),
+        distilleryName: "Mountain View Distilleries",
+        status: "PROCESSING",
+        brAmount: 2100,
+        permitType: "Alcohol Transit Permit",
+        vehicleNumber: "KA05GH3456",
+        driverName: "Suresh Kumar",
+        driverLicense: "DL-5566778899",
+        fromLocation: "Gyalshing, Sikkim",
+        toLocation: "Bangalore",
+        goodsDescription: "Mountain Whiskey 375ml",
+        quantity: 120,
+        unit: "Cases",
+        routeDetails: "Gyalshing - Bangalore via Siliguri and NH-44",
+        checkpostEntry: "Melli Checkpost",
+        checkpostExit: "Bagdogra Checkpost",
+        validityPeriod: 12,
+        issuedBy: "Assistant Excise Officer",
+        issuedDate: new Date("2025-09-19"),
+        soleDistributor: "Mountain View Distributors",
+        unitLocation: "Gyalshing (Sikkim)",
+        salesDepotLocation: "Bangalore, Karnataka",
+        brandName: "Mountain View",
         size: "375ml",
-        cases: "3",
+        cases: "120",
+        educationCess: "12.0",
+        exciseDuty: "100.0",
+        additionalExcise: "35.0",
+        educationCessTotal: "1440.00",
+        exciseDutyTotal: "12000.00",
+        additionalExciseTotal: "4200.00",
+        permitFee: "2100.0",
+      },
+      {
+        id: "5",
+        referenceNo: "TRN/BF805",
+        submissionDate: new Date("2025-09-18"),
+        distilleryName: "Eastern Himalaya Distillery",
+        status: "PENDING",
+        brAmount: 2800,
+        permitType: "Alcohol Transit Permit",
+        vehicleNumber: "TN09IJ7890",
+        driverName: "Ravi Sharma",
+        driverLicense: "DL-3344556677",
+        fromLocation: "Soreng, Sikkim",
+        toLocation: "Chennai",
+        goodsDescription: "Premium Rum 750ml",
+        quantity: 180,
+        unit: "Cases",
+        routeDetails: "Soreng - Chennai via Siliguri and NH-16",
+        checkpostEntry: "Rangpo Checkpost",
+        checkpostExit: "Melli Checkpost",
+        validityPeriod: 14,
+        issuedBy: "Excise Officer",
+        issuedDate: new Date("2025-09-18"),
+        soleDistributor: "Eastern Himalaya Distributors",
+        unitLocation: "Soreng (Sikkim)",
+        salesDepotLocation: "Chennai, Tamil Nadu",
+        brandName: "Himalayan Rum",
+        size: "750ml",
+        cases: "180",
         educationCess: "18.0",
         exciseDuty: "140.0",
-        additionalExcise: "42.0",
-        educationCessTotal: "54.00",
-        exciseDutyTotal: "420.00",
-        additionalExciseTotal: "126.00",
-        permitFee: "600.0",
+        additionalExcise: "48.0",
+        educationCessTotal: "3240.00",
+        exciseDutyTotal: "25200.00",
+        additionalExciseTotal: "8640.00",
+        permitFee: "2800.0",
+      },
+      {
+        id: "6",
+        referenceNo: "TRN/BF806",
+        submissionDate: new Date("2025-09-17"),
+        distilleryName: "Gangtok Premium Spirits",
+        status: "REJECTED",
+        brAmount: 1500,
+        permitType: "Alcohol Transit Permit",
+        vehicleNumber: "AS01KL2345",
+        driverName: "Binod Thapa",
+        driverLicense: "DL-7788990011",
+        fromLocation: "Gangtok, Sikkim",
+        toLocation: "Guwahati",
+        goodsDescription: "Premium Vodka 750ml",
+        quantity: 80,
+        unit: "Cases",
+        routeDetails: "Gangtok - Guwahati via Rangpo and NH-31",
+        checkpostEntry: "Rangpo Checkpost",
+        checkpostExit: "Melli Checkpost",
+        validityPeriod: 8,
+        issuedBy: "Excise Inspector",
+        issuedDate: new Date("2025-09-17"),
+        soleDistributor: "Gangtok Premium Distributors",
+        unitLocation: "Gangtok (Sikkim)",
+        salesDepotLocation: "Guwahati, Assam",
+        brandName: "Premium Vodka",
+        size: "750ml",
+        cases: "80",
+        educationCess: "22.0",
+        exciseDuty: "160.0",
+        additionalExcise: "55.0",
+        educationCessTotal: "1760.00",
+        exciseDutyTotal: "12800.00",
+        additionalExciseTotal: "4400.00",
+        permitFee: "1500.0",
       },
     ];
 
@@ -222,11 +324,39 @@ export class TransitPermitLetterViewComponent implements OnInit {
     this.router.navigate(["/dev-commissioner-dashboard"]);
   }
 
-  printLetter(): void {
-    if (this.isBrowser) {
-      // Use the browser's built-in print functionality with optimized CSS
-      window.print();
-    }
+  printApplication(): void {
+    const printable = document.getElementById("transitPermitPrintSection")?.innerHTML || "";
+    const styles = Array.from(
+      document.querySelectorAll('link[rel="stylesheet"], style'),
+    )
+      .map((el) => (el as HTMLElement).outerHTML)
+      .join("");
+    const win = window.open("", "_blank", "width=900,height=1000");
+    if (!win) return;
+    win.document.open();
+    const ref = this.transitPermitData?.referenceNo || "";
+    win.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>Transit Permit Application - ${ref}</title>
+          ${styles}
+          <style>
+            @page { size: A4; margin: 12mm; }
+            body { background: #fff; }
+            .no-print { display:none !important; }
+            .printable-content, .printable-content * { visibility: visible !important; }
+          </style>
+        </head>
+        <body>
+          ${printable}
+        </body>
+      </html>`);
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+      win.close();
+    };
   }
 
   getStatusText(status: string): string {
@@ -260,5 +390,41 @@ export class TransitPermitLetterViewComponent implements OnInit {
       default:
         return "badge bg-secondary";
     }
+  }
+
+  calculateEducationCessTotal(): string {
+    if (!this.transitPermitData) {
+      return '15.50';
+    }
+    
+    const cess = parseFloat(this.transitPermitData.educationCess || '15.50');
+    const cases = parseInt(this.transitPermitData.cases || '1');
+    const total = cess * cases;
+    
+    return total.toFixed(2);
+  }
+
+  calculateExciseDutyTotal(): string {
+    if (!this.transitPermitData) {
+      return '125.00';
+    }
+    
+    const duty = parseFloat(this.transitPermitData.exciseDuty || '125.00');
+    const cases = parseInt(this.transitPermitData.cases || '1');
+    const total = duty * cases;
+    
+    return total.toFixed(2);
+  }
+
+  calculateAdditionalExciseTotal(): string {
+    if (!this.transitPermitData) {
+      return '45.00';
+    }
+    
+    const excise = parseFloat(this.transitPermitData.additionalExcise || '45.00');
+    const cases = parseInt(this.transitPermitData.cases || '1');
+    const total = excise * cases;
+    
+    return total.toFixed(2);
   }
 }
