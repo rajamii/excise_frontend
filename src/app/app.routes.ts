@@ -310,6 +310,13 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/registers/hologram-daily-register/hologram-daily-register.component"
       ).then((m) => m.HologramDailyRegisterComponent),
   },
+  {
+    path: "dev-hologram-overview",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component"
+      ).then((m) => m.HologramoveriewComponent),
+  },
 
   // Role Protected modules
   {

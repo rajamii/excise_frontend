@@ -126,135 +126,7 @@
     }
   }
 
-  // Add Form Section
-  .add-form-section {
-    padding: 0 2rem;
-    margin-bottom: 2rem;
 
-    .form-card {
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      border: 1px solid #e2e8f0;
-      overflow: hidden;
-
-      .form-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1.5rem 2rem;
-
-        .form-title {
-          margin: 0;
-          font-size: 1.25rem;
-          font-weight: 600;
-        }
-      }
-
-      .form-body {
-        padding: 2rem;
-
-        .form-group {
-          margin-bottom: 1rem;
-
-          .form-label {
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 0.5rem;
-            display: block;
-
-            .required {
-              color: #ef4444;
-            }
-          }
-
-          .form-control, .form-select {
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 0.75rem;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-
-            &:focus {
-              border-color: #667eea;
-              box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-              outline: none;
-            }
-
-            &.calculated-field {
-              background-color: #f9fafb;
-              color: #6b7280;
-              font-weight: 600;
-
-              &.total-field {
-                background-color: #eff6ff;
-                color: #1d4ed8;
-                border-color: #3b82f6;
-              }
-            }
-          }
-        }
-
-        .declaration-notice {
-          margin-bottom: 1.5rem;
-
-          .alert {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            color: #92400e;
-            font-size: 0.95rem;
-            margin: 0;
-
-            i {
-              color: #f59e0b;
-              font-size: 1.1rem;
-            }
-
-            strong {
-              color: #78350f;
-            }
-          }
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-          margin-top: 2rem;
-          padding-top: 1.5rem;
-          border-top: 1px solid #e5e7eb;
-
-          .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-
-            &.btn-success {
-              background: linear-gradient(135deg, #10b981, #059669);
-              border: none;
-
-              &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-              }
-            }
-
-            &.btn-outline-secondary {
-              border: 2px solid #d1d5db;
-              color: #6b7280;
-
-              &:hover {
-                background-color: #f9fafb;
-                border-color: #9ca3af;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
 
   // Filter Section
   .filter-section {
@@ -640,7 +512,6 @@
     }
 
     .stock-summary-section,
-    .add-form-section,
     .filter-section,
     .register-section {
       padding-left: 1rem;

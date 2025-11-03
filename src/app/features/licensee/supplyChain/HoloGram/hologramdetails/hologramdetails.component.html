@@ -18,10 +18,11 @@
                     <i class="bi bi-file-earmark-text me-2"></i>
                     Hologram Requests
                 </button>
-                <button class="btn btn-primary" (click)="showAddNewRecord()" *ngIf="!showAddForm">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Record Arrival
+                <button class="btn btn-outline-info me-2" (click)="openHologramOverview()">
+                    <i class="bi bi-pie-chart me-2"></i>
+                    Hologram Overview
                 </button>
+
             </div>
         </div>
     </div>
@@ -65,81 +66,6 @@
         </div>
     </div>
 
-    <!-- Add New Record Form -->
-    <div class="add-form-section" *ngIf="showAddForm">
-        <div class="form-card">
-            <div class="form-header">
-                <h5 class="form-title">
-                    <i class="bi bi-plus-circle me-2"></i>
-                    Record Hologram Arrival
-                </h5>
-            </div>
-            <div class="form-body">
-                <div class="row g-4">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">Arrival Date <span class="required">*</span></label>
-                            <input type="date" class="form-control" [(ngModel)]="newRecord.date" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">Our Ref. No. <span class="required">*</span></label>
-                            <input type="text" class="form-control" placeholder="e.g., HRQ/2024/001"
-                                [(ngModel)]="newRecord.ourRefNo" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">Cartoon Number</label>
-                            <input type="text" class="form-control" placeholder="e.g., CTN001"
-                                [(ngModel)]="newRecord.cartoonNumber">
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">From Serial Number <span class="required">*</span></label>
-                            <input type="text" class="form-control" placeholder="e.g., HG001001"
-                                [(ngModel)]="newRecord.fromSerial" (input)="calculateHologramCount()" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">To Serial Number <span class="required">*</span></label>
-                            <input type="text" class="form-control" placeholder="e.g., HG001500"
-                                [(ngModel)]="newRecord.toSerial" (input)="calculateHologramCount()" required>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label class="form-label">Total No. of Holograms</label>
-                            <input type="number" class="form-control calculated-field"
-                                [(ngModel)]="newRecord.numberOfHolograms" readonly>
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="declaration-notice">
-                            <div class="alert alert-warning">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                <strong>Important Declaration:</strong> Once saved, hologram register entries cannot be
-                                modified or deleted.
-                                Please verify all information carefully before saving.
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button class="btn btn-success" (click)="saveNewRecord()">
-                                <i class="bi bi-check-lg me-2"></i>Save Entry
-                            </button>
-                            <button class="btn btn-outline-secondary" (click)="hideAddForm()">
-                                <i class="bi bi-x-lg me-2"></i>Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Filter Section -->
     <div class="filter-section">

@@ -1,6 +1,7 @@
 import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 export interface HologramRecord {
   id: number;
@@ -57,7 +58,7 @@ export interface SerialFilters {
 })
 export class HologramdetailsComponent implements OnInit {
   @Output() hologramRequestsClicked = new EventEmitter<void>();
-  
+
   hologramRecords: HologramRecord[] = [];
   filteredRecords: HologramRecord[] = [];
 
@@ -77,9 +78,7 @@ export class HologramdetailsComponent implements OnInit {
   selectedStatus: string = '';
   searchText: string = '';
 
-  // Add new record properties
-  showAddForm: boolean = false;
-  newRecord: Partial<HologramRecord> = {};
+
 
   // Update arrival properties
   showUpdateModal: boolean = false;
@@ -97,7 +96,7 @@ export class HologramdetailsComponent implements OnInit {
   hologramRolls: HologramRoll[] = [];
   filteredSerialData: HologramRoll[] = [];
   selectedRoll: HologramRoll | null = null;
-  
+
   serialFilters: SerialFilters = {
     rollStatus: '',
     hologramType: '',
@@ -120,7 +119,7 @@ export class HologramdetailsComponent implements OnInit {
     return { value: year, label: year };
   });
 
-  constructor() {
+  constructor(private router: Router) {
     this.selectedMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
     this.selectedYear = new Date().getFullYear().toString();
   }
@@ -140,10 +139,10 @@ export class HologramdetailsComponent implements OnInit {
     // Load hologram requests from supply chain (dev-hologram page)
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    
+
     // Load approved entries from officer in-charge
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-    
+
     // Convert supply chain hologram data to register format
     const supplyChainRecords = [...hologramRequests, ...hologramApplications].map((item: any, index: number) => ({
       id: item.id || (1000 + index),
@@ -178,11 +177,11 @@ export class HologramdetailsComponent implements OnInit {
     // Combine and deduplicate records based on ourRefNo
     const allRecords = [...supplyChainRecords, ...officerRecords];
     const uniqueRecordsMap = new Map();
-    
+
     // Deduplicate by ourRefNo, keeping the most recent/complete record
     allRecords.forEach(record => {
       const existingRecord = uniqueRecordsMap.get(record.ourRefNo);
-      
+
       if (!existingRecord) {
         // No existing record, add this one
         uniqueRecordsMap.set(record.ourRefNo, record);
@@ -317,7 +316,7 @@ export class HologramdetailsComponent implements OnInit {
       sampleRecords.forEach(record => {
         uniqueSampleMap.set(record.ourRefNo, record);
       });
-      
+
       this.hologramRecords = Array.from(uniqueSampleMap.values());
     }
   }
@@ -330,7 +329,7 @@ export class HologramdetailsComponent implements OnInit {
       const export_ = item.exportQtyLakh || 0;
       const defence = item.defenceQtyLakh || 0;
       const total = local + export_ + defence;
-      
+
       // If the total is very small (less than 10), treat it as units, not lakhs
       // This handles cases where users enter 1, 2, 5 etc. thinking they're entering units
       if (total <= 10) {
@@ -354,16 +353,16 @@ export class HologramdetailsComponent implements OnInit {
   determineStatus(item: any): 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' {
     // Check if hologram has physically arrived
     if (item.arrivedDate) return 'ARRIVED';
-    
+
     // Check if approved by commissioner and ready for arrival
     if (item.status === 'APPROVED' || item.approvedDate) return 'PENDING_ARRIVAL';
-    
+
     // Check if rejected
     if (item.status === 'REJECTED') return 'REJECTED';
-    
+
     // Check if submitted but not yet approved
     if (item.status === 'Submitted') return 'PENDING_APPROVAL';
-    
+
     // Default status for new requests
     return 'PENDING_APPROVAL';
   }
@@ -398,7 +397,7 @@ export class HologramdetailsComponent implements OnInit {
     if (newPriority === existingPriority) {
       const existingComplete = (existing.cartoonNumber || '') + (existing.fromSerial || '') + (existing.toSerial || '');
       const newComplete = (newRecord.cartoonNumber || '') + (newRecord.fromSerial || '') + (newRecord.toSerial || '');
-      
+
       return newComplete.length > existingComplete.length;
     }
 
@@ -456,81 +455,7 @@ export class HologramdetailsComponent implements OnInit {
 
 
 
-  // Add new record methods
-  showAddNewRecord() {
-    this.showAddForm = true;
-    this.newRecord = {
-      date: new Date().toISOString().split('T')[0],
-      ourRefNo: '',
-      cartoonNumber: '',
-      fromSerial: '',
-      toSerial: '',
-      numberOfHolograms: 0,
-      remarks: '',
-      status: 'PENDING_ARRIVAL'
-    };
-  }
 
-  hideAddForm() {
-    this.showAddForm = false;
-    this.newRecord = {};
-  }
-
-  calculateHologramCount() {
-    if (this.newRecord.fromSerial && this.newRecord.toSerial) {
-      const fromNum = this.extractSerialNumber(this.newRecord.fromSerial);
-      const toNum = this.extractSerialNumber(this.newRecord.toSerial);
-
-      if (fromNum && toNum && toNum >= fromNum) {
-        this.newRecord.numberOfHolograms = toNum - fromNum + 1;
-      }
-    }
-  }
-
-  extractSerialNumber(serial: string): number | null {
-    const match = serial.match(/\d+/);
-    return match ? parseInt(match[0]) : null;
-  }
-
-
-
-  saveNewRecord() {
-    if (this.validateNewRecord()) {
-      const newId = Math.max(...this.hologramRecords.map(r => r.id), 0) + 1;
-      const recordToAdd: HologramRecord = {
-        id: newId,
-        date: this.newRecord.date!,
-        ourRefNo: this.newRecord.ourRefNo!,
-        cartoonNumber: this.newRecord.cartoonNumber || '',
-        fromSerial: this.newRecord.fromSerial!,
-        toSerial: this.newRecord.toSerial!,
-        numberOfHolograms: this.newRecord.numberOfHolograms!,
-        remarks: this.newRecord.remarks || '',
-        status: 'ARRIVED',
-        arrivedDate: this.newRecord.date
-      };
-
-      this.hologramRecords.unshift(recordToAdd);
-      this.applyFilters();
-      this.hideAddForm();
-
-      console.log('New hologram record added:', recordToAdd);
-    }
-  }
-
-  validateNewRecord(): boolean {
-    if (!this.newRecord.date || !this.newRecord.ourRefNo || !this.newRecord.fromSerial || !this.newRecord.toSerial) {
-      alert('Please fill in all required fields');
-      return false;
-    }
-
-    if (!this.newRecord.numberOfHolograms || this.newRecord.numberOfHolograms <= 0) {
-      alert('Number of holograms must be greater than 0');
-      return false;
-    }
-
-    return true;
-  }
 
   // Update arrival methods
   canUpdateRecord(record: HologramRecord): boolean {
@@ -559,6 +484,11 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  extractSerialNumber(serial: string): number | null {
+    const match = serial.match(/\d+/);
+    return match ? parseInt(match[0]) : null;
+  }
+
   saveArrivalUpdate() {
     if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
       // Update the record
@@ -568,13 +498,13 @@ export class HologramdetailsComponent implements OnInit {
       this.selectedRecordForUpdate.numberOfHolograms = this.updateForm.numberOfHolograms;
       this.selectedRecordForUpdate.status = 'ARRIVED';
       this.selectedRecordForUpdate.arrivedDate = new Date().toISOString().split('T')[0];
-      
+
       // Update in storage
       this.updateHologramRecordInStorage(this.selectedRecordForUpdate);
-      
+
       this.closeUpdateModal();
       this.applyFilters();
-      
+
       alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully!`);
     }
   }
@@ -676,7 +606,7 @@ export class HologramdetailsComponent implements OnInit {
     // Update the record in localStorage
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
     const index = approvedEntries.findIndex((entry: any) => entry.id === updatedRecord.id);
-    
+
     if (index !== -1) {
       approvedEntries[index] = {
         ...approvedEntries[index],
@@ -694,7 +624,7 @@ export class HologramdetailsComponent implements OnInit {
     if (updatedRecord.supplyChainData) {
       const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const requestIndex = hologramRequests.findIndex((req: any) => req.refNo === updatedRecord.ourRefNo);
-      
+
       if (requestIndex !== -1) {
         hologramRequests[requestIndex] = {
           ...hologramRequests[requestIndex],
@@ -718,10 +648,10 @@ export class HologramdetailsComponent implements OnInit {
   // Force deduplication of existing records
   deduplicateRecords() {
     const uniqueRecordsMap = new Map();
-    
+
     this.hologramRecords.forEach(record => {
       const existingRecord = uniqueRecordsMap.get(record.ourRefNo);
-      
+
       if (!existingRecord) {
         uniqueRecordsMap.set(record.ourRefNo, record);
       } else {
@@ -747,6 +677,11 @@ export class HologramdetailsComponent implements OnInit {
 
   openHologramRequests(): void {
     this.hologramRequestsClicked.emit();
+  }
+
+  openHologramOverview(): void {
+    // Navigate to hologram overview page in a new tab/window for better user experience
+    window.open('/dev-hologram-overview', '_blank');
   }
 
   // Hologram Serial Numbers Data Methods
@@ -911,7 +846,7 @@ export class HologramdetailsComponent implements OnInit {
 
   getUsagePercentage(roll: HologramRoll, type: 'available' | 'used' | 'damaged'): number {
     if (roll.totalCount === 0) return 0;
-    
+
     switch (type) {
       case 'available':
         return (roll.availableCount / roll.totalCount) * 100;
