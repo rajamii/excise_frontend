@@ -81,6 +81,16 @@ export class HologramdetailsComponent implements OnInit {
   showAddForm: boolean = false;
   newRecord: Partial<HologramRecord> = {};
 
+  // Update arrival properties
+  showUpdateModal: boolean = false;
+  selectedRecordForUpdate: HologramRecord | null = null;
+  updateForm = {
+    cartoonNumber: '',
+    fromSerial: '',
+    toSerial: '',
+    numberOfHolograms: 0
+  };
+
   // Hologram Serial Numbers Data properties
   showHologramSerialModal: boolean = false;
   showUsageDetailsModal: boolean = false;
@@ -193,54 +203,109 @@ export class HologramdetailsComponent implements OnInit {
       const sampleRecords = [
         {
           id: 1,
-          date: '2024-11-01',
-          ourRefNo: 'YB/1/BREW/24',
+          date: '2024-11-03',
+          ourRefNo: 'HRQ/2024/001',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 500000, // 5 lakh from supply chain
-          remarks: 'Supply chain hologram request - Yuksom Breweries Ltd (Approved by Commissioner)',
-          status: 'PENDING_ARRIVAL',
-          approvedDate: '2024-11-01',
+          numberOfHolograms: 500000, // 5 lakh - Ready for update
+          remarks: 'Hologram request for Premium Whisky production - Approved by Commissioner',
+          status: 'PENDING_ARRIVAL' as const,
+          approvedDate: '2024-11-03',
           supplyChainData: {
-            refNo: 'YB/1/BREW/24',
-            companyName: 'Yuksom Breweries Ltd',
+            refNo: 'HRQ/2024/001',
+            companyName: 'Sikkim Distilleries Ltd',
             localQtyLakh: 5,
             status: 'APPROVED'
           }
         },
         {
           id: 2,
-          date: '2024-10-28',
-          ourRefNo: 'YB/2/BREW/24',
-          cartoonNumber: 'CTN001',
-          fromSerial: 'HG001001',
-          toSerial: 'HG200000',
-          numberOfHolograms: 200000, // 2 lakh
-          remarks: 'Supply chain hologram request - Yuksom Breweries Ltd (Arrived)',
-          status: 'ARRIVED',
-          approvedDate: '2024-10-28',
-          arrivedDate: '2024-10-29',
+          date: '2024-11-02',
+          ourRefNo: 'HRQ/2024/002',
+          cartoonNumber: '',
+          fromSerial: '',
+          toSerial: '',
+          numberOfHolograms: 300000, // 3 lakh - Ready for update
+          remarks: 'Hologram request for Export Rum - Approved by Commissioner',
+          status: 'PENDING_ARRIVAL' as const,
+          approvedDate: '2024-11-02',
           supplyChainData: {
-            refNo: 'YB/2/BREW/24',
-            companyName: 'Yuksom Breweries Ltd',
-            localQtyLakh: 2,
+            refNo: 'HRQ/2024/002',
+            companyName: 'Sikkim Distilleries Ltd',
+            exportQtyLakh: 3,
             status: 'APPROVED'
           }
         },
         {
           id: 3,
-          date: '2024-10-25',
-          ourRefNo: 'YB/3/BREW/24',
+          date: '2024-11-01',
+          ourRefNo: 'HRQ/2024/003',
+          cartoonNumber: 'CTN001',
+          fromSerial: 'HG001001',
+          toSerial: 'HG200000',
+          numberOfHolograms: 200000, // 2 lakh - Already arrived
+          remarks: 'Hologram request for Local Beer production - Completed',
+          status: 'ARRIVED' as const,
+          approvedDate: '2024-11-01',
+          arrivedDate: '2024-11-01',
+          supplyChainData: {
+            refNo: 'HRQ/2024/003',
+            companyName: 'Sikkim Distilleries Ltd',
+            localQtyLakh: 2,
+            status: 'APPROVED'
+          }
+        },
+        {
+          id: 4,
+          date: '2024-10-30',
+          ourRefNo: 'HRQ/2024/004',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 100000, // 1 lakh
-          remarks: 'Supply chain hologram request - Yuksom Breweries Ltd (Waiting for Commissioner Approval)',
-          status: 'PENDING_APPROVAL',
+          numberOfHolograms: 150000, // 1.5 lakh - Ready for update
+          remarks: 'Hologram request for Defence supplies - Approved by Commissioner',
+          status: 'PENDING_ARRIVAL' as const,
+          approvedDate: '2024-10-30',
           supplyChainData: {
-            refNo: 'YB/3/BREW/24',
-            companyName: 'Yuksom Breweries Ltd',
+            refNo: 'HRQ/2024/004',
+            companyName: 'Sikkim Distilleries Ltd',
+            defenceQtyLakh: 1.5,
+            status: 'APPROVED'
+          }
+        },
+        {
+          id: 5,
+          date: '2024-10-28',
+          ourRefNo: 'HRQ/2024/005',
+          cartoonNumber: 'CTN002',
+          fromSerial: 'HG201001',
+          toSerial: 'HG250000',
+          numberOfHolograms: 50000, // 50k - Already arrived
+          remarks: 'Hologram request for Special Edition Vodka - Completed',
+          status: 'ARRIVED' as const,
+          approvedDate: '2024-10-28',
+          arrivedDate: '2024-10-29',
+          supplyChainData: {
+            refNo: 'HRQ/2024/005',
+            companyName: 'Sikkim Distilleries Ltd',
+            localQtyLakh: 0.5,
+            status: 'APPROVED'
+          }
+        },
+        {
+          id: 6,
+          date: '2024-10-25',
+          ourRefNo: 'HRQ/2024/006',
+          cartoonNumber: '',
+          fromSerial: '',
+          toSerial: '',
+          numberOfHolograms: 100000, // 1 lakh - Waiting for approval
+          remarks: 'Hologram request for Premium Gin production - Waiting for Commissioner Approval',
+          status: 'PENDING_APPROVAL' as const,
+          supplyChainData: {
+            refNo: 'HRQ/2024/006',
+            companyName: 'Sikkim Distilleries Ltd',
             localQtyLakh: 1,
             status: 'Submitted'
           }
@@ -282,10 +347,7 @@ export class HologramdetailsComponent implements OnInit {
     return 'PENDING_APPROVAL';
   }
 
-  // Check if button should be active (only when approved and ready for arrival)
-  isUpdateButtonActive(record: HologramRecord): boolean {
-    return record.status === 'PENDING_ARRIVAL';
-  }
+
 
   // Check if record is from completed workflow
   isFromCompletedWorkflow(record: HologramRecord): boolean {
@@ -449,6 +511,84 @@ export class HologramdetailsComponent implements OnInit {
     return true;
   }
 
+  // Update arrival methods
+  canUpdateRecord(record: HologramRecord): boolean {
+    return record.status === 'PENDING_ARRIVAL';
+  }
+
+  updateArrivalDetails(record: HologramRecord) {
+    this.selectedRecordForUpdate = record;
+    this.updateForm = {
+      cartoonNumber: record.cartoonNumber || '',
+      fromSerial: record.fromSerial || '',
+      toSerial: record.toSerial || '',
+      numberOfHolograms: record.numberOfHolograms || 0
+    };
+    this.showUpdateModal = true;
+  }
+
+  calculateUpdateHologramCount() {
+    if (this.updateForm.fromSerial && this.updateForm.toSerial) {
+      const fromNum = this.extractSerialNumber(this.updateForm.fromSerial);
+      const toNum = this.extractSerialNumber(this.updateForm.toSerial);
+
+      if (fromNum && toNum && toNum >= fromNum) {
+        this.updateForm.numberOfHolograms = toNum - fromNum + 1;
+      }
+    }
+  }
+
+  saveArrivalUpdate() {
+    if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
+      // Update the record
+      this.selectedRecordForUpdate.cartoonNumber = this.updateForm.cartoonNumber;
+      this.selectedRecordForUpdate.fromSerial = this.updateForm.fromSerial;
+      this.selectedRecordForUpdate.toSerial = this.updateForm.toSerial;
+      this.selectedRecordForUpdate.numberOfHolograms = this.updateForm.numberOfHolograms;
+      this.selectedRecordForUpdate.status = 'ARRIVED';
+      this.selectedRecordForUpdate.arrivedDate = new Date().toISOString().split('T')[0];
+      
+      // Update in storage
+      this.updateHologramRecordInStorage(this.selectedRecordForUpdate);
+      
+      this.closeUpdateModal();
+      this.applyFilters();
+      
+      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully!`);
+    }
+  }
+
+  validateUpdateForm(): boolean {
+    if (!this.updateForm.cartoonNumber.trim()) {
+      alert('Please enter cartoon number');
+      return false;
+    }
+    if (!this.updateForm.fromSerial.trim()) {
+      alert('Please enter from serial number');
+      return false;
+    }
+    if (!this.updateForm.toSerial.trim()) {
+      alert('Please enter to serial number');
+      return false;
+    }
+    if (this.updateForm.numberOfHolograms <= 0) {
+      alert('Invalid hologram count');
+      return false;
+    }
+    return true;
+  }
+
+  closeUpdateModal() {
+    this.showUpdateModal = false;
+    this.selectedRecordForUpdate = null;
+    this.updateForm = {
+      cartoonNumber: '',
+      fromSerial: '',
+      toSerial: '',
+      numberOfHolograms: 0
+    };
+  }
+
   // Status related methods
   getStatusCount(status: string): number {
     return this.filteredRecords.filter(record => record.status === status).length;
@@ -505,106 +645,11 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
-  // Modal properties for arrival details
-  showArrivalModal = false;
-  selectedRecordForUpdate: HologramRecord | null = null;
-  arrivalForm = {
-    cartoonNumber: '',
-    fromSerial: '',
-    toSerial: '',
-    numberOfHolograms: 0
-  };
 
-  // Update hologram arrival details
-  updateArrivalDetails(record: HologramRecord) {
-    if (record.status === 'PENDING_ARRIVAL') {
-      this.selectedRecordForUpdate = record;
-      this.arrivalForm = {
-        cartoonNumber: record.cartoonNumber || '',
-        fromSerial: record.fromSerial || '',
-        toSerial: record.toSerial || '',
-        numberOfHolograms: record.numberOfHolograms || 0
-      };
-      this.showArrivalModal = true;
-    }
-  }
 
-  // Calculate holograms in modal
-  calculateModalHologramCount() {
-    if (this.arrivalForm.fromSerial && this.arrivalForm.toSerial) {
-      const fromNum = this.extractSerialNumber(this.arrivalForm.fromSerial);
-      const toNum = this.extractSerialNumber(this.arrivalForm.toSerial);
 
-      if (fromNum && toNum && toNum >= fromNum) {
-        this.arrivalForm.numberOfHolograms = toNum - fromNum + 1;
-      }
-    }
-  }
 
-  // Save arrival details from modal
-  saveArrivalDetails() {
-    if (this.selectedRecordForUpdate && this.validateArrivalForm()) {
-      this.selectedRecordForUpdate.cartoonNumber = this.arrivalForm.cartoonNumber;
-      this.selectedRecordForUpdate.fromSerial = this.arrivalForm.fromSerial;
-      this.selectedRecordForUpdate.toSerial = this.arrivalForm.toSerial;
-      this.selectedRecordForUpdate.numberOfHolograms = this.arrivalForm.numberOfHolograms;
-      this.selectedRecordForUpdate.status = 'ARRIVED';
-      this.selectedRecordForUpdate.arrivedDate = new Date().toISOString().split('T')[0];
-      
-      // Update the record in localStorage
-      this.updateHologramRecordInStorage(this.selectedRecordForUpdate);
-      
-      console.log('Hologram arrival details updated:', this.selectedRecordForUpdate);
-      this.closeArrivalModal();
-      this.applyFilters();
-      
-      // Show success message
-      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully!`);
-    }
-  }
 
-  validateArrivalForm(): boolean {
-    if (!this.arrivalForm.cartoonNumber.trim()) {
-      alert('Please enter cartoon number');
-      return false;
-    }
-    if (!this.arrivalForm.fromSerial.trim()) {
-      alert('Please enter from serial number');
-      return false;
-    }
-    if (!this.arrivalForm.toSerial.trim()) {
-      alert('Please enter to serial number');
-      return false;
-    }
-    if (this.arrivalForm.numberOfHolograms <= 0) {
-      alert('Invalid hologram count');
-      return false;
-    }
-    return true;
-  }
-
-  closeArrivalModal() {
-    this.showArrivalModal = false;
-    this.selectedRecordForUpdate = null;
-    this.arrivalForm = {
-      cartoonNumber: '',
-      fromSerial: '',
-      toSerial: '',
-      numberOfHolograms: 0
-    };
-  }
-
-  // Edit arrived record function
-  editArrivedRecord(record: HologramRecord) {
-    this.selectedRecordForUpdate = record;
-    this.arrivalForm = {
-      cartoonNumber: record.cartoonNumber || '',
-      fromSerial: record.fromSerial || '',
-      toSerial: record.toSerial || '',
-      numberOfHolograms: record.numberOfHolograms || 0
-    };
-    this.showArrivalModal = true;
-  }
 
   updateHologramRecordInStorage(updatedRecord: HologramRecord) {
     // Update the record in localStorage

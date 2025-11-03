@@ -260,19 +260,12 @@
                             </td>
                             <td class="actions">
                                 <div class="d-flex gap-1 align-items-center">
-                                    <!-- Update Button - Only active when workflow is completed and approved -->
-                                    <button *ngIf="isUpdateButtonActive(record)" class="btn btn-success btn-sm"
+                                    <!-- Update Arrival Button - Only for PENDING_ARRIVAL status -->
+                                    <button *ngIf="canUpdateRecord(record)" class="btn btn-success btn-sm"
                                         (click)="updateArrivalDetails(record)"
-                                        title="Update Arrival Details - Hologram Approved & Ready">
+                                        title="Update Arrival Details - Ready for Physical Arrival">
                                         <i class="bi bi-box-seam me-1"></i>
                                         Update Arrival
-                                    </button>
-
-                                    <!-- Edit Button for Arrived Records -->
-                                    <button *ngIf="record.status === 'ARRIVED'" class="btn btn-warning btn-sm"
-                                        (click)="editArrivedRecord(record)" title="Edit Arrival Details">
-                                        <i class="bi bi-pencil me-1"></i>
-                                        Edit
                                     </button>
 
                                     <!-- Disabled Button for Pending Approval -->
@@ -699,27 +692,27 @@
         </div>
     </div>
 </div>
-<!-- Hologr
-am Arrival Details Modal -->
-<div class="modal fade show" *ngIf="showArrivalModal" style="display: block; background-color: rgba(0,0,0,0.5);"
-    tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-box-seam me-2"></i>
-                    Update Hologram Arrival Details
-                </h5>
-                <button type="button" class="btn-close btn-close-white" (click)="closeArrivalModal()"></button>
-            </div>
-            <div class="modal-body">
-                <div class="arrival-form">
+<! -- Update Arrival Details Modal -->
+    <div class="modal fade show" *ngIf="showUpdateModal" style="display: block; background-color: rgba(0,0,0,0.5);"
+        tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        Update Hologram Arrival Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeUpdateModal()"></button>
+                </div>
+                <div class="modal-body">
                     <div class="alert alert-info">
                         <i class="bi bi-info-circle me-2"></i>
                         <strong>Reference:</strong> {{ selectedRecordForUpdate?.ourRefNo }}
                         <br>
                         <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }}
                         holograms
+                        <br>
+                        <strong>Status:</strong> Ready for physical arrival update
                     </div>
 
                     <div class="row g-3">
@@ -730,8 +723,8 @@ am Arrival Details Modal -->
                                     Cartoon Number <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control form-control-lg" placeholder="e.g., CTN001"
-                                    [(ngModel)]="arrivalForm.cartoonNumber" required>
-                                <div class="form-text">Enter the cartoon/box number from the physical delivery</div>
+                                    [(ngModel)]="updateForm.cartoonNumber" required>
+                                <div class="form-text">Enter the cartoon/box number from physical delivery</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -741,7 +734,7 @@ am Arrival Details Modal -->
                                     Calculated Holograms
                                 </label>
                                 <input type="number" class="form-control form-control-lg bg-light"
-                                    [(ngModel)]="arrivalForm.numberOfHolograms" readonly>
+                                    [(ngModel)]="updateForm.numberOfHolograms" readonly>
                                 <div class="form-text">Auto-calculated from serial number range</div>
                             </div>
                         </div>
@@ -755,9 +748,9 @@ am Arrival Details Modal -->
                                     From Serial Number <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control form-control-lg font-monospace"
-                                    placeholder="e.g., HG001001" [(ngModel)]="arrivalForm.fromSerial"
-                                    (input)="calculateModalHologramCount()" required>
-                                <div class="form-text">Starting serial number from the hologram roll</div>
+                                    placeholder="e.g., HG001001" [(ngModel)]="updateForm.fromSerial"
+                                    (input)="calculateUpdateHologramCount()" required>
+                                <div class="form-text">Starting serial number from hologram roll</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -767,9 +760,9 @@ am Arrival Details Modal -->
                                     To Serial Number <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control form-control-lg font-monospace"
-                                    placeholder="e.g., HG005000" [(ngModel)]="arrivalForm.toSerial"
-                                    (input)="calculateModalHologramCount()" required>
-                                <div class="form-text">Ending serial number from the hologram roll</div>
+                                    placeholder="e.g., HG500000" [(ngModel)]="updateForm.toSerial"
+                                    (input)="calculateUpdateHologramCount()" required>
+                                <div class="form-text">Ending serial number from hologram roll</div>
                             </div>
                         </div>
                     </div>
@@ -792,12 +785,12 @@ am Arrival Details Modal -->
                                     </div>
                                     <div class="col-md-4">
                                         <div class="border-end">
-                                            <h4 class="text-success">{{ arrivalForm.cartoonNumber || '-' }}</h4>
+                                            <h4 class="text-success">{{ updateForm.cartoonNumber || '-' }}</h4>
                                             <small class="text-muted">Cartoon Number</small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
-                                        <h4 class="text-info">{{ arrivalForm.numberOfHolograms | number }}</h4>
+                                        <h4 class="text-info">{{ updateForm.numberOfHolograms | number }}</h4>
                                         <small class="text-muted">Total Holograms</small>
                                     </div>
                                 </div>
@@ -805,25 +798,24 @@ am Arrival Details Modal -->
                                 <div class="text-center">
                                     <strong>Serial Range:</strong>
                                     <span class="font-monospace">
-                                        {{ arrivalForm.fromSerial || '---' }} to {{ arrivalForm.toSerial || '---' }}
+                                        {{ updateForm.fromSerial || '---' }} to {{ updateForm.toSerial || '---' }}
                                     </span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" (click)="closeArrivalModal()">
-                    <i class="bi bi-x-lg me-2"></i>
-                    Cancel
-                </button>
-                <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalDetails()"
-                    [disabled]="!arrivalForm.cartoonNumber || !arrivalForm.fromSerial || !arrivalForm.toSerial">
-                    <i class="bi bi-check-circle me-2"></i>
-                    Confirm Arrival
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
+                        <i class="bi bi-x-lg me-2"></i>
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
+                        [disabled]="!updateForm.cartoonNumber || !updateForm.fromSerial || !updateForm.toSerial">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Confirm Arrival
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
