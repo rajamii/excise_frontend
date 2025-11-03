@@ -208,14 +208,14 @@ export class HologramdetailsComponent implements OnInit {
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 500000, // 5 lakh - Ready for update
+          numberOfHolograms: 1, // 1 unit - Ready for update (this will show as 1 unit, not 100,000)
           remarks: 'Hologram request for Premium Whisky production - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-03',
           supplyChainData: {
             refNo: 'HRQ/2024/001',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 5,
+            totalHolograms: 1, // Direct unit entry, not in lakhs
             status: 'APPROVED'
           }
         },
@@ -226,14 +226,14 @@ export class HologramdetailsComponent implements OnInit {
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 300000, // 3 lakh - Ready for update
+          numberOfHolograms: 5000, // 5000 units - Ready for update
           remarks: 'Hologram request for Export Rum - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-02',
           supplyChainData: {
             refNo: 'HRQ/2024/002',
             companyName: 'Sikkim Distilleries Ltd',
-            exportQtyLakh: 3,
+            totalHolograms: 5000,
             status: 'APPROVED'
           }
         },
@@ -243,8 +243,8 @@ export class HologramdetailsComponent implements OnInit {
           ourRefNo: 'HRQ/2024/003',
           cartoonNumber: 'CTN001',
           fromSerial: 'HG001001',
-          toSerial: 'HG200000',
-          numberOfHolograms: 200000, // 2 lakh - Already arrived
+          toSerial: 'HG002000',
+          numberOfHolograms: 2000, // 2000 units - Already arrived
           remarks: 'Hologram request for Local Beer production - Completed',
           status: 'ARRIVED' as const,
           approvedDate: '2024-11-01',
@@ -252,7 +252,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/003',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 2,
+            totalHolograms: 2000,
             status: 'APPROVED'
           }
         },
@@ -263,14 +263,14 @@ export class HologramdetailsComponent implements OnInit {
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 150000, // 1.5 lakh - Ready for update
+          numberOfHolograms: 1500, // 1500 units - Ready for update
           remarks: 'Hologram request for Defence supplies - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-10-30',
           supplyChainData: {
             refNo: 'HRQ/2024/004',
             companyName: 'Sikkim Distilleries Ltd',
-            defenceQtyLakh: 1.5,
+            totalHolograms: 1500,
             status: 'APPROVED'
           }
         },
@@ -279,9 +279,9 @@ export class HologramdetailsComponent implements OnInit {
           date: '2024-10-28',
           ourRefNo: 'HRQ/2024/005',
           cartoonNumber: 'CTN002',
-          fromSerial: 'HG201001',
-          toSerial: 'HG250000',
-          numberOfHolograms: 50000, // 50k - Already arrived
+          fromSerial: 'HG003001',
+          toSerial: 'HG003500',
+          numberOfHolograms: 500, // 500 units - Already arrived
           remarks: 'Hologram request for Special Edition Vodka - Completed',
           status: 'ARRIVED' as const,
           approvedDate: '2024-10-28',
@@ -289,7 +289,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/005',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 0.5,
+            totalHolograms: 500,
             status: 'APPROVED'
           }
         },
@@ -300,13 +300,13 @@ export class HologramdetailsComponent implements OnInit {
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 100000, // 1 lakh - Waiting for approval
+          numberOfHolograms: 1000, // 1000 units - Waiting for approval
           remarks: 'Hologram request for Premium Gin production - Waiting for Commissioner Approval',
           status: 'PENDING_APPROVAL' as const,
           supplyChainData: {
             refNo: 'HRQ/2024/006',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 1,
+            totalHolograms: 1000,
             status: 'Submitted'
           }
         }
@@ -323,11 +323,32 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   calculateTotalHolograms(item: any): number {
-    // Calculate total holograms from supply chain data (in lakhs, convert to units)
-    const local = (item.localQtyLakh || 0) * 100000; // Convert lakhs to units
-    const export_ = (item.exportQtyLakh || 0) * 100000;
-    const defence = (item.defenceQtyLakh || 0) * 100000;
-    return local + export_ + defence;
+    // Check if this is supply chain data (has lakh fields) or direct entry
+    if (item.localQtyLakh !== undefined || item.exportQtyLakh !== undefined || item.defenceQtyLakh !== undefined) {
+      // Supply chain data - but check if values are small (likely entered as units, not lakhs)
+      const local = item.localQtyLakh || 0;
+      const export_ = item.exportQtyLakh || 0;
+      const defence = item.defenceQtyLakh || 0;
+      const total = local + export_ + defence;
+      
+      // If the total is very small (less than 10), treat it as units, not lakhs
+      // This handles cases where users enter 1, 2, 5 etc. thinking they're entering units
+      if (total <= 10) {
+        return total; // Return as units
+      } else {
+        // For larger values, treat as lakhs and convert to units
+        return total * 100000;
+      }
+    } else if (item.totalHolograms !== undefined) {
+      // Direct entry - already in units
+      return item.totalHolograms;
+    } else if (item.numberOfHolograms !== undefined) {
+      // Direct entry - already in units
+      return item.numberOfHolograms;
+    } else {
+      // Fallback - assume it's already in units
+      return 0;
+    }
   }
 
   determineStatus(item: any): 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' {
