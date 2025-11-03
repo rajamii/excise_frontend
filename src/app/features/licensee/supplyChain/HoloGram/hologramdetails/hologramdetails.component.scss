@@ -97,16 +97,7 @@
         }
       }
 
-      &.previous-stock {
-        .card-icon {
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-        .card-value {
-          color: #3b82f6;
-        }
-      }
-
-      &.new-arrivals {
+      &.total-holograms {
         .card-icon {
           background: linear-gradient(135deg, #10b981, #059669);
         }
@@ -420,15 +411,13 @@
               }
 
               // Column widths
-              &.sl-no { width: 60px; text-align: center; }
-              &.date-col { width: 120px; }
-              &.serial-from { width: 140px; }
-              &.serial-to { width: 140px; }
-              &.hologram-count { width: 120px; text-align: center; }
-              &.previous-stock { width: 120px; text-align: center; }
-              &.new-arrival { width: 120px; text-align: center; }
-              &.total-stock { width: 120px; text-align: center; }
-              &.remarks { width: 200px; }
+              &.sl-no { width: 80px; text-align: center; }
+              &.date-col { width: 150px; }
+              &.serial-from { width: 180px; }
+              &.serial-to { width: 180px; }
+              &.hologram-count { width: 150px; text-align: center; }
+              &.total-stock { width: 150px; text-align: center; }
+              &.remarks { width: 250px; }
             }
           }
 
@@ -516,8 +505,6 @@
                   }
                 }
 
-                &.previous-stock,
-                &.new-arrival,
                 &.total-stock {
                   text-align: center;
 
@@ -528,17 +515,7 @@
                       padding: 0.25rem 0.5rem;
                       border-radius: 4px;
                       display: inline-block;
-                      min-width: 60px;
-                    }
-
-                    &.previous .stock-number {
-                      background: #eff6ff;
-                      color: #1d4ed8;
-                    }
-
-                    &.arrival .stock-number {
-                      background: #ecfdf5;
-                      color: #059669;
+                      min-width: 80px;
                     }
 
                     &.total .stock-number {

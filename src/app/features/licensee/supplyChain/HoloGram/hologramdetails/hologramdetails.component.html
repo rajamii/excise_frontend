@@ -25,29 +25,7 @@
     <!-- Stock Summary Dashboard -->
     <div class="stock-summary-section">
         <div class="row g-4">
-            <div class="col-lg-3 col-md-6">
-                <div class="summary-card previous-stock">
-                    <div class="card-icon">
-                        <i class="bi bi-archive"></i>
-                    </div>
-                    <div class="card-content">
-                        <h3 class="card-value">{{ getTotalPreviousStock() | number }}</h3>
-                        <p class="card-label">Previous Stock</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-                <div class="summary-card new-arrivals">
-                    <div class="card-icon">
-                        <i class="bi bi-box-arrow-in-down"></i>
-                    </div>
-                    <div class="card-content">
-                        <h3 class="card-value">{{ getTotalNewArrivals() | number }}</h3>
-                        <p class="card-label">New Arrivals</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-4 col-md-6">
                 <div class="summary-card current-total">
                     <div class="card-icon">
                         <i class="bi bi-stack"></i>
@@ -58,7 +36,18 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-lg-4 col-md-6">
+                <div class="summary-card total-holograms">
+                    <div class="card-icon">
+                        <i class="bi bi-qr-code"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-value">{{ getTotalHolograms() | number }}</h3>
+                        <p class="card-label">Total Holograms</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
                 <div class="summary-card total-records">
                     <div class="card-icon">
                         <i class="bi bi-list-ul"></i>
@@ -103,28 +92,14 @@
                                 [(ngModel)]="newRecord.toSerial" (input)="calculateHologramCount()" required>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="form-group">
                             <label class="form-label">Hologram Count</label>
                             <input type="number" class="form-control calculated-field"
                                 [(ngModel)]="newRecord.numberOfHolograms" readonly>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label">Previous Stock</label>
-                            <input type="number" class="form-control calculated-field"
-                                [(ngModel)]="newRecord.previousStock" readonly>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="form-group">
-                            <label class="form-label">New Arrival</label>
-                            <input type="number" class="form-control calculated-field"
-                                [(ngModel)]="newRecord.newArrival" readonly>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-6">
                         <div class="form-group">
                             <label class="form-label">Total Stock</label>
                             <input type="number" class="form-control calculated-field total-field"
@@ -235,8 +210,6 @@
                             <th class="serial-from">From Serial</th>
                             <th class="serial-to">To Serial</th>
                             <th class="hologram-count">No. of Holograms</th>
-                            <th class="previous-stock">Previous Stock</th>
-                            <th class="new-arrival">New Arrival</th>
                             <th class="total-stock">Total Stock</th>
                             <th class="remarks">Remarks</th>
                         </tr>
@@ -260,16 +233,6 @@
                                 <div class="count-display">
                                     <span class="count-number">{{ record.numberOfHolograms | number }}</span>
                                     <span class="count-label">units</span>
-                                </div>
-                            </td>
-                            <td class="previous-stock">
-                                <div class="stock-display previous">
-                                    <span class="stock-number">{{ record.previousStock | number }}</span>
-                                </div>
-                            </td>
-                            <td class="new-arrival">
-                                <div class="stock-display arrival">
-                                    <span class="stock-number">{{ record.newArrival | number }}</span>
                                 </div>
                             </td>
                             <td class="total-stock">
@@ -297,15 +260,7 @@
                         <span class="summary-value">{{ getTotalHolograms() | number }}</span>
                     </div>
                     <div class="summary-item">
-                        <span class="summary-label">Previous Stock:</span>
-                        <span class="summary-value">{{ getTotalPreviousStock() | number }}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">New Arrivals:</span>
-                        <span class="summary-value">{{ getTotalNewArrivals() | number }}</span>
-                    </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Current Total:</span>
+                        <span class="summary-label">Current Total Stock:</span>
                         <span class="summary-value highlight">{{ getCurrentTotalStock() | number }}</span>
                     </div>
                 </div>

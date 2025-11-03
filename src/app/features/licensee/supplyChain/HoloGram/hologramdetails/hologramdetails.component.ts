@@ -128,8 +128,8 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: 'HG001001',
         toSerial: 'HG001500',
         numberOfHolograms: 500,
-        previousStock: 1000,
-        newArrival: 500,
+        previousStock: 0, // Keep for backward compatibility
+        newArrival: 500, // Keep for backward compatibility
         totalStock: 1500,
         remarks: 'First batch received',
         entryType: 'NEW_ARRIVAL',
@@ -141,8 +141,8 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: 'HG000501',
         toSerial: 'HG001000',
         numberOfHolograms: 500,
-        previousStock: 500,
-        newArrival: 500,
+        previousStock: 0, // Keep for backward compatibility
+        newArrival: 500, // Keep for backward compatibility
         totalStock: 1000,
         remarks: 'Regular monthly supply',
         entryType: 'NEW_ARRIVAL',
@@ -154,8 +154,8 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: 'HG000001',
         toSerial: 'HG000500',
         numberOfHolograms: 500,
-        previousStock: 0,
-        newArrival: 500,
+        previousStock: 0, // Keep for backward compatibility
+        newArrival: 500, // Keep for backward compatibility
         totalStock: 500,
         remarks: 'Initial stock',
         entryType: 'NEW_ARRIVAL',
@@ -235,9 +235,7 @@ export class HologramdetailsComponent implements OnInit {
       fromSerial: '',
       toSerial: '',
       numberOfHolograms: 0,
-      previousStock: this.getLatestTotalStock(),
-      newArrival: 0,
-      totalStock: 0,
+      totalStock: this.getLatestTotalStock(),
       remarks: '',
       entryType: 'NEW_ARRIVAL'
     };
@@ -255,14 +253,15 @@ export class HologramdetailsComponent implements OnInit {
 
       if (fromNum && toNum && toNum >= fromNum) {
         this.newRecord.numberOfHolograms = toNum - fromNum + 1;
-        this.newRecord.newArrival = this.newRecord.numberOfHolograms;
         this.calculateTotalStock();
       }
     }
   }
 
   calculateTotalStock() {
-    this.newRecord.totalStock = (this.newRecord.previousStock || 0) + (this.newRecord.newArrival || 0);
+    // Calculate total stock based on current hologram count plus existing stock
+    const currentStock = this.getLatestTotalStock();
+    this.newRecord.totalStock = currentStock + (this.newRecord.numberOfHolograms || 0);
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -287,8 +286,8 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: this.newRecord.fromSerial!,
         toSerial: this.newRecord.toSerial!,
         numberOfHolograms: this.newRecord.numberOfHolograms!,
-        previousStock: this.newRecord.previousStock!,
-        newArrival: this.newRecord.newArrival!,
+        previousStock: 0, // Keep for backward compatibility but not used in UI
+        newArrival: this.newRecord.numberOfHolograms!, // Keep for backward compatibility but not used in UI
         totalStock: this.newRecord.totalStock!,
         remarks: this.newRecord.remarks || '',
         entryType: 'NEW_ARRIVAL'
