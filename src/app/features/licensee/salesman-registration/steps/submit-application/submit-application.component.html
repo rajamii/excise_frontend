@@ -7,8 +7,9 @@
   </mat-card-header>
 
   <mat-card-content>
+    
     <!-- Application Summary Section - REMOVED Application Type card -->
-    <div class="info-section" *ngIf="licenseDetails.length > 0 || personalDetails.length > 0">
+    <!-- <div class="info-section" *ngIf="licenseDetails.length > 0 || personalDetails.length > 0">
       <div class="section-header">
         <mat-icon>summarize</mat-icon>
         <h3>Application Summary</h3>
@@ -19,7 +20,7 @@
           <span class="value">{{ item.value }}</span>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- License Details Section -->
     <div class="info-section" *ngIf="licenseDetails.length > 0">
@@ -39,7 +40,8 @@
     <div class="info-section" *ngIf="personalDetails.length > 0">
       <div class="section-header">
         <mat-icon>person</mat-icon>
-        <h3>{{ role === 'salesman' ? 'Salesman Details' : (role === 'barman' ? 'Barman Details' : 'Personal Details') }}</h3>
+        <h3>{{ role === 'salesman' ? 'Salesman' : 'Barman' }} Details</h3>
+        <!-- <h3>{{ role === 'salesman' ? 'Salesman Details' : (role === 'barman' ? 'Barman Details' : 'Personal Details') }}</h3> -->
       </div>
       <div class="details-grid">
         <div class="detail-item" *ngFor="let item of personalDetails" [class.full-width]="item.key === 'Address'">

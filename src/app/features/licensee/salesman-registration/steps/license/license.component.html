@@ -24,16 +24,12 @@
 
         <!-- District Selection -->
         <mat-form-field appearance="outline">
-          <mat-label>Select District</mat-label>
-          <mat-select formControlName="district">
-            <mat-option value="">-- Select District --</mat-option>
-            @for (district of districts; track district.id) {
-            <mat-option [value]="district.id">
-              {{ district.name }} ({{ district.code }})
+          <mat-label>Excise District</mat-label>
+          <mat-select formControlName="district" required>
+            <mat-option *ngFor="let d of districts" [value]="d.id">
+              {{ d.district }}
             </mat-option>
-            }
           </mat-select>
-          <mat-icon matSuffix>location_on</mat-icon>
           @if (isFieldInvalid('district')) {
           <mat-error>{{ getFieldError('district') }}</mat-error>
           }
@@ -46,11 +42,10 @@
             <mat-option value="">-- Select License Category --</mat-option>
             @for (category of licenseCategories; track category.id) {
             <mat-option [value]="category.id">
-              {{ category.name }}
+              {{ category.licenseCategory }}
             </mat-option>
             }
           </mat-select>
-          <mat-icon matSuffix>category</mat-icon>
           @if (isFieldInvalid('licenseCategory')) {
           <mat-error>{{ getFieldError('licenseCategory') }}</mat-error>
           }
@@ -59,19 +54,17 @@
         <!-- Select Licensee -->
         <mat-form-field appearance="outline">
           <mat-label>Select Licensee</mat-label>
-          <mat-select formControlName="licensee"
-            [disabled]="!applicationForm.get('district')?.value || !applicationForm.get('licenseCategory')?.value">
+          <mat-select formControlName="licensee" [disabled]="!applicationForm.get('district')?.value">
             <mat-option value="">-- Select Licensee --</mat-option>
             @for (licensee of filteredLicensees; track licensee.id) {
             <mat-option [value]="licensee.id">
               <div class="licensee-option">
                 <div class="licensee-name">{{ licensee.establishment_name }}</div>
-                <div class="licensee-details">{{ licensee.licensee_id }} - {{ licensee.license_category }}</div>
+                <div class="licensee-details">{{ licensee.id }}</div>
               </div>
             </mat-option>
             }
           </mat-select>
-          <mat-icon matSuffix>business</mat-icon>
           @if (isFieldInvalid('licensee')) {
           <mat-error>{{ getFieldError('licensee') }}</mat-error>
           }
@@ -104,7 +97,6 @@
               </mat-option>
             </ng-container>
           </mat-select>
-          <mat-icon matSuffix>work</mat-icon>
           @if (isFieldInvalid('modeOfOperation')) {
           <mat-error>{{ getFieldError('modeOfOperation') }}</mat-error>
           }
@@ -149,7 +141,7 @@
       </div>
 
       <!-- Summary Section - outside form-field-container but inside mat-card-content -->
-      @if (applicationForm.valid) {
+      <!-- @if (applicationForm.valid) {
       <div class="summary-section">
         <div class="heading">
           Application Summary
@@ -188,9 +180,9 @@
           </div>
         </div>
       </div>
-      }
-    </mat-card-content>
+      }-->
 
+    </mat-card-content>
     <mat-card-actions>
       <button mat-flat-button color="primary" type="submit" [disabled]="!applicationForm.valid" (click)="onSubmit()">
         Proceed to Next Step

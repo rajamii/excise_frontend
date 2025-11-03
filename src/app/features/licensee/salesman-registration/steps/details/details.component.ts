@@ -132,15 +132,15 @@ export class DetailsComponent implements OnInit, OnDestroy {
   // Load previously uploaded documents from service
   private loadSavedDocuments() {
     const savedDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-    
-    console.log('Loading saved documents:', savedDocs);
-    
+
+    // console.log('Loading saved documents:', savedDocs);
+
     this.documents.forEach(doc => {
       const savedFile = savedDocs[doc.key as keyof SalesmanBarmanDocuments];
       if (savedFile) {
         doc.file = savedFile;
         doc.fileUrl = URL.createObjectURL(savedFile);
-        console.log(`Loaded ${doc.key}:`, savedFile.name);
+        // console.log(`Loaded ${doc.key}:`, savedFile.name);
       }
     });
   }
@@ -148,13 +148,13 @@ export class DetailsComponent implements OnInit, OnDestroy {
   onFileSelect(event: any, document: any) {
     const file = event.target.files[0];
     if (file) {
-      console.log(`File selected for ${document.key}:`, file.name);
-      
+      // console.log(`File selected for ${document.key}:`, file.name);
+
       // Clear old URL if exists
       if (document.fileUrl) {
         URL.revokeObjectURL(document.fileUrl);
       }
-      
+
       // Update local document object
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
@@ -162,20 +162,20 @@ export class DetailsComponent implements OnInit, OnDestroy {
       // CRITICAL FIX: Get existing documents first, then add the new one
       // This preserves all previously uploaded documents
       const currentDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-      
+
       // Create updated documents object with the new file
       const updatedDocs = {
         ...currentDocs,
         [document.key]: file
       };
-      
+
       // Set all documents back to service
       this.salesmanBarmanService.setSalesmanBarmanDocuments(updatedDocs);
-      
+
       // Log the current state
-      console.log('Document uploaded:', document.key);
-      const uploadedCount = Object.keys(this.salesmanBarmanService.getSalesmanBarmanDocuments()).length;
-      console.log('Current document count:', uploadedCount);
+      // console.log('Document uploaded:', document.key);
+      // const uploadedCount = Object.keys(this.salesmanBarmanService.getSalesmanBarmanDocuments()).length;
+      // console.log('Current document count:', uploadedCount);
     }
   }
 
@@ -187,13 +187,13 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
   areDocumentsUploaded(): boolean {
     const allUploaded = this.documents.every(doc => !doc.required || !!doc.file);
-    console.log('All documents uploaded?', allUploaded);
-    
+    // console.log('All documents uploaded?', allUploaded);
+
     // Also verify with service
     const serviceDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-    const serviceCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
-    console.log('Documents in service:', serviceCount);
-    
+    // const serviceCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
+    // console.log('Documents in service:', serviceCount);
+
     return allUploaded;
   }
 
@@ -214,10 +214,10 @@ export class DetailsComponent implements OnInit, OnDestroy {
     this.detailsForm.reset();
     sessionStorage.removeItem('personalDetails');
     this.clearFileUrls();
-    
+
     // Clear documents from service
     this.salesmanBarmanService.clearSalesmanBarmanDocuments();
-    
+
     // Clear local document files
     this.documents.forEach(doc => {
       doc.file = null;
@@ -226,19 +226,13 @@ export class DetailsComponent implements OnInit, OnDestroy {
   }
 
   proceedToNext() {
-    if (this.detailsForm.valid && this.areDocumentsUploaded()) {
-      const serviceDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-      const uploadedCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
-      console.log('Proceeding to next step with documents:', uploadedCount);
-      this.next.emit();
-    } else {
-      console.warn('Form invalid or documents missing');
-      if (!this.detailsForm.valid) {
-        console.warn('Form errors:', this.detailsForm.errors);
-      }
-      if (!this.areDocumentsUploaded()) {
-        console.warn('Missing documents');
-      }
-    }
+  if (this.detailsForm.valid && this.areDocumentsUploaded()) {
+    const raw = this.detailsForm.getRawValue();
+    raw.dob = this.datePipe.transform(raw.dob, 'yyyy-MM-dd'); // ← CRITICAL
+    sessionStorage.setItem('personalDetails', JSON.stringify(raw));
+    this.next.emit();
+  } else {
+    this.detailsForm.markAllAsTouched();
   }
+}
 }

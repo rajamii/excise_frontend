@@ -10,7 +10,7 @@ import { UnifiedApplication } from '../models/shared-application.model';
   providedIn: 'root'
 })
 export class SalesmanBarmanRegistrationService {
-  private baseUrl = `${environment.apiBaseUrl}/salesman-barman`; // Updated path
+  private baseUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`; // Updated path
 
   private documents: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
 

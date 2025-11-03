@@ -56,7 +56,7 @@ export const licenseeRoutes: Routes = [
         children: [
           {
             path: 'prepare-application',
-            loadComponent: () => import('./salesman-registration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
+            loadComponent: () => import('./salesman-registration/prepare-application.component').then(m => m.PrepareApplicationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           }, 
