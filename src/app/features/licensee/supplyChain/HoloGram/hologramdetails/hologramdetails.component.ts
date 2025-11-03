@@ -139,9 +139,9 @@ export class HologramdetailsComponent implements OnInit {
       id: item.id || (1000 + index),
       date: item.date || new Date().toISOString().split('T')[0],
       ourRefNo: item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
-      cartoonNumber: '',
-      fromSerial: '',
-      toSerial: '',
+      cartoonNumber: item.cartoonNumber || '',
+      fromSerial: item.fromSerial || '',
+      toSerial: item.toSerial || '',
       numberOfHolograms: this.calculateTotalHolograms(item),
       remarks: `Supply chain hologram request - ${item.companyName || 'Unknown Company'}`,
       status: this.determineStatus(item),
@@ -165,12 +165,32 @@ export class HologramdetailsComponent implements OnInit {
       arrivedDate: entry.arrivedDate
     }));
 
-    // Combine all records
-    this.hologramRecords = [...supplyChainRecords, ...officerRecords];
+    // Combine and deduplicate records based on ourRefNo
+    const allRecords = [...supplyChainRecords, ...officerRecords];
+    const uniqueRecordsMap = new Map();
+    
+    // Deduplicate by ourRefNo, keeping the most recent/complete record
+    allRecords.forEach(record => {
+      const existingRecord = uniqueRecordsMap.get(record.ourRefNo);
+      
+      if (!existingRecord) {
+        // No existing record, add this one
+        uniqueRecordsMap.set(record.ourRefNo, record);
+      } else {
+        // Record exists, keep the one with more complete data or higher status
+        const shouldReplace = this.shouldReplaceRecord(existingRecord, record);
+        if (shouldReplace) {
+          uniqueRecordsMap.set(record.ourRefNo, record);
+        }
+      }
+    });
 
-    // Add sample data if no records exist
+    // Convert map back to array
+    this.hologramRecords = Array.from(uniqueRecordsMap.values());
+
+    // Add sample data if no records exist (ensure unique reference numbers)
     if (this.hologramRecords.length === 0) {
-      this.hologramRecords = [
+      const sampleRecords = [
         {
           id: 1,
           date: '2024-11-01',
@@ -226,6 +246,14 @@ export class HologramdetailsComponent implements OnInit {
           }
         }
       ];
+
+      // Apply deduplication to sample data as well
+      const uniqueSampleMap = new Map();
+      sampleRecords.forEach(record => {
+        uniqueSampleMap.set(record.ourRefNo, record);
+      });
+      
+      this.hologramRecords = Array.from(uniqueSampleMap.values());
     }
   }
 
@@ -262,6 +290,36 @@ export class HologramdetailsComponent implements OnInit {
   // Check if record is from completed workflow
   isFromCompletedWorkflow(record: HologramRecord): boolean {
     return record.supplyChainData && (record.status === 'PENDING_ARRIVAL' || record.status === 'ARRIVED');
+  }
+
+  // Determine which record to keep when deduplicating
+  shouldReplaceRecord(existing: HologramRecord, newRecord: HologramRecord): boolean {
+    // Priority order: ARRIVED > PENDING_ARRIVAL > PENDING_APPROVAL
+    const statusPriority = {
+      'ARRIVED': 3,
+      'PENDING_ARRIVAL': 2,
+      'PENDING_APPROVAL': 1,
+      'APPROVED': 1,
+      'REJECTED': 0
+    };
+
+    const existingPriority = statusPriority[existing.status] || 0;
+    const newPriority = statusPriority[newRecord.status] || 0;
+
+    // Keep the record with higher status priority
+    if (newPriority > existingPriority) {
+      return true;
+    }
+
+    // If same priority, keep the one with more complete data
+    if (newPriority === existingPriority) {
+      const existingComplete = (existing.cartoonNumber || '') + (existing.fromSerial || '') + (existing.toSerial || '');
+      const newComplete = (newRecord.cartoonNumber || '') + (newRecord.fromSerial || '') + (newRecord.toSerial || '');
+      
+      return newComplete.length > existingComplete.length;
+    }
+
+    return false;
   }
 
   applyFilters() {
@@ -588,7 +646,28 @@ export class HologramdetailsComponent implements OnInit {
   // Refresh data method
   refreshData() {
     this.loadHologramRecords();
-    console.log('Hologram register data refreshed');
+    console.log('Hologram register data refreshed and deduplicated');
+  }
+
+  // Force deduplication of existing records
+  deduplicateRecords() {
+    const uniqueRecordsMap = new Map();
+    
+    this.hologramRecords.forEach(record => {
+      const existingRecord = uniqueRecordsMap.get(record.ourRefNo);
+      
+      if (!existingRecord) {
+        uniqueRecordsMap.set(record.ourRefNo, record);
+      } else {
+        const shouldReplace = this.shouldReplaceRecord(existingRecord, record);
+        if (shouldReplace) {
+          uniqueRecordsMap.set(record.ourRefNo, record);
+        }
+      }
+    });
+
+    this.hologramRecords = Array.from(uniqueRecordsMap.values());
+    this.applyFilters();
   }
 
   // Get summary counts for new status system
