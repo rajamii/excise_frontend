@@ -544,8 +544,17 @@
                       </thead>
                       <tbody>
                         @for (available of availableData; track available.id) {
-                          <tr>
-                            <td><span class="fw-bold text-primary">{{ available.cartoonNumber }}</span></td>
+                          <tr [class.table-success]="isNewAvailable(available)" [class.new-roll-highlight]="isNewAvailable(available)">
+                            <td>
+                              <div class="d-flex align-items-center">
+                                <span class="fw-bold text-primary">{{ available.cartoonNumber }}</span>
+                                @if (isNewAvailable(available)) {
+                                  <span class="badge bg-danger text-white ms-2 pulse-animation">
+                                    <i class="bi bi-star-fill me-1"></i>NEW
+                                  </span>
+                                }
+                              </div>
+                            </td>
                             <td>
                               <span class="badge" [class]="getTypeClass(available.type)">{{ available.type }}</span>
                             </td>
@@ -560,7 +569,12 @@
                               </div>
                             </td>
                             <td>
-                              <span class="badge" [class]="getStatusClass(available.status)">{{ available.status }}</span>
+                              <div class="d-flex align-items-center">
+                                <span class="badge" [class]="getStatusClass(available.status)">{{ available.status }}</span>
+                                @if (isNewAvailable(available)) {
+                                  <small class="text-muted ms-2">(Fresh Data)</small>
+                                }
+                              </div>
                             </td>
                           </tr>
                         }

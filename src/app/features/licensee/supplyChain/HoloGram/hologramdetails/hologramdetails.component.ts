@@ -508,14 +508,15 @@ export class HologramdetailsComponent implements OnInit {
       this.closeUpdateModal();
       this.applyFilters();
 
-      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully and added to Rolls inventory!`);
+      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully and added to Rolls & Available Hologram Data!`);
     }
   }
 
-  // Add new method to save data to hologram overview rolls
+  // Add new method to save data to hologram overview rolls and available data
   addToHologramOverviewRolls(record: HologramRecord) {
-    // Get existing rolls data from localStorage
+    // Get existing data from localStorage
     const existingRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const existingAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
 
     // Determine hologram type based on supply chain data or default to LOCAL
     let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
@@ -527,9 +528,11 @@ export class HologramdetailsComponent implements OnInit {
       }
     }
 
-    // Create new roll entry
+    const uniqueId = Date.now(); // Use timestamp as unique ID
+
+    // Create new roll entry for Rolls tab
     const newRoll = {
-      id: Date.now(), // Use timestamp as unique ID
+      id: uniqueId,
       cartoonNumber: record.cartoonNumber,
       type: hologramType,
       fromSerial: record.fromSerial,
@@ -544,13 +547,30 @@ export class HologramdetailsComponent implements OnInit {
       newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
     };
 
-    // Add to existing rolls
+    // Create new available entry for Available Hologram Data tab
+    const newAvailable = {
+      id: uniqueId,
+      cartoonNumber: record.cartoonNumber,
+      type: hologramType,
+      availableRange: `${record.fromSerial} - ${record.toSerial}`,
+      availableCount: record.numberOfHolograms,
+      nextSerial: record.fromSerial, // First serial is the next available
+      percentage: 100, // 100% available initially
+      status: 'AVAILABLE',
+      isNew: true, // Flag to highlight as new
+      newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
+    };
+
+    // Add to existing data
     existingRolls.push(newRoll);
+    existingAvailable.push(newAvailable);
 
     // Save back to localStorage
     localStorage.setItem('hologramOverviewRolls', JSON.stringify(existingRolls));
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(existingAvailable));
 
     console.log('Added new roll to hologram overview:', newRoll);
+    console.log('Added new available data to hologram overview:', newAvailable);
   }
 
   validateUpdateForm(): boolean {

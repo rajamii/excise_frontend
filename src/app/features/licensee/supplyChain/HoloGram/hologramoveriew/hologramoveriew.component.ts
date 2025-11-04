@@ -52,6 +52,8 @@ interface AvailableHologram {
   nextSerial: string;
   percentage: number;
   status: 'AVAILABLE' | 'LOW_STOCK' | 'CRITICAL';
+  isNew?: boolean;
+  newUntil?: number;
 }
 
 @Component({
@@ -113,11 +115,18 @@ export class HologramoveriewComponent implements OnInit {
 
   // Refresh rolls data to check for new arrivals
   refreshRollsData() {
-    const currentCount = this.rollsData.length;
-    this.loadRollsData();
+    const currentRollsCount = this.rollsData.length;
+    const currentAvailableCount = this.availableData.length;
     
-    if (this.rollsData.length > currentCount) {
+    this.loadRollsData();
+    this.loadAvailableData();
+    
+    if (this.rollsData.length > currentRollsCount) {
       console.log('New hologram rolls detected!');
+    }
+    
+    if (this.availableData.length > currentAvailableCount) {
+      console.log('New available hologram data detected!');
     }
   }
 
@@ -310,48 +319,73 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadAvailableData() {
-    this.availableData = [
+    // Load from localStorage first
+    const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    
+    // Sample data (will be combined with saved data)
+    const sampleAvailable = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
-        type: 'LOCAL',
+        type: 'LOCAL' as const,
         availableRange: 'HG001121 - HG001500',
         availableCount: 350,
         nextSerial: 'HG001121',
         percentage: 70,
-        status: 'AVAILABLE'
+        status: 'AVAILABLE' as const
       },
       {
         id: 2,
         cartoonNumber: 'CTN002',
-        type: 'EXPORT',
+        type: 'EXPORT' as const,
         availableRange: 'HG002001 - HG002500',
         availableCount: 500,
         nextSerial: 'HG002001',
         percentage: 100,
-        status: 'AVAILABLE'
+        status: 'AVAILABLE' as const
       },
       {
         id: 3,
         cartoonNumber: 'CTN004',
-        type: 'LOCAL',
+        type: 'LOCAL' as const,
         availableRange: 'HG004101 - HG004750',
         availableCount: 600,
         nextSerial: 'HG004101',
         percentage: 80,
-        status: 'AVAILABLE'
-      },
-      {
-        id: 4,
-        cartoonNumber: 'CTN005',
-        type: 'EXPORT',
-        availableRange: 'HG005081 - HG005400',
-        availableCount: 250,
-        nextSerial: 'HG005081',
-        percentage: 62.5,
-        status: 'AVAILABLE'
+        status: 'AVAILABLE' as const
       }
     ];
+
+    // Combine saved available data with sample data (saved data first to show at top)
+    this.availableData = [...savedAvailable, ...sampleAvailable];
+
+    // Clean up expired "new" flags for available data
+    this.cleanupExpiredAvailableNewFlags();
+  }
+
+  // Clean up expired "new" flags for available data
+  cleanupExpiredAvailableNewFlags() {
+    const now = Date.now();
+    let hasChanges = false;
+
+    this.availableData.forEach(available => {
+      if (available.isNew && available.newUntil && now > available.newUntil) {
+        available.isNew = false;
+        delete available.newUntil;
+        hasChanges = true;
+      }
+    });
+
+    // Update localStorage if there were changes
+    if (hasChanges) {
+      const savedAvailable = this.availableData.filter(available => available.id > 1000); // Only save non-sample data
+      localStorage.setItem('hologramOverviewAvailable', JSON.stringify(savedAvailable));
+    }
+  }
+
+  // Check if available data is new
+  isNewAvailable(available: AvailableHologram): boolean {
+    return !!(available.isNew === true && available.newUntil && Date.now() < available.newUntil);
   }
 
   getTypeClass(type: string): string {
