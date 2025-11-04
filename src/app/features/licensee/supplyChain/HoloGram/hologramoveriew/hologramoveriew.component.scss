@@ -1090,4 +1090,52 @@ rial Numbers Data Tab Specific Styling
       }
     }
   }
+}//
+ Filtered card styling
+.summary-card {
+  &.filtered-card {
+    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2) !important;
+    
+    &:hover {
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3) !important;
+    }
+    
+    .card-content {
+      .card-label {
+        color: #3b82f6 !important;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+// Filter summary styling
+.bg-light {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  
+  .text-muted {
+    color: #64748b !important;
+    font-weight: 500;
+  }
+  
+  .bi-info-circle {
+    color: #3b82f6;
+  }
+}
+
+// Filter icon styling
+.bi-funnel-fill {
+  font-size: 0.8rem;
+  animation: filterPulse 2s ease-in-out infinite;
+}
+
+@keyframes filterPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
