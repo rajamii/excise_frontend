@@ -144,20 +144,36 @@ export class HologramdetailsComponent implements OnInit {
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
 
     // Convert supply chain hologram data to register format
-    const supplyChainRecords = [...hologramRequests, ...hologramApplications].map((item: any, index: number) => ({
-      id: item.id || (1000 + index),
-      date: item.date || new Date().toISOString().split('T')[0],
-      ourRefNo: item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
-      cartoonNumber: item.cartoonNumber || '',
-      fromSerial: item.fromSerial || '',
-      toSerial: item.toSerial || '',
-      numberOfHolograms: this.calculateTotalHolograms(item),
-      remarks: `Supply chain hologram request - ${item.companyName || 'Unknown Company'}`,
-      status: this.determineStatus(item),
-      approvedDate: item.approvedDate,
-      arrivedDate: item.arrivedDate,
-      supplyChainData: item
-    }));
+    const supplyChainRecords = [...hologramRequests, ...hologramApplications].map((item: any, index: number) => {
+      // Determine the primary type based on quantities
+      let primaryType = 'Local';
+      if (item.exportQtyLakh > 0) {
+        primaryType = 'Export';
+      } else if (item.defenceQtyLakh > 0) {
+        primaryType = 'Defence';
+      }
+
+      return {
+        id: item.id || (1000 + index),
+        date: item.date || new Date().toISOString().split('T')[0],
+        ourRefNo: item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
+        cartoonNumber: item.cartoonNumber || '',
+        fromSerial: item.fromSerial || '',
+        toSerial: item.toSerial || '',
+        numberOfHolograms: this.calculateTotalHolograms(item),
+        remarks: `Supply chain hologram request - ${item.companyName || 'Unknown Company'} (${primaryType})`,
+        status: this.determineStatus(item),
+        approvedDate: item.approvedDate,
+        arrivedDate: item.arrivedDate,
+        supplyChainData: {
+          ...item,
+          // Ensure we have the quantity fields for type determination
+          localQtyLakh: item.localQtyLakh || 0,
+          exportQtyLakh: item.exportQtyLakh || 0,
+          defenceQtyLakh: item.defenceQtyLakh || 0
+        }
+      };
+    });
 
     // Convert officer approved entries
     const officerRecords = approvedEntries.map((entry: any) => ({
@@ -207,14 +223,16 @@ export class HologramdetailsComponent implements OnInit {
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
-          numberOfHolograms: 1, // 1 unit - Ready for update (this will show as 1 unit, not 100,000)
+          numberOfHolograms: 1000, // 1000 units - Ready for update
           remarks: 'Hologram request for Premium Whisky production - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-03',
           supplyChainData: {
             refNo: 'HRQ/2024/001',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 1, // Direct unit entry, not in lakhs
+            localQtyLakh: 0.01, // 1000 units = 0.01 lakh
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0,
             status: 'APPROVED'
           }
         },
@@ -232,7 +250,9 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/002',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 5000,
+            localQtyLakh: 0,
+            exportQtyLakh: 0.05, // 5000 units = 0.05 lakh
+            defenceQtyLakh: 0,
             status: 'APPROVED'
           }
         },
@@ -251,7 +271,9 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/003',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 2000,
+            localQtyLakh: 0.02, // 2000 units = 0.02 lakh
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0,
             status: 'APPROVED'
           }
         },
@@ -269,7 +291,9 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/004',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 1500,
+            localQtyLakh: 0,
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0.015, // 1500 units = 0.015 lakh
             status: 'APPROVED'
           }
         },
@@ -288,7 +312,9 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/005',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 500,
+            localQtyLakh: 0.005, // 500 units = 0.005 lakh
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0,
             status: 'APPROVED'
           }
         },
@@ -305,7 +331,9 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/006',
             companyName: 'Sikkim Distilleries Ltd',
-            totalHolograms: 1000,
+            localQtyLakh: 0.01, // 1000 units = 0.01 lakh
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0,
             status: 'Submitted'
           }
         }
@@ -657,6 +685,49 @@ export class HologramdetailsComponent implements OnInit {
         return 'Pending Approval';
       default:
         return 'Unknown';
+    }
+  }
+
+  // Hologram type related methods
+  getHologramType(record: HologramRecord): string {
+    // Check supply chain data first
+    if (record.supplyChainData) {
+      // Check which type has quantity > 0
+      if (record.supplyChainData.exportQtyLakh > 0) {
+        return 'EXPORT';
+      } else if (record.supplyChainData.defenceQtyLakh > 0) {
+        return 'DEFENCE';
+      } else if (record.supplyChainData.localQtyLakh > 0) {
+        return 'LOCAL';
+      }
+    }
+
+    // Check remarks for type indicators
+    if (record.remarks) {
+      const remarks = record.remarks.toLowerCase();
+      if (remarks.includes('export')) {
+        return 'EXPORT';
+      } else if (remarks.includes('defence') || remarks.includes('defense')) {
+        return 'DEFENCE';
+      } else if (remarks.includes('local')) {
+        return 'LOCAL';
+      }
+    }
+
+    // Default to LOCAL if no specific type found
+    return 'LOCAL';
+  }
+
+  getHologramTypeClass(type: string): string {
+    switch (type) {
+      case 'LOCAL':
+        return 'bg-success text-white';
+      case 'EXPORT':
+        return 'bg-dark text-white';
+      case 'DEFENCE':
+        return 'bg-warning text-dark';
+      default:
+        return 'bg-secondary text-white';
     }
   }
 

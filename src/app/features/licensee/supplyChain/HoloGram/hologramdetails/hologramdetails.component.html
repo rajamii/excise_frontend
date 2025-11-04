@@ -147,6 +147,7 @@
                             <th class="date-col">Date</th>
                             <th class="ref-no">Our Ref. No.</th>
                             <th class="cartoon-no">Cartoon Number</th>
+                            <th class="type-col">Type</th>
                             <th class="serial-from">From Serial</th>
                             <th class="serial-to">To Serial</th>
                             <th class="hologram-count">Total No. of Holograms</th>
@@ -168,6 +169,11 @@
                             </td>
                             <td class="cartoon-no">
                                 <span class="cartoon-number">{{ record.cartoonNumber || '-' }}</span>
+                            </td>
+                            <td class="type-col">
+                                <span class="badge" [class]="getHologramTypeClass(getHologramType(record))">
+                                    {{ getHologramType(record) }}
+                                </span>
                             </td>
                             <td class="serial-from">
                                 <span class="serial-number">{{ record.fromSerial || '-' }}</span>
