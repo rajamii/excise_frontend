@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 
 interface HologramRoll {
   id: number;
@@ -56,6 +57,41 @@ interface AvailableHologram {
   newUntil?: number;
 }
 
+interface SerialNumberRoll {
+  id: number;
+  rollNumber: string;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  fromSerial: string;
+  toSerial: string;
+  totalCount: number;
+  availableCount: number;
+  usedCount: number;
+  damagedCount: number;
+  status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
+  receivedDate: string;
+  usageHistory: UsageHistory[];
+  isNew?: boolean;
+  newUntil?: number;
+}
+
+interface UsageHistory {
+  date: string;
+  batchNumber: string;
+  brandName: string;
+  fromSerial: string;
+  toSerial: string;
+  quantity: number;
+  status: 'COMPLETED' | 'IN_PROGRESS' | 'DAMAGED';
+}
+
+interface SerialFilters {
+  rollStatus: string;
+  hologramType: string;
+  dateFrom: string;
+  dateTo: string;
+  serialSearch: string;
+}
+
 @Component({
   selector: 'app-hologramoveriew',
   imports: [CommonModule, FormsModule],
@@ -69,6 +105,21 @@ export class HologramoveriewComponent implements OnInit {
   issuedData: IssuedHologram[] = [];
   historyData: HologramHistory[] = [];
   availableData: AvailableHologram[] = [];
+  
+  // Serial Numbers Data
+  serialNumbersData: SerialNumberRoll[] = [];
+  filteredSerialData: SerialNumberRoll[] = [];
+  serialFilters: SerialFilters = {
+    rollStatus: '',
+    hologramType: '',
+    dateFrom: '',
+    dateTo: '',
+    serialSearch: ''
+  };
+  
+  // Pagination for serial data
+  serialCurrentPage: number = 1;
+  serialItemsPerPage: number = 10;
 
   // Filter properties
   showAdvancedFilters: boolean = false;
@@ -97,15 +148,27 @@ export class HologramoveriewComponent implements OnInit {
     return { value: year, label: year };
   });
 
+  constructor(private route: ActivatedRoute) {}
+
   ngOnInit() {
+    // Check for tab parameter in URL
+    this.route.queryParams.subscribe(params => {
+      if (params['tab']) {
+        this.activeTab = params['tab'];
+      }
+    });
+
     this.loadRollsData();
     this.loadIssuedData();
     this.loadHistoryData();
     this.loadAvailableData();
+    this.loadSerialNumbersData();
     
     // Debug: Log the data to console
     console.log('Rolls Data:', this.rollsData);
     console.log('Available Data:', this.availableData);
+    console.log('Serial Numbers Data:', this.serialNumbersData);
+    console.log('Active Tab:', this.activeTab);
     
     // Set up periodic refresh to check for new data
     setInterval(() => {
@@ -212,6 +275,11 @@ export class HologramoveriewComponent implements OnInit {
 
   // Check if a roll is new
   isNewRoll(roll: HologramRoll): boolean {
+    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
+  }
+
+  // Check if a serial roll is new
+  isNewSerialRoll(roll: SerialNumberRoll): boolean {
     return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
   }
 
@@ -518,5 +586,242 @@ export class HologramoveriewComponent implements OnInit {
     console.log('Exporting filtered chart data');
     // In a real application, this would export the filtered data
     alert('Chart data export functionality will be implemented here');
+  }
+
+  // Serial Numbers Data Methods
+  loadSerialNumbersData() {
+    // Load from localStorage (data from hologram register arrivals)
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    
+    // Sample serial numbers data
+    const sampleSerialData: SerialNumberRoll[] = [
+      {
+        id: 1,
+        rollNumber: 'ROLL-001',
+        hologramType: 'LOCAL',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001500',
+        totalCount: 500,
+        availableCount: 350,
+        usedCount: 120,
+        damagedCount: 30,
+        status: 'IN_USE',
+        receivedDate: '2024-11-01',
+        usageHistory: [
+          {
+            date: '2024-11-02',
+            batchNumber: 'BATCH-001',
+            brandName: 'Premium Whisky',
+            fromSerial: 'HG001001',
+            toSerial: 'HG001050',
+            quantity: 50,
+            status: 'COMPLETED'
+          },
+          {
+            date: '2024-11-03',
+            batchNumber: 'BATCH-002',
+            brandName: 'Royal Rum',
+            fromSerial: 'HG001051',
+            toSerial: 'HG001120',
+            quantity: 70,
+            status: 'COMPLETED'
+          }
+        ]
+      },
+      {
+        id: 2,
+        rollNumber: 'ROLL-002',
+        hologramType: 'EXPORT',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002500',
+        totalCount: 500,
+        availableCount: 500,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: '2024-10-28',
+        usageHistory: []
+      },
+      {
+        id: 3,
+        rollNumber: 'ROLL-003',
+        hologramType: 'DEFENCE',
+        fromSerial: 'HG003001',
+        toSerial: 'HG003300',
+        totalCount: 300,
+        availableCount: 0,
+        usedCount: 280,
+        damagedCount: 20,
+        status: 'COMPLETED',
+        receivedDate: '2024-10-15',
+        usageHistory: [
+          {
+            date: '2024-10-20',
+            batchNumber: 'DEF-001',
+            brandName: 'Military Special',
+            fromSerial: 'HG003001',
+            toSerial: 'HG003280',
+            quantity: 280,
+            status: 'COMPLETED'
+          }
+        ]
+      }
+    ];
+
+    // Convert saved rolls to serial number format
+    const convertedRolls: SerialNumberRoll[] = savedRolls.map((roll: any) => ({
+      id: roll.id,
+      rollNumber: roll.cartoonNumber || `ROLL-${roll.id}`,
+      hologramType: roll.type,
+      fromSerial: roll.fromSerial,
+      toSerial: roll.toSerial,
+      totalCount: roll.totalCount,
+      availableCount: roll.availableCount,
+      usedCount: roll.usedCount || 0,
+      damagedCount: roll.damagedCount || 0,
+      status: roll.status,
+      receivedDate: roll.receivedDate,
+      usageHistory: [],
+      isNew: roll.isNew,
+      newUntil: roll.newUntil
+    }));
+
+    // Combine converted rolls with sample data
+    this.serialNumbersData = [...convertedRolls, ...sampleSerialData];
+    this.applySerialFilters();
+  }
+
+  applySerialFilters() {
+    this.filteredSerialData = this.serialNumbersData.filter(roll => {
+      // Roll status filter
+      const statusMatch = !this.serialFilters.rollStatus || roll.status === this.serialFilters.rollStatus;
+      
+      // Hologram type filter
+      const typeMatch = !this.serialFilters.hologramType || roll.hologramType === this.serialFilters.hologramType;
+      
+      // Date range filter
+      const rollDate = new Date(roll.receivedDate);
+      const dateFromMatch = !this.serialFilters.dateFrom || rollDate >= new Date(this.serialFilters.dateFrom);
+      const dateToMatch = !this.serialFilters.dateTo || rollDate <= new Date(this.serialFilters.dateTo);
+      
+      // Serial search filter
+      const serialMatch = !this.serialFilters.serialSearch || 
+        roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
+        roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
+        roll.rollNumber.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase());
+      
+      return statusMatch && typeMatch && dateFromMatch && dateToMatch && serialMatch;
+    });
+
+    // Reset pagination
+    this.serialCurrentPage = 1;
+  }
+
+  clearSerialFilters() {
+    this.serialFilters = {
+      rollStatus: '',
+      hologramType: '',
+      dateFrom: '',
+      dateTo: '',
+      serialSearch: ''
+    };
+    this.applySerialFilters();
+  }
+
+  refreshSerialData() {
+    this.loadSerialNumbersData();
+    console.log('Serial numbers data refreshed');
+  }
+
+  exportSerialData() {
+    console.log('Exporting serial numbers data');
+    // In a real application, this would export the serial data
+    alert('Serial numbers data export functionality will be implemented here');
+  }
+
+  // Serial data summary methods
+  getTotalRolls(): number {
+    return this.serialNumbersData.length;
+  }
+
+  getAvailableHolograms(): number {
+    return this.serialNumbersData.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  getUsedInProduction(): number {
+    return this.serialNumbersData.reduce((total, roll) => total + roll.usedCount, 0);
+  }
+
+  getDamagedWastage(): number {
+    return this.serialNumbersData.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  // Serial data action methods
+  viewUsageDetails(roll: SerialNumberRoll) {
+    console.log('Viewing usage details for roll:', roll.rollNumber);
+    // In a real application, this would open a modal with usage details
+    alert(`Usage details for ${roll.rollNumber}:\n\nTotal Usage History: ${roll.usageHistory.length} entries\nLast Used: ${roll.usageHistory.length > 0 ? roll.usageHistory[roll.usageHistory.length - 1].date : 'Never'}`);
+  }
+
+  editRoll(roll: SerialNumberRoll) {
+    console.log('Editing roll:', roll.rollNumber);
+    // In a real application, this would open an edit modal
+    alert(`Edit functionality for ${roll.rollNumber} will be implemented here`);
+  }
+
+  viewRollDetails(roll: SerialNumberRoll) {
+    console.log('Viewing roll details:', roll.rollNumber);
+    // In a real application, this would show detailed information
+    alert(`Roll Details:\n\nRoll Number: ${roll.rollNumber}\nType: ${roll.hologramType}\nSerial Range: ${roll.fromSerial} - ${roll.toSerial}\nTotal: ${roll.totalCount}\nAvailable: ${roll.availableCount}\nUsed: ${roll.usedCount}\nDamaged: ${roll.damagedCount}\nStatus: ${roll.status}\nReceived: ${roll.receivedDate}`);
+  }
+
+  markDamaged(roll: SerialNumberRoll) {
+    console.log('Marking roll as damaged:', roll.rollNumber);
+    // In a real application, this would open a damage reporting modal
+    alert(`Damage reporting for ${roll.rollNumber} will be implemented here`);
+  }
+
+  // Pagination methods for serial data
+  getSerialDataStartIndex(): number {
+    return (this.serialCurrentPage - 1) * this.serialItemsPerPage;
+  }
+
+  getSerialDataEndIndex(): number {
+    return Math.min(this.getSerialDataStartIndex() + this.serialItemsPerPage, this.filteredSerialData.length);
+  }
+
+  getTotalSerialPages(): number {
+    return Math.ceil(this.filteredSerialData.length / this.serialItemsPerPage);
+  }
+
+  getSerialPageNumbers(): number[] {
+    const totalPages = this.getTotalSerialPages();
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, this.serialCurrentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  }
+
+  setSerialPage(page: number) {
+    if (page >= 1 && page <= this.getTotalSerialPages()) {
+      this.serialCurrentPage = page;
+    }
+  }
+
+  getPaginatedSerialData(): SerialNumberRoll[] {
+    const startIndex = this.getSerialDataStartIndex();
+    const endIndex = this.getSerialDataEndIndex();
+    return this.filteredSerialData.slice(startIndex, endIndex);
   }
 }
