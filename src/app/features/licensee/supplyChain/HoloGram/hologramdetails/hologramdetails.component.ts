@@ -502,11 +502,55 @@ export class HologramdetailsComponent implements OnInit {
       // Update in storage
       this.updateHologramRecordInStorage(this.selectedRecordForUpdate);
 
+      // Add to hologram overview rolls data
+      this.addToHologramOverviewRolls(this.selectedRecordForUpdate);
+
       this.closeUpdateModal();
       this.applyFilters();
 
-      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully!`);
+      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully and added to Rolls inventory!`);
     }
+  }
+
+  // Add new method to save data to hologram overview rolls
+  addToHologramOverviewRolls(record: HologramRecord) {
+    // Get existing rolls data from localStorage
+    const existingRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+
+    // Determine hologram type based on supply chain data or default to LOCAL
+    let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
+    if (record.supplyChainData) {
+      if (record.supplyChainData.exportQtyLakh > 0 || record.remarks?.toLowerCase().includes('export')) {
+        hologramType = 'EXPORT';
+      } else if (record.supplyChainData.defenceQtyLakh > 0 || record.remarks?.toLowerCase().includes('defence')) {
+        hologramType = 'DEFENCE';
+      }
+    }
+
+    // Create new roll entry
+    const newRoll = {
+      id: Date.now(), // Use timestamp as unique ID
+      cartoonNumber: record.cartoonNumber,
+      type: hologramType,
+      fromSerial: record.fromSerial,
+      toSerial: record.toSerial,
+      totalCount: record.numberOfHolograms,
+      availableCount: record.numberOfHolograms, // All available initially
+      usedCount: 0, // None used initially
+      damagedCount: 0, // None damaged initially
+      status: 'AVAILABLE', // Fresh data is available
+      receivedDate: record.arrivedDate || new Date().toISOString().split('T')[0],
+      isNew: true, // Flag to highlight as new
+      newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
+    };
+
+    // Add to existing rolls
+    existingRolls.push(newRoll);
+
+    // Save back to localStorage
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify(existingRolls));
+
+    console.log('Added new roll to hologram overview:', newRoll);
   }
 
   validateUpdateForm(): boolean {

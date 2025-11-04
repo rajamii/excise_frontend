@@ -14,6 +14,8 @@ interface HologramRoll {
   damagedCount: number;
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
+  isNew?: boolean;
+  newUntil?: number;
 }
 
 interface IssuedHologram {
@@ -102,6 +104,21 @@ export class HologramoveriewComponent implements OnInit {
     // Debug: Log the data to console
     console.log('Rolls Data:', this.rollsData);
     console.log('Available Data:', this.availableData);
+    
+    // Set up periodic refresh to check for new data
+    setInterval(() => {
+      this.refreshRollsData();
+    }, 30000); // Refresh every 30 seconds
+  }
+
+  // Refresh rolls data to check for new arrivals
+  refreshRollsData() {
+    const currentCount = this.rollsData.length;
+    this.loadRollsData();
+    
+    if (this.rollsData.length > currentCount) {
+      console.log('New hologram rolls detected!');
+    }
   }
 
   setActiveTab(tab: string) {
@@ -111,73 +128,82 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadRollsData() {
-    this.rollsData = [
+    // Load from localStorage first
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    
+    // Sample data (will be combined with saved data)
+    const sampleRolls = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
-        type: 'LOCAL',
+        type: 'LOCAL' as const,
         fromSerial: 'HG001001',
         toSerial: 'HG001500',
         totalCount: 500,
         availableCount: 350,
         usedCount: 120,
         damagedCount: 30,
-        status: 'IN_USE',
+        status: 'IN_USE' as const,
         receivedDate: '2024-11-01'
       },
       {
         id: 2,
         cartoonNumber: 'CTN002',
-        type: 'EXPORT',
+        type: 'EXPORT' as const,
         fromSerial: 'HG002001',
         toSerial: 'HG002500',
         totalCount: 500,
         availableCount: 500,
         usedCount: 0,
         damagedCount: 0,
-        status: 'AVAILABLE',
+        status: 'AVAILABLE' as const,
         receivedDate: '2024-10-28'
       },
       {
         id: 3,
         cartoonNumber: 'CTN003',
-        type: 'DEFENCE',
+        type: 'DEFENCE' as const,
         fromSerial: 'HG003001',
         toSerial: 'HG003300',
         totalCount: 300,
         availableCount: 0,
         usedCount: 280,
         damagedCount: 20,
-        status: 'COMPLETED',
+        status: 'COMPLETED' as const,
         receivedDate: '2024-10-15'
-      },
-      {
-        id: 4,
-        cartoonNumber: 'CTN004',
-        type: 'LOCAL',
-        fromSerial: 'HG004001',
-        toSerial: 'HG004750',
-        totalCount: 750,
-        availableCount: 600,
-        usedCount: 100,
-        damagedCount: 50,
-        status: 'IN_USE',
-        receivedDate: '2024-10-20'
-      },
-      {
-        id: 5,
-        cartoonNumber: 'CTN005',
-        type: 'EXPORT',
-        fromSerial: 'HG005001',
-        toSerial: 'HG005400',
-        totalCount: 400,
-        availableCount: 250,
-        usedCount: 130,
-        damagedCount: 20,
-        status: 'IN_USE',
-        receivedDate: '2024-10-25'
       }
     ];
+
+    // Combine saved rolls with sample data (saved rolls first to show at top)
+    this.rollsData = [...savedRolls, ...sampleRolls];
+
+    // Clean up expired "new" flags
+    this.cleanupExpiredNewFlags();
+  }
+
+  // Clean up expired "new" flags
+  cleanupExpiredNewFlags() {
+    const now = Date.now();
+    let hasChanges = false;
+
+    this.rollsData.forEach(roll => {
+      if (roll.isNew && roll.newUntil && now > roll.newUntil) {
+        roll.isNew = false;
+        delete roll.newUntil;
+        hasChanges = true;
+      }
+    });
+
+    // Update localStorage if there were changes
+    if (hasChanges) {
+      const savedRolls = this.rollsData.filter(roll => roll.id > 1000); // Only save non-sample data
+      localStorage.setItem('hologramOverviewRolls', JSON.stringify(savedRolls));
+    }
+  }
+
+  // Check if a roll is new
+  isNewRoll(roll: HologramRoll): boolean {
+    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
   }
 
   loadIssuedData() {

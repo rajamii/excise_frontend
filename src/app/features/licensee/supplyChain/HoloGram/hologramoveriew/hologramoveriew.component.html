@@ -349,22 +349,18 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <!-- Test row to verify table is working -->
-                        <tr>
-                          <td><span class="fw-bold text-primary">TEST-CTN001</span></td>
-                          <td><span class="badge bg-success text-white">LOCAL</span></td>
-                          <td><span class="font-monospace">HG001001</span></td>
-                          <td><span class="font-monospace">HG001500</span></td>
-                          <td class="text-end">500</td>
-                          <td class="text-end text-success fw-bold">350</td>
-                          <td class="text-end text-primary fw-bold">120</td>
-                          <td class="text-end text-danger fw-bold">30</td>
-                          <td><span class="badge bg-warning text-dark">IN_USE</span></td>
-                          <td>01-Nov-2024</td>
-                        </tr>
                         @for (roll of rollsData; track roll.id) {
-                          <tr>
-                            <td><span class="fw-bold text-primary">{{ roll.cartoonNumber }}</span></td>
+                          <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
+                            <td>
+                              <div class="d-flex align-items-center">
+                                <span class="fw-bold text-primary">{{ roll.cartoonNumber }}</span>
+                                @if (isNewRoll(roll)) {
+                                  <span class="badge bg-danger text-white ms-2 pulse-animation">
+                                    <i class="bi bi-star-fill me-1"></i>NEW
+                                  </span>
+                                }
+                              </div>
+                            </td>
                             <td>
                               <span class="badge" [class]="getTypeClass(roll.type)">{{ roll.type }}</span>
                             </td>
@@ -375,7 +371,12 @@
                             <td class="text-end text-primary fw-bold">{{ roll.usedCount | number }}</td>
                             <td class="text-end text-danger fw-bold">{{ roll.damagedCount | number }}</td>
                             <td>
-                              <span class="badge" [class]="getStatusClass(roll.status)">{{ roll.status }}</span>
+                              <div class="d-flex align-items-center">
+                                <span class="badge" [class]="getStatusClass(roll.status)">{{ roll.status }}</span>
+                                @if (isNewRoll(roll)) {
+                                  <small class="text-muted ms-2">(Fresh Data)</small>
+                                }
+                              </div>
                             </td>
                             <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
                           </tr>
