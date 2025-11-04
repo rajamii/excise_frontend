@@ -77,12 +77,14 @@ export class HologramdetailsComponent implements OnInit {
   });
 
   constructor(private router: Router) {
-    this.selectedMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    this.selectedYear = new Date().getFullYear().toString();
+    // Don't set default month/year filters to show all data including test data
+    this.selectedMonth = '';
+    this.selectedYear = '';
   }
 
   ngOnInit() {
     this.loadHologramRecords();
+    this.addTestDataForArrivalTesting();
   }
 
   loadHologramRecords() {
@@ -768,6 +770,76 @@ export class HologramdetailsComponent implements OnInit {
   openHologramOverview(): void {
     // Navigate to hologram overview page in a new tab/window for better user experience
     window.open('/dev-hologram-overview', '_blank');
+  }
+
+  // Add test data for arrival testing
+  addTestDataForArrivalTesting(): void {
+    const testRecords: HologramRecord[] = [
+      {
+        id: 9001,
+        date: '2024-11-04',
+        ourRefNo: 'TEST/2024/001',
+        cartoonNumber: '',
+        fromSerial: '',
+        toSerial: '',
+        numberOfHolograms: 1000,
+        remarks: 'TEST: Hologram request for Local Whiskey - Ready for Arrival Update',
+        status: 'PENDING_ARRIVAL',
+        approvedDate: '2024-11-04',
+        supplyChainData: {
+          refNo: 'TEST/2024/001',
+          companyName: 'Test Company Ltd',
+          localQtyLakh: 1000,
+          exportQtyLakh: 0,
+          defenceQtyLakh: 0,
+          status: 'APPROVED'
+        }
+      },
+      {
+        id: 9002,
+        date: '2024-11-04',
+        ourRefNo: 'TEST/2024/002',
+        cartoonNumber: '',
+        fromSerial: '',
+        toSerial: '',
+        numberOfHolograms: 2500,
+        remarks: 'TEST: Hologram request for Export Rum - Ready for Arrival Update',
+        status: 'PENDING_ARRIVAL',
+        approvedDate: '2024-11-04',
+        supplyChainData: {
+          refNo: 'TEST/2024/002',
+          companyName: 'Test Company Ltd',
+          localQtyLakh: 0,
+          exportQtyLakh: 2500,
+          defenceQtyLakh: 0,
+          status: 'APPROVED'
+        }
+      },
+      {
+        id: 9003,
+        date: '2024-11-04',
+        ourRefNo: 'TEST/2024/003',
+        cartoonNumber: '',
+        fromSerial: '',
+        toSerial: '',
+        numberOfHolograms: 500,
+        remarks: 'TEST: Hologram request for Defence Supplies - Ready for Arrival Update',
+        status: 'PENDING_ARRIVAL',
+        approvedDate: '2024-11-04',
+        supplyChainData: {
+          refNo: 'TEST/2024/003',
+          companyName: 'Test Company Ltd',
+          localQtyLakh: 0,
+          exportQtyLakh: 0,
+          defenceQtyLakh: 500,
+          status: 'APPROVED'
+        }
+      }
+    ];
+
+    // Add test records to the beginning of the array for visibility
+    this.hologramRecords = [...testRecords, ...this.hologramRecords];
+    this.applyFilters();
   }
 
 

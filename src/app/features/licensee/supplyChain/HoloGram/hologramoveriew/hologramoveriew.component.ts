@@ -122,14 +122,14 @@ interface SerialRollData {
 })
 export class HologramoveriewComponent implements OnInit {
   activeTab: string = 'rolls';
-  
+
   rollsData: HologramRoll[] = [];
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
   serialRollsData: SerialRollData[] = [];
   filteredSerialData: SerialRollData[] = [];
-  
+
   // Serial Details Modal
   showSerialDetailsModal: boolean = false;
   selectedSerialData: SerialData | null = null;
@@ -188,15 +188,71 @@ export class HologramoveriewComponent implements OnInit {
     { value: '2022', label: '2022' }
   ];
 
-  constructor(private route: ActivatedRoute) {}
+  constructor(private route: ActivatedRoute) { }
 
   ngOnInit() {
+    this.loadAllData();
+    this.setupAutoRefresh();
+  }
+
+  loadAllData() {
+    console.log('🔄 Loading all hologram data...');
     this.loadRollsData();
     this.loadAvailableData();
     this.loadIssuedData();
     this.loadHistoryData();
     this.loadSerialRollsData();
     this.applySerialFilters();
+    console.log('✅ All hologram data loaded successfully');
+
+    // Show a brief notification
+    this.showRefreshNotification();
+  }
+
+  showRefreshNotification() {
+    // Create a temporary notification element
+    const notification = document.createElement('div');
+    notification.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+        font-weight: 600;
+        animation: slideIn 0.3s ease-out;
+      ">
+        <i class="bi bi-check-circle me-2"></i>
+        Data refreshed successfully!
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 3000);
+  }
+
+  setupAutoRefresh() {
+    // Refresh data when window gains focus (user switches back to this tab)
+    window.addEventListener('focus', () => {
+      this.loadAllData();
+      console.log('Window focused - refreshed hologram data');
+    });
+
+    // Also refresh every 30 seconds to catch any new arrivals
+    setInterval(() => {
+      this.loadAllData();
+      console.log('Auto-refresh - updated hologram data');
+    }, 30000);
   }
 
   setActiveTab(tab: string) {
@@ -204,8 +260,11 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadRollsData() {
-    // Sample data
-    this.rollsData = [
+    // Load data from localStorage (saved by arrival process)
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+
+    // Sample data for demonstration
+    const sampleData = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
@@ -246,11 +305,24 @@ export class HologramoveriewComponent implements OnInit {
         receivedDate: '2024-10-15'
       }
     ];
+
+    // Combine saved data with sample data, prioritizing saved data
+    this.rollsData = [...savedRolls, ...sampleData];
+
+    console.log('📊 Loaded rolls data:', {
+      savedFromStorage: savedRolls.length,
+      sampleData: sampleData.length,
+      total: this.rollsData.length,
+      data: this.rollsData
+    });
   }
 
   loadAvailableData() {
+    // Load data from localStorage (saved by arrival process)
+    const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+
     // Sample available hologram data
-    this.availableData = [
+    const sampleData = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
@@ -282,6 +354,16 @@ export class HologramoveriewComponent implements OnInit {
         status: 'AVAILABLE'
       }
     ];
+
+    // Combine saved data with sample data, prioritizing saved data
+    this.availableData = [...savedAvailable, ...sampleData];
+
+    console.log('📋 Loaded available data:', {
+      savedFromStorage: savedAvailable.length,
+      sampleData: sampleData.length,
+      total: this.availableData.length,
+      data: this.availableData
+    });
   }
 
   loadIssuedData(): void {
@@ -437,26 +519,26 @@ export class HologramoveriewComponent implements OnInit {
 
   generateSerialNumbersData(availableData: AvailableHologram): SerialData {
     const serialNumbers: SerialNumber[] = [];
-    
+
     // Extract start and end numbers from serial range
     const fromMatch = availableData.availableRange.split(' - ')[0].match(/\d+/);
     const toMatch = availableData.availableRange.split(' - ')[1].match(/\d+/);
-    
+
     if (fromMatch && toMatch) {
       const startNum = parseInt(fromMatch[0]);
       const endNum = parseInt(toMatch[0]);
       const prefix = availableData.availableRange.split(' - ')[0].replace(/\d+/, '');
-      
+
       // Generate serial numbers with realistic usage patterns
       for (let i = startNum; i <= endNum; i++) {
         const serialNumber = prefix + i.toString().padStart(6, '0');
         let status: 'AVAILABLE' | 'USED' | 'DAMAGED' = 'AVAILABLE';
         let usedDate: string | undefined;
-        
+
         // Simulate realistic usage patterns - first part available, middle part used, some damaged
         const totalRange = endNum - startNum + 1;
         const availableEnd = startNum + availableData.availableCount - 1;
-        
+
         if (i <= availableEnd) {
           status = 'AVAILABLE';
         } else if (i <= startNum + totalRange * 0.9) { // 90% of remaining are used
@@ -469,7 +551,7 @@ export class HologramoveriewComponent implements OnInit {
         } else {
           status = 'DAMAGED';
         }
-        
+
         serialNumbers.push({
           number: serialNumber,
           status: status,
@@ -479,7 +561,7 @@ export class HologramoveriewComponent implements OnInit {
         });
       }
     }
-    
+
     return {
       cartoonNumber: availableData.cartoonNumber,
       type: availableData.type,
@@ -500,9 +582,9 @@ export class HologramoveriewComponent implements OnInit {
 
   getFilteredSerialNumbers(): SerialNumber[] {
     if (!this.selectedSerialData) return [];
-    
+
     let filtered = this.selectedSerialData.serialNumbers;
-    
+
     // Filter by view mode
     if (this.serialViewMode !== 'all') {
       filtered = filtered.filter(serial => {
@@ -518,11 +600,11 @@ export class HologramoveriewComponent implements OnInit {
         }
       });
     }
-    
+
     // Apply pagination
     const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
     const endIndex = startIndex + this.serialPageSize;
-    
+
     return filtered.slice(startIndex, endIndex);
   }
 
@@ -554,9 +636,9 @@ export class HologramoveriewComponent implements OnInit {
 
   getTotalSerialPages(): number {
     if (!this.selectedSerialData) return 1;
-    
+
     let totalItems = this.selectedSerialData.serialNumbers.length;
-    
+
     // Filter by view mode
     if (this.serialViewMode !== 'all') {
       totalItems = this.selectedSerialData.serialNumbers.filter(serial => {
@@ -572,7 +654,7 @@ export class HologramoveriewComponent implements OnInit {
         }
       }).length;
     }
-    
+
     return Math.ceil(totalItems / this.serialPageSize);
   }
 
@@ -580,18 +662,18 @@ export class HologramoveriewComponent implements OnInit {
     const totalPages = this.getTotalSerialPages();
     const pages: number[] = [];
     const maxPagesToShow = 5;
-    
+
     let startPage = Math.max(1, this.currentSerialPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
+
     return pages;
   }
 
@@ -604,7 +686,7 @@ export class HologramoveriewComponent implements OnInit {
 
   exportSerialNumbers(): void {
     if (!this.selectedSerialData) return;
-    
+
     console.log('Exporting serial numbers for:', this.selectedSerialData.cartoonNumber);
     // Implement export functionality
     alert('Serial numbers export functionality will be implemented with backend integration');
@@ -638,13 +720,13 @@ export class HologramoveriewComponent implements OnInit {
     if (this.chartFilters.year) filters.push(`Year: ${this.chartFilters.year}`);
     if (this.chartFilters.type) filters.push(`Type: ${this.chartFilters.type}`);
     if (this.chartFilters.status) filters.push(`Status: ${this.chartFilters.status}`);
-    
+
     return filters.length > 0 ? filters.join(', ') : 'All data';
   }
 
   refreshChartData(): void {
     console.log('Refreshing chart data...');
-    // Implement chart data refresh
+    this.loadAllData();
   }
 
   exportChartData(): void {
@@ -666,9 +748,9 @@ export class HologramoveriewComponent implements OnInit {
       if (this.serialFilters.hologramType && roll.hologramType !== this.serialFilters.hologramType) {
         return false;
       }
-      if (this.serialFilters.serialSearch && 
-          !roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) &&
-          !roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase())) {
+      if (this.serialFilters.serialSearch &&
+        !roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) &&
+        !roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase())) {
         return false;
       }
       return true;
@@ -688,11 +770,11 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   hasActiveSerialFilters(): boolean {
-    return !!(this.serialFilters.rollStatus || 
-              this.serialFilters.hologramType || 
-              this.serialFilters.dateFrom || 
-              this.serialFilters.dateTo || 
-              this.serialFilters.serialSearch);
+    return !!(this.serialFilters.rollStatus ||
+      this.serialFilters.hologramType ||
+      this.serialFilters.dateFrom ||
+      this.serialFilters.dateTo ||
+      this.serialFilters.serialSearch);
   }
 
   getSerialFilterSummary(): string {
@@ -700,8 +782,8 @@ export class HologramoveriewComponent implements OnInit {
     if (this.serialFilters.rollStatus) filters.push(`Status: ${this.serialFilters.rollStatus}`);
     if (this.serialFilters.hologramType) filters.push(`Type: ${this.serialFilters.hologramType}`);
     if (this.serialFilters.serialSearch) filters.push(`Search: ${this.serialFilters.serialSearch}`);
-    
-    return filters.length > 0 ? 
+
+    return filters.length > 0 ?
       `Filtered by: ${filters.join(', ')} | Showing ${this.filteredSerialData.length} of ${this.serialRollsData.length} rolls` :
       `Showing all ${this.serialRollsData.length} rolls`;
   }
@@ -773,12 +855,37 @@ export class HologramoveriewComponent implements OnInit {
 
   refreshSerialData(): void {
     console.log('Refreshing serial data...');
-    this.loadSerialRollsData();
-    this.applySerialFilters();
+    this.loadAllData();
   }
 
   exportSerialData(): void {
     console.log('Exporting serial data...');
     alert('Serial data export functionality will be implemented with backend integration');
+  }
+
+  // Debug method to check localStorage data
+  debugLocalStorage(): void {
+    const rollsData = localStorage.getItem('hologramOverviewRolls');
+    const availableData = localStorage.getItem('hologramOverviewAvailable');
+
+    console.log('🔍 Debug localStorage:');
+    console.log('Rolls data:', rollsData ? JSON.parse(rollsData) : 'No data');
+    console.log('Available data:', availableData ? JSON.parse(availableData) : 'No data');
+
+    // Also log all localStorage keys related to holograms
+    const hologramKeys = Object.keys(localStorage).filter(key =>
+      key.toLowerCase().includes('hologram')
+    );
+    console.log('All hologram-related localStorage keys:', hologramKeys);
+  }
+
+  // Method to clear test data (for debugging)
+  clearTestData(): void {
+    if (confirm('Clear all hologram data from localStorage? This will remove all arrival data.')) {
+      localStorage.removeItem('hologramOverviewRolls');
+      localStorage.removeItem('hologramOverviewAvailable');
+      this.loadAllData();
+      alert('Test data cleared successfully!');
+    }
   }
 }

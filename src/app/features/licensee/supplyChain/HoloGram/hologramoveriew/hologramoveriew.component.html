@@ -12,6 +12,18 @@
         </div>
         <div class="col-auto">
           <div class="header-actions">
+            <button class="btn btn-outline-success me-2" (click)="loadAllData()">
+              <i class="bi bi-arrow-clockwise me-2"></i>
+              Refresh Data
+            </button>
+            <button class="btn btn-outline-info me-2" (click)="debugLocalStorage()">
+              <i class="bi bi-bug me-2"></i>
+              Debug
+            </button>
+            <button class="btn btn-outline-warning me-2" (click)="clearTestData()">
+              <i class="bi bi-trash me-2"></i>
+              Clear Test Data
+            </button>
             <button class="btn btn-outline-secondary me-2" onclick="window.close()">
               <i class="bi bi-x-lg me-2"></i>
               Close
