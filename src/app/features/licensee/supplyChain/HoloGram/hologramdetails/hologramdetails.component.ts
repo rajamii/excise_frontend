@@ -230,7 +230,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/001',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 0.01, // 1000 units = 0.01 lakh
+            localQtyLakh: 1000, // 1000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
             status: 'APPROVED'
@@ -251,7 +251,7 @@ export class HologramdetailsComponent implements OnInit {
             refNo: 'HRQ/2024/002',
             companyName: 'Sikkim Distilleries Ltd',
             localQtyLakh: 0,
-            exportQtyLakh: 0.05, // 5000 units = 0.05 lakh
+            exportQtyLakh: 5000, // 5000 units (field name is misleading)
             defenceQtyLakh: 0,
             status: 'APPROVED'
           }
@@ -271,7 +271,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/003',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 0.02, // 2000 units = 0.02 lakh
+            localQtyLakh: 2000, // 2000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
             status: 'APPROVED'
@@ -293,7 +293,7 @@ export class HologramdetailsComponent implements OnInit {
             companyName: 'Sikkim Distilleries Ltd',
             localQtyLakh: 0,
             exportQtyLakh: 0,
-            defenceQtyLakh: 0.015, // 1500 units = 0.015 lakh
+            defenceQtyLakh: 1500, // 1500 units (field name is misleading)
             status: 'APPROVED'
           }
         },
@@ -312,7 +312,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/005',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 0.005, // 500 units = 0.005 lakh
+            localQtyLakh: 500, // 500 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
             status: 'APPROVED'
@@ -331,7 +331,7 @@ export class HologramdetailsComponent implements OnInit {
           supplyChainData: {
             refNo: 'HRQ/2024/006',
             companyName: 'Sikkim Distilleries Ltd',
-            localQtyLakh: 0.01, // 1000 units = 0.01 lakh
+            localQtyLakh: 1000, // 1000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
             status: 'Submitted'
@@ -352,20 +352,15 @@ export class HologramdetailsComponent implements OnInit {
   calculateTotalHolograms(item: any): number {
     // Check if this is supply chain data (has lakh fields) or direct entry
     if (item.localQtyLakh !== undefined || item.exportQtyLakh !== undefined || item.defenceQtyLakh !== undefined) {
-      // Supply chain data - but check if values are small (likely entered as units, not lakhs)
+      // Supply chain data - treat all values as units (not lakhs)
+      // The field names are misleading - they actually contain unit values
       const local = item.localQtyLakh || 0;
       const export_ = item.exportQtyLakh || 0;
       const defence = item.defenceQtyLakh || 0;
       const total = local + export_ + defence;
 
-      // If the total is very small (less than 10), treat it as units, not lakhs
-      // This handles cases where users enter 1, 2, 5 etc. thinking they're entering units
-      if (total <= 10) {
-        return total; // Return as units
-      } else {
-        // For larger values, treat as lakhs and convert to units
-        return total * 100000;
-      }
+      // Return the total as-is (already in units)
+      return total;
     } else if (item.totalHolograms !== undefined) {
       // Direct entry - already in units
       return item.totalHolograms;
