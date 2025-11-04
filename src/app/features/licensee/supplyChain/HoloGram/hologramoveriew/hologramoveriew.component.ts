@@ -739,21 +739,61 @@ export class HologramoveriewComponent implements OnInit {
     alert('Serial numbers data export functionality will be implemented here');
   }
 
-  // Serial data summary methods
+  // Serial data summary methods - Updated to use filtered data
   getTotalRolls(): number {
-    return this.serialNumbersData.length;
+    return this.filteredSerialData.length;
   }
 
   getAvailableHolograms(): number {
-    return this.serialNumbersData.reduce((total, roll) => total + roll.availableCount, 0);
+    return this.filteredSerialData.reduce((total, roll) => total + roll.availableCount, 0);
   }
 
   getUsedInProduction(): number {
-    return this.serialNumbersData.reduce((total, roll) => total + roll.usedCount, 0);
+    return this.filteredSerialData.reduce((total, roll) => total + roll.usedCount, 0);
   }
 
   getDamagedWastage(): number {
-    return this.serialNumbersData.reduce((total, roll) => total + roll.damagedCount, 0);
+    return this.filteredSerialData.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  // Get filter summary for Serial Numbers Data
+  getSerialFilterSummary(): string {
+    const filters = [];
+    
+    if (this.serialFilters.rollStatus) {
+      filters.push(`Status: ${this.serialFilters.rollStatus}`);
+    }
+    
+    if (this.serialFilters.hologramType) {
+      filters.push(`Type: ${this.serialFilters.hologramType}`);
+    }
+    
+    if (this.serialFilters.dateFrom && this.serialFilters.dateTo) {
+      filters.push(`Date: ${this.serialFilters.dateFrom} to ${this.serialFilters.dateTo}`);
+    } else if (this.serialFilters.dateFrom) {
+      filters.push(`From: ${this.serialFilters.dateFrom}`);
+    } else if (this.serialFilters.dateTo) {
+      filters.push(`Until: ${this.serialFilters.dateTo}`);
+    }
+    
+    if (this.serialFilters.serialSearch) {
+      filters.push(`Search: "${this.serialFilters.serialSearch}"`);
+    }
+    
+    if (filters.length === 0) {
+      return `Showing all ${this.serialNumbersData.length} rolls`;
+    }
+    
+    return `Filtered by: ${filters.join(', ')} (${this.filteredSerialData.length} of ${this.serialNumbersData.length} rolls)`;
+  }
+
+  // Check if any serial filters are active
+  hasActiveSerialFilters(): boolean {
+    return !!(this.serialFilters.rollStatus || 
+              this.serialFilters.hologramType || 
+              this.serialFilters.dateFrom || 
+              this.serialFilters.dateTo || 
+              this.serialFilters.serialSearch);
   }
 
   // Serial data action methods
