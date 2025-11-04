@@ -303,16 +303,6 @@
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'issued'" (click)="setActiveTab('issued')">
-                <i class="bi bi-arrow-up-circle me-1"></i>Issued Hologram
-              </button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
-                <i class="bi bi-clock-history me-1"></i>Issued History
-              </button>
-            </li>
-            <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'available'" (click)="setActiveTab('available')">
                 <i class="bi bi-check-circle me-1"></i>Available Hologram Data
               </button>
@@ -320,6 +310,16 @@
             <li class="nav-item">
               <button class="nav-link" [class.active]="activeTab === 'serialNumbers'" (click)="setActiveTab('serialNumbers')">
                 <i class="bi bi-list-ol me-1"></i>Serial Numbers Data
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'issued'" (click)="setActiveTab('issued')">
+                <i class="bi bi-arrow-up-circle me-1"></i>Issued Hologram
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'history'" (click)="setActiveTab('history')">
+                <i class="bi bi-clock-history me-1"></i>Issued History
               </button>
             </li>
           </ul>
@@ -388,98 +388,6 @@
                         } @empty {
                           <tr>
                             <td colspan="10" class="text-center text-muted">No data available - rollsData is empty</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            }
-
-            <!-- Issued Hologram Tab -->
-            @if (activeTab === 'issued') {
-              <div class="analytics-card">
-                <div class="card-header">
-                  <h5 class="card-title">
-                    <i class="bi bi-arrow-up-circle me-2"></i>
-                    Currently Issued Holograms
-                  </h5>
-                </div>
-                <div class="card-body">
-                  <div class="table-responsive">
-                    <table class="table table-hover table-bordered">
-                      <thead class="table-success">
-                        <tr>
-                          <th>Batch Number</th>
-                          <th>Brand Name</th>
-                          <th>From Serial</th>
-                          <th>To Serial</th>
-                          <th>Quantity</th>
-                          <th>Issue Date</th>
-                          <th>Status</th>
-                          <th>Production Officer</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (issued of issuedData; track issued.id) {
-                          <tr>
-                            <td><span class="fw-bold text-primary">{{ issued.batchNumber }}</span></td>
-                            <td>{{ issued.brandName }}</td>
-                            <td><span class="font-monospace">{{ issued.fromSerial }}</span></td>
-                            <td><span class="font-monospace">{{ issued.toSerial }}</span></td>
-                            <td class="text-end">{{ issued.quantity | number }}</td>
-                            <td>{{ issued.issueDate | date:'dd-MMM-yyyy HH:mm' }}</td>
-                            <td>
-                              <span class="badge" [class]="getStatusClass(issued.status)">{{ issued.status }}</span>
-                            </td>
-                            <td>{{ issued.officer }}</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            }
-
-            <!-- Issued History Tab -->
-            @if (activeTab === 'history') {
-              <div class="analytics-card">
-                <div class="card-header">
-                  <h5 class="card-title">
-                    <i class="bi bi-clock-history me-2"></i>
-                    Hologram Issue History
-                  </h5>
-                </div>
-                <div class="card-body">
-                  <div class="table-responsive">
-                    <table class="table table-hover table-bordered">
-                      <thead class="table-success">
-                        <tr>
-                          <th>Date</th>
-                          <th>Batch Number</th>
-                          <th>Brand Name</th>
-                          <th>Serial Range</th>
-                          <th>Quantity</th>
-                          <th>Status</th>
-                          <th>Completion Date</th>
-                          <th>Officer</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (history of historyData; track history.id) {
-                          <tr>
-                            <td>{{ history.issueDate | date:'dd-MMM-yyyy' }}</td>
-                            <td><span class="fw-bold text-primary">{{ history.batchNumber }}</span></td>
-                            <td>{{ history.brandName }}</td>
-                            <td><span class="font-monospace small">{{ history.fromSerial }} - {{ history.toSerial }}</span></td>
-                            <td class="text-end">{{ history.quantity | number }}</td>
-                            <td>
-                              <span class="badge" [class]="getStatusClass(history.status)">{{ history.status }}</span>
-                            </td>
-                            <td>{{ history.completionDate | date:'dd-MMM-yyyy' }}</td>
-                            <td>{{ history.officer }}</td>
                           </tr>
                         }
                       </tbody>
@@ -581,6 +489,98 @@
                                 }
                               </div>
                             </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Issued Hologram Tab -->
+            @if (activeTab === 'issued') {
+              <div class="analytics-card">
+                <div class="card-header">
+                  <h5 class="card-title">
+                    <i class="bi bi-arrow-up-circle me-2"></i>
+                    Currently Issued Holograms
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                      <thead class="table-success">
+                        <tr>
+                          <th>Batch Number</th>
+                          <th>Brand Name</th>
+                          <th>From Serial</th>
+                          <th>To Serial</th>
+                          <th>Quantity</th>
+                          <th>Issue Date</th>
+                          <th>Status</th>
+                          <th>Production Officer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (issued of issuedData; track issued.id) {
+                          <tr>
+                            <td><span class="fw-bold text-primary">{{ issued.batchNumber }}</span></td>
+                            <td>{{ issued.brandName }}</td>
+                            <td><span class="font-monospace">{{ issued.fromSerial }}</span></td>
+                            <td><span class="font-monospace">{{ issued.toSerial }}</span></td>
+                            <td class="text-end">{{ issued.quantity | number }}</td>
+                            <td>{{ issued.issueDate | date:'dd-MMM-yyyy HH:mm' }}</td>
+                            <td>
+                              <span class="badge" [class]="getStatusClass(issued.status)">{{ issued.status }}</span>
+                            </td>
+                            <td>{{ issued.officer }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Issued History Tab -->
+            @if (activeTab === 'history') {
+              <div class="analytics-card">
+                <div class="card-header">
+                  <h5 class="card-title">
+                    <i class="bi bi-clock-history me-2"></i>
+                    Hologram Issue History
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover table-bordered">
+                      <thead class="table-success">
+                        <tr>
+                          <th>Date</th>
+                          <th>Batch Number</th>
+                          <th>Brand Name</th>
+                          <th>Serial Range</th>
+                          <th>Quantity</th>
+                          <th>Status</th>
+                          <th>Completion Date</th>
+                          <th>Officer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (history of historyData; track history.id) {
+                          <tr>
+                            <td>{{ history.issueDate | date:'dd-MMM-yyyy' }}</td>
+                            <td><span class="fw-bold text-primary">{{ history.batchNumber }}</span></td>
+                            <td>{{ history.brandName }}</td>
+                            <td><span class="font-monospace small">{{ history.fromSerial }} - {{ history.toSerial }}</span></td>
+                            <td class="text-end">{{ history.quantity | number }}</td>
+                            <td>
+                              <span class="badge" [class]="getStatusClass(history.status)">{{ history.status }}</span>
+                            </td>
+                            <td>{{ history.completionDate | date:'dd-MMM-yyyy' }}</td>
+                            <td>{{ history.officer }}</td>
                           </tr>
                         }
                       </tbody>
