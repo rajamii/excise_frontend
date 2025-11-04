@@ -135,7 +135,12 @@
             </div>
 
             <!-- Register Table -->
-            <div class="register-table-wrapper" *ngIf="filteredRecords.length > 0">
+            @if (filteredRecords.length > 0) {
+            <div class="register-table-wrapper">
+                <div class="table-scroll-hint d-md-none">
+                    <i class="bi bi-arrow-left-right me-2"></i>
+                    <small class="text-muted">Scroll horizontally to view all columns</small>
+                </div>
                 <table class="register-table">
                     <thead>
                         <tr>
@@ -152,7 +157,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr *ngFor="let record of filteredRecords; let i = index" class="register-row">
+                        @for (record of filteredRecords; track record.id; let i = $index) {
+                        <tr class="register-row">
                             <td class="sl-no">{{ i + 1 }}</td>
                             <td class="date-col">
                                 <div class="date-display">
@@ -187,34 +193,42 @@
                                 <span class="remarks-text">{{ record.remarks || '-' }}</span>
                             </td>
                             <td class="actions">
-                                <div class="d-flex gap-1 align-items-center">
+                                <div class="d-flex gap-1 align-items-center flex-wrap">
                                     <!-- Update Arrival Button - Only for PENDING_ARRIVAL status -->
-                                    <button *ngIf="canUpdateRecord(record)" class="btn btn-success btn-sm"
+                                    @if (canUpdateRecord(record)) {
+                                    <button class="btn btn-success btn-sm"
                                         (click)="updateArrivalDetails(record)"
                                         title="Update Arrival Details - Ready for Physical Arrival">
                                         <i class="bi bi-box-seam me-1"></i>
-                                        Update Arrival
+                                        <span class="d-none d-lg-inline">Update Arrival</span>
+                                        <span class="d-lg-none">Update</span>
                                     </button>
+                                    }
 
                                     <!-- Disabled Button for Pending Approval -->
-                                    <button *ngIf="record.status === 'PENDING_APPROVAL'"
-                                        class="btn btn-secondary btn-sm" disabled
+                                    @if (record.status === 'PENDING_APPROVAL') {
+                                    <button class="btn btn-secondary btn-sm" disabled
                                         title="Waiting for Commissioner Approval">
                                         <i class="bi bi-hourglass-split me-1"></i>
-                                        Pending Approval
+                                        <span class="d-none d-lg-inline">Pending Approval</span>
+                                        <span class="d-lg-none">Pending</span>
                                     </button>
+                                    }
 
                                     <!-- Status Badge -->
                                     <span class="badge ms-1" [class]="getStatusClass(record.status)">
                                         <i [class]="getStatusIcon(record.status)" class="me-1"></i>
-                                        {{ getStatusLabel(record.status) }}
+                                        <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
+                                        <span class="d-md-none">{{ getStatusLabel(record.status).substring(0, 3) }}</span>
                                     </span>
                                 </div>
                             </td>
                         </tr>
+                        }
                     </tbody>
                 </table>
             </div>
+            }
 
             <!-- Register Summary Footer -->
             <div class="register-footer" *ngIf="filteredRecords.length > 0">

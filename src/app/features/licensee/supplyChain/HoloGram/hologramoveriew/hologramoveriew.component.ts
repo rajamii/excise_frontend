@@ -19,6 +19,39 @@ interface HologramRoll {
   newUntil?: number;
 }
 
+interface SerialNumber {
+  number: string;
+  status: 'AVAILABLE' | 'USED' | 'DAMAGED';
+  usedDate?: string;
+  batchNumber?: string;
+  productionLine?: string;
+}
+
+interface SerialData {
+  cartoonNumber: string;
+  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  fromSerial: string;
+  toSerial: string;
+  totalCount: number;
+  availableCount: number;
+  usedCount: number;
+  damagedCount: number;
+  serialNumbers: SerialNumber[];
+}
+
+interface AvailableHologram {
+  id: number;
+  cartoonNumber: string;
+  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  availableRange: string;
+  availableCount: number;
+  nextSerial: string;
+  percentage: number;
+  status: 'AVAILABLE' | 'IN_USE';
+  isNew?: boolean;
+  newUntil?: number;
+}
+
 interface IssuedHologram {
   id: number;
   batchNumber: string;
@@ -31,7 +64,7 @@ interface IssuedHologram {
   officer: string;
 }
 
-interface HologramHistory {
+interface HistoryHologram {
   id: number;
   issueDate: string;
   batchNumber: string;
@@ -44,20 +77,27 @@ interface HologramHistory {
   officer: string;
 }
 
-interface AvailableHologram {
-  id: number;
-  cartoonNumber: string;
-  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  availableRange: string;
-  availableCount: number;
-  nextSerial: string;
-  percentage: number;
-  status: 'AVAILABLE' | 'LOW_STOCK' | 'CRITICAL';
-  isNew?: boolean;
-  newUntil?: number;
+interface ChartFilters {
+  specificDate: string;
+  month: string;
+  year: string;
+  type: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+  minQuantity: number | null;
+  maxQuantity: number | null;
 }
 
-interface SerialNumberRoll {
+interface SerialFilters {
+  rollStatus: string;
+  hologramType: string;
+  dateFrom: string;
+  dateTo: string;
+  serialSearch: string;
+}
+
+interface SerialRollData {
   id: number;
   rollNumber: string;
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
@@ -69,27 +109,9 @@ interface SerialNumberRoll {
   damagedCount: number;
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
-  usageHistory: UsageHistory[];
+  usageHistory: any[];
   isNew?: boolean;
   newUntil?: number;
-}
-
-interface UsageHistory {
-  date: string;
-  batchNumber: string;
-  brandName: string;
-  fromSerial: string;
-  toSerial: string;
-  quantity: number;
-  status: 'COMPLETED' | 'IN_PROGRESS' | 'DAMAGED';
-}
-
-interface SerialFilters {
-  rollStatus: string;
-  hologramType: string;
-  dateFrom: string;
-  dateTo: string;
-  serialSearch: string;
 }
 
 @Component({
@@ -100,30 +122,23 @@ interface SerialFilters {
 })
 export class HologramoveriewComponent implements OnInit {
   activeTab: string = 'rolls';
-
+  
   rollsData: HologramRoll[] = [];
-  issuedData: IssuedHologram[] = [];
-  historyData: HologramHistory[] = [];
   availableData: AvailableHologram[] = [];
+  issuedData: IssuedHologram[] = [];
+  historyData: HistoryHologram[] = [];
+  serialRollsData: SerialRollData[] = [];
+  filteredSerialData: SerialRollData[] = [];
   
-  // Serial Numbers Data
-  serialNumbersData: SerialNumberRoll[] = [];
-  filteredSerialData: SerialNumberRoll[] = [];
-  serialFilters: SerialFilters = {
-    rollStatus: '',
-    hologramType: '',
-    dateFrom: '',
-    dateTo: '',
-    serialSearch: ''
-  };
-  
-  // Pagination for serial data
-  serialCurrentPage: number = 1;
-  serialItemsPerPage: number = 10;
+  // Serial Details Modal
+  showSerialDetailsModal: boolean = false;
+  selectedSerialData: SerialData | null = null;
+  serialViewMode: 'all' | 'available' | 'used' | 'damaged' = 'all';
+  currentSerialPage: number = 1;
+  serialPageSize: number = 50;
 
-  // Filter properties
-  showAdvancedFilters: boolean = false;
-  chartFilters = {
+  // Chart Filters
+  chartFilters: ChartFilters = {
     specificDate: '',
     month: '',
     year: '',
@@ -131,329 +146,231 @@ export class HologramoveriewComponent implements OnInit {
     status: '',
     dateFrom: '',
     dateTo: '',
-    minQuantity: null as number | null,
-    maxQuantity: null as number | null
+    minQuantity: null,
+    maxQuantity: null
   };
 
-  // Date options
+  // Serial Filters
+  serialFilters: SerialFilters = {
+    rollStatus: '',
+    hologramType: '',
+    dateFrom: '',
+    dateTo: '',
+    serialSearch: ''
+  };
+
+  // Pagination for serial data
+  serialCurrentPage: number = 1;
+  serialDataPageSize: number = 10;
+
+  // UI State
+  showAdvancedFilters: boolean = false;
+
+  // Filter options
   months = [
-    { value: '01', label: 'January' }, { value: '02', label: 'February' }, { value: '03', label: 'March' },
-    { value: '04', label: 'April' }, { value: '05', label: 'May' }, { value: '06', label: 'June' },
-    { value: '07', label: 'July' }, { value: '08', label: 'August' }, { value: '09', label: 'September' },
-    { value: '10', label: 'October' }, { value: '11', label: 'November' }, { value: '12', label: 'December' }
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
   ];
 
-  years = Array.from({ length: 10 }, (_, i) => {
-    const year = (new Date().getFullYear() - 5 + i).toString();
-    return { value: year, label: year };
-  });
+  years = [
+    { value: '2024', label: '2024' },
+    { value: '2023', label: '2023' },
+    { value: '2022', label: '2022' }
+  ];
 
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit() {
-    // Check for tab parameter in URL
-    this.route.queryParams.subscribe(params => {
-      if (params['tab']) {
-        this.activeTab = params['tab'];
-      }
-    });
-
     this.loadRollsData();
+    this.loadAvailableData();
     this.loadIssuedData();
     this.loadHistoryData();
-    this.loadAvailableData();
-    this.loadSerialNumbersData();
-    
-    // Debug: Log the data to console
-    console.log('Rolls Data:', this.rollsData);
-    console.log('Available Data:', this.availableData);
-    console.log('Serial Numbers Data:', this.serialNumbersData);
-    console.log('Active Tab:', this.activeTab);
-    
-    // Set up periodic refresh to check for new data
-    setInterval(() => {
-      this.refreshRollsData();
-    }, 30000); // Refresh every 30 seconds
-  }
-
-  // Refresh rolls data to check for new arrivals
-  refreshRollsData() {
-    const currentRollsCount = this.rollsData.length;
-    const currentAvailableCount = this.availableData.length;
-    
-    this.loadRollsData();
-    this.loadAvailableData();
-    
-    if (this.rollsData.length > currentRollsCount) {
-      console.log('New hologram rolls detected!');
-    }
-    
-    if (this.availableData.length > currentAvailableCount) {
-      console.log('New available hologram data detected!');
-    }
+    this.loadSerialRollsData();
+    this.applySerialFilters();
   }
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
-    console.log('Active tab changed to:', tab);
-    console.log('Current rolls data:', this.rollsData);
   }
 
   loadRollsData() {
-    // Load from localStorage first
-    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-    
-    // Sample data (will be combined with saved data)
-    const sampleRolls = [
+    // Sample data
+    this.rollsData = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
-        type: 'LOCAL' as const,
+        type: 'LOCAL',
         fromSerial: 'HG001001',
         toSerial: 'HG001500',
         totalCount: 500,
         availableCount: 350,
         usedCount: 120,
         damagedCount: 30,
-        status: 'IN_USE' as const,
+        status: 'IN_USE',
         receivedDate: '2024-11-01'
       },
       {
         id: 2,
         cartoonNumber: 'CTN002',
-        type: 'EXPORT' as const,
+        type: 'EXPORT',
         fromSerial: 'HG002001',
         toSerial: 'HG002500',
         totalCount: 500,
         availableCount: 500,
         usedCount: 0,
         damagedCount: 0,
-        status: 'AVAILABLE' as const,
+        status: 'AVAILABLE',
         receivedDate: '2024-10-28'
       },
       {
         id: 3,
         cartoonNumber: 'CTN003',
-        type: 'DEFENCE' as const,
+        type: 'DEFENCE',
         fromSerial: 'HG003001',
         toSerial: 'HG003300',
         totalCount: 300,
         availableCount: 0,
         usedCount: 280,
         damagedCount: 20,
-        status: 'COMPLETED' as const,
+        status: 'COMPLETED',
         receivedDate: '2024-10-15'
-      }
-    ];
-
-    // Combine saved rolls with sample data (saved rolls first to show at top)
-    this.rollsData = [...savedRolls, ...sampleRolls];
-
-    // Clean up expired "new" flags
-    this.cleanupExpiredNewFlags();
-  }
-
-  // Clean up expired "new" flags
-  cleanupExpiredNewFlags() {
-    const now = Date.now();
-    let hasChanges = false;
-
-    this.rollsData.forEach(roll => {
-      if (roll.isNew && roll.newUntil && now > roll.newUntil) {
-        roll.isNew = false;
-        delete roll.newUntil;
-        hasChanges = true;
-      }
-    });
-
-    // Update localStorage if there were changes
-    if (hasChanges) {
-      const savedRolls = this.rollsData.filter(roll => roll.id > 1000); // Only save non-sample data
-      localStorage.setItem('hologramOverviewRolls', JSON.stringify(savedRolls));
-    }
-  }
-
-  // Check if a roll is new
-  isNewRoll(roll: HologramRoll): boolean {
-    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
-  }
-
-  // Check if a serial roll is new
-  isNewSerialRoll(roll: SerialNumberRoll): boolean {
-    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
-  }
-
-  loadIssuedData() {
-    this.issuedData = [
-      {
-        id: 1,
-        batchNumber: 'BATCH-001',
-        brandName: 'Premium Whisky',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001050',
-        quantity: 50,
-        issueDate: '2024-11-02T10:30:00',
-        status: 'IN_PROGRESS',
-        officer: 'Rajesh Kumar'
-      },
-      {
-        id: 2,
-        batchNumber: 'BATCH-002',
-        brandName: 'Royal Rum',
-        fromSerial: 'HG001051',
-        toSerial: 'HG001120',
-        quantity: 70,
-        issueDate: '2024-11-03T14:15:00',
-        status: 'IN_PROGRESS',
-        officer: 'Priya Sharma'
-      },
-      {
-        id: 3,
-        batchNumber: 'BATCH-003',
-        brandName: 'Export Vodka',
-        fromSerial: 'HG005001',
-        toSerial: 'HG005080',
-        quantity: 80,
-        issueDate: '2024-11-04T09:45:00',
-        status: 'IN_PROGRESS',
-        officer: 'Amit Singh'
-      }
-    ];
-  }
-
-  loadHistoryData() {
-    this.historyData = [
-      {
-        id: 1,
-        issueDate: '2024-10-28',
-        batchNumber: 'BATCH-098',
-        brandName: 'Classic Whisky',
-        fromSerial: 'HG003001',
-        toSerial: 'HG003100',
-        quantity: 100,
-        status: 'COMPLETED',
-        completionDate: '2024-10-30',
-        officer: 'Rajesh Kumar'
-      },
-      {
-        id: 2,
-        issueDate: '2024-10-25',
-        batchNumber: 'BATCH-097',
-        brandName: 'Premium Gin',
-        fromSerial: 'HG003101',
-        toSerial: 'HG003180',
-        quantity: 80,
-        status: 'COMPLETED',
-        completionDate: '2024-10-27',
-        officer: 'Priya Sharma'
-      },
-      {
-        id: 3,
-        issueDate: '2024-10-22',
-        batchNumber: 'BATCH-096',
-        brandName: 'Special Rum',
-        fromSerial: 'HG003181',
-        toSerial: 'HG003280',
-        quantity: 100,
-        status: 'COMPLETED',
-        completionDate: '2024-10-24',
-        officer: 'Amit Singh'
-      },
-      {
-        id: 4,
-        issueDate: '2024-10-20',
-        batchNumber: 'BATCH-095',
-        brandName: 'Export Beer',
-        fromSerial: 'HG004001',
-        toSerial: 'HG004100',
-        quantity: 100,
-        status: 'COMPLETED',
-        completionDate: '2024-10-22',
-        officer: 'Rajesh Kumar'
-      },
-      {
-        id: 5,
-        issueDate: '2024-10-18',
-        batchNumber: 'BATCH-094',
-        brandName: 'Defence Whisky',
-        fromSerial: 'HG003281',
-        toSerial: 'HG003300',
-        quantity: 20,
-        status: 'CANCELLED',
-        completionDate: '2024-10-19',
-        officer: 'Priya Sharma'
       }
     ];
   }
 
   loadAvailableData() {
-    // Load from localStorage first
-    const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
-    
-    // Sample data (will be combined with saved data)
-    const sampleAvailable = [
+    // Sample available hologram data
+    this.availableData = [
       {
         id: 1,
         cartoonNumber: 'CTN001',
-        type: 'LOCAL' as const,
-        availableRange: 'HG001121 - HG001500',
+        type: 'LOCAL',
+        availableRange: 'HG001111 - HG001500',
         availableCount: 350,
-        nextSerial: 'HG001121',
+        nextSerial: 'HG001111',
         percentage: 70,
-        status: 'AVAILABLE' as const
+        status: 'AVAILABLE'
       },
       {
         id: 2,
         cartoonNumber: 'CTN002',
-        type: 'EXPORT' as const,
+        type: 'EXPORT',
         availableRange: 'HG002001 - HG002500',
         availableCount: 500,
         nextSerial: 'HG002001',
         percentage: 100,
-        status: 'AVAILABLE' as const
+        status: 'AVAILABLE'
       },
       {
-        id: 3,
+        id: 4,
         cartoonNumber: 'CTN004',
-        type: 'LOCAL' as const,
+        type: 'LOCAL',
         availableRange: 'HG004101 - HG004750',
         availableCount: 600,
         nextSerial: 'HG004101',
         percentage: 80,
-        status: 'AVAILABLE' as const
+        status: 'AVAILABLE'
       }
     ];
-
-    // Combine saved available data with sample data (saved data first to show at top)
-    this.availableData = [...savedAvailable, ...sampleAvailable];
-
-    // Clean up expired "new" flags for available data
-    this.cleanupExpiredAvailableNewFlags();
   }
 
-  // Clean up expired "new" flags for available data
-  cleanupExpiredAvailableNewFlags() {
-    const now = Date.now();
-    let hasChanges = false;
-
-    this.availableData.forEach(available => {
-      if (available.isNew && available.newUntil && now > available.newUntil) {
-        available.isNew = false;
-        delete available.newUntil;
-        hasChanges = true;
+  loadIssuedData(): void {
+    this.issuedData = [
+      {
+        id: 1,
+        batchNumber: 'BATCH001',
+        brandName: 'Premium Brand A',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001100',
+        quantity: 100,
+        issueDate: '2024-11-01T10:30:00',
+        status: 'IN_PROGRESS',
+        officer: 'John Smith'
+      },
+      {
+        id: 2,
+        batchNumber: 'BATCH002',
+        brandName: 'Export Brand B',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002050',
+        quantity: 50,
+        issueDate: '2024-10-28T14:15:00',
+        status: 'COMPLETED',
+        officer: 'Jane Doe'
       }
-    });
-
-    // Update localStorage if there were changes
-    if (hasChanges) {
-      const savedAvailable = this.availableData.filter(available => available.id > 1000); // Only save non-sample data
-      localStorage.setItem('hologramOverviewAvailable', JSON.stringify(savedAvailable));
-    }
+    ];
   }
 
-  // Check if available data is new
-  isNewAvailable(available: AvailableHologram): boolean {
-    return !!(available.isNew === true && available.newUntil && Date.now() < available.newUntil);
+  loadHistoryData(): void {
+    this.historyData = [
+      {
+        id: 1,
+        issueDate: '2024-10-15',
+        batchNumber: 'BATCH003',
+        brandName: 'Defence Brand C',
+        fromSerial: 'HG003001',
+        toSerial: 'HG003200',
+        quantity: 200,
+        status: 'COMPLETED',
+        completionDate: '2024-10-20',
+        officer: 'Mike Johnson'
+      },
+      {
+        id: 2,
+        issueDate: '2024-10-10',
+        batchNumber: 'BATCH004',
+        brandName: 'Local Brand D',
+        fromSerial: 'HG004001',
+        toSerial: 'HG004150',
+        quantity: 150,
+        status: 'COMPLETED',
+        completionDate: '2024-10-18',
+        officer: 'Sarah Wilson'
+      }
+    ];
+  }
+
+  loadSerialRollsData(): void {
+    this.serialRollsData = [
+      {
+        id: 1,
+        rollNumber: 'ROLL001',
+        hologramType: 'LOCAL',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001500',
+        totalCount: 500,
+        availableCount: 350,
+        usedCount: 120,
+        damagedCount: 30,
+        status: 'IN_USE',
+        receivedDate: '2024-11-01',
+        usageHistory: []
+      },
+      {
+        id: 2,
+        rollNumber: 'ROLL002',
+        hologramType: 'EXPORT',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002500',
+        totalCount: 500,
+        availableCount: 500,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: '2024-10-28',
+        usageHistory: []
+      }
+    ];
   }
 
   getTypeClass(type: string): string {
@@ -461,7 +378,7 @@ export class HologramoveriewComponent implements OnInit {
       case 'LOCAL':
         return 'bg-success text-white';
       case 'EXPORT':
-        return 'bg-dark text-white';  // Changed from bg-info to bg-dark for better visibility
+        return 'bg-primary text-white';
       case 'DEFENCE':
         return 'bg-warning text-dark';
       default:
@@ -474,20 +391,22 @@ export class HologramoveriewComponent implements OnInit {
       case 'AVAILABLE':
         return 'bg-success text-white';
       case 'IN_USE':
-      case 'IN_PROGRESS':
         return 'bg-warning text-dark';
       case 'COMPLETED':
-        return 'bg-dark text-white';  // Changed from bg-primary to bg-dark for better visibility
+        return 'bg-secondary text-white';
       case 'DAMAGED':
-      case 'CANCELLED':
-        return 'bg-danger text-white';
-      case 'LOW_STOCK':
-        return 'bg-warning text-dark';
-      case 'CRITICAL':
         return 'bg-danger text-white';
       default:
         return 'bg-secondary text-white';
     }
+  }
+
+  isNewRoll(roll: HologramRoll): boolean {
+    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
+  }
+
+  isNewAvailable(available: AvailableHologram): boolean {
+    return !!(available.isNew === true && available.newUntil && Date.now() < available.newUntil);
   }
 
   getTotalAvailable(): number {
@@ -500,19 +419,204 @@ export class HologramoveriewComponent implements OnInit {
       .reduce((total, roll) => total + roll.availableCount, 0);
   }
 
-  // Filter methods
-  applyChartFilters() {
-    // This method will be called when filters are applied
-    // In a real application, this would filter the chart data
-    console.log('Applying chart filters:', this.chartFilters);
-    
-    // Here you would typically:
-    // 1. Filter your data based on the selected criteria
-    // 2. Update the chart with filtered data
-    // 3. Refresh the analytics
+  // Serial Details Modal Methods
+  openSerialDetailsModal(availableData: AvailableHologram): void {
+    // Generate detailed serial numbers data
+    this.selectedSerialData = this.generateSerialNumbersData(availableData);
+    this.serialViewMode = 'all';
+    this.currentSerialPage = 1;
+    this.showSerialDetailsModal = true;
   }
 
-  clearChartFilters() {
+  closeSerialDetailsModal(): void {
+    this.showSerialDetailsModal = false;
+    this.selectedSerialData = null;
+    this.serialViewMode = 'all';
+    this.currentSerialPage = 1;
+  }
+
+  generateSerialNumbersData(availableData: AvailableHologram): SerialData {
+    const serialNumbers: SerialNumber[] = [];
+    
+    // Extract start and end numbers from serial range
+    const fromMatch = availableData.availableRange.split(' - ')[0].match(/\d+/);
+    const toMatch = availableData.availableRange.split(' - ')[1].match(/\d+/);
+    
+    if (fromMatch && toMatch) {
+      const startNum = parseInt(fromMatch[0]);
+      const endNum = parseInt(toMatch[0]);
+      const prefix = availableData.availableRange.split(' - ')[0].replace(/\d+/, '');
+      
+      // Generate serial numbers with realistic usage patterns
+      for (let i = startNum; i <= endNum; i++) {
+        const serialNumber = prefix + i.toString().padStart(6, '0');
+        let status: 'AVAILABLE' | 'USED' | 'DAMAGED' = 'AVAILABLE';
+        let usedDate: string | undefined;
+        
+        // Simulate realistic usage patterns - first part available, middle part used, some damaged
+        const totalRange = endNum - startNum + 1;
+        const availableEnd = startNum + availableData.availableCount - 1;
+        
+        if (i <= availableEnd) {
+          status = 'AVAILABLE';
+        } else if (i <= startNum + totalRange * 0.9) { // 90% of remaining are used
+          status = 'USED';
+          // Generate random used date within last 30 days
+          const daysAgo = Math.floor(Math.random() * 30);
+          const date = new Date();
+          date.setDate(date.getDate() - daysAgo);
+          usedDate = date.toISOString().split('T')[0];
+        } else {
+          status = 'DAMAGED';
+        }
+        
+        serialNumbers.push({
+          number: serialNumber,
+          status: status,
+          usedDate: usedDate,
+          batchNumber: status === 'USED' ? `BATCH-${Math.floor(Math.random() * 100) + 1}` : undefined,
+          productionLine: status === 'USED' ? `LINE-${Math.floor(Math.random() * 5) + 1}` : undefined
+        });
+      }
+    }
+    
+    return {
+      cartoonNumber: availableData.cartoonNumber,
+      type: availableData.type,
+      fromSerial: availableData.availableRange.split(' - ')[0],
+      toSerial: availableData.availableRange.split(' - ')[1],
+      totalCount: serialNumbers.length,
+      availableCount: serialNumbers.filter(s => s.status === 'AVAILABLE').length,
+      usedCount: serialNumbers.filter(s => s.status === 'USED').length,
+      damagedCount: serialNumbers.filter(s => s.status === 'DAMAGED').length,
+      serialNumbers: serialNumbers
+    };
+  }
+
+  setSerialViewMode(mode: 'all' | 'available' | 'used' | 'damaged'): void {
+    this.serialViewMode = mode;
+    this.currentSerialPage = 1;
+  }
+
+  getFilteredSerialNumbers(): SerialNumber[] {
+    if (!this.selectedSerialData) return [];
+    
+    let filtered = this.selectedSerialData.serialNumbers;
+    
+    // Filter by view mode
+    if (this.serialViewMode !== 'all') {
+      filtered = filtered.filter(serial => {
+        switch (this.serialViewMode) {
+          case 'available':
+            return serial.status === 'AVAILABLE';
+          case 'used':
+            return serial.status === 'USED';
+          case 'damaged':
+            return serial.status === 'DAMAGED';
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Apply pagination
+    const startIndex = (this.currentSerialPage - 1) * this.serialPageSize;
+    const endIndex = startIndex + this.serialPageSize;
+    
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  getSerialStatusClass(status: string): string {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'serial-available';
+      case 'USED':
+        return 'serial-used';
+      case 'DAMAGED':
+        return 'serial-damaged';
+      default:
+        return 'serial-unknown';
+    }
+  }
+
+  getSerialBadgeClass(status: string): string {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'bg-success text-white';
+      case 'USED':
+        return 'bg-warning text-dark';
+      case 'DAMAGED':
+        return 'bg-danger text-white';
+      default:
+        return 'bg-secondary text-white';
+    }
+  }
+
+  getTotalSerialPages(): number {
+    if (!this.selectedSerialData) return 1;
+    
+    let totalItems = this.selectedSerialData.serialNumbers.length;
+    
+    // Filter by view mode
+    if (this.serialViewMode !== 'all') {
+      totalItems = this.selectedSerialData.serialNumbers.filter(serial => {
+        switch (this.serialViewMode) {
+          case 'available':
+            return serial.status === 'AVAILABLE';
+          case 'used':
+            return serial.status === 'USED';
+          case 'damaged':
+            return serial.status === 'DAMAGED';
+          default:
+            return true;
+        }
+      }).length;
+    }
+    
+    return Math.ceil(totalItems / this.serialPageSize);
+  }
+
+  getSerialPageNumbers(): number[] {
+    const totalPages = this.getTotalSerialPages();
+    const pages: number[] = [];
+    const maxPagesToShow = 5;
+    
+    let startPage = Math.max(1, this.currentSerialPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+    
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  }
+
+  setSerialPage(page: number): void {
+    const totalPages = this.getTotalSerialPages();
+    if (page >= 1 && page <= totalPages) {
+      this.currentSerialPage = page;
+    }
+  }
+
+  exportSerialNumbers(): void {
+    if (!this.selectedSerialData) return;
+    
+    console.log('Exporting serial numbers for:', this.selectedSerialData.cartoonNumber);
+    // Implement export functionality
+    alert('Serial numbers export functionality will be implemented with backend integration');
+  }
+
+  // Chart filter methods
+  applyChartFilters(): void {
+    console.log('Applying chart filters:', this.chartFilters);
+    // Implement chart filtering logic
+  }
+
+  clearChartFilters(): void {
     this.chartFilters = {
       specificDate: '',
       month: '',
@@ -524,200 +628,55 @@ export class HologramoveriewComponent implements OnInit {
       minQuantity: null,
       maxQuantity: null
     };
-    this.showAdvancedFilters = false;
     this.applyChartFilters();
   }
 
   getFilterSummary(): string {
     const filters = [];
+    if (this.chartFilters.specificDate) filters.push(`Date: ${this.chartFilters.specificDate}`);
+    if (this.chartFilters.month) filters.push(`Month: ${this.chartFilters.month}`);
+    if (this.chartFilters.year) filters.push(`Year: ${this.chartFilters.year}`);
+    if (this.chartFilters.type) filters.push(`Type: ${this.chartFilters.type}`);
+    if (this.chartFilters.status) filters.push(`Status: ${this.chartFilters.status}`);
     
-    if (this.chartFilters.specificDate) {
-      filters.push(`Date: ${this.chartFilters.specificDate}`);
-    }
-    
-    if (this.chartFilters.month) {
-      const monthName = this.months.find(m => m.value === this.chartFilters.month)?.label;
-      filters.push(`Month: ${monthName}`);
-    }
-    
-    if (this.chartFilters.year) {
-      filters.push(`Year: ${this.chartFilters.year}`);
-    }
-    
-    if (this.chartFilters.type) {
-      filters.push(`Type: ${this.chartFilters.type}`);
-    }
-    
-    if (this.chartFilters.status) {
-      filters.push(`Status: ${this.chartFilters.status}`);
-    }
-    
-    if (this.chartFilters.dateFrom && this.chartFilters.dateTo) {
-      filters.push(`Range: ${this.chartFilters.dateFrom} to ${this.chartFilters.dateTo}`);
-    }
-    
-    if (this.chartFilters.minQuantity !== null || this.chartFilters.maxQuantity !== null) {
-      const min = this.chartFilters.minQuantity || 0;
-      const max = this.chartFilters.maxQuantity || '∞';
-      filters.push(`Quantity: ${min} - ${max}`);
-    }
-    
-    return filters.length > 0 ? filters.join(', ') : 'All data (no filters applied)';
+    return filters.length > 0 ? filters.join(', ') : 'All data';
+  }
+
+  refreshChartData(): void {
+    console.log('Refreshing chart data...');
+    // Implement chart data refresh
+  }
+
+  exportChartData(): void {
+    console.log('Exporting chart data...');
+    alert('Chart data export functionality will be implemented with backend integration');
   }
 
   getFilteredDataCount(): number {
-    // In a real application, this would return the count of filtered records
-    // For now, return a mock count based on filters
-    let baseCount = 1250000; // Total holograms
-    
-    if (this.chartFilters.type) baseCount = Math.floor(baseCount * 0.6);
-    if (this.chartFilters.status) baseCount = Math.floor(baseCount * 0.8);
-    if (this.chartFilters.month) baseCount = Math.floor(baseCount * 0.3);
-    
-    return baseCount;
+    // Return filtered data count based on current filters
+    return 1250; // Mock value
   }
 
-  refreshChartData() {
-    console.log('Refreshing chart data with current filters');
-    this.applyChartFilters();
-  }
-
-  exportChartData() {
-    console.log('Exporting filtered chart data');
-    // In a real application, this would export the filtered data
-    alert('Chart data export functionality will be implemented here');
-  }
-
-  // Serial Numbers Data Methods
-  loadSerialNumbersData() {
-    // Load from localStorage (data from hologram register arrivals)
-    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-    
-    // Sample serial numbers data
-    const sampleSerialData: SerialNumberRoll[] = [
-      {
-        id: 1,
-        rollNumber: 'ROLL-001',
-        hologramType: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
-        totalCount: 500,
-        availableCount: 350,
-        usedCount: 120,
-        damagedCount: 30,
-        status: 'IN_USE',
-        receivedDate: '2024-11-01',
-        usageHistory: [
-          {
-            date: '2024-11-02',
-            batchNumber: 'BATCH-001',
-            brandName: 'Premium Whisky',
-            fromSerial: 'HG001001',
-            toSerial: 'HG001050',
-            quantity: 50,
-            status: 'COMPLETED'
-          },
-          {
-            date: '2024-11-03',
-            batchNumber: 'BATCH-002',
-            brandName: 'Royal Rum',
-            fromSerial: 'HG001051',
-            toSerial: 'HG001120',
-            quantity: 70,
-            status: 'COMPLETED'
-          }
-        ]
-      },
-      {
-        id: 2,
-        rollNumber: 'ROLL-002',
-        hologramType: 'EXPORT',
-        fromSerial: 'HG002001',
-        toSerial: 'HG002500',
-        totalCount: 500,
-        availableCount: 500,
-        usedCount: 0,
-        damagedCount: 0,
-        status: 'AVAILABLE',
-        receivedDate: '2024-10-28',
-        usageHistory: []
-      },
-      {
-        id: 3,
-        rollNumber: 'ROLL-003',
-        hologramType: 'DEFENCE',
-        fromSerial: 'HG003001',
-        toSerial: 'HG003300',
-        totalCount: 300,
-        availableCount: 0,
-        usedCount: 280,
-        damagedCount: 20,
-        status: 'COMPLETED',
-        receivedDate: '2024-10-15',
-        usageHistory: [
-          {
-            date: '2024-10-20',
-            batchNumber: 'DEF-001',
-            brandName: 'Military Special',
-            fromSerial: 'HG003001',
-            toSerial: 'HG003280',
-            quantity: 280,
-            status: 'COMPLETED'
-          }
-        ]
+  // Serial filter methods
+  applySerialFilters(): void {
+    this.filteredSerialData = this.serialRollsData.filter(roll => {
+      if (this.serialFilters.rollStatus && roll.status !== this.serialFilters.rollStatus) {
+        return false;
       }
-    ];
-
-    // Convert saved rolls to serial number format
-    const convertedRolls: SerialNumberRoll[] = savedRolls.map((roll: any) => ({
-      id: roll.id,
-      rollNumber: roll.cartoonNumber || `ROLL-${roll.id}`,
-      hologramType: roll.type,
-      fromSerial: roll.fromSerial,
-      toSerial: roll.toSerial,
-      totalCount: roll.totalCount,
-      availableCount: roll.availableCount,
-      usedCount: roll.usedCount || 0,
-      damagedCount: roll.damagedCount || 0,
-      status: roll.status,
-      receivedDate: roll.receivedDate,
-      usageHistory: [],
-      isNew: roll.isNew,
-      newUntil: roll.newUntil
-    }));
-
-    // Combine converted rolls with sample data
-    this.serialNumbersData = [...convertedRolls, ...sampleSerialData];
-    this.applySerialFilters();
-  }
-
-  applySerialFilters() {
-    this.filteredSerialData = this.serialNumbersData.filter(roll => {
-      // Roll status filter
-      const statusMatch = !this.serialFilters.rollStatus || roll.status === this.serialFilters.rollStatus;
-      
-      // Hologram type filter
-      const typeMatch = !this.serialFilters.hologramType || roll.hologramType === this.serialFilters.hologramType;
-      
-      // Date range filter
-      const rollDate = new Date(roll.receivedDate);
-      const dateFromMatch = !this.serialFilters.dateFrom || rollDate >= new Date(this.serialFilters.dateFrom);
-      const dateToMatch = !this.serialFilters.dateTo || rollDate <= new Date(this.serialFilters.dateTo);
-      
-      // Serial search filter
-      const serialMatch = !this.serialFilters.serialSearch || 
-        roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
-        roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) ||
-        roll.rollNumber.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase());
-      
-      return statusMatch && typeMatch && dateFromMatch && dateToMatch && serialMatch;
+      if (this.serialFilters.hologramType && roll.hologramType !== this.serialFilters.hologramType) {
+        return false;
+      }
+      if (this.serialFilters.serialSearch && 
+          !roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) &&
+          !roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase())) {
+        return false;
+      }
+      return true;
     });
-
-    // Reset pagination
     this.serialCurrentPage = 1;
   }
 
-  clearSerialFilters() {
+  clearSerialFilters(): void {
     this.serialFilters = {
       rollStatus: '',
       hologramType: '',
@@ -728,66 +687,6 @@ export class HologramoveriewComponent implements OnInit {
     this.applySerialFilters();
   }
 
-  refreshSerialData() {
-    this.loadSerialNumbersData();
-    console.log('Serial numbers data refreshed');
-  }
-
-  exportSerialData() {
-    console.log('Exporting serial numbers data');
-    // In a real application, this would export the serial data
-    alert('Serial numbers data export functionality will be implemented here');
-  }
-
-  // Serial data summary methods - Updated to use filtered data
-  getTotalRolls(): number {
-    return this.filteredSerialData.length;
-  }
-
-  getAvailableHolograms(): number {
-    return this.filteredSerialData.reduce((total, roll) => total + roll.availableCount, 0);
-  }
-
-  getUsedInProduction(): number {
-    return this.filteredSerialData.reduce((total, roll) => total + roll.usedCount, 0);
-  }
-
-  getDamagedWastage(): number {
-    return this.filteredSerialData.reduce((total, roll) => total + roll.damagedCount, 0);
-  }
-
-  // Get filter summary for Serial Numbers Data
-  getSerialFilterSummary(): string {
-    const filters = [];
-    
-    if (this.serialFilters.rollStatus) {
-      filters.push(`Status: ${this.serialFilters.rollStatus}`);
-    }
-    
-    if (this.serialFilters.hologramType) {
-      filters.push(`Type: ${this.serialFilters.hologramType}`);
-    }
-    
-    if (this.serialFilters.dateFrom && this.serialFilters.dateTo) {
-      filters.push(`Date: ${this.serialFilters.dateFrom} to ${this.serialFilters.dateTo}`);
-    } else if (this.serialFilters.dateFrom) {
-      filters.push(`From: ${this.serialFilters.dateFrom}`);
-    } else if (this.serialFilters.dateTo) {
-      filters.push(`Until: ${this.serialFilters.dateTo}`);
-    }
-    
-    if (this.serialFilters.serialSearch) {
-      filters.push(`Search: "${this.serialFilters.serialSearch}"`);
-    }
-    
-    if (filters.length === 0) {
-      return `Showing all ${this.serialNumbersData.length} rolls`;
-    }
-    
-    return `Filtered by: ${filters.join(', ')} (${this.filteredSerialData.length} of ${this.serialNumbersData.length} rolls)`;
-  }
-
-  // Check if any serial filters are active
   hasActiveSerialFilters(): boolean {
     return !!(this.serialFilters.rollStatus || 
               this.serialFilters.hologramType || 
@@ -796,72 +695,90 @@ export class HologramoveriewComponent implements OnInit {
               this.serialFilters.serialSearch);
   }
 
-  // Serial data action methods
-  viewUsageDetails(roll: SerialNumberRoll) {
-    console.log('Viewing usage details for roll:', roll.rollNumber);
-    // In a real application, this would open a modal with usage details
-    alert(`Usage details for ${roll.rollNumber}:\n\nTotal Usage History: ${roll.usageHistory.length} entries\nLast Used: ${roll.usageHistory.length > 0 ? roll.usageHistory[roll.usageHistory.length - 1].date : 'Never'}`);
+  getSerialFilterSummary(): string {
+    const filters = [];
+    if (this.serialFilters.rollStatus) filters.push(`Status: ${this.serialFilters.rollStatus}`);
+    if (this.serialFilters.hologramType) filters.push(`Type: ${this.serialFilters.hologramType}`);
+    if (this.serialFilters.serialSearch) filters.push(`Search: ${this.serialFilters.serialSearch}`);
+    
+    return filters.length > 0 ? 
+      `Filtered by: ${filters.join(', ')} | Showing ${this.filteredSerialData.length} of ${this.serialRollsData.length} rolls` :
+      `Showing all ${this.serialRollsData.length} rolls`;
   }
 
-  editRoll(roll: SerialNumberRoll) {
-    console.log('Editing roll:', roll.rollNumber);
-    // In a real application, this would open an edit modal
-    alert(`Edit functionality for ${roll.rollNumber} will be implemented here`);
+  // Serial data summary methods
+  getTotalRolls(): number {
+    return this.hasActiveSerialFilters() ? this.filteredSerialData.length : this.serialRollsData.length;
   }
 
-  viewRollDetails(roll: SerialNumberRoll) {
-    console.log('Viewing roll details:', roll.rollNumber);
-    // In a real application, this would show detailed information
-    alert(`Roll Details:\n\nRoll Number: ${roll.rollNumber}\nType: ${roll.hologramType}\nSerial Range: ${roll.fromSerial} - ${roll.toSerial}\nTotal: ${roll.totalCount}\nAvailable: ${roll.availableCount}\nUsed: ${roll.usedCount}\nDamaged: ${roll.damagedCount}\nStatus: ${roll.status}\nReceived: ${roll.receivedDate}`);
+  getAvailableHolograms(): number {
+    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
+    return data.reduce((total, roll) => total + roll.availableCount, 0);
   }
 
-  markDamaged(roll: SerialNumberRoll) {
-    console.log('Marking roll as damaged:', roll.rollNumber);
-    // In a real application, this would open a damage reporting modal
-    alert(`Damage reporting for ${roll.rollNumber} will be implemented here`);
+  getUsedInProduction(): number {
+    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
+    return data.reduce((total, roll) => total + roll.usedCount, 0);
   }
 
-  // Pagination methods for serial data
+  getDamagedWastage(): number {
+    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
+    return data.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  // Serial data pagination methods
+  getPaginatedSerialData(): SerialRollData[] {
+    const startIndex = (this.serialCurrentPage - 1) * this.serialDataPageSize;
+    const endIndex = startIndex + this.serialDataPageSize;
+    return this.filteredSerialData.slice(startIndex, endIndex);
+  }
+
   getSerialDataStartIndex(): number {
-    return (this.serialCurrentPage - 1) * this.serialItemsPerPage;
+    return (this.serialCurrentPage - 1) * this.serialDataPageSize;
   }
 
   getSerialDataEndIndex(): number {
-    return Math.min(this.getSerialDataStartIndex() + this.serialItemsPerPage, this.filteredSerialData.length);
+    const endIndex = this.serialCurrentPage * this.serialDataPageSize;
+    return Math.min(endIndex, this.filteredSerialData.length);
   }
 
-  getTotalSerialPages(): number {
-    return Math.ceil(this.filteredSerialData.length / this.serialItemsPerPage);
+  getTotalSerialDataPages(): number {
+    return Math.ceil(this.filteredSerialData.length / this.serialDataPageSize);
   }
 
-  getSerialPageNumbers(): number[] {
-    const totalPages = this.getTotalSerialPages();
-    const pages: number[] = [];
-    const maxVisiblePages = 5;
-    
-    let startPage = Math.max(1, this.serialCurrentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    
-    return pages;
+  // Serial roll action methods
+  isNewSerialRoll(roll: SerialRollData): boolean {
+    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
   }
 
-  setSerialPage(page: number) {
-    if (page >= 1 && page <= this.getTotalSerialPages()) {
-      this.serialCurrentPage = page;
-    }
+  viewUsageDetails(roll: SerialRollData): void {
+    console.log('Viewing usage details for roll:', roll.rollNumber);
+    alert(`Usage details for ${roll.rollNumber} will be implemented with backend integration`);
   }
 
-  getPaginatedSerialData(): SerialNumberRoll[] {
-    const startIndex = this.getSerialDataStartIndex();
-    const endIndex = this.getSerialDataEndIndex();
-    return this.filteredSerialData.slice(startIndex, endIndex);
+  editRoll(roll: SerialRollData): void {
+    console.log('Editing roll:', roll.rollNumber);
+    alert(`Edit functionality for ${roll.rollNumber} will be implemented`);
+  }
+
+  viewRollDetails(roll: SerialRollData): void {
+    console.log('Viewing roll details:', roll.rollNumber);
+    alert(`Detailed view for ${roll.rollNumber} will be implemented`);
+  }
+
+  markDamaged(roll: SerialRollData): void {
+    console.log('Marking roll as damaged:', roll.rollNumber);
+    alert(`Mark damaged functionality for ${roll.rollNumber} will be implemented`);
+  }
+
+  refreshSerialData(): void {
+    console.log('Refreshing serial data...');
+    this.loadSerialRollsData();
+    this.applySerialFilters();
+  }
+
+  exportSerialData(): void {
+    console.log('Exporting serial data...');
+    alert('Serial data export functionality will be implemented with backend integration');
   }
 }

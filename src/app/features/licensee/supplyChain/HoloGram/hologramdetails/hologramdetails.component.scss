@@ -257,84 +257,169 @@
         }
       }
 
+      .table-scroll-hint {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        text-align: center;
+        font-size: 0.8rem;
+        animation: fadeInDown 0.5s ease-out;
+        
+        i {
+          color: #f59e0b;
+          animation: bounce 2s infinite;
+        }
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+          transform: translateY(0);
+        }
+        40% {
+          transform: translateY(-3px);
+        }
+        60% {
+          transform: translateY(-2px);
+        }
+      }
+
       .register-table-wrapper {
         overflow-x: auto;
         max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+
+        &::-webkit-scrollbar {
+          height: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+          
+          &:hover {
+            background: #94a3b8;
+          }
+        }
 
         .register-table {
           width: 100%;
-          min-width: 1200px;
+          min-width: 1300px;
           border-collapse: collapse;
           font-size: 0.9rem;
-          table-layout: fixed;
+          table-layout: auto;
+          
+          @media (max-width: 1200px) {
+            min-width: 1200px;
+          }
+          
+          @media (max-width: 992px) {
+            min-width: 1100px;
+          }
+          
+          @media (max-width: 768px) {
+            min-width: 1000px;
+          }
 
           thead {
             background: #f8fafc;
             border-bottom: 2px solid #e2e8f0;
 
             th {
-              padding: 1rem 0.75rem;
+              padding: 1rem 0.5rem;
               text-align: left;
               font-weight: 700;
               color: #374151;
               border-right: 1px solid #e5e7eb;
               white-space: nowrap;
               text-transform: uppercase;
-              font-size: 0.8rem;
-              letter-spacing: 0.5px;
+              font-size: 0.75rem;
+              letter-spacing: 0.3px;
+              overflow: hidden;
+              text-overflow: ellipsis;
 
               &:last-child {
                 border-right: none;
               }
 
-              // Column widths - Updated for new table structure
+              // Column widths - Fixed layout (Total: 100%)
               &.sl-no {
-                width: 60px;
+                width: 5%;
+                min-width: 60px;
                 text-align: center;
               }
 
               &.date-col {
-                width: 120px;
+                width: 8%;
+                min-width: 100px;
                 text-align: center;
               }
 
               &.ref-no {
-                width: 140px;
+                width: 10%;
+                min-width: 130px;
                 text-align: center;
               }
 
               &.cartoon-no {
-                width: 120px;
+                width: 8%;
+                min-width: 100px;
                 text-align: center;
               }
 
               &.type-col {
-                width: 100px;
+                width: 6%;
+                min-width: 80px;
                 text-align: center;
               }
 
               &.serial-from {
-                width: 140px;
+                width: 10%;
+                min-width: 130px;
                 text-align: center;
               }
 
               &.serial-to {
-                width: 140px;
+                width: 10%;
+                min-width: 130px;
                 text-align: center;
               }
 
               &.hologram-count {
-                width: 140px;
+                width: 15%;
+                min-width: 180px;
                 text-align: center;
               }
 
               &.remarks {
-                width: 200px;
+                width: 20%;
+                min-width: 250px;
                 text-align: left;
               }
 
               &.actions {
-                width: 180px;
+                width: 8%;
+                min-width: 120px;
                 text-align: center;
               }
             }
@@ -358,9 +443,10 @@
               }
 
               td {
-                padding: 1rem 0.75rem;
+                padding: 1rem 0.5rem;
                 vertical-align: middle;
                 border-right: 1px solid #f1f5f9;
+                white-space: nowrap;
 
                 &:last-child {
                   border-right: none;
@@ -459,43 +545,71 @@
 
                 &.hologram-count {
                   text-align: center;
+                  word-wrap: break-word;
+                  overflow-wrap: break-word;
+                  white-space: normal;
 
                   .count-display {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    
                     .count-number {
-                      display: block;
                       font-weight: 700;
                       color: #667eea;
-                      font-size: 1rem;
+                      font-size: 1.1rem;
+                      line-height: 1.2;
                     }
 
                     .count-label {
-                      display: block;
                       color: #6b7280;
                       font-size: 0.7rem;
                       text-transform: uppercase;
+                      margin-top: 0.125rem;
                     }
                   }
                 }
 
                 &.remarks {
                   text-align: left;
+                  word-wrap: break-word;
+                  overflow-wrap: break-word;
+                  hyphens: auto;
+                  white-space: normal;
                   
                   .remarks-text {
                     color: #6b7280;
                     font-style: italic;
                     font-size: 0.85rem;
+                    line-height: 1.4;
+                    max-width: 100%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    line-clamp: 3;
+                    -webkit-box-orient: vertical;
                   }
                 }
 
                 &.actions {
                   text-align: center;
                   
+                  .d-flex {
+                    justify-content: center;
+                    
+                    &.flex-wrap {
+                      gap: 0.25rem !important;
+                    }
+                  }
+                  
                   .btn {
                     font-size: 0.75rem;
                     padding: 0.375rem 0.75rem;
                     border-radius: 4px;
                     font-weight: 600;
-                    margin: 0 0.125rem;
+                    white-space: nowrap;
                     
                     &.btn-success {
                       background-color: #10b981;
@@ -516,7 +630,7 @@
                   .badge {
                     font-size: 0.65rem;
                     padding: 0.25rem 0.5rem;
-                    margin-left: 0.25rem;
+                    white-space: nowrap;
                   }
                 }
               }
@@ -637,35 +751,62 @@
     }
 
     .register-table-wrapper {
+      .table-scroll-hint {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.8rem;
+      }
+
       .register-table {
-        min-width: 1000px;
         font-size: 0.8rem;
+        min-width: 1100px;
 
         thead th {
-          padding: 0.75rem 0.5rem;
+          padding: 0.75rem 0.4rem;
           font-size: 0.7rem;
           
           &.actions {
-            width: 150px;
+            min-width: 100px;
           }
           
           &.type-col {
-            width: 80px;
+            min-width: 70px;
+          }
+
+          &.remarks {
+            min-width: 200px;
+          }
+
+          &.hologram-count {
+            min-width: 150px;
+          }
+
+          &.serial-from,
+          &.serial-to {
+            min-width: 110px;
           }
         }
 
         tbody td {
-          padding: 0.75rem 0.5rem;
+          padding: 0.75rem 0.4rem;
           
           &.actions {
+            .d-flex {
+              flex-direction: column;
+              gap: 0.25rem !important;
+              align-items: center;
+            }
+
             .btn {
               font-size: 0.65rem;
               padding: 0.25rem 0.5rem;
+              width: 100%;
+              max-width: 120px;
             }
             
             .badge {
               font-size: 0.6rem;
               padding: 0.2rem 0.4rem;
+              margin: 0;
             }
           }
           
@@ -673,6 +814,35 @@
             .badge {
               font-size: 0.65rem;
               padding: 0.25rem 0.5rem;
+            }
+          }
+
+          &.remarks {
+            .remarks-text {
+              font-size: 0.75rem;
+              word-break: break-word;
+              -webkit-line-clamp: 2;
+              line-clamp: 2;
+            }
+          }
+
+          &.hologram-count {
+            .count-display {
+              .count-number {
+                font-size: 1rem;
+              }
+              
+              .count-label {
+                font-size: 0.65rem;
+              }
+            }
+          }
+
+          &.serial-from,
+          &.serial-to {
+            .serial-number {
+              font-size: 0.7rem;
+              padding: 0.2rem 0.4rem;
             }
           }
         }
@@ -698,51 +868,153 @@
   }
 
   @media (max-width: 480px) {
+    .header-section {
+      padding: 1rem;
+      
+      .header-actions {
+        margin-top: 1rem;
+        
+        .btn {
+          padding: 0.5rem 1rem;
+          font-size: 0.8rem;
+          margin-bottom: 0.5rem;
+          width: 100%;
+        }
+      }
+    }
+
+    .stock-summary-section {
+      .summary-card {
+        padding: 1rem;
+        flex-direction: column;
+        text-align: center;
+        
+        .card-icon {
+          width: 50px;
+          height: 50px;
+          font-size: 1.25rem;
+        }
+        
+        .card-content {
+          .card-value {
+            font-size: 1.5rem;
+          }
+        }
+      }
+    }
+
+    .filter-section {
+      .filter-card {
+        .filter-header {
+          padding: 1rem;
+          flex-direction: column;
+          gap: 0.5rem;
+          text-align: center;
+        }
+        
+        .filter-controls {
+          padding: 1rem;
+          
+          .form-group {
+            .filter-actions {
+              .btn {
+                width: 100%;
+                margin-top: 0.5rem;
+              }
+            }
+          }
+        }
+      }
+    }
+
     .register-table-wrapper {
+      .table-scroll-hint {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.6rem;
+      }
+
       .register-table {
-        min-width: 800px;
+        min-width: 1000px;
         font-size: 0.75rem;
 
         thead th {
-          padding: 0.5rem 0.25rem;
+          padding: 0.5rem 0.2rem;
           font-size: 0.65rem;
           
           &.actions {
-            width: 120px;
+            min-width: 90px;
           }
           
           &.type-col {
-            width: 60px;
+            min-width: 60px;
+          }
+
+          &.remarks {
+            min-width: 180px;
+          }
+
+          &.hologram-count {
+            min-width: 130px;
+          }
+
+          &.serial-from,
+          &.serial-to {
+            min-width: 100px;
           }
         }
 
         tbody td {
-          padding: 0.5rem 0.25rem;
+          padding: 0.5rem 0.2rem;
 
           &.serial-from,
           &.serial-to {
             .serial-number {
-              font-size: 0.75rem;
+              font-size: 0.65rem;
               padding: 0.125rem 0.25rem;
             }
           }
           
           &.actions {
+            .d-flex {
+              flex-direction: column;
+              gap: 0.2rem !important;
+            }
+
             .btn {
               font-size: 0.6rem;
-              padding: 0.2rem 0.4rem;
+              padding: 0.2rem 0.3rem;
+              width: 100%;
+              max-width: 100px;
             }
             
             .badge {
               font-size: 0.55rem;
-              padding: 0.15rem 0.3rem;
+              padding: 0.15rem 0.25rem;
             }
           }
           
           &.type-col {
             .badge {
               font-size: 0.6rem;
-              padding: 0.2rem 0.4rem;
+              padding: 0.2rem 0.3rem;
+            }
+          }
+
+          &.remarks {
+            .remarks-text {
+              font-size: 0.65rem;
+            }
+          }
+
+          &.hologram-count {
+            .count-display {
+              .count-number {
+                font-size: 0.9rem;
+              }
+              
+              .count-label {
+                font-size: 0.6rem;
+              }
             }
           }
         }

@@ -331,6 +331,7 @@
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
                       <tr>
+                        <th>Received Date</th>
                         <th>Cartoon Number</th>
                         <th>Type</th>
                         <th>From Serial</th>
@@ -340,12 +341,12 @@
                         <th>Used</th>
                         <th>Damaged</th>
                         <th>Status</th>
-                        <th>Received Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (roll of rollsData; track roll.id) {
                       <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
+                        <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
                         <td>
                           <div class="d-flex align-items-center">
                             <span class="fw-bold text-primary">{{ roll.cartoonNumber }}</span>
@@ -373,7 +374,6 @@
                             }
                           </div>
                         </td>
-                        <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
                       </tr>
                       } @empty {
                       <tr>
@@ -464,7 +464,15 @@
                         </td>
                         <td><span class="font-monospace small">{{ available.availableRange }}</span></td>
                         <td class="text-end text-success fw-bold">{{ available.availableCount | number }}</td>
-                        <td><span class="font-monospace">{{ available.nextSerial }}</span></td>
+                        <td>
+                          <div class="d-flex align-items-center justify-content-between">
+                            <span class="font-monospace">{{ available.nextSerial }}</span>
+                            <button class="btn btn-outline-info btn-sm ms-2" (click)="openSerialDetailsModal(available)"
+                              title="View Serial Numbers Details">
+                              <i class="bi bi-list-ol me-1"></i>Details
+                            </button>
+                          </div>
+                        </td>
                         <td>
                           <div class="progress" style="height: 20px;">
                             <div class="progress-bar bg-success" [style.width.%]="available.percentage">
@@ -855,3 +863,145 @@
     </div>
   </div>
 </div>
+< !-- Serial Numbers Details Modal -->
+  @if (showSerialDetailsModal) {
+  <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-list-ol me-2"></i>
+            Serial Numbers Details - {{ selectedSerialData?.cartoonNumber }}
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="closeSerialDetailsModal()"></button>
+        </div>
+        <div class="modal-body p-0">
+          @if (selectedSerialData) {
+
+          <!-- Summary Cards -->
+          <div class="container-fluid p-3 bg-light">
+            <div class="row g-3">
+              <div class="col-md-3">
+                <div class="card border-primary">
+                  <div class="card-body text-center">
+                    <h4 class="text-primary">{{ selectedSerialData.totalCount | number }}</h4>
+                    <small class="text-muted">Total Serial Numbers</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-success">
+                  <div class="card-body text-center">
+                    <h4 class="text-success">{{ selectedSerialData.availableCount | number }}</h4>
+                    <small class="text-muted">Available</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-warning">
+                  <div class="card-body text-center">
+                    <h4 class="text-warning">{{ selectedSerialData.usedCount | number }}</h4>
+                    <small class="text-muted">Used</small>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="card border-danger">
+                  <div class="card-body text-center">
+                    <h4 class="text-danger">{{ selectedSerialData.damagedCount | number }}</h4>
+                    <small class="text-muted">Damaged</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Serial Numbers Grid -->
+          <div class="container-fluid p-3">
+            <div class="row">
+              <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Serial Numbers Status</h6>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn" [class.btn-primary]="serialViewMode === 'all'"
+                      [class.btn-outline-primary]="serialViewMode !== 'all'" (click)="setSerialViewMode('all')">
+                      All ({{ selectedSerialData.totalCount }})
+                    </button>
+                    <button class="btn" [class.btn-success]="serialViewMode === 'available'"
+                      [class.btn-outline-success]="serialViewMode !== 'available'"
+                      (click)="setSerialViewMode('available')">
+                      Available ({{ selectedSerialData.availableCount }})
+                    </button>
+                    <button class="btn" [class.btn-warning]="serialViewMode === 'used'"
+                      [class.btn-outline-warning]="serialViewMode !== 'used'" (click)="setSerialViewMode('used')">
+                      Used ({{ selectedSerialData.usedCount }})
+                    </button>
+                    <button class="btn" [class.btn-danger]="serialViewMode === 'damaged'"
+                      [class.btn-outline-danger]="serialViewMode !== 'damaged'" (click)="setSerialViewMode('damaged')">
+                      Damaged ({{ selectedSerialData.damagedCount }})
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Serial Numbers Display -->
+                <div class="serial-numbers-grid" style="max-height: 400px; overflow-y: auto;">
+                  <div class="row g-2">
+                    @for (serial of getFilteredSerialNumbers(); track serial.number) {
+                    <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                      <div class="serial-number-card" [class]="getSerialStatusClass(serial.status)">
+                        <div class="serial-number">{{ serial.number }}</div>
+                        <div class="serial-status">
+                          <span class="badge" [class]="getSerialBadgeClass(serial.status)">
+                            {{ serial.status }}
+                          </span>
+                        </div>
+                        @if (serial.usedDate) {
+                        <div class="serial-date">
+                          <small class="text-muted">{{ serial.usedDate | date:'dd-MMM' }}</small>
+                        </div>
+                        }
+                      </div>
+                    </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- Pagination for large datasets -->
+                @if (getTotalSerialPages() > 1) {
+                <div class="d-flex justify-content-center mt-3">
+                  <nav>
+                    <ul class="pagination pagination-sm">
+                      <li class="page-item" [class.disabled]="currentSerialPage === 1">
+                        <button class="page-link" (click)="setSerialPage(currentSerialPage - 1)">Previous</button>
+                      </li>
+                      @for (page of getSerialPageNumbers(); track page) {
+                      <li class="page-item" [class.active]="page === currentSerialPage">
+                        <button class="page-link" (click)="setSerialPage(page)">{{ page }}</button>
+                      </li>
+                      }
+                      <li class="page-item" [class.disabled]="currentSerialPage === getTotalSerialPages()">
+                        <button class="page-link" (click)="setSerialPage(currentSerialPage + 1)">Next</button>
+                      </li>
+                    </ul>
+                  </nav>
+                </div>
+                }
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeSerialDetailsModal()">
+            <i class="bi bi-x-lg me-1"></i>
+            Close
+          </button>
+          <button type="button" class="btn btn-primary" (click)="exportSerialNumbers()">
+            <i class="bi bi-download me-1"></i>
+            Export Serial Numbers
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
