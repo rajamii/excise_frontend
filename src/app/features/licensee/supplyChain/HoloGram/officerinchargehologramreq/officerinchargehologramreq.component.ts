@@ -84,6 +84,25 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   ngOnInit() {
     this.loadHologramRequests();
+    
+    // Listen for storage changes to auto-refresh when new requests are submitted
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'hologramRequests' || e.key === 'hologramApplications') {
+        console.log('Storage change detected:', e.key);
+        this.loadHologramRequests();
+      }
+    });
+    
+    // Check for updates every 10 seconds
+    setInterval(() => {
+      this.loadHologramRequests();
+    }, 10000);
+    
+    // Also listen for focus events to refresh when user returns to tab
+    window.addEventListener('focus', () => {
+      console.log('Window focus detected, refreshing requests...');
+      this.loadHologramRequests();
+    });
   }
 
   getCurrentDateTime(): string {
@@ -91,108 +110,161 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   loadHologramRequests() {
-    // Sample data - requests from supply chain users
-    this.hologramRequests = [
-      {
-        id: 'HR001',
-        referenceNo: 'HRQ/2024/001',
-        submissionDate: '2024-11-01',
-        submittedBy: 'Supply Chain Manager - John Doe',
-        requestType: 'NEW_ALLOCATION',
-        hologramType: 'LOCAL',
-        requestedQuantity: 1000,
+    console.log('Loading hologram requests from localStorage...');
+    
+    // Load actual submitted requests from localStorage
+    const submittedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    
+    console.log('Found hologramRequests:', submittedRequests);
+    console.log('Found hologramApplications:', hologramApplications);
+    
+    // Convert submitted requests to officer format
+    const convertedRequests = submittedRequests.map((request: any, index: number) => {
+      console.log('Converting request:', request);
+      
+      return {
+        id: `HR${String(Date.now() + index).slice(-6)}`,
+        referenceNo: request.refNumber || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
+        submissionDate: request.submissionDate ? new Date(request.submissionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        submittedBy: 'Supply Chain User - Sikkim Distilleries Ltd',
+        requestType: 'NEW_ALLOCATION' as const,
+        hologramType: 'LOCAL' as const,
+        requestedQuantity: request.totalHolograms || 0,
         brandDetails: {
-          brandName: 'SDL Premium Whisky',
+          brandName: this.getBrandLabel(request.brandName) || request.brandName || 'Unknown Brand',
+          alcoholPercent: '42.8%',
+          sizeMl: this.getBottleSizeNumber(request.bottleSize) || 750,
+          liquorType: this.getLiquorType(request.brandName) || 'Whisky'
+        },
+        justification: request.remarks || `Hologram request for ${this.getBrandLabel(request.brandName) || request.brandName} production - ${request.bottleSize} bottles. Usage date: ${request.usageDate}`,
+        urgencyLevel: this.determineUrgencyLevel(request.usageDate) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+        status: request.status === 'APPROVED' ? 'APPROVED' as const : 
+                request.status === 'REJECTED' ? 'REJECTED' as const : 'PENDING' as const,
+        officerComments: request.officerComments,
+        approvedQuantity: request.approvedQuantity,
+        approvalDate: request.approvalDate,
+        rejectionReason: request.rejectionReason
+      };
+    });
+
+    // Convert hologram applications to officer format
+    const convertedApplications = hologramApplications.map((app: any, index: number) => {
+      const totalHolograms = (app.localQtyLakh || 0) + (app.exportQtyLakh || 0) + (app.defenceQtyLakh || 0);
+      let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
+      
+      if (app.exportQtyLakh > 0) hologramType = 'EXPORT';
+      else if (app.defenceQtyLakh > 0) hologramType = 'DEFENCE';
+
+      return {
+        id: `HA${String(Date.now() + index + 1000).slice(-6)}`,
+        referenceNo: app.refNo || `HRQ/${new Date().getFullYear()}/${String(index + 100).padStart(3, '0')}`,
+        submissionDate: app.date || new Date().toISOString().split('T')[0],
+        submittedBy: `${app.companyName || 'Supply Chain User'} - Hologram Application`,
+        requestType: 'NEW_ALLOCATION' as const,
+        hologramType: hologramType,
+        requestedQuantity: totalHolograms,
+        brandDetails: {
+          brandName: app.companyName || 'Unknown Company',
           alcoholPercent: '42.8%',
           sizeMl: 750,
-          liquorType: 'Whisky'
+          liquorType: 'Mixed Products'
         },
-        justification: 'New product launch requires initial hologram allocation for local market distribution.',
-        urgencyLevel: 'HIGH',
-        status: 'PENDING'
-      },
-      {
-        id: 'HR002',
-        referenceNo: 'HRQ/2024/002',
-        submissionDate: '2024-10-28',
-        submittedBy: 'Production Supervisor - Jane Smith',
-        requestType: 'ADDITIONAL_STOCK',
-        hologramType: 'EXPORT',
-        requestedQuantity: 500,
-        fromSerial: 'EXP001001',
-        toSerial: 'EXP001500',
-        brandDetails: {
-          brandName: 'SDL Reserve Brandy',
-          alcoholPercent: '42.8%',
-          sizeMl: 750,
-          liquorType: 'Brandy'
-        },
-        justification: 'Current export stock running low. Need additional holograms for upcoming shipment to Nepal.',
-        urgencyLevel: 'MEDIUM',
-        status: 'PENDING'
-      },
-      {
-        id: 'HR003',
-        referenceNo: 'HRQ/2024/003',
-        submissionDate: '2024-10-25',
-        submittedBy: 'Quality Control - Mike Johnson',
-        requestType: 'REPLACEMENT',
-        hologramType: 'LOCAL',
-        requestedQuantity: 50,
-        brandDetails: {
-          brandName: 'SDL Classic Rum',
-          alcoholPercent: '40%',
-          sizeMl: 375,
-          liquorType: 'Rum'
-        },
-        justification: 'Damaged holograms during production process. Need replacement for quality compliance.',
-        urgencyLevel: 'CRITICAL',
-        status: 'APPROVED',
-        officerComments: 'Approved for replacement due to production damage',
-        approvedQuantity: 50,
-        approvalDate: '2024-10-26'
-      },
-      {
-        id: 'HR004',
-        referenceNo: 'HRQ/2024/004',
-        submissionDate: '2024-10-20',
-        submittedBy: 'Export Manager - Sarah Wilson',
-        requestType: 'NEW_ALLOCATION',
-        hologramType: 'DEFENCE',
-        requestedQuantity: 200,
-        brandDetails: {
-          brandName: 'SDL Mountain Vodka',
-          alcoholPercent: '40%',
-          sizeMl: 180,
-          liquorType: 'Vodka'
-        },
-        justification: 'Defence canteen order requires special allocation for military personnel.',
-        urgencyLevel: 'HIGH',
-        status: 'REJECTED',
-        rejectionReason: 'Insufficient defence quota available for current month',
-        approvalDate: '2024-10-22'
-      },
-      {
-        id: 'HR005',
-        referenceNo: 'HRQ/2024/005',
-        submissionDate: '2024-10-15',
-        submittedBy: 'Supply Chain Coordinator - David Brown',
-        requestType: 'ADDITIONAL_STOCK',
-        hologramType: 'LOCAL',
-        requestedQuantity: 750,
-        brandDetails: {
-          brandName: 'SDL Heritage Whisky',
-          alcoholPercent: '42.8%',
-          sizeMl: 750,
-          liquorType: 'Whisky'
-        },
-        justification: 'Festival season demand increase. Additional stock required for local distribution.',
-        urgencyLevel: 'MEDIUM',
-        status: 'PENDING'
-      }
-    ];
+        justification: `Hologram application for ${hologramType.toLowerCase()} market. Local: ${app.localQtyLakh || 0}, Export: ${app.exportQtyLakh || 0}, Defence: ${app.defenceQtyLakh || 0} units.`,
+        urgencyLevel: 'MEDIUM' as const,
+        status: app.status === 'APPROVED' ? 'APPROVED' as const : 
+                app.status === 'REJECTED' ? 'REJECTED' as const : 'PENDING' as const,
+        officerComments: app.officerComments,
+        approvedQuantity: app.approvedQuantity || totalHolograms,
+        approvalDate: app.approvalDate,
+        rejectionReason: app.rejectionReason
+      };
+    });
+
+    // Combine all requests
+    this.hologramRequests = [...convertedRequests, ...convertedApplications];
+
+    console.log('Total converted requests:', convertedRequests.length);
+    console.log('Total converted applications:', convertedApplications.length);
+    console.log('Combined hologram requests:', this.hologramRequests.length);
+
+    // Add sample data only if no real requests exist
+    if (this.hologramRequests.length === 0) {
+      console.log('No real requests found, adding sample data');
+      this.hologramRequests = [
+        {
+          id: 'SAMPLE001',
+          referenceNo: 'HRQ/2024/SAMPLE001',
+          submissionDate: '2024-11-01',
+          submittedBy: 'Sample Data - No real requests found',
+          requestType: 'NEW_ALLOCATION',
+          hologramType: 'LOCAL',
+          requestedQuantity: 1000,
+          brandDetails: {
+            brandName: 'SDL Premium Whisky',
+            alcoholPercent: '42.8%',
+            sizeMl: 750,
+            liquorType: 'Whisky'
+          },
+          justification: 'Sample data - Submit a real hologram request to see it here.',
+          urgencyLevel: 'MEDIUM',
+          status: 'PENDING'
+        }
+      ];
+    } else {
+      console.log('Found real requests, using them instead of sample data');
+    }
 
     this.applyFilters();
+  }
+
+  // Helper methods for data conversion
+  private getBrandLabel(brandValue: string): string {
+    if (!brandValue) return 'Unknown Brand';
+    
+    const brandMap: { [key: string]: string } = {
+      'sikkim-supreme': 'Sikkim Supreme Whisky',
+      'himalayan-gold': 'Himalayan Gold Rum',
+      'royal-sikkim': 'Royal Sikkim Brandy',
+      'mountain-dew': 'Mountain Dew Vodka',
+      'gangtok-special': 'Gangtok Special Whisky',
+      'teesta-valley': 'Teesta Valley Rum',
+      'khangchendzonga': 'Khangchendzonga Premium',
+      'yuksom-heritage': 'Yuksom Heritage Whisky'
+    };
+    
+    return brandMap[brandValue] || brandValue;
+  }
+
+  private getBottleSizeNumber(bottleSize: string): number {
+    const sizeMap: { [key: string]: number } = {
+      '180ml': 180,
+      '375ml': 375,
+      '750ml': 750,
+      '1000ml': 1000
+    };
+    return sizeMap[bottleSize] || 750;
+  }
+
+  private getLiquorType(brandValue: string): string {
+    if (brandValue?.includes('whisky') || brandValue?.includes('whiskey')) return 'Whisky';
+    if (brandValue?.includes('rum')) return 'Rum';
+    if (brandValue?.includes('brandy')) return 'Brandy';
+    if (brandValue?.includes('vodka')) return 'Vodka';
+    return 'Whisky';
+  }
+
+  private determineUrgencyLevel(usageDate: string): string {
+    if (!usageDate) return 'MEDIUM';
+    
+    const usage = new Date(usageDate);
+    const today = new Date();
+    const diffDays = Math.ceil((usage.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 1) return 'CRITICAL';
+    if (diffDays <= 3) return 'HIGH';
+    if (diffDays <= 7) return 'MEDIUM';
+    return 'LOW';
   }
 
   applyFilters() {
@@ -383,5 +455,79 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   backToHologramRegister() {
     this.backToRegister.emit();
+  }
+
+  // Manual refresh method
+  refreshRequests() {
+    console.log('Refreshing hologram requests...');
+    
+    // Debug: Check what's in localStorage
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    
+    console.log('Found hologramRequests in localStorage:', hologramRequests);
+    console.log('Found hologramApplications in localStorage:', hologramApplications);
+    
+    this.loadHologramRequests();
+    alert(`Hologram requests refreshed successfully! Found ${hologramRequests.length} requests and ${hologramApplications.length} applications.`);
+  }
+
+  // Debug method to add test request (for testing)
+  addTestRequest() {
+    const testRequest = {
+      usageDate: '2024-11-06',
+      brandName: 'himalayan-gold',
+      bottleSize: '750ml',
+      totalHolograms: 1000,
+      remarks: 'Test hologram request for verification',
+      refNumber: `TEST/${Date.now()}`,
+      submissionDate: new Date().toISOString(),
+      status: 'PENDING'
+    };
+
+    const existingRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    existingRequests.push(testRequest);
+    localStorage.setItem('hologramRequests', JSON.stringify(existingRequests));
+    
+    console.log('Added test request:', testRequest);
+    this.loadHologramRequests();
+    alert('Test request added successfully!');
+  }
+
+  // Debug method to show localStorage contents
+  showStorageContents() {
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    
+    console.log('=== LOCALSTORAGE CONTENTS ===');
+    console.log('hologramRequests:', hologramRequests);
+    console.log('hologramApplications:', hologramApplications);
+    console.log('Current component requests:', this.hologramRequests);
+    console.log('Filtered requests:', this.filteredRequests);
+    
+    const message = `
+    LocalStorage Contents:
+    - hologramRequests: ${hologramRequests.length} items
+    - hologramApplications: ${hologramApplications.length} items
+    
+    Component Data:
+    - Total requests loaded: ${this.hologramRequests.length}
+    - Filtered requests: ${this.filteredRequests.length}
+    
+    Check browser console for detailed data.
+    `;
+    
+    alert(message);
+  }
+
+  // Debug method to clear localStorage (for testing)
+  clearTestData() {
+    if (confirm('Are you sure you want to clear all test data? This will remove all hologram requests.')) {
+      localStorage.removeItem('hologramRequests');
+      localStorage.removeItem('hologramApplications');
+      localStorage.removeItem('approvedHologramEntries');
+      this.loadHologramRequests();
+      alert('Test data cleared successfully!');
+    }
   }
 }

@@ -12,6 +12,22 @@
                     <p class="register-subtitle">Track and manage all hologram requests from supply chain users</p>
                 </div>
                 <div class="header-actions">
+                    <button class="btn btn-outline-primary me-2" (click)="refreshRequests()" title="Refresh to load latest requests">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Refresh Requests
+                    </button>
+                    <button class="btn btn-outline-info me-2" (click)="addTestRequest()" title="Add test request">
+                        <i class="bi bi-plus-square me-2"></i>
+                        Add Test Request
+                    </button>
+                    <button class="btn btn-outline-warning me-2" (click)="showStorageContents()" title="Show localStorage contents">
+                        <i class="bi bi-database me-2"></i>
+                        Debug Storage
+                    </button>
+                    <button class="btn btn-outline-danger me-2" (click)="clearTestData()" title="Clear all test data">
+                        <i class="bi bi-trash me-2"></i>
+                        Clear Test Data
+                    </button>
                     <button class="btn btn-outline-secondary me-2" (click)="backToHologramRegister()">
                         <i class="bi bi-arrow-left me-2"></i>
                         Back to Hologram Register
