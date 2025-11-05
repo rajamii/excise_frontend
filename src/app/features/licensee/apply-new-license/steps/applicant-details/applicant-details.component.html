@@ -2,138 +2,287 @@
   <mat-card>
     <mat-card-header>
       <div class="heading">Applicant Details</div>
-      <div class="validation">
-        * Marked Fields Are Mandatory
-      </div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
     <mat-card-content>
+      <!-- ==================== PERSONAL INFO ==================== -->
+      <h5 class="section-title">Personal Information</h5>
       <div class="form-field-container">
+
+        <!-- First / Middle / Last -->
         <mat-form-field appearance="outline">
-          <mat-label>Status</mat-label>
-          <mat-select formControlName="status" required>
-            @for (status of statuses; track status) {
-              <mat-option [value]="status">{{ status }}</mat-option>
-            }
-          </mat-select>
-          @if (applicantDetailsForm.controls['status'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('status') }}
-            </mat-error>
-          }
+          <mat-label>First Name</mat-label>
+          <input matInput placeholder="Enter First Name" formControlName="firstName" required />
+          <mat-error *ngIf="f.firstName.touched && f.firstName.invalid">
+            {{ getErrorMessage('firstName') }}
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Applicant Name</mat-label>
-          <input matInput placeholder="Enter Your Name" type="text" formControlName="applicantName" required/>
-          @if (applicantDetailsForm.controls['applicantName'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('applicantName') }}
-            </mat-error>
-          }
+          <mat-label>Middle Name</mat-label>
+          <input matInput placeholder="Enter Middle Name" formControlName="middleName" />
         </mat-form-field>
 
+        <mat-form-field appearance="outline">
+          <mat-label>Last Name</mat-label>
+          <input matInput placeholder="Enter Last Name" formControlName="lastName" required />
+          <mat-error *ngIf="f.lastName.touched && f.lastName.invalid">
+            {{ getErrorMessage('lastName') }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Father / Husband -->
         <mat-form-field appearance="outline">
           <mat-label>Father's / Husband's Name</mat-label>
-          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="fatherHusbandName" required/>
-          @if (applicantDetailsForm.controls['fatherHusbandName'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('fatherHusbandName') }}
-            </mat-error>
-          }
+          <input matInput placeholder="Enter Father's / Husband's Name"
+                 formControlName="fatherHusbandName" required />
+          <mat-error *ngIf="f.fatherHusbandName.touched && f.fatherHusbandName.invalid">
+            {{ getErrorMessage('fatherHusbandName') }}
+          </mat-error>
         </mat-form-field>
 
+        <!-- DOB -->
         <mat-form-field appearance="outline">
-          <mat-label>Nationality</mat-label>
-          <mat-select formControlName="nationality" required>
-            @for (nationality of nationalities; track nationality) {
-              <mat-option [value]="nationality">{{ nationality }}</mat-option>
-            }
-          </mat-select>
-          @if (applicantDetailsForm.controls['nationality'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('nationality') }}
-            </mat-error>
-          }
+          <mat-label>Date of Birth</mat-label>
+          <input matInput [matDatepicker]="dobPicker" formControlName="dob" required />
+          <mat-datepicker-toggle matIconSuffix [for]="dobPicker"></mat-datepicker-toggle>
+          <mat-datepicker #dobPicker></mat-datepicker>
+          <mat-error *ngIf="f.dob.touched && f.dob.invalid">
+            {{ getErrorMessage('dob') }}
+          </mat-error>
         </mat-form-field>
 
+        <!-- Gender -->
         <div class="radio-group-container">
           <label class="field-label">Gender <span class="required">*</span></label>
           <mat-radio-group formControlName="gender" required>
             <mat-radio-button value="Male">Male</mat-radio-button>
             <mat-radio-button value="Female">Female</mat-radio-button>
           </mat-radio-group>
-          @if (applicantDetailsForm.controls['gender'].invalid && applicantDetailsForm.controls['gender'].touched) {
-            <mat-error class="radio-error">
-              {{ getErrorMessage('gender') }}
-            </mat-error>
-          }
+          <mat-error class="radio-error"
+                     *ngIf="f.gender.touched && f.gender.invalid">
+            {{ getErrorMessage('gender') }}
+          </mat-error>
         </div>
 
+        <!-- Nationality -->
         <mat-form-field appearance="outline">
-          <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required/>
-          @if (applicantDetailsForm.controls['pan'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('pan') }}
-            </mat-error>
-          }
+          <mat-label>Nationality</mat-label>
+          <mat-select formControlName="nationality" required>
+            @for (nat of nationalities; track nat) {
+              <mat-option [value]="nat">{{ nat }}</mat-option>
+            }
+          </mat-select>
+          <mat-error *ngIf="f.nationality.touched && f.nationality.invalid">
+            {{ getErrorMessage('nationality') }}
+          </mat-error>
         </mat-form-field>
 
+        <!-- Residential Status -->
         <mat-form-field appearance="outline">
-          <mat-label>Phone Number</mat-label>
-          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="applicantMobileNumber" required/>
-          @if (applicantDetailsForm.controls['applicantMobileNumber'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('applicantMobileNumber') }}
-            </mat-error>
-          }
+          <mat-label>Residential Status</mat-label>
+          <mat-select formControlName="residentialStatus" required>
+            @for (st of residentialStatuses; track st) {
+              <mat-option [value]="st">{{ st }}</mat-option>
+            }
+          </mat-select>
+          <mat-error *ngIf="f.residentialStatus.touched && f.residentialStatus.invalid">
+            {{ getErrorMessage('residentialStatus') }}
+          </mat-error>
         </mat-form-field>
 
+        <!-- Email -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="applicantEmail" required/>
-          @if (applicantDetailsForm.controls['applicantEmail'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('applicantEmail') }}
-            </mat-error>
-          }
+          <input matInput placeholder="Enter email id" type="email" formControlName="email" />
+          <mat-error *ngIf="f.email.touched && f.email.invalid">
+            {{ getErrorMessage('email') }}
+          </mat-error>
         </mat-form-field>
 
-        <div class="upload-section">
-          <label class="upload-label">
-            Passport Size Photo <span class="required">*</span>
-            <span class="file-format">(png, jpg, jpeg)</span>
-          </label>
-          <div class="upload-actions">
-            <input
-              type="file"
-              id="photoUpload"
-              (change)="onPhotoSelect($event)"
-              accept=".png,.jpg,.jpeg"
-              style="display: none"
-            />
-            <label for="photoUpload" mat-raised-button color="primary" style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;">
-              <mat-icon style="margin-right: 4px;">upload</mat-icon>
-              Upload Photo
-            </label>
-            @if (passPhoto.fileUrl) {
-              <button mat-icon-button color="accent" (click)="viewPhoto()" type="button" aria-label="View Uploaded Photo">
-                <mat-icon>visibility</mat-icon>
-              </button>
-            }
-            @if (passPhoto.file) {
-              <span class="uploaded-file-name">{{ passPhoto.file.name }}</span>
-            }
-          </div>
+        <!-- Present Address -->
+        <mat-form-field appearance="outline">
+          <mat-label>Present Address</mat-label>
+          <textarea matInput placeholder="Enter Present Address"
+                    cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4"
+                    formControlName="presentAddress" required></textarea>
+          <mat-error *ngIf="f.presentAddress.touched && f.presentAddress.invalid">
+            {{ getErrorMessage('presentAddress') }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Permanent Address + same-checkbox -->
+        <mat-form-field appearance="outline">
+          <mat-label>Permanent Address</mat-label>
+          <textarea matInput placeholder="Enter Permanent Address"
+                    cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4"
+                    formControlName="permanentAddress" required></textarea>
+          <mat-error *ngIf="f.permanentAddress.touched && f.permanentAddress.invalid">
+            {{ getErrorMessage('permanentAddress') }}
+          </mat-error>
+        </mat-form-field>
+
+        <div class="checkbox-same">
+          <mat-checkbox (change)="copyPresentToPermanent($event.checked)">
+            Present and Permanent Address are same
+          </mat-checkbox>
         </div>
+
+        <!-- Past / Present Occupation
+        <mat-form-field appearance="outline">
+          <mat-label>Past Occupation</mat-label>
+          <input matInput placeholder="Enter Past Occupation" formControlName="pastOccupation" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Present Occupation</mat-label>
+          <input matInput placeholder="Enter Present Occupation" formControlName="presentOccupation" />
+        </mat-form-field>
+
+        
+        <mat-form-field appearance="outline">
+          <mat-label>Aadhaar No</mat-label>
+          <input matInput placeholder="Enter Aadhaar No" type="text"
+                 formControlName="aadhaarNo" [pattern]="PatternConstants.AADHAAR" />
+          <mat-error *ngIf="f.aadhaarNo.touched && f.aadhaarNo.invalid">
+            {{ getErrorMessage('aadhaarNo') }}
+          </mat-error>
+        </mat-form-field> -->
+
+        <!-- PAN -->
+        <mat-form-field appearance="outline">
+          <mat-label>PAN No</mat-label>
+          <input matInput placeholder="Enter PAN No" type="text"
+                 formControlName="pan" pattern="^[A-Z]{5}[0-9]{4}[A-Z]$" required />
+          <mat-error *ngIf="f.pan.touched && f.pan.invalid">
+            {{ getErrorMessage('pan') }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Mode of Operation -->
+        <mat-form-field appearance="outline">
+          <mat-label>Mode of Operation</mat-label>
+          <mat-select formControlName="modeOfOperation">
+            @for (mode of modesOfOperation; track mode.value) {
+              <mat-option [value]="mode.value">{{ mode.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <!-- ==================== RADIO QUESTIONS ==================== -->
+      <h5 class="section-title">Eligibility Questions</h5>
+      <div class="radio-questions-container">
+
+        <div class="radio-question">
+          <label class="question-label">
+            Whether the Applicant holds Sikkim Subject Certificate / Certificate of Identification / Residential Certificate (for urban area only)?
+            <span class="required">*</span>
+          </label>
+          <mat-radio-group formControlName="hasSikkimCertificate" required>
+            <mat-radio-button value="Yes">Yes</mat-radio-button>
+            <mat-radio-button value="No">No</mat-radio-button>
+          </mat-radio-group>
+          <mat-error class="radio-error"
+                     *ngIf="f.hasSikkimCertificate.touched && f.hasSikkimCertificate.invalid">
+            {{ getErrorMessage('hasSikkimCertificate') }}
+          </mat-error>
+        </div>
+
+        <div class="radio-question">
+          <label class="question-label">
+            Whether the Applicant holds or held any Excise License(s) in Sikkim / in any other State of India?
+            <span class="required">*</span>
+          </label>
+          <mat-radio-group formControlName="hasExciseLicense" required>
+            <mat-radio-button value="Yes">Yes</mat-radio-button>
+            <mat-radio-button value="No">No</mat-radio-button>
+          </mat-radio-group>
+          <mat-error class="radio-error"
+                     *ngIf="f.hasExciseLicense.touched && f.hasExciseLicense.invalid">
+            {{ getErrorMessage('hasExciseLicense') }}
+          </mat-error>
+        </div>
+
+        <div class="radio-question">
+          <label class="question-label">
+            Whether any of the family members of the applicant was holding any Excise License during the last Settlement/Contract Period?
+            <span class="required">*</span>
+          </label>
+          <mat-radio-group formControlName="familyExciseLicense" required>
+            <mat-radio-button value="Yes">Yes</mat-radio-button>
+            <mat-radio-button value="No">No</mat-radio-button>
+          </mat-radio-group>
+          <mat-error class="radio-error"
+                     *ngIf="f.familyExciseLicense.touched && f.familyExciseLicense.invalid">
+            {{ getErrorMessage('familyExciseLicense') }}
+          </mat-error>
+        </div>
+
+        <div class="radio-question">
+          <label class="question-label">
+            Whether the applicant was ever convicted by a Criminal Court for a non bailable offence?
+            <span class="required">*</span>
+          </label>
+          <mat-radio-group formControlName="criminalConviction" required>
+            <mat-radio-button value="Yes">Yes</mat-radio-button>
+            <mat-radio-button value="No">No</mat-radio-button>
+          </mat-radio-group>
+          <mat-error class="radio-error"
+                     *ngIf="f.criminalConviction.touched && f.criminalConviction.invalid">
+            {{ getErrorMessage('criminalConviction') }}
+          </mat-error>
+        </div>
+      </div>
+
+      <!-- ==================== DOCUMENT UPLOAD ==================== -->
+      <h5 class="section-title">Upload Documents</h5>
+      <div class="documents-upload-container">
+        @for (doc of documents; track doc.name) {
+          <div class="document-upload-row">
+            <div class="document-info">
+              <span class="document-label">
+                {{ doc.label }}
+                @if (doc.required) { <span class="required">*</span> }
+              </span>
+              <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
+            </div>
+            <div class="document-actions">
+              <input type="file"
+                     [id]="doc.name"
+                     (change)="onDocumentSelect($event, doc.name)"
+                     [accept]="doc.formats"
+                     style="display:none"/>
+              <label [for]="doc.name" mat-raised-button color="primary"
+                     style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
+                <mat-icon style="margin-right:4px;">upload_file</mat-icon>
+                Choose File
+              </label>
+
+              @if (doc.fileUrl) {
+                <button mat-icon-button color="accent"
+                        (click)="viewDocument(doc)" type="button">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              }
+              @if (doc.file) {
+                <span class="file-name">{{ doc.file.name }}</span>
+              }
+            </div>
+          </div>
+        }
       </div>
     </mat-card-content>
 
+    <!-- ==================== ACTIONS ==================== -->
     <mat-card-actions>
       <button mat-stroked-button (click)="goBack()" type="button">Back</button>
       <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!applicantDetailsForm.valid || !isPhotoUploaded()" type="button">Next</button>
+      <button mat-flat-button color="primary"
+              (click)="proceedToNext()"
+              [disabled]="!applicantDetailsForm.valid || !areRequiredDocumentsUploaded()"
+              type="button">Next</button>
     </mat-card-actions>
   </mat-card>
 </form>

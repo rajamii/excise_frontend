@@ -54,6 +54,7 @@ export class LicenseApplication {
   modeOfOperation!: string;
 
   // address/site details
+  siteDistrict!: District;
   siteSubdivision!: Subdivision;
   policeStation!: PoliceStation;
   locationCategory!: string;
@@ -92,6 +93,7 @@ export class LicenseApplication {
   memberMobileNumber!: number;
   applicantEmail?: string;
   memberEmail!: string;
+  dob!: string;
 
   // document
   photo!: File;

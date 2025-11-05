@@ -1,12 +1,24 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import {
+  Component, EventEmitter, Output, OnInit, OnDestroy,
+  ChangeDetectorRef, signal
+} from '@angular/core';
+import {
+  FormBuilder, FormGroup, Validators, AbstractControl
+} from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
-import { FormUtils } from '../../../../../shared/utils/capitalize.util';
-import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+
+interface DocumentUpload {
+  name: string;
+  label: string;
+  file: File | null;
+  fileUrl: string;
+  required: boolean;
+  formats: string;
+}
+interface ModeOfOperation { value: string; label: string; }
 
 @Component({
   selector: 'app-applicant-details',
@@ -16,52 +28,90 @@ import { LicenseApplicationService } from '../../../../../core/services/license-
   styleUrl: './applicant-details.component.scss',
 })
 export class ApplicantDetailsComponent implements OnInit, OnDestroy {
-  applicantDetailsForm: FormGroup;
+  applicantDetailsForm!: FormGroup;
+  f!: any;                     // shortcut for form controls
 
-  passPhoto = {
-    file: null as File | null,
-    fileUrl: ''
-  };
+  // ---------- Dropdowns ----------
+  nationalities = ['Indian', 'Foreign'];
+  residentialStatuses = ['Resident', 'Non-Resident'];
+  modesOfOperation: ModeOfOperation[] = [
+    { value: 'Self', label: 'Self' },
+    { value: 'Salesman', label: 'Salesman' },
+    { value: 'Barman', label: 'Barman' }
+  ];
 
-  // Static dropdown values
-  statuses: string[] = ['Single', 'Married', 'Divorced'];
-  nationalities: string[] = ['Indian', 'Foreign'];
-  
+  // ---------- Documents (same style as site-details) ----------
+  documents: DocumentUpload[] = [
+    { name: 'passportPhoto', label: 'Passport Size Photo', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png' },
+    { name: 'panCard',   label: 'Pan card',      file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    { name: 'sikkimCertificate', label: 'Sikkim Subject Certificate / Certificate of Identification / Residential Certificate',
+      file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    {name: 'dobProof', label: 'Date of Birth Proof', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' }
+  ];
+
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
-  
+
   private destroy$ = new Subject<void>();
-  
-  errorMessages = {
-    status: signal(''),
-    applicantName: signal(''),
-    fatherHusbandName: signal(''),
-    nationality: signal(''),
-    gender: signal(''),
-    pan: signal(''),
-    applicantMobileNumber: signal(''),
-    applicantEmail: signal(''),
-    photo: signal('')
+
+  // ---------- Error messages (signal based) ----------
+  private errorMessages = {
+    firstName: signal(''), lastName: signal(''), fatherHusbandName: signal(''),
+    dob: signal(''), gender: signal(''), nationality: signal(''), residentialStatus: signal(''),
+    presentAddress: signal(''), permanentAddress: signal(''), pan: signal(''),
+    aadhaarNo: signal(''), email: signal(''), hasSikkimCertificate: signal(''),
+    hasExciseLicense: signal(''), familyExciseLicense: signal(''), criminalConviction: signal('')
   };
 
   constructor(
-    private fb: FormBuilder, 
-    private licenseApplicationService: LicenseApplicationService,
+    private fb: FormBuilder,
+    private licenseSrv: LicenseApplicationService,
     private cdr: ChangeDetectorRef
-  ){
-    const storedValues = this.getFromSessionStorage();
+  ) {
+    const stored = this.getFromSessionStorage();
 
     this.applicantDetailsForm = this.fb.group({
-      status: new FormControl(storedValues.status, [Validators.required]),
-      applicantName: new FormControl(storedValues.applicantName, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      fatherHusbandName: new FormControl(storedValues.fatherHusbandName, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
-      nationality: new FormControl(storedValues.nationality, [Validators.required]),
-      gender: new FormControl(storedValues.gender, [Validators.required]),
-      pan: new FormControl(storedValues.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
-      applicantMobileNumber: new FormControl(storedValues.applicantMobileNumber, [Validators.required, Validators.pattern(PatternConstants.MOBILE)]),
-      applicantEmail: new FormControl(storedValues.applicantEmail, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]),
+      // Personal
+      firstName: [stored.firstName, [Validators.required, Validators.pattern(PatternConstants.NAME)]],
+      middleName: [stored.middleName],
+      lastName: [stored.lastName, [Validators.required, Validators.pattern(PatternConstants.NAME)]],
+      fatherHusbandName: [stored.fatherHusbandName, [Validators.required, Validators.pattern(PatternConstants.NAME)]],
+      dob: [stored.dob, [Validators.required]],
+      gender: [stored.gender, Validators.required],
+      nationality: [stored.nationality ?? 'Indian', Validators.required],
+      residentialStatus: [stored.residentialStatus ?? 'Resident', Validators.required],
+      email: [stored.email, [Validators.pattern(PatternConstants.EMAIL)]],
+
+      // Address
+      presentAddress: [stored.presentAddress, Validators.required],
+      permanentAddress: [stored.permanentAddress, Validators.required],
+
+      // Occupation
+      pastOccupation: [stored.pastOccupation],
+      presentOccupation: [stored.presentOccupation],
+
+      // ID
+      // aadhaarNo: [stored.aadhaarNo, [Validators.pattern(PatternConstants.AADHAAR)]],
+      pan: [stored.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]],
+
+      // Mode
+      modeOfOperation: [stored.modeOfOperation],
+
+      // Radio questions
+      hasSikkimCertificate: [stored.hasSikkimCertificate, Validators.required],
+      hasExciseLicense: [stored.hasExciseLicense, Validators.required],
+      familyExciseLicense: [stored.familyExciseLicense, Validators.required],
+      criminalConviction: [stored.criminalConviction, Validators.required]
     });
 
+    this.f = this.applicantDetailsForm.controls;
+
+    // ---- AGE VALIDATION (≥21) ----
+    this.applicantDetailsForm.get('dob')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.validateAge());
+
+    // ---- SAVE ON EVERY CHANGE ----
     this.applicantDetailsForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -70,99 +120,181 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnInit() {
-    FormUtils.capitalize(this.applicantDetailsForm.get('pan')!, this.destroy$);
-
-    const storedPhoto = this.licenseApplicationService.getPassPhoto();
-    if (storedPhoto) {
-      this.passPhoto.file = storedPhoto;
-      this.passPhoto.fileUrl = URL.createObjectURL(storedPhoto);
-    }
+  /* --------------------------------------------------------------- */
+  /* -------------------------- LIFECYCLE -------------------------- */
+  /* --------------------------------------------------------------- */
+  ngOnInit(): void {
+    this.restoreDocuments();
+    this.validateAge();               // initial check
   }
 
-  ngOnDestroy() {
-    this.clearPhotoUrl();
+  ngOnDestroy(): void {
+    this.clearAllDocumentUrls();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  private getFromSessionStorage(): Partial<LicenseApplication> {
-    const storedData = sessionStorage.getItem('applicantDetailsData');
-    return storedData ? JSON.parse(storedData) as LicenseApplication : {};
+  /* --------------------------------------------------------------- */
+  /* -------------------------- STORAGE ---------------------------- */
+  /* --------------------------------------------------------------- */
+  private getFromSessionStorage(): any {
+    const raw = sessionStorage.getItem('applicantDetailsData');
+    return raw ? JSON.parse(raw) : {};
   }
 
-  private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.applicantDetailsForm.getRawValue(); 
-    sessionStorage.setItem('applicantDetailsData', JSON.stringify(formData));
+  private saveToSessionStorage(): void {
+    const raw = this.applicantDetailsForm.getRawValue();
+
+    // Build the single applicantName required by the backend
+    const parts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
+    raw.applicantName = parts.join(' ');
+
+    sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
 
-  onPhotoSelect(event: Event) {
-    const input = event.target as HTMLInputElement;
+  /* --------------------------------------------------------------- */
+  /* -------------------------- DOCUMENTS -------------------------- */
+  /* --------------------------------------------------------------- */
+  private restoreDocuments(): void {
+    this.documents.forEach(d => {
+      const stored = this.licenseSrv.getSiteDocument(d.name);
+      if (stored) {
+        d.file = stored;
+        d.fileUrl = URL.createObjectURL(stored);
+      }
+    });
+  }
+
+  private clearAllDocumentUrls(): void {
+    this.documents.forEach(d => {
+      if (d.fileUrl) URL.revokeObjectURL(d.fileUrl);
+      d.fileUrl = '';
+    });
+  }
+
+  onDocumentSelect(ev: Event, docName: string): void {
+    const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
+    const doc = this.documents.find(d => d.name === docName);
+    if (!file || !doc) return;
 
-    if (file) {
-      this.passPhoto.file = file;
-      this.passPhoto.fileUrl = URL.createObjectURL(file);
-      this.cdr.detectChanges();
-      this.licenseApplicationService.setPassPhoto(file);
+    // size < 5 MB
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be < 5 MB');
+      input.value = '';
+      return;
+    }
+
+    const allowed = doc.formats.split(',').map(f => f.trim());
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowed.includes(ext)) {
+      alert(`Allowed: ${doc.formats}`);
+      input.value = '';
+      return;
+    }
+
+    doc.file = file;
+    doc.fileUrl = URL.createObjectURL(file);
+    this.licenseSrv.setSiteDocument(docName, file);
+    this.cdr.detectChanges();
+  }
+
+  viewDocument(doc: DocumentUpload): void {
+    if (doc.fileUrl) window.open(doc.fileUrl, '_blank');
+  }
+
+  areRequiredDocumentsUploaded(): boolean {
+    return this.documents.filter(d => d.required).every(d => d.file !== null);
+  }
+
+  /* --------------------------------------------------------------- */
+  /* -------------------------- HELPERS ---------------------------- */
+  /* --------------------------------------------------------------- */
+  copyPresentToPermanent(checked: boolean): void {
+    if (checked) {
+      const present = this.applicantDetailsForm.get('presentAddress')?.value ?? '';
+      this.applicantDetailsForm.patchValue({ permanentAddress: present });
     }
   }
 
-  viewPhoto() {
-    if (this.passPhoto.fileUrl) {
-      window.open(this.passPhoto.fileUrl, '_blank');
+  private validateAge(): void {
+    const dobCtrl = this.applicantDetailsForm.get('dob');
+    if (!dobCtrl?.value) return;
+
+    const dob = new Date(dobCtrl.value);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+
+    if (age < 21) {
+      dobCtrl.setErrors({ minAge: true });
+      this.errorMessages.dob.set('Applicant must be at least 21 years old');
+    } else {
+      const { minAge, ...others } = dobCtrl.errors ?? {};
+      dobCtrl.setErrors(Object.keys(others).length ? others : null);
+      this.errorMessages.dob.set(dobCtrl.hasError('required') ? 'This field is required' : '');
     }
   }
 
-  isPhotoUploaded(): boolean {
-    return !!this.passPhoto.file;
-  }
+  /* --------------------------------------------------------------- */
+  /* -------------------------- VALIDATION ------------------------- */
+  /* --------------------------------------------------------------- */
+  private updateErrorMessage(field: keyof typeof this.errorMessages): void {
+    const ctrl = this.applicantDetailsForm.get(field);
+    if (!ctrl) return;
 
-  clearPhotoUrl() {
-    if (this.passPhoto.fileUrl) {
-      URL.revokeObjectURL(this.passPhoto.fileUrl);
-      this.passPhoto.fileUrl = '';
-    }
-  }
-
-  private updateErrorMessage(field: keyof typeof this.errorMessages) {
-    const control = this.applicantDetailsForm.get(field);
-    if (control?.hasError('required')) {
+    if (ctrl.hasError('required')) {
       this.errorMessages[field].set('This field is required');
-    } else if (control?.hasError('pattern')) {
-      this.errorMessages[field].set('Invalid format');
-    } else if (control?.hasError('email')) {
-      this.errorMessages[field].set('Not a valid email');
+    } else if (ctrl.hasError('pattern')) {
+      const msg = field === 'pan' ? 'Invalid PAN format' :
+                  field === 'aadhaarNo' ? 'Invalid Aadhaar format' :
+                  field === 'email' ? 'Invalid email address' : 'Invalid format';
+      this.errorMessages[field].set(msg);
+    } else if (ctrl.hasError('minAge')) {
+      this.errorMessages[field].set('Applicant must be at least 21 years old');
     } else {
       this.errorMessages[field].set('');
     }
   }
 
-  private updateAllErrorMessages() {
-    Object.keys(this.errorMessages).forEach((field) => {
-      this.updateErrorMessage(field as keyof typeof this.errorMessages);
-    });
+  private updateAllErrorMessages(): void {
+    (Object.keys(this.errorMessages) as (keyof typeof this.errorMessages)[])
+      .forEach(f => this.updateErrorMessage(f));
   }
 
-  getErrorMessage(field: keyof typeof this.errorMessages) {
+  getErrorMessage(field: keyof typeof this.errorMessages): string {
     return this.errorMessages[field]();
   }
 
-  proceedToNext() {
-    if (this.applicantDetailsForm.valid && this.isPhotoUploaded()) {
+  /* --------------------------------------------------------------- */
+  /* -------------------------- NAVIGATION ------------------------- */
+  /* --------------------------------------------------------------- */
+  proceedToNext(): void {
+    if (this.applicantDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
       this.next.emit();
+    } else {
+      Object.keys(this.applicantDetailsForm.controls)
+        .forEach(k => this.applicantDetailsForm.get(k)?.markAsTouched());
+
+      if (!this.areRequiredDocumentsUploaded()) {
+        alert('Please upload all required documents before proceeding.');
+      }
     }
   }
 
-  resetForm() {
+  resetForm(): void {
     this.applicantDetailsForm.reset();
-    this.passPhoto.file = null;
-    this.clearPhotoUrl();
-    this.licenseApplicationService.setPassPhoto(null);
+    this.documents.forEach(d => {
+      d.file = null;
+      if (d.fileUrl) URL.revokeObjectURL(d.fileUrl);
+      d.fileUrl = '';
+      this.licenseSrv.removeSiteDocument(d.name);
+    });
     sessionStorage.removeItem('applicantDetailsData');
   }
 
-  goBack() {
+  goBack(): void {
     this.back.emit();
   }
 }

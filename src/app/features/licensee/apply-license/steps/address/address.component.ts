@@ -29,9 +29,9 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
 
   // Static dropdown values
   locationCategories: string[] = ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'];
-  locationNames: string[] = ['Location 1', 'Location 2', 'Location 3', 'Location 4'];
-  wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
-  roadNames: string[] = ['Road 1', 'Road 2', 'Road 3', 'Road 4'];
+  locationNames: string[] = ['Location 1', 'Location 2', 'Location 3'];
+  wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3'];
+  roadNames: string[] = ['Road 1', 'Road 2', 'Road 3'];
 
   // Outputs for navigation between form steps
   @Output() readonly next = new EventEmitter<void>();
