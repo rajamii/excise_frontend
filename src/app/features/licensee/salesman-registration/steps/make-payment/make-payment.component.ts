@@ -1,5 +1,5 @@
 import { Component, EventEmitter, Output, signal } from '@angular/core';
-import { MaterialModule } from '../../../../../../shared/material.module';
+import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 
 @Component({
@@ -20,9 +20,10 @@ export class MakePaymentComponent {
   }
 
   proceedToNext() {
-    if (this.makePaymentForm.valid) {
-      this.next.emit();
-    }
+    // if (this.makePaymentForm.valid) {
+    //   this.next.emit();
+    // }
+    this.next.emit(); // Skip payment for now
   }
 
   goBack() {

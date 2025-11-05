@@ -1,10 +1,10 @@
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
-  @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5'])) {
+  @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'single_window'])) {
     <div class="stats-container">
 
-      @if (accountService.hasAnyRole('site_admin')) {
+      @if (accountService.hasAnyRole(['site_admin', 'single_window'])) {
         <!-- Applied Stat Card -->
         <mat-card class="stat-card applied" (click)="showTable('applied')">
           <div class="circle-icon blue-bg">

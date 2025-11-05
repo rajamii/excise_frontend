@@ -1,39 +1,71 @@
 import { Injectable } from '@angular/core';
-import { SalesmanBarmanDocuments } from '../models/salesman-barman.model';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { SalesmanBarman, SalesmanBarmanDocuments } from '../models/salesman-barman.model';
+import { DashboardCount } from '../models/dashboard.model';
+import { UnifiedApplication } from '../models/shared-application.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SalesmanBarmanRegistrationService {
-  private baseUrl = `${environment.apiBaseUrl}/salesman_barman`; // Base URL for the API
-  private salesmanBarmanDocs: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
+  private baseUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`; // Updated path
 
-  constructor(private http: HttpClient) { }
+  private documents: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
 
-  getSalesmanBarmanList(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/list /`);
+  constructor(private http: HttpClient) {}
+
+  // === CREATE ===
+  createSalesmanBarman(data: FormData): Observable<SalesmanBarman> {
+    return this.http.post<SalesmanBarman>(`${this.baseUrl}/apply/`, data);
   }
 
-  createSalesmanBarman(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/create/`, data);
+  // === LIST ===
+  getSalesmanBarmanList(): Observable<SalesmanBarman[]> {
+    return this.http.get<SalesmanBarman[]>(`${this.baseUrl}/list/`);
   }
 
-  getSalesmanBarmanDetail(id: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/detail/${id}/`);
+  // === DETAIL ===
+  getSalesmanBarmanDetail(applicationId: string): Observable<SalesmanBarman> {
+    return this.http.get<SalesmanBarman>(`${this.baseUrl}/detail/${applicationId}/`);
   }
 
+  // === ADVANCE STAGE ===
+  advanceStage(applicationId: string, stageId: number, remarks?: string): Observable<SalesmanBarman> {
+    return this.http.post<SalesmanBarman>(`${this.baseUrl}/${applicationId}/advance/${stageId}/`, { remarks });
+  }
+
+  // === NEXT STAGES ===
+  getNextStages(applicationId: string): Observable<Array<{id: number, name: string}>> {
+    return this.http.get<Array<{id: number, name: string}>>(`${this.baseUrl}/${applicationId}/next-stages/`);
+  }
+
+  // === DOCUMENT HANDLING ===
   setSalesmanBarmanDocuments(docs: Partial<Record<keyof SalesmanBarmanDocuments, File>>): void {
-    this.salesmanBarmanDocs = { ...this.salesmanBarmanDocs, ...docs };
+    this.documents = { ...this.documents, ...docs };
   }
 
   getSalesmanBarmanDocuments(): Partial<Record<keyof SalesmanBarmanDocuments, File>> {
-    return this.salesmanBarmanDocs;
+    return this.documents;
   }
 
   clearSalesmanBarmanDocuments(): void {
-    this.salesmanBarmanDocs = {};
+    this.documents = {};
+  }
+
+  // New: Fetch aggregated counts
+  getDashboardCounts(): Observable<DashboardCount> {
+    return this.http.get<DashboardCount>(`${this.baseUrl}/dashboard-counts/`);
+  }
+
+  // New: Fetch apps grouped by status
+  getApplicationsByStatus(): Observable<{
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+  }> {
+    return this.http.get<any>(`${this.baseUrl}/applications-by-status/`);
   }
 }

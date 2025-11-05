@@ -20,6 +20,7 @@ const routes: Routes = [
             Authority.LEVEL_3, 
             Authority.LEVEL_4, 
             Authority.LEVEL_5, 
+            Authority.SINGLE_WINDOW
           ]
         }, 
       },
@@ -98,6 +99,38 @@ const routes: Routes = [
       {
         path: 'roads',
         loadComponent: () => import('./master/road/list/list.component').then(m => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'workflow',
+        loadComponent: () => import('./master/workflow/list/list.component').then(m => m.WorkflowListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'stages',
+        loadComponent: () => import('./master/workflow/stages/list/list.component').then(m => m.WorkflowStageListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'permissions',
+        loadComponent: () => import('./master/workflow/permissions/list/list.component').then(m => m.StagePermissionListComponent),
+        canActivate: [UserRouteAccessService],
+        data: {
+          authorities: [Authority.SITE_ADMIN]
+        },
+      },
+      {
+        path: 'transitions',
+        loadComponent: () => import('./master/workflow/transitions/list/list.component').then(m => m.WorkflowTransitionListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]

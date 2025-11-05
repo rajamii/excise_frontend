@@ -17,7 +17,9 @@ import {
 @Injectable({
   providedIn: 'root'
 })
+
 export class LicenseApplicationService {
+
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/masters/new_license_application`;
   
@@ -29,22 +31,26 @@ export class LicenseApplicationService {
 
   constructor(private http: HttpClient) { }
     
-  // ========================== OLD LICENSE APPLICATION (EXISTING) ==========================
+  // ========================== OLD LICENSE APPLICATION ==========================
   
+  // Final application submission by the licensee (includes all sections + photo).
   submitLicenseApplication(data: any): Observable<any> {
     console.log(data);
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/apply/`, data);
   } 
 
+  // Updates a license application with the provided changes (e.g., status update, details change)
   updateApplication(id: number, changes: Partial<any>): Observable<LicenseApplication> {
     return this.http.put<LicenseApplication>(`${this.baseUrl}/${id}/update/`, changes);
   }
 
+  // Deletes a license application by its ID
   deleteApplication(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.delete(`${this.baseUrl}/${encodedId}/delete/`);
   }
 
+  // Fetches the counts for various categories on the dashboard (e.g., number of pending, approved, rejected applications)
   getDashboardCounts(): Observable<DashboardCount> {
     return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`);
   }
@@ -53,10 +59,17 @@ export class LicenseApplicationService {
     return this.http.get<LocationFee[]>(`${this.baseUrl}/location-fee/`);
   }
 
+  // Retrieves a list of license applications, categorized by their current status (applied, accepted, pending or rejected)
   getApplicationsByStatus(): Observable<ApplicationStatus> {
     return this.http.get<ApplicationStatus>(`${this.baseUrl}/list-by-status/`);
   }
 
+  getNextStages(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/next-stages/`);
+  }
+
+  // Advances the application to the next stage based on the provided action (approve, reject, raise objection)
   advanceApplication(
     applicationId: string,
     stageID: string | undefined,
@@ -76,31 +89,72 @@ export class LicenseApplicationService {
       context
     };
 
+    // Optional: include new license category during approval if changed
     if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
       body.newLicenseCategory = newLicenseCategoryId;
     }
 
+    // Only include objections when action is 'raise_objection'
     if (action === 'raise_objection' && objections) {
       body.objections = objections;
     }
     return this.http.post(`${this.baseUrl}/${encodedId}/advance/${encodedStageId}/`, body);
   }
 
+  // Method to raise objections for a given application
+  raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], remarks?: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    const body: any = {
+      objections: objections.map(obj => ({ field: obj.field, remarks: obj.remarks })), // Map 'field' to 'field_name' for backend compatibility
+      remarks
+    };
+    return this.http.post(`${this.baseUrl}/${encodedId}/raise-objection/`, body);
+  }
+
+  // Retrieves all objections raised against a given application
   getObjections(applicationId: string): Observable<any[]> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/objections/`);
   }
 
-  resolveObjections(applicationId: string, formData: FormData): Observable<any> {
+  // Resolves previously raised objections for a given application.
+    resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post<any>(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
+    const formData = new FormData();
+
+    // Append fields to FormData
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== null && value !== undefined) {
+        // Handle dropdowns (e.g., licenseCategory, siteSubdivision) by sending the ID or code
+        if (['licenseCategory', 'licenseType', 'exciseDistrict', 'exciseSubdivision', 'siteSubdivision', 'policeStation'].includes(key)) {
+          formData.append(key, value.id || value.subdivisionCode || value.districtCode || value.policeStationCode || value.toString());
+        } else {
+          formData.append(key, value.toString());
+        }
+      }
+    }
+
+    // Append photo if provided
+    if (photo) {
+      formData.append('photo', photo, photo.name);
+    }
+
+    // Log FormData for debugging
+    console.log('FormData entries:');
+    for (const pair of formData.entries()) {
+      console.log(`${pair[0]}: ${pair[1]}`);
+    }
+
+    return this.http.post(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
   }
   
+  // Submits the site enquiry report associated with the application.
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
+  // Initiates the license printing process for an approved application.
   printLicense(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.baseUrl}/${encodedId}/print/`, {});
@@ -351,24 +405,31 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/print/`, {});
   }
 
+  
+  
   // ========================== PASSPORT PHOTO MANAGEMENT ==========================
   
+  // Set the uploaded photo
   setPassPhoto(file: File | null): void {
     this.passPhotoSubject.next(file);
+  }
+
+  // Get the uploaded photo
+  getPassPhoto(): File | null {
+    return this.passPhotoSubject.value;
   }
 
   getPassPhotoObservable(): Observable<File | null> {
     return this.passPhotoSubject.asObservable();
   }
 
-  getPassPhoto(): File | null {
-    return this.passPhotoSubject.value;
-  }
-
+  // Clear the stored photo by setting it to null
   clearPassPhoto(): void {
     this.passPhotoSubject.next(null);
   }
 
+  
+  
   // ========================== SITE DOCUMENTS MANAGEMENT ==========================
   
   setSiteDocument(documentName: string, file: File): void {

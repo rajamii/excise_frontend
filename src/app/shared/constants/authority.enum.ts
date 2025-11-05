@@ -6,4 +6,5 @@ export enum Authority {
     LEVEL_3 = 'level_3',
     LEVEL_4 = 'level_4',
     LEVEL_5 = 'level_5',
+    SINGLE_WINDOW = 'single_window',
 }

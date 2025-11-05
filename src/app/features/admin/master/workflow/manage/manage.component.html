@@ -1,0 +1,42 @@
+<div class="container-fluid">
+    <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Workflow</h2>
+  
+    <form #form="ngForm">
+      <mat-dialog-content>
+        <!-- Workflow Name -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Workflow Name</mat-label>
+          <input 
+            matInput 
+            [(ngModel)]="workflow.name" 
+            name="name" 
+            required 
+            maxlength="100"
+            #nameModel="ngModel" 
+          />
+          <mat-error *ngIf="nameModel.invalid && nameModel.touched">
+            Workflow name is required
+          </mat-error>
+          <mat-error *ngIf="nameModel.errors?.['maxlength']">
+            Workflow name cannot exceed 100 characters
+          </mat-error>
+        </mat-form-field>
+  
+        <!-- Workflow Description -->
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Description</mat-label>
+          <textarea 
+            matInput 
+            [(ngModel)]="workflow.description" 
+            name="description"
+            rows="4"
+          ></textarea>
+        </mat-form-field>
+      </mat-dialog-content>
+  
+      <mat-dialog-actions align="center">
+        <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+        <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+      </mat-dialog-actions>
+    </form>
+  </div>

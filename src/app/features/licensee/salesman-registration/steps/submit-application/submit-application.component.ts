@@ -1,7 +1,7 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
-import { MaterialModule } from '../../../../../../shared/material.module';
-import { SalesmanBarmanRegistrationService } from '../../../../../../core/services/salesman-barman-registration.service';
-import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../../core/models/salesman-barman.model';
+import { MaterialModule } from '../../../../../shared/material.module';
+import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../core/models/salesman-barman.model';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
@@ -14,13 +14,17 @@ import { Router } from '@angular/router';
   styleUrl: './submit-application.component.scss'
 })
 export class SubmitApplicationComponent implements OnInit, OnDestroy {
-  fileUrls: string[] = [];
+
+  // fileUrls: string[] = [];
   acceptTerms: boolean = false;
   isSubmitting: boolean = false;
   applicationId: string | null = null;
 
-  // Cache for salesman/barman documents to prevent recreating URLs
-  private cachedDocuments: { key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }[] = [];
+  // For document preview
+  salesmanBarmanDocuments: Array<{ key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }> = [];
+
+  // // Cache for salesman/barman documents to prevent recreating URLs
+  // private cachedDocuments: { key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }[] = [];
 
   // Human-readable labels for license details
   readonly licenseLabels: Partial<Record<keyof SalesmanBarman, string>> = {
@@ -60,77 +64,92 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   @Output() back = new EventEmitter<void>();
 
+  private fileUrlMap = new Map<String, string>();
+
   constructor(
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Clear any existing cache to force fresh load
-    this.cachedDocuments = [];
-    this.fileUrls.forEach(url => URL.revokeObjectURL(url));
-    this.fileUrls = [];
-    
+    // this.cachedDocuments = [];
+    // this.fileUrls.forEach(url => URL.revokeObjectURL(url));
+    // this.fileUrls = [];
+
     // Force refresh of documents on init
     this.refreshDocuments();
   }
 
   ngOnDestroy(): void {
-    this.fileUrls.forEach(url => URL.revokeObjectURL(url));
+    // this.fileUrls.forEach(url => URL.revokeObjectURL(url));
+    this.revokeFileUrls();
   }
 
   private refreshDocuments(): void {
     // Clear cache to force reload
-    this.cachedDocuments = [];
-    this.fileUrls.forEach(url => URL.revokeObjectURL(url));
-    this.fileUrls = [];
-    
-    // Log what's in the service
+    // this.cachedDocuments = [];
+    // this.fileUrls.forEach(url => URL.revokeObjectURL(url));
+    // this.fileUrls = [];
+
+    this.revokeFileUrls();
+    this.salesmanBarmanDocuments = [];
     const docs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-    console.log('=== DOCUMENT DEBUG INFO ===');
-    console.log('Full documents object:', docs);
+    /* 
+    // console.log('=== DOCUMENT DEBUG INFO ===');
+    // console.log('Full documents object:', docs);
     
     // Check each document key
+    
     const documentKeys: (keyof SalesmanBarmanDocuments)[] = ['passPhoto', 'aadhaarCard', 'residentialCertificate', 'dateofBirthProof'];
     documentKeys.forEach(key => {
       const file = docs[key];
-      console.log(`Document ${key}:`, {
+     
+     console.log(`Document ${key}:`, {
         exists: !!file,
         isFile: file instanceof File,
         name: file?.name,
         size: file?.size,
         type: file?.type
       });
+      */
+
+    (Object.entries(docs) as [keyof SalesmanBarmanDocuments, File][]).forEach(([key, file]) => {
+      if (file) {
+        const fileUrl = URL.createObjectURL(file);
+        this.fileUrlMap.set(key, fileUrl);
+        this.salesmanBarmanDocuments.push({ key, file, fileUrl });
+      }
     });
-    
-    const validCount = Object.keys(docs).filter(key => docs[key as keyof SalesmanBarmanDocuments]).length;
-    console.log('Total valid documents:', validCount);
-    console.log('=========================');
+    // const validCount = Object.keys(docs).filter(key => docs[key as keyof SalesmanBarmanDocuments]).length;
+    // console.log('Total valid documents:', validCount);
+    // console.log('=========================');
   }
 
-  // Get formatted license details from session storage for display
-  get licenseDetails() {
-    return this.getGroupedEntries<Partial<SalesmanBarman>>('licenseDetails', this.licenseLabels);
+  private revokeFileUrls(): void {
+    this.fileUrlMap.forEach(url => URL.revokeObjectURL(url));
+    this.fileUrlMap.clear();
+  }
+
+  get licenseDetails(): Array<{ key: string; value: any }> {
+    const data = JSON.parse(sessionStorage.getItem('licenseDetails') || '{}');
+    return Object.entries(data)
+      .filter(([_, v]) => v != null)
+      .map(([k, v]) => ({ key: this.licenseLabels[k as keyof SalesmanBarman] || k, value: v }));
   }
 
   // Get formatted personal details from session storage for display with Yes/No conversion
-  get personalDetails() {
-    const details = this.getGroupedEntries<Partial<SalesmanBarman>>('personalDetails', this.personLabels);
-    
-    // Convert boolean sikkimSubject to Yes/No
-    return details.map(item => {
-      if (item.key === 'Sikkim Subject') {
-        const value = item.value;
-        if (value === true || value === 'true') {
-          return { ...item, value: 'Yes' };
-        } else if (value === false || value === 'false') {
-          return { ...item, value: 'No' };
-        }
-      }
-      return item;
-    });
+  get personalDetails(): Array<{ key: string; value: any }> {
+    const data = JSON.parse(sessionStorage.getItem('personalDetails') || '{}');
+    return Object.entries(data)
+      .filter(([_, v]) => v != null)
+      .map(([k, v]) => ({
+        key: this.personLabels[k as keyof SalesmanBarman] || k,
+        value: k === 'sikkimSubject' ? (v ? 'Yes' : 'No') : v
+      }));
   }
 
+  /*
   // Get uploaded document metadata (filename) for preview display
   get salesmanBarmanDocuments(): { key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }[] {
     // Get fresh documents from service
@@ -141,7 +160,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     
     // If cache exists but has different count than service, clear cache and rebuild
     if (this.cachedDocuments.length > 0 && this.cachedDocuments.length !== serviceDocCount) {
-      console.log('Cache mismatch detected. Clearing cache and rebuilding...');
+      // console.log('Cache mismatch detected. Clearing cache and rebuilding...');
       this.fileUrls.forEach(url => URL.revokeObjectURL(url));
       this.fileUrls = [];
       this.cachedDocuments = [];
@@ -149,7 +168,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     
     // If we have valid cached documents matching service count, return them
     if (this.cachedDocuments.length > 0 && this.cachedDocuments.length === serviceDocCount) {
-      console.log('Returning cached documents:', this.cachedDocuments.length);
+      // console.log('Returning cached documents:', this.cachedDocuments.length);
       return this.cachedDocuments;
     }
 
@@ -158,9 +177,9 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     this.fileUrls = [];
     this.cachedDocuments = [];
 
-    console.log('Creating new document cache...');
-    console.log('Raw docs object:', docs);
-    console.log('Service has documents:', serviceDocCount);
+    // console.log('Creating new document cache...');
+    // console.log('Raw docs object:', docs);
+    // console.log('Service has documents:', serviceDocCount);
 
     // Define all possible document keys
     const documentKeys: (keyof SalesmanBarmanDocuments)[] = [
@@ -173,11 +192,13 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     // Check each key explicitly and create object URLs
     documentKeys.forEach(key => {
       const file = docs[key];
+      
       console.log(`Checking ${key}:`, {
         exists: !!file,
         isFile: file instanceof File,
         fileName: file?.name
       });
+      
 
       // Check if file exists and is a File instance
       if (file && file instanceof File) {
@@ -189,20 +210,38 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
             file: file,
             fileUrl: url
           });
-          console.log(`✓ Added ${key} to cache`);
+          // console.log(`✓ Added ${key} to cache`);
         } catch (error) {
           console.error(`✗ Error creating URL for ${key}:`, error);
         }
       } else {
-        console.log(`✗ Skipping ${key} - not a valid file`);
+        // console.log(`✗ Skipping ${key} - not a valid file`);
       }
     });
 
-    console.log(`Total cached documents: ${this.cachedDocuments.length}`);
-    console.log(`Expected documents: ${serviceDocCount}`);
+    // console.log(`Total cached documents: ${this.cachedDocuments.length}`);
+    // console.log(`Expected documents: ${serviceDocCount}`);
     return this.cachedDocuments;
   }
+  */
 
+  getSummaryData(): Array<{ key: string; value: any }> {
+    return [
+      ...this.licenseDetails,
+      ...this.personalDetails
+    ];
+  }
+
+  viewFile(doc: { key: keyof SalesmanBarmanDocuments; fileUrl: string }): void {
+    window.open(doc.fileUrl, '_blank');
+  }
+
+  get role(): string {
+    const license = JSON.parse(sessionStorage.getItem('licenseDetails') || '{}');
+    return license.role?.toLowerCase() || 'applicant';
+  }
+
+  /*
   get role(): string | null {
     const storedData = sessionStorage.getItem('licenseDetails');
     try {
@@ -218,7 +257,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     const summary: { key: string; value: any }[] = [];
 
     // Add key license details
-    const licenseData = sessionStorage.getItem('licenseDetails');
+    const licenseData = sessionStorage.getItem('SalesmanBarmanData');
     if (licenseData) {
       try {
         const parsed = JSON.parse(licenseData);
@@ -291,7 +330,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   }
 
   viewFile(doc: { key: keyof SalesmanBarmanDocuments; file: File; fileUrl: string }) {
-    console.log('Attempting to view file:', doc);
+    // console.log('Attempting to view file:', doc);
     
     if (!doc) {
       console.error('No document provided');
@@ -301,7 +340,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
     // Use existing fileUrl from cached documents
     if (doc.fileUrl) {
-      console.log('Opening fileUrl:', doc.fileUrl);
+      // console.log('Opening fileUrl:', doc.fileUrl);
       const newWindow = window.open(doc.fileUrl, '_blank');
       
       if (!newWindow) {
@@ -312,7 +351,7 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
     // Fallback: create new URL from file if fileUrl is missing
     if (doc.file) {
-      console.log('Creating new URL from file');
+      // console.log('Creating new URL from file');
       try {
         const url = URL.createObjectURL(doc.file);
         const newWindow = window.open(url, '_blank');
@@ -333,7 +372,9 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     console.error('No file or fileUrl available');
     Swal.fire('Error', 'File not found. Please try uploading again.', 'error');
   }
+    */
 
+  /*
   // Submit the full application
   async submit(): Promise<void> {
     if (!this.acceptTerms) {
@@ -426,10 +467,118 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     const prefix = this.role === 'salesman' ? 'SM' : (this.role === 'barman' ? 'BM' : 'REG');
     return `${prefix}/${year}${month}${day}/${randomNum}`;
   }
+    */
+
+  submit(): void {
+    if (!this.acceptTerms || this.isSubmitting) return;
+    this.isSubmitting = true;
+
+    try {
+      const licenseDetails = JSON.parse(sessionStorage.getItem('licenseDetails') || '{}');
+      const personalDetails = JSON.parse(sessionStorage.getItem('personalDetails') || '{}');
+      const documents = this.salesmanBarmanService.getSalesmanBarmanDocuments();
+
+      // === VALIDATION ===
+      if (!licenseDetails.role || !personalDetails.firstName) {
+        Swal.fire('Error', 'Please complete all steps.', 'error');
+        this.isSubmitting = false;
+        return;
+      }
+
+      const requiredDocs: (keyof SalesmanBarmanDocuments)[] = ['passPhoto', 'aadhaarCard', 'residentialCertificate', 'dateofBirthProof'];
+      const missing = requiredDocs.filter(key => !documents[key]);
+      if (missing.length > 0) {
+        Swal.fire('Error', `Missing: ${missing.map(d => this.documentLabels[d]).join(', ')}`, 'error');
+        this.isSubmitting = false;
+        return;
+      }
+
+      // === BUILD FormData (camelCase) ===
+      const formData = new FormData();
+
+      // Personal Details (camelCase)
+      const personal = {
+        firstName: personalDetails.firstName,
+        middleName: personalDetails.middleName || '',
+        lastName: personalDetails.lastName,
+        fatherHusbandName: personalDetails.fatherHusbandName,
+        gender: personalDetails.gender,
+        dob: this.formatDate(personalDetails.dob), // ← YYYY-MM-DD
+        nationality: personalDetails.nationality,
+        address: personalDetails.address,
+        pan: personalDetails.pan,
+        aadhaar: personalDetails.aadhaar,
+        mobileNumber: personalDetails.mobileNumber,
+        emailId: personalDetails.emailId || '',
+        sikkimSubject: personalDetails.sikkimSubject?.toString() || 'false',
+      };
+
+      Object.entries(personal).forEach(([key, value]) => {
+        if (value != null && value !== '') {
+          formData.append(key, value);
+        }
+      });
+
+      // License Details (camelCase)
+      formData.append('role', licenseDetails.role);
+      formData.append('exciseDistrict', String(licenseDetails.excise_district || licenseDetails.district || ''));
+      formData.append('licenseCategory', String(licenseDetails.license_category || licenseDetails.licenseCategory || ''));
+      formData.append('license', String(licenseDetails.licensee || ''));
+
+      // === FILES (camelCase) ===
+      formData.append('passPhoto', documents.passPhoto!, documents.passPhoto!.name);
+      formData.append('aadhaarCard', documents.aadhaarCard!, documents.aadhaarCard!.name);
+      formData.append('residentialCertificate', documents.residentialCertificate!, documents.residentialCertificate!.name);
+      formData.append('dateofBirthProof', documents.dateofBirthProof!, documents.dateofBirthProof!.name);
+
+      // === DEBUG ===
+      console.log('FormData (camelCase):');
+      for (const [k, v] of formData.entries()) {
+        console.log(k, v instanceof File ? `${v.name} (${v.size} bytes)` : v);
+      }
+
+      // === SUBMIT ===
+      this.salesmanBarmanService.createSalesmanBarman(formData).subscribe({
+        next: (res) => {
+          this.applicationId = res.applicationId;
+          sessionStorage.clear();
+          this.salesmanBarmanService.clearSalesmanBarmanDocuments();
+          this.revokeFileUrls();
+          Swal.fire('Success!', `ID: ${this.applicationId}`, 'success');
+          this.isSubmitting = false;
+        },
+        error: (err) => {
+          console.error('Error:', err);
+          const errors = Object.entries(err.error || {})
+            .map(([k, v]) => `<strong>${k}:</strong> ${Array.isArray(v) ? v.join(', ') : v}`)
+            .join('<br>');
+          Swal.fire({
+            title: 'Validation Failed',
+            html: errors || 'Please check your inputs.',
+            icon: 'error'
+          });
+          this.isSubmitting = false;
+        }
+      });
+
+    } catch (error) {
+      console.error('Unexpected:', error);
+      Swal.fire('Error', 'Something went wrong.', 'error');
+      this.isSubmitting = false;
+    }
+  }
+
+  // Helper: Format date to YYYY-MM-DD
+  private formatDate(date: any): string {
+    if (!date) return '';
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 
   goToDashboard() {
     sessionStorage.clear();
-    this.salesmanBarmanService.clearSalesmanBarmanDocuments();
+    this.salesmanBarmanService.clearSalesmanBarmanDocuments()
+    this.revokeFileUrls();
     this.router.navigate(['/site-admin/dashboard']);
   }
 
