@@ -6,7 +6,7 @@
         <div class="col">
           <h2 class="page-title">
             <i class="bi bi-wallet2 me-3"></i>
-            Hologram Wallet Overview
+            Hologram Inventory
           </h2>
           <p class="page-subtitle">Comprehensive hologram inventory and usage analytics</p>
         </div>
@@ -46,9 +46,9 @@
               <i class="bi bi-collection"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">1,250,000</h3>
+              <h3 class="card-value">{{ getTotalHolograms() | number }}</h3>
               <p class="card-label">Total Holograms</p>
-              <small class="card-change positive">+5.2% from last month</small>
+              <small class="card-change neutral">Sum of Available Column</small>
             </div>
           </div>
         </div>
@@ -59,9 +59,9 @@
               <i class="bi bi-check-circle"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">850,000</h3>
+              <h3 class="card-value">{{ getTotalAvailable() | number }}</h3>
               <p class="card-label">Available</p>
-              <small class="card-change neutral">68% of total</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -72,9 +72,9 @@
               <i class="bi bi-arrow-up-circle"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">350,000</h3>
+              <h3 class="card-value">{{ getTotalUsedInProduction() | number }}</h3>
               <p class="card-label">Used in Production</p>
-              <small class="card-change positive">+12.8% this month</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -85,9 +85,9 @@
               <i class="bi bi-exclamation-triangle"></i>
             </div>
             <div class="card-content">
-              <h3 class="card-value">50,000</h3>
+              <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
               <p class="card-label">Damaged/Wastage</p>
-              <small class="card-change negative">4% of total</small>
+              <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
             </div>
           </div>
         </div>
@@ -410,7 +410,7 @@
                     <div class="card border-success">
                       <div class="card-body text-center">
                         <h4 class="text-success">{{ getTotalAvailable() | number }}</h4>
-                        <small class="text-muted">Total Available</small>
+                        <small class="text-muted">Total Available (From Serial Data)</small>
                       </div>
                     </div>
                   </div>
@@ -418,7 +418,7 @@
                     <div class="card border-success">
                       <div class="card-body text-center">
                         <h4 class="text-success">{{ getAvailableByType('LOCAL') | number }}</h4>
-                        <small class="text-muted">Local Available</small>
+                        <small class="text-muted">Local Available (From Serial Data)</small>
                       </div>
                     </div>
                   </div>
@@ -426,7 +426,7 @@
                     <div class="card border-dark">
                       <div class="card-body text-center">
                         <h4 class="text-dark">{{ getAvailableByType('EXPORT') | number }}</h4>
-                        <small class="text-muted">Export Available</small>
+                        <small class="text-muted">Export Available (From Serial Data)</small>
                       </div>
                     </div>
                   </div>
@@ -434,7 +434,7 @@
                     <div class="card border-warning">
                       <div class="card-body text-center">
                         <h4 class="text-warning">{{ getAvailableByType('DEFENCE') | number }}</h4>
-                        <small class="text-muted">Defence Available</small>
+                        <small class="text-muted">Defence Available (From Serial Data)</small>
                       </div>
                     </div>
                   </div>

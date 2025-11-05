@@ -493,11 +493,12 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
-  // Add new method to save data to hologram overview rolls and available data
+  // Add new method to save data to hologram overview rolls, available data, and serial numbers data
   addToHologramOverviewRolls(record: HologramRecord) {
     // Get existing data from localStorage
     const existingRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
     const existingAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    const existingSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
 
     // Determine hologram type based on supply chain data or default to LOCAL
     let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
@@ -542,13 +543,33 @@ export class HologramdetailsComponent implements OnInit {
       newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
     };
 
+    // Create new serial data entry for Serial Numbers Data tab
+    const newSerialData = {
+      id: uniqueId,
+      rollNumber: record.cartoonNumber,
+      hologramType: hologramType,
+      fromSerial: record.fromSerial,
+      toSerial: record.toSerial,
+      totalCount: record.numberOfHolograms,
+      availableCount: record.numberOfHolograms, // All available initially
+      usedCount: 0, // None used initially
+      damagedCount: 0, // None damaged initially
+      status: 'AVAILABLE',
+      receivedDate: record.arrivedDate || new Date().toISOString().split('T')[0],
+      usageHistory: [], // Empty usage history initially
+      isNew: true, // Flag to highlight as new
+      newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
+    };
+
     // Add to existing data
     existingRolls.push(newRoll);
     existingAvailable.push(newAvailable);
+    existingSerialData.push(newSerialData);
 
     // Save back to localStorage
     localStorage.setItem('hologramOverviewRolls', JSON.stringify(existingRolls));
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(existingAvailable));
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(existingSerialData));
   }
 
   validateUpdateForm(): boolean {

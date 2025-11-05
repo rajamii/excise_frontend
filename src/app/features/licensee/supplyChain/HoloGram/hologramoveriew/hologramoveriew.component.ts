@@ -357,7 +357,11 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadSerialRollsData(): void {
-    this.serialRollsData = [
+    // Load data from localStorage (saved by arrival process)
+    const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+
+    // Sample data for demonstration
+    const sampleData = [
       {
         id: 1,
         rollNumber: 'ROLL001',
@@ -387,6 +391,9 @@ export class HologramoveriewComponent implements OnInit {
         usageHistory: []
       }
     ];
+
+    // Combine saved data with sample data, prioritizing saved data
+    this.serialRollsData = [...savedSerialData, ...sampleData];
   }
 
   getTypeClass(type: string): string {
@@ -425,11 +432,40 @@ export class HologramoveriewComponent implements OnInit {
     return !!(available.isNew === true && available.newUntil && Date.now() < available.newUntil);
   }
 
+  // Overview statistics calculated from Serial Numbers Data only
+  getTotalHolograms(): number {
+    return this.serialRollsData.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
   getTotalAvailable(): number {
-    return this.rollsData.reduce((total, roll) => total + roll.availableCount, 0);
+    return this.serialRollsData.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  getTotalUsedInProduction(): number {
+    return this.serialRollsData.reduce((total, roll) => total + roll.usedCount, 0);
+  }
+
+  getTotalDamagedWastage(): number {
+    return this.serialRollsData.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  // Helper method to calculate percentage safely
+  getPercentage(value: number, total: number): number {
+    return total > 0 ? (value / total) * 100 : 0;
   }
 
   getAvailableByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
+    return this.serialRollsData
+      .filter(roll => roll.hologramType === type)
+      .reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  // Legacy methods for backward compatibility (now using serial data)
+  getTotalAvailableFromRolls(): number {
+    return this.rollsData.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  getAvailableByTypeFromRolls(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
     return this.rollsData
       .filter(roll => roll.type === type)
       .reduce((total, roll) => total + roll.availableCount, 0);
