@@ -232,7 +232,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       // Submit to backend
       this.licenseAppService.submitNewLicenseApplication(formData).subscribe({
         next: (response) => {
-          console.log('✅ Application submitted successfully:', response);
+          console.log(' Application submitted successfully:', response);
 
           Swal.fire({
             title: 'Success!',
@@ -257,7 +257,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
           });
         },
         error: (err) => {
-          console.error('❌ Submission failed:', err);
+          console.error(' Submission failed:', err);
 
           // Format error message locally
           const errorMessage = this.formatErrorMessage(err);
@@ -276,9 +276,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       });
 
     } catch (error) {
-      console.error('❌ Unexpected error during submission:', error);
+      console.error(' Unexpected error during submission:', error);
       this.isSubmitting = false;
-
       Swal.fire({
         title: 'Error',
         text: 'An unexpected error occurred. Please try again.',
@@ -308,7 +307,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     // Clear documents from service
     this.licenseAppService.clearAllDocuments();
 
-    console.log('✅ Application data cleared successfully');
+    console.log('Application data cleared successfully');
   }
 
   /**

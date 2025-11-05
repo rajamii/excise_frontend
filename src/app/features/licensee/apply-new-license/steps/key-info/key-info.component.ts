@@ -147,8 +147,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         if (data.length > 0) {
           console.log(' First item structure:', JSON.stringify(data[0], null, 2));
         }
-
-        // ✅ FRONTEND-ONLY FIX: Handle multiple possible backend formats
         this.licenseSubCategories = data
           .filter(item => {
             // Extract category ID from various possible formats:

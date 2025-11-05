@@ -226,7 +226,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
       // If exciseSubdivision is set from previous step and current value is different
       if (selectedExciseSubdivision && currentValue !== selectedExciseSubdivision) {
-        console.log('🔄 Auto-setting subdivision from previous step:', selectedExciseSubdivision);
+        console.log(' Auto-setting subdivision from previous step:', selectedExciseSubdivision);
         siteSubdivisionControl?.setValue(selectedExciseSubdivision, { emitEvent: true });
         siteSubdivisionControl?.disable({ emitEvent: false });
         
@@ -242,15 +242,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private loadDropdownData(): void {
-    console.log('📄 Loading subdivisions...');
+    console.log(' Loading subdivisions...');
     
     // Load subdivisions
     this.masterService.getSubdivision().subscribe({
       next: (data: any[]) => {
-        console.log('📦 Raw subdivisions from backend:', data);
+        console.log(' Raw subdivisions from backend:', data);
         
         if (data.length > 0) {
-          console.log('🔍 First subdivision structure:', JSON.stringify(data[0], null, 2));
+          console.log(' First subdivision structure:', JSON.stringify(data[0], null, 2));
         }
         
         this.subdivisions = data.map(item => ({
@@ -260,8 +260,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           subdivision_code: item.subdivision_code || item.id
         }));
         
-        console.log('✅ Mapped subdivisions:', this.subdivisions);
-        console.log('✅ Subdivision codes:', this.subdivisions.map(s => ({ id: s.id, code: s.subdivisionCode })));
+        console.log(' Mapped subdivisions:', this.subdivisions);
+        console.log('Subdivision codes:', this.subdivisions.map(s => ({ id: s.id, code: s.subdivisionCode })));
         
         // After subdivisions load, trigger filtering if subdivision is already set
         const currentSubdivision = this.siteDetailsForm.get('siteSubdivision')?.value;
@@ -270,19 +270,19 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         }
       },
       error: (error) => {
-        console.error('❌ Failed to load subdivisions:', error);
+        console.error(' Failed to load subdivisions:', error);
       }
     });
 
-    console.log('📄 Loading police stations...');
+    console.log(' Loading police stations...');
     
     // Load police stations
     this.masterService.getPoliceStations().subscribe({
       next: (data: any[]) => {
-        console.log('📦 Raw police stations from backend:', data);
+        console.log(' Raw police stations from backend:', data);
         
         if (data.length > 0) {
-          console.log('🔍 First police station structure:', JSON.stringify(data[0], null, 2));
+          console.log(' First police station structure:', JSON.stringify(data[0], null, 2));
         }
         
         // Store all police stations with flexible field mapping
@@ -298,8 +298,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           subdivision_code: item.subdivision_code
         }));
         
-        console.log('✅ Mapped police stations:', this.allPoliceStations);
-        console.log('✅ Police station subdivision codes:', 
+        console.log(' Mapped police stations:', this.allPoliceStations);
+        console.log(' Police station subdivision codes:', 
           this.allPoliceStations.map(ps => ({ id: ps.id, name: ps.policeStation, subdivisionCode: ps.subdivision_code })));
         
         // Filter police stations if subdivision is already selected
@@ -309,19 +309,19 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         }
       },
       error: (error) => {
-        console.error('❌ Failed to load police stations:', error);
+        console.error(' Failed to load police stations:', error);
       }
     });
 
-    console.log('📄 Loading roads...');
+    console.log('Loading roads...');
     
     // Load roads from master service
     this.masterService.getRoads().subscribe({
       next: (data: any[]) => {
-        console.log('📦 Raw roads from backend:', data);
+        console.log(' Raw roads from backend:', data);
         
         if (data.length > 0) {
-          console.log('🔍 First road structure:', JSON.stringify(data[0], null, 2));
+          console.log(' First road structure:', JSON.stringify(data[0], null, 2));
         }
         
         // Store all roads
@@ -334,11 +334,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         // Extract road names for dropdown
         this.roadNames = this.allRoads.map(road => road.roadName);
         
-        console.log('✅ Mapped roads:', this.allRoads);
-        console.log('✅ Road names for dropdown:', this.roadNames);
+        console.log(' Mapped roads:', this.allRoads);
+        console.log(' Road names for dropdown:', this.roadNames);
       },
       error: (error) => {
-        console.error('❌ Failed to load roads:', error);
+        console.error(' Failed to load roads:', error);
         // Fallback to static values if API fails
         this.roadNames = ['Road 1', 'Road 2', 'Road 3', 'Road 4'];
       }
@@ -346,16 +346,16 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private filterPoliceStations(subdivisionId: number): void {
-    console.log('🎯 Filtering police stations for subdivision ID:', subdivisionId);
-    console.log('🎯 All subdivisions:', this.subdivisions);
-    console.log('🎯 All police stations:', this.allPoliceStations);
+    console.log(' Filtering police stations for subdivision ID:', subdivisionId);
+    console.log('All subdivisions:', this.subdivisions);
+    console.log(' All police stations:', this.allPoliceStations);
     
     // Find the selected subdivision
     const selectedSubdivision = this.subdivisions.find(sub => sub.id === subdivisionId);
-    console.log('🔍 Selected subdivision:', selectedSubdivision);
+    console.log(' Selected subdivision:', selectedSubdivision);
     
     if (!selectedSubdivision) {
-      console.warn('⚠️ Subdivision not found in subdivisions array');
+      console.warn(' Subdivision not found in subdivisions array');
       this.sitePoliceStations = [];
       this.cdr.detectChanges();
       return;
@@ -364,15 +364,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     // CRITICAL: Get the subdivision_code from the selected subdivision
     // Police stations reference subdivisions by subdivision_code, NOT by ID
     const subdivisionCode = selectedSubdivision.subdivision_code || selectedSubdivision.subdivisionCode;
-    console.log('📍 Subdivision code from selected subdivision:', subdivisionCode);
-    console.log('📍 Selected subdivision object:', {
+    console.log(' Subdivision code from selected subdivision:', subdivisionCode);
+    console.log(' Selected subdivision object:', {
       id: selectedSubdivision.id,
       name: selectedSubdivision.subdivision,
       code: subdivisionCode
     });
     
     if (!subdivisionCode) {
-      console.error('❌ Selected subdivision does not have a subdivision_code!');
+      console.error(' Selected subdivision does not have a subdivision_code!');
       this.sitePoliceStations = [];
       this.cdr.detectChanges();
       return;
@@ -394,17 +394,17 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       return matches;
     });
     
-    console.log('✅ Filtered police stations count:', this.sitePoliceStations.length);
-    console.log('✅ Filtered police stations:', this.sitePoliceStations.map(ps => ({
+    console.log(' Filtered police stations count:', this.sitePoliceStations.length);
+    console.log(' Filtered police stations:', this.sitePoliceStations.map(ps => ({
       id: ps.id,
       name: ps.policeStation,
       subdivision_code: ps.subdivision_code
     })));
     
     if (this.sitePoliceStations.length === 0) {
-      console.warn('⚠️ No police stations found!');
-      console.warn('⚠️ Looking for subdivision_code:', subdivisionCode);
-      console.warn('⚠️ Available subdivision_codes in police stations:', 
+      console.warn(' No police stations found!');
+      console.warn(' Looking for subdivision_code:', subdivisionCode);
+      console.warn(' Available subdivision_codes in police stations:', 
         [...new Set(this.allPoliceStations.map(ps => ps.subdivision_code || ps.subdivisionCode))]);
     }
     
