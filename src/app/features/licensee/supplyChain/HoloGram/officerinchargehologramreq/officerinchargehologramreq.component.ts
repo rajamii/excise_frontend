@@ -37,6 +37,36 @@ interface FilterOptions {
   dateTo: string;
 }
 
+interface HologramInventory {
+  id: number;
+  cartoonNumber: string;
+  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  fromSerial: string;
+  toSerial: string;
+  totalCount: number;
+  availableCount: number;
+  usedCount: number;
+  damagedCount: number;
+  status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
+  receivedDate: string;
+  nextAvailableSerial?: string;
+}
+
+interface HologramAllocation {
+  cartoonNumber: string;
+  fromSerial: string;
+  toSerial: string;
+  quantity: number;
+  remainingInCartoon: number;
+}
+
+interface AllocationResult {
+  canAllocate: boolean;
+  totalAvailable: number;
+  allocations: HologramAllocation[];
+  message: string;
+}
+
 @Component({
   selector: 'app-officerinchargehologramreq',
   imports: [CommonModule, FormsModule],
@@ -81,6 +111,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   approvalComments = '';
   approvedQuantity = 0;
   rejectionReason = '';
+
+  // Hologram allocation modal
+  showAllocationModal = false;
+  allocationResult: AllocationResult | null = null;
+  hologramInventory: HologramInventory[] = [];
 
   ngOnInit() {
     this.loadHologramRequests();
@@ -382,15 +417,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.selectedRequest = request;
     this.approvalComments = '';
     this.approvedQuantity = request.requestedQuantity;
-    // In real app, open approval modal
-    const comments = prompt('Enter approval comments (optional):');
-    const quantity = prompt(`Approved quantity (requested: ${request.requestedQuantity}):`, request.requestedQuantity.toString());
     
-    if (comments !== null && quantity !== null) {
-      this.approvalComments = comments;
-      this.approvedQuantity = parseInt(quantity) || request.requestedQuantity;
-      this.confirmApproval();
-    }
+    // Check inventory and show allocation popup
+    this.showHologramAllocationModal(request);
   }
 
   rejectRequest(request: HologramRequest) {
@@ -530,4 +559,368 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       alert('Test data cleared successfully!');
     }
   }
+
+  // Hologram allocation methods
+  loadHologramInventory(): void {
+    // Load from localStorage (saved by hologram overview)
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    
+    // Combine both sources and prioritize serial data
+    const combinedInventory = [...savedSerialData, ...savedRolls];
+    
+    // Sample inventory data if no real data exists
+    const sampleInventory = [
+      {
+        id: 1,
+        cartoonNumber: 'CTN001',
+        type: 'LOCAL',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001500',
+        totalCount: 500,
+        availableCount: 350,
+        usedCount: 120,
+        damagedCount: 30,
+        status: 'AVAILABLE',
+        receivedDate: '2024-09-01'
+      },
+      {
+        id: 2,
+        cartoonNumber: 'CTN002',
+        type: 'LOCAL',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002500',
+        totalCount: 500,
+        availableCount: 500,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: '2024-08-28'
+      },
+      {
+        id: 3,
+        cartoonNumber: 'CTN003',
+        type: 'EXPORT',
+        fromSerial: 'HG003001',
+        toSerial: 'HG003300',
+        totalCount: 300,
+        availableCount: 250,
+        usedCount: 40,
+        damagedCount: 10,
+        status: 'AVAILABLE',
+        receivedDate: '2024-08-15'
+      }
+    ];
+
+    this.hologramInventory = combinedInventory.length > 0 ? combinedInventory : sampleInventory;
+    
+    // Sort by received date (oldest first for FIFO)
+    this.hologramInventory.sort((a, b) => {
+      return new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime();
+    });
+  }
+
+  showHologramAllocationModal(request: HologramRequest): void {
+    this.selectedRequest = request;
+    this.approvedQuantity = request.requestedQuantity;
+    this.loadHologramInventory();
+    this.allocationResult = this.calculateHologramAllocation(request.requestedQuantity, request.hologramType);
+    this.showAllocationModal = true;
+  }
+
+  calculateHologramAllocation(requestedQuantity: number, hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'): AllocationResult {
+    // Filter available inventory by type and status
+    const availableInventory = this.hologramInventory.filter(item => 
+      item.type === hologramType && 
+      item.status === 'AVAILABLE' && 
+      item.availableCount > 0
+    );
+
+    const totalAvailable = availableInventory.reduce((sum, item) => sum + item.availableCount, 0);
+
+    if (totalAvailable < requestedQuantity) {
+      return {
+        canAllocate: false,
+        totalAvailable,
+        allocations: [],
+        message: `Insufficient inventory. Available: ${totalAvailable}, Requested: ${requestedQuantity}`
+      };
+    }
+
+    // FIFO allocation - use oldest cartoons first
+    const allocations: HologramAllocation[] = [];
+    let remainingQuantity = requestedQuantity;
+
+    for (const item of availableInventory) {
+      if (remainingQuantity <= 0) break;
+
+      const quantityFromThisCartoon = Math.min(remainingQuantity, item.availableCount);
+      
+      // Calculate serial range for this allocation
+      const startSerial = this.getNextAvailableSerial(item);
+      const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
+
+      allocations.push({
+        cartoonNumber: item.cartoonNumber,
+        fromSerial: startSerial,
+        toSerial: endSerial,
+        quantity: quantityFromThisCartoon,
+        remainingInCartoon: item.availableCount - quantityFromThisCartoon
+      });
+
+      remainingQuantity -= quantityFromThisCartoon;
+    }
+
+    return {
+      canAllocate: true,
+      totalAvailable,
+      allocations,
+      message: `Successfully allocated ${requestedQuantity} holograms from ${allocations.length} cartoon(s)`
+    };
+  }
+
+  getNextAvailableSerial(item: HologramInventory): string {
+    if (item.nextAvailableSerial) {
+      return item.nextAvailableSerial;
+    }
+
+    // Calculate next available serial based on used count
+    const serialPrefix = item.fromSerial.replace(/\d+$/, '');
+    const startNumber = parseInt(item.fromSerial.match(/\d+$/)?.[0] || '0');
+    const nextNumber = startNumber + item.usedCount;
+    
+    return serialPrefix + nextNumber.toString().padStart(6, '0');
+  }
+
+  calculateEndSerial(startSerial: string, quantity: number): string {
+    const serialPrefix = startSerial.replace(/\d+$/, '');
+    const startNumber = parseInt(startSerial.match(/\d+$/)?.[0] || '0');
+    const endNumber = startNumber + quantity;
+    
+    return serialPrefix + endNumber.toString().padStart(6, '0');
+  }
+
+  confirmHologramAllocation(): void {
+    if (!this.selectedRequest || !this.allocationResult) {
+      return;
+    }
+
+    // Update inventory
+    this.updateInventoryAfterAllocation();
+
+    // Create issued hologram entries
+    this.createIssuedHologramEntries();
+
+    // Update request status
+    this.selectedRequest.status = 'APPROVED';
+    this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation';
+    this.selectedRequest.approvedQuantity = this.approvedQuantity || this.selectedRequest.requestedQuantity;
+    this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
+
+    // Update localStorage
+    this.updateRequestInStorage();
+
+
+    alert(`Request ${this.selectedRequest.referenceNo} approved! ${this.allocationResult.allocations.length} hologram allocation(s) created.`);
+
+    this.closeAllocationModal();
+    this.applyFilters();
+  }
+
+  updateInventoryAfterAllocation(): void {
+    if (!this.allocationResult) return;
+
+    for (const allocation of this.allocationResult.allocations) {
+      const inventoryItem = this.hologramInventory.find(item => 
+        item.cartoonNumber === allocation.cartoonNumber
+      );
+
+      if (inventoryItem) {
+        inventoryItem.availableCount -= allocation.quantity;
+        inventoryItem.usedCount += allocation.quantity;
+        inventoryItem.nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
+
+        if (inventoryItem.availableCount === 0) {
+          inventoryItem.status = 'COMPLETED';
+        }
+      }
+    }
+
+    // Update localStorage
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.hologramInventory));
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(this.hologramInventory));
+  }
+
+  createIssuedHologramEntries(): void {
+    if (!this.selectedRequest || !this.allocationResult) return;
+
+    const issuedEntries = this.allocationResult.allocations.map((allocation, index) => ({
+      id: Date.now() + index,
+      batchNumber: `BATCH${String(Date.now()).slice(-6)}`,
+      brandName: this.selectedRequest!.brandDetails.brandName,
+      fromSerial: allocation.fromSerial,
+      toSerial: allocation.toSerial,
+      quantity: allocation.quantity,
+      issueDate: new Date().toISOString(),
+      status: 'IN_PROGRESS',
+      officer: this.currentOfficer.name,
+      requestReference: this.selectedRequest!.referenceNo,
+      hologramType: this.selectedRequest!.hologramType,
+      cartoonNumber: allocation.cartoonNumber
+    }));
+
+    // Save to localStorage for hologram overview
+    const existingIssued = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+    const updatedIssued = [...existingIssued, ...issuedEntries];
+    localStorage.setItem('issuedHolograms', JSON.stringify(updatedIssued));
+
+    console.log('Created issued hologram entries:', issuedEntries);
+  }
+
+  updateRequestInStorage(): void {
+    if (!this.selectedRequest) return;
+
+    // Update in hologramRequests
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const requestIndex = hologramRequests.findIndex((req: any) => 
+      req.refNumber === this.selectedRequest!.referenceNo
+    );
+
+    if (requestIndex !== -1) {
+      hologramRequests[requestIndex].status = 'APPROVED';
+      hologramRequests[requestIndex].officerComments = this.selectedRequest.officerComments;
+      hologramRequests[requestIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
+      hologramRequests[requestIndex].approvalDate = this.selectedRequest.approvalDate;
+      localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+    }
+
+    // Update in hologramApplications if exists
+    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const appIndex = hologramApplications.findIndex((app: any) => 
+      app.refNo === this.selectedRequest!.referenceNo
+    );
+
+    if (appIndex !== -1) {
+      hologramApplications[appIndex].status = 'APPROVED';
+      hologramApplications[appIndex].officerComments = this.selectedRequest.officerComments;
+      hologramApplications[appIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
+      hologramApplications[appIndex].approvalDate = this.selectedRequest.approvalDate;
+      localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
+    }
+  }
+
+  closeAllocationModal(): void {
+    this.showAllocationModal = false;
+    this.allocationResult = null;
+    this.selectedRequest = null;
+    this.approvalComments = '';
+    this.approvedQuantity = 0;
+  }
+
+  editAllocationQuantity(allocation: HologramAllocation, newQuantity: number): void {
+    if (newQuantity <= 0 || !this.allocationResult) return;
+
+    const inventoryItem = this.hologramInventory.find(item => 
+      item.cartoonNumber === allocation.cartoonNumber
+    );
+
+    if (!inventoryItem) return;
+
+    const maxQuantity = inventoryItem.availableCount;
+    if (newQuantity > maxQuantity) {
+      alert(`Maximum available in ${allocation.cartoonNumber}: ${maxQuantity}`);
+      return;
+    }
+
+    // Update allocation
+    const oldQuantity = allocation.quantity;
+    allocation.quantity = newQuantity;
+    allocation.toSerial = this.calculateEndSerial(allocation.fromSerial, newQuantity - 1);
+    allocation.remainingInCartoon = inventoryItem.availableCount - newQuantity;
+
+    // Recalculate total and update approved quantity
+    const totalAllocated = this.allocationResult.allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    this.approvedQuantity = totalAllocated;
+
+    // Update message
+    this.allocationResult.message = `Allocated ${totalAllocated} holograms from ${this.allocationResult.allocations.length} cartoon(s)`;
+  }
+
+  // Method to add sample inventory for testing
+  addSampleInventory(): void {
+    const sampleInventory = [
+      {
+        id: Date.now(),
+        cartoonNumber: `CTN${String(Date.now()).slice(-3)}`,
+        type: 'LOCAL',
+        fromSerial: 'HG001001',
+        toSerial: 'HG001500',
+        totalCount: 500,
+        availableCount: 500,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: new Date().toISOString().split('T')[0],
+        isNew: true,
+        newUntil: Date.now() + (60 * 60 * 1000) // 1 hour from now
+      },
+      {
+        id: Date.now() + 1,
+        cartoonNumber: `CTN${String(Date.now() + 1).slice(-3)}`,
+        type: 'EXPORT',
+        fromSerial: 'HG002001',
+        toSerial: 'HG002300',
+        totalCount: 300,
+        availableCount: 300,
+        usedCount: 0,
+        damagedCount: 0,
+        status: 'AVAILABLE',
+        receivedDate: new Date().toISOString().split('T')[0],
+        isNew: true,
+        newUntil: Date.now() + (60 * 60 * 1000) // 1 hour from now
+      }
+    ];
+
+    // Add to localStorage
+    const existingRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const existingSerial = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    const existingAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+
+    // Add to all storage locations
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify([...existingRolls, ...sampleInventory]));
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify([...existingSerial, ...sampleInventory]));
+    
+    // Create available data
+    const availableData = sampleInventory.map(item => ({
+      id: item.id + 1000,
+      cartoonNumber: item.cartoonNumber,
+      type: item.type,
+      availableRange: `${item.fromSerial} - ${item.toSerial}`,
+      availableCount: item.availableCount,
+      nextSerial: item.fromSerial,
+      percentage: 100,
+      status: 'AVAILABLE',
+      isNew: true,
+      newUntil: item.newUntil
+    }));
+
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify([...existingAvailable, ...availableData]));
+
+    alert(`Added ${sampleInventory.length} sample hologram cartoons to inventory! You can now test the approval workflow.`);
+  }
+
+  // Helper method for template calculations
+  getTotalAllocatedQuantity(): number {
+    if (!this.allocationResult) return 0;
+    return this.allocationResult.allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+  }
+
+  // Event handler for allocation quantity change
+  onAllocationQuantityChange(allocation: HologramAllocation, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const newQuantity = parseInt(target.value) || 0;
+    this.editAllocationQuantity(allocation, newQuantity);
+  }
+
+
 }

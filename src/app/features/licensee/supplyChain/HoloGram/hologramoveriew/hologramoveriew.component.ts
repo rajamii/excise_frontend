@@ -62,6 +62,9 @@ interface IssuedHologram {
   issueDate: string;
   status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   officer: string;
+  requestReference?: string;
+  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  cartoonNumber?: string;
 }
 
 interface HistoryHologram {
@@ -325,7 +328,11 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadIssuedData(): void {
-    this.issuedData = [
+    // Load issued holograms from localStorage (created by officer approval)
+    const savedIssued = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+    
+    // Sample data for demonstration
+    const sampleData = [
       {
         id: 1,
         batchNumber: 'BATCH001',
@@ -349,6 +356,14 @@ export class HologramoveriewComponent implements OnInit {
         officer: 'Jane Doe'
       }
     ];
+
+    // Sort saved data by issue date (newest first)
+    const sortedSavedIssued = savedIssued.sort((a: any, b: any) => {
+      return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+    });
+
+    // Combine with saved data at top, then sample data
+    this.issuedData = [...sortedSavedIssued, ...sampleData];
   }
 
   loadHistoryData(): void {
@@ -866,8 +881,64 @@ export class HologramoveriewComponent implements OnInit {
     if (confirm('Clear all hologram data from localStorage? This will remove all arrival data.')) {
       localStorage.removeItem('hologramOverviewRolls');
       localStorage.removeItem('hologramOverviewAvailable');
+      localStorage.removeItem('issuedHolograms');
       this.loadAllData();
       alert('Test data cleared successfully!');
     }
+  }
+
+  // Helper method to check if an issued hologram is new (within last hour)
+  isNewIssued(issued: IssuedHologram): boolean {
+    const issueTime = new Date(issued.issueDate).getTime();
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    return issueTime > oneHourAgo;
+  }
+
+  // Method to mark hologram as completed
+  markAsCompleted(issued: IssuedHologram): void {
+    if (confirm(`Mark batch ${issued.batchNumber} as completed?`)) {
+      issued.status = 'COMPLETED';
+      
+      // Update in localStorage
+      const issuedHolograms = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+      const index = issuedHolograms.findIndex((item: any) => item.id === issued.id);
+      if (index !== -1) {
+        issuedHolograms[index].status = 'COMPLETED';
+        localStorage.setItem('issuedHolograms', JSON.stringify(issuedHolograms));
+      }
+      
+      alert(`Batch ${issued.batchNumber} marked as completed!`);
+    }
+  }
+
+  // Method to view issued hologram details
+  viewIssuedDetails(issued: IssuedHologram): void {
+    const details = `
+Batch Number: ${issued.batchNumber}
+Brand: ${issued.brandName}
+Serial Range: ${issued.fromSerial} - ${issued.toSerial}
+Quantity: ${issued.quantity}
+Issue Date: ${new Date(issued.issueDate).toLocaleString()}
+Status: ${issued.status}
+Officer: ${issued.officer}
+${issued.requestReference ? `Request Reference: ${issued.requestReference}` : ''}
+${issued.hologramType ? `Hologram Type: ${issued.hologramType}` : ''}
+${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
+    `;
+    
+    alert(details);
+  }
+
+  // Helper methods for template calculations
+  getInProgressCount(): number {
+    return this.issuedData.filter(item => item.status === 'IN_PROGRESS').length;
+  }
+
+  getCompletedCount(): number {
+    return this.issuedData.filter(item => item.status === 'COMPLETED').length;
+  }
+
+  getTotalIssuedQuantity(): number {
+    return this.issuedData.reduce((sum, item) => sum + item.quantity, 0);
   }
 }
