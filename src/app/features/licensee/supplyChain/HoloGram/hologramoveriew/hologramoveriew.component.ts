@@ -201,6 +201,11 @@ export class HologramoveriewComponent implements OnInit {
     this.loadHistoryData();
     this.loadSerialRollsData();
     this.applySerialFilters();
+    
+    // Force change detection to ensure UI updates
+    setTimeout(() => {
+      // This ensures the UI reflects the new data order
+    }, 0);
   }
 
   setActiveTab(tab: string) {
@@ -211,7 +216,7 @@ export class HologramoveriewComponent implements OnInit {
     // Load data from localStorage (saved by arrival process)
     const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
 
-    // Sample data for demonstration
+    // Sample data for demonstration (using older dates to ensure saved data appears first)
     const sampleData = [
       {
         id: 1,
@@ -224,7 +229,7 @@ export class HologramoveriewComponent implements OnInit {
         usedCount: 120,
         damagedCount: 30,
         status: 'IN_USE',
-        receivedDate: '2024-11-01'
+        receivedDate: '2024-09-01'
       },
       {
         id: 2,
@@ -237,7 +242,7 @@ export class HologramoveriewComponent implements OnInit {
         usedCount: 0,
         damagedCount: 0,
         status: 'AVAILABLE',
-        receivedDate: '2024-10-28'
+        receivedDate: '2024-08-28'
       },
       {
         id: 3,
@@ -250,12 +255,26 @@ export class HologramoveriewComponent implements OnInit {
         usedCount: 280,
         damagedCount: 20,
         status: 'COMPLETED',
-        receivedDate: '2024-10-15'
+        receivedDate: '2024-08-15'
       }
     ];
 
-    // Combine saved data with sample data, prioritizing saved data
-    this.rollsData = [...savedRolls, ...sampleData];
+    // Sort saved data by received date (newest first) and then by ID (newest first)
+    const sortedSavedRolls = savedRolls.sort((a: any, b: any) => {
+      // First sort by date
+      const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
+      const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Newer date first
+      }
+      
+      // If dates are same, sort by ID (newer ID first)
+      return (b.id || 0) - (a.id || 0);
+    });
+
+    // Combine with saved data at top, then sample data
+    this.rollsData = [...sortedSavedRolls, ...sampleData];
   }
 
   loadAvailableData() {
@@ -296,8 +315,13 @@ export class HologramoveriewComponent implements OnInit {
       }
     ];
 
-    // Combine saved data with sample data, prioritizing saved data
-    this.availableData = [...savedAvailable, ...sampleData];
+    // Sort saved data by ID (newest first, since ID is timestamp-based)
+    const sortedSavedAvailable = savedAvailable.sort((a: any, b: any) => {
+      return b.id - a.id; // Higher ID (newer timestamp) first
+    });
+
+    // Combine with saved data at top, then sample data
+    this.availableData = [...sortedSavedAvailable, ...sampleData];
   }
 
   loadIssuedData(): void {
@@ -373,7 +397,7 @@ export class HologramoveriewComponent implements OnInit {
         usedCount: 120,
         damagedCount: 30,
         status: 'IN_USE',
-        receivedDate: '2024-11-01',
+        receivedDate: '2024-09-01',
         usageHistory: []
       },
       {
@@ -387,13 +411,27 @@ export class HologramoveriewComponent implements OnInit {
         usedCount: 0,
         damagedCount: 0,
         status: 'AVAILABLE',
-        receivedDate: '2024-10-28',
+        receivedDate: '2024-08-28',
         usageHistory: []
       }
     ];
 
-    // Combine saved data with sample data, prioritizing saved data
-    this.serialRollsData = [...savedSerialData, ...sampleData];
+    // Sort saved data by received date (newest first) and then by ID (newest first)
+    const sortedSavedSerialData = savedSerialData.sort((a: any, b: any) => {
+      // First sort by date
+      const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
+      const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Newer date first
+      }
+      
+      // If dates are same, sort by ID (newer ID first)
+      return (b.id || 0) - (a.id || 0);
+    });
+
+    // Combine with saved data at top, then sample data
+    this.serialRollsData = [...sortedSavedSerialData, ...sampleData];
   }
 
   getTypeClass(type: string): string {
