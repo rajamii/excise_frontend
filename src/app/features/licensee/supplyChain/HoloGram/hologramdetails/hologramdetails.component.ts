@@ -549,9 +549,6 @@ export class HologramdetailsComponent implements OnInit {
     // Save back to localStorage
     localStorage.setItem('hologramOverviewRolls', JSON.stringify(existingRolls));
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(existingAvailable));
-
-    console.log('Added new roll to hologram overview:', newRoll);
-    console.log('Added new available data to hologram overview:', newAvailable);
   }
 
   validateUpdateForm(): boolean {
@@ -730,7 +727,6 @@ export class HologramdetailsComponent implements OnInit {
   // Refresh data method
   refreshData() {
     this.loadHologramRecords();
-    console.log('Hologram register data refreshed and deduplicated');
   }
 
   // Force deduplication of existing records

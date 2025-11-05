@@ -192,67 +192,15 @@ export class HologramoveriewComponent implements OnInit {
 
   ngOnInit() {
     this.loadAllData();
-    this.setupAutoRefresh();
   }
 
   loadAllData() {
-    console.log('🔄 Loading all hologram data...');
     this.loadRollsData();
     this.loadAvailableData();
     this.loadIssuedData();
     this.loadHistoryData();
     this.loadSerialRollsData();
     this.applySerialFilters();
-    console.log('✅ All hologram data loaded successfully');
-
-    // Show a brief notification
-    this.showRefreshNotification();
-  }
-
-  showRefreshNotification() {
-    // Create a temporary notification element
-    const notification = document.createElement('div');
-    notification.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #10b981;
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999;
-        font-weight: 600;
-        animation: slideIn 0.3s ease-out;
-      ">
-        <i class="bi bi-check-circle me-2"></i>
-        Data refreshed successfully!
-      </div>
-    `;
-
-    document.body.appendChild(notification);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 3000);
-  }
-
-  setupAutoRefresh() {
-    // Refresh data when window gains focus (user switches back to this tab)
-    window.addEventListener('focus', () => {
-      this.loadAllData();
-      console.log('Window focused - refreshed hologram data');
-    });
-
-    // Also refresh every 30 seconds to catch any new arrivals
-    setInterval(() => {
-      this.loadAllData();
-      console.log('Auto-refresh - updated hologram data');
-    }, 30000);
   }
 
   setActiveTab(tab: string) {
@@ -308,13 +256,6 @@ export class HologramoveriewComponent implements OnInit {
 
     // Combine saved data with sample data, prioritizing saved data
     this.rollsData = [...savedRolls, ...sampleData];
-
-    console.log('📊 Loaded rolls data:', {
-      savedFromStorage: savedRolls.length,
-      sampleData: sampleData.length,
-      total: this.rollsData.length,
-      data: this.rollsData
-    });
   }
 
   loadAvailableData() {
@@ -357,13 +298,6 @@ export class HologramoveriewComponent implements OnInit {
 
     // Combine saved data with sample data, prioritizing saved data
     this.availableData = [...savedAvailable, ...sampleData];
-
-    console.log('📋 Loaded available data:', {
-      savedFromStorage: savedAvailable.length,
-      sampleData: sampleData.length,
-      total: this.availableData.length,
-      data: this.availableData
-    });
   }
 
   loadIssuedData(): void {
@@ -687,14 +621,12 @@ export class HologramoveriewComponent implements OnInit {
   exportSerialNumbers(): void {
     if (!this.selectedSerialData) return;
 
-    console.log('Exporting serial numbers for:', this.selectedSerialData.cartoonNumber);
     // Implement export functionality
     alert('Serial numbers export functionality will be implemented with backend integration');
   }
 
   // Chart filter methods
   applyChartFilters(): void {
-    console.log('Applying chart filters:', this.chartFilters);
     // Implement chart filtering logic
   }
 
@@ -725,12 +657,10 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   refreshChartData(): void {
-    console.log('Refreshing chart data...');
     this.loadAllData();
   }
 
   exportChartData(): void {
-    console.log('Exporting chart data...');
     alert('Chart data export functionality will be implemented with backend integration');
   }
 
@@ -834,49 +764,27 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   viewUsageDetails(roll: SerialRollData): void {
-    console.log('Viewing usage details for roll:', roll.rollNumber);
     alert(`Usage details for ${roll.rollNumber} will be implemented with backend integration`);
   }
 
   editRoll(roll: SerialRollData): void {
-    console.log('Editing roll:', roll.rollNumber);
     alert(`Edit functionality for ${roll.rollNumber} will be implemented`);
   }
 
   viewRollDetails(roll: SerialRollData): void {
-    console.log('Viewing roll details:', roll.rollNumber);
     alert(`Detailed view for ${roll.rollNumber} will be implemented`);
   }
 
   markDamaged(roll: SerialRollData): void {
-    console.log('Marking roll as damaged:', roll.rollNumber);
     alert(`Mark damaged functionality for ${roll.rollNumber} will be implemented`);
   }
 
   refreshSerialData(): void {
-    console.log('Refreshing serial data...');
     this.loadAllData();
   }
 
   exportSerialData(): void {
-    console.log('Exporting serial data...');
     alert('Serial data export functionality will be implemented with backend integration');
-  }
-
-  // Debug method to check localStorage data
-  debugLocalStorage(): void {
-    const rollsData = localStorage.getItem('hologramOverviewRolls');
-    const availableData = localStorage.getItem('hologramOverviewAvailable');
-
-    console.log('🔍 Debug localStorage:');
-    console.log('Rolls data:', rollsData ? JSON.parse(rollsData) : 'No data');
-    console.log('Available data:', availableData ? JSON.parse(availableData) : 'No data');
-
-    // Also log all localStorage keys related to holograms
-    const hologramKeys = Object.keys(localStorage).filter(key =>
-      key.toLowerCase().includes('hologram')
-    );
-    console.log('All hologram-related localStorage keys:', hologramKeys);
   }
 
   // Method to clear test data (for debugging)
