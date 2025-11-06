@@ -566,6 +566,35 @@ export class HologramDailyRegisterComponent implements OnInit {
     alert('Test officer approval simulated! A new auto-generated entry has been created.');
   }
 
+  // Debug method to check localStorage contents
+  debugLocalStorage(): void {
+    const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    
+    console.log('=== LOCALSTORAGE DEBUG ===');
+    console.log('approvedHologramEntries:', approvedEntries);
+    console.log('hologramRequests:', hologramRequests);
+    console.log('hologramApplications:', hologramApplications);
+    console.log('Current dailyEntries:', this.dailyEntries);
+    console.log('Current filteredEntries:', this.filteredEntries);
+    console.log('Current approvedEntries:', this.approvedEntries);
+    
+    const message = `
+LocalStorage Debug:
+- approvedHologramEntries: ${approvedEntries.length} items
+- hologramRequests: ${hologramRequests.length} items  
+- hologramApplications: ${hologramApplications.length} items
+- Current dailyEntries: ${this.dailyEntries.length} items
+- Current filteredEntries: ${this.filteredEntries.length} items
+- Current approvedEntries: ${this.approvedEntries.length} items
+
+Check browser console for detailed data.
+    `;
+    
+    alert(message);
+  }
+
   // Pagination methods
   getTotalPages(): number {
     return Math.ceil(this.filteredEntries.length / this.pageSize);
