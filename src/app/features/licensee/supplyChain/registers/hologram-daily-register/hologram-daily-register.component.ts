@@ -15,8 +15,9 @@ import { HologramDataService, HologramDailyEntry } from '../../../supplyChain/se
 })
 export class HologramDailyRegisterComponent implements OnInit {
   Math = Math;
-  selectedMonth = 'jul';
+  selectedMonth = 'nov'; // Current month
   selectedYear = '2025';
+  selectedDate = new Date().toISOString().split('T')[0]; // Current date
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
 
   // Helper method to get count of editable entries
@@ -118,6 +119,12 @@ export class HologramDailyRegisterComponent implements OnInit {
   ) {
     console.log('HologramDailyRegisterComponent constructor called');
     
+    // Initialize with current date/month/year
+    const now = new Date();
+    this.selectedDate = now.toISOString().split('T')[0];
+    this.selectedMonth = now.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    this.selectedYear = now.getFullYear().toString();
+    
     // Load approved hologram entries from officer approvals
     this.loadApprovedEntries();
     
@@ -175,13 +182,22 @@ export class HologramDailyRegisterComponent implements OnInit {
     
     console.log('Filtering data with:', {
       selectedType: this.selectedHologramType,
+      selectedDate: this.selectedDate,
       datePrefix: datePrefix,
       totalEntries: this.dailyEntries.length
     });
     
     this.filteredEntries = this.dailyEntries.filter(entry => {
       const typeMatch = entry.hologramType === this.selectedHologramType;
-      const dateMatch = entry.date.startsWith(datePrefix);
+      
+      // If specific date is selected, filter by exact date
+      // Otherwise, filter by month/year
+      let dateMatch = false;
+      if (this.selectedDate) {
+        dateMatch = entry.date === this.selectedDate;
+      } else {
+        dateMatch = entry.date.startsWith(datePrefix);
+      }
       
       console.log(`Entry ${entry.id}: type=${entry.hologramType} (${typeMatch}), date=${entry.date} (${dateMatch}), isFixed=${entry.isFixed}`);
       
@@ -205,8 +221,33 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  onDateFilterChange(): void {
+    this.loadFilteredData();
+    this.currentPage = 1;
+  }
+
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
     this.selectedHologramType = type;
+    this.loadFilteredData();
+    this.currentPage = 1;
+  }
+
+  hasActiveFilters(): boolean {
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    const currentYear = new Date().getFullYear().toString();
+    
+    return this.selectedDate !== today || 
+           this.selectedMonth !== currentMonth || 
+           this.selectedYear !== currentYear;
+  }
+
+  clearAllFilters(): void {
+    // Reset to current date/month/year
+    this.selectedDate = new Date().toISOString().split('T')[0];
+    this.selectedMonth = new Date().toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    this.selectedYear = new Date().getFullYear().toString();
+    
     this.loadFilteredData();
     this.currentPage = 1;
   }
