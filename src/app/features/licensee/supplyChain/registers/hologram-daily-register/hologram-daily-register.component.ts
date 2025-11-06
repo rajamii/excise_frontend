@@ -286,10 +286,10 @@ export class HologramDailyRegisterComponent implements OnInit {
   }
 
   onSerialChange(entry: HologramDailyEntry): void {
-    // Recalculate all quantities when serials change
+    // Recalculate issued and wastage quantities when serials change
     entry.issuedQuantity = this.calculateIssuedQuantity(entry);
     entry.wastageQuantity = this.calculateWastageQuantity(entry);
-    entry.leftOverQuantity = this.calculateLeftOverQuantity(entry);
+    // Note: leftOverQuantity is now user input, not auto-calculated
     
     this.onEntryDataChange(entry);
     this.cdr.detectChanges();
@@ -492,12 +492,7 @@ export class HologramDailyRegisterComponent implements OnInit {
     return this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
   }
 
-  // Calculate left over quantity
-  calculateLeftOverQuantity(entry: HologramDailyEntry): number {
-    const issuedQty = this.calculateIssuedQuantity(entry);
-    const wastageQty = this.calculateWastageQuantity(entry);
-    return Math.max(0, issuedQty - wastageQty);
-  }
+
 
   // Load approved hologram entries from officer approvals
   loadApprovedEntries(): void {

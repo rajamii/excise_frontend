@@ -306,10 +306,7 @@
 
                 <!-- Issued Quantity (Auto-calculated) -->
                 <td class="issued-qty auto-calculated">
-                  <div class="qty-display">
-                    <span class="qty-number">{{ calculateIssuedQuantity(entry) | number }}</span>
-                    <small class="qty-label">Auto</small>
-                  </div>
+                  <span class="qty-number">{{ calculateIssuedQuantity(entry) | number }}</span>
                 </td>
 
                 <!-- Wastage From Serial -->
@@ -330,18 +327,15 @@
 
                 <!-- Wastage Quantity (Auto-calculated) -->
                 <td class="wastage-qty auto-calculated">
-                  <div class="qty-display">
-                    <span class="qty-number">{{ calculateWastageQuantity(entry) | number }}</span>
-                    <small class="qty-label">Auto</small>
-                  </div>
+                  <span class="qty-number">{{ calculateWastageQuantity(entry) | number }}</span>
                 </td>
 
-                <!-- Left Over Quantity (Auto-calculated) -->
-                <td class="left-over auto-calculated">
-                  <div class="qty-display">
-                    <span class="qty-number">{{ calculateLeftOverQuantity(entry) | number }}</span>
-                    <small class="qty-label">Auto</small>
-                  </div>
+                <!-- Left Over Quantity (User Input) -->
+                <td class="left-over">
+                  <input type="number" class="form-control form-control-sm qty-input"
+                    [(ngModel)]="entry.leftOverQuantity" (ngModelChange)="onEntryDataChange(entry)"
+                    placeholder="0" [readonly]="entry.isFixed" min="0"
+                    [class.editable]="!entry.isFixed">
                 </td>
 
                 <!-- Damage Reason -->
