@@ -2,7 +2,7 @@ import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { HologramDataService, HologramDailyEntry } from '../../../supplyChain/services/hologram-data.service';
+import { HologramDataService, HologramDailyEntry, HologramIssuedEntry, HologramWastageEntry } from '../../../supplyChain/services/hologram-data.service';
 
 
 
@@ -139,11 +139,18 @@ export class HologramDailyRegisterComponent implements OnInit {
       this.mergeApprovedEntries(existingEntries);
     }
     
-    // Calculate quantities for all entries
+    // Migrate legacy entries and calculate quantities for all entries
     this.dailyEntries.forEach(entry => {
-      entry.issuedQuantity = this.calculateQuantityFromSerials(entry.issuedFromSerial, entry.issuedToSerial);
-      entry.wastageQuantity = this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
-      entry.leftOverQuantity = entry.issuedQuantity - entry.utilizedQuantity - entry.wastageQuantity;
+      // Migrate legacy entries to new structure
+      const migratedEntry = this.hologramDataService.migrateLegacyEntry(entry);
+      Object.assign(entry, migratedEntry);
+      
+      // Initialize arrays if needed
+      this.initializeEntryArrays(entry);
+      
+      // Calculate quantities
+      this.calculateTotalQuantities(entry);
+      entry.leftOverQuantity = entry.utilizedQuantity - (entry.issuedQuantity || 0) - (entry.wastageQuantity || 0);
     });
     
     this.loadFilteredData();
@@ -205,6 +212,11 @@ export class HologramDailyRegisterComponent implements OnInit {
     });
     
     console.log('Filtered result:', this.filteredEntries.length, 'entries');
+    
+    // Initialize entry arrays for new structure
+    this.filteredEntries.forEach(entry => {
+      this.initializeEntryArrays(entry);
+    });
   }
 
   getMonthNumber(month: string): string {
@@ -273,9 +285,9 @@ export class HologramDailyRegisterComponent implements OnInit {
 
 
   onEntryDataChange(entry: HologramDailyEntry): void {
-    entry.issuedQuantity = this.calculateQuantityFromSerials(entry.issuedFromSerial, entry.issuedToSerial);
-    entry.wastageQuantity = this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
-    entry.leftOverQuantity = entry.issuedQuantity - entry.utilizedQuantity - entry.wastageQuantity;
+    entry.issuedQuantity = this.calculateQuantityFromSerials(entry.issuedFromSerial || '', entry.issuedToSerial || '');
+    entry.wastageQuantity = this.calculateQuantityFromSerials(entry.wastageFromSerial || '', entry.wastageToSerial || '');
+    entry.leftOverQuantity = (entry.issuedQuantity || 0) - entry.utilizedQuantity - (entry.wastageQuantity || 0);
     
     // Update the service with the changed data immediately
     this.hologramDataService.updateDailyEntry(entry);
@@ -296,42 +308,7 @@ export class HologramDailyRegisterComponent implements OnInit {
   }
 
   private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
-    if (!fromSerial || !toSerial) {
-      return 0;
-    }
-
-    fromSerial = fromSerial.trim();
-    toSerial = toSerial.trim();
-
-    const fromNum = this.extractNumericPart(fromSerial);
-    const toNum = this.extractNumericPart(toSerial);
-
-    if (fromNum === null || toNum === null || toNum < fromNum) {
-      return 0;
-    }
-
-    return (toNum - fromNum) + 1;
-  }
-
-  private extractNumericPart(serial: string): number | null {
-    if (!serial) return null;
-    
-    if (/^\d+$/.test(serial)) {
-      return parseInt(serial, 10);
-    }
-    
-    const trailingNumbers = serial.match(/\d+$/);
-    if (trailingNumbers) {
-      return parseInt(trailingNumbers[0], 10);
-    }
-    
-    const allNumbers = serial.match(/\d+/g);
-    if (allNumbers && allNumbers.length > 0) {
-      const longestNum = allNumbers.reduce((a, b) => a.length > b.length ? a : b);
-      return parseInt(longestNum, 10);
-    }
-    
-    return null;
+    return this.hologramDataService.calculateQuantityFromSerials(fromSerial, toSerial);
   }
 
   saveEntry(entry: HologramDailyEntry): void {
@@ -421,21 +398,21 @@ export class HologramDailyRegisterComponent implements OnInit {
       // Find first and last utilization serials
       const utilizationEntries = sortedEntries.filter(e => e.utilizedQuantity > 0 && e.issuedFromSerial && e.issuedToSerial);
       if (utilizationEntries.length > 0) {
-        utilizationFromSerial = utilizationEntries[0].issuedFromSerial;
-        utilizationToSerial = utilizationEntries[utilizationEntries.length - 1].issuedToSerial;
+        utilizationFromSerial = utilizationEntries[0].issuedFromSerial || '';
+        utilizationToSerial = utilizationEntries[utilizationEntries.length - 1].issuedToSerial || '';
       }
 
       // Find first and last wastage serials
-      const wastageEntries = sortedEntries.filter(e => e.wastageQuantity > 0 && e.wastageFromSerial && e.wastageToSerial);
+      const wastageEntries = sortedEntries.filter(e => (e.wastageQuantity || 0) > 0 && e.wastageFromSerial && e.wastageToSerial);
       if (wastageEntries.length > 0) {
-        wastageFromSerial = wastageEntries[0].wastageFromSerial;
-        wastageToSerial = wastageEntries[wastageEntries.length - 1].wastageToSerial;
+        wastageFromSerial = wastageEntries[0].wastageFromSerial || '';
+        wastageToSerial = wastageEntries[wastageEntries.length - 1].wastageToSerial || '';
       }
 
       // Calculate totals
-      totalIssued = sortedEntries.reduce((sum, entry) => sum + entry.issuedQuantity, 0);
+      totalIssued = sortedEntries.reduce((sum, entry) => sum + (entry.issuedQuantity || 0), 0);
       totalUtilized = sortedEntries.reduce((sum, entry) => sum + entry.utilizedQuantity, 0);
-      totalWastage = sortedEntries.reduce((sum, entry) => sum + entry.wastageQuantity, 0);
+      totalWastage = sortedEntries.reduce((sum, entry) => sum + (entry.wastageQuantity || 0), 0);
       totalLeftOver = sortedEntries.reduce((sum, entry) => sum + entry.leftOverQuantity, 0);
     }
 
@@ -472,12 +449,12 @@ export class HologramDailyRegisterComponent implements OnInit {
 
   // Calculate issued quantity from serials
   calculateIssuedQuantity(entry: HologramDailyEntry): number {
-    return this.calculateQuantityFromSerials(entry.issuedFromSerial, entry.issuedToSerial);
+    return this.calculateQuantityFromSerials(entry.issuedFromSerial || '', entry.issuedToSerial || '');
   }
 
   // Calculate wastage quantity from serials
   calculateWastageQuantity(entry: HologramDailyEntry): number {
-    return this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
+    return this.calculateQuantityFromSerials(entry.wastageFromSerial || '', entry.wastageToSerial || '');
   }
 
 
@@ -661,5 +638,112 @@ Check browser console for detailed data.
   changePageSize(size: number): void {
     this.pageSize = size;
     this.currentPage = 1;
+  }
+
+  // Methods for managing multiple issued entries
+  addIssuedEntry(entry: HologramDailyEntry): void {
+    if (!entry.issuedEntries) {
+      entry.issuedEntries = [];
+    }
+    
+    const newIssuedEntry: HologramIssuedEntry = {
+      id: this.hologramDataService.generateId(),
+      fromSerial: '',
+      toSerial: '',
+      quantity: 0
+    };
+    
+    entry.issuedEntries.push(newIssuedEntry);
+    this.calculateTotalQuantities(entry);
+  }
+
+  removeIssuedEntry(entry: HologramDailyEntry, index: number): void {
+    if (entry.issuedEntries && entry.issuedEntries.length > 1) {
+      entry.issuedEntries.splice(index, 1);
+      this.calculateTotalQuantities(entry);
+    }
+  }
+
+  onIssuedSerialChange(entry: HologramDailyEntry, issuedEntry: HologramIssuedEntry): void {
+    issuedEntry.quantity = this.calculateQuantityFromSerials(issuedEntry.fromSerial, issuedEntry.toSerial);
+    this.calculateTotalQuantities(entry);
+  }
+
+  // Methods for managing multiple wastage entries
+  addWastageEntry(entry: HologramDailyEntry): void {
+    if (!entry.wastageEntries) {
+      entry.wastageEntries = [];
+    }
+    
+    const newWastageEntry: HologramWastageEntry = {
+      id: this.hologramDataService.generateId(),
+      fromSerial: '',
+      toSerial: '',
+      quantity: 0,
+      damageReason: ''
+    };
+    
+    entry.wastageEntries.push(newWastageEntry);
+    this.calculateTotalQuantities(entry);
+  }
+
+  removeWastageEntry(entry: HologramDailyEntry, index: number): void {
+    if (entry.wastageEntries && entry.wastageEntries.length > 1) {
+      entry.wastageEntries.splice(index, 1);
+      this.calculateTotalQuantities(entry);
+    }
+  }
+
+  onWastageSerialChange(entry: HologramDailyEntry, wastageEntry: HologramWastageEntry): void {
+    wastageEntry.quantity = this.calculateQuantityFromSerials(wastageEntry.fromSerial, wastageEntry.toSerial);
+    this.calculateTotalQuantities(entry);
+  }
+
+  // Calculate total quantities from all issued and wastage entries
+  calculateTotalQuantities(entry: HologramDailyEntry): void {
+    // Calculate total issued quantity
+    const totalIssued = (entry.issuedEntries || []).reduce((sum, issued) => sum + (issued.quantity || 0), 0);
+    
+    // Calculate total wastage quantity
+    const totalWastage = (entry.wastageEntries || []).reduce((sum, wastage) => sum + (wastage.quantity || 0), 0);
+    
+    // Update legacy fields for backward compatibility
+    entry.issuedQuantity = totalIssued;
+    entry.wastageQuantity = totalWastage;
+    
+    // Calculate left over quantity
+    entry.leftOverQuantity = entry.utilizedQuantity - totalIssued - totalWastage;
+  }
+
+  // Get total issued quantity for display
+  getTotalIssuedQuantity(entry: HologramDailyEntry): number {
+    return this.hologramDataService.getTotalIssuedQuantity(entry);
+  }
+
+  // Get total wastage quantity for display
+  getTotalWastageQuantity(entry: HologramDailyEntry): number {
+    return this.hologramDataService.getTotalWastageQuantity(entry);
+  }
+
+  // Initialize entries with at least one issued and wastage entry
+  initializeEntryArrays(entry: HologramDailyEntry): void {
+    if (!entry.issuedEntries || entry.issuedEntries.length === 0) {
+      entry.issuedEntries = [{
+        id: this.hologramDataService.generateId(),
+        fromSerial: entry.issuedFromSerial || '',
+        toSerial: entry.issuedToSerial || '',
+        quantity: entry.issuedQuantity || 0
+      }];
+    }
+    
+    if (!entry.wastageEntries || entry.wastageEntries.length === 0) {
+      entry.wastageEntries = [{
+        id: this.hologramDataService.generateId(),
+        fromSerial: entry.wastageFromSerial || '',
+        toSerial: entry.wastageToSerial || '',
+        quantity: entry.wastageQuantity || 0,
+        damageReason: entry.damageReason || ''
+      }];
+    }
   }
 }

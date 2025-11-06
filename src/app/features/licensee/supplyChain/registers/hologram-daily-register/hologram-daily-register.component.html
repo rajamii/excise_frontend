@@ -288,46 +288,102 @@
                   {{ entry.issuedQuantity | number }}
                 </td>
 
-                <!-- Issued From Serial -->
+                <!-- Multiple Issued Entries -->
                 <td class="issued-from">
-                  <input type="text" class="form-control form-control-sm serial-input"
-                    [(ngModel)]="entry.issuedFromSerial" (ngModelChange)="onSerialChange(entry)"
-                    placeholder="From Serial" [readonly]="entry.isFixed"
-                    [class.editable]="!entry.isFixed">
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let issuedEntry of entry.issuedEntries || []; let i = index" class="entry-row">
+                      <div class="d-flex align-items-center gap-1">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [(ngModel)]="issuedEntry.fromSerial" 
+                          (ngModelChange)="onIssuedSerialChange(entry, issuedEntry)"
+                          placeholder="From Serial" [readonly]="entry.isFixed"
+                          [class.editable]="!entry.isFixed">
+                        <button *ngIf="!entry.isFixed && (entry.issuedEntries?.length || 0) > 1" 
+                                class="btn btn-sm btn-outline-danger remove-btn"
+                                (click)="removeIssuedEntry(entry, i)" title="Remove this range">
+                          <i class="bi bi-dash"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-success add-btn mt-1"
+                            (click)="addIssuedEntry(entry)" title="Add another issued range">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
+                  </div>
                 </td>
 
-                <!-- Issued To Serial -->
+                <!-- Multiple Issued To Entries -->
                 <td class="issued-to">
-                  <input type="text" class="form-control form-control-sm serial-input"
-                    [(ngModel)]="entry.issuedToSerial" (ngModelChange)="onSerialChange(entry)"
-                    placeholder="To Serial" [readonly]="entry.isFixed"
-                    [class.editable]="!entry.isFixed">
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let issuedEntry of entry.issuedEntries || []; let i = index" class="entry-row">
+                      <input type="text" class="form-control form-control-sm serial-input"
+                        [(ngModel)]="issuedEntry.toSerial" 
+                        (ngModelChange)="onIssuedSerialChange(entry, issuedEntry)"
+                        placeholder="To Serial" [readonly]="entry.isFixed"
+                        [class.editable]="!entry.isFixed">
+                    </div>
+                  </div>
                 </td>
 
-                <!-- Issued Quantity (Auto-calculated) -->
+                <!-- Total Issued Quantity (Auto-calculated) -->
                 <td class="issued-qty auto-calculated">
-                  <span class="qty-number">{{ calculateIssuedQuantity(entry) | number }}</span>
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let issuedEntry of entry.issuedEntries || []" class="entry-row">
+                      <span class="qty-number">{{ issuedEntry.quantity | number }}</span>
+                    </div>
+                    <div class="total-row mt-1">
+                      <strong class="text-primary">Total: {{ getTotalIssuedQuantity(entry) | number }}</strong>
+                    </div>
+                  </div>
                 </td>
 
-                <!-- Wastage From Serial -->
+                <!-- Multiple Wastage From Entries -->
                 <td class="wastage-from">
-                  <input type="text" class="form-control form-control-sm serial-input"
-                    [(ngModel)]="entry.wastageFromSerial" (ngModelChange)="onSerialChange(entry)"
-                    placeholder="Optional" [readonly]="entry.isFixed"
-                    [class.editable]="!entry.isFixed">
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let wastageEntry of entry.wastageEntries || []; let i = index" class="entry-row">
+                      <div class="d-flex align-items-center gap-1">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [(ngModel)]="wastageEntry.fromSerial" 
+                          (ngModelChange)="onWastageSerialChange(entry, wastageEntry)"
+                          placeholder="Optional" [readonly]="entry.isFixed"
+                          [class.editable]="!entry.isFixed">
+                        <button *ngIf="!entry.isFixed && (entry.wastageEntries?.length || 0) > 1" 
+                                class="btn btn-sm btn-outline-danger remove-btn"
+                                (click)="removeWastageEntry(entry, i)" title="Remove this range">
+                          <i class="bi bi-dash"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-warning add-btn mt-1"
+                            (click)="addWastageEntry(entry)" title="Add another wastage range">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
+                  </div>
                 </td>
 
-                <!-- Wastage To Serial -->
+                <!-- Multiple Wastage To Entries -->
                 <td class="wastage-to">
-                  <input type="text" class="form-control form-control-sm serial-input"
-                    [(ngModel)]="entry.wastageToSerial" (ngModelChange)="onSerialChange(entry)"
-                    placeholder="Optional" [readonly]="entry.isFixed"
-                    [class.editable]="!entry.isFixed">
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let wastageEntry of entry.wastageEntries || []; let i = index" class="entry-row">
+                      <input type="text" class="form-control form-control-sm serial-input"
+                        [(ngModel)]="wastageEntry.toSerial" 
+                        (ngModelChange)="onWastageSerialChange(entry, wastageEntry)"
+                        placeholder="Optional" [readonly]="entry.isFixed"
+                        [class.editable]="!entry.isFixed">
+                    </div>
+                  </div>
                 </td>
 
-                <!-- Wastage Quantity (Auto-calculated) -->
+                <!-- Total Wastage Quantity (Auto-calculated) -->
                 <td class="wastage-qty auto-calculated">
-                  <span class="qty-number">{{ calculateWastageQuantity(entry) | number }}</span>
+                  <div class="multiple-entries-container">
+                    <div *ngFor="let wastageEntry of entry.wastageEntries || []" class="entry-row">
+                      <span class="qty-number">{{ wastageEntry.quantity | number }}</span>
+                    </div>
+                    <div class="total-row mt-1">
+                      <strong class="text-warning">Total: {{ getTotalWastageQuantity(entry) | number }}</strong>
+                    </div>
+                  </div>
                 </td>
 
                 <!-- Left Over Quantity (User Input) -->

@@ -462,6 +462,63 @@
         }
 
         /* Delete button styles removed - users cannot delete entries */
+        
+        &.add-btn {
+          background: #10b981;
+          color: white;
+          font-size: 0.75rem;
+          padding: 0.25rem 0.5rem;
+
+          &:hover {
+            background: #059669;
+            transform: scale(1.05);
+          }
+        }
+
+        &.remove-btn {
+          background: #ef4444;
+          color: white;
+          font-size: 0.75rem;
+          padding: 0.25rem 0.5rem;
+
+          &:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+          }
+        }
+      }
+
+      // Multiple entries container styles
+      .multiple-entries-container {
+        .entry-row {
+          margin-bottom: 0.25rem;
+          
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+
+        .total-row {
+          border-top: 1px solid #e5e7eb;
+          padding-top: 0.25rem;
+          font-size: 0.875rem;
+        }
+
+        .add-btn {
+          font-size: 0.75rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.375rem;
+        }
+
+        .remove-btn {
+          width: 24px;
+          height: 24px;
+          padding: 0;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
       }
 
       .status-badge {
