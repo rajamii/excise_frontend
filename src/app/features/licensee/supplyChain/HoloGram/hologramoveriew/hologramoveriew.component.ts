@@ -27,6 +27,46 @@ interface SerialNumber {
   productionLine?: string;
 }
 
+interface SerialRange {
+  fromSerial: string;
+  toSerial: string;
+  count: number;
+  status: 'AVAILABLE' | 'USED' | 'DAMAGED';
+  description: string;
+  usedDate?: string;
+  damageDate?: string;
+  batchNumber?: string;
+  productionLine?: string;
+  damageReason?: string;
+  reportedBy?: string;
+}
+
+interface UsageEvent {
+  startSerial: number;
+  endSerial: number;
+  count: number;
+  status: 'AVAILABLE' | 'USED' | 'DAMAGED';
+  description: string;
+  date: string;
+  batchNumber?: string;
+  productionLine?: string;
+  damageReason?: string;
+  reportedBy?: string;
+}
+
+interface ProductionBatch {
+  size: number;
+  productName: string;
+  batchNumber: string;
+  productionLine: string;
+}
+
+interface DamageIncident {
+  count: number;
+  reason: string;
+  reportedBy: string;
+}
+
 interface SerialData {
   cartoonNumber: string;
   type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
@@ -37,6 +77,7 @@ interface SerialData {
   usedCount: number;
   damagedCount: number;
   serialNumbers: SerialNumber[];
+  serialRanges?: SerialRange[];
 }
 
 interface AvailableHologram {
@@ -541,62 +582,314 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   generateSerialNumbersData(availableData: AvailableHologram): SerialData {
-    const serialNumbers: SerialNumber[] = [];
-
-    // Extract start and end numbers from serial range
-    const fromMatch = availableData.availableRange.split(' - ')[0].match(/\d+/);
-    const toMatch = availableData.availableRange.split(' - ')[1].match(/\d+/);
-
-    if (fromMatch && toMatch) {
-      const startNum = parseInt(fromMatch[0]);
-      const endNum = parseInt(toMatch[0]);
-      const prefix = availableData.availableRange.split(' - ')[0].replace(/\d+/, '');
-
-      // Generate serial numbers with realistic usage patterns
-      for (let i = startNum; i <= endNum; i++) {
-        const serialNumber = prefix + i.toString().padStart(6, '0');
-        let status: 'AVAILABLE' | 'USED' | 'DAMAGED' = 'AVAILABLE';
-        let usedDate: string | undefined;
-
-        // Simulate realistic usage patterns - first part available, middle part used, some damaged
-        const totalRange = endNum - startNum + 1;
-        const availableEnd = startNum + availableData.availableCount - 1;
-
-        if (i <= availableEnd) {
-          status = 'AVAILABLE';
-        } else if (i <= startNum + totalRange * 0.9) { // 90% of remaining are used
-          status = 'USED';
-          // Generate random used date within last 30 days
-          const daysAgo = Math.floor(Math.random() * 30);
-          const date = new Date();
-          date.setDate(date.getDate() - daysAgo);
-          usedDate = date.toISOString().split('T')[0];
-        } else {
-          status = 'DAMAGED';
-        }
-
-        serialNumbers.push({
-          number: serialNumber,
-          status: status,
-          usedDate: usedDate,
-          batchNumber: status === 'USED' ? `BATCH-${Math.floor(Math.random() * 100) + 1}` : undefined,
-          productionLine: status === 'USED' ? `LINE-${Math.floor(Math.random() * 5) + 1}` : undefined
-        });
-      }
-    }
+    // Generate range-based data instead of individual serial numbers
+    const serialRanges = this.generateSerialRanges(availableData);
 
     return {
       cartoonNumber: availableData.cartoonNumber,
       type: availableData.type,
       fromSerial: availableData.availableRange.split(' - ')[0],
       toSerial: availableData.availableRange.split(' - ')[1],
-      totalCount: serialNumbers.length,
-      availableCount: serialNumbers.filter(s => s.status === 'AVAILABLE').length,
-      usedCount: serialNumbers.filter(s => s.status === 'USED').length,
-      damagedCount: serialNumbers.filter(s => s.status === 'DAMAGED').length,
-      serialNumbers: serialNumbers
+      totalCount: serialRanges.reduce((sum, range) => sum + range.count, 0),
+      availableCount: serialRanges.filter(r => r.status === 'AVAILABLE').reduce((sum, range) => sum + range.count, 0),
+      usedCount: serialRanges.filter(r => r.status === 'USED').reduce((sum, range) => sum + range.count, 0),
+      damagedCount: serialRanges.filter(r => r.status === 'DAMAGED').reduce((sum, range) => sum + range.count, 0),
+      serialNumbers: [], // Keep empty for backward compatibility
+      serialRanges: serialRanges // New property for ranges
     };
   }
+
+  generateSerialRanges(availableData: AvailableHologram): SerialRange[] {
+    // Extract start and end numbers from serial range
+    const fromMatch = availableData.availableRange.split(' - ')[0].match(/\d+/);
+    const toMatch = availableData.availableRange.split(' - ')[1].match(/\d+/);
+
+    if (!fromMatch || !toMatch) return [];
+
+    const startNum = parseInt(fromMatch[0]);
+    const endNum = parseInt(toMatch[0]);
+    const prefix = availableData.availableRange.split(' - ')[0].replace(/\d+/, '');
+    const totalCount = endNum - startNum + 1;
+
+    // Calculate used and damaged counts based on realistic patterns
+    const usedCount = Math.floor(totalCount * 0.6); // 60% used
+    const damagedCount = Math.floor(totalCount * 0.1); // 10% damaged
+    const actualAvailableCount = totalCount - usedCount - damagedCount;
+
+    // Create realistic mixed usage pattern
+    return this.generateRealisticMixedRanges(
+      prefix, 
+      startNum, 
+      endNum, 
+      totalCount,
+      actualAvailableCount,
+      usedCount,
+      damagedCount
+    );
+  }
+
+  generateRealisticMixedRanges(
+    prefix: string, 
+    startNum: number, 
+    endNum: number, 
+    totalCount: number,
+    availableCount: number,
+    usedCount: number,
+    damagedCount: number
+  ): SerialRange[] {
+    const ranges: SerialRange[] = [];
+    
+    // Create usage events with realistic patterns
+    const usageEvents = this.generateUsageEvents(startNum, endNum, availableCount, usedCount, damagedCount);
+    
+    // Sort events by serial number to process in order
+    usageEvents.sort((a, b) => a.startSerial - b.startSerial);
+    
+    // Convert events to ranges
+    for (const event of usageEvents) {
+      const range: SerialRange = {
+        fromSerial: prefix + event.startSerial.toString().padStart(6, '0'),
+        toSerial: prefix + event.endSerial.toString().padStart(6, '0'),
+        count: event.count,
+        status: event.status,
+        description: event.description
+      };
+
+      // Add additional properties based on status
+      if (event.status === 'USED') {
+        range.usedDate = event.date;
+        range.batchNumber = event.batchNumber;
+        range.productionLine = event.productionLine;
+      } else if (event.status === 'DAMAGED') {
+        range.damageDate = event.date;
+        range.damageReason = event.damageReason;
+        range.reportedBy = event.reportedBy;
+      }
+
+      ranges.push(range);
+    }
+
+    return ranges;
+  }
+
+  generateUsageEvents(startNum: number, endNum: number, availableCount: number, usedCount: number, damagedCount: number): UsageEvent[] {
+    const events: UsageEvent[] = [];
+    const totalRange = endNum - startNum + 1;
+    
+    // Create realistic usage timeline (last 90 days)
+    const today = new Date();
+    const usageDates = this.generateRealisticUsageDates(usedCount + damagedCount);
+    
+    let currentSerial = startNum;
+    let eventIndex = 0;
+
+    // Strategy: Create mixed patterns that reflect real-world usage
+    
+    // 1. Start with some available holograms (fresh stock)
+    if (availableCount > 0) {
+      const availableChunks = this.splitIntoChunks(availableCount, 1, 3); // 1-3 available chunks
+      
+      for (const chunkSize of availableChunks) {
+        events.push({
+          startSerial: currentSerial,
+          endSerial: currentSerial + chunkSize - 1,
+          count: chunkSize,
+          status: 'AVAILABLE',
+          description: 'Ready for production use',
+          date: today.toISOString().split('T')[0]
+        });
+        currentSerial += chunkSize;
+      }
+    }
+
+    // 2. Create realistic production usage patterns
+    if (usedCount > 0) {
+      const productionBatches = this.generateProductionBatches(usedCount);
+      
+      for (const batch of productionBatches) {
+        if (currentSerial + batch.size - 1 <= endNum && eventIndex < usageDates.length) {
+          events.push({
+            startSerial: currentSerial,
+            endSerial: currentSerial + batch.size - 1,
+            count: batch.size,
+            status: 'USED',
+            description: `Production batch - ${batch.productName}`,
+            date: usageDates[eventIndex],
+            batchNumber: batch.batchNumber,
+            productionLine: batch.productionLine
+          });
+          currentSerial += batch.size;
+          eventIndex++;
+        }
+      }
+    }
+
+    // 3. Simulate damage incidents at various points
+    if (damagedCount > 0) {
+      const damageIncidents = this.generateDamageIncidents(damagedCount);
+      
+      for (const incident of damageIncidents) {
+        if (currentSerial + incident.count - 1 <= endNum && eventIndex < usageDates.length) {
+          events.push({
+            startSerial: currentSerial,
+            endSerial: currentSerial + incident.count - 1,
+            count: incident.count,
+            status: 'DAMAGED',
+            description: incident.reason,
+            date: usageDates[eventIndex],
+            damageReason: incident.reason,
+            reportedBy: incident.reportedBy
+          });
+          currentSerial += incident.count;
+          eventIndex++;
+        }
+      }
+    }
+
+    // 4. Fill any remaining gaps with mixed available/used based on realistic patterns
+    while (currentSerial <= endNum) {
+      const remaining = endNum - currentSerial + 1;
+      const chunkSize = Math.min(remaining, Math.floor(Math.random() * 50) + 10);
+      
+      // 70% chance of being used, 20% available, 10% damaged
+      const rand = Math.random();
+      let status: 'AVAILABLE' | 'USED' | 'DAMAGED';
+      let description: string;
+      
+      if (rand < 0.7) {
+        status = 'USED';
+        description = 'Production batch - Mixed products';
+      } else if (rand < 0.9) {
+        status = 'AVAILABLE';
+        description = 'Ready for production use';
+      } else {
+        status = 'DAMAGED';
+        description = 'Quality control rejection';
+      }
+
+      events.push({
+        startSerial: currentSerial,
+        endSerial: currentSerial + chunkSize - 1,
+        count: chunkSize,
+        status: status,
+        description: description,
+        date: eventIndex < usageDates.length ? usageDates[eventIndex] : today.toISOString().split('T')[0]
+      });
+      
+      currentSerial += chunkSize;
+      eventIndex++;
+    }
+
+    return events;
+  }
+
+  generateProductionBatches(totalUsed: number): ProductionBatch[] {
+    const batches: ProductionBatch[] = [];
+    const productNames = [
+      'Premium Whiskey 750ml',
+      'Export Rum 1L', 
+      'Local Brandy 750ml',
+      'Special Edition Vodka 500ml',
+      'Craft Beer 330ml',
+      'Wine Collection 750ml'
+    ];
+    
+    let remaining = totalUsed;
+    let batchCounter = 1;
+    
+    while (remaining > 0) {
+      const batchSize = Math.min(remaining, this.getRealisticBatchSize());
+      const productName = productNames[Math.floor(Math.random() * productNames.length)];
+      
+      batches.push({
+        size: batchSize,
+        productName: productName,
+        batchNumber: `BATCH-${String(batchCounter).padStart(3, '0')}`,
+        productionLine: `LINE-${Math.floor(Math.random() * 5) + 1}`
+      });
+      
+      remaining -= batchSize;
+      batchCounter++;
+    }
+    
+    return batches;
+  }
+
+  generateDamageIncidents(totalDamaged: number): DamageIncident[] {
+    const incidents: DamageIncident[] = [];
+    const damageReasons = [
+      'Printing quality defects - Color bleeding',
+      'Physical damage during transport',
+      'Adhesive failure - Poor bonding',
+      'Color mismatch - Batch variation', 
+      'Cutting defects - Irregular edges',
+      'Storage damage - Moisture exposure',
+      'Quality control rejection - Specifications not met',
+      'Machine malfunction damage',
+      'Handling damage during inspection',
+      'Temperature damage during storage'
+    ];
+    
+    const inspectors = ['QC-001', 'QC-002', 'QC-003', 'PROD-MGR', 'SHIFT-SUP'];
+    
+    let remaining = totalDamaged;
+    
+    while (remaining > 0) {
+      const incidentSize = Math.min(remaining, Math.floor(Math.random() * 25) + 5); // 5-30 damaged per incident
+      
+      incidents.push({
+        count: incidentSize,
+        reason: damageReasons[Math.floor(Math.random() * damageReasons.length)],
+        reportedBy: inspectors[Math.floor(Math.random() * inspectors.length)]
+      });
+      
+      remaining -= incidentSize;
+    }
+    
+    return incidents;
+  }
+
+  getRealisticBatchSize(): number {
+    // Realistic production batch sizes based on product type
+    const batchSizes = [50, 75, 100, 150, 200, 250, 300, 500];
+    return batchSizes[Math.floor(Math.random() * batchSizes.length)];
+  }
+
+  splitIntoChunks(total: number, minChunks: number, maxChunks: number): number[] {
+    const numChunks = Math.min(maxChunks, Math.max(minChunks, Math.floor(Math.random() * maxChunks) + 1));
+    const chunks: number[] = [];
+    let remaining = total;
+    
+    for (let i = 0; i < numChunks - 1; i++) {
+      const chunkSize = Math.floor(remaining / (numChunks - i)) + Math.floor(Math.random() * 20) - 10;
+      const actualChunkSize = Math.max(1, Math.min(remaining - (numChunks - i - 1), chunkSize));
+      chunks.push(actualChunkSize);
+      remaining -= actualChunkSize;
+    }
+    
+    if (remaining > 0) {
+      chunks.push(remaining);
+    }
+    
+    return chunks;
+  }
+
+  generateRealisticUsageDates(eventCount: number): string[] {
+    const dates: string[] = [];
+    const today = new Date();
+    
+    for (let i = 0; i < eventCount; i++) {
+      // Generate dates over the last 90 days with more recent activity
+      const daysAgo = Math.floor(Math.pow(Math.random(), 2) * 90); // Weighted towards recent dates
+      const date = new Date(today);
+      date.setDate(date.getDate() - daysAgo);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    return dates.sort(); // Sort chronologically
+  }
+
+
 
   setSerialViewMode(mode: 'all' | 'available' | 'used' | 'damaged'): void {
     this.serialViewMode = mode;
@@ -604,20 +897,26 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   getFilteredSerialNumbers(): SerialNumber[] {
-    if (!this.selectedSerialData) return [];
+    // This method is kept for backward compatibility but now returns empty
+    // We use getFilteredSerialRanges() instead
+    return [];
+  }
 
-    let filtered = this.selectedSerialData.serialNumbers;
+  getFilteredSerialRanges(): SerialRange[] {
+    if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
+
+    let filtered = this.selectedSerialData.serialRanges;
 
     // Filter by view mode
     if (this.serialViewMode !== 'all') {
-      filtered = filtered.filter(serial => {
+      filtered = filtered.filter(range => {
         switch (this.serialViewMode) {
           case 'available':
-            return serial.status === 'AVAILABLE';
+            return range.status === 'AVAILABLE';
           case 'used':
-            return serial.status === 'USED';
+            return range.status === 'USED';
           case 'damaged':
-            return serial.status === 'DAMAGED';
+            return range.status === 'DAMAGED';
           default:
             return true;
         }
@@ -657,21 +956,47 @@ export class HologramoveriewComponent implements OnInit {
     }
   }
 
-  getTotalSerialPages(): number {
-    if (!this.selectedSerialData) return 1;
+  getRangeStatusClass(status: string): string {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'range-available';
+      case 'USED':
+        return 'range-used';
+      case 'DAMAGED':
+        return 'range-damaged';
+      default:
+        return 'range-unknown';
+    }
+  }
 
-    let totalItems = this.selectedSerialData.serialNumbers.length;
+  getRangeStatusIcon(status: string): string {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'bi-check-circle-fill';
+      case 'USED':
+        return 'bi-arrow-up-circle-fill';
+      case 'DAMAGED':
+        return 'bi-exclamation-triangle-fill';
+      default:
+        return 'bi-question-circle-fill';
+    }
+  }
+
+  getTotalSerialPages(): number {
+    if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return 1;
+
+    let totalItems = this.selectedSerialData.serialRanges.length;
 
     // Filter by view mode
     if (this.serialViewMode !== 'all') {
-      totalItems = this.selectedSerialData.serialNumbers.filter(serial => {
+      totalItems = this.selectedSerialData.serialRanges.filter(range => {
         switch (this.serialViewMode) {
           case 'available':
-            return serial.status === 'AVAILABLE';
+            return range.status === 'AVAILABLE';
           case 'used':
-            return serial.status === 'USED';
+            return range.status === 'USED';
           case 'damaged':
-            return serial.status === 'DAMAGED';
+            return range.status === 'DAMAGED';
           default:
             return true;
         }

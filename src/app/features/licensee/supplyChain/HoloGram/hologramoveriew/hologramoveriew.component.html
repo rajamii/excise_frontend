@@ -1039,23 +1039,90 @@
                   </div>
                 </div>
 
-                <!-- Serial Numbers Display -->
-                <div class="serial-numbers-grid" style="max-height: 400px; overflow-y: auto;">
-                  <div class="row g-2">
-                    @for (serial of getFilteredSerialNumbers(); track serial.number) {
-                    <div class="col-lg-2 col-md-3 col-sm-4 col-6">
-                      <div class="serial-number-card" [class]="getSerialStatusClass(serial.status)">
-                        <div class="serial-number">{{ serial.number }}</div>
-                        <div class="serial-status">
-                          <span class="badge" [class]="getSerialBadgeClass(serial.status)">
-                            {{ serial.status }}
-                          </span>
+                <!-- Serial Ranges Display -->
+                <div class="serial-ranges-container" style="max-height: 400px; overflow-y: auto;">
+                  <div class="row g-3">
+                    @for (range of getFilteredSerialRanges(); track range.fromSerial) {
+                    <div class="col-12">
+                      <div class="range-card" [class]="getRangeStatusClass(range.status)">
+                        <div class="row align-items-center">
+                          <div class="col-md-4">
+                            <div class="range-info">
+                              <div class="range-serials">
+                                <i class="bi" [class]="getRangeStatusIcon(range.status)" 
+                                   [class.text-success]="range.status === 'AVAILABLE'"
+                                   [class.text-warning]="range.status === 'USED'"
+                                   [class.text-danger]="range.status === 'DAMAGED'"></i>
+                                <span class="font-monospace fw-bold">{{ range.fromSerial }}</span>
+                                <span class="mx-2">to</span>
+                                <span class="font-monospace fw-bold">{{ range.toSerial }}</span>
+                              </div>
+                              <div class="range-count">
+                                <span class="badge" [class]="getSerialBadgeClass(range.status)">
+                                  {{ range.count | number }} units
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-4">
+                            <div class="range-status">
+                              <div class="status-label">
+                                <strong>{{ range.status }}</strong>
+                              </div>
+                              <div class="status-description text-muted">
+                                {{ range.description }}
+                              </div>
+                            </div>
+                          </div>
+                          <div class="col-md-4">
+                            <div class="range-details">
+                              @if (range.usedDate) {
+                              <div class="detail-item">
+                                <i class="bi bi-calendar-check text-primary me-1"></i>
+                                <small>Used: {{ range.usedDate | date:'dd-MMM-yyyy' }}</small>
+                              </div>
+                              }
+                              @if (range.damageDate) {
+                              <div class="detail-item">
+                                <i class="bi bi-exclamation-triangle text-danger me-1"></i>
+                                <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
+                              </div>
+                              }
+                              @if (range.batchNumber) {
+                              <div class="detail-item">
+                                <i class="bi bi-tag text-info me-1"></i>
+                                <small>Batch: {{ range.batchNumber }}</small>
+                              </div>
+                              }
+                              @if (range.productionLine) {
+                              <div class="detail-item">
+                                <i class="bi bi-gear text-secondary me-1"></i>
+                                <small>{{ range.productionLine }}</small>
+                              </div>
+                              }
+                              @if (range.damageReason) {
+                              <div class="detail-item">
+                                <i class="bi bi-info-circle text-warning me-1"></i>
+                                <small>{{ range.damageReason }}</small>
+                              </div>
+                              }
+                              @if (range.reportedBy) {
+                              <div class="detail-item">
+                                <i class="bi bi-person text-muted me-1"></i>
+                                <small>Reported by: {{ range.reportedBy }}</small>
+                              </div>
+                              }
+                            </div>
+                          </div>
                         </div>
-                        @if (serial.usedDate) {
-                        <div class="serial-date">
-                          <small class="text-muted">{{ serial.usedDate | date:'dd-MMM' }}</small>
-                        </div>
-                        }
+                      </div>
+                    </div>
+                    } @empty {
+                    <div class="col-12">
+                      <div class="text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <h5 class="text-muted mt-2">No ranges found</h5>
+                        <p class="text-muted">No serial ranges match the selected filter.</p>
                       </div>
                     </div>
                     }
