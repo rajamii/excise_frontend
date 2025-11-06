@@ -205,7 +205,7 @@
         <div class="radio-question">
           <label class="question-label">Is the proposed site owned by the Applicant? <span
               class="required">*</span></label>
-          <mat-radio-group formControlName="siteOwned" required (change)="onSiteOwnedChange($event)">
+          <mat-radio-group formControlName="siteOwned" required >
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
@@ -230,40 +230,59 @@
         </div>
       </div>
 
-      <!-- Document Upload Section -->
-      <h5 class="section-title">Upload Documents</h5>
-      <div class="documents-upload-container">
-        @for (doc of documents; track doc.name) {
-        <div class="document-upload-row">
-          <div class="document-info">
-            <span class="document-label">
-              {{ doc.label }}
-              @if (doc.required) {
+      <!-- Document Upload Section – Only show if site is NOT owned -->
+<div *ngIf="siteDetailsForm.get('siteOwned')?.value === 'No'">
+  <h5 class="section-title">Upload Documents</h5>
+  <div class="documents-upload-container">
+    @for (doc of documents; track doc.name) {
+      <div class="document-upload-row">
+        <div class="document-info">
+          <span class="document-label">
+            {{ doc.label }}
+            @if (doc.required) {
               <span class="required">*</span>
-              }
-            </span>
-            <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
-          </div>
-          <div class="document-actions">
-            <input type="file" [id]="doc.name" (change)="onDocumentSelect($event, doc.name)" [accept]="doc.formats"
-              style="display: none" />
-            <label [for]="doc.name" mat-raised-button color="primary"
-              style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;">
-              <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
-              Choose File
-            </label>
-            @if (doc.fileUrl) {
-            <button mat-icon-button color="accent" (click)="viewDocument(doc)" type="button" aria-label="View Document">
+            }
+          </span>
+          <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
+        </div>
+        <div class="document-actions">
+          <input
+            type="file"
+            [id]="doc.name"
+            (change)="onDocumentSelect($event, doc.name)"
+            [accept]="doc.formats"
+            style="display: none"
+          />
+          <label
+            [for]="doc.name"
+            mat-raised-button
+            color="primary"
+            style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;"
+          >
+            <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
+            Choose File
+          </label>
+
+          @if (doc.fileUrl) {
+            <button
+              mat-icon-button
+              color="accent"
+              (click)="viewDocument(doc)"
+              type="button"
+              aria-label="View Document"
+            >
               <mat-icon>visibility</mat-icon>
             </button>
-            }
-            @if (doc.file) {
+          }
+
+          @if (doc.file) {
             <span class="file-name">{{ doc.file.name }}</span>
-            }
-          </div>
+          }
         </div>
-        }
       </div>
+    }
+  </div>
+</div>
     </mat-card-content>
 
     <mat-card-actions>

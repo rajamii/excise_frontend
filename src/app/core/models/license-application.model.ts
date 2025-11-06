@@ -4,7 +4,7 @@ import { LicenseCategory } from "./license-category.model";
 import { PoliceStation } from "./policestation.model";
 import { Subdivision } from "./subdivision.model";
 
-// Define Transaction and Objection classes FIRST
+
 export class Transaction {
   id!: number;
   licenseApplication!: string | LicenseApplication;
@@ -27,7 +27,7 @@ export class Objection {
   resolvedOn?: string | null;
 }
 
-// Now define LicenseApplication that uses them
+
 export class LicenseApplication {
   // select license
   applicationId!: string;

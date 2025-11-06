@@ -14,7 +14,7 @@
           <mat-select formControlName="licenseCategory" required>
             @for (category of licenseCategories; track category.id) {
               <mat-option [value]="category.id">
-                {{ category.name }}
+                {{ category.licenseCategory }}
               </mat-option>
             }
           </mat-select>
@@ -31,7 +31,7 @@
           <mat-select formControlName="licenseSubCategory" required>
             @for (subCategory of licenseSubCategories; track subCategory.id) {
               <mat-option [value]="subCategory.id">
-                {{ subCategory.name }}
+                {{ subCategory.description }}
               </mat-option>
             }
           </mat-select>
@@ -52,23 +52,6 @@
           @if (keyInfoForm.controls['establishmentName'].invalid) {
             <mat-error>
               {{ getErrorMessage('establishmentName') }}
-            </mat-error>
-          }
-        </mat-form-field>
-
-        <!-- Location District -->
-        <mat-form-field appearance="outline">
-          <mat-label>Location District/ Site District</mat-label>
-          <mat-select formControlName="locationDistrict" required>
-            @for (district of districts; track district.id) {
-              <mat-option [value]="district.id">
-                {{ district.name }}
-              </mat-option>
-            }
-          </mat-select>
-          @if (keyInfoForm.controls['locationDistrict'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('locationDistrict') }}
             </mat-error>
           }
         </mat-form-field>
