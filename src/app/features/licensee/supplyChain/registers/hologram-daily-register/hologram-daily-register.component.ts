@@ -245,6 +245,11 @@ export class HologramDailyRegisterComponent implements OnInit {
   }
 
   onSerialChange(entry: HologramDailyEntry): void {
+    // Recalculate all quantities when serials change
+    entry.issuedQuantity = this.calculateIssuedQuantity(entry);
+    entry.wastageQuantity = this.calculateWastageQuantity(entry);
+    entry.leftOverQuantity = this.calculateLeftOverQuantity(entry);
+    
     this.onEntryDataChange(entry);
     this.cdr.detectChanges();
   }
@@ -434,6 +439,23 @@ export class HologramDailyRegisterComponent implements OnInit {
   // Check if there are any fixed entries for live data indicator
   hasFixedEntries(): boolean {
     return this.filteredEntries.filter(e => e.isFixed).length > 0;
+  }
+
+  // Calculate issued quantity from serials
+  calculateIssuedQuantity(entry: HologramDailyEntry): number {
+    return this.calculateQuantityFromSerials(entry.issuedFromSerial, entry.issuedToSerial);
+  }
+
+  // Calculate wastage quantity from serials
+  calculateWastageQuantity(entry: HologramDailyEntry): number {
+    return this.calculateQuantityFromSerials(entry.wastageFromSerial, entry.wastageToSerial);
+  }
+
+  // Calculate left over quantity
+  calculateLeftOverQuantity(entry: HologramDailyEntry): number {
+    const issuedQty = this.calculateIssuedQuantity(entry);
+    const wastageQty = this.calculateWastageQuantity(entry);
+    return Math.max(0, issuedQty - wastageQty);
   }
 
   // Load approved hologram entries from officer approvals

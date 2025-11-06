@@ -231,16 +231,19 @@
                 <th rowspan="2" class="brand-details">BRAND DETAILS</th>
                 <th rowspan="2" class="bottle-size">BOTTLE SIZE</th>
                 <th rowspan="2" class="hologram-qty">HOLOGRAM QTY</th>
-                <th colspan="2" class="hologram-header">HOLOGRAM</th>
-                <th colspan="2" class="wastage-header">WASTAGE</th>
+                <th colspan="3" class="hologram-header">HOLOGRAM</th>
+                <th colspan="3" class="wastage-header">WASTAGE</th>
+                <th rowspan="2" class="left-over">LEFT OVER</th>
                 <th rowspan="2" class="damage-reason">DAMAGE REASON</th>
                 <th rowspan="2" class="actions">ACTIONS</th>
               </tr>
               <tr>
                 <th class="issued-from">ISSUED FROM</th>
                 <th class="issued-to">ISSUED TO</th>
+                <th class="issued-qty">ISSUED QTY</th>
                 <th class="wastage-from">WASTAGE FROM</th>
                 <th class="wastage-to">WASTAGE TO</th>
+                <th class="wastage-qty">WASTAGE QTY</th>
               </tr>
             </thead>
             <tbody>
@@ -298,6 +301,14 @@
                     [class.editable]="!entry.isFixed">
                 </td>
 
+                <!-- Issued Quantity (Auto-calculated) -->
+                <td class="issued-qty auto-calculated">
+                  <div class="qty-display">
+                    <span class="qty-number">{{ calculateIssuedQuantity(entry) | number }}</span>
+                    <small class="qty-label">Auto</small>
+                  </div>
+                </td>
+
                 <!-- Wastage From Serial -->
                 <td class="wastage-from">
                   <input type="text" class="form-control form-control-sm serial-input"
@@ -312,6 +323,22 @@
                     [(ngModel)]="entry.wastageToSerial" (ngModelChange)="onSerialChange(entry)"
                     placeholder="Optional" [readonly]="entry.isFixed"
                     [class.editable]="!entry.isFixed">
+                </td>
+
+                <!-- Wastage Quantity (Auto-calculated) -->
+                <td class="wastage-qty auto-calculated">
+                  <div class="qty-display">
+                    <span class="qty-number">{{ calculateWastageQuantity(entry) | number }}</span>
+                    <small class="qty-label">Auto</small>
+                  </div>
+                </td>
+
+                <!-- Left Over Quantity (Auto-calculated) -->
+                <td class="left-over auto-calculated">
+                  <div class="qty-display">
+                    <span class="qty-number">{{ calculateLeftOverQuantity(entry) | number }}</span>
+                    <small class="qty-label">Auto</small>
+                  </div>
                 </td>
 
                 <!-- Damage Reason -->
@@ -343,7 +370,7 @@
               </tr>
               } @empty {
               <tr>
-                <td colspan="13" class="text-center text-muted py-5">
+                <td colspan="15" class="text-center text-muted py-5">
                   <div class="empty-state">
                     <div class="empty-icon">
                       <i class="bi bi-calendar-x"></i>
