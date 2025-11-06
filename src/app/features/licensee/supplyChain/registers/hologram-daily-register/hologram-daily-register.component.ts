@@ -373,19 +373,7 @@ export class HologramDailyRegisterComponent implements OnInit {
     console.log('Entry saved successfully:', entry);
   }
 
-  deleteEntry(entry: HologramDailyEntry): void {
-    if (entry.isFixed) {
-      alert('Cannot delete saved entries');
-      return;
-    }
-    
-    // For unsaved entries, just remove without confirmation
-    this.dailyEntries = this.dailyEntries.filter(e => e.id !== entry.id);
-    this.loadFilteredData();
-    this.cdr.detectChanges();
-    
-    console.log('Unsaved entry cancelled/deleted');
-  }
+
 
   openMonthlyStatement(): void {
     // Navigate to monthly report with current filters

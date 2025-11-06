@@ -461,15 +461,7 @@
           }
         }
 
-        &.delete {
-          background: #dc3545;
-          color: white;
-
-          &:hover {
-            background: #c82333;
-            transform: scale(1.1);
-          }
-        }
+        /* Delete button styles removed - users cannot delete entries */
       }
 
       .status-badge {
