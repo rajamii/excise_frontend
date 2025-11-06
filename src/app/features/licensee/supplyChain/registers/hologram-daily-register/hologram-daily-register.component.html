@@ -305,10 +305,6 @@
                         </button>
                       </div>
                     </div>
-                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-success add-btn mt-1"
-                            (click)="addIssuedEntry(entry)" title="Add another issued range">
-                      <i class="bi bi-plus"></i> Add Range
-                    </button>
                   </div>
                 </td>
 
@@ -334,6 +330,10 @@
                     <div class="total-row mt-1">
                       <strong class="text-primary">Total: {{ getTotalIssuedQuantity(entry) | number }}</strong>
                     </div>
+                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-success add-btn mt-1"
+                            (click)="addIssuedEntry(entry)" title="Add another issued range">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
                   </div>
                 </td>
 
@@ -354,10 +354,6 @@
                         </button>
                       </div>
                     </div>
-                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-warning add-btn mt-1"
-                            (click)="addWastageEntry(entry)" title="Add another wastage range">
-                      <i class="bi bi-plus"></i> Add Range
-                    </button>
                   </div>
                 </td>
 
@@ -383,6 +379,10 @@
                     <div class="total-row mt-1">
                       <strong class="text-warning">Total: {{ getTotalWastageQuantity(entry) | number }}</strong>
                     </div>
+                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-warning add-btn mt-1"
+                            (click)="addWastageEntry(entry)" title="Add another wastage range">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
                   </div>
                 </td>
 
