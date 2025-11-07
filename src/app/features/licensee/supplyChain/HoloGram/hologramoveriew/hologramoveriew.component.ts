@@ -582,18 +582,38 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   generateSerialNumbersData(availableData: AvailableHologram): SerialData {
-    // Generate range-based data instead of individual serial numbers
-    const serialRanges = this.generateSerialRanges(availableData);
+    // Find the actual roll data from rollsData to get real counts
+    const actualRoll = this.rollsData.find(roll => 
+      roll.cartoonNumber === availableData.cartoonNumber && 
+      roll.type === availableData.type
+    );
+
+    // If we have actual roll data, use it; otherwise use available data
+    const totalCount = actualRoll ? actualRoll.totalCount : availableData.availableCount;
+    const availableCount = actualRoll ? actualRoll.availableCount : availableData.availableCount;
+    const usedCount = actualRoll ? actualRoll.usedCount : 0;
+    const damagedCount = actualRoll ? actualRoll.damagedCount : 0;
+
+    // Generate serial ranges based on ACTUAL data from daily register entries
+    const serialRanges = this.generateRealSerialRanges(
+      availableData.cartoonNumber,
+      availableData.type,
+      availableData.availableRange,
+      totalCount,
+      availableCount,
+      usedCount,
+      damagedCount
+    );
 
     return {
       cartoonNumber: availableData.cartoonNumber,
       type: availableData.type,
       fromSerial: availableData.availableRange.split(' - ')[0],
       toSerial: availableData.availableRange.split(' - ')[1],
-      totalCount: serialRanges.reduce((sum, range) => sum + range.count, 0),
-      availableCount: serialRanges.filter(r => r.status === 'AVAILABLE').reduce((sum, range) => sum + range.count, 0),
-      usedCount: serialRanges.filter(r => r.status === 'USED').reduce((sum, range) => sum + range.count, 0),
-      damagedCount: serialRanges.filter(r => r.status === 'DAMAGED').reduce((sum, range) => sum + range.count, 0),
+      totalCount: totalCount,
+      availableCount: availableCount,
+      usedCount: usedCount,
+      damagedCount: damagedCount,
       serialNumbers: [], // Keep empty for backward compatibility
       serialRanges: serialRanges // New property for ranges
     };
@@ -1265,5 +1285,144 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
 
   getTotalIssuedQuantity(): number {
     return this.issuedData.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  /**
+   * Generate real serial ranges based on actual daily register entries
+   * This uses the actual data entered by users instead of simulated data
+   */
+  generateRealSerialRanges(
+    cartoonNumber: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE',
+    availableRange: string,
+    totalCount: number,
+    availableCount: number,
+    usedCount: number,
+    damagedCount: number
+  ): SerialRange[] {
+    const ranges: SerialRange[] = [];
+
+    // Load daily register entries from localStorage
+    const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+    
+    // Filter entries for this specific cartoon number and type
+    const relevantEntries = dailyEntries.filter((entry: any) => 
+      entry.cartoonNumber === cartoonNumber && 
+      entry.hologramType === hologramType &&
+      entry.isFixed === true // Only show saved entries
+    );
+
+    console.log('Generating real serial ranges for:', cartoonNumber, hologramType);
+    console.log('Found entries:', relevantEntries.length);
+
+    // If we have actual entries, use them to create ranges
+    if (relevantEntries.length > 0) {
+      // Process each entry to create serial ranges
+      relevantEntries.forEach((entry: any) => {
+        // Add issued ranges
+        if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+          entry.issuedEntries.forEach((issued: any) => {
+            if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
+              ranges.push({
+                fromSerial: issued.fromSerial,
+                toSerial: issued.toSerial,
+                count: issued.quantity,
+                status: 'USED',
+                description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
+                usedDate: entry.date,
+                batchNumber: entry.referenceNo || 'N/A',
+                productionLine: entry.brandDetails?.brandName || 'N/A'
+              });
+            }
+          });
+        } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
+          // Handle legacy single entry format
+          ranges.push({
+            fromSerial: entry.issuedFromSerial,
+            toSerial: entry.issuedToSerial,
+            count: entry.issuedQuantity,
+            status: 'USED',
+            description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
+            usedDate: entry.date,
+            batchNumber: entry.referenceNo || 'N/A',
+            productionLine: entry.brandDetails?.brandName || 'N/A'
+          });
+        }
+
+        // Add wastage/damaged ranges
+        if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+          entry.wastageEntries.forEach((wastage: any) => {
+            if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
+              ranges.push({
+                fromSerial: wastage.fromSerial,
+                toSerial: wastage.toSerial,
+                count: wastage.quantity,
+                status: 'DAMAGED',
+                description: wastage.damageReason || entry.damageReason || 'Damaged during production',
+                damageDate: entry.date,
+                damageReason: wastage.damageReason || entry.damageReason || 'Not specified',
+                reportedBy: entry.officerName || 'System'
+              });
+            }
+          });
+        } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
+          // Handle legacy single entry format
+          ranges.push({
+            fromSerial: entry.wastageFromSerial,
+            toSerial: entry.wastageToSerial,
+            count: entry.wastageQuantity,
+            status: 'DAMAGED',
+            description: entry.damageReason || 'Damaged during production',
+            damageDate: entry.date,
+            damageReason: entry.damageReason || 'Not specified',
+            reportedBy: entry.officerName || 'System'
+          });
+        }
+      });
+    }
+
+    // If we still have available count, add an available range
+    if (availableCount > 0) {
+      // Parse the available range to get the serial numbers
+      const [fromSerial, toSerial] = availableRange.split(' - ');
+      
+      // Calculate the next available serial based on what's been used
+      let nextAvailableSerial = fromSerial;
+      
+      // If we have ranges, find the highest serial number used
+      if (ranges.length > 0) {
+        const allSerials = ranges.map(r => {
+          const match = r.toSerial.match(/\d+/);
+          return match ? parseInt(match[0]) : 0;
+        });
+        const maxSerial = Math.max(...allSerials);
+        const prefix = fromSerial.replace(/\d+/, '');
+        nextAvailableSerial = prefix + String(maxSerial + 1).padStart(6, '0');
+      }
+
+      // Calculate the end serial for available range
+      const nextSerialNum = parseInt(nextAvailableSerial.match(/\d+/)?.[0] || '0');
+      const prefix = nextAvailableSerial.replace(/\d+/, '');
+      const endSerialNum = nextSerialNum + availableCount - 1;
+      const endSerial = prefix + String(endSerialNum).padStart(6, '0');
+
+      ranges.push({
+        fromSerial: nextAvailableSerial,
+        toSerial: endSerial,
+        count: availableCount,
+        status: 'AVAILABLE',
+        description: 'Ready for production use'
+      });
+    }
+
+    // Sort ranges by serial number
+    ranges.sort((a, b) => {
+      const aNum = parseInt(a.fromSerial.match(/\d+/)?.[0] || '0');
+      const bNum = parseInt(b.fromSerial.match(/\d+/)?.[0] || '0');
+      return aNum - bNum;
+    });
+
+    console.log('Generated ranges:', ranges);
+    return ranges;
   }
 }
