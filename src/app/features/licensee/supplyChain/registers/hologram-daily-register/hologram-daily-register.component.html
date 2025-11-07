@@ -285,7 +285,7 @@
 
                 <!-- Hologram Qty -->
                 <td class="hologram-qty locked-field">
-                  {{ entry.issuedQuantity | number }}
+                  {{ entry.utilizedQuantity | number }}
                 </td>
 
                 <!-- Multiple Issued Entries -->
@@ -386,12 +386,9 @@
                   </div>
                 </td>
 
-                <!-- Left Over Quantity (User Input) -->
-                <td class="left-over">
-                  <input type="number" class="form-control form-control-sm qty-input"
-                    [(ngModel)]="entry.leftOverQuantity" (ngModelChange)="onEntryDataChange(entry)"
-                    placeholder="0" [readonly]="entry.isFixed" min="0"
-                    [class.editable]="!entry.isFixed">
+                <!-- Left Over Quantity (Auto-calculated) -->
+                <td class="left-over auto-calculated">
+                  <span class="qty-number">{{ entry.leftOverQuantity | number }}</span>
                 </td>
 
                 <!-- Damage Reason -->
