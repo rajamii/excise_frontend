@@ -1,3 +1,118 @@
+<!-- Save Confirmation Modal -->
+<div class="modal fade" id="saveConfirmationModal" tabindex="-1" aria-labelledby="saveConfirmationModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content save-confirmation-modal">
+      <div class="modal-header border-0">
+        <div class="modal-icon-container">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
+      </div>
+      <div class="modal-body text-center px-4 pb-4">
+        <h4 class="modal-title mb-3">⚠️ Important Declaration</h4>
+        <div class="declaration-box">
+          <p class="declaration-text">
+            Once you save this entry, it <strong>CANNOT be changed or edited</strong>.
+            This will be a permanent record in the Daily Hologram Register.
+          </p>
+        </div>
+        
+        <div class="entry-summary mt-4">
+          <h6 class="summary-title">Entry Summary</h6>
+          <div class="summary-content" *ngIf="entryToSave">
+            <div class="summary-row">
+              <span class="summary-label">Reference No:</span>
+              <span class="summary-value">{{ getEntryMetadata(entryToSave).referenceNo }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Date:</span>
+              <span class="summary-value">{{ entryToSave.date | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Brand:</span>
+              <span class="summary-value">{{ getEntryMetadata(entryToSave).brandDetails?.brandName }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="calculation-verification mt-4" *ngIf="entryToSave">
+          <h6 class="verification-title">
+            <i class="bi bi-calculator me-2"></i>Calculation Verification
+          </h6>
+          <div class="verification-content">
+            <!-- Original Hologram Qty -->
+            <div class="calc-row hologram-total">
+              <span class="calc-label">
+                <i class="bi bi-box-seam me-2"></i>Total Hologram Qty:
+              </span>
+              <span class="calc-value">{{ entryToSave.utilizedQuantity | number }}</span>
+            </div>
+
+            <div class="calc-divider"></div>
+
+            <!-- Breakdown -->
+            <div class="calc-row issued">
+              <span class="calc-label">
+                <i class="bi bi-arrow-right-circle me-2"></i>Issued Qty:
+              </span>
+              <span class="calc-value">{{ entryToSave.issuedQuantity | number }}</span>
+            </div>
+            <div class="calc-row wastage">
+              <span class="calc-label">
+                <i class="bi bi-exclamation-triangle me-2"></i>Wastage Qty:
+              </span>
+              <span class="calc-value">{{ entryToSave.wastageQuantity | number }}</span>
+            </div>
+            <div class="calc-row leftover">
+              <span class="calc-label">
+                <i class="bi bi-archive me-2"></i>Left Over:
+              </span>
+              <span class="calc-value">{{ entryToSave.leftOverQuantity | number }}</span>
+            </div>
+
+            <div class="calc-divider-bold"></div>
+
+            <!-- Total Calculation -->
+            <div class="calc-row total-calc">
+              <span class="calc-label">
+                <i class="bi bi-plus-circle me-2"></i>Total (Issued + Wastage + Left Over):
+              </span>
+              <span class="calc-value">
+                {{ (entryToSave.issuedQuantity || 0) + (entryToSave.wastageQuantity || 0) + entryToSave.leftOverQuantity | number }}
+              </span>
+            </div>
+
+            <!-- Verification Status -->
+            <div class="verification-status" 
+                 [class.status-match]="isCalculationMatching(entryToSave)"
+                 [class.status-mismatch]="!isCalculationMatching(entryToSave)">
+              <i class="bi" [class.bi-check-circle-fill]="isCalculationMatching(entryToSave)" 
+                 [class.bi-x-circle-fill]="!isCalculationMatching(entryToSave)"></i>
+              <span *ngIf="isCalculationMatching(entryToSave)">
+                ✓ Calculation Verified - Totals Match!
+              </span>
+              <span *ngIf="!isCalculationMatching(entryToSave)">
+                ✗ Calculation Error - Totals Don't Match!
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="confirmation-question mt-4">
+          <p class="mb-0">Do you confirm that all information is correct?</p>
+        </div>
+      </div>
+      <div class="modal-footer border-0 justify-content-center pb-4">
+        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-confirm" (click)="confirmSave()">
+          <i class="bi bi-check-circle me-2"></i>Confirm & Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Dynamic Hologram Daily Register - Supply Chain Design -->
 <div class="bg-white">
   <div class="container-fluid p-3">
@@ -20,6 +135,10 @@
           <button class="btn btn-outline-warning me-2" (click)="simulateOfficerApproval()" title="Simulate officer approval for testing">
             <i class="bi bi-lightning me-2"></i>
             Test Officer Approval
+          </button>
+          <button class="btn btn-outline-danger me-2" (click)="clearTestData()" title="Clear all test data and reset">
+            <i class="bi bi-trash me-2"></i>
+            Clear Test Data
           </button>
           <button class="btn btn-outline-secondary me-2" (click)="debugLocalStorage()" title="Debug localStorage contents">
             <i class="bi bi-bug me-2"></i>
@@ -237,6 +356,7 @@
                 <th colspan="3" class="hologram-header">HOLOGRAM</th>
                 <th colspan="3" class="wastage-header">WASTAGE</th>
                 <th rowspan="2" class="left-over">LEFT OVER</th>
+                <th rowspan="2" class="total-calc">TOTAL</th>
                 <th rowspan="2" class="damage-reason">DAMAGE REASON</th>
                 <th rowspan="2" class="actions">ACTIONS</th>
               </tr>
@@ -387,13 +507,54 @@
                 </td>
 
                 <!-- Left Over Quantity (Auto-calculated) -->
-                <td class="left-over auto-calculated" [class.negative-value]="entry.leftOverQuantity < 0">
-                  <span class="qty-number" [class.text-danger]="entry.leftOverQuantity < 0" [class.text-success]="entry.leftOverQuantity >= 0">
+                <td class="left-over auto-calculated" 
+                    [class.negative-value]="entry.leftOverQuantity < 0"
+                    [class.zero-value]="entry.leftOverQuantity === 0"
+                    [class.positive-value]="entry.leftOverQuantity > 0">
+                  <span class="qty-number" 
+                        [class.text-danger]="entry.leftOverQuantity < 0" 
+                        [class.text-info]="entry.leftOverQuantity === 0"
+                        [class.text-success]="entry.leftOverQuantity > 0">
                     {{ entry.leftOverQuantity | number }}
                   </span>
                   <div *ngIf="entry.leftOverQuantity < 0" class="validation-warning">
                     <i class="bi bi-exclamation-triangle text-danger"></i>
                     <small class="text-danger">Exceeds limit!</small>
+                  </div>
+                  <div *ngIf="entry.leftOverQuantity === 0 && !entry.isFixed" class="validation-info">
+                    <i class="bi bi-info-circle text-info"></i>
+                    <small class="text-info">Fully utilized</small>
+                  </div>
+                </td>
+
+                <!-- Total (Issued + Wastage + Left Over) -->
+                <td class="total-calc auto-calculated"
+                    [class.total-match]="getTotalCalculation(entry) === entry.utilizedQuantity"
+                    [class.total-mismatch]="getTotalCalculation(entry) !== entry.utilizedQuantity">
+                  <div class="total-display">
+                    <span class="qty-number fw-bold"
+                          [class.text-success]="getTotalCalculation(entry) === entry.utilizedQuantity"
+                          [class.text-danger]="getTotalCalculation(entry) > entry.utilizedQuantity"
+                          [class.text-warning]="getTotalCalculation(entry) < entry.utilizedQuantity">
+                      {{ getTotalCalculation(entry) | number }}
+                    </span>
+                    <div class="total-formula">
+                      <small class="text-muted">
+                        {{ entry.issuedQuantity | number }} + {{ entry.wastageQuantity | number }} + {{ entry.leftOverQuantity | number }}
+                      </small>
+                    </div>
+                    <div *ngIf="getTotalCalculation(entry) === entry.utilizedQuantity" class="validation-success">
+                      <i class="bi bi-check-circle text-success"></i>
+                      <small class="text-success">Match!</small>
+                    </div>
+                    <div *ngIf="getTotalCalculation(entry) > entry.utilizedQuantity" class="validation-error">
+                      <i class="bi bi-exclamation-triangle text-danger"></i>
+                      <small class="text-danger">Exceeds!</small>
+                    </div>
+                    <div *ngIf="getTotalCalculation(entry) < entry.utilizedQuantity" class="validation-warning">
+                      <i class="bi bi-exclamation-circle text-warning"></i>
+                      <small class="text-warning">Under!</small>
+                    </div>
                   </div>
                 </td>
 

@@ -19,6 +19,7 @@ export class HologramDailyRegisterComponent implements OnInit {
   selectedYear = '2025';
   selectedDate = new Date().toISOString().split('T')[0]; // Current date
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
+  entryToSave: HologramDailyEntry | null = null; // Store entry for modal
 
   // Helper method to get count of editable entries
   getEditableEntriesCount(): number {
@@ -217,9 +218,13 @@ export class HologramDailyRegisterComponent implements OnInit {
     
     console.log('Filtered result:', this.filteredEntries.length, 'entries');
     
-    // Initialize entry arrays for new structure
+    // Initialize entry arrays for new structure (only for non-fixed entries)
     this.filteredEntries.forEach(entry => {
-      this.initializeEntryArrays(entry);
+      // Only initialize arrays for entries that haven't been saved yet
+      // Fixed entries should not be modified
+      if (!entry.isFixed) {
+        this.initializeEntryArrays(entry);
+      }
     });
   }
 
@@ -289,6 +294,12 @@ export class HologramDailyRegisterComponent implements OnInit {
 
 
   onEntryDataChange(entry: HologramDailyEntry): void {
+    // IMPORTANT: Do NOT recalculate for fixed (saved) entries
+    if (entry.isFixed) {
+      console.log('Skipping data change for fixed entry:', entry.id);
+      return;
+    }
+    
     const issuedQty = this.calculateQuantityFromSerials(entry.issuedFromSerial || '', entry.issuedToSerial || '');
     const wastageQty = this.calculateQuantityFromSerials(entry.wastageFromSerial || '', entry.wastageToSerial || '');
     
@@ -296,28 +307,37 @@ export class HologramDailyRegisterComponent implements OnInit {
     entry.wastageQuantity = wastageQty;
     
     // Get original hologram quantity (stored when entry is created)
+    // IMPORTANT: Do NOT modify utilizedQuantity - it should remain constant
     const originalHologramQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
+    
+    // Store original hologram qty if not already stored
+    if (!(entry as any).originalHologramQty) {
+      (entry as any).originalHologramQty = entry.utilizedQuantity;
+    }
     
     // Calculate left over: Original Hologram Qty - (Issued Qty + Wastage Qty)
     const totalUsed = issuedQty + wastageQty;
     entry.leftOverQuantity = originalHologramQty - totalUsed;
     
-    // Validate that total used doesn't exceed hologram quantity
-    if (totalUsed > originalHologramQty) {
-      // Mark entry as having validation error
+    // Calculate total: Issued + Wastage + Left Over
+    const totalCalculation = issuedQty + wastageQty + entry.leftOverQuantity;
+    
+    // Validate that total calculation matches hologram quantity
+    // Error only if total EXCEEDS hologram quantity
+    if (totalCalculation > originalHologramQty) {
+      const excess = totalCalculation - originalHologramQty;
       (entry as any).hasValidationError = true;
-      (entry as any).validationMessage = `Total usage (${totalUsed.toLocaleString()}) exceeds available hologram quantity (${originalHologramQty.toLocaleString()}). Please adjust serial numbers.`;
+      (entry as any).validationMessage = `Total (${totalCalculation.toLocaleString()}) exceeds hologram quantity (${originalHologramQty.toLocaleString()}) by ${excess.toLocaleString()} units.`;
     } else {
       (entry as any).hasValidationError = false;
       (entry as any).validationMessage = '';
     }
     
-    // Utilized quantity equals issued quantity
-    entry.utilizedQuantity = issuedQty;
+    // DO NOT modify utilizedQuantity here - it should remain the original hologram quantity
     
-    // Update the service with the changed data immediately
-    this.hologramDataService.updateDailyEntry(entry);
-    console.log('Daily register updated entry in service:', entry.id, entry);
+    // DO NOT auto-save - only save when user clicks "Save Entry" button
+    // this.hologramDataService.updateDailyEntry(entry);
+    // console.log('Daily register updated entry in service:', entry.id, entry);
     
     // Force change detection to update summary
     this.cdr.detectChanges();
@@ -340,13 +360,18 @@ export class HologramDailyRegisterComponent implements OnInit {
       return;
     }
     
-    if (!entry.issuedFromSerial || !entry.issuedToSerial) {
-      alert('Please enter both Issued From Serial and Issued To Serial numbers');
+    // Check if there are any issued entries with serials
+    const hasIssuedEntries = entry.issuedEntries && entry.issuedEntries.length > 0 && 
+                             entry.issuedEntries.some(e => e.fromSerial && e.toSerial);
+    
+    if (!hasIssuedEntries) {
+      alert('Please enter at least one Issued From Serial and Issued To Serial');
       return;
     }
     
-    // Calculate final quantities before saving
-    this.onEntryDataChange(entry);
+    // DO NOT recalculate here - quantities should already be calculated from serial changes
+    // Just ensure total quantities are up to date
+    this.calculateTotalQuantities(entry);
     
     // Validate that issued quantity is calculated
     if (!entry.issuedQuantity || entry.issuedQuantity <= 0) {
@@ -354,61 +379,67 @@ export class HologramDailyRegisterComponent implements OnInit {
       return;
     }
     
-    // Check for validation errors (negative left over)
-    if ((entry as any).hasValidationError) {
-      const originalHologramQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
-      const totalUsed = entry.issuedQuantity + (entry.wastageQuantity || 0);
-      const excess = totalUsed - originalHologramQty;
-      
-      alert(
-        `❌ Cannot save entry with negative left over!\n\n` +
-        `📊 Summary:\n` +
-        `• Available Hologram Qty: ${originalHologramQty.toLocaleString()}\n` +
-        `• Issued Qty: ${entry.issuedQuantity.toLocaleString()}\n` +
-        `• Wastage Qty: ${(entry.wastageQuantity || 0).toLocaleString()}\n` +
-        `• Total Used: ${totalUsed.toLocaleString()}\n` +
-        `• Excess: ${excess.toLocaleString()}\n\n` +
-        `⚠️ You are exceeding the available quantity by ${excess.toLocaleString()} units.\n\n` +
-        `💡 Please adjust your serial numbers to stay within the available hologram quantity.`
-      );
-      return;
-    }
+    // Store entry for modal
+    this.entryToSave = entry;
     
-    // Validate left over is not negative
-    if (entry.leftOverQuantity < 0) {
-      const originalHologramQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
-      alert(
-        `❌ Invalid Entry: Negative Left Over Detected!\n\n` +
-        `📊 Current Calculation:\n` +
-        `• Hologram Qty: ${originalHologramQty.toLocaleString()}\n` +
-        `• Issued Qty: ${entry.issuedQuantity.toLocaleString()}\n` +
-        `• Wastage Qty: ${(entry.wastageQuantity || 0).toLocaleString()}\n` +
-        `• Left Over: ${entry.leftOverQuantity.toLocaleString()} ❌\n\n` +
-        `💡 The total of Issued + Wastage cannot exceed the Hologram Qty.\n` +
-        `Please reduce your serial number ranges.`
-      );
-      return;
+    // Show the modal
+    const modalElement = document.getElementById('saveConfirmationModal');
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
     }
+  }
+
+  confirmSave(): void {
+    if (!this.entryToSave) return;
+    
+    const entry = this.entryToSave;
+    
+    // IMPORTANT: Store the current leftover quantity before marking as fixed
+    // This prevents recalculation from changing the leftover value
+    const savedLeftOver = entry.leftOverQuantity;
+    const savedIssuedQty = entry.issuedQuantity;
+    const savedWastageQty = entry.wastageQuantity;
     
     // Mark as fixed (saved)
     entry.isFixed = true;
+    
+    // Restore the exact quantities that were calculated before save
+    // This prevents any recalculation from changing the values
+    entry.leftOverQuantity = savedLeftOver;
+    entry.issuedQuantity = savedIssuedQty;
+    entry.wastageQuantity = savedWastageQty;
     
     // Clear validation flags
     (entry as any).hasValidationError = false;
     (entry as any).validationMessage = '';
     
+    // Add timestamp for when entry was saved
+    (entry as any).savedAt = new Date().toISOString();
+    (entry as any).savedBy = 'Current User';
+    
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
     console.log('Daily register updated all entries in service:', this.dailyEntries.length, 'entries');
     
+    // Close the modal
+    const modalElement = document.getElementById('saveConfirmationModal');
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
+    
     // Refresh the display and summary
     this.loadFilteredData();
-    
-    // Force change detection to update summary
     this.cdr.detectChanges();
     
+    // Clear the entry to save
+    this.entryToSave = null;
+    
     // Show success message
-    alert('✅ Entry saved successfully! Monthly statement will be automatically updated.');
+    alert('✅ Entry saved successfully! The monthly statement will be automatically updated.');
     
     console.log('Entry saved successfully:', entry);
   }
@@ -686,6 +717,85 @@ Check browser console for detailed data.
     alert(message);
   }
 
+  // Clear all test data
+  clearTestData(): void {
+    const confirmMessage = 
+      `⚠️ WARNING: Clear All Test Data ⚠️\n\n` +
+      `This will permanently delete:\n` +
+      `• All daily register entries\n` +
+      `• All approved hologram entries\n` +
+      `• All hologram requests\n` +
+      `• All hologram applications\n` +
+      `• All localStorage data\n\n` +
+      `Current Data:\n` +
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
+      `• Daily Entries: ${this.dailyEntries.length}\n` +
+      `• Filtered Entries: ${this.filteredEntries.length}\n` +
+      `• Approved Entries: ${this.approvedEntries.length}\n\n` +
+      `This action CANNOT be undone!\n\n` +
+      `Are you sure you want to clear all test data?`;
+    
+    const confirmed = confirm(confirmMessage);
+    
+    if (!confirmed) {
+      console.log('Clear test data cancelled');
+      return;
+    }
+    
+    // Double confirmation for safety
+    const doubleConfirm = confirm(
+      `⚠️ FINAL CONFIRMATION ⚠️\n\n` +
+      `This is your last chance to cancel.\n\n` +
+      `Click OK to permanently delete all test data.\n` +
+      `Click Cancel to keep your data.`
+    );
+    
+    if (!doubleConfirm) {
+      console.log('Clear test data cancelled on second confirmation');
+      return;
+    }
+    
+    try {
+      // Clear localStorage
+      localStorage.removeItem('approvedHologramEntries');
+      localStorage.removeItem('hologramRequests');
+      localStorage.removeItem('hologramApplications');
+      localStorage.removeItem('dailyRegisterEntries');
+      
+      // Clear component data
+      this.dailyEntries = [];
+      this.filteredEntries = [];
+      this.approvedEntries = [];
+      
+      // Update service
+      this.hologramDataService.updateDailyEntries([]);
+      
+      // Refresh display
+      this.loadFilteredData();
+      this.cdr.detectChanges();
+      
+      console.log('All test data cleared successfully');
+      
+      alert(
+        `✅ Test Data Cleared Successfully!\n\n` +
+        `All test data has been permanently deleted:\n` +
+        `• Daily register entries: Cleared\n` +
+        `• Approved entries: Cleared\n` +
+        `• Hologram requests: Cleared\n` +
+        `• Hologram applications: Cleared\n` +
+        `• LocalStorage: Cleared\n\n` +
+        `The system is now reset to a clean state.`
+      );
+    } catch (error) {
+      console.error('Error clearing test data:', error);
+      alert(
+        `❌ Error Clearing Test Data\n\n` +
+        `An error occurred while clearing test data.\n` +
+        `Please check the console for details.`
+      );
+    }
+  }
+
   // Pagination methods
   getTotalPages(): number {
     return Math.ceil(this.filteredEntries.length / this.pageSize);
@@ -733,8 +843,18 @@ Check browser console for detailed data.
   }
 
   onIssuedSerialChange(entry: HologramDailyEntry, issuedEntry: HologramIssuedEntry): void {
+    // Calculate quantity from serials
     issuedEntry.quantity = this.calculateQuantityFromSerials(issuedEntry.fromSerial, issuedEntry.toSerial);
+    console.log('Issued serial changed:', issuedEntry.fromSerial, 'to', issuedEntry.toSerial, '=', issuedEntry.quantity);
+    
+    // Recalculate total quantities
     this.calculateTotalQuantities(entry);
+    
+    // DO NOT auto-save - only save when user clicks "Save Entry" button
+    // this.hologramDataService.updateDailyEntry(entry);
+    
+    // Force UI update
+    this.cdr.detectChanges();
   }
 
   // Methods for managing multiple wastage entries
@@ -763,12 +883,29 @@ Check browser console for detailed data.
   }
 
   onWastageSerialChange(entry: HologramDailyEntry, wastageEntry: HologramWastageEntry): void {
+    // Calculate quantity from serials
     wastageEntry.quantity = this.calculateQuantityFromSerials(wastageEntry.fromSerial, wastageEntry.toSerial);
+    console.log('Wastage serial changed:', wastageEntry.fromSerial, 'to', wastageEntry.toSerial, '=', wastageEntry.quantity);
+    
+    // Recalculate total quantities
     this.calculateTotalQuantities(entry);
+    
+    // DO NOT auto-save - only save when user clicks "Save Entry" button
+    // this.hologramDataService.updateDailyEntry(entry);
+    
+    // Force UI update
+    this.cdr.detectChanges();
   }
 
   // Calculate total quantities from all issued and wastage entries
   calculateTotalQuantities(entry: HologramDailyEntry): void {
+    // IMPORTANT: Do NOT recalculate for fixed (saved) entries
+    // Once an entry is saved, its quantities should remain exactly as they were
+    if (entry.isFixed) {
+      console.log('Skipping recalculation for fixed entry:', entry.id);
+      return;
+    }
+    
     // Calculate total issued quantity
     const totalIssued = (entry.issuedEntries || []).reduce((sum, issued) => sum + (issued.quantity || 0), 0);
     
@@ -842,5 +979,17 @@ Check browser console for detailed data.
       return `Exceeds available quantity by ${excess.toLocaleString()} units`;
     }
     return '';
+  }
+
+  // Check if calculation matches hologram quantity
+  isCalculationMatching(entry: HologramDailyEntry): boolean {
+    const originalQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
+    const totalCalculated = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0) + entry.leftOverQuantity;
+    return originalQty === totalCalculated;
+  }
+
+  // Get total calculation (Issued + Wastage + Left Over)
+  getTotalCalculation(entry: HologramDailyEntry): number {
+    return (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0) + entry.leftOverQuantity;
   }
 }

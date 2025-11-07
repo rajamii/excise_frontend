@@ -271,6 +271,7 @@ export class HologramDataService {
 
   /**
    * Validates serial range and calculates quantity
+   * Inclusive calculation: from 1 to 1 = 1 hologram, from 1 to 10 = 10 holograms
    */
   calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
     if (!fromSerial || !toSerial) return 0;
@@ -284,6 +285,7 @@ export class HologramDataService {
       const toNum = parseInt(toMatch[1], 10);
       
       if (toNum >= fromNum) {
+        // Inclusive range calculation: from 1 to 1 = 1, from 1 to 10 = 10
         return toNum - fromNum + 1;
       }
     }
