@@ -387,8 +387,14 @@
                 </td>
 
                 <!-- Left Over Quantity (Auto-calculated) -->
-                <td class="left-over auto-calculated">
-                  <span class="qty-number">{{ entry.leftOverQuantity | number }}</span>
+                <td class="left-over auto-calculated" [class.negative-value]="entry.leftOverQuantity < 0">
+                  <span class="qty-number" [class.text-danger]="entry.leftOverQuantity < 0" [class.text-success]="entry.leftOverQuantity >= 0">
+                    {{ entry.leftOverQuantity | number }}
+                  </span>
+                  <div *ngIf="entry.leftOverQuantity < 0" class="validation-warning">
+                    <i class="bi bi-exclamation-triangle text-danger"></i>
+                    <small class="text-danger">Exceeds limit!</small>
+                  </div>
                 </td>
 
                 <!-- Damage Reason -->
@@ -403,7 +409,8 @@
                 <td class="actions">
                   <div class="action-buttons">
                     @if (!entry.isFixed) {
-                      <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry">
+                      <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry"
+                              [class.disabled]="entry.leftOverQuantity < 0">
                         <i class="bi bi-check-circle"></i>
                       </button>
 
@@ -416,6 +423,26 @@
                   </div>
                 </td>
               </tr>
+              
+              <!-- Validation Error Row -->
+              @if (!entry.isFixed && entry.leftOverQuantity < 0) {
+              <tr class="validation-error-row">
+                <td colspan="16" class="validation-error-cell">
+                  <div class="alert alert-danger mb-0 d-flex align-items-center">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <div>
+                      <strong>⚠️ Validation Error:</strong> 
+                      Total usage exceeds available hologram quantity. 
+                      <strong>Hologram Qty:</strong> {{ entry.utilizedQuantity | number }} | 
+                      <strong>Issued:</strong> {{ entry.issuedQuantity | number }} | 
+                      <strong>Wastage:</strong> {{ entry.wastageQuantity | number }} | 
+                      <strong>Total Used:</strong> {{ (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0) | number }} | 
+                      <strong>Excess:</strong> <span class="text-danger fw-bold">{{ ((entry.issuedQuantity || 0) + (entry.wastageQuantity || 0)) - entry.utilizedQuantity | number }}</span>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              }
               } @empty {
               <tr>
                 <td colspan="15" class="text-center text-muted py-5">

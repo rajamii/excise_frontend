@@ -302,6 +302,16 @@ export class HologramDailyRegisterComponent implements OnInit {
     const totalUsed = issuedQty + wastageQty;
     entry.leftOverQuantity = originalHologramQty - totalUsed;
     
+    // Validate that total used doesn't exceed hologram quantity
+    if (totalUsed > originalHologramQty) {
+      // Mark entry as having validation error
+      (entry as any).hasValidationError = true;
+      (entry as any).validationMessage = `Total usage (${totalUsed.toLocaleString()}) exceeds available hologram quantity (${originalHologramQty.toLocaleString()}). Please adjust serial numbers.`;
+    } else {
+      (entry as any).hasValidationError = false;
+      (entry as any).validationMessage = '';
+    }
+    
     // Utilized quantity equals issued quantity
     entry.utilizedQuantity = issuedQty;
     
@@ -344,8 +354,48 @@ export class HologramDailyRegisterComponent implements OnInit {
       return;
     }
     
+    // Check for validation errors (negative left over)
+    if ((entry as any).hasValidationError) {
+      const originalHologramQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
+      const totalUsed = entry.issuedQuantity + (entry.wastageQuantity || 0);
+      const excess = totalUsed - originalHologramQty;
+      
+      alert(
+        `❌ Cannot save entry with negative left over!\n\n` +
+        `📊 Summary:\n` +
+        `• Available Hologram Qty: ${originalHologramQty.toLocaleString()}\n` +
+        `• Issued Qty: ${entry.issuedQuantity.toLocaleString()}\n` +
+        `• Wastage Qty: ${(entry.wastageQuantity || 0).toLocaleString()}\n` +
+        `• Total Used: ${totalUsed.toLocaleString()}\n` +
+        `• Excess: ${excess.toLocaleString()}\n\n` +
+        `⚠️ You are exceeding the available quantity by ${excess.toLocaleString()} units.\n\n` +
+        `💡 Please adjust your serial numbers to stay within the available hologram quantity.`
+      );
+      return;
+    }
+    
+    // Validate left over is not negative
+    if (entry.leftOverQuantity < 0) {
+      const originalHologramQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
+      alert(
+        `❌ Invalid Entry: Negative Left Over Detected!\n\n` +
+        `📊 Current Calculation:\n` +
+        `• Hologram Qty: ${originalHologramQty.toLocaleString()}\n` +
+        `• Issued Qty: ${entry.issuedQuantity.toLocaleString()}\n` +
+        `• Wastage Qty: ${(entry.wastageQuantity || 0).toLocaleString()}\n` +
+        `• Left Over: ${entry.leftOverQuantity.toLocaleString()} ❌\n\n` +
+        `💡 The total of Issued + Wastage cannot exceed the Hologram Qty.\n` +
+        `Please reduce your serial number ranges.`
+      );
+      return;
+    }
+    
     // Mark as fixed (saved)
     entry.isFixed = true;
+    
+    // Clear validation flags
+    (entry as any).hasValidationError = false;
+    (entry as any).validationMessage = '';
     
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
@@ -358,7 +408,7 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.cdr.detectChanges();
     
     // Show success message
-    alert('Entry saved successfully! Monthly statement will be automatically updated.');
+    alert('✅ Entry saved successfully! Monthly statement will be automatically updated.');
     
     console.log('Entry saved successfully:', entry);
   }
@@ -735,6 +785,15 @@ Check browser console for detailed data.
     // Calculate left over: Original Hologram Qty - (Issued Qty + Wastage Qty)
     const totalUsed = totalIssued + totalWastage;
     entry.leftOverQuantity = originalHologramQty - totalUsed;
+    
+    // Validate that total used doesn't exceed hologram quantity
+    if (totalUsed > originalHologramQty) {
+      (entry as any).hasValidationError = true;
+      (entry as any).validationMessage = `Total usage exceeds available quantity`;
+    } else {
+      (entry as any).hasValidationError = false;
+      (entry as any).validationMessage = '';
+    }
   }
 
   // Get total issued quantity for display
@@ -767,5 +826,21 @@ Check browser console for detailed data.
         damageReason: entry.damageReason || ''
       }];
     }
+  }
+
+  // Get validation status for an entry
+  hasValidationError(entry: HologramDailyEntry): boolean {
+    return entry.leftOverQuantity < 0;
+  }
+
+  // Get validation message for display
+  getValidationMessage(entry: HologramDailyEntry): string {
+    if (entry.leftOverQuantity < 0) {
+      const originalQty = (entry as any).originalHologramQty || entry.utilizedQuantity;
+      const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
+      const excess = totalUsed - originalQty;
+      return `Exceeds available quantity by ${excess.toLocaleString()} units`;
+    }
+    return '';
   }
 }

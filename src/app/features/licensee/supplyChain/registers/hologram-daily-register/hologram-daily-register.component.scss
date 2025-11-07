@@ -694,6 +694,62 @@
     text-align: center;
     padding: 0.375rem 0.5rem;
   }
+  
+  &.negative-value {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+    border: 2px solid #dc3545;
+    animation: pulse-error 2s infinite;
+  }
+  
+  .validation-warning {
+    text-align: center;
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    
+    i {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+@keyframes pulse-error {
+  0%, 100% {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+  50% {
+    border-color: #c82333;
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.1);
+  }
+}
+
+/* Validation Error Row */
+.validation-error-row {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+  border-left: 4px solid #dc3545;
+  
+  .validation-error-cell {
+    padding: 0.75rem 1rem;
+    
+    .alert {
+      font-size: 0.85rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.375rem;
+      box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    }
+  }
+}
+
+/* Disabled save button */
+.btn-action.save.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #6c757d;
+  
+  &:hover {
+    background: #6c757d;
+    transform: none;
+  }
 }
 
 /* Responsive Design */
