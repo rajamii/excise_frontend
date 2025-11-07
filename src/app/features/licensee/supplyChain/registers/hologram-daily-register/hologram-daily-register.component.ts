@@ -1149,4 +1149,201 @@ Check browser console for detailed data.
   getTotalCalculation(entry: HologramDailyEntry): number {
     return (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0) + entry.leftOverQuantity;
   }
+
+  /**
+   * Test method to verify roll data update functionality
+   * This method helps test if the roll data is being updated correctly
+   */
+  testRollDataUpdate(): void {
+    const cartoonNumber = prompt('Enter Cartoon Number to verify (e.g., cttest1):');
+    
+    if (!cartoonNumber) {
+      alert('Test cancelled - no cartoon number provided');
+      return;
+    }
+    
+    try {
+      // Load roll data from localStorage
+      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+      
+      // Find the roll
+      const roll = rollsData.find((r: any) => r.cartoonNumber === cartoonNumber);
+      const available = availableData.find((a: any) => a.cartoonNumber === cartoonNumber);
+      const serial = serialData.find((s: any) => s.rollNumber === cartoonNumber);
+      
+      if (!roll) {
+        alert(`❌ Roll not found: ${cartoonNumber}\n\nAvailable rolls:\n${rollsData.map((r: any) => r.cartoonNumber).join(', ')}`);
+        return;
+      }
+      
+      // Display current roll data
+      const message = `
+🔍 ROLL DATA VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📦 Cartoon Number: ${roll.cartoonNumber}
+🏷️  Type: ${roll.type}
+
+📊 CURRENT COUNTS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total Count: ${roll.totalCount}
+Available: ${roll.availableCount}
+Used: ${roll.usedCount}
+Damaged: ${roll.damagedCount}
+Status: ${roll.status}
+
+✅ DATA CONSISTENCY CHECK:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Rolls Tab: Available=${roll.availableCount}, Used=${roll.usedCount}, Damaged=${roll.damagedCount}
+Available Tab: ${available ? `Available=${available.availableCount}, Status=${available.status}` : 'Not found'}
+Serial Tab: ${serial ? `Available=${serial.availableCount}, Used=${serial.usedCount}, Damaged=${serial.damagedCount}` : 'Not found'}
+
+📝 CALCULATION VERIFICATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Total = Available + Used + Damaged
+${roll.totalCount} = ${roll.availableCount} + ${roll.usedCount} + ${roll.damagedCount}
+${roll.totalCount} = ${roll.availableCount + roll.usedCount + roll.damagedCount}
+${roll.totalCount === (roll.availableCount + roll.usedCount + roll.damagedCount) ? '✅ CORRECT' : '❌ MISMATCH'}
+
+🎯 STATUS LOGIC:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Current Status: ${roll.status}
+Expected Status: ${roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE'}
+${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅ CORRECT' : '❌ INCORRECT'}
+
+💡 NEXT STEPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Save a daily entry for this roll
+2. Run this test again to verify updates
+3. Check that counts change correctly
+4. Verify status updates automatically
+      `;
+      
+      console.log(message);
+      alert(message);
+      
+      // Also log to console for detailed inspection
+      console.log('=== DETAILED ROLL DATA ===');
+      console.log('Roll:', roll);
+      console.log('Available:', available);
+      console.log('Serial:', serial);
+      
+    } catch (error) {
+      console.error('Error testing roll data:', error);
+      alert(`❌ Error testing roll data:\n${error}`);
+    }
+  }
+
+  /**
+   * Quick test to create a test roll for testing
+   */
+  createTestRoll(): void {
+    const cartoonNumber = prompt('Enter Cartoon Number for test roll (e.g., TEST001):');
+    
+    if (!cartoonNumber) {
+      alert('Test cancelled');
+      return;
+    }
+    
+    const totalCount = parseInt(prompt('Enter Total Count (e.g., 1000):', '1000') || '1000');
+    
+    const testRoll = {
+      id: Date.now(),
+      cartoonNumber: cartoonNumber,
+      type: this.selectedHologramType,
+      fromSerial: 'HG001001',
+      toSerial: `HG${String(1000 + totalCount).padStart(6, '0')}`,
+      totalCount: totalCount,
+      availableCount: totalCount,
+      usedCount: 0,
+      damagedCount: 0,
+      status: 'AVAILABLE',
+      receivedDate: new Date().toISOString().split('T')[0],
+      isNew: true,
+      newUntil: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+    };
+    
+    // Add to all three data sources
+    const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    rollsData.unshift(testRoll); // Add at beginning
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
+    
+    const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    availableData.unshift({
+      id: testRoll.id,
+      cartoonNumber: testRoll.cartoonNumber,
+      type: testRoll.type,
+      availableRange: `${testRoll.fromSerial} - ${testRoll.toSerial}`,
+      availableCount: testRoll.availableCount,
+      nextSerial: testRoll.fromSerial,
+      percentage: 100,
+      status: 'AVAILABLE',
+      isNew: true,
+      newUntil: testRoll.newUntil
+    });
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+    
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    serialData.unshift({
+      id: testRoll.id,
+      rollNumber: testRoll.cartoonNumber,
+      hologramType: testRoll.type,
+      fromSerial: testRoll.fromSerial,
+      toSerial: testRoll.toSerial,
+      totalCount: testRoll.totalCount,
+      availableCount: testRoll.availableCount,
+      usedCount: 0,
+      damagedCount: 0,
+      status: 'AVAILABLE',
+      receivedDate: testRoll.receivedDate,
+      usageHistory: [],
+      isNew: true,
+      newUntil: testRoll.newUntil
+    });
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+    
+    // Create a test entry in daily register
+    const testEntry = {
+      id: `TEST_${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      hologramType: this.selectedHologramType,
+      issuedFromSerial: '',
+      issuedToSerial: '',
+      issuedQuantity: 0,
+      utilizedQuantity: totalCount,
+      wastageFromSerial: '',
+      wastageToSerial: '',
+      wastageQuantity: 0,
+      leftOverQuantity: totalCount,
+      damageReason: '',
+      isFixed: false,
+      referenceNo: `TEST/${new Date().getFullYear()}/${String(Date.now()).slice(-6)}`,
+      brandDetails: {
+        brandName: 'Test Brand',
+        alcoholPercent: '40%',
+        sizeMl: 750,
+        liquorType: 'Test'
+      },
+      bottleSize: '750ml',
+      submissionDate: new Date().toISOString().split('T')[0],
+      usageDate: new Date().toISOString().split('T')[0],
+      approvalDate: new Date().toISOString().split('T')[0],
+      officerName: 'Test Officer',
+      cartoonNumber: cartoonNumber,
+      autoGenerated: true,
+      originalHologramQty: totalCount
+    };
+    
+    // Add to approved entries
+    const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    approvedEntries.push(testEntry);
+    localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
+    
+    alert(`✅ Test roll created successfully!\n\nCartoon Number: ${cartoonNumber}\nType: ${this.selectedHologramType}\nTotal Count: ${totalCount}\n\nRefresh the page to see the new roll.`);
+    
+    // Refresh entries
+    this.refreshEntries();
+  }
 }
