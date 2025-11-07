@@ -325,15 +325,14 @@
     text-align: center;
     vertical-align: middle;
     user-select: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .ref-number {
-    width: 120px;
-    min-width: 120px;
-    max-width: 120px;
+    min-width: 160px !important; // Increased width to show full reference number
+    max-width: none !important; // No maximum width restriction
+    white-space: nowrap !important; // Prevent text wrapping
+    overflow: visible !important; // Show full text, no truncation
+    text-overflow: clip !important; // Never show ellipsis
   }
 
   .submission-date,
