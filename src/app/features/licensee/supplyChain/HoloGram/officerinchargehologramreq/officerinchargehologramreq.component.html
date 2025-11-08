@@ -69,11 +69,11 @@
                 <div class="col-md-3">
                     <div class="summary-card approved-requests">
                         <div class="card-icon">
-                            <i class="bi bi-check-circle"></i>
+                            <i class="bi bi-hourglass-split"></i>
                         </div>
                         <div class="card-content">
-                            <h3 class="card-value">{{ getRequestCount('APPROVED') }}</h3>
-                            <p class="card-label">Approved</p>
+                            <h3 class="card-value">{{ getRequestCount('UNDER_PROCESS') }}</h3>
+                            <p class="card-label">Under Process</p>
                         </div>
                     </div>
                 </div>
@@ -229,11 +229,13 @@
                                     </div>
                                 </td>
                                 <td class="status">
-                                    <span class="status-badge" [class.bg-warning-subtle]="request.status === 'PENDING'"
-                                        [class.bg-success-subtle]="request.status === 'APPROVED'"
+                                    <span class="status-badge" 
+                                        [class.bg-warning-subtle]="request.status === 'PENDING'"
+                                        [class.bg-info-subtle]="request.status === 'UNDER_PROCESS'"
+                                        [class.bg-success-subtle]="request.status === 'APPROVED' || request.status === 'COMPLETED'"
                                         [class.bg-danger-subtle]="request.status === 'REJECTED'">
                                         <i [class]="getStatusIcon(request.status)"></i>
-                                        {{ request.status }}
+                                        {{ request.status === 'UNDER_PROCESS' ? 'UNDER PROCESS' : request.status }}
                                     </span>
                                 </td>
                                 <td class="actions">
@@ -242,6 +244,7 @@
                                             title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
+                                        <!-- Show approve/reject buttons only for PENDING status -->
                                         <button *ngIf="request.status === 'PENDING'" class="btn-action approve"
                                             (click)="approveRequest(request)" title="Approve Request">
                                             <i class="bi bi-check-circle"></i>
@@ -250,6 +253,16 @@
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
+                                        <!-- Show status badge for UNDER_PROCESS -->
+                                        <span *ngIf="request.status === 'UNDER_PROCESS'" class="badge bg-info text-white">
+                                            <i class="bi bi-hourglass-split me-1"></i>
+                                            Under Process
+                                        </span>
+                                        <!-- Show status badge for COMPLETED -->
+                                        <span *ngIf="request.status === 'COMPLETED'" class="badge bg-success text-white">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Completed
+                                        </span>
                                     </div>
                                 </td>
                             </tr>
@@ -551,7 +564,8 @@
                                         Ready to allocate {{ getTotalAllocatedQuantity() | number }} holograms from {{ allocationResult.allocations.length }} cartoon(s)
                                     </span>
                                     <span *ngIf="!allocationResult.canAllocate">
-                                        Only {{ allocationResult.totalAvailable | number }} holograms available, need {{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} more
+                                        <strong>{{ selectedRequest?.hologramType }}</strong> type: Only {{ allocationResult.totalAvailable | number }} holograms available. 
+                                        You need <strong class="text-danger">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} more</strong> {{ selectedRequest?.hologramType }} holograms.
                                     </span>
                                 </p>
                             </div>
@@ -617,8 +631,8 @@
                                         <strong>Total Allocated:</strong> <span class="text-success fw-bold">{{ getTotalAllocatedQuantity() | number }}</span>
                                     </div>
                                     <div *ngIf="!allocationResult.canAllocate">
-                                        <strong>Available Stock:</strong> <span class="text-danger">{{ allocationResult.totalAvailable | number }}</span><br>
-                                        <strong>Shortage:</strong> <span class="text-danger">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }}</span>
+                                        <strong>{{ selectedRequest?.hologramType }} Available:</strong> <span class="text-warning">{{ allocationResult.totalAvailable | number }}</span><br>
+                                        <strong>{{ selectedRequest?.hologramType }} Shortage:</strong> <span class="text-danger fw-bold">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} holograms</span>
                                     </div>
                                 </div>
                             </div>

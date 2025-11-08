@@ -20,7 +20,7 @@ interface HologramRequest {
   };
   justification: string;
   urgencyLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
   officerComments?: string;
   approvedQuantity?: number;
   approvalDate?: string;
@@ -223,31 +223,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Total converted applications:', convertedApplications.length);
     console.log('Combined hologram requests:', this.hologramRequests.length);
 
-    // Add sample data only if no real requests exist
+    // No sample data - only show real requests
     if (this.hologramRequests.length === 0) {
-      console.log('No real requests found, adding sample data');
-      this.hologramRequests = [
-        {
-          id: 'SAMPLE001',
-          referenceNo: 'HRQ/2024/SAMPLE001',
-          submissionDate: '2024-11-01',
-          submittedBy: 'Sample Data - No real requests found',
-          requestType: 'NEW_ALLOCATION',
-          hologramType: 'LOCAL',
-          requestedQuantity: 1000,
-          brandDetails: {
-            brandName: 'SDL Premium Whisky',
-            alcoholPercent: '42.8%',
-            sizeMl: 750,
-            liquorType: 'Whisky'
-          },
-          justification: 'Sample data - Submit a real hologram request to see it here.',
-          urgencyLevel: 'MEDIUM',
-          status: 'PENDING'
-        }
-      ];
+      console.log('No real requests found - showing empty state');
     } else {
-      console.log('Found real requests, using them instead of sample data');
+      console.log('Found real requests:', this.hologramRequests.length);
     }
 
     this.applyFilters();
@@ -382,7 +362,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   getStatusIcon(status: string): string {
     switch (status) {
       case 'PENDING': return 'bi bi-clock';
+      case 'UNDER_PROCESS': return 'bi bi-hourglass-split';
       case 'APPROVED': return 'bi bi-check-circle';
+      case 'COMPLETED': return 'bi bi-check-circle-fill';
       case 'REJECTED': return 'bi bi-x-circle';
       default: return 'bi bi-question-circle';
     }
@@ -748,16 +730,19 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Create issued hologram entries
     this.createIssuedHologramEntries();
 
-    // Update request status
-    this.selectedRequest.status = 'APPROVED';
-    this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation';
+    // Update request status to UNDER_PROCESS (not APPROVED yet)
+    // Status will change to COMPLETED only after Manufacturing Register approval
+    this.selectedRequest.status = 'UNDER_PROCESS';
+    this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation - Under Process';
     this.selectedRequest.approvedQuantity = this.approvedQuantity || this.selectedRequest.requestedQuantity;
     this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
+
+    console.log('Request status set to UNDER_PROCESS');
 
     // Update localStorage
     this.updateRequestInStorage();
 
-    alert(`Request ${this.selectedRequest.referenceNo} approved! ${this.allocationResult.allocations.length} hologram allocation(s) created.`);
+    alert(`Request ${this.selectedRequest.referenceNo} approved and moved to UNDER_PROCESS! ${this.allocationResult.allocations.length} hologram allocation(s) created. Status will change to COMPLETED after Manufacturing Register approval.`);
 
     this.closeAllocationModal();
     this.applyFilters();
