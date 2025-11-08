@@ -562,83 +562,104 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   // Hologram allocation methods
   loadHologramInventory(): void {
+    console.log('=== LOADING HOLOGRAM INVENTORY ===');
+    
     // Load from localStorage (saved by hologram overview)
     const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
     const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
     
-    // Combine both sources and prioritize serial data
-    const combinedInventory = [...savedSerialData, ...savedRolls];
+    console.log('Saved Rolls:', savedRolls);
+    console.log('Saved Serial Data:', savedSerialData);
     
-    // Sample inventory data if no real data exists
-    const sampleInventory = [
-      {
-        id: 1,
-        cartoonNumber: 'CTN001',
-        type: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
-        totalCount: 500,
-        availableCount: 350,
-        usedCount: 120,
-        damagedCount: 30,
-        status: 'AVAILABLE',
-        receivedDate: '2024-09-01'
-      },
-      {
-        id: 2,
-        cartoonNumber: 'CTN002',
-        type: 'LOCAL',
-        fromSerial: 'HG002001',
-        toSerial: 'HG002500',
-        totalCount: 500,
-        availableCount: 500,
-        usedCount: 0,
-        damagedCount: 0,
-        status: 'AVAILABLE',
-        receivedDate: '2024-08-28'
-      },
-      {
-        id: 3,
-        cartoonNumber: 'CTN003',
-        type: 'EXPORT',
-        fromSerial: 'HG003001',
-        toSerial: 'HG003300',
-        totalCount: 300,
-        availableCount: 250,
-        usedCount: 40,
-        damagedCount: 10,
-        status: 'AVAILABLE',
-        receivedDate: '2024-08-15'
-      }
-    ];
-
-    this.hologramInventory = combinedInventory.length > 0 ? combinedInventory : sampleInventory;
+    // Remove duplicates and normalize data structure
+    const allInventory = [...savedSerialData, ...savedRolls];
+    const uniqueInventory = allInventory.filter((item, index, self) => 
+      index === self.findIndex((t) => t.cartoonNumber === item.cartoonNumber || t.rollNumber === item.cartoonNumber)
+    );
+    
+    // Normalize the data structure to ensure consistent property names
+    const normalizedInventory = uniqueInventory.map(item => ({
+      id: item.id,
+      cartoonNumber: item.cartoonNumber || item.rollNumber || 'UNKNOWN',
+      type: item.type || item.hologramType || 'LOCAL',
+      fromSerial: item.fromSerial,
+      toSerial: item.toSerial,
+      totalCount: item.totalCount,
+      availableCount: item.availableCount,
+      usedCount: item.usedCount || 0,
+      damagedCount: item.damagedCount || 0,
+      status: item.status,
+      receivedDate: item.receivedDate
+    }));
+    
+    console.log('Normalized Inventory:', normalizedInventory);
+    
+    this.hologramInventory = normalizedInventory;
     
     // Sort by received date (oldest first for FIFO)
     this.hologramInventory.sort((a, b) => {
-      return new Date(a.receivedDate).getTime() - new Date(b.receivedDate).getTime();
+      return new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime();
     });
+    
+    console.log('Final Inventory Count:', this.hologramInventory.length);
+    console.log('Final Inventory:', this.hologramInventory);
+    console.log('=== END LOADING HOLOGRAM INVENTORY ===');
   }
 
   showHologramAllocationModal(request: HologramRequest): void {
+    console.log('=== SHOW HOLOGRAM ALLOCATION MODAL ===');
+    console.log('Request:', request);
+    console.log('Request Type:', request.hologramType);
+    console.log('Requested Quantity:', request.requestedQuantity);
+    
     this.selectedRequest = request;
     this.approvedQuantity = request.requestedQuantity;
     this.loadHologramInventory();
+    
+    console.log('Inventory loaded, count:', this.hologramInventory.length);
+    console.log('Inventory items:', this.hologramInventory);
+    
     this.allocationResult = this.calculateHologramAllocation(request.requestedQuantity, request.hologramType);
+    
+    console.log('Allocation Result:', this.allocationResult);
+    console.log('=== END SHOW HOLOGRAM ALLOCATION MODAL ===');
+    
     this.showAllocationModal = true;
   }
 
   calculateHologramAllocation(requestedQuantity: number, hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'): AllocationResult {
+    console.log('=== CALCULATING HOLOGRAM ALLOCATION ===');
+    console.log('Requested Quantity:', requestedQuantity);
+    console.log('Requested Type:', hologramType);
+    console.log('Total Inventory Items:', this.hologramInventory.length);
+    
     // Filter available inventory by type and status
-    const availableInventory = this.hologramInventory.filter(item => 
-      item.type === hologramType && 
-      item.status === 'AVAILABLE' && 
-      item.availableCount > 0
-    );
+    const availableInventory = this.hologramInventory.filter(item => {
+      const typeMatch = item.type === hologramType;
+      const statusMatch = item.status === 'AVAILABLE';
+      const hasAvailable = item.availableCount > 0;
+      
+      console.log(`Checking ${item.cartoonNumber}:`, {
+        type: item.type,
+        typeMatch,
+        status: item.status,
+        statusMatch,
+        availableCount: item.availableCount,
+        hasAvailable,
+        passes: typeMatch && statusMatch && hasAvailable
+      });
+      
+      return typeMatch && statusMatch && hasAvailable;
+    });
 
+    console.log('Available Inventory After Filter:', availableInventory);
+    
     const totalAvailable = availableInventory.reduce((sum, item) => sum + item.availableCount, 0);
+    
+    console.log('Total Available:', totalAvailable);
 
     if (totalAvailable < requestedQuantity) {
+      console.log('Insufficient inventory!');
       return {
         canAllocate: false,
         totalAvailable,
@@ -670,6 +691,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
       remainingQuantity -= quantityFromThisCartoon;
     }
+
+    console.log('Final Allocations:', allocations);
+    console.log('=== END CALCULATING HOLOGRAM ALLOCATION ===');
 
     return {
       canAllocate: true,
