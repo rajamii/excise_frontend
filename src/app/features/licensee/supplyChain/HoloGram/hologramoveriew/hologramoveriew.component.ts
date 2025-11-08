@@ -1177,18 +1177,24 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
   ): SerialRange[] {
     const ranges: SerialRange[] = [];
 
-    // Load daily register entries from localStorage
+    // Load daily register entries from localStorage (both sources)
     const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+    const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+    
+    // Combine both sources
+    const allEntries = [...dailyEntries, ...approvedEntries];
     
     // Filter entries for this specific cartoon number and type
-    const relevantEntries = dailyEntries.filter((entry: any) => 
+    // Only show APPROVED entries (not pending)
+    const relevantEntries = allEntries.filter((entry: any) => 
       entry.cartoonNumber === cartoonNumber && 
       entry.hologramType === hologramType &&
-      entry.isFixed === true // Only show saved entries
+      (entry.isFixed === true || entry.approvalStatus === 'APPROVED') // Show saved or approved entries
     );
 
     console.log('Generating real serial ranges for:', cartoonNumber, hologramType);
     console.log('Found entries:', relevantEntries.length);
+    console.log('Entries:', relevantEntries);
 
     // If we have actual entries, use them to create ranges
     if (relevantEntries.length > 0) {
