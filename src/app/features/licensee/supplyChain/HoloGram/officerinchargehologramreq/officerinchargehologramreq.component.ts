@@ -774,22 +774,22 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         });
         
         // Update counts
+        // Only subtract from available, DON'T add to usedCount yet
+        // usedCount will be updated when Manufacturing Register is approved
         rollsData[rollIndex].availableCount -= allocation.quantity;
-        rollsData[rollIndex].usedCount = (rollsData[rollIndex].usedCount || 0) + allocation.quantity;
+        // rollsData[rollIndex].usedCount = (rollsData[rollIndex].usedCount || 0) + allocation.quantity; // REMOVED - will be updated by Manufacturing Register
         rollsData[rollIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
         
         console.log(`AFTER count update - Roll ${allocation.cartoonNumber}:`, {
           availableCount: rollsData[rollIndex].availableCount,
-          usedCount: rollsData[rollIndex].usedCount,
-          hasBeenUsed: rollsData[rollIndex].usedCount > 0
+          allocated: allocation.quantity,
+          note: 'usedCount will be updated when Manufacturing Register is approved'
         });
         
-        // Update status - Always set to IN_USE when holograms have been allocated
-        // Status will only be COMPLETED when explicitly marked by the system later
-        if (rollsData[rollIndex].usedCount > 0) {
-          rollsData[rollIndex].status = 'IN_USE';
-          console.log(`Status set to IN_USE (usedCount = ${rollsData[rollIndex].usedCount}, availableCount = ${rollsData[rollIndex].availableCount})`);
-        }
+        // Update status - Set to IN_USE when holograms have been allocated
+        // usedCount will be updated later by Manufacturing Register
+        rollsData[rollIndex].status = 'IN_USE';
+        console.log(`Status set to IN_USE (allocated = ${allocation.quantity}, availableCount = ${rollsData[rollIndex].availableCount})`);
         
         console.log(`FINAL - Roll ${allocation.cartoonNumber}:`, rollsData[rollIndex]);
       }
@@ -841,22 +841,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         });
         
         // Update counts
+        // Only subtract from available, DON'T add to usedCount yet
+        // usedCount will be updated when Manufacturing Register is approved
         serialData[serialIndex].availableCount -= allocation.quantity;
-        serialData[serialIndex].usedCount = (serialData[serialIndex].usedCount || 0) + allocation.quantity;
+        // serialData[serialIndex].usedCount = (serialData[serialIndex].usedCount || 0) + allocation.quantity; // REMOVED
         serialData[serialIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
         
         console.log(`AFTER count update - Serial ${allocation.cartoonNumber}:`, {
           availableCount: serialData[serialIndex].availableCount,
-          usedCount: serialData[serialIndex].usedCount,
-          hasBeenUsed: serialData[serialIndex].usedCount > 0
+          allocated: allocation.quantity,
+          note: 'usedCount will be updated when Manufacturing Register is approved'
         });
         
-        // Update status - Always set to IN_USE when holograms have been allocated
-        // Status will only be COMPLETED when explicitly marked by the system later
-        if (serialData[serialIndex].usedCount > 0) {
-          serialData[serialIndex].status = 'IN_USE';
-          console.log(`Status set to IN_USE (usedCount = ${serialData[serialIndex].usedCount}, availableCount = ${serialData[serialIndex].availableCount})`);
-        }
+        // Update status - Set to IN_USE when holograms have been allocated
+        serialData[serialIndex].status = 'IN_USE';
+        console.log(`Status set to IN_USE (allocated = ${allocation.quantity}, availableCount = ${serialData[serialIndex].availableCount})`);
         
         console.log(`FINAL - Serial ${allocation.cartoonNumber}:`, serialData[serialIndex]);
       }

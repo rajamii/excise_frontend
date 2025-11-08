@@ -285,6 +285,8 @@ export class HologramManufacturingRegisterComponent implements OnInit {
 
   /**
    * Update Rolls Tab Data
+   * Logic: Only subtract (issued + wastage) from available
+   * Leftover quantity automatically remains in available stock
    */
   private updateRollsData(entry: any, cartoonNumber: string): void {
     try {
@@ -302,16 +304,44 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       
       const roll = rollsData[rollIndex];
       
+      console.log(`Updating roll ${cartoonNumber}:`, {
+        before: {
+          available: roll.availableCount,
+          used: roll.usedCount,
+          damaged: roll.damagedCount
+        },
+        changes: {
+          issued: entry.issuedQuantity || 0,
+          wastage: entry.wastageQuantity || 0,
+          leftover: entry.leftOverQuantity || 0
+        }
+      });
+      
+      // IMPORTANT: When officer allocated, the entire amount was subtracted from available
+      // Now we need to ADD BACK the leftover quantity since it wasn't actually used
+      const leftoverQuantity = entry.leftOverQuantity || 0;
+      
       // Update counts
+      // Subtract what was actually used (issued + wastage)
+      // Add back what was returned (leftover)
       roll.usedCount = (roll.usedCount || 0) + (entry.issuedQuantity || 0);
       roll.damagedCount = (roll.damagedCount || 0) + (entry.wastageQuantity || 0);
       
-      const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
-      roll.availableCount = Math.max(0, (roll.availableCount || 0) - totalUsed);
+      // Add back leftover to available (it was subtracted during allocation but not used)
+      roll.availableCount = (roll.availableCount || 0) + leftoverQuantity;
+      
+      console.log(`After update:`, {
+        available: roll.availableCount,
+        used: roll.usedCount,
+        damaged: roll.damagedCount,
+        note: `Added back leftover ${leftoverQuantity} to available`
+      });
       
       // Update status
       if (roll.availableCount === 0) {
         roll.status = 'COMPLETED';
+      } else if (roll.usedCount > 0 || roll.damagedCount > 0) {
+        roll.status = 'IN_USE';
       } else {
         roll.status = 'AVAILABLE';
       }
@@ -319,7 +349,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       rollsData[rollIndex] = roll;
       localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
       
-      console.log('Rolls data updated:', roll);
+      console.log('Rolls data updated successfully');
     } catch (error) {
       console.error('Error updating rolls data:', error);
     }
@@ -340,14 +370,17 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       if (availableIndex !== -1) {
         const available = availableData[availableIndex];
         
-        const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
-        available.availableCount = Math.max(0, (available.availableCount || 0) - totalUsed);
+        // Add back leftover to available (it was subtracted during allocation but not used)
+        const leftoverQuantity = entry.leftOverQuantity || 0;
+        available.availableCount = (available.availableCount || 0) + leftoverQuantity;
         
         const totalCount = available.availableCount + (available.usedCount || 0) + (available.damagedCount || 0);
         available.percentage = totalCount > 0 ? Math.round((available.availableCount / totalCount) * 100) : 0;
         
         if (available.availableCount === 0) {
           available.status = 'COMPLETED';
+        } else if (available.usedCount > 0 || available.damagedCount > 0) {
+          available.status = 'IN_USE';
         } else {
           available.status = 'AVAILABLE';
         }
@@ -355,7 +388,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         availableData[availableIndex] = available;
         localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
         
-        console.log('Available hologram data updated:', available);
+        console.log('Available hologram data updated - added back leftover:', leftoverQuantity);
       }
     } catch (error) {
       console.error('Error updating available hologram data:', error);
@@ -380,11 +413,14 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         serialRoll.usedCount = (serialRoll.usedCount || 0) + (entry.issuedQuantity || 0);
         serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (entry.wastageQuantity || 0);
         
-        const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
-        serialRoll.availableCount = Math.max(0, (serialRoll.availableCount || 0) - totalUsed);
+        // Add back leftover to available (it was subtracted during allocation but not used)
+        const leftoverQuantity = entry.leftOverQuantity || 0;
+        serialRoll.availableCount = (serialRoll.availableCount || 0) + leftoverQuantity;
         
         if (serialRoll.availableCount === 0) {
           serialRoll.status = 'COMPLETED';
+        } else if (serialRoll.usedCount > 0 || serialRoll.damagedCount > 0) {
+          serialRoll.status = 'IN_USE';
         } else {
           serialRoll.status = 'AVAILABLE';
         }
@@ -392,7 +428,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         serialData[serialIndex] = serialRoll;
         localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
         
-        console.log('Serial numbers data updated:', serialRoll);
+        console.log('Serial numbers data updated - added back leftover:', leftoverQuantity);
       }
     } catch (error) {
       console.error('Error updating serial numbers data:', error);
