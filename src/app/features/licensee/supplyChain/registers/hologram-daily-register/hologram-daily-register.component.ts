@@ -416,7 +416,13 @@ export class HologramDailyRegisterComponent implements OnInit {
     
     // Add timestamp for when entry was saved
     (entry as any).savedAt = new Date().toISOString();
-    (entry as any).savedBy = 'Current User';
+    (entry as any).savedBy = 'Supply Chain User';
+    
+    // Mark as pending approval for Officer in Charge
+    (entry as any).approvalStatus = 'PENDING';
+    
+    // Save to localStorage for Officer in Charge verification
+    this.saveEntryForOfficerVerification(entry);
     
     // Update the roll data in officer-in-charge overview
     this.updateRollData(entry);
@@ -442,9 +448,37 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.entryToSave = null;
     
     // Show success message
-    alert('✅ Entry saved successfully! The roll data has been updated in Officer-in-Charge overview.');
+    alert('✅ Entry saved successfully! Sent to Officer in Charge for verification.');
     
     console.log('Entry saved successfully:', entry);
+  }
+
+  /**
+   * Save entry to localStorage for Officer in Charge verification
+   */
+  private saveEntryForOfficerVerification(entry: HologramDailyEntry): void {
+    try {
+      // Load existing entries from localStorage
+      const savedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+      
+      // Check if entry already exists
+      const existingIndex = savedEntries.findIndex((e: any) => e.id === entry.id);
+      
+      if (existingIndex !== -1) {
+        // Update existing entry
+        savedEntries[existingIndex] = entry;
+      } else {
+        // Add new entry
+        savedEntries.push(entry);
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem('dailyRegisterEntries', JSON.stringify(savedEntries));
+      
+      console.log('Entry saved for officer verification:', entry.id);
+    } catch (error) {
+      console.error('Error saving entry for officer verification:', error);
+    }
   }
 
   /**

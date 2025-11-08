@@ -311,6 +311,13 @@ export const routes: Routes = [
       ).then((m) => m.HologramDailyRegisterComponent),
   },
   {
+    path: "dev-hologram-manufacturing-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component"
+      ).then((m) => m.HologramManufacturingRegisterComponent),
+  },
+  {
     path: "dev-hologram-overview",
     loadComponent: () =>
       import(
