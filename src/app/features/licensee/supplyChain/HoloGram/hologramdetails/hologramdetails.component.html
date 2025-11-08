@@ -326,9 +326,13 @@
                                     <i class="bi bi-arrow-right me-1"></i>
                                     From Serial Number <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control form-control-lg font-monospace"
-                                    placeholder="e.g., HG001001" [(ngModel)]="updateForm.fromSerial"
-                                    (input)="calculateUpdateHologramCount()" required>
+                                <input type="text" 
+                                    class="form-control form-control-lg font-monospace"
+                                    [class.is-invalid]="serialRangeValidationError"
+                                    placeholder="e.g., HG001001" 
+                                    [(ngModel)]="updateForm.fromSerial"
+                                    (input)="calculateUpdateHologramCount()" 
+                                    required>
                                 <div class="form-text">Starting serial number from hologram roll</div>
                             </div>
                         </div>
@@ -338,10 +342,34 @@
                                     <i class="bi bi-arrow-left me-1"></i>
                                     To Serial Number <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control form-control-lg font-monospace"
-                                    placeholder="e.g., HG500000" [(ngModel)]="updateForm.toSerial"
-                                    (input)="calculateUpdateHologramCount()" required>
+                                <input type="text" 
+                                    class="form-control form-control-lg font-monospace"
+                                    [class.is-invalid]="serialRangeValidationError"
+                                    placeholder="e.g., HG500000" 
+                                    [(ngModel)]="updateForm.toSerial"
+                                    (input)="calculateUpdateHologramCount()" 
+                                    required>
                                 <div class="form-text">Ending serial number from hologram roll</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validation Error Alert -->
+                    <div class="row mt-3" *ngIf="serialRangeValidationError">
+                        <div class="col-12">
+                            <div class="alert alert-danger d-flex align-items-center" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                <div>{{ serialRangeValidationError }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success Indicator -->
+                    <div class="row mt-3" *ngIf="!serialRangeValidationError && updateForm.fromSerial && updateForm.toSerial && updateForm.numberOfHolograms > 0 && selectedRecordForUpdate && updateForm.numberOfHolograms === selectedRecordForUpdate.numberOfHolograms">
+                        <div class="col-12">
+                            <div class="alert alert-success d-flex align-items-center" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                <div>✅ Perfect! Serial range matches the expected quantity of {{ selectedRecordForUpdate.numberOfHolograms | number }} holograms.</div>
                             </div>
                         </div>
                     </div>
@@ -390,7 +418,7 @@
                         Cancel
                     </button>
                     <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
-                        [disabled]="!updateForm.cartoonNumber || !updateForm.fromSerial || !updateForm.toSerial">
+                        [disabled]="!updateForm.cartoonNumber || !updateForm.fromSerial || !updateForm.toSerial || serialRangeValidationError">
                         <i class="bi bi-check-circle me-2"></i>
                         Confirm Arrival
                     </button>

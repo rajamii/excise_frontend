@@ -59,6 +59,7 @@ export class HologramdetailsComponent implements OnInit {
     toSerial: '',
     numberOfHolograms: 0
   };
+  serialRangeValidationError: string = '';
 
 
 
@@ -455,12 +456,39 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   calculateUpdateHologramCount() {
+    // Clear previous error
+    this.serialRangeValidationError = '';
+    
     if (this.updateForm.fromSerial && this.updateForm.toSerial) {
       const fromNum = this.extractSerialNumber(this.updateForm.fromSerial);
       const toNum = this.extractSerialNumber(this.updateForm.toSerial);
 
       if (fromNum && toNum && toNum >= fromNum) {
-        this.updateForm.numberOfHolograms = toNum - fromNum + 1;
+        const calculatedCount = toNum - fromNum + 1;
+        
+        // DON'T update the numberOfHolograms field - keep it fixed to expected quantity
+        // this.updateForm.numberOfHolograms = calculatedCount; // REMOVED
+        
+        // Validate against expected quantity
+        if (this.selectedRecordForUpdate) {
+          const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
+          
+          if (calculatedCount !== expectedQuantity) {
+            // Show error message
+            if (calculatedCount > expectedQuantity) {
+              this.serialRangeValidationError = `❌ Range exceeded! Expected: ${expectedQuantity.toLocaleString()} holograms, but serial range gives: ${calculatedCount.toLocaleString()}. Please reduce the range.`;
+            } else {
+              this.serialRangeValidationError = `⚠️ Range too small! Expected: ${expectedQuantity.toLocaleString()} holograms, but serial range gives: ${calculatedCount.toLocaleString()}. Please increase the range.`;
+            }
+            
+            console.error(this.serialRangeValidationError);
+          } else {
+            // Clear error if counts match
+            this.serialRangeValidationError = '';
+          }
+        }
+      } else if (fromNum && toNum && toNum < fromNum) {
+        this.serialRangeValidationError = '❌ Invalid range! "To Serial Number" must be greater than or equal to "From Serial Number".';
       }
     }
   }
