@@ -337,13 +337,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         note: `Added back leftover ${leftoverQuantity} to available`
       });
       
-      // Update status
+      // Update status based on available count
       if (roll.availableCount === 0) {
-        roll.status = 'COMPLETED';
-      } else if (roll.usedCount > 0 || roll.damagedCount > 0) {
-        roll.status = 'IN_USE';
+        roll.status = 'COMPLETED'; // All holograms used up
       } else {
-        roll.status = 'AVAILABLE';
+        roll.status = 'AVAILABLE'; // Still has holograms available for use
       }
       
       rollsData[rollIndex] = roll;
@@ -377,12 +375,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         const totalCount = available.availableCount + (available.usedCount || 0) + (available.damagedCount || 0);
         available.percentage = totalCount > 0 ? Math.round((available.availableCount / totalCount) * 100) : 0;
         
+        // Update status based on available count
         if (available.availableCount === 0) {
-          available.status = 'COMPLETED';
-        } else if (available.usedCount > 0 || available.damagedCount > 0) {
-          available.status = 'IN_USE';
+          available.status = 'COMPLETED'; // All holograms used up
         } else {
-          available.status = 'AVAILABLE';
+          available.status = 'AVAILABLE'; // Still has holograms available for use
         }
         
         availableData[availableIndex] = available;
@@ -417,12 +414,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         const leftoverQuantity = entry.leftOverQuantity || 0;
         serialRoll.availableCount = (serialRoll.availableCount || 0) + leftoverQuantity;
         
+        // Update status based on available count
         if (serialRoll.availableCount === 0) {
-          serialRoll.status = 'COMPLETED';
-        } else if (serialRoll.usedCount > 0 || serialRoll.damagedCount > 0) {
-          serialRoll.status = 'IN_USE';
+          serialRoll.status = 'COMPLETED'; // All holograms used up
         } else {
-          serialRoll.status = 'AVAILABLE';
+          serialRoll.status = 'AVAILABLE'; // Still has holograms available for use
         }
         
         serialData[serialIndex] = serialRoll;

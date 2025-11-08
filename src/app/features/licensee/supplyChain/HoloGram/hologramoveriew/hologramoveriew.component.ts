@@ -1200,8 +1200,11 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     if (relevantEntries.length > 0) {
       // Process each entry to create serial ranges
       relevantEntries.forEach((entry: any) => {
-        // Add issued ranges
+        console.log('Processing entry:', entry.id, entry);
+        
+        // Add issued ranges - Check for issuedEntries array first
         if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+          console.log('Using issuedEntries array:', entry.issuedEntries);
           entry.issuedEntries.forEach((issued: any) => {
             if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
               ranges.push({
@@ -1217,7 +1220,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             }
           });
         } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
-          // Handle legacy single entry format
+          // Handle single entry format (only if issuedEntries doesn't exist)
+          console.log('Using single issued entry:', entry.issuedFromSerial, '-', entry.issuedToSerial);
           ranges.push({
             fromSerial: entry.issuedFromSerial,
             toSerial: entry.issuedToSerial,
@@ -1230,8 +1234,9 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           });
         }
 
-        // Add wastage/damaged ranges
+        // Add wastage/damaged ranges - Check for wastageEntries array first
         if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+          console.log('Using wastageEntries array:', entry.wastageEntries);
           entry.wastageEntries.forEach((wastage: any) => {
             if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
               ranges.push({
@@ -1247,7 +1252,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             }
           });
         } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
-          // Handle legacy single entry format
+          // Handle single entry format (only if wastageEntries doesn't exist)
+          console.log('Using single wastage entry:', entry.wastageFromSerial, '-', entry.wastageToSerial);
           ranges.push({
             fromSerial: entry.wastageFromSerial,
             toSerial: entry.wastageToSerial,
@@ -1262,38 +1268,62 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
       });
     }
 
-    // If we still have available count, add an available range
-    if (availableCount > 0) {
-      // Parse the available range to get the serial numbers
-      const [fromSerial, toSerial] = availableRange.split(' - ');
+    // Calculate available ranges by finding GAPS between used/damaged ranges
+    if (availableCount > 0 && availableRange) {
+      const [rollFromSerial, rollToSerial] = availableRange.split(' - ');
+      const prefix = rollFromSerial.replace(/\d+/, '');
+      const rollStart = parseInt(rollFromSerial.match(/\d+/)?.[0] || '0');
+      const rollEnd = parseInt(rollToSerial.match(/\d+/)?.[0] || '0');
       
-      // Calculate the next available serial based on what's been used
-      let nextAvailableSerial = fromSerial;
-      
-      // If we have ranges, find the highest serial number used
-      if (ranges.length > 0) {
-        const allSerials = ranges.map(r => {
-          const match = r.toSerial.match(/\d+/);
-          return match ? parseInt(match[0]) : 0;
-        });
-        const maxSerial = Math.max(...allSerials);
-        const prefix = fromSerial.replace(/\d+/, '');
-        nextAvailableSerial = prefix + String(maxSerial + 1).padStart(6, '0');
-      }
-
-      // Calculate the end serial for available range
-      const nextSerialNum = parseInt(nextAvailableSerial.match(/\d+/)?.[0] || '0');
-      const prefix = nextAvailableSerial.replace(/\d+/, '');
-      const endSerialNum = nextSerialNum + availableCount - 1;
-      const endSerial = prefix + String(endSerialNum).padStart(6, '0');
-
-      ranges.push({
-        fromSerial: nextAvailableSerial,
-        toSerial: endSerial,
-        count: availableCount,
-        status: 'AVAILABLE',
-        description: 'Ready for production use'
+      // Create a Set of all used/damaged serial numbers
+      const usedSerials = new Set<number>();
+      ranges.forEach(range => {
+        const start = parseInt(range.fromSerial.match(/\d+/)?.[0] || '0');
+        const end = parseInt(range.toSerial.match(/\d+/)?.[0] || '0');
+        for (let i = start; i <= end; i++) {
+          usedSerials.add(i);
+        }
       });
+      
+      // Find gaps (available ranges)
+      const availableRanges: SerialRange[] = [];
+      let gapStart: number | null = null;
+      
+      for (let i = rollStart; i <= rollEnd; i++) {
+        if (!usedSerials.has(i)) {
+          // This serial is available
+          if (gapStart === null) {
+            gapStart = i; // Start of a new gap
+          }
+        } else {
+          // This serial is used/damaged
+          if (gapStart !== null) {
+            // End of a gap - add it as an available range
+            availableRanges.push({
+              fromSerial: prefix + String(gapStart).padStart(6, '0'),
+              toSerial: prefix + String(i - 1).padStart(6, '0'),
+              count: i - gapStart,
+              status: 'AVAILABLE',
+              description: 'Ready for production use'
+            });
+            gapStart = null;
+          }
+        }
+      }
+      
+      // Handle last gap if it extends to the end
+      if (gapStart !== null) {
+        availableRanges.push({
+          fromSerial: prefix + String(gapStart).padStart(6, '0'),
+          toSerial: prefix + String(rollEnd).padStart(6, '0'),
+          count: rollEnd - gapStart + 1,
+          status: 'AVAILABLE',
+          description: 'Ready for production use'
+        });
+      }
+      
+      // Add all available ranges
+      ranges.push(...availableRanges);
     }
 
     // Sort ranges by serial number
