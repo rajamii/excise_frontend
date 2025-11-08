@@ -1019,11 +1019,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     );
 
     if (requestIndex !== -1) {
-      hologramRequests[requestIndex].status = 'APPROVED';
+      hologramRequests[requestIndex].status = this.selectedRequest.status; // Use the actual status from selectedRequest
       hologramRequests[requestIndex].officerComments = this.selectedRequest.officerComments;
       hologramRequests[requestIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
       hologramRequests[requestIndex].approvalDate = this.selectedRequest.approvalDate;
       localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+      console.log('Updated hologramRequests in localStorage:', hologramRequests[requestIndex]);
     }
 
     // Update in hologramApplications if exists
@@ -1033,11 +1034,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     );
 
     if (appIndex !== -1) {
-      hologramApplications[appIndex].status = 'APPROVED';
+      hologramApplications[appIndex].status = this.selectedRequest.status; // Use the actual status from selectedRequest
       hologramApplications[appIndex].officerComments = this.selectedRequest.officerComments;
       hologramApplications[appIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
       hologramApplications[appIndex].approvalDate = this.selectedRequest.approvalDate;
       localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
+      console.log('Updated hologramApplications in localStorage:', hologramApplications[appIndex]);
     }
   }
 
