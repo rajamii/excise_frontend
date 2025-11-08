@@ -370,7 +370,7 @@ export class HologramoveriewComponent implements OnInit {
 
   loadIssuedData(): void {
     // Load issued holograms from localStorage (created by officer approval)
-    const savedIssued = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+    const savedIssued = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
     
     // Sample data for demonstration
     const sampleData = [
@@ -408,7 +408,11 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadHistoryData(): void {
-    this.historyData = [
+    // Load history data from localStorage (created by officer approval)
+    const savedHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+    
+    // Sample data for demonstration
+    const sampleData = [
       {
         id: 1,
         issueDate: '2024-10-15',
@@ -434,6 +438,14 @@ export class HologramoveriewComponent implements OnInit {
         officer: 'Sarah Wilson'
       }
     ];
+    
+    // Sort saved data by issue date (newest first)
+    const sortedSavedHistory = savedHistory.sort((a: any, b: any) => {
+      return new Date(b.issueDate || b.date).getTime() - new Date(a.issueDate || a.date).getTime();
+    });
+    
+    // Combine with saved data at top, then sample data
+    this.historyData = [...sortedSavedHistory, ...sampleData];
   }
 
   loadSerialRollsData(): void {
@@ -1226,7 +1238,10 @@ export class HologramoveriewComponent implements OnInit {
     if (confirm('Clear all hologram data from localStorage? This will remove all arrival data.')) {
       localStorage.removeItem('hologramOverviewRolls');
       localStorage.removeItem('hologramOverviewAvailable');
-      localStorage.removeItem('issuedHolograms');
+      localStorage.removeItem('hologramOverviewSerialData');
+      localStorage.removeItem('hologramOverviewIssued');
+      localStorage.removeItem('hologramOverviewHistory');
+      localStorage.removeItem('issuedHolograms'); // Legacy key
       this.loadAllData();
       alert('Test data cleared successfully!');
     }

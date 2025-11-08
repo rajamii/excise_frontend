@@ -424,8 +424,8 @@ export class HologramDailyRegisterComponent implements OnInit {
     // Save to localStorage for Officer in Charge verification
     this.saveEntryForOfficerVerification(entry);
     
-    // Update the roll data in officer-in-charge overview
-    this.updateRollData(entry);
+    // DO NOT update roll data here - wait for Officer approval
+    // Roll data will be updated only after Officer approves the entry
     
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);

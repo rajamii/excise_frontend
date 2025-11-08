@@ -209,9 +209,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   confirmApproval(): void {
     if (!this.entryToProcess) return;
     
+    const entry = this.entryToProcess;
+    
     // Update the entry status in localStorage
     const savedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
-    const entryIndex = savedEntries.findIndex((e: any) => e.id === this.entryToProcess!.id);
+    const entryIndex = savedEntries.findIndex((e: any) => e.id === entry.id);
     
     if (entryIndex !== -1) {
       savedEntries[entryIndex].approvalStatus = 'APPROVED';
@@ -224,6 +226,9 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
       approvedEntries.push(savedEntries[entryIndex]);
       localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
+      
+      // NOW UPDATE ROLL DATA - Only after Officer approval
+      this.updateRollDataAfterApproval(savedEntries[entryIndex]);
     }
     
     // Close modal
@@ -238,7 +243,248 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     this.loadFilteredData();
     this.entryToProcess = null;
     
-    alert('✅ Entry approved successfully!');
+    alert('✅ Entry approved successfully! Roll data has been updated in Hologram Overview.');
+  }
+
+  /**
+   * Update roll data in hologram overview after Officer approval
+   * Updates Rolls, Available Hologram Data, Serial Numbers Data, Issued Hologram, and Issued History
+   */
+  private updateRollDataAfterApproval(entry: any): void {
+    try {
+      const cartoonNumber = entry.cartoonNumber;
+      
+      if (!cartoonNumber) {
+        console.warn('No cartoon number found in entry, skipping roll data update');
+        return;
+      }
+      
+      console.log('Updating roll data after approval for:', cartoonNumber);
+      
+      // 1. Update Rolls Tab Data
+      this.updateRollsData(entry, cartoonNumber);
+      
+      // 2. Update Available Hologram Data Tab
+      this.updateAvailableHologramData(entry, cartoonNumber);
+      
+      // 3. Update Serial Numbers Data Tab
+      this.updateSerialNumbersData(entry, cartoonNumber);
+      
+      // 4. Update Issued Hologram Tab
+      this.updateIssuedHologramData(entry, cartoonNumber);
+      
+      // 5. Update Issued History Tab
+      this.updateIssuedHistoryData(entry, cartoonNumber);
+      
+      console.log('Roll data updated successfully after approval');
+      
+    } catch (error) {
+      console.error('Error updating roll data after approval:', error);
+    }
+  }
+
+  /**
+   * Update Rolls Tab Data
+   */
+  private updateRollsData(entry: any, cartoonNumber: string): void {
+    try {
+      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      
+      const rollIndex = rollsData.findIndex((roll: any) => 
+        roll.cartoonNumber === cartoonNumber && 
+        roll.type === entry.hologramType
+      );
+      
+      if (rollIndex === -1) {
+        console.warn(`Roll not found for cartoon number: ${cartoonNumber}`);
+        return;
+      }
+      
+      const roll = rollsData[rollIndex];
+      
+      // Update counts
+      roll.usedCount = (roll.usedCount || 0) + (entry.issuedQuantity || 0);
+      roll.damagedCount = (roll.damagedCount || 0) + (entry.wastageQuantity || 0);
+      
+      const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
+      roll.availableCount = Math.max(0, (roll.availableCount || 0) - totalUsed);
+      
+      // Update status
+      if (roll.availableCount === 0) {
+        roll.status = 'COMPLETED';
+      } else {
+        roll.status = 'AVAILABLE';
+      }
+      
+      rollsData[rollIndex] = roll;
+      localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
+      
+      console.log('Rolls data updated:', roll);
+    } catch (error) {
+      console.error('Error updating rolls data:', error);
+    }
+  }
+
+  /**
+   * Update Available Hologram Data Tab
+   */
+  private updateAvailableHologramData(entry: any, cartoonNumber: string): void {
+    try {
+      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+      
+      const availableIndex = availableData.findIndex((item: any) => 
+        item.cartoonNumber === cartoonNumber && 
+        item.type === entry.hologramType
+      );
+      
+      if (availableIndex !== -1) {
+        const available = availableData[availableIndex];
+        
+        const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
+        available.availableCount = Math.max(0, (available.availableCount || 0) - totalUsed);
+        
+        const totalCount = available.availableCount + (available.usedCount || 0) + (available.damagedCount || 0);
+        available.percentage = totalCount > 0 ? Math.round((available.availableCount / totalCount) * 100) : 0;
+        
+        if (available.availableCount === 0) {
+          available.status = 'COMPLETED';
+        } else {
+          available.status = 'AVAILABLE';
+        }
+        
+        availableData[availableIndex] = available;
+        localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+        
+        console.log('Available hologram data updated:', available);
+      }
+    } catch (error) {
+      console.error('Error updating available hologram data:', error);
+    }
+  }
+
+  /**
+   * Update Serial Numbers Data Tab
+   */
+  private updateSerialNumbersData(entry: any, cartoonNumber: string): void {
+    try {
+      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+      
+      const serialIndex = serialData.findIndex((roll: any) => 
+        roll.rollNumber === cartoonNumber && 
+        roll.hologramType === entry.hologramType
+      );
+      
+      if (serialIndex !== -1) {
+        const serialRoll = serialData[serialIndex];
+        
+        serialRoll.usedCount = (serialRoll.usedCount || 0) + (entry.issuedQuantity || 0);
+        serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (entry.wastageQuantity || 0);
+        
+        const totalUsed = (entry.issuedQuantity || 0) + (entry.wastageQuantity || 0);
+        serialRoll.availableCount = Math.max(0, (serialRoll.availableCount || 0) - totalUsed);
+        
+        if (serialRoll.availableCount === 0) {
+          serialRoll.status = 'COMPLETED';
+        } else {
+          serialRoll.status = 'AVAILABLE';
+        }
+        
+        serialData[serialIndex] = serialRoll;
+        localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+        
+        console.log('Serial numbers data updated:', serialRoll);
+      }
+    } catch (error) {
+      console.error('Error updating serial numbers data:', error);
+    }
+  }
+
+  /**
+   * Update Issued Hologram Tab
+   */
+  private updateIssuedHologramData(entry: any, cartoonNumber: string): void {
+    try {
+      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+      
+      // Create new issued entry
+      const newIssuedEntry = {
+        id: Date.now(),
+        cartoonNumber: cartoonNumber,
+        type: entry.hologramType,
+        referenceNo: entry.referenceNo || 'N/A',
+        brandName: entry.brandDetails?.brandName || 'N/A',
+        issuedFromSerial: entry.issuedFromSerial || '',
+        issuedToSerial: entry.issuedToSerial || '',
+        issuedQuantity: entry.issuedQuantity || 0,
+        issuedDate: entry.date,
+        approvedBy: 'Officer In Charge',
+        approvedAt: new Date().toISOString()
+      };
+      
+      issuedData.push(newIssuedEntry);
+      localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedData));
+      
+      console.log('Issued hologram data updated:', newIssuedEntry);
+    } catch (error) {
+      console.error('Error updating issued hologram data:', error);
+    }
+  }
+
+  /**
+   * Update Issued History Tab
+   */
+  private updateIssuedHistoryData(entry: any, cartoonNumber: string): void {
+    try {
+      const historyData = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+      
+      // Create history entry for issued holograms
+      if (entry.issuedQuantity > 0) {
+        const issuedHistoryEntry = {
+          id: Date.now(),
+          cartoonNumber: cartoonNumber,
+          type: entry.hologramType,
+          action: 'ISSUED',
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          fromSerial: entry.issuedFromSerial || '',
+          toSerial: entry.issuedToSerial || '',
+          quantity: entry.issuedQuantity || 0,
+          date: entry.date,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString(),
+          remarks: 'Approved by Officer In Charge'
+        };
+        
+        historyData.push(issuedHistoryEntry);
+      }
+      
+      // Create history entry for wastage
+      if (entry.wastageQuantity > 0) {
+        const wastageHistoryEntry = {
+          id: Date.now() + 1,
+          cartoonNumber: cartoonNumber,
+          type: entry.hologramType,
+          action: 'WASTAGE',
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          fromSerial: entry.wastageFromSerial || '',
+          toSerial: entry.wastageToSerial || '',
+          quantity: entry.wastageQuantity || 0,
+          date: entry.date,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString(),
+          remarks: entry.damageReason || 'Wastage recorded'
+        };
+        
+        historyData.push(wastageHistoryEntry);
+      }
+      
+      localStorage.setItem('hologramOverviewHistory', JSON.stringify(historyData));
+      
+      console.log('Issued history data updated');
+    } catch (error) {
+      console.error('Error updating issued history data:', error);
+    }
   }
 
   // Reject entry
