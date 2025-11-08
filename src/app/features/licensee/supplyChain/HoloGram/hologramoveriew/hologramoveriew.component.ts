@@ -260,49 +260,6 @@ export class HologramoveriewComponent implements OnInit {
     // Load data from localStorage (saved by arrival process)
     const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
 
-    // Sample data for demonstration (using older dates to ensure saved data appears first)
-    const sampleData = [
-      {
-        id: 1,
-        cartoonNumber: 'CTN001',
-        type: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
-        totalCount: 500,
-        availableCount: 350,
-        usedCount: 120,
-        damagedCount: 30,
-        status: 'IN_USE',
-        receivedDate: '2024-09-01'
-      },
-      {
-        id: 2,
-        cartoonNumber: 'CTN002',
-        type: 'EXPORT',
-        fromSerial: 'HG002001',
-        toSerial: 'HG002500',
-        totalCount: 500,
-        availableCount: 500,
-        usedCount: 0,
-        damagedCount: 0,
-        status: 'AVAILABLE',
-        receivedDate: '2024-08-28'
-      },
-      {
-        id: 3,
-        cartoonNumber: 'CTN003',
-        type: 'DEFENCE',
-        fromSerial: 'HG003001',
-        toSerial: 'HG003300',
-        totalCount: 300,
-        availableCount: 0,
-        usedCount: 280,
-        damagedCount: 20,
-        status: 'COMPLETED',
-        receivedDate: '2024-08-15'
-      }
-    ];
-
     // Sort saved data by received date (newest first) and then by ID (newest first)
     const sortedSavedRolls = savedRolls.sort((a: any, b: any) => {
       // First sort by date
@@ -317,172 +274,52 @@ export class HologramoveriewComponent implements OnInit {
       return (b.id || 0) - (a.id || 0);
     });
 
-    // Combine with saved data at top, then sample data
-    this.rollsData = [...sortedSavedRolls, ...sampleData];
+    // Use only saved data (no sample data for clean testing)
+    this.rollsData = sortedSavedRolls;
   }
 
   loadAvailableData() {
     // Load data from localStorage (saved by arrival process)
     const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
 
-    // Sample available hologram data
-    const sampleData = [
-      {
-        id: 1,
-        cartoonNumber: 'CTN001',
-        type: 'LOCAL',
-        availableRange: 'HG001111 - HG001500',
-        availableCount: 350,
-        nextSerial: 'HG001111',
-        percentage: 70,
-        status: 'AVAILABLE'
-      },
-      {
-        id: 2,
-        cartoonNumber: 'CTN002',
-        type: 'EXPORT',
-        availableRange: 'HG002001 - HG002500',
-        availableCount: 500,
-        nextSerial: 'HG002001',
-        percentage: 100,
-        status: 'AVAILABLE'
-      },
-      {
-        id: 4,
-        cartoonNumber: 'CTN004',
-        type: 'LOCAL',
-        availableRange: 'HG004101 - HG004750',
-        availableCount: 600,
-        nextSerial: 'HG004101',
-        percentage: 80,
-        status: 'AVAILABLE'
-      }
-    ];
-
     // Sort saved data by ID (newest first, since ID is timestamp-based)
     const sortedSavedAvailable = savedAvailable.sort((a: any, b: any) => {
       return b.id - a.id; // Higher ID (newer timestamp) first
     });
 
-    // Combine with saved data at top, then sample data
-    this.availableData = [...sortedSavedAvailable, ...sampleData];
+    // Use only saved data (no sample data for clean testing)
+    this.availableData = sortedSavedAvailable;
   }
 
   loadIssuedData(): void {
     // Load issued holograms from localStorage (created by officer approval)
     const savedIssued = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
-    
-    // Sample data for demonstration
-    const sampleData = [
-      {
-        id: 1,
-        batchNumber: 'BATCH001',
-        brandName: 'Premium Brand A',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001100',
-        quantity: 100,
-        issueDate: '2024-11-01T10:30:00',
-        status: 'IN_PROGRESS',
-        officer: 'John Smith'
-      },
-      {
-        id: 2,
-        batchNumber: 'BATCH002',
-        brandName: 'Export Brand B',
-        fromSerial: 'HG002001',
-        toSerial: 'HG002050',
-        quantity: 50,
-        issueDate: '2024-10-28T14:15:00',
-        status: 'COMPLETED',
-        officer: 'Jane Doe'
-      }
-    ];
 
     // Sort saved data by issue date (newest first)
     const sortedSavedIssued = savedIssued.sort((a: any, b: any) => {
-      return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+      return new Date(b.issueDate || b.issuedDate || 0).getTime() - new Date(a.issueDate || a.issuedDate || 0).getTime();
     });
 
-    // Combine with saved data at top, then sample data
-    this.issuedData = [...sortedSavedIssued, ...sampleData];
+    // Use only saved data (no sample data for clean testing)
+    this.issuedData = sortedSavedIssued;
   }
 
   loadHistoryData(): void {
     // Load history data from localStorage (created by officer approval)
     const savedHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
     
-    // Sample data for demonstration
-    const sampleData = [
-      {
-        id: 1,
-        issueDate: '2024-10-15',
-        batchNumber: 'BATCH003',
-        brandName: 'Defence Brand C',
-        fromSerial: 'HG003001',
-        toSerial: 'HG003200',
-        quantity: 200,
-        status: 'COMPLETED',
-        completionDate: '2024-10-20',
-        officer: 'Mike Johnson'
-      },
-      {
-        id: 2,
-        issueDate: '2024-10-10',
-        batchNumber: 'BATCH004',
-        brandName: 'Local Brand D',
-        fromSerial: 'HG004001',
-        toSerial: 'HG004150',
-        quantity: 150,
-        status: 'COMPLETED',
-        completionDate: '2024-10-18',
-        officer: 'Sarah Wilson'
-      }
-    ];
-    
     // Sort saved data by issue date (newest first)
     const sortedSavedHistory = savedHistory.sort((a: any, b: any) => {
-      return new Date(b.issueDate || b.date).getTime() - new Date(a.issueDate || a.date).getTime();
+      return new Date(b.issueDate || b.date || 0).getTime() - new Date(a.issueDate || a.date || 0).getTime();
     });
     
-    // Combine with saved data at top, then sample data
-    this.historyData = [...sortedSavedHistory, ...sampleData];
+    // Use only saved data (no sample data for clean testing)
+    this.historyData = sortedSavedHistory;
   }
 
   loadSerialRollsData(): void {
     // Load data from localStorage (saved by arrival process)
     const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-
-    // Sample data for demonstration
-    const sampleData = [
-      {
-        id: 1,
-        rollNumber: 'ROLL001',
-        hologramType: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
-        totalCount: 500,
-        availableCount: 350,
-        usedCount: 120,
-        damagedCount: 30,
-        status: 'IN_USE',
-        receivedDate: '2024-09-01',
-        usageHistory: []
-      },
-      {
-        id: 2,
-        rollNumber: 'ROLL002',
-        hologramType: 'EXPORT',
-        fromSerial: 'HG002001',
-        toSerial: 'HG002500',
-        totalCount: 500,
-        availableCount: 500,
-        usedCount: 0,
-        damagedCount: 0,
-        status: 'AVAILABLE',
-        receivedDate: '2024-08-28',
-        usageHistory: []
-      }
-    ];
 
     // Sort saved data by received date (newest first) and then by ID (newest first)
     const sortedSavedSerialData = savedSerialData.sort((a: any, b: any) => {
@@ -498,8 +335,8 @@ export class HologramoveriewComponent implements OnInit {
       return (b.id || 0) - (a.id || 0);
     });
 
-    // Combine with saved data at top, then sample data
-    this.serialRollsData = [...sortedSavedSerialData, ...sampleData];
+    // Use only saved data (no sample data for clean testing)
+    this.serialRollsData = sortedSavedSerialData;
   }
 
   getTypeClass(type: string): string {
@@ -1235,15 +1072,38 @@ export class HologramoveriewComponent implements OnInit {
 
   // Method to clear test data (for debugging)
   clearTestData(): void {
-    if (confirm('Clear all hologram data from localStorage? This will remove all arrival data.')) {
+    if (confirm('⚠️ Clear ALL hologram data? This will remove everything and start fresh.\n\nThis includes:\n- All Rolls\n- Available Hologram Data\n- Serial Numbers Data\n- Issued Holograms\n- Issued History\n- Daily Register Entries\n\nAre you sure?')) {
+      // Clear all hologram overview data
       localStorage.removeItem('hologramOverviewRolls');
       localStorage.removeItem('hologramOverviewAvailable');
       localStorage.removeItem('hologramOverviewSerialData');
       localStorage.removeItem('hologramOverviewIssued');
       localStorage.removeItem('hologramOverviewHistory');
-      localStorage.removeItem('issuedHolograms'); // Legacy key
-      this.loadAllData();
-      alert('Test data cleared successfully!');
+      
+      // Clear daily register and approval data
+      localStorage.removeItem('dailyRegisterEntries');
+      localStorage.removeItem('approvedHologramEntries');
+      
+      // Clear legacy keys
+      localStorage.removeItem('issuedHolograms');
+      localStorage.removeItem('hologramDailyEntries');
+      
+      // Clear all arrays to show empty state
+      this.rollsData = [];
+      this.availableData = [];
+      this.issuedData = [];
+      this.historyData = [];
+      this.serialRollsData = [];
+      this.filteredSerialData = [];
+      
+      alert('✅ All hologram data cleared successfully!\n\nYou now have a fresh start. All tabs are empty.');
+      
+      console.log('=== ALL HOLOGRAM DATA CLEARED ===');
+      console.log('Rolls:', this.rollsData.length);
+      console.log('Available:', this.availableData.length);
+      console.log('Serial Data:', this.serialRollsData.length);
+      console.log('Issued:', this.issuedData.length);
+      console.log('History:', this.historyData.length);
     }
   }
 

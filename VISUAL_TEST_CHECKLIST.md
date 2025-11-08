@@ -4,7 +4,7 @@
 
 Use this checklist to verify the entire hologram approval workflow is working correctly.
 
----
+-----
 
 ## 📝 Test Scenario
 
