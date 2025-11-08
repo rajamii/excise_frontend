@@ -1199,6 +1199,9 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // If we have actual entries, use them to create ranges
     if (relevantEntries.length > 0) {
       // Process each entry to create serial ranges
+      // Use a Set to track unique ranges and prevent duplicates
+      const processedRanges = new Set<string>();
+      
       relevantEntries.forEach((entry: any) => {
         console.log('Processing entry:', entry.id, entry);
         
@@ -1207,31 +1210,39 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           console.log('Using issuedEntries array:', entry.issuedEntries);
           entry.issuedEntries.forEach((issued: any) => {
             if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
-              ranges.push({
-                fromSerial: issued.fromSerial,
-                toSerial: issued.toSerial,
-                count: issued.quantity,
-                status: 'USED',
-                description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
-                usedDate: entry.date,
-                batchNumber: entry.referenceNo || 'N/A',
-                productionLine: entry.brandDetails?.brandName || 'N/A'
-              });
+              const rangeKey = `USED-${issued.fromSerial}-${issued.toSerial}`;
+              if (!processedRanges.has(rangeKey)) {
+                processedRanges.add(rangeKey);
+                ranges.push({
+                  fromSerial: issued.fromSerial,
+                  toSerial: issued.toSerial,
+                  count: issued.quantity,
+                  status: 'USED',
+                  description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
+                  usedDate: entry.date,
+                  batchNumber: entry.referenceNo || 'N/A',
+                  productionLine: entry.brandDetails?.brandName || 'N/A'
+                });
+              }
             }
           });
         } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
           // Handle single entry format (only if issuedEntries doesn't exist)
           console.log('Using single issued entry:', entry.issuedFromSerial, '-', entry.issuedToSerial);
-          ranges.push({
-            fromSerial: entry.issuedFromSerial,
-            toSerial: entry.issuedToSerial,
-            count: entry.issuedQuantity,
-            status: 'USED',
-            description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
-            usedDate: entry.date,
-            batchNumber: entry.referenceNo || 'N/A',
-            productionLine: entry.brandDetails?.brandName || 'N/A'
-          });
+          const rangeKey = `USED-${entry.issuedFromSerial}-${entry.issuedToSerial}`;
+          if (!processedRanges.has(rangeKey)) {
+            processedRanges.add(rangeKey);
+            ranges.push({
+              fromSerial: entry.issuedFromSerial,
+              toSerial: entry.issuedToSerial,
+              count: entry.issuedQuantity,
+              status: 'USED',
+              description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
+              usedDate: entry.date,
+              batchNumber: entry.referenceNo || 'N/A',
+              productionLine: entry.brandDetails?.brandName || 'N/A'
+            });
+          }
         }
 
         // Add wastage/damaged ranges - Check for wastageEntries array first
@@ -1239,31 +1250,39 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           console.log('Using wastageEntries array:', entry.wastageEntries);
           entry.wastageEntries.forEach((wastage: any) => {
             if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
-              ranges.push({
-                fromSerial: wastage.fromSerial,
-                toSerial: wastage.toSerial,
-                count: wastage.quantity,
-                status: 'DAMAGED',
-                description: wastage.damageReason || entry.damageReason || 'Damaged during production',
-                damageDate: entry.date,
-                damageReason: wastage.damageReason || entry.damageReason || 'Not specified',
-                reportedBy: entry.officerName || 'System'
-              });
+              const rangeKey = `DAMAGED-${wastage.fromSerial}-${wastage.toSerial}`;
+              if (!processedRanges.has(rangeKey)) {
+                processedRanges.add(rangeKey);
+                ranges.push({
+                  fromSerial: wastage.fromSerial,
+                  toSerial: wastage.toSerial,
+                  count: wastage.quantity,
+                  status: 'DAMAGED',
+                  description: wastage.damageReason || entry.damageReason || 'Damaged during production',
+                  damageDate: entry.date,
+                  damageReason: wastage.damageReason || entry.damageReason || 'Not specified',
+                  reportedBy: entry.officerName || 'System'
+                });
+              }
             }
           });
         } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
           // Handle single entry format (only if wastageEntries doesn't exist)
           console.log('Using single wastage entry:', entry.wastageFromSerial, '-', entry.wastageToSerial);
-          ranges.push({
-            fromSerial: entry.wastageFromSerial,
-            toSerial: entry.wastageToSerial,
-            count: entry.wastageQuantity,
-            status: 'DAMAGED',
-            description: entry.damageReason || 'Damaged during production',
-            damageDate: entry.date,
-            damageReason: entry.damageReason || 'Not specified',
-            reportedBy: entry.officerName || 'System'
-          });
+          const rangeKey = `DAMAGED-${entry.wastageFromSerial}-${entry.wastageToSerial}`;
+          if (!processedRanges.has(rangeKey)) {
+            processedRanges.add(rangeKey);
+            ranges.push({
+              fromSerial: entry.wastageFromSerial,
+              toSerial: entry.wastageToSerial,
+              count: entry.wastageQuantity,
+              status: 'DAMAGED',
+              description: entry.damageReason || 'Damaged during production',
+              damageDate: entry.date,
+              damageReason: entry.damageReason || 'Not specified',
+              reportedBy: entry.officerName || 'System'
+            });
+          }
         }
       });
     }
