@@ -372,8 +372,20 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         const leftoverQuantity = entry.leftOverQuantity || 0;
         available.availableCount = (available.availableCount || 0) + leftoverQuantity;
         
-        const totalCount = available.availableCount + (available.usedCount || 0) + (available.damagedCount || 0);
-        available.percentage = totalCount > 0 ? Math.round((available.availableCount / totalCount) * 100) : 0;
+        // Get the original total count from the rolls data to calculate percentage correctly
+        const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        const correspondingRoll = rollsData.find((roll: any) => 
+          roll.cartoonNumber === cartoonNumber && 
+          roll.type === entry.hologramType
+        );
+        
+        // Calculate percentage based on original total count from roll
+        if (correspondingRoll && correspondingRoll.totalCount > 0) {
+          available.percentage = Math.round((available.availableCount / correspondingRoll.totalCount) * 100);
+        } else {
+          // Fallback: if no roll found, percentage is 100% if we have any available, 0% otherwise
+          available.percentage = available.availableCount > 0 ? 100 : 0;
+        }
         
         // Update status based on available count
         if (available.availableCount === 0) {
@@ -385,7 +397,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         availableData[availableIndex] = available;
         localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
         
-        console.log('Available hologram data updated - added back leftover:', leftoverQuantity);
+        console.log('Available hologram data updated - added back leftover:', leftoverQuantity, 'percentage:', available.percentage);
       }
     } catch (error) {
       console.error('Error updating available hologram data:', error);

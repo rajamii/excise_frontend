@@ -808,14 +808,22 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         // Update counts
         availableData[availableIndex].availableCount -= allocation.quantity;
         
-        const totalCount = availableData[availableIndex].availableCount + 
-                          (availableData[availableIndex].usedCount || 0) + 
-                          (availableData[availableIndex].damagedCount || 0);
-        availableData[availableIndex].percentage = totalCount > 0 ? 
-          Math.round((availableData[availableIndex].availableCount / totalCount) * 100) : 0;
+        // Get the original total count from the rolls data to calculate percentage correctly
+        const correspondingRoll = rollsData.find((roll: any) => 
+          roll.cartoonNumber === allocation.cartoonNumber
+        );
+        
+        // Calculate percentage based on original total count from roll
+        if (correspondingRoll && correspondingRoll.totalCount > 0) {
+          availableData[availableIndex].percentage = Math.round((availableData[availableIndex].availableCount / correspondingRoll.totalCount) * 100);
+        } else {
+          // Fallback: if no roll found, percentage is 100% if we have any available, 0% otherwise
+          availableData[availableIndex].percentage = availableData[availableIndex].availableCount > 0 ? 100 : 0;
+        }
         
         console.log(`AFTER count update - Available ${allocation.cartoonNumber}:`, {
           availableCount: availableData[availableIndex].availableCount,
+          percentage: availableData[availableIndex].percentage,
           hasBeenAllocated: true
         });
         
