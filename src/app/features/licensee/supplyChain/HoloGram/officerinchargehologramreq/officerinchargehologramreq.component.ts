@@ -766,29 +766,129 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   updateInventoryAfterAllocation(): void {
     if (!this.allocationResult) return;
 
+    console.log('=== UPDATING INVENTORY AFTER ALLOCATION ===');
+
+    // Load all three data sources
+    const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+
     for (const allocation of this.allocationResult.allocations) {
-      const inventoryItem = this.hologramInventory.find(item => 
+      console.log(`Processing allocation for ${allocation.cartoonNumber}:`, allocation);
+
+      // Update Rolls Tab Data
+      const rollIndex = rollsData.findIndex((roll: any) => 
+        roll.cartoonNumber === allocation.cartoonNumber
+      );
+      
+      if (rollIndex !== -1) {
+        console.log(`BEFORE update - Roll ${allocation.cartoonNumber}:`, {
+          availableCount: rollsData[rollIndex].availableCount,
+          usedCount: rollsData[rollIndex].usedCount,
+          status: rollsData[rollIndex].status
+        });
+        
+        // Update counts
+        rollsData[rollIndex].availableCount -= allocation.quantity;
+        rollsData[rollIndex].usedCount = (rollsData[rollIndex].usedCount || 0) + allocation.quantity;
+        rollsData[rollIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
+        
+        console.log(`AFTER count update - Roll ${allocation.cartoonNumber}:`, {
+          availableCount: rollsData[rollIndex].availableCount,
+          usedCount: rollsData[rollIndex].usedCount,
+          hasBeenUsed: rollsData[rollIndex].usedCount > 0
+        });
+        
+        // Update status - Always set to IN_USE when holograms have been allocated
+        // Status will only be COMPLETED when explicitly marked by the system later
+        if (rollsData[rollIndex].usedCount > 0) {
+          rollsData[rollIndex].status = 'IN_USE';
+          console.log(`Status set to IN_USE (usedCount = ${rollsData[rollIndex].usedCount}, availableCount = ${rollsData[rollIndex].availableCount})`);
+        }
+        
+        console.log(`FINAL - Roll ${allocation.cartoonNumber}:`, rollsData[rollIndex]);
+      }
+
+      // Update Available Hologram Data Tab
+      const availableIndex = availableData.findIndex((item: any) => 
         item.cartoonNumber === allocation.cartoonNumber
       );
+      
+      if (availableIndex !== -1) {
+        console.log(`BEFORE update - Available ${allocation.cartoonNumber}:`, {
+          availableCount: availableData[availableIndex].availableCount,
+          status: availableData[availableIndex].status
+        });
+        
+        // Update counts
+        availableData[availableIndex].availableCount -= allocation.quantity;
+        
+        const totalCount = availableData[availableIndex].availableCount + 
+                          (availableData[availableIndex].usedCount || 0) + 
+                          (availableData[availableIndex].damagedCount || 0);
+        availableData[availableIndex].percentage = totalCount > 0 ? 
+          Math.round((availableData[availableIndex].availableCount / totalCount) * 100) : 0;
+        
+        console.log(`AFTER count update - Available ${allocation.cartoonNumber}:`, {
+          availableCount: availableData[availableIndex].availableCount,
+          hasBeenAllocated: true
+        });
+        
+        // Update status - Always set to IN_USE when holograms have been allocated
+        // Status will only be COMPLETED when explicitly marked by the system later
+        availableData[availableIndex].status = 'IN_USE';
+        console.log(`Status set to IN_USE (availableCount = ${availableData[availableIndex].availableCount})`);
 
-      if (inventoryItem) {
-        inventoryItem.availableCount -= allocation.quantity;
-        inventoryItem.usedCount += allocation.quantity;
-        inventoryItem.nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
+        
+        console.log(`FINAL - Available ${allocation.cartoonNumber}:`, availableData[availableIndex]);
+      }
 
-        if (inventoryItem.availableCount === 0) {
-          inventoryItem.status = 'COMPLETED';
+      // Update Serial Numbers Data Tab
+      const serialIndex = serialData.findIndex((roll: any) => 
+        (roll.rollNumber === allocation.cartoonNumber || roll.cartoonNumber === allocation.cartoonNumber)
+      );
+      
+      if (serialIndex !== -1) {
+        console.log(`BEFORE update - Serial ${allocation.cartoonNumber}:`, {
+          availableCount: serialData[serialIndex].availableCount,
+          usedCount: serialData[serialIndex].usedCount,
+          status: serialData[serialIndex].status
+        });
+        
+        // Update counts
+        serialData[serialIndex].availableCount -= allocation.quantity;
+        serialData[serialIndex].usedCount = (serialData[serialIndex].usedCount || 0) + allocation.quantity;
+        serialData[serialIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
+        
+        console.log(`AFTER count update - Serial ${allocation.cartoonNumber}:`, {
+          availableCount: serialData[serialIndex].availableCount,
+          usedCount: serialData[serialIndex].usedCount,
+          hasBeenUsed: serialData[serialIndex].usedCount > 0
+        });
+        
+        // Update status - Always set to IN_USE when holograms have been allocated
+        // Status will only be COMPLETED when explicitly marked by the system later
+        if (serialData[serialIndex].usedCount > 0) {
+          serialData[serialIndex].status = 'IN_USE';
+          console.log(`Status set to IN_USE (usedCount = ${serialData[serialIndex].usedCount}, availableCount = ${serialData[serialIndex].availableCount})`);
         }
+        
+        console.log(`FINAL - Serial ${allocation.cartoonNumber}:`, serialData[serialIndex]);
       }
     }
 
-    // Update localStorage
-    localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.hologramInventory));
-    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(this.hologramInventory));
+    // Save all updated data back to localStorage
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+
+    console.log('=== INVENTORY UPDATE COMPLETE ===');
   }
 
   createIssuedHologramEntries(): void {
     if (!this.selectedRequest || !this.allocationResult) return;
+
+    console.log('=== CREATING ISSUED HOLOGRAM ENTRIES ===');
 
     const issuedEntries = this.allocationResult.allocations.map((allocation, index) => ({
       id: Date.now() + index,
@@ -798,22 +898,62 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       toSerial: allocation.toSerial,
       quantity: allocation.quantity,
       issueDate: new Date().toISOString(),
-      status: 'IN_PROGRESS',
+      status: 'IN_PROGRESS', // ← Status is IN_PROGRESS
       officer: this.currentOfficer.name,
       requestReference: this.selectedRequest!.referenceNo,
       hologramType: this.selectedRequest!.hologramType,
       cartoonNumber: allocation.cartoonNumber
     }));
 
-    // Save to localStorage for hologram overview
-    const existingIssued = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+    // Save to CORRECT localStorage key for hologram overview
+    const existingIssued = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
     const updatedIssued = [...existingIssued, ...issuedEntries];
-    localStorage.setItem('issuedHolograms', JSON.stringify(updatedIssued));
+    localStorage.setItem('hologramOverviewIssued', JSON.stringify(updatedIssued));
+
+    console.log('Created issued hologram entries:', issuedEntries);
+    console.log('Saved to hologramOverviewIssued');
+
+    // Also create history entries
+    this.createIssuedHistoryEntries(issuedEntries);
 
     // Create auto-populated daily register entries
     this.createDailyRegisterEntries();
 
-    console.log('Created issued hologram entries:', issuedEntries);
+    console.log('=== ISSUED HOLOGRAM ENTRIES COMPLETE ===');
+  }
+
+  createIssuedHistoryEntries(issuedEntries: any[]): void {
+    console.log('=== CREATING ISSUED HISTORY ENTRIES ===');
+
+    const historyEntries = issuedEntries.map((issued, index) => ({
+      id: Date.now() + index + 1000,
+      issueDate: issued.issueDate,
+      date: new Date().toISOString().split('T')[0],
+      cartoonNumber: issued.cartoonNumber,
+      type: issued.hologramType,
+      action: 'ISSUED',
+      batchNumber: issued.batchNumber,
+      brandName: issued.brandName,
+      fromSerial: issued.fromSerial,
+      toSerial: issued.toSerial,
+      quantity: issued.quantity,
+      status: 'COMPLETED',
+      completionDate: new Date().toISOString().split('T')[0],
+      officer: issued.officer,
+      requestReference: issued.requestReference,
+      approvedBy: this.currentOfficer.name,
+      approvedAt: new Date().toISOString(),
+      remarks: `Approved by ${this.currentOfficer.name} - Request: ${issued.requestReference}`
+    }));
+
+    // Save to hologram overview history
+    const existingHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+    const updatedHistory = [...existingHistory, ...historyEntries];
+    localStorage.setItem('hologramOverviewHistory', JSON.stringify(updatedHistory));
+
+    console.log('Created history entries:', historyEntries);
+    console.log('Saved to hologramOverviewHistory');
+    console.log('=== ISSUED HISTORY ENTRIES COMPLETE ===');
   }
 
   createDailyRegisterEntries(): void {
