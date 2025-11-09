@@ -619,26 +619,57 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Saved Rolls:', savedRolls);
     console.log('Saved Serial Data:', savedSerialData);
     
-    // Remove duplicates and normalize data structure
+    // Combine all inventory sources
     const allInventory = [...savedSerialData, ...savedRolls];
-    const uniqueInventory = allInventory.filter((item, index, self) => 
-      index === self.findIndex((t) => t.cartoonNumber === item.cartoonNumber || t.rollNumber === item.cartoonNumber)
-    );
+    
+    console.log('Combined Inventory (before deduplication):', allInventory.length, 'items');
+    
+    // Remove EXACT duplicates based on ID (not cartoon number, as we can have multiple rolls with same cartoon number)
+    // Use a Map to track unique items by their actual ID
+    const uniqueMap = new Map();
+    
+    allInventory.forEach(item => {
+      const cartoonNumber = item.cartoonNumber || item.rollNumber;
+      const itemId = item.id;
+      
+      // Create a unique key using both ID and cartoon number to handle duplicates properly
+      const uniqueKey = `${itemId}_${cartoonNumber}`;
+      
+      if (!uniqueMap.has(uniqueKey)) {
+        uniqueMap.set(uniqueKey, item);
+      } else {
+        console.log(`Skipping duplicate: ${cartoonNumber} (ID: ${itemId})`);
+      }
+    });
+    
+    const uniqueInventory = Array.from(uniqueMap.values());
+    
+    console.log('Unique Inventory (after deduplication):', uniqueInventory.length, 'items');
     
     // Normalize the data structure to ensure consistent property names
-    const normalizedInventory = uniqueInventory.map(item => ({
-      id: item.id,
-      cartoonNumber: item.cartoonNumber || item.rollNumber || 'UNKNOWN',
-      type: item.type || item.hologramType || 'LOCAL',
-      fromSerial: item.fromSerial,
-      toSerial: item.toSerial,
-      totalCount: item.totalCount,
-      availableCount: item.availableCount,
-      usedCount: item.usedCount || 0,
-      damagedCount: item.damagedCount || 0,
-      status: item.status,
-      receivedDate: item.receivedDate
-    }));
+    const normalizedInventory = uniqueInventory.map(item => {
+      const normalized = {
+        id: item.id,
+        cartoonNumber: item.cartoonNumber || item.rollNumber || 'UNKNOWN',
+        type: item.type || item.hologramType || 'LOCAL',
+        fromSerial: item.fromSerial,
+        toSerial: item.toSerial,
+        totalCount: item.totalCount,
+        availableCount: item.availableCount,
+        usedCount: item.usedCount || 0,
+        damagedCount: item.damagedCount || 0,
+        status: item.status,
+        receivedDate: item.receivedDate
+      };
+      
+      console.log(`Normalized ${normalized.cartoonNumber}:`, {
+        type: normalized.type,
+        available: normalized.availableCount,
+        status: normalized.status
+      });
+      
+      return normalized;
+    });
     
     console.log('Normalized Inventory:', normalizedInventory);
     
@@ -649,8 +680,25 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       return new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime();
     });
     
-    console.log('Final Inventory Count:', this.hologramInventory.length);
-    console.log('Final Inventory:', this.hologramInventory);
+    console.log('=== INVENTORY SUMMARY ===');
+    console.log('Total Rolls Loaded:', this.hologramInventory.length);
+    
+    // Group by type and show totals
+    const byType = this.hologramInventory.reduce((acc, item) => {
+      if (!acc[item.type]) {
+        acc[item.type] = { count: 0, available: 0, rolls: [] };
+      }
+      acc[item.type].count++;
+      acc[item.type].available += item.availableCount;
+      acc[item.type].rolls.push(item.cartoonNumber);
+      return acc;
+    }, {} as any);
+    
+    Object.keys(byType).forEach(type => {
+      console.log(`${type}: ${byType[type].count} rolls, ${byType[type].available} available holograms`);
+      console.log(`  Rolls: ${byType[type].rolls.join(', ')}`);
+    });
+    
     console.log('=== END LOADING HOLOGRAM INVENTORY ===');
   }
 
@@ -1010,21 +1058,37 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     }
 
     // Create daily register entries for each allocation
+    // Using NEW format with issuedEntries array for multiple roll support
     const dailyEntries = this.allocationResult.allocations.map((allocation, index) => {
       const entry = {
         id: `AUTO_${Date.now()}_${index}`,
         date: new Date().toISOString().split('T')[0], // Today's date
         hologramType: this.selectedRequest!.hologramType,
+        
+        // NEW FORMAT: Use issuedEntries array (supports multiple rolls per entry)
+        issuedEntries: [{
+          id: `ISSUED_${Date.now()}_${index}`,
+          fromSerial: allocation.fromSerial,
+          toSerial: allocation.toSerial,
+          quantity: allocation.quantity
+        }],
+        
+        // NEW FORMAT: Use wastageEntries array (initially empty)
+        wastageEntries: [],
+        
+        // Legacy fields for backward compatibility (will be migrated automatically)
         issuedFromSerial: allocation.fromSerial,
         issuedToSerial: allocation.toSerial,
         issuedQuantity: allocation.quantity,
-        utilizedQuantity: 0, // User will update this
+        
+        utilizedQuantity: allocation.quantity, // Set to allocated quantity (user can adjust)
         wastageFromSerial: '',
         wastageToSerial: '',
         wastageQuantity: 0,
-        leftOverQuantity: allocation.quantity, // Initially all are left over
+        leftOverQuantity: 0, // Initially 0 (user will update after production)
         damageReason: '',
         isFixed: false, // User can edit these fields
+        
         // Additional metadata for tracking
         referenceNo: this.selectedRequest!.referenceNo,
         brandDetails: this.selectedRequest!.brandDetails,
@@ -1033,11 +1097,13 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         usageDate: new Date().toISOString().split('T')[0],
         approvalDate: new Date().toISOString().split('T')[0],
         officerName: this.currentOfficer.name,
-        cartoonNumber: allocation.cartoonNumber,
+        cartoonNumber: allocation.cartoonNumber, // ← This shows which roll was used!
         autoGenerated: true
       };
       
-      console.log(`Created daily entry ${index + 1}:`, entry);
+      console.log(`Created daily entry ${index + 1} for Roll ${allocation.cartoonNumber}:`, entry);
+      console.log(`  - Serial Range: ${allocation.fromSerial} to ${allocation.toSerial}`);
+      console.log(`  - Quantity: ${allocation.quantity}`);
       return entry;
     });
 
