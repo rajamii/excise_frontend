@@ -1415,4 +1415,226 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     // Return unique rolls
     return [...new Set(rolls)];
   }
+
+  /**
+   * Get available rolls for an entry (from the assigned rolls for that entry)
+   */
+  getAvailableRollsForEntry(entry: HologramDailyEntry): any[] {
+    // Get all rolls assigned to this entry
+    const assignedRolls = this.getAssignedRolls(entry);
+    
+    // Load roll details from localStorage (officer's allocation)
+    const allocatedRolls = JSON.parse(localStorage.getItem('hologramAllocations') || '[]');
+    
+    // Return roll details for assigned rolls
+    return assignedRolls.map(cartoonNumber => {
+      const rollDetail = allocatedRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+      return rollDetail || {
+        cartoonNumber: cartoonNumber,
+        availableCount: 1000, // Default
+        serialRange: '000001-001000',
+        remainingInCartoon: 1000
+      };
+    });
+  }
+
+  /**
+   * Get current selected roll for entry
+   */
+  getCurrentSelectedRoll(entry: HologramDailyEntry): string | null {
+    const rollData = (entry as any).currentRollSelection;
+    return rollData?.selectedRoll || null;
+  }
+
+  /**
+   * Get current roll input data
+   */
+  getCurrentRollInput(entry: HologramDailyEntry): any {
+    return (entry as any).currentRollSelection?.rollInput;
+  }
+
+  /**
+   * Check if roll input is locked
+   */
+  isRollInputLocked(entry: HologramDailyEntry): boolean {
+    return (entry as any).currentRollSelection?.isLocked || false;
+  }
+
+  /**
+   * Get locked rolls for entry
+   */
+  getLockedRollsForEntry(entry: HologramDailyEntry): any[] {
+    return (entry as any).lockedRolls || [];
+  }
+
+  /**
+   * Select a roll for entry
+   */
+  selectRollForEntry(entry: HologramDailyEntry, cartoonNumber: string): void {
+    if (!cartoonNumber) return;
+
+    // Find the roll details
+    const roll = this.getAvailableRollsForEntry(entry).find(r => r.cartoonNumber === cartoonNumber);
+    if (!roll) return;
+
+    // Check if already locked
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.some((lr: any) => lr.cartoonNumber === cartoonNumber)) {
+      alert('This roll is already locked.');
+      return;
+    }
+
+    // Initialize roll selection data
+    (entry as any).currentRollSelection = {
+      selectedRoll: cartoonNumber,
+      rollInput: {
+        cartoonNumber: cartoonNumber,
+        availableCount: roll.remainingInCartoon || roll.availableCount || 1000,
+        serialRange: roll.serialRange,
+        issuedFrom: '',
+        issuedTo: '',
+        issuedQty: 0,
+        wastageFrom: '',
+        wastageTo: '',
+        wastageQty: 0,
+        leftOver: roll.remainingInCartoon || roll.availableCount || 1000
+      },
+      isLocked: false
+    };
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Handle roll input changes
+   */
+  onRollInputChange(entry: HologramDailyEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+
+    // Calculate issued quantity
+    rollInput.issuedQty = this.calculateQuantityFromSerials(
+      rollInput.issuedFrom,
+      rollInput.issuedTo
+    );
+
+    // Calculate wastage quantity
+    rollInput.wastageQty = this.calculateQuantityFromSerials(
+      rollInput.wastageFrom,
+      rollInput.wastageTo
+    );
+
+    // Calculate left over
+    const totalUsed = rollInput.issuedQty + rollInput.wastageQty;
+    rollInput.leftOver = rollInput.availableCount - totalUsed;
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Check if roll can be locked
+   */
+  canLockRoll(entry: HologramDailyEntry): boolean {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return false;
+
+    // Must have issued serials
+    if (!rollInput.issuedFrom || !rollInput.issuedTo) return false;
+
+    // Left over must not be negative
+    if (rollInput.leftOver < 0) return false;
+
+    return true;
+  }
+
+  /**
+   * Lock the current roll
+   */
+  lockRollForEntry(entry: HologramDailyEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput || !this.canLockRoll(entry)) {
+      alert('Please enter valid serial numbers before locking.');
+      return;
+    }
+
+    // Initialize locked rolls array
+    if (!(entry as any).lockedRolls) {
+      (entry as any).lockedRolls = [];
+    }
+
+    // Add to locked rolls
+    (entry as any).lockedRolls.push({ ...rollInput });
+
+    // Clear current selection
+    (entry as any).currentRollSelection = null;
+
+    // Recalculate entry totals
+    this.recalculateEntryFromLockedRolls(entry);
+
+    alert(`Roll ${rollInput.cartoonNumber} locked successfully! You can now select another roll or save the entry.`);
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Unlock a roll
+   */
+  unlockRollForEntry(entry: HologramDailyEntry, cartoonNumber: string): void {
+    const lockedRolls = (entry as any).lockedRolls || [];
+    const index = lockedRolls.findIndex((r: any) => r.cartoonNumber === cartoonNumber);
+
+    if (index !== -1) {
+      lockedRolls.splice(index, 1);
+      this.recalculateEntryFromLockedRolls(entry);
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Recalculate entry totals from locked rolls
+   */
+  recalculateEntryFromLockedRolls(entry: HologramDailyEntry): void {
+    const lockedRolls = (entry as any).lockedRolls || [];
+
+    let totalIssued = 0;
+    let totalWastage = 0;
+    let totalLeftOver = 0;
+
+    lockedRolls.forEach((roll: any) => {
+      totalIssued += roll.issuedQty || 0;
+      totalWastage += roll.wastageQty || 0;
+      totalLeftOver += roll.leftOver || 0;
+    });
+
+    entry.issuedQuantity = totalIssued;
+    entry.wastageQuantity = totalWastage;
+    entry.leftOverQuantity = totalLeftOver;
+
+    // Update issued and wastage entries arrays
+    entry.issuedEntries = lockedRolls
+      .filter((roll: any) => roll.issuedQty > 0)
+      .map((roll: any) => ({
+        id: this.hologramDataService.generateId(),
+        fromSerial: roll.issuedFrom,
+        toSerial: roll.issuedTo,
+        quantity: roll.issuedQty
+      }));
+
+    entry.wastageEntries = lockedRolls
+      .filter((roll: any) => roll.wastageQty > 0)
+      .map((roll: any) => ({
+        id: this.hologramDataService.generateId(),
+        fromSerial: roll.wastageFrom,
+        toSerial: roll.wastageTo,
+        quantity: roll.wastageQty,
+        damageReason: entry.damageReason || ''
+      }));
+  }
+
+  /**
+   * Check if entry has locked rolls
+   */
+  hasLockedRolls(entry: HologramDailyEntry): boolean {
+    const lockedRolls = (entry as any).lockedRolls || [];
+    return lockedRolls.length > 0;
+  }
 }

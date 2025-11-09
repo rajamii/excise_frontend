@@ -413,16 +413,43 @@
                   {{ getEntryMetadata(entry).bottleSize }}
                 </td>
 
-                <!-- ROLLS ASSIGNED - NEW COLUMN -->
+                <!-- ROLLS ASSIGNED - NEW COLUMN WITH DROPDOWN -->
                 <td class="rolls-assigned">
-                  <div class="rolls-list">
-                    @for (roll of getAssignedRolls(entry); track roll) {
-                      <span class="badge bg-primary me-1 mb-1">{{ roll }}</span>
-                    }
-                    @if (getAssignedRolls(entry).length === 0) {
-                      <span class="text-muted">No rolls assigned</span>
-                    }
-                  </div>
+                  @if (!entry.isFixed) {
+                    <!-- Roll Selection Dropdown -->
+                    <select class="form-select form-select-sm mb-2" 
+                            [value]="getCurrentSelectedRoll(entry) || ''"
+                            (change)="selectRollForEntry(entry, $any($event.target).value)"
+                            [disabled]="isRollInputLocked(entry)">
+                      <option value="">Select Roll...</option>
+                      @for (roll of getAvailableRollsForEntry(entry); track roll.cartoonNumber) {
+                        <option [value]="roll.cartoonNumber">
+                          {{ roll.cartoonNumber }} ({{ roll.availableCount || roll.remainingInCartoon || 1000 }} avail)
+                        </option>
+                      }
+                    </select>
+
+                    <!-- Locked Rolls Display -->
+                    <div class="locked-rolls-display">
+                      @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                        <span class="badge bg-success me-1 mb-1">
+                          {{ lockedRoll.cartoonNumber }}
+                          <button class="btn btn-sm btn-link text-white p-0 ms-1" 
+                                  (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"
+                                  title="Unlock this roll">
+                            <i class="bi bi-x"></i>
+                          </button>
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <!-- Show locked rolls for saved entries -->
+                    <div class="rolls-list">
+                      @for (roll of getAssignedRolls(entry); track roll) {
+                        <span class="badge bg-secondary me-1 mb-1">{{ roll }}</span>
+                      }
+                    </div>
+                  }
                 </td>
 
                 <!-- Hologram Qty -->
