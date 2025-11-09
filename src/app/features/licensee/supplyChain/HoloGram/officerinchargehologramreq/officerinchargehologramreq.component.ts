@@ -884,7 +884,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     const issuedEntries = this.allocationResult.allocations.map((allocation, index) => ({
       id: Date.now() + index,
-      batchNumber: `BATCH${String(Date.now()).slice(-6)}`,
+      referenceNo: this.selectedRequest!.referenceNo, // Use reference number instead of batch number
       brandName: this.selectedRequest!.brandDetails.brandName,
       fromSerial: allocation.fromSerial,
       toSerial: allocation.toSerial,
@@ -924,7 +924,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       cartoonNumber: issued.cartoonNumber,
       type: issued.hologramType,
       action: 'ISSUED',
-      batchNumber: issued.batchNumber,
+      referenceNo: issued.referenceNo, // Use reference number instead of batch number
       brandName: issued.brandName,
       fromSerial: issued.fromSerial,
       toSerial: issued.toSerial,

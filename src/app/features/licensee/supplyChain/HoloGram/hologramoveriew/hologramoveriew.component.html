@@ -548,14 +548,13 @@
                     <thead class="table-success">
                       <tr>
                         <th>Issue Date</th>
-                        <th>Batch Number</th>
+                        <th>Request Reference</th>
                         <th>Brand Name</th>
                         <th>Serial Range</th>
                         <th>Quantity</th>
                         <th>Status</th>
                         <th>Officer</th>
-                        <th>Request Ref</th>
-                        <th>Actions</th>
+                        <th>Cartoon Number</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -567,11 +566,11 @@
                           <small class="text-muted">{{ issued.issueDate | date:'EEEE' }}</small>
                         </td>
                         <td>
-                          <span class="fw-bold text-primary">{{ issued.batchNumber }}</span>
+                          <span class="fw-bold text-primary">{{ issued.referenceNo || issued.requestReference }}</span>
                           @if (issued.status === 'IN_PROGRESS') {
                           <br>
                           <span class="badge bg-warning text-dark">
-                            <i class="bi bi-clock me-1"></i>NEW
+                            <i class="bi bi-clock me-1"></i>IN PROCESS
                           </span>
                           }
                         </td>
@@ -584,10 +583,6 @@
                         </td>
                         <td>
                           <span class="font-monospace small">{{ issued.fromSerial }} - {{ issued.toSerial }}</span>
-                          @if (issued.cartoonNumber) {
-                          <br>
-                          <small class="text-muted">Cartoon: {{ issued.cartoonNumber }}</small>
-                          }
                         </td>
                         <td class="text-end">
                           <span class="fw-bold">{{ issued.quantity | number }}</span>
@@ -602,33 +597,21 @@
                         </td>
                         <td>{{ issued.officer }}</td>
                         <td>
-                          @if (issued.requestReference) {
-                          <span class="font-monospace small">{{ issued.requestReference }}</span>
+                          @if (issued.cartoonNumber) {
+                          <span class="font-monospace small">{{ issued.cartoonNumber }}</span>
                           } @else {
                           <span class="text-muted">-</span>
                           }
                         </td>
-                        <td>
-                          <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-info" (click)="viewIssuedDetails(issued)" title="View Details">
-                              <i class="bi bi-eye"></i>
-                            </button>
-                            @if (issued.status === 'IN_PROGRESS') {
-                            <button class="btn btn-outline-success" (click)="markAsCompleted(issued)" title="Mark as Completed">
-                              <i class="bi bi-check-circle"></i>
-                            </button>
-                            }
-                          </div>
-                        </td>
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                           <i class="bi bi-inbox display-4"></i>
                           <br>
                           No holograms have been issued yet.
                           <br>
-                          <small>Approved hologram requests will appear here with "In Process" status.</small>
+                          <small>Approved hologram requests will appear here with "In Process" status. They will automatically move to "Issued History" when the officer approves the daily register entry.</small>
                         </td>
                       </tr>
                       }
@@ -654,7 +637,7 @@
                     <thead class="table-success">
                       <tr>
                         <th>Date</th>
-                        <th>Batch Number</th>
+                        <th>Request Reference</th>
                         <th>Brand Name</th>
                         <th>Serial Range</th>
                         <th>Quantity</th>
@@ -667,7 +650,7 @@
                       @for (history of historyData; track history.id) {
                       <tr>
                         <td>{{ history.issueDate | date:'dd-MMM-yyyy' }}</td>
-                        <td><span class="fw-bold text-primary">{{ history.batchNumber }}</span></td>
+                        <td><span class="fw-bold text-primary">{{ history.referenceNo || history.requestReference }}</span></td>
                         <td>{{ history.brandName }}</td>
                         <td><span class="font-monospace small">{{ history.fromSerial }} - {{ history.toSerial }}</span>
                         </td>
@@ -1088,10 +1071,10 @@
                                 <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
                               </div>
                               }
-                              @if (range.batchNumber) {
+                              @if (range.referenceNo) {
                               <div class="detail-item">
-                                <i class="bi bi-tag text-info me-1"></i>
-                                <small>Batch: {{ range.batchNumber }}</small>
+                                <i class="bi bi-file-text text-info me-1"></i>
+                                <small>Request Ref: {{ range.referenceNo }}</small>
                               </div>
                               }
                               @if (range.productionLine) {

@@ -35,7 +35,7 @@ interface SerialRange {
   description: string;
   usedDate?: string;
   damageDate?: string;
-  batchNumber?: string;
+  referenceNo?: string; // Changed from batchNumber to referenceNo
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
@@ -48,7 +48,7 @@ interface UsageEvent {
   status: 'AVAILABLE' | 'USED' | 'DAMAGED';
   description: string;
   date: string;
-  batchNumber?: string;
+  referenceNo?: string; // Changed from batchNumber to referenceNo
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
@@ -57,7 +57,7 @@ interface UsageEvent {
 interface ProductionBatch {
   size: number;
   productName: string;
-  batchNumber: string;
+  referenceNo: string; // Changed from batchNumber to referenceNo
   productionLine: string;
 }
 
@@ -95,7 +95,7 @@ interface AvailableHologram {
 
 interface IssuedHologram {
   id: number;
-  batchNumber: string;
+  referenceNo: string; // Changed from batchNumber to referenceNo
   brandName: string;
   fromSerial: string;
   toSerial: string;
@@ -111,7 +111,7 @@ interface IssuedHologram {
 interface HistoryHologram {
   id: number;
   issueDate: string;
-  batchNumber: string;
+  referenceNo: string; // Changed from batchNumber to referenceNo
   brandName: string;
   fromSerial: string;
   toSerial: string;
@@ -119,6 +119,7 @@ interface HistoryHologram {
   status: 'COMPLETED' | 'CANCELLED';
   completionDate: string;
   officer: string;
+  requestReference?: string; // For backward compatibility
 }
 
 interface ChartFilters {
@@ -527,7 +528,7 @@ export class HologramoveriewComponent implements OnInit {
       // Add additional properties based on status
       if (event.status === 'USED') {
         range.usedDate = event.date;
-        range.batchNumber = event.batchNumber;
+        range.referenceNo = event.referenceNo; // Changed from batchNumber to referenceNo
         range.productionLine = event.productionLine;
       } else if (event.status === 'DAMAGED') {
         range.damageDate = event.date;
@@ -584,7 +585,7 @@ export class HologramoveriewComponent implements OnInit {
             status: 'USED',
             description: `Production batch - ${batch.productName}`,
             date: usageDates[eventIndex],
-            batchNumber: batch.batchNumber,
+            referenceNo: batch.referenceNo, // Changed from batchNumber to referenceNo
             productionLine: batch.productionLine
           });
           currentSerial += batch.size;
@@ -673,7 +674,7 @@ export class HologramoveriewComponent implements OnInit {
       batches.push({
         size: batchSize,
         productName: productName,
-        batchNumber: `BATCH-${String(batchCounter).padStart(3, '0')}`,
+        referenceNo: `REF-${String(batchCounter).padStart(3, '0')}`, // Changed from batchNumber to referenceNo
         productionLine: `LINE-${Math.floor(Math.random() * 5) + 1}`
       });
       
@@ -1114,34 +1115,33 @@ export class HologramoveriewComponent implements OnInit {
     return issueTime > oneHourAgo;
   }
 
-  // Method to mark hologram as completed
+  // Method to mark hologram as completed (NO LONGER USED - kept for backward compatibility)
   markAsCompleted(issued: IssuedHologram): void {
-    if (confirm(`Mark batch ${issued.batchNumber} as completed?`)) {
+    if (confirm(`Mark request ${issued.referenceNo} as completed?`)) {
       issued.status = 'COMPLETED';
       
       // Update in localStorage
-      const issuedHolograms = JSON.parse(localStorage.getItem('issuedHolograms') || '[]');
+      const issuedHolograms = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
       const index = issuedHolograms.findIndex((item: any) => item.id === issued.id);
       if (index !== -1) {
         issuedHolograms[index].status = 'COMPLETED';
-        localStorage.setItem('issuedHolograms', JSON.stringify(issuedHolograms));
+        localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedHolograms));
       }
       
-      alert(`Batch ${issued.batchNumber} marked as completed!`);
+      alert(`Request ${issued.referenceNo} marked as completed!`);
     }
   }
 
   // Method to view issued hologram details
   viewIssuedDetails(issued: IssuedHologram): void {
     const details = `
-Batch Number: ${issued.batchNumber}
+Request Reference: ${issued.referenceNo}
 Brand: ${issued.brandName}
 Serial Range: ${issued.fromSerial} - ${issued.toSerial}
 Quantity: ${issued.quantity}
 Issue Date: ${new Date(issued.issueDate).toLocaleString()}
 Status: ${issued.status}
 Officer: ${issued.officer}
-${issued.requestReference ? `Request Reference: ${issued.requestReference}` : ''}
 ${issued.hologramType ? `Hologram Type: ${issued.hologramType}` : ''}
 ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     `;
@@ -1220,7 +1220,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                   status: 'USED',
                   description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
                   usedDate: entry.date,
-                  batchNumber: entry.referenceNo || 'N/A',
+                  referenceNo: entry.referenceNo || 'N/A', // Changed from batchNumber to referenceNo
                   productionLine: entry.brandDetails?.brandName || 'N/A'
                 });
               }
@@ -1239,7 +1239,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
               status: 'USED',
               description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
               usedDate: entry.date,
-              batchNumber: entry.referenceNo || 'N/A',
+              referenceNo: entry.referenceNo || 'N/A', // Changed from batchNumber to referenceNo
               productionLine: entry.brandDetails?.brandName || 'N/A'
             });
           }
