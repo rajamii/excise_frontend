@@ -905,8 +905,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Created issued hologram entries:', issuedEntries);
     console.log('Saved to hologramOverviewIssued');
 
-    // Also create history entries
-    this.createIssuedHistoryEntries(issuedEntries);
+    // NOTE: Do NOT create history entries here!
+    // History entries will be created ONLY when officer approves from Manufacturing Register
+    // by the moveIssuedHologramToHistory() method
 
     // Create auto-populated daily register entries
     this.createDailyRegisterEntries();
@@ -914,38 +915,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('=== ISSUED HOLOGRAM ENTRIES COMPLETE ===');
   }
 
+  /**
+   * DEPRECATED: This method is NO LONGER USED
+   * History entries should ONLY be created when officer approves from Manufacturing Register
+   * NOT when officer approves the hologram request
+   */
   createIssuedHistoryEntries(issuedEntries: any[]): void {
-    console.log('=== CREATING ISSUED HISTORY ENTRIES ===');
-
-    const historyEntries = issuedEntries.map((issued, index) => ({
-      id: Date.now() + index + 1000,
-      issueDate: issued.issueDate,
-      date: new Date().toISOString().split('T')[0],
-      cartoonNumber: issued.cartoonNumber,
-      type: issued.hologramType,
-      action: 'ISSUED',
-      referenceNo: issued.referenceNo, // Use reference number instead of batch number
-      brandName: issued.brandName,
-      fromSerial: issued.fromSerial,
-      toSerial: issued.toSerial,
-      quantity: issued.quantity,
-      status: 'COMPLETED',
-      completionDate: new Date().toISOString().split('T')[0],
-      officer: issued.officer,
-      requestReference: issued.requestReference,
-      approvedBy: this.currentOfficer.name,
-      approvedAt: new Date().toISOString(),
-      remarks: `Approved by ${this.currentOfficer.name} - Request: ${issued.requestReference}`
-    }));
-
-    // Save to hologram overview history
-    const existingHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
-    const updatedHistory = [...existingHistory, ...historyEntries];
-    localStorage.setItem('hologramOverviewHistory', JSON.stringify(updatedHistory));
-
-    console.log('Created history entries:', historyEntries);
-    console.log('Saved to hologramOverviewHistory');
-    console.log('=== ISSUED HISTORY ENTRIES COMPLETE ===');
+    console.log('=== createIssuedHistoryEntries: DEPRECATED - This method should not be called ===');
+    console.log('History entries will be created by moveIssuedHologramToHistory() in manufacturing register');
+    // This method is intentionally empty
+    // History entries are created ONLY when officer approves from Manufacturing Register
   }
 
   createDailyRegisterEntries(): void {
