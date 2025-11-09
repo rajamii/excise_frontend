@@ -1605,3 +1605,420 @@ rial Numbers Details Modal Styles
     font-size: 0.8rem;
   }
 }
+// Usage 
+Details Modal Styling
+.modal {
+  &.show {
+    display: block;
+  }
+  
+  .modal-dialog.modal-xl {
+    max-width: 95%;
+    margin: 1.75rem auto;
+  }
+  
+  .modal-content {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    
+    .modal-header {
+      border-radius: 15px 15px 0 0;
+      padding: 1.5rem 2rem;
+      border-bottom: none;
+      
+      .modal-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        
+        i {
+          font-size: 1.75rem;
+          vertical-align: middle;
+        }
+      }
+    }
+    
+    .modal-body {
+      padding: 2rem;
+      max-height: 75vh;
+      overflow-y: auto;
+      
+      // Custom scrollbar
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 10px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+        
+        &:hover {
+          background: #94a3b8;
+        }
+      }
+    }
+    
+    .modal-footer {
+      border-top: 1px solid #e2e8f0;
+      padding: 1.25rem 2rem;
+      background: #f8fafc;
+      border-radius: 0 0 15px 15px;
+    }
+  }
+}
+
+// Info Item Styling
+.info-item {
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background: #f8fafc;
+    transform: translateY(-2px);
+  }
+  
+  small {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+  }
+  
+  strong {
+    font-size: 1.1rem;
+    color: #1f2937;
+  }
+}
+
+// Card Enhancements for Usage Details
+.card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card-header {
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    
+    h6 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1f2937;
+      
+      i {
+        font-size: 1.1rem;
+      }
+    }
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+  }
+}
+
+// Table Enhancements for Usage Details
+.table {
+  margin-bottom: 0;
+  
+  thead {
+    th {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 1rem 0.75rem;
+      background: #f8fafc;
+    }
+  }
+  
+  tbody {
+    tr {
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: #f8fafc;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+      
+      td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        
+        .font-monospace {
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+      }
+    }
+  }
+  
+  tfoot {
+    tr {
+      background: #f8fafc;
+      
+      td {
+        padding: 1rem 0.75rem;
+        font-weight: 600;
+        border-top: 2px solid #e2e8f0;
+      }
+    }
+  }
+}
+
+// Statistics Cards in Usage Details
+.card.border-success,
+.card.border-primary,
+.card.border-danger,
+.card.border-info {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  }
+  
+  .card-body {
+    padding: 1.5rem;
+    
+    i {
+      opacity: 0.8;
+      transition: all 0.3s ease;
+    }
+    
+    h3 {
+      font-weight: 800;
+      margin: 0.5rem 0;
+    }
+    
+    small {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    &:hover i {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+}
+
+// Progress Bar Enhancements
+.progress {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  
+  .progress-bar {
+    transition: width 0.6s ease;
+    border-radius: 10px;
+  }
+}
+
+// Badge Enhancements
+.badge {
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  
+  &.bg-primary {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  }
+  
+  &.bg-success {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+  }
+  
+  &.bg-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  }
+  
+  &.bg-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+  }
+}
+
+// Empty State Styling
+.text-center.py-5 {
+  padding: 3rem 2rem !important;
+  
+  .display-4 {
+    font-size: 4rem;
+    opacity: 0.3;
+    margin-bottom: 1rem;
+  }
+  
+  h6 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    font-size: 0.95rem;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+}
+
+// Icon Styling
+.bi {
+  &.bi-calendar-event,
+  &.bi-calendar-x {
+    font-size: 1rem;
+  }
+  
+  &.bi-person-badge {
+    font-size: 0.95rem;
+  }
+  
+  &.bi-info-circle {
+    font-size: 0.9rem;
+  }
+}
+
+// Responsive Design for Usage Details Modal
+@media (max-width: 992px) {
+  .modal-dialog.modal-xl {
+    max-width: 98%;
+    margin: 0.5rem;
+  }
+  
+  .modal-body {
+    padding: 1.5rem !important;
+    max-height: 70vh !important;
+  }
+  
+  .info-item {
+    margin-bottom: 1rem;
+  }
+  
+  .table {
+    font-size: 0.85rem;
+    
+    thead th,
+    tbody td,
+    tfoot td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 1rem 1.5rem !important;
+    
+    .modal-title {
+      font-size: 1.2rem !important;
+    }
+  }
+  
+  .modal-body {
+    padding: 1rem !important;
+  }
+  
+  .modal-footer {
+    padding: 1rem 1.5rem !important;
+    
+    .btn {
+      font-size: 0.85rem;
+      padding: 0.5rem 1rem;
+    }
+  }
+  
+  .card {
+    margin-bottom: 1rem;
+    
+    .card-body {
+      padding: 1rem;
+    }
+  }
+  
+  .table-responsive {
+    font-size: 0.8rem;
+    
+    .table {
+      min-width: 800px;
+    }
+  }
+  
+  .row.g-3 {
+    .col-md-3 {
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+// Animation for modal appearance
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal.show .modal-dialog {
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+// Hover effects for interactive elements
+.btn {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Print-friendly styles
+@media print {
+  .modal-header,
+  .modal-footer {
+    display: none;
+  }
+  
+  .modal-body {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  .card {
+    page-break-inside: avoid;
+  }
+  
+  .table {
+    page-break-inside: auto;
+    
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+  }
+}

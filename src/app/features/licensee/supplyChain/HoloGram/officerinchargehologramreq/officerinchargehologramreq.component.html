@@ -277,6 +277,11 @@
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
+                                        <!-- Show status badge for APPROVED -->
+                                        <span *ngIf="request.status === 'APPROVED'" class="badge bg-success text-white">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Approved
+                                        </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
                                         <span *ngIf="request.status === 'UNDER_PROCESS'" class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
@@ -286,6 +291,11 @@
                                         <span *ngIf="request.status === 'COMPLETED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Completed
+                                        </span>
+                                        <!-- Show status badge for REJECTED -->
+                                        <span *ngIf="request.status === 'REJECTED'" class="badge bg-danger text-white">
+                                            <i class="bi bi-x-circle-fill me-1"></i>
+                                            Rejected
                                         </span>
                                     </div>
                                 </td>

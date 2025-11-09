@@ -182,6 +182,10 @@ export class HologramoveriewComponent implements OnInit {
   currentSerialPage: number = 1;
   serialPageSize: number = 50;
 
+  // Usage Details Modal
+  showUsageDetailsModal: boolean = false;
+  selectedRollForUsage: SerialRollData | null = null;
+
   // Chart Filters
   chartFilters: ChartFilters = {
     specificDate: '',
@@ -1042,13 +1046,129 @@ export class HologramoveriewComponent implements OnInit {
     return Math.ceil(this.filteredSerialData.length / this.serialDataPageSize);
   }
 
+  getSerialDataPageNumbers(): number[] {
+    const totalPages = this.getTotalSerialDataPages();
+    const pages: number[] = [];
+    const maxPagesToShow = 5;
+
+    let startPage = Math.max(1, this.serialCurrentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  setSerialDataPage(page: number): void {
+    const totalPages = this.getTotalSerialDataPages();
+    if (page >= 1 && page <= totalPages) {
+      this.serialCurrentPage = page;
+    }
+  }
+
   // Serial roll action methods
   isNewSerialRoll(roll: SerialRollData): boolean {
     return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
   }
 
   viewUsageDetails(roll: SerialRollData): void {
-    alert(`Usage details for ${roll.rollNumber} will be implemented with backend integration`);
+    this.selectedRollForUsage = roll;
+    this.showUsageDetailsModal = true;
+  }
+
+  closeUsageDetailsModal(): void {
+    this.showUsageDetailsModal = false;
+    this.selectedRollForUsage = null;
+  }
+
+  getUsageDetailsData() {
+    if (!this.selectedRollForUsage) return null;
+
+    const roll = this.selectedRollForUsage;
+    
+    // Load daily register entries to get actual usage data
+    const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+    const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+    const allEntries = [...dailyEntries, ...approvedEntries];
+    
+    // Filter entries for this specific roll
+    const relevantEntries = allEntries.filter((entry: any) => 
+      entry.cartoonNumber === roll.rollNumber && 
+      entry.hologramType === roll.hologramType &&
+      (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
+    );
+
+    // Process issued entries
+    const issuedDetails: any[] = [];
+    const wastageDetails: any[] = [];
+    
+    relevantEntries.forEach((entry: any) => {
+      // Process issued entries
+      if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+        entry.issuedEntries.forEach((issued: any) => {
+          if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
+            issuedDetails.push({
+              date: entry.date,
+              fromSerial: issued.fromSerial,
+              toSerial: issued.toSerial,
+              quantity: issued.quantity,
+              brandName: entry.brandDetails?.brandName || 'N/A',
+              referenceNo: entry.referenceNo || 'N/A',
+              officerName: entry.officerName || 'System'
+            });
+          }
+        });
+      } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
+        issuedDetails.push({
+          date: entry.date,
+          fromSerial: entry.issuedFromSerial,
+          toSerial: entry.issuedToSerial,
+          quantity: entry.issuedQuantity,
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          referenceNo: entry.referenceNo || 'N/A',
+          officerName: entry.officerName || 'System'
+        });
+      }
+
+      // Process wastage entries
+      if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+        entry.wastageEntries.forEach((wastage: any) => {
+          if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
+            wastageDetails.push({
+              date: entry.date,
+              fromSerial: wastage.fromSerial,
+              toSerial: wastage.toSerial,
+              quantity: wastage.quantity,
+              reason: wastage.damageReason || entry.damageReason || 'Not specified',
+              officerName: entry.officerName || 'System'
+            });
+          }
+        });
+      } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
+        wastageDetails.push({
+          date: entry.date,
+          fromSerial: entry.wastageFromSerial,
+          toSerial: entry.wastageToSerial,
+          quantity: entry.wastageQuantity,
+          reason: entry.damageReason || 'Not specified',
+          officerName: entry.officerName || 'System'
+        });
+      }
+    });
+
+    return {
+      roll: roll,
+      issuedDetails: issuedDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      wastageDetails: wastageDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      totalIssued: issuedDetails.reduce((sum, item) => sum + item.quantity, 0),
+      totalWastage: wastageDetails.reduce((sum, item) => sum + item.quantity, 0)
+    };
   }
 
   editRoll(roll: SerialRollData): void {

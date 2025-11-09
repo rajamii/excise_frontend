@@ -418,10 +418,42 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   confirmApproval() {
     if (this.selectedRequest) {
+      // Update the request status
       this.selectedRequest.status = 'APPROVED';
       this.selectedRequest.officerComments = this.approvalComments;
       this.selectedRequest.approvedQuantity = this.approvedQuantity;
       this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
+
+      // Update in localStorage - find and update the original request
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      
+      // Update in hologramRequests
+      const requestIndex = hologramRequests.findIndex((req: any) => 
+        req.refNumber === this.selectedRequest!.referenceNo || 
+        req.referenceNo === this.selectedRequest!.referenceNo
+      );
+      
+      if (requestIndex !== -1) {
+        hologramRequests[requestIndex].status = 'APPROVED';
+        hologramRequests[requestIndex].officerComments = this.approvalComments;
+        hologramRequests[requestIndex].approvedQuantity = this.approvedQuantity;
+        hologramRequests[requestIndex].approvalDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+      }
+      
+      // Update in hologramApplications
+      const appIndex = hologramApplications.findIndex((app: any) => 
+        app.refNo === this.selectedRequest!.referenceNo
+      );
+      
+      if (appIndex !== -1) {
+        hologramApplications[appIndex].status = 'APPROVED';
+        hologramApplications[appIndex].officerComments = this.approvalComments;
+        hologramApplications[appIndex].approvedQuantity = this.approvedQuantity;
+        hologramApplications[appIndex].approvalDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
+      }
 
       console.log('Request approved:', this.selectedRequest.referenceNo);
       alert(`Request ${this.selectedRequest.referenceNo} has been approved for ${this.approvedQuantity} holograms!`);
@@ -429,22 +461,56 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       this.selectedRequest = null;
       this.approvalComments = '';
       this.approvedQuantity = 0;
-      this.applyFilters();
+      
+      // Reload data to reflect changes
+      this.loadHologramRequests();
     }
   }
 
   confirmRejection() {
     if (this.selectedRequest && this.rejectionReason.trim()) {
+      // Update the request status
       this.selectedRequest.status = 'REJECTED';
       this.selectedRequest.rejectionReason = this.rejectionReason;
       this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
+
+      // Update in localStorage - find and update the original request
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      
+      // Update in hologramRequests
+      const requestIndex = hologramRequests.findIndex((req: any) => 
+        req.refNumber === this.selectedRequest!.referenceNo || 
+        req.referenceNo === this.selectedRequest!.referenceNo
+      );
+      
+      if (requestIndex !== -1) {
+        hologramRequests[requestIndex].status = 'REJECTED';
+        hologramRequests[requestIndex].rejectionReason = this.rejectionReason;
+        hologramRequests[requestIndex].approvalDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+      }
+      
+      // Update in hologramApplications
+      const appIndex = hologramApplications.findIndex((app: any) => 
+        app.refNo === this.selectedRequest!.referenceNo
+      );
+      
+      if (appIndex !== -1) {
+        hologramApplications[appIndex].status = 'REJECTED';
+        hologramApplications[appIndex].rejectionReason = this.rejectionReason;
+        hologramApplications[appIndex].approvalDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
+      }
 
       console.log('Request rejected:', this.selectedRequest.referenceNo);
       alert(`Request ${this.selectedRequest.referenceNo} has been rejected.`);
 
       this.selectedRequest = null;
       this.rejectionReason = '';
-      this.applyFilters();
+      
+      // Reload data to reflect changes
+      this.loadHologramRequests();
     }
   }
 
@@ -730,22 +796,23 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Create issued hologram entries
     this.createIssuedHologramEntries();
 
-    // Update request status to UNDER_PROCESS (not APPROVED yet)
-    // Status will change to COMPLETED only after Manufacturing Register approval
-    this.selectedRequest.status = 'UNDER_PROCESS';
-    this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation - Under Process';
+    // Update request status to APPROVED
+    this.selectedRequest.status = 'APPROVED';
+    this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation';
     this.selectedRequest.approvedQuantity = this.approvedQuantity || this.selectedRequest.requestedQuantity;
     this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
 
-    console.log('Request status set to UNDER_PROCESS');
+    console.log('Request status set to APPROVED');
 
     // Update localStorage
     this.updateRequestInStorage();
 
-    alert(`Request ${this.selectedRequest.referenceNo} approved and moved to UNDER_PROCESS! ${this.allocationResult.allocations.length} hologram allocation(s) created. Status will change to COMPLETED after Manufacturing Register approval.`);
+    alert(`Request ${this.selectedRequest.referenceNo} has been APPROVED! ${this.allocationResult.allocations.length} hologram allocation(s) created successfully.`);
 
     this.closeAllocationModal();
-    this.applyFilters();
+    
+    // Reload data to reflect changes immediately
+    this.loadHologramRequests();
   }
 
   updateInventoryAfterAllocation(): void {
