@@ -44,6 +44,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   selectedMonth = 'nov';
   selectedYear = '2025';
   selectedDate = new Date().toISOString().split('T')[0];
+  selectedStatus: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'PENDING'; // Add status filter
   
   // Pagination
   pageSize = 10;
@@ -78,9 +79,10 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     // Load entries from localStorage that were saved by supply chain users
     const savedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
     
-    // Filter only entries that are marked as fixed (saved) but not yet approved
+    // Load ALL entries (PENDING, APPROVED, REJECTED) so officer can see history
+    // Filter only entries that are marked as fixed (saved)
     this.pendingEntries = savedEntries
-      .filter((entry: any) => entry.isFixed && (!entry.approvalStatus || entry.approvalStatus === 'PENDING'))
+      .filter((entry: any) => entry.isFixed)
       .map((entry: any) => ({
         id: entry.id,
         date: entry.date,
@@ -120,7 +122,10 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         dateMatch = entry.date.startsWith(datePrefix);
       }
       
-      return typeMatch && dateMatch;
+      // Add status filter
+      const statusMatch = this.selectedStatus === 'ALL' || entry.status === this.selectedStatus;
+      
+      return typeMatch && dateMatch && statusMatch;
     });
     
     console.log('Filtered entries:', this.filteredEntries.length);
@@ -147,6 +152,12 @@ export class HologramManufacturingRegisterComponent implements OnInit {
 
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
     this.selectedHologramType = type;
+    this.loadFilteredData();
+    this.currentPage = 1;
+  }
+
+  onStatusChange(status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'): void {
+    this.selectedStatus = status;
     this.loadFilteredData();
     this.currentPage = 1;
   }
