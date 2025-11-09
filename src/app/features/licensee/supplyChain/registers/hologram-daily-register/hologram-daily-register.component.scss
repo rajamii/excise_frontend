@@ -1308,3 +1308,131 @@
     }
   }
 }
+
+/*
+ Rolls Assigned Column */
+.rolls-assigned {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+  padding: 0.5rem;
+  
+  .rolls-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    align-items: center;
+    
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.375rem 0.5rem;
+      white-space: nowrap;
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      border: 1px solid #0056b3;
+      box-shadow: 0 1px 3px rgba(0, 123, 255, 0.2);
+    }
+    
+    .text-muted {
+      font-size: 0.75rem;
+      font-style: italic;
+    }
+  }
+}
+
+
+/* Fix overlapping text in table */
+.register-table {
+  thead th {
+    white-space: normal !important;
+    word-wrap: break-word;
+    line-height: 1.2;
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.7rem !important;
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  tbody td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.75rem;
+  }
+}
+
+/* Specific column width fixes to prevent overlap */
+.register-table {
+  .ref-number {
+    min-width: 140px !important;
+    max-width: 140px !important;
+  }
+
+  .submission-date,
+  .usage-date {
+    min-width: 90px !important;
+    max-width: 90px !important;
+  }
+
+  .brand-details {
+    min-width: 120px !important;
+    max-width: 120px !important;
+    white-space: normal !important;
+    word-wrap: break-word;
+  }
+
+  .bottle-size {
+    min-width: 70px !important;
+    max-width: 70px !important;
+  }
+
+  .rolls-assigned {
+    min-width: 120px !important;
+    max-width: 120px !important;
+    
+    .badge {
+      font-size: 0.65rem !important;
+      padding: 0.25rem 0.4rem !important;
+    }
+  }
+
+  .hologram-qty {
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  .issued-from,
+  .issued-to,
+  .wastage-from,
+  .wastage-to {
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  .issued-qty,
+  .wastage-qty {
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  .left-over {
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+
+  .total-calc {
+    min-width: 100px !important;
+    max-width: 100px !important;
+  }
+
+  .damage-reason {
+    min-width: 120px !important;
+    max-width: 120px !important;
+  }
+
+  .actions {
+    min-width: 90px !important;
+    max-width: 90px !important;
+  }
+}

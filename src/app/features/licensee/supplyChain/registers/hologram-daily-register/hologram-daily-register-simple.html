@@ -1,0 +1,178 @@
+<!-- SIMPLE SINGLE ROW DESIGN -->
+<div class="bg-white">
+  <div class="container-fluid p-3">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4>Daily Hologram Register - Single Row Entry</h4>
+      <button class="btn btn-outline-secondary" (click)="goBack()">
+        <i class="bi bi-arrow-left me-2"></i>Back
+      </button>
+    </div>
+
+    <!-- Single Row Table -->
+    <div class="table-responsive" *ngIf="currentWorkingEntry">
+      <table class="table table-bordered">
+        <thead class="table-light">
+          <tr>
+            <th>SL NO</th>
+            <th>Reference No</th>
+            <th>Date</th>
+            <th>Roll Selection</th>
+            <th>Issued From</th>
+            <th>Issued To</th>
+            <th>Issued Qty</th>
+            <th>Wastage From</th>
+            <th>Wastage To</th>
+            <th>Wastage Qty</th>
+            <th>Left Over</th>
+            <th>Damage Reason</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <!-- SL NO -->
+            <td>1</td>
+
+            <!-- Reference No -->
+            <td>
+              <input type="text" class="form-control form-control-sm" 
+                     [(ngModel)]="currentWorkingEntry.referenceNo" 
+                     placeholder="Auto">
+            </td>
+
+            <!-- Date -->
+            <td>
+              <input type="date" class="form-control form-control-sm" 
+                     [(ngModel)]="currentWorkingEntry.date">
+            </td>
+
+            <!-- Roll Selection -->
+            <td style="min-width: 200px;">
+              <!-- Dropdown -->
+              <select class="form-select form-select-sm mb-2" 
+                      [value]="currentWorkingEntry.selectedRoll || ''"
+                      (change)="selectRoll($any($event.target).value)">
+                <option value="">Select Roll...</option>
+                <option *ngFor="let roll of availableRolls" [value]="roll.id">
+                  {{ roll.cartoonNumber }} ({{ roll.availableCount }} avail)
+                </option>
+              </select>
+
+              <!-- Locked Rolls -->
+              <div *ngIf="currentWorkingEntry.lockedRolls.length > 0">
+                <small class="text-success"><i class="bi bi-lock-fill"></i> Locked:</small>
+                <div *ngFor="let lr of currentWorkingEntry.lockedRolls">
+                  <span class="badge bg-success">
+                    {{ lr.cartoonNumber }}
+                    <button class="btn btn-sm btn-link text-white p-0" 
+                            (click)="unlockRoll(lr.rollId)">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Issued From -->
+            <td>
+              <input *ngIf="currentWorkingEntry.currentRollData" 
+                     type="text" class="form-control form-control-sm" 
+                     [value]="currentWorkingEntry.currentRollData.issuedFrom"
+                     (input)="updateRollField('issuedFrom', $any($event.target).value)"
+                     placeholder="From">
+            </td>
+
+            <!-- Issued To -->
+            <td>
+              <input *ngIf="currentWorkingEntry.currentRollData" 
+                     type="text" class="form-control form-control-sm" 
+                     [value]="currentWorkingEntry.currentRollData.issuedTo"
+                     (input)="updateRollField('issuedTo', $any($event.target).value)"
+                     placeholder="To">
+            </td>
+
+            <!-- Issued Qty -->
+            <td>
+              <span *ngIf="currentWorkingEntry.currentRollData">
+                {{ currentWorkingEntry.currentRollData.issuedQty | number }}
+              </span>
+            </td>
+
+            <!-- Wastage From -->
+            <td>
+              <input *ngIf="currentWorkingEntry.currentRollData" 
+                     type="text" class="form-control form-control-sm" 
+                     [value]="currentWorkingEntry.currentRollData.wastageFrom"
+                     (input)="updateRollField('wastageFrom', $any($event.target).value)"
+                     placeholder="From">
+            </td>
+
+            <!-- Wastage To -->
+            <td>
+              <input *ngIf="currentWorkingEntry.currentRollData" 
+                     type="text" class="form-control form-control-sm" 
+                     [value]="currentWorkingEntry.currentRollData.wastageTo"
+                     (input)="updateRollField('wastageTo', $any($event.target).value)"
+                     placeholder="To">
+            </td>
+
+            <!-- Wastage Qty -->
+            <td>
+              <span *ngIf="currentWorkingEntry.currentRollData">
+                {{ currentWorkingEntry.currentRollData.wastageQty | number }}
+              </span>
+            </td>
+
+            <!-- Left Over -->
+            <td [class.text-danger]="currentWorkingEntry.currentRollData?.leftOver < 0"
+                [class.text-success]="currentWorkingEntry.currentRollData?.leftOver > 0">
+              <span *ngIf="currentWorkingEntry.currentRollData">
+                {{ currentWorkingEntry.currentRollData.leftOver | number }}
+              </span>
+            </td>
+
+            <!-- Damage Reason -->
+            <td>
+              <textarea class="form-control form-control-sm" 
+                        [(ngModel)]="currentWorkingEntry.damageReason" 
+                        rows="2" placeholder="Reason..."></textarea>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              <!-- Lock Roll Button -->
+              <button *ngIf="currentWorkingEntry.currentRollData && !currentWorkingEntry.currentRollData.isLocked" 
+                      class="btn btn-sm btn-warning mb-1 w-100" 
+                      (click)="lockRoll()"
+                      [disabled]="currentWorkingEntry.currentRollData.leftOver < 0">
+                <i class="bi bi-lock"></i> Lock Roll
+              </button>
+
+              <!-- Submit Button -->
+              <button *ngIf="currentWorkingEntry.lockedRolls.length > 0" 
+                      class="btn btn-sm btn-success w-100" 
+                      (click)="submitEntry()">
+                <i class="bi bi-send"></i> Submit
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-info mt-3">
+      <h6><i class="bi bi-info-circle"></i> How to use:</h6>
+      <ol class="mb-0">
+        <li>Select a roll from the dropdown</li>
+        <li>Enter serial numbers for that roll</li>
+        <li>Click "Lock Roll" to save that roll's data</li>
+        <li>Repeat for other rolls if needed</li>
+        <li>Click "Submit" when all rolls are complete</li>
+      </ol>
+    </div>
+
+  </div>
+</div>

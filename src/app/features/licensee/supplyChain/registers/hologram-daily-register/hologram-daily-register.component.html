@@ -360,6 +360,7 @@
                 <th rowspan="2" class="usage-date">USAGE DATE</th>
                 <th rowspan="2" class="brand-details">BRAND DETAILS</th>
                 <th rowspan="2" class="bottle-size">BOTTLE SIZE</th>
+                <th rowspan="2" class="rolls-assigned">ROLLS ASSIGNED</th>
                 <th rowspan="2" class="hologram-qty">HOLOGRAM QTY</th>
                 <th colspan="3" class="hologram-header">HOLOGRAM</th>
                 <th colspan="3" class="wastage-header">WASTAGE</th>
@@ -378,13 +379,14 @@
               </tr>
             </thead>
             <tbody>
-              @for (entry of getPagedEntries(); track entry.id; let i = $index) {
+              @for (entry of getUniquePagedEntries(); track entry.id; let i = $index) {
+              @if (i === 0 || entry.id !== getUniquePagedEntries()[i-1]?.id) {
               <tr class="register-row"
                   [class.auto-generated-row]="!entry.isFixed"
                   [class.saved-row]="entry.isFixed">
                 
                 <!-- SL NO -->
-                <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                <td class="sl-no">{{ i + 1 }}</td>
 
                 <!-- Reference No -->
                 <td class="ref-number locked-field">
@@ -409,6 +411,18 @@
                 <!-- Bottle Size -->
                 <td class="bottle-size locked-field">
                   {{ getEntryMetadata(entry).bottleSize }}
+                </td>
+
+                <!-- ROLLS ASSIGNED - NEW COLUMN -->
+                <td class="rolls-assigned">
+                  <div class="rolls-list">
+                    @for (roll of getAssignedRolls(entry); track roll) {
+                      <span class="badge bg-primary me-1 mb-1">{{ roll }}</span>
+                    }
+                    @if (getAssignedRolls(entry).length === 0) {
+                      <span class="text-muted">No rolls assigned</span>
+                    }
+                  </div>
                 </td>
 
                 <!-- Hologram Qty -->
@@ -592,6 +606,7 @@
                   </div>
                 </td>
               </tr>
+              }
               
               <!-- Validation Error Row -->
               @if (!entry.isFixed && entry.leftOverQuantity < 0) {

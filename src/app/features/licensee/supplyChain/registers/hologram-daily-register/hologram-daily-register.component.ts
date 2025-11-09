@@ -1380,4 +1380,39 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     // Refresh entries
     this.refreshEntries();
   }
+
+  /**
+   * Get unique entries (group by reference number to avoid duplicates)
+   */
+  getUniquePagedEntries(): HologramDailyEntry[] {
+    const pagedEntries = this.getPagedEntries();
+    const uniqueMap = new Map<string, HologramDailyEntry>();
+    
+    pagedEntries.forEach(entry => {
+      const refNo = this.getEntryMetadata(entry).referenceNo;
+      if (!uniqueMap.has(refNo)) {
+        uniqueMap.set(refNo, entry);
+      }
+    });
+    
+    return Array.from(uniqueMap.values());
+  }
+
+  /**
+   * Get all rolls assigned to an entry (by reference number)
+   */
+  getAssignedRolls(entry: HologramDailyEntry): string[] {
+    const refNo = this.getEntryMetadata(entry).referenceNo;
+    const allEntriesWithSameRef = this.filteredEntries.filter(e => 
+      this.getEntryMetadata(e).referenceNo === refNo
+    );
+    
+    const rolls = allEntriesWithSameRef.map(e => {
+      const cartoonNumber = (e as any).cartoonNumber || this.getEntryMetadata(e).cartoonNumber;
+      return cartoonNumber;
+    }).filter(roll => roll); // Remove empty values
+    
+    // Return unique rolls
+    return [...new Set(rolls)];
+  }
 }
