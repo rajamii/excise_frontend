@@ -1953,7 +1953,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       selectedRoll: cartoonNumber,
       rollInput: {
         cartoonNumber: cartoonNumber,
-        availableCount: roll.availableCount || roll.remainingInCartoon || roll.totalCount || 0,
+        availableCount: roll.allocatedQuantity ?? roll.availableCount ?? roll.remainingInCartoon ?? roll.totalCount ?? 0,
         serialRange: roll.serialRange,
         issuedRanges: [{
           fromSerial: '',
@@ -1972,6 +1972,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       isLocked: false
     };
 
+    this.updateEntryQuantitiesFromSelection(entry);
     this.cdr.detectChanges();
   }
 
@@ -1998,6 +1999,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const totalUsed = rollInput.issuedQty + rollInput.wastageQty;
     rollInput.leftOver = rollInput.availableCount - totalUsed;
 
+    this.updateEntryQuantitiesFromSelection(entry);
     this.cdr.detectChanges();
   }
 
@@ -2043,6 +2045,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
 
     // Recalculate entry totals
     this.recalculateEntryFromLockedRolls(entry);
+    this.updateEntryQuantitiesFromSelection(entry);
 
     alert(`Roll ${rollInput.cartoonNumber} locked successfully! You can now select another roll or save the entry.`);
     this.cdr.detectChanges();
@@ -2058,6 +2061,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (index !== -1) {
       lockedRolls.splice(index, 1);
       this.recalculateEntryFromLockedRolls(entry);
+      this.updateEntryQuantitiesFromSelection(entry);
       this.cdr.detectChanges();
     }
   }
@@ -2122,6 +2126,42 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         });
       }
     });
+  }
+
+  /**
+   * Calculate total allocated quantity from locked rolls
+   */
+  private getLockedRollsAllocatedTotal(entry: HologramDailyEntry): number {
+    const lockedRolls = (entry as any).lockedRolls || [];
+    return lockedRolls.reduce((sum: number, roll: any) => {
+      const allocated = roll.availableCount ?? roll.allocatedQuantity ?? roll.leftOver ?? 0;
+      return sum + (allocated || 0);
+    }, 0);
+  }
+
+  /**
+   * Update entry level quantities based on locked rolls and current selection
+   */
+  private updateEntryQuantitiesFromSelection(entry: HologramDailyEntry): void {
+    if (entry.isFixed) {
+      return;
+    }
+
+    const lockedTotal = this.getLockedRollsAllocatedTotal(entry);
+    const currentRoll = this.getCurrentRollInput(entry);
+    const currentAllocated = currentRoll ? (currentRoll.availableCount ?? currentRoll.allocatedQuantity ?? currentRoll.leftOver ?? 0) : 0;
+
+    const totalAllocated = lockedTotal + currentAllocated;
+
+    // Update original/utilized totals to reflect allocation
+    entry.utilizedQuantity = totalAllocated;
+    (entry as any).originalHologramQty = totalAllocated;
+
+    const issuedQty = entry.issuedQuantity || 0;
+    const wastageQty = entry.wastageQuantity || 0;
+    const leftOver = totalAllocated - (issuedQty + wastageQty);
+
+    entry.leftOverQuantity = leftOver >= 0 ? leftOver : 0;
   }
 
   /**
