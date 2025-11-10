@@ -297,7 +297,7 @@ export const routes: Routes = [
     path: 'supply-chain',
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.SUPPLY_CHAIN],
+      authorities: [Authority.LICENSEE, Authority.SUPPLY_CHAIN],
     },
     children: [
       {
@@ -312,7 +312,20 @@ export const routes: Routes = [
             (m) => m.SupplyChainComponent
           ),
       },
-      // Add other supply chain routes here as needed
+      {
+        path: 'revalidation-request',
+        loadComponent: () =>
+          import(
+            './features/licensee/supplyChain/revalidation-request/revalidation-request.component'
+          ).then((m) => m.RevalidationRequestComponent),
+      },
+      {
+        path: 'cancellation-request',
+        loadComponent: () =>
+          import(
+            './features/licensee/supplyChain/cancellation-request/cancellation-request.component'
+          ).then((m) => m.CancellationRequestComponent),
+      },
     ],
   },
 

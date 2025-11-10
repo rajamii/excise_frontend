@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
@@ -12,6 +13,15 @@ import { Role } from '../models/role.model';
 import { LicenseSubcategory } from '../models/license-subcategory.model';
 import { LicenseTitle } from '../models/license-title.model';
 import { Road } from '../models/road.model';
+
+export interface BulkSpiritType {
+  spritId: number;
+  strengthFrom: string;
+  strengthTo: string;
+  priceBl: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -69,5 +79,17 @@ export class MasterService {
   // Fetches all available roads
   getRoads(): Observable<Road[]> {
     return this.http.get<Road[]>(`${this.baseUrl}/roads`);
+  }
+
+  /**
+   * Fetches all active bulk spirit types from the server
+   * @returns Observable containing an array of BulkSpiritType objects
+   */
+  getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
+    return this.http.get<{success: boolean, data: BulkSpiritType[]}>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/bulk-spirit/bulk-spirit-types/`
+    ).pipe(
+      map(response => response.data)
+    );
   }
 }

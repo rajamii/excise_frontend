@@ -1,7 +1,20 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Inject,
+  PLATFORM_ID,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import {
+  MasterService,
+  BulkSpiritType,
+} from '../../../../core/services/master.service';
 
 interface FormData {
   refNo: string;
@@ -21,9 +34,11 @@ interface FormData {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './import-permit.component.html',
-  styleUrls: ['./import-permit.component.scss']
+  styleUrls: ['./import-permit.component.scss'],
 })
-export class ImportPermitComponent implements OnInit {
+export class ImportPermitComponent implements OnInit, AfterViewInit {
+  @ViewChild('spiritTypeSelect')
+  spiritTypeSelect!: ElementRef<HTMLSelectElement>;
   errorMessage = '';
   refNoError = '';
   calculatedTotal = 0;
@@ -42,18 +57,57 @@ export class ImportPermitComponent implements OnInit {
     liftedFrom: '',
     viaRoute: '',
     checkpostEntry: '',
-    purpose: ''
+    purpose: '',
   };
 
-  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+  bulkSpiritTypes: BulkSpiritType[] = [];
+  isLoading = false;
+
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private masterService: MasterService,
+    private changeDetector: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
+    if (this.isBrowser) {
+      this.viewModeRef =
+        this.route.snapshot.queryParamMap.get('viewMode') || '';
+      this.initializeForm();
+      this.loadBulkSpiritTypes();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    // Initialization code can be added here if needed
+  }
+
+  private loadBulkSpiritTypes(): void {
+    this.isLoading = true;
+
+    this.masterService.getBulkSpiritTypes().subscribe({
+      next: (types) => {
+        this.bulkSpiritTypes = types || [];
+        this.changeDetector.detectChanges();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading bulk spirit types:', error);
+        this.isLoading = false;
+        // You might want to show an error message to the user here
+      },
+    });
+  }
+
+  private initializeForm(): void {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-    
+
     // Generate reference number
     this.generateRefNumber();
 
@@ -61,8 +115,10 @@ export class ImportPermitComponent implements OnInit {
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
       this.viewModeRef = ref;
-      const list: any[] = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-      const found = list.find(r => r.refNo === ref);
+      const list: any[] = JSON.parse(
+        localStorage.getItem('importPermitRequests') || '[]'
+      );
+      const found = list.find((r) => r.refNo === ref);
       if (found) {
         this.formData = { ...this.formData, ...found };
         // recalc derived fields
@@ -81,26 +137,33 @@ export class ImportPermitComponent implements OnInit {
   }
 
   calculateTotal(): void {
-    this.calculatedTotal = (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
+    this.calculatedTotal =
+      (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
   }
 
+  /**
+   * Handles changes to the bulk spirit type selection
+   */
   onBulkSpiritTypeChange(): void {
-    switch (this.formData.bulkSpiritType) {
-      case 'grain-ena':
-        this.formData.strengthTo = '96%';
-        this.strengthFrom = '95%';
-        break;
-      case 'molasses-ena':
-        this.formData.strengthTo = '95%';
-        this.strengthFrom = '94%';
-        break;
-      case 'rectified-spirit':
-        this.formData.strengthTo = '95.5%';
-        this.strengthFrom = '95%';
-        break;
-      default:
-        this.formData.strengthTo = '';
-        this.strengthFrom = '';
+    if (!this.formData.bulkSpiritType) {
+      this.formData.strengthTo = '';
+      this.strengthFrom = '';
+      return;
+    }
+
+    // Find the selected spirit type
+    const selectedType = this.bulkSpiritTypes.find(
+      (type) => type.strengthFrom === this.formData.bulkSpiritType
+    );
+
+    if (selectedType) {
+      // Set the strength values from the selected type
+      this.formData.strengthTo = selectedType.strengthTo;
+      this.strengthFrom = selectedType.strengthFrom;
+      console.log('Selected bulk spirit type:', selectedType);
+    } else {
+      this.formData.strengthTo = '';
+      this.strengthFrom = '';
     }
   }
 
@@ -128,8 +191,9 @@ export class ImportPermitComponent implements OnInit {
     if (this.isBrowser) {
       const key = 'importPermitRequests';
       const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const idx = list.findIndex(r => r.refNo === this.formData.refNo);
-      if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
+      const idx = list.findIndex((r) => r.refNo === this.formData.refNo);
+      if (idx >= 0) list[idx] = { ...this.formData };
+      else list.unshift({ ...this.formData });
       localStorage.setItem(key, JSON.stringify(list));
     }
     alert('Form saved successfully!');
@@ -145,9 +209,12 @@ export class ImportPermitComponent implements OnInit {
 
     // Extract printable HTML and open a clean window for printing
     setTimeout(() => {
-      const printable = document.getElementById('importPermitPrintSection')?.innerHTML || '';
-      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map(el => (el as HTMLElement).outerHTML)
+      const printable =
+        document.getElementById('importPermitPrintSection')?.innerHTML || '';
+      const styles = Array.from(
+        document.querySelectorAll('link[rel="stylesheet"], style')
+      )
+        .map((el) => (el as HTMLElement).outerHTML)
         .join('');
 
       const printWindow = window.open('', '_blank', 'width=900,height=1000');
@@ -187,8 +254,9 @@ export class ImportPermitComponent implements OnInit {
       if (this.isBrowser) {
         const key = 'importPermitRequests';
         const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-        const idx = list.findIndex(r => r.refNo === this.formData.refNo);
-        if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
+        const idx = list.findIndex((r) => r.refNo === this.formData.refNo);
+        if (idx >= 0) list[idx] = { ...this.formData };
+        else list.unshift({ ...this.formData });
         localStorage.setItem(key, JSON.stringify(list));
       }
       alert('Form submitted successfully!');
@@ -228,7 +296,7 @@ export class ImportPermitComponent implements OnInit {
       this.errorMessage = 'Please select purpose';
       return false;
     }
-    
+
     this.errorMessage = '';
     return true;
   }
