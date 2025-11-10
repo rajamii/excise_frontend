@@ -56,7 +56,7 @@
                       (change)="selectRoll($any($event.target).value)">
                 <option value="">Select Roll...</option>
                 <option *ngFor="let roll of availableRolls" [value]="roll.id">
-                  {{ roll.cartoonNumber }} ({{ roll.availableCount }} avail)
+                  {{ roll.cartoonNumber }} ({{ roll.availableCount }} availa)
                 </option>
               </select>
 

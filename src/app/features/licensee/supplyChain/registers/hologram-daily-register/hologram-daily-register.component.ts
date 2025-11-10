@@ -1664,21 +1664,55 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   getAvailableRollsForEntry(entry: HologramDailyEntry): any[] {
     console.log('🎯 Getting available rolls for entry:', entry.id);
     
-    // First, try to get from hologram allocation data (source of truth)
+    // Load the ACTUAL roll data from hologramOverviewRolls (same source as Hologram Allocation)
+    const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    console.log('📦 Loaded hologramOverviewRolls:', allOverviewRolls.length, 'rolls');
+    
+    // First, try to get from hologram allocation data (to know WHICH rolls were allocated)
     const allocationData = this.getHologramAllocationForEntry(entry);
     
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
-      console.log('✅ Using allocation data for rolls:', allocationData.allocatedCartoons);
-      // Return the actual allocated cartoons with their quantities
-      return allocationData.allocatedCartoons.map((cartoon: any) => ({
-        cartoonNumber: cartoon.cartoonNumber,
-        availableCount: cartoon.quantity,
-        serialRange: cartoon.serialRange || `${cartoon.fromSerial} - ${cartoon.toSerial}`,
-        remainingInCartoon: cartoon.remainingInCartoon || cartoon.quantity,
-        totalCount: cartoon.quantity,
-        fromSerial: cartoon.fromSerial,
-        toSerial: cartoon.toSerial
-      }));
+      console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
+      
+      // For each allocated roll, fetch its CURRENT available count from hologramOverviewRolls
+      return allocationData.allocatedCartoons.map((cartoon: any) => {
+        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoon.cartoonNumber);
+        const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+        const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+        const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+
+        if (actualRollData) {
+          console.log(`✅ Found actual roll data for ${cartoon.cartoonNumber}:`, actualRollData);
+
+          return {
+            cartoonNumber: actualRollData.cartoonNumber,
+            allocatedQuantity,
+            availableCount: allocatedQuantity, // Amount licensee can work with for this entry
+            remainingInCartoon,
+            serialRange: actualRollData.serialRange || `${actualRollData.fromSerial} - ${actualRollData.toSerial}`,
+            totalCount,
+            fromSerial: actualRollData.fromSerial,
+            toSerial: actualRollData.toSerial,
+            type: actualRollData.type,
+            status: actualRollData.status,
+            actualBalance: actualRollData.availableCount ?? remainingInCartoon
+          };
+        }
+
+        console.warn(`⚠️ Roll ${cartoon.cartoonNumber} not found in hologramOverviewRolls, using allocation data`);
+        return {
+          cartoonNumber: cartoon.cartoonNumber,
+          allocatedQuantity,
+          availableCount: allocatedQuantity,
+          remainingInCartoon,
+          serialRange: cartoon.serialRange || `${cartoon.fromSerial} - ${cartoon.toSerial}`,
+          totalCount,
+          fromSerial: cartoon.fromSerial,
+          toSerial: cartoon.toSerial,
+          type: cartoon.type || entry.hologramType,
+          status: cartoon.status || 'ALLOCATED'
+        };
+      });
     }
     
     console.log('⚠️ No allocation data found, using fallback logic');
@@ -1691,9 +1725,11 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       const rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
       
       if (rollDetail) {
+        const allocatedQuantity = this.getAllocatedQuantityFromCartoon(rollDetail);
         return [{
           cartoonNumber: rollDetail.cartoonNumber,
-          availableCount: rollDetail.availableCount || rollDetail.totalCount,
+          allocatedQuantity,
+          availableCount: allocatedQuantity,
           serialRange: rollDetail.serialRange || `${rollDetail.fromSerial} - ${rollDetail.toSerial}`,
           remainingInCartoon: rollDetail.remainingInCartoon || rollDetail.availableCount,
           totalCount: rollDetail.totalCount,
@@ -1718,42 +1754,152 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       
       // Return roll details for assigned rolls
       return assignedRolls.map(cartoonNumber => {
-        // Try to find in overviewRolls
         let rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
         
-        // If not found, create default with approved quantity divided by number of rolls
-        return rollDetail || {
+        if (rollDetail) {
+          const allocatedQuantity = this.getAllocatedQuantityFromCartoon(rollDetail);
+          return {
+            cartoonNumber: rollDetail.cartoonNumber,
+            allocatedQuantity,
+            availableCount: allocatedQuantity,
+            serialRange: rollDetail.serialRange || `${rollDetail.fromSerial} - ${rollDetail.toSerial}`,
+            remainingInCartoon: rollDetail.remainingInCartoon || rollDetail.availableCount,
+            totalCount: rollDetail.totalCount,
+            fromSerial: rollDetail.fromSerial,
+            toSerial: rollDetail.toSerial,
+            type: rollDetail.type,
+            status: rollDetail.status
+          };
+        }
+        
+        return {
           cartoonNumber: cartoonNumber,
+          allocatedQuantity: qtyPerRoll,
           availableCount: qtyPerRoll,
           serialRange: '000001-' + String(qtyPerRoll).padStart(6, '0'),
           remainingInCartoon: qtyPerRoll,
-          totalCount: qtyPerRoll
+          totalCount: qtyPerRoll,
+          type: entry.hologramType,
+          status: 'ALLOCATED'
         };
       });
     }
     
-    // Fallback 3: Load ALL available rolls from overview
-    console.log('⚠️ No assigned rolls, loading all available rolls');
+    // Fallback 3: Load ALL available rolls from overview (same source as Hologram Allocation)
+    console.log('⚠️ No assigned rolls, loading all available rolls from hologramOverviewRolls');
     const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
     const hologramType = entry.hologramType;
     
-    // Filter by hologram type and status
-    const availableRolls = overviewRolls.filter((r: any) => 
-      r.type === hologramType && 
-      (r.status === 'AVAILABLE' || r.availableCount > 0)
+    console.log('📦 Total rolls in hologramOverviewRolls:', overviewRolls.length);
+    console.log('🔍 Filtering by hologram type:', hologramType);
+    
+    // Filter by hologram type and availability (same logic as Hologram Allocation)
+    const availableRolls = overviewRolls.filter((r: any) => {
+      const matchesType = r.type === hologramType;
+      const hasAvailability = r.availableCount > 0 || r.status === 'AVAILABLE';
+      
+      console.log(`Roll ${r.cartoonNumber}: type=${r.type}, availableCount=${r.availableCount}, status=${r.status}, matches=${matchesType && hasAvailability}`);
+      
+      return matchesType && hasAvailability;
+    });
+    
+    console.log('✅ Available rolls after filtering:', availableRolls.length);
+    
+    // Return rolls with their CURRENT available counts (exactly as shown in Hologram Allocation)
+    const rollsWithCounts = availableRolls.map((r: any) => {
+      const allocatedQuantity = this.getAllocatedQuantityFromCartoon(r);
+      const rollData = {
+        cartoonNumber: r.cartoonNumber,
+        allocatedQuantity,
+        availableCount: allocatedQuantity,
+        serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+        remainingInCartoon: r.remainingInCartoon || r.availableCount || 0,
+        totalCount: r.totalCount || 0,
+        fromSerial: r.fromSerial,
+        toSerial: r.toSerial,
+        type: r.type,
+        status: r.status
+      };
+      
+      console.log(`📋 Roll ${rollData.cartoonNumber}: allocatedQuantity=${rollData.allocatedQuantity}`);
+      
+      return rollData;
+    });
+    
+    return rollsWithCounts;
+  }
+
+  /**
+   * Resolve allocated quantity from a cartoon allocation object
+   */
+  private getAllocatedQuantityFromCartoon(cartoon: any, actualRollData?: any): number {
+    const numericValue = (...values: any[]): number | null => {
+      for (const value of values) {
+        if (value === undefined || value === null || value === '') continue;
+        const num = Number(value);
+        if (!Number.isNaN(num) && num > 0) {
+          return num;
+        }
+      }
+      return null;
+    };
+
+    // Prefer explicit quantity fields
+    const directQuantity = numericValue(
+      cartoon.quantity,
+      cartoon.allocatedQuantity,
+      cartoon.approvedQuantity,
+      cartoon.utilizedQuantity,
+      cartoon.totalAllocated,
+      cartoon.requestedQuantity
     );
-    
-    console.log('📦 Available rolls from overview:', availableRolls.length);
-    
-    return availableRolls.map((r: any) => ({
-      cartoonNumber: r.cartoonNumber,
-      availableCount: r.availableCount || r.totalCount,
-      serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
-      remainingInCartoon: r.remainingInCartoon || r.availableCount,
-      totalCount: r.totalCount,
-      fromSerial: r.fromSerial,
-      toSerial: r.toSerial
-    }));
+    if (directQuantity !== null) {
+      return directQuantity;
+    }
+
+    // Derive from total minus remaining
+    const total = numericValue(
+      cartoon.totalCount,
+      cartoon.totalQuantity,
+      cartoon.initialQuantity,
+      cartoon.originalCount,
+      actualRollData?.totalCount
+    );
+
+    if (total !== null) {
+      const remaining = numericValue(
+        cartoon.remainingInCartoon,
+        cartoon.remainingQuantity,
+        cartoon.availableCount,
+        actualRollData?.availableCount
+      ) ?? 0;
+
+      const derived = total - remaining;
+      if (derived > 0) {
+        return derived;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Resolve remaining quantity in cartoon after allocation (if provided)
+   */
+  private getRemainingQuantityAfterAllocation(cartoon: any, actualRollData: any): number {
+    if (typeof cartoon.remainingInCartoon === 'number') {
+      return cartoon.remainingInCartoon;
+    }
+
+    if (typeof cartoon.remainingQuantity === 'number') {
+      return cartoon.remainingQuantity;
+    }
+
+    if (typeof actualRollData?.availableCount === 'number') {
+      return actualRollData.availableCount;
+    }
+
+    return 0;
   }
 
   /**
@@ -2228,6 +2374,86 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       rollInput.wastageRanges.splice(index, 1);
       this.onRollInputChange(entry);
     }
+  }
+
+  /**
+   * DEBUG: Check what's in hologramOverviewRolls localStorage
+   */
+  debugRollsData(): void {
+    console.log('=== DEBUGGING ROLLS DATA ===');
+    
+    // Check hologramOverviewRolls
+    const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    console.log('📦 hologramOverviewRolls:', overviewRolls);
+    
+    // Check hologramOverviewAvailable
+    const overviewAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    console.log('📦 hologramOverviewAvailable:', overviewAvailable);
+    
+    // Check hologramOverviewSerialData
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    console.log('📦 hologramOverviewSerialData:', serialData);
+    
+    let message = '=== ROLLS DATA DEBUG ===\n\n';
+    message += `hologramOverviewRolls: ${overviewRolls.length} items\n\n`;
+    
+    overviewRolls.forEach((roll: any) => {
+      message += `Roll: ${roll.cartoonNumber}\n`;
+      message += `  Type: ${roll.type}\n`;
+      message += `  Available Count: ${roll.availableCount}\n`;
+      message += `  Total Count: ${roll.totalCount}\n`;
+      message += `  Status: ${roll.status}\n\n`;
+    });
+    
+    message += `\nhologramOverviewAvailable: ${overviewAvailable.length} items\n\n`;
+    
+    overviewAvailable.forEach((avail: any) => {
+      message += `Roll: ${avail.cartoonNumber}\n`;
+      message += `  Available Count: ${avail.availableCount}\n`;
+      message += `  Next Serial: ${avail.nextSerial}\n\n`;
+    });
+    
+    alert(message);
+  }
+
+  /**
+   * FIX: Sync roll data from hologramOverviewAvailable to hologramOverviewRolls
+   * This ensures the Register shows the same available counts as Hologram Allocation
+   */
+  syncRollDataFromAllocation(): void {
+    console.log('🔄 Syncing roll data from Hologram Allocation...');
+    
+    // Load both data sources
+    const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const overviewAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+    
+    console.log('📦 Before sync - overviewRolls:', overviewRolls);
+    console.log('📦 Before sync - overviewAvailable:', overviewAvailable);
+    
+    // Update availableCount in overviewRolls from overviewAvailable
+    let updatedCount = 0;
+    overviewRolls.forEach((roll: any) => {
+      const availData = overviewAvailable.find((a: any) => a.cartoonNumber === roll.cartoonNumber);
+      if (availData) {
+        const oldCount = roll.availableCount;
+        roll.availableCount = availData.availableCount;
+        if (oldCount !== roll.availableCount) {
+          updatedCount++;
+          console.log(`✅ Updated ${roll.cartoonNumber}: ${oldCount} → ${roll.availableCount}`);
+        }
+      }
+    });
+    
+    // Save back to localStorage
+    localStorage.setItem('hologramOverviewRolls', JSON.stringify(overviewRolls));
+    
+    console.log('✅ Sync complete. Updated', updatedCount, 'rolls');
+    
+    // Refresh the display
+    this.loadFilteredData();
+    this.cdr.detectChanges();
+    
+    alert(`✅ Roll data synced!\n\nUpdated ${updatedCount} rolls with current available counts from Hologram Allocation.\n\nThe dropdown should now show correct numbers.`);
   }
 
   /**
