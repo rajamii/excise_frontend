@@ -424,8 +424,11 @@ export class HologramDailyRegisterComponent implements OnInit {
     // Save to localStorage for Officer in Charge verification
     this.saveEntryForOfficerVerification(entry);
     
-    // DO NOT update roll data here - wait for Officer approval
-    // Roll data will be updated only after Officer approves the entry
+    // Update roll data for each locked roll
+    const lockedRolls = (entry as any).lockedRolls || [];
+    lockedRolls.forEach((roll: any) => {
+      this.updateRollDataForLockedRoll(entry, roll);
+    });
     
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
@@ -448,7 +451,7 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.entryToSave = null;
     
     // Show success message
-    alert('✅ Entry saved successfully! Sent to Officer in Charge for verification.');
+    alert('✅ Entry saved successfully! Roll data updated in hologram overview.');
     
     console.log('Entry saved successfully:', entry);
   }
@@ -478,6 +481,73 @@ export class HologramDailyRegisterComponent implements OnInit {
       console.log('Entry saved for officer verification:', entry.id);
     } catch (error) {
       console.error('Error saving entry for officer verification:', error);
+    }
+  }
+
+  /**
+   * Update roll data for a specific locked roll
+   */
+  private updateRollDataForLockedRoll(entry: HologramDailyEntry, lockedRoll: any): void {
+    try {
+      const cartoonNumber = lockedRoll.cartoonNumber;
+      
+      if (!cartoonNumber) {
+        console.warn('No cartoon number found in locked roll');
+        return;
+      }
+      
+      // Load existing roll data from localStorage
+      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      
+      // Find the roll that matches the cartoon number and hologram type
+      const rollIndex = rollsData.findIndex((roll: any) => 
+        roll.cartoonNumber === cartoonNumber && 
+        roll.type === entry.hologramType
+      );
+      
+      if (rollIndex === -1) {
+        console.warn(`Roll not found for cartoon number: ${cartoonNumber}, type: ${entry.hologramType}`);
+        return;
+      }
+      
+      const roll = rollsData[rollIndex];
+      
+      // Update the roll counts based on the locked roll data
+      roll.usedCount = (roll.usedCount || 0) + (lockedRoll.issuedQty || 0);
+      roll.damagedCount = (roll.damagedCount || 0) + (lockedRoll.wastageQty || 0);
+      
+      // Available count decreases by total used (issued + wastage)
+      const totalUsed = (lockedRoll.issuedQty || 0) + (lockedRoll.wastageQty || 0);
+      roll.availableCount = Math.max(0, (roll.availableCount || 0) - totalUsed);
+      
+      // Automatic status update based on available count
+      if (roll.availableCount === 0) {
+        roll.status = 'COMPLETED';
+      } else {
+        roll.status = 'AVAILABLE';
+      }
+      
+      // Save updated roll data back to localStorage
+      rollsData[rollIndex] = roll;
+      localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
+      
+      // Also update the available hologram data
+      this.updateAvailableHologramDataForRoll(entry, cartoonNumber, lockedRoll);
+      
+      // Also update the serial rolls data
+      this.updateSerialRollsDataForRoll(entry, cartoonNumber, lockedRoll);
+      
+      console.log('Roll data updated successfully:', {
+        cartoonNumber,
+        type: entry.hologramType,
+        usedCount: roll.usedCount,
+        damagedCount: roll.damagedCount,
+        availableCount: roll.availableCount,
+        status: roll.status
+      });
+      
+    } catch (error) {
+      console.error('Error updating roll data:', error);
     }
   }
 
@@ -555,6 +625,50 @@ export class HologramDailyRegisterComponent implements OnInit {
   }
 
   /**
+   * Update available hologram data for a specific roll
+   */
+  private updateAvailableHologramDataForRoll(entry: HologramDailyEntry, cartoonNumber: string, lockedRoll: any): void {
+    try {
+      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+      
+      const availableIndex = availableData.findIndex((item: any) => 
+        item.cartoonNumber === cartoonNumber && 
+        item.type === entry.hologramType
+      );
+      
+      if (availableIndex !== -1) {
+        const available = availableData[availableIndex];
+        
+        // Update available count
+        const totalUsed = (lockedRoll.issuedQty || 0) + (lockedRoll.wastageQty || 0);
+        available.availableCount = Math.max(0, (available.availableCount || 0) - totalUsed);
+        
+        // Update used and damaged counts
+        available.usedCount = (available.usedCount || 0) + (lockedRoll.issuedQty || 0);
+        available.damagedCount = (available.damagedCount || 0) + (lockedRoll.wastageQty || 0);
+        
+        // Update percentage
+        const totalCount = available.availableCount + available.usedCount + available.damagedCount;
+        available.percentage = totalCount > 0 ? Math.round((available.availableCount / totalCount) * 100) : 0;
+        
+        // Automatic status update based on available count
+        if (available.availableCount === 0) {
+          available.status = 'COMPLETED';
+        } else {
+          available.status = 'AVAILABLE';
+        }
+        
+        availableData[availableIndex] = available;
+        localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+        
+        console.log('Available hologram data updated for roll:', available);
+      }
+    } catch (error) {
+      console.error('Error updating available hologram data for roll:', error);
+    }
+  }
+
+  /**
    * Update available hologram data in officer-in-charge overview
    */
   private updateAvailableHologramData(entry: HologramDailyEntry, cartoonNumber: string): void {
@@ -592,6 +706,60 @@ export class HologramDailyRegisterComponent implements OnInit {
       }
     } catch (error) {
       console.error('Error updating available hologram data:', error);
+    }
+  }
+
+  /**
+   * Update serial rolls data for a specific roll
+   */
+  private updateSerialRollsDataForRoll(entry: HologramDailyEntry, cartoonNumber: string, lockedRoll: any): void {
+    try {
+      const serialRollsData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+      
+      const serialIndex = serialRollsData.findIndex((roll: any) => 
+        roll.rollNumber === cartoonNumber && 
+        roll.hologramType === entry.hologramType
+      );
+      
+      if (serialIndex !== -1) {
+        const serialRoll = serialRollsData[serialIndex];
+        
+        // Update counts
+        serialRoll.usedCount = (serialRoll.usedCount || 0) + (lockedRoll.issuedQty || 0);
+        serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (lockedRoll.wastageQty || 0);
+        
+        const totalUsed = (lockedRoll.issuedQty || 0) + (lockedRoll.wastageQty || 0);
+        serialRoll.availableCount = Math.max(0, (serialRoll.availableCount || 0) - totalUsed);
+        
+        // Automatic status update based on available count
+        if (serialRoll.availableCount === 0) {
+          serialRoll.status = 'COMPLETED';
+        } else {
+          serialRoll.status = 'AVAILABLE';
+        }
+        
+        // Add usage history entry
+        if (!serialRoll.usageHistory) {
+          serialRoll.usageHistory = [];
+        }
+        serialRoll.usageHistory.push({
+          date: entry.date,
+          issuedFrom: lockedRoll.issuedFrom,
+          issuedTo: lockedRoll.issuedTo,
+          issuedQty: lockedRoll.issuedQty,
+          wastageFrom: lockedRoll.wastageFrom,
+          wastageTo: lockedRoll.wastageTo,
+          wastageQty: lockedRoll.wastageQty,
+          leftOver: lockedRoll.leftOver
+        });
+        
+        serialRollsData[serialIndex] = serialRoll;
+        localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialRollsData));
+        
+        console.log('Serial rolls data updated for roll:', serialRoll);
+      }
+    } catch (error) {
+      console.error('Error updating serial rolls data for roll:', error);
     }
   }
 

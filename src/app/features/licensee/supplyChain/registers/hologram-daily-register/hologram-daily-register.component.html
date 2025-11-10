@@ -459,100 +459,194 @@
 
                 <!-- Multiple Issued Entries -->
                 <td class="issued-from">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let issuedEntry of entry.issuedEntries || []; let i = index" class="entry-row">
-                      <div class="d-flex align-items-center gap-1">
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-input mb-2">
+                        <label class="form-label small mb-1">
+                          <i class="bi bi-box me-1"></i>{{ getCurrentSelectedRoll(entry) }}
+                        </label>
                         <input type="text" class="form-control form-control-sm serial-input"
-                          [(ngModel)]="issuedEntry.fromSerial" 
-                          (ngModelChange)="onIssuedSerialChange(entry, issuedEntry)"
-                          placeholder="From Serial" [readonly]="entry.isFixed"
-                          [class.editable]="!entry.isFixed">
-                        <button *ngIf="!entry.isFixed && (entry.issuedEntries?.length || 0) > 1" 
-                                class="btn btn-sm btn-outline-danger remove-btn"
-                                (click)="removeIssuedEntry(entry, i)" title="Remove this range">
-                          <i class="bi bi-dash"></i>
-                        </button>
+                          [(ngModel)]="getCurrentRollInput(entry).issuedFrom"
+                          (ngModelChange)="onRollInputChange(entry)"
+                          placeholder="From Serial">
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-display mb-1">
+                        <small class="text-muted">{{ lockedRoll.cartoonNumber }}:</small>
+                        <span class="badge bg-light text-dark">{{ lockedRoll.issuedFrom }}</span>
+                      </div>
+                    }
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let issuedEntry of entry.issuedEntries || []" class="entry-row">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [value]="issuedEntry.fromSerial" readonly>
                       </div>
                     </div>
-                  </div>
+                  }
                 </td>
 
                 <!-- Multiple Issued To Entries -->
                 <td class="issued-to">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let issuedEntry of entry.issuedEntries || []; let i = index" class="entry-row">
-                      <input type="text" class="form-control form-control-sm serial-input"
-                        [(ngModel)]="issuedEntry.toSerial" 
-                        (ngModelChange)="onIssuedSerialChange(entry, issuedEntry)"
-                        placeholder="To Serial" [readonly]="entry.isFixed"
-                        [class.editable]="!entry.isFixed">
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-input mb-2">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [(ngModel)]="getCurrentRollInput(entry).issuedTo"
+                          (ngModelChange)="onRollInputChange(entry)"
+                          placeholder="To Serial">
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-display mb-1">
+                        <span class="badge bg-light text-dark">{{ lockedRoll.issuedTo }}</span>
+                      </div>
+                    }
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let issuedEntry of entry.issuedEntries || []" class="entry-row">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [value]="issuedEntry.toSerial" readonly>
+                      </div>
                     </div>
-                  </div>
+                  }
                 </td>
 
                 <!-- Total Issued Quantity (Auto-calculated) -->
                 <td class="issued-qty auto-calculated">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let issuedEntry of entry.issuedEntries || []" class="entry-row">
-                      <span class="qty-number">{{ issuedEntry.quantity | number }}</span>
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-qty mb-2">
+                        <span class="badge bg-primary">{{ getCurrentRollInput(entry).issuedQty | number }}</span>
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-qty mb-1">
+                        <span class="badge bg-success">{{ lockedRoll.issuedQty | number }}</span>
+                      </div>
+                    }
+                    
+                    <!-- Total -->
+                    <div class="total-row mt-2">
+                      <strong class="text-primary">Total: {{ entry.issuedQuantity | number }}</strong>
                     </div>
-                    <div class="total-row mt-1">
-                      <strong class="text-primary">Total: {{ getTotalIssuedQuantity(entry) | number }}</strong>
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let issuedEntry of entry.issuedEntries || []" class="entry-row">
+                        <span class="qty-number">{{ issuedEntry.quantity | number }}</span>
+                      </div>
+                      <div class="total-row mt-1">
+                        <strong class="text-primary">Total: {{ getTotalIssuedQuantity(entry) | number }}</strong>
+                      </div>
                     </div>
-                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-success add-btn mt-1"
-                            (click)="addIssuedEntry(entry)" title="Add another issued range">
-                      <i class="bi bi-plus"></i> Add Range
-                    </button>
-                  </div>
+                  }
                 </td>
 
                 <!-- Multiple Wastage From Entries -->
                 <td class="wastage-from">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let wastageEntry of entry.wastageEntries || []; let i = index" class="entry-row">
-                      <div class="d-flex align-items-center gap-1">
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-input mb-2">
                         <input type="text" class="form-control form-control-sm serial-input"
-                          [(ngModel)]="wastageEntry.fromSerial" 
-                          (ngModelChange)="onWastageSerialChange(entry, wastageEntry)"
-                          placeholder="Optional" [readonly]="entry.isFixed"
-                          [class.editable]="!entry.isFixed">
-                        <button *ngIf="!entry.isFixed && (entry.wastageEntries?.length || 0) > 1" 
-                                class="btn btn-sm btn-outline-danger remove-btn"
-                                (click)="removeWastageEntry(entry, i)" title="Remove this range">
-                          <i class="bi bi-dash"></i>
-                        </button>
+                          [(ngModel)]="getCurrentRollInput(entry).wastageFrom"
+                          (ngModelChange)="onRollInputChange(entry)"
+                          placeholder="Optional">
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-display mb-1">
+                        <span class="badge bg-light text-dark">{{ lockedRoll.wastageFrom || '-' }}</span>
+                      </div>
+                    }
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let wastageEntry of entry.wastageEntries || []" class="entry-row">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [value]="wastageEntry.fromSerial" readonly>
                       </div>
                     </div>
-                  </div>
+                  }
                 </td>
 
                 <!-- Multiple Wastage To Entries -->
                 <td class="wastage-to">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let wastageEntry of entry.wastageEntries || []; let i = index" class="entry-row">
-                      <input type="text" class="form-control form-control-sm serial-input"
-                        [(ngModel)]="wastageEntry.toSerial" 
-                        (ngModelChange)="onWastageSerialChange(entry, wastageEntry)"
-                        placeholder="Optional" [readonly]="entry.isFixed"
-                        [class.editable]="!entry.isFixed">
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-input mb-2">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [(ngModel)]="getCurrentRollInput(entry).wastageTo"
+                          (ngModelChange)="onRollInputChange(entry)"
+                          placeholder="Optional">
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-display mb-1">
+                        <span class="badge bg-light text-dark">{{ lockedRoll.wastageTo || '-' }}</span>
+                      </div>
+                    }
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let wastageEntry of entry.wastageEntries || []" class="entry-row">
+                        <input type="text" class="form-control form-control-sm serial-input"
+                          [value]="wastageEntry.toSerial" readonly>
+                      </div>
                     </div>
-                  </div>
+                  }
                 </td>
 
                 <!-- Total Wastage Quantity (Auto-calculated) -->
                 <td class="wastage-qty auto-calculated">
-                  <div class="multiple-entries-container">
-                    <div *ngFor="let wastageEntry of entry.wastageEntries || []" class="entry-row">
-                      <span class="qty-number">{{ wastageEntry.quantity | number }}</span>
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-qty mb-2">
+                        <span class="badge bg-warning">{{ getCurrentRollInput(entry).wastageQty | number }}</span>
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-qty mb-1">
+                        <span class="badge bg-secondary">{{ lockedRoll.wastageQty | number }}</span>
+                      </div>
+                    }
+                    
+                    <!-- Total -->
+                    <div class="total-row mt-2">
+                      <strong class="text-warning">Total: {{ entry.wastageQuantity | number }}</strong>
                     </div>
-                    <div class="total-row mt-1">
-                      <strong class="text-warning">Total: {{ getTotalWastageQuantity(entry) | number }}</strong>
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <div class="multiple-entries-container">
+                      <div *ngFor="let wastageEntry of entry.wastageEntries || []" class="entry-row">
+                        <span class="qty-number">{{ wastageEntry.quantity | number }}</span>
+                      </div>
+                      <div class="total-row mt-1">
+                        <strong class="text-warning">Total: {{ getTotalWastageQuantity(entry) | number }}</strong>
+                      </div>
                     </div>
-                    <button *ngIf="!entry.isFixed" class="btn btn-sm btn-outline-warning add-btn mt-1"
-                            (click)="addWastageEntry(entry)" title="Add another wastage range">
-                      <i class="bi bi-plus"></i> Add Range
-                    </button>
-                  </div>
+                  }
                 </td>
 
                 <!-- Left Over Quantity (Auto-calculated) -->
@@ -560,20 +654,53 @@
                     [class.negative-value]="entry.leftOverQuantity < 0"
                     [class.zero-value]="entry.leftOverQuantity === 0"
                     [class.positive-value]="entry.leftOverQuantity > 0">
-                  <span class="qty-number" 
-                        [class.text-danger]="entry.leftOverQuantity < 0" 
-                        [class.text-info]="entry.leftOverQuantity === 0"
-                        [class.text-success]="entry.leftOverQuantity > 0">
-                    {{ entry.leftOverQuantity | number }}
-                  </span>
-                  <div *ngIf="entry.leftOverQuantity < 0" class="validation-warning">
-                    <i class="bi bi-exclamation-triangle text-danger"></i>
-                    <small class="text-danger">Exceeds limit!</small>
-                  </div>
-                  <div *ngIf="entry.leftOverQuantity === 0 && !entry.isFixed" class="validation-info">
-                    <i class="bi bi-info-circle text-info"></i>
-                    <small class="text-info">Fully utilized</small>
-                  </div>
+                  @if (!entry.isFixed) {
+                    <!-- Per-Roll Input for Current Selection -->
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <div class="per-roll-qty mb-2">
+                        <span class="badge" 
+                              [class.bg-danger]="getCurrentRollInput(entry).leftOver < 0"
+                              [class.bg-info]="getCurrentRollInput(entry).leftOver === 0"
+                              [class.bg-success]="getCurrentRollInput(entry).leftOver > 0">
+                          {{ getCurrentRollInput(entry).leftOver | number }}
+                        </span>
+                      </div>
+                    }
+                    
+                    <!-- Locked Rolls Display -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="locked-roll-qty mb-1">
+                        <span class="badge" 
+                              [class.bg-danger]="lockedRoll.leftOver < 0"
+                              [class.bg-info]="lockedRoll.leftOver === 0"
+                              [class.bg-success]="lockedRoll.leftOver > 0">
+                          {{ lockedRoll.leftOver | number }}
+                        </span>
+                      </div>
+                    }
+                    
+                    <!-- Total -->
+                    <div class="total-row mt-2">
+                      <strong [class.text-danger]="entry.leftOverQuantity < 0" 
+                              [class.text-info]="entry.leftOverQuantity === 0"
+                              [class.text-success]="entry.leftOverQuantity > 0">
+                        Total: {{ entry.leftOverQuantity | number }}
+                      </strong>
+                    </div>
+                    
+                    <div *ngIf="entry.leftOverQuantity < 0" class="validation-warning mt-1">
+                      <i class="bi bi-exclamation-triangle text-danger"></i>
+                      <small class="text-danger">Exceeds limit!</small>
+                    </div>
+                  } @else {
+                    <!-- Saved Entry Display -->
+                    <span class="qty-number" 
+                          [class.text-danger]="entry.leftOverQuantity < 0" 
+                          [class.text-info]="entry.leftOverQuantity === 0"
+                          [class.text-success]="entry.leftOverQuantity > 0">
+                      {{ entry.leftOverQuantity | number }}
+                    </span>
+                  }
                 </td>
 
                 <!-- Total (Issued + Wastage + Left Over) -->
@@ -619,9 +746,24 @@
                 <td class="actions">
                   <div class="action-buttons">
                     @if (!entry.isFixed) {
-                      <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry"
-                              [class.disabled]="entry.leftOverQuantity < 0">
-                        <i class="bi bi-check-circle"></i>
+                      <!-- Lock Roll Button (shown when a roll is selected) -->
+                      @if (getCurrentSelectedRoll(entry)) {
+                        <button class="btn btn-sm btn-warning mb-1" 
+                                (click)="lockRollForEntry(entry)" 
+                                [disabled]="!canLockRoll(entry)"
+                                title="Lock this roll and select another">
+                          <i class="bi bi-lock-fill me-1"></i>
+                          Lock Roll
+                        </button>
+                      }
+                      
+                      <!-- Save Entry Button (shown when rolls are locked or no roll selected) -->
+                      <button class="btn btn-sm btn-success" 
+                              (click)="saveEntry(entry)" 
+                              title="Save Entry"
+                              [disabled]="entry.leftOverQuantity < 0 || !hasLockedRolls(entry)">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Save Entry
                       </button>
 
                     } @else {
