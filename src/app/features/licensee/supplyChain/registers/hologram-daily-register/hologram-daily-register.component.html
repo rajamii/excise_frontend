@@ -1030,7 +1030,7 @@
                       <button class="action-btn-icon save" 
                               (click)="saveEntry(entry)" 
                               title="Save Entry"
-                              [disabled]="entry.leftOverQuantity < 0 || !hasLockedRolls(entry)">
+                              [disabled]="!canSaveEntry(entry)">
                         <i class="bi bi-check-circle-fill"></i>
                       </button>
 

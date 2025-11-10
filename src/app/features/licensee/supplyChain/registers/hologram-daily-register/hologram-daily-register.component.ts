@@ -2165,6 +2165,41 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Determine if entry can be saved (all rolls locked and quantities validated)
+   */
+  canSaveEntry(entry: HologramDailyEntry): boolean {
+    if (entry.isFixed) {
+      return false;
+    }
+
+    if (entry.leftOverQuantity < 0) {
+      return false;
+    }
+
+    // Do not allow save while a roll is selected but not locked
+    if (this.getCurrentSelectedRoll(entry)) {
+      return false;
+    }
+
+    if (!this.hasLockedRolls(entry)) {
+      return false;
+    }
+
+    const expectedTotal = this.getTotalHologramQty(entry);
+    if (expectedTotal <= 0) {
+      return false;
+    }
+
+    const lockedTotal = this.getLockedRollsAllocatedTotal(entry);
+    if (lockedTotal !== expectedTotal) {
+      return false;
+    }
+
+    // Ensure issued + wastage + leftover matches total allocation
+    return this.getTotalCalculation(entry) === expectedTotal;
+  }
+
+  /**
    * Check if entry has locked rolls
    */
   hasLockedRolls(entry: HologramDailyEntry): boolean {
