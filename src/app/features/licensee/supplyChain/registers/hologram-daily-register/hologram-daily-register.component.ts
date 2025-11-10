@@ -113,6 +113,10 @@ export class HologramDailyRegisterComponent implements OnInit {
   pageSize = 10;
   currentPage = 1;
 
+  // Roll color mapping - maps cartoon number to color index
+  private rollColorMap: Map<string, number> = new Map();
+  private nextColorIndex = 0;
+
   constructor(
     private router: Router, 
     private cdr: ChangeDetectorRef,
@@ -1880,9 +1884,20 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Get color for a roll based on its index
+   * Get or assign a color index for a roll based on its cartoon number
    */
-  getRollColor(rollIndex: number): string {
+  private getRollColorIndex(cartoonNumber: string): number {
+    if (!this.rollColorMap.has(cartoonNumber)) {
+      this.rollColorMap.set(cartoonNumber, this.nextColorIndex);
+      this.nextColorIndex++;
+    }
+    return this.rollColorMap.get(cartoonNumber)!;
+  }
+
+  /**
+   * Get color for a roll based on its index or cartoon number
+   */
+  getRollColor(rollIndexOrCartoonNumber: number | string): string {
     const colors = [
       '#007bff', // Blue
       '#28a745', // Green
@@ -1895,13 +1910,21 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       '#e83e8c', // Pink
       '#6c757d'  // Gray
     ];
-    return colors[rollIndex % colors.length];
+    
+    let colorIndex: number;
+    if (typeof rollIndexOrCartoonNumber === 'string') {
+      colorIndex = this.getRollColorIndex(rollIndexOrCartoonNumber);
+    } else {
+      colorIndex = rollIndexOrCartoonNumber;
+    }
+    
+    return colors[colorIndex % colors.length];
   }
 
   /**
    * Get background color for a roll (lighter version)
    */
-  getRollBackgroundColor(rollIndex: number): string {
+  getRollBackgroundColor(rollIndexOrCartoonNumber: number | string): string {
     const bgColors = [
       '#e7f3ff', // Light Blue
       '#e7f5e7', // Light Green
@@ -1914,7 +1937,15 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       '#fce4ec', // Light Pink
       '#f8f9fa'  // Light Gray
     ];
-    return bgColors[rollIndex % bgColors.length];
+    
+    let colorIndex: number;
+    if (typeof rollIndexOrCartoonNumber === 'string') {
+      colorIndex = this.getRollColorIndex(rollIndexOrCartoonNumber);
+    } else {
+      colorIndex = rollIndexOrCartoonNumber;
+    }
+    
+    return bgColors[colorIndex % bgColors.length];
   }
 
   /**
@@ -1948,10 +1979,11 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     }
 
     const groups: any[] = [];
-    lockedRolls.forEach((roll: any, index: number) => {
+    lockedRolls.forEach((roll: any) => {
       const rollRanges = roll.issuedRanges || [];
+      const colorIndex = this.getRollColorIndex(roll.cartoonNumber);
       groups.push({
-        rollIndex: index,
+        rollIndex: colorIndex,
         rollName: roll.cartoonNumber,
         entries: rollRanges.map((range: any) => ({
           fromSerial: range.fromSerial,
@@ -1978,10 +2010,11 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     }
 
     const groups: any[] = [];
-    lockedRolls.forEach((roll: any, index: number) => {
+    lockedRolls.forEach((roll: any) => {
       const rollRanges = roll.wastageRanges || [];
+      const colorIndex = this.getRollColorIndex(roll.cartoonNumber);
       groups.push({
-        rollIndex: index,
+        rollIndex: colorIndex,
         rollName: roll.cartoonNumber,
         entries: rollRanges.map((range: any) => ({
           fromSerial: range.fromSerial,

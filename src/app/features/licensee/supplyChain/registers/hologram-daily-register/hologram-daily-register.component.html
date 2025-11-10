@@ -444,10 +444,10 @@
                     <div class="locked-rolls-display">
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-badge" 
-                             [style.background-color]="getRollBackgroundColor(i)">
+                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)">
                           <span class="roll-name-badge" 
-                                [style.background-color]="getRollColor(i)"
-                                [style.border-color]="getRollColor(i)">
+                                [style.background-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                             {{ lockedRoll.cartoonNumber }}
                           </span>
                           <button class="btn-unlock" 
@@ -516,17 +516,17 @@
                       <!-- Locked Rolls Display -->
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-item" 
-                             [style.background-color]="getRollBackgroundColor(i)"
-                             [style.border-color]="getRollColor(i)">
+                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
+                             [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                           <div class="roll-name" 
-                               [style.color]="getRollColor(i)">
+                               [style.color]="getRollColor(lockedRoll.cartoonNumber)">
                             {{ lockedRoll.cartoonNumber }}
                           </div>
                           <div class="roll-values">
                             @for (range of lockedRoll.issuedRanges || []; track $index) {
                               <span class="value-badge" 
-                                    [style.border-color]="getRollColor(i)"
-                                    [style.color]="getRollColor(i)">
+                                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                    [style.color]="getRollColor(lockedRoll.cartoonNumber)">
                                 {{ range.fromSerial }}
                               </span>
                             }
@@ -580,10 +580,16 @@
                       
                       <!-- Locked Rolls Display -->
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
-                        <div class="locked-roll-item">
+                        <div class="locked-roll-item"
+                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
+                             [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                           <div class="roll-values">
                             @for (range of lockedRoll.issuedRanges || []; track $index) {
-                              <span class="value-badge">{{ range.toSerial }}</span>
+                              <span class="value-badge"
+                                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                    [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                                {{ range.toSerial }}
+                              </span>
                             }
                           </div>
                         </div>
@@ -644,7 +650,7 @@
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-item">
                           <span class="qty-badge" 
-                                [style.background-color]="getRollColor(i)">
+                                [style.background-color]="getRollColor(lockedRoll.cartoonNumber)">
                             {{ lockedRoll.issuedQty | number }}
                           </span>
                         </div>
@@ -717,13 +723,13 @@
                       <!-- Locked Rolls Display -->
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-item" 
-                             [style.background-color]="getRollBackgroundColor(i)"
-                             [style.border-color]="getRollColor(i)">
+                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
+                             [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                           <div class="roll-values">
                             @for (range of lockedRoll.wastageRanges || []; track $index) {
                               <span class="value-badge" 
-                                    [style.border-color]="getRollColor(i)"
-                                    [style.color]="getRollColor(i)">
+                                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                    [style.color]="getRollColor(lockedRoll.cartoonNumber)">
                                 {{ range.fromSerial || '-' }}
                               </span>
                             }
@@ -781,13 +787,13 @@
                       <!-- Locked Rolls Display -->
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-item" 
-                             [style.background-color]="getRollBackgroundColor(i)"
-                             [style.border-color]="getRollColor(i)">
+                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
+                             [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                           <div class="roll-values">
                             @for (range of lockedRoll.wastageRanges || []; track $index) {
                               <span class="value-badge" 
-                                    [style.border-color]="getRollColor(i)"
-                                    [style.color]="getRollColor(i)">
+                                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                    [style.color]="getRollColor(lockedRoll.cartoonNumber)">
                                 {{ range.toSerial || '-' }}
                               </span>
                             }
@@ -850,7 +856,7 @@
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="locked-roll-item">
                           <span class="qty-badge" 
-                                [style.background-color]="getRollColor(i)">
+                                [style.background-color]="getRollColor(lockedRoll.cartoonNumber)">
                             {{ lockedRoll.wastageQty | number }}
                           </span>
                         </div>
@@ -911,7 +917,7 @@
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                         <div class="qty-row">
                           <span class="qty-badge" 
-                                [style.background-color]="getRollColor(i)"
+                                [style.background-color]="getRollColor(lockedRoll.cartoonNumber)"
                                 [class.opacity-50]="lockedRoll.leftOver < 0">
                             {{ lockedRoll.leftOver | number }}
                           </span>
