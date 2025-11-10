@@ -228,6 +228,20 @@ export class HologramDailyRegisterComponent implements OnInit {
       // Fixed entries should not be modified
       if (!entry.isFixed) {
         this.initializeEntryArrays(entry);
+        
+        // Fix leftOverQuantity if it's incorrect (from old test data)
+        // If no rolls are selected/locked yet, leftOver should equal utilizedQuantity
+        const lockedRolls = (entry as any).lockedRolls || [];
+        const currentRoll = this.getCurrentRollInput(entry);
+        if (lockedRolls.length === 0 && !currentRoll) {
+          // No rolls selected yet, reset leftOver to match utilizedQuantity
+          const originalQty = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
+          if (entry.leftOverQuantity !== originalQty) {
+            entry.leftOverQuantity = originalQty;
+            entry.issuedQuantity = 0;
+            entry.wastageQuantity = 0;
+          }
+        }
       }
     });
   }
@@ -1700,7 +1714,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       selectedRoll: cartoonNumber,
       rollInput: {
         cartoonNumber: cartoonNumber,
-        availableCount: roll.remainingInCartoon || roll.availableCount || 1000,
+        availableCount: roll.availableCount || roll.remainingInCartoon || roll.totalCount || 0,
         serialRange: roll.serialRange,
         issuedRanges: [{
           fromSerial: '',
@@ -1714,7 +1728,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         }],
         issuedQty: 0,
         wastageQty: 0,
-        leftOver: roll.remainingInCartoon || roll.availableCount || 1000
+        leftOver: roll.availableCount || roll.remainingInCartoon || roll.totalCount || 0
       },
       isLocked: false
     };
@@ -1902,6 +1916,11 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     lockedRolls.forEach((roll: any) => {
       total += roll.availableCount || 0;
     });
+
+    // If no rolls selected or locked yet, use the entry's utilizedQuantity
+    if (total === 0) {
+      total = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
+    }
 
     return total;
   }
