@@ -1880,6 +1880,128 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Get color for a roll based on its index
+   */
+  getRollColor(rollIndex: number): string {
+    const colors = [
+      '#007bff', // Blue
+      '#28a745', // Green
+      '#ffc107', // Yellow
+      '#dc3545', // Red
+      '#17a2b8', // Cyan
+      '#6f42c1', // Purple
+      '#fd7e14', // Orange
+      '#20c997', // Teal
+      '#e83e8c', // Pink
+      '#6c757d'  // Gray
+    ];
+    return colors[rollIndex % colors.length];
+  }
+
+  /**
+   * Get background color for a roll (lighter version)
+   */
+  getRollBackgroundColor(rollIndex: number): string {
+    const bgColors = [
+      '#e7f3ff', // Light Blue
+      '#e7f5e7', // Light Green
+      '#fff8e1', // Light Yellow
+      '#ffe7e7', // Light Red
+      '#e0f7fa', // Light Cyan
+      '#f3e5f5', // Light Purple
+      '#fff3e0', // Light Orange
+      '#e0f2f1', // Light Teal
+      '#fce4ec', // Light Pink
+      '#f8f9fa'  // Light Gray
+    ];
+    return bgColors[rollIndex % bgColors.length];
+  }
+
+  /**
+   * Get the index of current selected roll
+   */
+  getCurrentRollIndex(entry: HologramDailyEntry): number {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    return lockedRolls.length; // Current roll is always after locked rolls
+  }
+
+  /**
+   * Get the index of a locked roll
+   */
+  getLockedRollIndex(entry: HologramDailyEntry, rollCartoonNumber: string): number {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    return lockedRolls.findIndex((r: any) => r.cartoonNumber === rollCartoonNumber);
+  }
+
+  /**
+   * Group issued entries by roll for saved entries
+   * Assumes entries are ordered by roll (from locked rolls)
+   */
+  groupIssuedEntriesByRoll(entry: HologramDailyEntry): any[] {
+    const lockedRolls = (entry as any).lockedRolls || [];
+    if (lockedRolls.length === 0) {
+      // Fallback: treat all entries as one group
+      return [{
+        rollIndex: 0,
+        entries: entry.issuedEntries || []
+      }];
+    }
+
+    const groups: any[] = [];
+    lockedRolls.forEach((roll: any, index: number) => {
+      const rollRanges = roll.issuedRanges || [];
+      groups.push({
+        rollIndex: index,
+        rollName: roll.cartoonNumber,
+        entries: rollRanges.map((range: any) => ({
+          fromSerial: range.fromSerial,
+          toSerial: range.toSerial,
+          quantity: range.quantity
+        }))
+      });
+    });
+
+    return groups;
+  }
+
+  /**
+   * Group wastage entries by roll for saved entries
+   */
+  groupWastageEntriesByRoll(entry: HologramDailyEntry): any[] {
+    const lockedRolls = (entry as any).lockedRolls || [];
+    if (lockedRolls.length === 0) {
+      // Fallback: treat all entries as one group
+      return [{
+        rollIndex: 0,
+        entries: entry.wastageEntries || []
+      }];
+    }
+
+    const groups: any[] = [];
+    lockedRolls.forEach((roll: any, index: number) => {
+      const rollRanges = roll.wastageRanges || [];
+      groups.push({
+        rollIndex: index,
+        rollName: roll.cartoonNumber,
+        entries: rollRanges.map((range: any) => ({
+          fromSerial: range.fromSerial,
+          toSerial: range.toSerial,
+          quantity: range.quantity
+        }))
+      });
+    });
+
+    return groups;
+  }
+
+  /**
+   * Calculate subtotal for a group of entries
+   */
+  getGroupSubtotal(entries: any[]): number {
+    return entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
+  }
+
+  /**
    * Add issued range for current roll
    */
   addIssuedRangeForRoll(entry: HologramDailyEntry): void {
