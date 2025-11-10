@@ -380,7 +380,7 @@
             </thead>
             <tbody>
               @for (entry of getUniquePagedEntries(); track entry.id; let i = $index) {
-              @if (i === 0 || entry.id !== getUniquePagedEntries()[i-1]?.id) {
+              @if (i === 0 || entry.id !== getUniquePagedEntries()[i-1].id) {
               <tr class="register-row"
                   [class.auto-generated-row]="!entry.isFixed"
                   [class.saved-row]="entry.isFixed">
