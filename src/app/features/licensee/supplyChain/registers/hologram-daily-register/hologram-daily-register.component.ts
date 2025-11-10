@@ -173,22 +173,33 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
     console.log('ngOnInit: Service updated with current entries');
     
-    // Listen for storage changes to auto-refresh when new approvals come in
+    // Listen for storage changes to auto-refresh when allocation data changes
     window.addEventListener('storage', (e) => {
+      // Refresh when approved entries change
       if (e.key === 'approvedHologramEntries') {
-        console.log('New approved entries detected, refreshing...');
+        console.log('✅ New approved entries detected, refreshing...');
         this.loadApprovedEntries();
         this.mergeApprovedEntries(this.hologramDataService.getDailyEntries());
         this.loadFilteredData();
         this.cdr.detectChanges();
       }
+      
+      // Refresh when allocation data changes (DYNAMIC UPDATE)
+      if (e.key === 'hologramAllocations' || 
+          e.key === 'hologramRequests' || 
+          e.key === 'hologramApplications') {
+        console.log('🔄 Allocation data changed, refreshing display...');
+        this.loadFilteredData();
+        this.cdr.detectChanges();
+      }
     });
     
-    // Check for updates every 30 seconds
+    // Check for updates every 30 seconds (DYNAMIC POLLING)
     setInterval(() => {
       this.loadApprovedEntries();
       this.mergeApprovedEntries(this.hologramDataService.getDailyEntries());
       this.loadFilteredData();
+      this.cdr.detectChanges();
     }, 30000);
   }
 
@@ -1607,9 +1618,31 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Get all rolls assigned to an entry (by reference number)
+   * Get all rolls assigned to an entry - READ FROM ALLOCATION DATA
+   * This is the source of truth showing which rolls were allocated
    */
   getAssignedRolls(entry: HologramDailyEntry): string[] {
+    console.log('🎲 Getting assigned rolls for entry:', entry.id);
+    
+    // First, try to get from hologram allocation data (source of truth)
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    console.log('📦 Allocation data:', allocationData);
+    
+    if (allocationData && allocationData.allocatedCartoons) {
+      const cartoonNumbers = allocationData.allocatedCartoons.map((c: any) => c.cartoonNumber);
+      console.log('✅ Assigned rolls from allocation:', cartoonNumbers);
+      return cartoonNumbers;
+    }
+    
+    // Fallback to locked rolls if allocation data not available
+    const lockedRolls = (entry as any).lockedRolls || [];
+    if (lockedRolls.length > 0) {
+      const cartoonNumbers = lockedRolls.map((r: any) => r.cartoonNumber);
+      console.log('🔒 Assigned rolls from locked rolls:', cartoonNumbers);
+      return cartoonNumbers;
+    }
+    
+    // Last fallback: try to get from entry metadata
     const refNo = this.getEntryMetadata(entry).referenceNo;
     const allEntriesWithSameRef = this.filteredEntries.filter(e => 
       this.getEntryMetadata(e).referenceNo === refNo
@@ -1625,42 +1658,102 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Get available rolls for an entry (from the assigned rolls for that entry)
+   * Get available rolls for an entry - READ FROM ALLOCATION DATA
+   * This shows the actual rolls that were allocated with their correct quantities
    */
   getAvailableRollsForEntry(entry: HologramDailyEntry): any[] {
-    // Get all rolls assigned to this entry
-    const assignedRolls = this.getAssignedRolls(entry);
+    console.log('🎯 Getting available rolls for entry:', entry.id);
     
-    // Load roll details from localStorage (officer's allocation)
-    const allocatedRolls = JSON.parse(localStorage.getItem('hologramAllocations') || '[]');
+    // First, try to get from hologram allocation data (source of truth)
+    const allocationData = this.getHologramAllocationForEntry(entry);
     
-    // Also check hologramOverviewRolls for roll data
-    const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-
-    // Get the total approved quantity for this entry
-    const totalApprovedQty = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
-    const numRolls = assignedRolls.length || 1;
-    const qtyPerRoll = Math.floor(totalApprovedQty / numRolls);
+    if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
+      console.log('✅ Using allocation data for rolls:', allocationData.allocatedCartoons);
+      // Return the actual allocated cartoons with their quantities
+      return allocationData.allocatedCartoons.map((cartoon: any) => ({
+        cartoonNumber: cartoon.cartoonNumber,
+        availableCount: cartoon.quantity,
+        serialRange: cartoon.serialRange || `${cartoon.fromSerial} - ${cartoon.toSerial}`,
+        remainingInCartoon: cartoon.remainingInCartoon || cartoon.quantity,
+        totalCount: cartoon.quantity,
+        fromSerial: cartoon.fromSerial,
+        toSerial: cartoon.toSerial
+      }));
+    }
     
-    // Return roll details for assigned rolls
-    return assignedRolls.map(cartoonNumber => {
-      // First try to find in allocatedRolls
-      let rollDetail = allocatedRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+    console.log('⚠️ No allocation data found, using fallback logic');
+    
+    // Fallback 1: Try to get from entry's cartoon number
+    const cartoonNumber = (entry as any).cartoonNumber;
+    if (cartoonNumber) {
+      console.log('📦 Using entry cartoon number:', cartoonNumber);
+      const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      const rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
       
-      // If not found, try overviewRolls
-      if (!rollDetail) {
-        rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+      if (rollDetail) {
+        return [{
+          cartoonNumber: rollDetail.cartoonNumber,
+          availableCount: rollDetail.availableCount || rollDetail.totalCount,
+          serialRange: rollDetail.serialRange || `${rollDetail.fromSerial} - ${rollDetail.toSerial}`,
+          remainingInCartoon: rollDetail.remainingInCartoon || rollDetail.availableCount,
+          totalCount: rollDetail.totalCount,
+          fromSerial: rollDetail.fromSerial,
+          toSerial: rollDetail.toSerial
+        }];
       }
+    }
+    
+    // Fallback 2: Get all rolls assigned to this entry
+    const assignedRolls = this.getAssignedRolls(entry);
+    console.log('📋 Assigned rolls:', assignedRolls);
+    
+    if (assignedRolls.length > 0) {
+      // Load roll details from localStorage
+      const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+
+      // Get the total approved quantity for this entry
+      const totalApprovedQty = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
+      const numRolls = assignedRolls.length;
+      const qtyPerRoll = Math.floor(totalApprovedQty / numRolls);
       
-      // If still not found, create default with approved quantity divided by number of rolls
-      return rollDetail || {
-        cartoonNumber: cartoonNumber,
-        availableCount: qtyPerRoll,
-        serialRange: '000001-' + String(qtyPerRoll).padStart(6, '0'),
-        remainingInCartoon: qtyPerRoll,
-        totalCount: qtyPerRoll
-      };
-    });
+      // Return roll details for assigned rolls
+      return assignedRolls.map(cartoonNumber => {
+        // Try to find in overviewRolls
+        let rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+        
+        // If not found, create default with approved quantity divided by number of rolls
+        return rollDetail || {
+          cartoonNumber: cartoonNumber,
+          availableCount: qtyPerRoll,
+          serialRange: '000001-' + String(qtyPerRoll).padStart(6, '0'),
+          remainingInCartoon: qtyPerRoll,
+          totalCount: qtyPerRoll
+        };
+      });
+    }
+    
+    // Fallback 3: Load ALL available rolls from overview
+    console.log('⚠️ No assigned rolls, loading all available rolls');
+    const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const hologramType = entry.hologramType;
+    
+    // Filter by hologram type and status
+    const availableRolls = overviewRolls.filter((r: any) => 
+      r.type === hologramType && 
+      (r.status === 'AVAILABLE' || r.availableCount > 0)
+    );
+    
+    console.log('📦 Available rolls from overview:', availableRolls.length);
+    
+    return availableRolls.map((r: any) => ({
+      cartoonNumber: r.cartoonNumber,
+      availableCount: r.availableCount || r.totalCount,
+      serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+      remainingInCartoon: r.remainingInCartoon || r.availableCount,
+      totalCount: r.totalCount,
+      fromSerial: r.fromSerial,
+      toSerial: r.toSerial
+    }));
   }
 
   /**
@@ -1894,35 +1987,30 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Get total hologram quantity from all assigned rolls
+   * Get total hologram quantity - DYNAMIC READ FROM ALLOCATION DATA
+   * This reads from Hologram Allocation which shows the actual allocated quantity
+   * e.g., 600 holograms = 500 from roll 1 + 100 from roll 2
+   * 
+   * IMPORTANT: This function reads fresh data from localStorage every time it's called,
+   * ensuring the displayed quantity is always up-to-date with the latest allocation.
+   * No caching is used - values are dynamically fetched on each render.
    */
   getTotalHologramQty(entry: HologramDailyEntry): number {
-    // For saved entries, use the stored utilizedQuantity
+    // First, try to get from hologram allocation data (source of truth)
+    // This reads fresh from localStorage every time - NO CACHING
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    if (allocationData && allocationData.totalAllocated > 0) {
+      console.log('✅ Using DYNAMIC allocation data for hologram qty:', allocationData.totalAllocated);
+      return allocationData.totalAllocated;
+    }
+    
+    // For saved entries, use the stored utilizedQuantity (these are locked)
     if (entry.isFixed) {
       return entry.utilizedQuantity || 0;
     }
 
-    // For editable entries, sum up all roll quantities
-    let total = 0;
-
-    // Add current roll selection
-    const currentRoll = this.getCurrentRollInput(entry);
-    if (currentRoll) {
-      total += currentRoll.availableCount || 0;
-    }
-
-    // Add all locked rolls
-    const lockedRolls = (entry as any).lockedRolls || [];
-    lockedRolls.forEach((roll: any) => {
-      total += roll.availableCount || 0;
-    });
-
-    // If no rolls selected or locked yet, use the entry's utilizedQuantity
-    if (total === 0) {
-      total = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
-    }
-
-    return total;
+    // Fallback: use entry's utilizedQuantity or originalHologramQty
+    return entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
   }
 
   /**
@@ -2139,6 +2227,276 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (rollInput.wastageRanges.length > 1) {
       rollInput.wastageRanges.splice(index, 1);
       this.onRollInputChange(entry);
+    }
+  }
+
+  /**
+   * TEST: Manually set correct allocation data for testing
+   * This creates the allocation data structure that matches the popup
+   */
+  setTestAllocationData(): void {
+    const testAllocation = {
+      referenceNo: 'HRQ/251110/676',
+      ourRefNo: 'HRQ/251110/676',
+      totalAllocated: 600,
+      requestedQuantity: 600,
+      allocatedCartoons: [
+        {
+          cartoonNumber: 'test2',
+          quantity: 500,
+          fromSerial: '000001',
+          toSerial: '000500',
+          serialRange: '000001 - 000500',
+          remainingInCartoon: 0
+        },
+        {
+          cartoonNumber: 'test3',
+          quantity: 100,
+          fromSerial: '000001',
+          toSerial: '000100',
+          serialRange: '000001 - 000100',
+          remainingInCartoon: 400
+        }
+      ],
+      cartoonsUsed: 2,
+      status: 'APPROVED',
+      brandName: 'Royal Sikkim Brandy',
+      type: 'LOCAL'
+    };
+    
+    // Save to hologramAllocations
+    const allocations = JSON.parse(localStorage.getItem('hologramAllocations') || '[]');
+    
+    // Remove any existing allocation with same reference
+    const filtered = allocations.filter((a: any) => a.referenceNo !== 'HRQ/251110/676');
+    filtered.push(testAllocation);
+    
+    localStorage.setItem('hologramAllocations', JSON.stringify(filtered));
+    
+    console.log('✅ Test allocation data set:', testAllocation);
+    
+    // Refresh display
+    this.refreshAllocationData();
+    
+    alert('✅ Test allocation data set!\n\nReference: HRQ/251110/676\nRolls: test2 (500), test3 (100)\nTotal: 600\n\nRefresh the page to see the changes.');
+  }
+
+  /**
+   * Refresh allocation data dynamically
+   * This forces a refresh of all hologram quantities and roll assignments
+   */
+  refreshAllocationData(): void {
+    console.log('🔄 Manually refreshing allocation data...');
+    
+    // Force refresh of filtered data
+    this.loadFilteredData();
+    
+    // Trigger change detection to update UI
+    this.cdr.detectChanges();
+    
+    // Count how many entries have allocation data
+    let entriesWithAllocation = 0;
+    let totalAllocated = 0;
+    
+    this.filteredEntries.forEach(entry => {
+      const allocationData = this.getHologramAllocationForEntry(entry);
+      if (allocationData) {
+        entriesWithAllocation++;
+        totalAllocated += allocationData.totalAllocated || 0;
+      }
+    });
+    
+    alert(
+      `✅ Allocation Data Refreshed!\n\n` +
+      `Entries with allocation: ${entriesWithAllocation}\n` +
+      `Total allocated holograms: ${totalAllocated.toLocaleString()}\n\n` +
+      `All hologram quantities and roll assignments are now up to date.`
+    );
+  }
+
+  /**
+   * DEBUG: Show allocation data structure for current entry
+   */
+  debugAllocationData(entry: HologramDailyEntry): void {
+    const referenceNo = (entry as any).referenceNo;
+    console.log('=== ALLOCATION DATA DEBUG ===');
+    console.log('Reference No:', referenceNo);
+    console.log('Entry:', entry);
+    
+    // Check ALL localStorage keys
+    const keys = ['hologramAllocations', 'hologramRequests', 'hologramApplications', 'approvedHologramEntries', 'hologramOverviewRolls'];
+    keys.forEach(key => {
+      const data = JSON.parse(localStorage.getItem(key) || '[]');
+      console.log(`\n📦 ${key}:`, data);
+      
+      // Find matching entries
+      const matches = data.filter((item: any) => 
+        item.referenceNo === referenceNo || 
+        item.ourRefNo === referenceNo ||
+        item.id === referenceNo
+      );
+      if (matches.length > 0) {
+        console.log(`  ✅ Found ${matches.length} matches:`, matches);
+      }
+    });
+    
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    console.log('\n📋 Processed Allocation Data:', allocationData);
+    
+    const assignedRolls = this.getAssignedRolls(entry);
+    console.log('🎲 Assigned Rolls:', assignedRolls);
+    
+    const availableRolls = this.getAvailableRollsForEntry(entry);
+    console.log('🎯 Available Rolls:', availableRolls);
+    
+    const totalQty = this.getTotalHologramQty(entry);
+    console.log('💯 Total Hologram Qty:', totalQty);
+    
+    let message = `=== ALLOCATION DATA DEBUG ===\n\n`;
+    message += `Reference: ${referenceNo}\n`;
+    message += `Total Qty: ${totalQty}\n`;
+    message += `Assigned Rolls: ${assignedRolls.join(', ')}\n\n`;
+    message += `Available Rolls:\n`;
+    availableRolls.forEach((roll: any) => {
+      message += `  - ${roll.cartoonNumber}: ${roll.availableCount} units\n`;
+    });
+    message += `\nCheck browser console (F12) for detailed data structure.`;
+    
+    alert(message);
+  }
+
+  /**
+   * Get hologram allocation data for an entry (from localStorage or API)
+   * This reads the actual allocation data which shows how many holograms
+   * were allocated from which rolls (e.g., 500 from roll 1 + 100 from roll 2 = 600 total)
+   */
+  getHologramAllocationForEntry(entry: HologramDailyEntry): any {
+    try {
+      const referenceNo = (entry as any).referenceNo;
+      const cartoonNumber = (entry as any).cartoonNumber;
+      
+      console.log('🔍 Looking for allocation data:', { referenceNo, cartoonNumber });
+      
+      if (!referenceNo && !cartoonNumber) {
+        console.warn('⚠️ No reference number or cartoon number found in entry');
+        return null;
+      }
+      
+      // Try multiple localStorage keys where allocation data might be stored
+      const possibleKeys = [
+        'hologramAllocations',
+        'hologramRequests', 
+        'hologramApplications',
+        'approvedHologramEntries',
+        'hologramOverviewRolls'
+      ];
+      
+      for (const key of possibleKeys) {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        console.log(`📦 Checking ${key}:`, data.length, 'items');
+        
+        // Find ALL allocations matching this reference number (there might be multiple entries for different cartoons)
+        const matchingAllocations = data.filter((a: any) => 
+          a.referenceNo === referenceNo || 
+          a.ourRefNo === referenceNo ||
+          a.id === referenceNo
+        );
+        
+        console.log(`🔍 Found ${matchingAllocations.length} matching allocations for reference:`, referenceNo);
+        
+        // If we found multiple allocations (one per cartoon), combine them
+        if (matchingAllocations.length > 0) {
+          console.log('✅ Found allocations in', key, ':', matchingAllocations);
+          
+          // If we have multiple allocations (one per cartoon), combine them
+          let normalized: any;
+          
+          if (matchingAllocations.length > 1) {
+            // Multiple allocations - combine them
+            console.log('🔄 Combining multiple allocations');
+            const cartoons = matchingAllocations.map((alloc: any) => ({
+              cartoonNumber: alloc.cartoonNumber || alloc.cartoon || '',
+              quantity: alloc.quantity || alloc.allocatedQuantity || alloc.numberOfHolograms || 0,
+              fromSerial: alloc.fromSerial || '',
+              toSerial: alloc.toSerial || '',
+              serialRange: alloc.serialRange || `${alloc.fromSerial} - ${alloc.toSerial}`,
+              remainingInCartoon: alloc.remainingInCartoon || 0
+            }));
+            
+            const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
+            
+            normalized = {
+              referenceNo: referenceNo,
+              totalAllocated: totalQty,
+              allocatedCartoons: cartoons
+            };
+          } else {
+            // Single allocation - normalize it
+            const allocation = matchingAllocations[0];
+            normalized = {
+              referenceNo: allocation.referenceNo || allocation.ourRefNo || allocation.id || referenceNo,
+              totalAllocated: allocation.totalAllocated || allocation.requestedQuantity || allocation.numberOfHolograms || allocation.utilizedQuantity || 0,
+              allocatedCartoons: allocation.allocatedCartoons || allocation.cartoons || allocation.cartoonsUsed || []
+            };
+          }
+          
+          console.log('🔍 Raw allocation data:', matchingAllocations);
+          console.log('📋 Initial normalized:', normalized);
+          
+          // If allocatedCartoons is empty, try to extract from other fields
+          if (normalized.allocatedCartoons.length === 0 && matchingAllocations.length === 1) {
+            const allocation = matchingAllocations[0];
+            
+            // Check if allocation has cartoonDetails array
+            if (allocation.cartoonDetails && Array.isArray(allocation.cartoonDetails)) {
+              normalized.allocatedCartoons = allocation.cartoonDetails.map((c: any) => ({
+                cartoonNumber: c.cartoonNumber || c.number || c.id,
+                quantity: c.quantity || c.allocatedQuantity || 0,
+                fromSerial: c.fromSerial || c.serialFrom || '',
+                toSerial: c.toSerial || c.serialTo || '',
+                serialRange: c.serialRange || `${c.fromSerial} - ${c.toSerial}`
+              }));
+            }
+            // Check if allocation has multiple cartoon fields (t1, t2, etc.)
+            else if (allocation.t1 || allocation.t2 || allocation.t3) {
+              const cartoons = [];
+              for (let i = 1; i <= 10; i++) {
+                const cartoonKey = `t${i}`;
+                if (allocation[cartoonKey]) {
+                  cartoons.push({
+                    cartoonNumber: cartoonKey,
+                    quantity: allocation[cartoonKey].quantity || allocation[cartoonKey],
+                    fromSerial: allocation[cartoonKey].fromSerial || '',
+                    toSerial: allocation[cartoonKey].toSerial || '',
+                    serialRange: allocation[cartoonKey].serialRange || ''
+                  });
+                }
+              }
+              normalized.allocatedCartoons = cartoons;
+            }
+            // If still empty and we have a single cartoon, create it
+            else if (cartoonNumber) {
+              normalized.allocatedCartoons = [{
+                cartoonNumber: cartoonNumber,
+                quantity: normalized.totalAllocated,
+                fromSerial: allocation.fromSerial || '',
+                toSerial: allocation.toSerial || '',
+                serialRange: allocation.serialRange || `${allocation.fromSerial} - ${allocation.toSerial}`
+              }];
+            }
+          }
+          
+          console.log('✅ Final normalized allocation:', normalized);
+          console.log('📦 Allocated cartoons:', normalized.allocatedCartoons);
+          return normalized;
+        }
+      }
+      
+      console.warn('❌ No allocation found for:', { referenceNo, cartoonNumber });
+      return null;
+    } catch (error) {
+      console.error('Error loading hologram allocation:', error);
+      return null;
     }
   }
 }

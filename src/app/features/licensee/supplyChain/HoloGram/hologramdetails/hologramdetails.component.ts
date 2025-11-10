@@ -827,7 +827,7 @@ export class HologramdetailsComponent implements OnInit {
         cartoonNumber: '',
         fromSerial: '',
         toSerial: '',
-        numberOfHolograms: 1000,
+        numberOfHolograms: 500,
         remarks: 'TEST: Hologram request for Local Whiskey - Ready for Arrival Update',
         status: 'PENDING_ARRIVAL',
         approvedDate: '2024-11-04',

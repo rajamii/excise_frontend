@@ -128,6 +128,18 @@
          
         </div>
         <div class="header-actions">
+          <button class="btn btn-outline-success me-2" (click)="refreshAllocationData()" title="Refresh hologram quantities and roll assignments from allocation data">
+            <i class="bi bi-arrow-repeat me-2"></i>
+            Refresh Allocation Data
+          </button>
+          <button class="btn btn-outline-warning me-2" (click)="debugAllocationData(filteredEntries[0])" *ngIf="filteredEntries.length > 0" title="Debug allocation data for first entry">
+            <i class="bi bi-bug-fill me-2"></i>
+            Debug First Entry
+          </button>
+          <button class="btn btn-outline-primary me-2" (click)="setTestAllocationData()" title="Set test allocation data (test2: 500, test3: 100)">
+            <i class="bi bi-database-fill-add me-2"></i>
+            Set Test Allocation
+          </button>
           <button class="btn btn-outline-info me-2" (click)="refreshEntries()" title="Check for new officer approvals">
             <i class="bi bi-arrow-clockwise me-2"></i>
             Refresh from Approvals
