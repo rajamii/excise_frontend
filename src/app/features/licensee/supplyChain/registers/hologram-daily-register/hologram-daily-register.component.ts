@@ -738,20 +738,42 @@ export class HologramDailyRegisterComponent implements OnInit {
           serialRoll.status = 'AVAILABLE';
         }
         
-        // Add usage history entry
+        // Add usage history entries for all ranges
         if (!serialRoll.usageHistory) {
           serialRoll.usageHistory = [];
         }
-        serialRoll.usageHistory.push({
-          date: entry.date,
-          issuedFrom: lockedRoll.issuedFrom,
-          issuedTo: lockedRoll.issuedTo,
-          issuedQty: lockedRoll.issuedQty,
-          wastageFrom: lockedRoll.wastageFrom,
-          wastageTo: lockedRoll.wastageTo,
-          wastageQty: lockedRoll.wastageQty,
-          leftOver: lockedRoll.leftOver
-        });
+        
+        // Add issued ranges to history
+        if (lockedRoll.issuedRanges && lockedRoll.issuedRanges.length > 0) {
+          lockedRoll.issuedRanges.forEach((range: any) => {
+            if (range.quantity > 0) {
+              serialRoll.usageHistory.push({
+                date: entry.date,
+                type: 'ISSUED',
+                fromSerial: range.fromSerial,
+                toSerial: range.toSerial,
+                quantity: range.quantity,
+                cartoonNumber: cartoonNumber
+              });
+            }
+          });
+        }
+        
+        // Add wastage ranges to history
+        if (lockedRoll.wastageRanges && lockedRoll.wastageRanges.length > 0) {
+          lockedRoll.wastageRanges.forEach((range: any) => {
+            if (range.quantity > 0) {
+              serialRoll.usageHistory.push({
+                date: entry.date,
+                type: 'WASTAGE',
+                fromSerial: range.fromSerial,
+                toSerial: range.toSerial,
+                quantity: range.quantity,
+                cartoonNumber: cartoonNumber
+              });
+            }
+          });
+        }
         
         serialRollsData[serialIndex] = serialRoll;
         localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialRollsData));
@@ -1652,18 +1674,24 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       return;
     }
 
-    // Initialize roll selection data
+    // Initialize roll selection data with arrays for multiple ranges
     (entry as any).currentRollSelection = {
       selectedRoll: cartoonNumber,
       rollInput: {
         cartoonNumber: cartoonNumber,
         availableCount: roll.remainingInCartoon || roll.availableCount || 1000,
         serialRange: roll.serialRange,
-        issuedFrom: '',
-        issuedTo: '',
+        issuedRanges: [{
+          fromSerial: '',
+          toSerial: '',
+          quantity: 0
+        }],
+        wastageRanges: [{
+          fromSerial: '',
+          toSerial: '',
+          quantity: 0
+        }],
         issuedQty: 0,
-        wastageFrom: '',
-        wastageTo: '',
         wastageQty: 0,
         leftOver: roll.remainingInCartoon || roll.availableCount || 1000
       },
@@ -1680,17 +1708,17 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
 
-    // Calculate issued quantity
-    rollInput.issuedQty = this.calculateQuantityFromSerials(
-      rollInput.issuedFrom,
-      rollInput.issuedTo
-    );
+    // Calculate total issued quantity from all ranges
+    rollInput.issuedQty = (rollInput.issuedRanges || []).reduce((sum: number, range: any) => {
+      range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      return sum + range.quantity;
+    }, 0);
 
-    // Calculate wastage quantity
-    rollInput.wastageQty = this.calculateQuantityFromSerials(
-      rollInput.wastageFrom,
-      rollInput.wastageTo
-    );
+    // Calculate total wastage quantity from all ranges
+    rollInput.wastageQty = (rollInput.wastageRanges || []).reduce((sum: number, range: any) => {
+      range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      return sum + range.quantity;
+    }, 0);
 
     // Calculate left over
     const totalUsed = rollInput.issuedQty + rollInput.wastageQty;
@@ -1706,8 +1734,11 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
-    // Must have issued serials
-    if (!rollInput.issuedFrom || !rollInput.issuedTo) return false;
+    // Must have at least one issued range with valid serials
+    const hasValidIssuedRange = rollInput.issuedRanges && 
+      rollInput.issuedRanges.some((range: any) => range.fromSerial && range.toSerial && range.quantity > 0);
+    
+    if (!hasValidIssuedRange) return false;
 
     // Left over must not be negative
     if (rollInput.leftOver < 0) return false;
@@ -1777,25 +1808,40 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     entry.wastageQuantity = totalWastage;
     entry.leftOverQuantity = totalLeftOver;
 
-    // Update issued and wastage entries arrays
-    entry.issuedEntries = lockedRolls
-      .filter((roll: any) => roll.issuedQty > 0)
-      .map((roll: any) => ({
-        id: this.hologramDataService.generateId(),
-        fromSerial: roll.issuedFrom,
-        toSerial: roll.issuedTo,
-        quantity: roll.issuedQty
-      }));
+    // Update issued and wastage entries arrays from all ranges in all locked rolls
+    entry.issuedEntries = [];
+    entry.wastageEntries = [];
 
-    entry.wastageEntries = lockedRolls
-      .filter((roll: any) => roll.wastageQty > 0)
-      .map((roll: any) => ({
-        id: this.hologramDataService.generateId(),
-        fromSerial: roll.wastageFrom,
-        toSerial: roll.wastageTo,
-        quantity: roll.wastageQty,
-        damageReason: entry.damageReason || ''
-      }));
+    lockedRolls.forEach((roll: any) => {
+      // Add all issued ranges from this roll
+      if (roll.issuedRanges && roll.issuedRanges.length > 0) {
+        roll.issuedRanges.forEach((range: any) => {
+          if (range.quantity > 0) {
+            entry.issuedEntries!.push({
+              id: this.hologramDataService.generateId(),
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              quantity: range.quantity
+            });
+          }
+        });
+      }
+
+      // Add all wastage ranges from this roll
+      if (roll.wastageRanges && roll.wastageRanges.length > 0) {
+        roll.wastageRanges.forEach((range: any) => {
+          if (range.quantity > 0) {
+            entry.wastageEntries!.push({
+              id: this.hologramDataService.generateId(),
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              quantity: range.quantity,
+              damageReason: entry.damageReason || ''
+            });
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -1804,5 +1850,98 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   hasLockedRolls(entry: HologramDailyEntry): boolean {
     const lockedRolls = (entry as any).lockedRolls || [];
     return lockedRolls.length > 0;
+  }
+
+  /**
+   * Get total hologram quantity from all assigned rolls
+   */
+  getTotalHologramQty(entry: HologramDailyEntry): number {
+    // For saved entries, use the stored utilizedQuantity
+    if (entry.isFixed) {
+      return entry.utilizedQuantity || 0;
+    }
+
+    // For editable entries, sum up all roll quantities
+    let total = 0;
+
+    // Add current roll selection
+    const currentRoll = this.getCurrentRollInput(entry);
+    if (currentRoll) {
+      total += currentRoll.availableCount || 0;
+    }
+
+    // Add all locked rolls
+    const lockedRolls = (entry as any).lockedRolls || [];
+    lockedRolls.forEach((roll: any) => {
+      total += roll.availableCount || 0;
+    });
+
+    return total;
+  }
+
+  /**
+   * Add issued range for current roll
+   */
+  addIssuedRangeForRoll(entry: HologramDailyEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+
+    if (!rollInput.issuedRanges) {
+      rollInput.issuedRanges = [];
+    }
+
+    rollInput.issuedRanges.push({
+      fromSerial: '',
+      toSerial: '',
+      quantity: 0
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Remove issued range for current roll
+   */
+  removeIssuedRangeForRoll(entry: HologramDailyEntry, index: number): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput || !rollInput.issuedRanges) return;
+
+    if (rollInput.issuedRanges.length > 1) {
+      rollInput.issuedRanges.splice(index, 1);
+      this.onRollInputChange(entry);
+    }
+  }
+
+  /**
+   * Add wastage range for current roll
+   */
+  addWastageRangeForRoll(entry: HologramDailyEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+
+    if (!rollInput.wastageRanges) {
+      rollInput.wastageRanges = [];
+    }
+
+    rollInput.wastageRanges.push({
+      fromSerial: '',
+      toSerial: '',
+      quantity: 0
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Remove wastage range for current roll
+   */
+  removeWastageRangeForRoll(entry: HologramDailyEntry, index: number): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput || !rollInput.wastageRanges) return;
+
+    if (rollInput.wastageRanges.length > 1) {
+      rollInput.wastageRanges.splice(index, 1);
+      this.onRollInputChange(entry);
+    }
   }
 }
