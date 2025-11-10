@@ -1801,16 +1801,22 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     let totalIssued = 0;
     let totalWastage = 0;
     let totalLeftOver = 0;
+    let totalAvailable = 0;
 
     lockedRolls.forEach((roll: any) => {
       totalIssued += roll.issuedQty || 0;
       totalWastage += roll.wastageQty || 0;
       totalLeftOver += roll.leftOver || 0;
+      totalAvailable += roll.availableCount || 0;
     });
 
     entry.issuedQuantity = totalIssued;
     entry.wastageQuantity = totalWastage;
     entry.leftOverQuantity = totalLeftOver;
+    
+    // Update the utilized quantity to reflect total from all rolls
+    entry.utilizedQuantity = totalAvailable;
+    (entry as any).originalHologramQty = totalAvailable;
 
     // Update issued and wastage entries arrays from all ranges in all locked rolls
     entry.issuedEntries = [];
