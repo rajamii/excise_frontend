@@ -102,7 +102,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         submittedBy: entry.savedBy || 'Supply Chain User',
         submittedAt: entry.savedAt || new Date().toISOString(),
         cartoonNumber: entry.cartoonNumber || 'N/A',
-        status: entry.approvalStatus || 'PENDING'
+        status: entry.approvalStatus || 'PENDING',
+        // IMPORTANT: Include locked rolls data for detailed breakdown
+        lockedRolls: entry.lockedRolls || [],
+        issuedEntries: entry.issuedEntries || [],
+        wastageEntries: entry.wastageEntries || []
       }));
     
     console.log('Loaded pending entries:', this.pendingEntries.length);
