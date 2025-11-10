@@ -177,6 +177,91 @@
   </div>
 </div>
 
+<!-- Roll Details Modal -->
+<div class="modal fade" id="rollDetailsModal" tabindex="-1" aria-labelledby="rollDetailsModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="rollDetailsModalLabel">
+          <i class="bi bi-box-seam me-2"></i>Roll Details - {{ entryForRollDetails?.referenceNo }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeRollDetailsModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" *ngIf="entryForRollDetails">
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Brand:</label>
+            <p>{{ entryForRollDetails.brandDetails.brandName }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Bottle Size:</label>
+            <p>{{ entryForRollDetails.bottleSize }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Total Hologram Qty:</label>
+            <p class="fs-5 fw-bold text-primary">{{ entryForRollDetails.hologramQty | number }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Date:</label>
+            <p>{{ entryForRollDetails.date | date:'dd/MM/yyyy' }}</p>
+          </div>
+        </div>
+
+        <div class="rolls-details-container">
+          @for (rollData of getRollBreakdown(entryForRollDetails); track rollData.rollName) {
+            <div class="roll-card"
+                 [style.border-color]="getRollColor(rollData.rollName)"
+                 [style.background-color]="getRollBackgroundColor(rollData.rollName)">
+              <div class="roll-card-header"
+                   [style.background-color]="getRollColor(rollData.rollName)">
+                <span class="roll-name">{{ rollData.rollName }}</span>
+                <span class="roll-allocated">Allocated: {{ rollData.allocatedQty | number }}</span>
+              </div>
+              <div class="roll-card-body">
+                <div class="roll-stats">
+                  <div class="roll-stat issued">
+                    <span class="label">Issued</span>
+                    <span class="value">{{ rollData.issuedQty | number }}</span>
+                  </div>
+                  <div class="roll-stat wastage">
+                    <span class="label">Wastage</span>
+                    <span class="value">{{ rollData.wastageQty | number }}</span>
+                  </div>
+                  <div class="roll-stat leftover">
+                    <span class="label">Left</span>
+                    <span class="value">{{ rollData.leftOver | number }}</span>
+                  </div>
+                </div>
+                <div class="roll-ranges" *ngIf="rollData.issuedRanges.length > 0">
+                  <small class="range-title">Issued Ranges</small>
+                  <div class="range-list">
+                    @for (range of rollData.issuedRanges; track $index) {
+                      <span class="range-pill">{{ range.fromSerial }} → {{ range.toSerial }}</span>
+                    }
+                  </div>
+                </div>
+                <div class="roll-ranges" *ngIf="rollData.wastageRanges.length > 0">
+                  <small class="range-title">Wastage Ranges</small>
+                  <div class="range-list">
+                    @for (range of rollData.wastageRanges; track $index) {
+                      <span class="range-pill warning">{{ range.fromSerial }} → {{ range.toSerial }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeRollDetailsModal()">
+          <i class="bi bi-x-circle me-2"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Main Content -->
 <div class="bg-white">
   <div class="container-fluid p-3">
@@ -429,13 +514,14 @@
                 <td>{{ entry.date | date:'dd/MM/yyyy' }}</td>
                 <td>{{ entry.brandDetails.brandName }}</td>
                 <td>{{ entry.bottleSize }}</td>
-                <td>
-                  @if (getAssignedRolls(entry) && getAssignedRolls(entry).length > 0) {
-                    <div class="d-flex flex-wrap gap-1">
-                      @for (roll of getAssignedRolls(entry); track roll) {
-                        <span class="badge bg-primary">{{ roll }}</span>
-                      }
-                    </div>
+                <td class="rolls-cell">
+                  @if (getRollBreakdown(entry).length > 0) {
+                    <button class="btn btn-sm btn-outline-primary" 
+                            (click)="openRollDetailsModal(entry)"
+                            title="View roll details">
+                      <i class="bi bi-box-seam me-1"></i>
+                      View Rolls ({{ getRollBreakdown(entry).length }})
+                    </button>
                   } @else {
                     <span class="text-muted">-</span>
                   }

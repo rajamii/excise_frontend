@@ -3,6 +3,17 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
+interface RollBreakdown {
+  rollName: string;
+  allocatedQty: number;
+  issuedQty: number;
+  issuedRanges: any[];
+  wastageQty: number;
+  wastageRanges: any[];
+  leftOver: number;
+  totalUsed: number;
+}
+
 interface PendingEntry {
   id: string;
   date: string;
@@ -28,6 +39,9 @@ interface PendingEntry {
   submittedAt: string;
   cartoonNumber: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  lockedRolls: any[];
+  issuedEntries: any[];
+  wastageEntries: any[];
 }
 
 @Component({
@@ -38,6 +52,9 @@ interface PendingEntry {
   styleUrl: './hologram-manufacturing-register.component.scss'
 })
 export class HologramManufacturingRegisterComponent implements OnInit {
+  private rollColorMap: Map<string, number> = new Map();
+  private nextColorIndex = 0;
+
   pendingEntries: PendingEntry[] = [];
   filteredEntries: PendingEntry[] = [];
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
@@ -53,6 +70,9 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   // Entry to approve/reject
   entryToProcess: PendingEntry | null = null;
   rejectionReason = '';
+  
+  // Entry for roll details modal
+  entryForRollDetails: PendingEntry | null = null;
 
   constructor(
     private router: Router,
@@ -670,19 +690,99 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   }
 
   // Get roll-wise breakdown for an entry
-  getRollBreakdown(entry: any): any[] {
+  getRollBreakdown(entry: PendingEntry): RollBreakdown[] {
     const lockedRolls = entry.lockedRolls || [];
-    return lockedRolls.map((roll: any) => ({
-      rollName: roll.cartoonNumber,
-      issuedRanges: roll.issuedRanges || [],
-      issuedQty: roll.issuedQty || 0,
-      wastageRanges: roll.wastageRanges || [],
-      wastageQty: roll.wastageQty || 0,
-      leftOver: roll.leftOver || 0
-    }));
+    return lockedRolls.map((roll: any) => {
+      const issuedRanges = roll.issuedRanges || [];
+      const wastageRanges = roll.wastageRanges || [];
+
+      const issuedQty = roll.issuedQty ?? issuedRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
+      const wastageQty = roll.wastageQty ?? wastageRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
+
+      const allocatedQty = roll.availableCount ?? roll.allocatedQuantity ?? roll.totalAllocated ?? (issuedQty + wastageQty + (roll.leftOver ?? 0));
+      const leftOver = roll.leftOver ?? (allocatedQty - (issuedQty + wastageQty));
+      const totalUsed = issuedQty + wastageQty;
+
+      return {
+        rollName: roll.cartoonNumber,
+        allocatedQty,
+        issuedRanges,
+        issuedQty,
+        wastageRanges,
+        wastageQty,
+        leftOver: leftOver < 0 ? 0 : leftOver,
+        totalUsed
+      };
+    });
   }
 
   getRejectedCount(): number {
     return this.pendingEntries.filter(e => e.status === 'REJECTED').length;
+  }
+
+  private getRollColorIndex(cartoonNumber: string): number {
+    if (!this.rollColorMap.has(cartoonNumber)) {
+      this.rollColorMap.set(cartoonNumber, this.nextColorIndex);
+      this.nextColorIndex++;
+    }
+    return this.rollColorMap.get(cartoonNumber)!;
+  }
+
+  getRollColor(cartoonNumber: string): string {
+    const colors = [
+      '#007bff',
+      '#28a745',
+      '#ffc107',
+      '#dc3545',
+      '#17a2b8',
+      '#6f42c1',
+      '#fd7e14',
+      '#20c997',
+      '#e83e8c',
+      '#6c757d'
+    ];
+
+    const index = this.getRollColorIndex(cartoonNumber);
+    return colors[index % colors.length];
+  }
+
+  getRollBackgroundColor(cartoonNumber: string): string {
+    const bgColors = [
+      '#e7f3ff',
+      '#e7f5e7',
+      '#fff8e1',
+      '#ffe7e7',
+      '#e0f7fa',
+      '#f3e5f5',
+      '#fff3e0',
+      '#e0f2f1',
+      '#fce4ec',
+      '#f8f9fa'
+    ];
+
+    const index = this.getRollColorIndex(cartoonNumber);
+    return bgColors[index % bgColors.length];
+  }
+
+  // Open roll details modal
+  openRollDetailsModal(entry: PendingEntry): void {
+    this.entryForRollDetails = entry;
+    const modalElement = document.getElementById('rollDetailsModal');
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  // Close roll details modal
+  closeRollDetailsModal(): void {
+    this.entryForRollDetails = null;
+    const modalElement = document.getElementById('rollDetailsModal');
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
   }
 }
