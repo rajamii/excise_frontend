@@ -1620,14 +1620,31 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     // Load roll details from localStorage (officer's allocation)
     const allocatedRolls = JSON.parse(localStorage.getItem('hologramAllocations') || '[]');
     
+    // Also check hologramOverviewRolls for roll data
+    const overviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+
+    // Get the total approved quantity for this entry
+    const totalApprovedQty = entry.utilizedQuantity || (entry as any).originalHologramQty || 0;
+    const numRolls = assignedRolls.length || 1;
+    const qtyPerRoll = Math.floor(totalApprovedQty / numRolls);
+    
     // Return roll details for assigned rolls
     return assignedRolls.map(cartoonNumber => {
-      const rollDetail = allocatedRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+      // First try to find in allocatedRolls
+      let rollDetail = allocatedRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+      
+      // If not found, try overviewRolls
+      if (!rollDetail) {
+        rollDetail = overviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+      }
+      
+      // If still not found, create default with approved quantity divided by number of rolls
       return rollDetail || {
         cartoonNumber: cartoonNumber,
-        availableCount: 1000, // Default
-        serialRange: '000001-001000',
-        remainingInCartoon: 1000
+        availableCount: qtyPerRoll,
+        serialRange: '000001-' + String(qtyPerRoll).padStart(6, '0'),
+        remainingInCartoon: qtyPerRoll,
+        totalCount: qtyPerRoll
       };
     });
   }

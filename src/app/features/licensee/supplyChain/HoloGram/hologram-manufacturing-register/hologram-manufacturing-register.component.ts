@@ -659,6 +659,25 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     return this.pendingEntries.filter(e => e.status === 'APPROVED').length;
   }
 
+  // Get assigned rolls for an entry
+  getAssignedRolls(entry: any): string[] {
+    const lockedRolls = entry.lockedRolls || [];
+    return lockedRolls.map((roll: any) => roll.cartoonNumber);
+  }
+
+  // Get roll-wise breakdown for an entry
+  getRollBreakdown(entry: any): any[] {
+    const lockedRolls = entry.lockedRolls || [];
+    return lockedRolls.map((roll: any) => ({
+      rollName: roll.cartoonNumber,
+      issuedRanges: roll.issuedRanges || [],
+      issuedQty: roll.issuedQty || 0,
+      wastageRanges: roll.wastageRanges || [],
+      wastageQty: roll.wastageQty || 0,
+      leftOver: roll.leftOver || 0
+    }));
+  }
+
   getRejectedCount(): number {
     return this.pendingEntries.filter(e => e.status === 'REJECTED').length;
   }

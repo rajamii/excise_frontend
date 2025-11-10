@@ -31,6 +31,18 @@
             <label class="form-label fw-bold">Bottle Size:</label>
             <p>{{ entryToProcess.bottleSize }}</p>
           </div>
+          <div class="col-12">
+            <label class="form-label fw-bold">Rolls Assigned:</label>
+            @if (getAssignedRolls(entryToProcess) && getAssignedRolls(entryToProcess).length > 0) {
+              <div class="d-flex flex-wrap gap-2">
+                @for (roll of getAssignedRolls(entryToProcess); track roll) {
+                  <span class="badge bg-primary fs-6">{{ roll }}</span>
+                }
+              </div>
+            } @else {
+              <p class="text-muted">No rolls assigned</p>
+            }
+          </div>
           <div class="col-md-6">
             <label class="form-label fw-bold">Hologram Qty:</label>
             <p>{{ entryToProcess.hologramQty | number }}</p>
@@ -48,6 +60,63 @@
             <p>{{ entryToProcess.leftOverQuantity | number }}</p>
           </div>
         </div>
+
+        <!-- Roll-wise Breakdown -->
+        @if (getRollBreakdown(entryToProcess) && getRollBreakdown(entryToProcess).length > 0) {
+          <div class="mt-4">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-box-seam me-2"></i>Roll-wise Breakdown
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Roll No.</th>
+                    <th>Issued Ranges</th>
+                    <th>Issued Qty</th>
+                    <th>Wastage Ranges</th>
+                    <th>Wastage Qty</th>
+                    <th>Left Over</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (rollData of getRollBreakdown(entryToProcess); track rollData.rollName) {
+                    <tr>
+                      <td><span class="badge bg-primary">{{ rollData.rollName }}</span></td>
+                      <td>
+                        @if (rollData.issuedRanges && rollData.issuedRanges.length > 0) {
+                          <div class="d-flex flex-column gap-1">
+                            @for (range of rollData.issuedRanges; track $index) {
+                              <small>{{ range.fromSerial }} - {{ range.toSerial }}</small>
+                            }
+                          </div>
+                        } @else {
+                          <span class="text-muted">-</span>
+                        }
+                      </td>
+                      <td class="text-end">{{ rollData.issuedQty | number }}</td>
+                      <td>
+                        @if (rollData.wastageRanges && rollData.wastageRanges.length > 0) {
+                          <div class="d-flex flex-column gap-1">
+                            @for (range of rollData.wastageRanges; track $index) {
+                              <small>{{ range.fromSerial }} - {{ range.toSerial }}</small>
+                            }
+                          </div>
+                        } @else {
+                          <span class="text-muted">-</span>
+                        }
+                      </td>
+                      <td class="text-end">{{ rollData.wastageQty | number }}</td>
+                      <td class="text-end" [class.text-success]="rollData.leftOver > 0">
+                        {{ rollData.leftOver | number }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
 
         <div class="alert mt-3" 
              [class.alert-success]="isCalculationMatching(entryToProcess)"
@@ -340,6 +409,7 @@
                 <th>DATE</th>
                 <th>BRAND</th>
                 <th>BOTTLE SIZE</th>
+                <th>ROLLS ASSIGNED</th>
                 <th>HOLOGRAM QTY</th>
                 <th>ISSUED QTY</th>
                 <th>WASTAGE QTY</th>
@@ -359,6 +429,17 @@
                 <td>{{ entry.date | date:'dd/MM/yyyy' }}</td>
                 <td>{{ entry.brandDetails.brandName }}</td>
                 <td>{{ entry.bottleSize }}</td>
+                <td>
+                  @if (getAssignedRolls(entry) && getAssignedRolls(entry).length > 0) {
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (roll of getAssignedRolls(entry); track roll) {
+                        <span class="badge bg-primary">{{ roll }}</span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="text-muted">-</span>
+                  }
+                </td>
                 <td>{{ entry.hologramQty | number }}</td>
                 <td>{{ entry.issuedQuantity | number }}</td>
                 <td>{{ entry.wastageQuantity | number }}</td>
