@@ -170,6 +170,7 @@ export class HologramoveriewComponent implements OnInit {
   activeTab: string = 'rolls';
 
   rollsData: HologramRoll[] = [];
+  filteredRollsData: HologramRoll[] = []; // Filtered rolls data
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
@@ -203,6 +204,15 @@ export class HologramoveriewComponent implements OnInit {
 
   // Serial Filters
   serialFilters: SerialFilters = {
+    rollStatus: '',
+    hologramType: '',
+    dateFrom: '',
+    dateTo: '',
+    serialSearch: ''
+  };
+
+  // Rolls Filters (same structure as Serial Filters)
+  rollsFilters: SerialFilters = {
     rollStatus: '',
     hologramType: '',
     dateFrom: '',
@@ -283,6 +293,8 @@ export class HologramoveriewComponent implements OnInit {
 
     // Use only saved data (no sample data for clean testing)
     this.rollsData = sortedSavedRolls;
+    // Apply filters after loading
+    this.applyRollsFilters();
   }
 
   loadAvailableData() {
@@ -1030,6 +1042,68 @@ export class HologramoveriewComponent implements OnInit {
       `Showing all ${this.serialRollsData.length} rolls`;
   }
 
+  // Rolls filter methods (same logic as Serial filters)
+  applyRollsFilters(): void {
+    this.filteredRollsData = this.rollsData.filter(roll => {
+      if (this.rollsFilters.rollStatus && roll.status !== this.rollsFilters.rollStatus) {
+        return false;
+      }
+      if (this.rollsFilters.hologramType && roll.type !== this.rollsFilters.hologramType) {
+        return false;
+      }
+      if (this.rollsFilters.dateFrom) {
+        const rollDate = new Date(roll.receivedDate);
+        const filterDate = new Date(this.rollsFilters.dateFrom);
+        if (rollDate < filterDate) {
+          return false;
+        }
+      }
+      if (this.rollsFilters.dateTo) {
+        const rollDate = new Date(roll.receivedDate);
+        const filterDate = new Date(this.rollsFilters.dateTo);
+        if (rollDate > filterDate) {
+          return false;
+        }
+      }
+      if (this.rollsFilters.serialSearch &&
+        !roll.fromSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase()) &&
+        !roll.toSerial.toLowerCase().includes(this.rollsFilters.serialSearch.toLowerCase())) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  clearRollsFilters(): void {
+    this.rollsFilters = {
+      rollStatus: '',
+      hologramType: '',
+      dateFrom: '',
+      dateTo: '',
+      serialSearch: ''
+    };
+    this.applyRollsFilters();
+  }
+
+  hasActiveRollsFilters(): boolean {
+    return !!(this.rollsFilters.rollStatus ||
+      this.rollsFilters.hologramType ||
+      this.rollsFilters.dateFrom ||
+      this.rollsFilters.dateTo ||
+      this.rollsFilters.serialSearch);
+  }
+
+  getRollsFilterSummary(): string {
+    const filters = [];
+    if (this.rollsFilters.rollStatus) filters.push(`Status: ${this.rollsFilters.rollStatus}`);
+    if (this.rollsFilters.hologramType) filters.push(`Type: ${this.rollsFilters.hologramType}`);
+    if (this.rollsFilters.serialSearch) filters.push(`Search: ${this.rollsFilters.serialSearch}`);
+
+    return filters.length > 0 ?
+      `Filtered by: ${filters.join(', ')} | Showing ${this.filteredRollsData.length} of ${this.rollsData.length} rolls` :
+      `Showing all ${this.rollsData.length} rolls`;
+  }
+
   // Serial data summary methods
   getTotalRolls(): number {
     return this.hasActiveSerialFilters() ? this.filteredSerialData.length : this.serialRollsData.length;
@@ -1047,6 +1121,26 @@ export class HologramoveriewComponent implements OnInit {
 
   getDamagedWastage(): number {
     const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
+    return data.reduce((total, roll) => total + roll.damagedCount, 0);
+  }
+
+  // Rolls data summary methods (for Rolls tab)
+  getTotalRollsForRollsTab(): number {
+    return this.hasActiveRollsFilters() ? this.filteredRollsData.length : this.rollsData.length;
+  }
+
+  getAvailableHologramsForRollsTab(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((total, roll) => total + roll.availableCount, 0);
+  }
+
+  getUsedInProductionForRollsTab(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((total, roll) => total + roll.usedCount, 0);
+  }
+
+  getDamagedWastageForRollsTab(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
     return data.reduce((total, roll) => total + roll.damagedCount, 0);
   }
 
@@ -1295,6 +1389,10 @@ export class HologramoveriewComponent implements OnInit {
 
   exportSerialData(): void {
     alert('Serial data export functionality will be implemented with backend integration');
+  }
+
+  exportRollsData(): void {
+    alert('Rolls data export functionality will be implemented with backend integration');
   }
 
   // Method to clear test data (for debugging)

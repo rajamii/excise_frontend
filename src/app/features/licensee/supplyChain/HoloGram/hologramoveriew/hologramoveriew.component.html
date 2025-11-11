@@ -332,9 +332,139 @@
                   <i class="bi bi-collection me-2"></i>
                   Hologram Rolls Management
                 </h5>
-                <small class="text-muted">Debug: {{ rollsData.length }} records loaded</small>
+                <small class="text-muted">Showing all {{ rollsData.length }} rolls</small>
               </div>
               <div class="card-body">
+                <!-- Rolls Summary Cards -->
+                <div class="row g-3 mb-4">
+                  <div class="col-md-3">
+                    <div class="summary-card total-rolls" [class.filtered-card]="hasActiveRollsFilters()">
+                      <div class="card-icon">
+                        <i class="bi bi-collection"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getTotalRollsForRollsTab() }}</h3>
+                        <p class="card-label">
+                          {{ hasActiveRollsFilters() ? 'Filtered Rolls' : 'Total Rolls' }}
+                          @if (hasActiveRollsFilters()) {
+                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card available-holograms" [class.filtered-card]="hasActiveRollsFilters()">
+                      <div class="card-icon">
+                        <i class="bi bi-check-circle"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getAvailableHologramsForRollsTab() }}</h3>
+                        <p class="card-label">
+                          {{ hasActiveRollsFilters() ? 'Filtered Available' : 'Available Holograms' }}
+                          @if (hasActiveRollsFilters()) {
+                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card used-holograms" [class.filtered-card]="hasActiveRollsFilters()">
+                      <div class="card-icon">
+                        <i class="bi bi-arrow-up-circle"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getUsedInProductionForRollsTab() }}</h3>
+                        <p class="card-label">
+                          {{ hasActiveRollsFilters() ? 'Filtered Used' : 'Used in Production' }}
+                          @if (hasActiveRollsFilters()) {
+                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-card damaged-holograms" [class.filtered-card]="hasActiveRollsFilters()">
+                      <div class="card-icon">
+                        <i class="bi bi-exclamation-triangle"></i>
+                      </div>
+                      <div class="card-content">
+                        <h3 class="card-value">{{ getDamagedWastageForRollsTab() }}</h3>
+                        <p class="card-label">
+                          {{ hasActiveRollsFilters() ? 'Filtered Damaged' : 'Damaged/Wastage' }}
+                          @if (hasActiveRollsFilters()) {
+                          <i class="bi bi-funnel-fill text-primary ms-1" title="Filters Applied"></i>
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rolls Filter Section -->
+                <div class="row g-3 mb-4">
+                  <div class="col-12">
+                    <div class="filter-card">
+                      <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                          <div class="col-md-2">
+                            <label class="form-label small fw-bold">Roll Status</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.rollStatus"
+                              (change)="applyRollsFilters()">
+                              <option value="">All Status</option>
+                              <option value="AVAILABLE">Available</option>
+                              <option value="IN_USE">In Use</option>
+                              <option value="COMPLETED">Completed</option>
+                              <option value="DAMAGED">Damaged</option>
+                            </select>
+                          </div>
+                          <div class="col-md-2">
+                            <label class="form-label small fw-bold">Hologram Type</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="rollsFilters.hologramType"
+                              (change)="applyRollsFilters()">
+                              <option value="">All Types</option>
+                              <option value="LOCAL">Local</option>
+                              <option value="EXPORT">Export</option>
+                              <option value="DEFENCE">Defence</option>
+                            </select>
+                          </div>
+                          <div class="col-md-2">
+                            <label class="form-label small fw-bold">Date From</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateFrom"
+                              (change)="applyRollsFilters()">
+                          </div>
+                          <div class="col-md-2">
+                            <label class="form-label small fw-bold">Date To</label>
+                            <input type="date" class="form-control form-control-sm" [(ngModel)]="rollsFilters.dateTo"
+                              (change)="applyRollsFilters()">
+                          </div>
+                          <div class="col-md-2">
+                            <label class="form-label small fw-bold">Serial Range</label>
+                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollsFilters.serialSearch"
+                              (input)="applyRollsFilters()" placeholder="e.g. HG001001">
+                          </div>
+                          <div class="col-md-2">
+                            <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearRollsFilters()">
+                              <i class="bi bi-x-circle me-1"></i>Clear
+                            </button>
+                            <button class="btn btn-success btn-sm" (click)="exportRollsData()">
+                              <i class="bi bi-download me-1"></i>Export
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Filter Summary -->
+                <div class="mt-2 p-2 bg-light rounded">
+                  <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    {{ getRollsFilterSummary() }}
+                  </small>
+                </div>
                 <div class="table-responsive">
                   <table class="table table-hover table-bordered">
                     <thead class="table-success">
@@ -353,7 +483,7 @@
                       </tr>
                     </thead>
                     <tbody>
-                      @for (roll of rollsData; track roll.id) {
+                      @for (roll of (hasActiveRollsFilters() ? filteredRollsData : rollsData); track roll.id) {
                       <tr [class.table-success]="isNewRoll(roll)" [class.new-roll-highlight]="isNewRoll(roll)">
                         <td>{{ roll.receivedDate | date:'dd-MMM-yyyy' }}</td>
                         <td>
