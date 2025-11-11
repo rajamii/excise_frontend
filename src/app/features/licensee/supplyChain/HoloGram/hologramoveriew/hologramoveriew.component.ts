@@ -1419,18 +1419,50 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
               });
               console.log('Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
             } else {
+              // Try to get damage reason from daily register entry if not in history
+              let damageReason = historyEntry.damageReason;
+              if (!damageReason || damageReason.trim() === '') {
+                // Fallback: try to find it from daily register entries
+                const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+                const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+                const allEntries = [...dailyEntries, ...approvedEntries];
+                
+                const matchingEntry = allEntries.find((entry: any) => {
+                  // Check if this entry matches the wastage range
+                  if (entry.cartoonNumber !== cartoonNumber || entry.hologramType !== hologramType) {
+                    return false;
+                  }
+                  
+                  // Check wastageEntries array
+                  if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+                    return entry.wastageEntries.some((w: any) => 
+                      w.fromSerial === fromSerial && w.toSerial === toSerial
+                    );
+                  }
+                  
+                  // Check legacy wastage fields
+                  return entry.wastageFromSerial === fromSerial && entry.wastageToSerial === toSerial;
+                });
+                
+                if (matchingEntry) {
+                  damageReason = matchingEntry.damageReason || matchingEntry.wastageEntries?.find((w: any) => 
+                    w.fromSerial === fromSerial && w.toSerial === toSerial
+                  )?.damageReason || '';
+                }
+              }
+              
               ranges.push({
                 fromSerial: fromSerial,
                 toSerial: toSerial,
                 count: quantity,
                 status: 'DAMAGED',
-                description: historyEntry.damageReason || 'Damaged during production',
+                description: damageReason || 'Damaged during production',
                 damageDate: historyEntry.date || historyEntry.approvedAt,
-                damageReason: historyEntry.damageReason || 'Not specified',
+                damageReason: damageReason || 'Not specified',
                 reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System',
                 referenceNo: historyEntry.referenceNo || 'N/A' // Add reference number for damaged entries
               });
-              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'refNo:', historyEntry.referenceNo);
+              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'damageReason:', damageReason || 'Not specified', 'refNo:', historyEntry.referenceNo);
             }
           }
         } else {

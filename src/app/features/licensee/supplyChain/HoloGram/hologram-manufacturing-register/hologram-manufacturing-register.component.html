@@ -248,6 +248,16 @@
                     }
                   </div>
                 </div>
+                <div class="roll-damage-info" *ngIf="rollData.wastageQty > 0 || rollData.damageReason">
+                  <small class="damage-title">Damage Information</small>
+                  <div class="damage-details">
+                    <div class="damage-reason-box">
+                      <i class="bi bi-exclamation-triangle me-2"></i>
+                      <strong>Damage Reason:</strong>
+                      <p class="damage-reason-text">{{ rollData.damageReason?.trim() || 'No damage reason specified' }}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           }

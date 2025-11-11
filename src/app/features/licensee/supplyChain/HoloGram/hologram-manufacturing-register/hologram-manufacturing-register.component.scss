@@ -591,6 +591,51 @@
         }
       }
     }
+
+    .roll-damage-info {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #dee2e6;
+
+      .damage-title {
+        display: block;
+        font-weight: 600;
+        color: #dc3545;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+      }
+
+      .damage-details {
+        .damage-reason-box {
+          padding: 0.75rem;
+          background: #fff3cd;
+          border: 1px solid #ffc107;
+          border-radius: 8px;
+          border-left: 4px solid #ffc107;
+
+          i {
+            color: #856404;
+          }
+
+          strong {
+            display: block;
+            color: #856404;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+          }
+
+          .damage-reason-text {
+            margin: 0;
+            color: #856404;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
+        }
+      }
+    }
   }
 }
 

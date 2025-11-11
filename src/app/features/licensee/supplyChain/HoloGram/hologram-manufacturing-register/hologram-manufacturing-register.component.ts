@@ -12,6 +12,7 @@ interface RollBreakdown {
   wastageRanges: any[];
   leftOver: number;
   totalUsed: number;
+  damageReason?: string; // Per-roll damage reason
 }
 
 interface PendingEntry {
@@ -124,7 +125,11 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         cartoonNumber: entry.cartoonNumber || 'N/A',
         status: entry.approvalStatus || 'PENDING',
         // IMPORTANT: Include locked rolls data for detailed breakdown
-        lockedRolls: entry.lockedRolls || [],
+        // Ensure lockedRolls preserve all properties including damageReason
+        lockedRolls: (entry.lockedRolls || []).map((roll: any) => ({
+          ...roll,
+          damageReason: roll.damageReason || entry.damageReason || '' // Preserve per-roll damage reason with fallback
+        })),
         issuedEntries: entry.issuedEntries || [],
         wastageEntries: entry.wastageEntries || []
       }));
@@ -346,8 +351,10 @@ export class HologramManufacturingRegisterComponent implements OnInit {
           wastageEntries: lockedRoll.wastageRanges?.map((r: any) => ({
             fromSerial: r.fromSerial,
             toSerial: r.toSerial,
-            quantity: r.quantity || 0
-          })) || []
+            quantity: r.quantity || 0,
+            damageReason: lockedRoll.damageReason || r.damageReason || ''
+          })) || [],
+          damageReason: lockedRoll.damageReason || '' // Per-roll damage reason
         };
         
         // Update all tabs for this specific roll
@@ -1024,6 +1031,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   // Get roll-wise breakdown for an entry
   getRollBreakdown(entry: PendingEntry): RollBreakdown[] {
     const lockedRolls = entry.lockedRolls || [];
+    console.log('🔍 getRollBreakdown - Entry lockedRolls:', lockedRolls);
     return lockedRolls.map((roll: any) => {
       const issuedRanges = roll.issuedRanges || [];
       const wastageRanges = roll.wastageRanges || [];
@@ -1035,6 +1043,10 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       const leftOver = roll.leftOver ?? (allocatedQty - (issuedQty + wastageQty));
       const totalUsed = issuedQty + wastageQty;
 
+      // Get damage reason from roll, with fallback to entry-level damage reason
+      const damageReason = roll.damageReason || entry.damageReason || '';
+      console.log(`🔍 Roll ${roll.cartoonNumber} - damageReason from roll:`, roll.damageReason, 'from entry:', entry.damageReason, 'final:', damageReason);
+
       return {
         rollName: roll.cartoonNumber,
         allocatedQty,
@@ -1043,7 +1055,8 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         wastageRanges,
         wastageQty,
         leftOver: leftOver < 0 ? 0 : leftOver,
-        totalUsed
+        totalUsed,
+        damageReason: damageReason // Per-roll damage reason with fallback
       };
     });
   }

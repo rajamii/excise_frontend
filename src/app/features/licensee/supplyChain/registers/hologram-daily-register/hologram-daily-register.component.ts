@@ -795,11 +795,16 @@ export class HologramDailyRegisterComponent implements OnInit {
               serialRoll.usageHistory.push({
                 date: entry.date,
                 type: 'WASTAGE',
+                wastageFromSerial: range.fromSerial,
+                wastageToSerial: range.toSerial,
                 fromSerial: range.fromSerial,
                 toSerial: range.toSerial,
+                wastageQuantity: range.quantity,
                 quantity: range.quantity,
+                damageReason: lockedRoll.damageReason || range.damageReason || entry.damageReason || '',
                 cartoonNumber: cartoonNumber,
-                referenceNo: (entry as any).referenceNo || this.getEntryMetadata(entry).referenceNo || 'N/A' // Add reference number
+                referenceNo: (entry as any).referenceNo || this.getEntryMetadata(entry).referenceNo || 'N/A',
+                approvedBy: (entry as any).officerName || 'Officer In Charge'
               });
             }
           });
@@ -1722,6 +1727,27 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Get damage reason for a specific roll from an entry
+   */
+  getDamageReasonForRoll(entry: HologramDailyEntry, cartoonNumber: string): string {
+    // First check locked rolls
+    const lockedRolls = (entry as any).lockedRolls || [];
+    const lockedRoll = lockedRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+    if (lockedRoll && lockedRoll.damageReason) {
+      return lockedRoll.damageReason;
+    }
+
+    // Check current roll selection
+    const currentRoll = (entry as any).currentRollSelection;
+    if (currentRoll && currentRoll.selectedRoll === cartoonNumber && currentRoll.rollInput?.damageReason) {
+      return currentRoll.rollInput.damageReason;
+    }
+
+    // Fallback to entry-level damage reason (for backward compatibility)
+    return entry.damageReason || '';
+  }
+
+  /**
    * Get available rolls for an entry - READ FROM ALLOCATION DATA
    * This shows the actual rolls that were allocated with their correct quantities
    */
@@ -2031,7 +2057,8 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         }],
         issuedQty: 0,
         wastageQty: 0,
-        leftOver: roll.availableCount || roll.remainingInCartoon || roll.totalCount || 0
+        leftOver: roll.availableCount || roll.remainingInCartoon || roll.totalCount || 0,
+        damageReason: '' // Per-roll damage reason
       },
       isLocked: false
     };
@@ -2203,23 +2230,67 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
-    // Must have at least one issued range with valid serials
-    const hasValidIssuedRange = rollInput.issuedRanges && 
-      rollInput.issuedRanges.some((range: any) => range.fromSerial && range.toSerial && range.quantity > 0);
-    
-    if (!hasValidIssuedRange) return false;
+    // Check ISSUED ranges: Both FROM and TO must be filled for any range that has started
+    if (rollInput.issuedRanges && rollInput.issuedRanges.length > 0) {
+      // Check if any issued range has only one field filled (incomplete)
+      const hasIncompleteIssuedRange = rollInput.issuedRanges.some((range: any) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If either FROM or TO is filled, both must be filled
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      if (hasIncompleteIssuedRange) return false;
 
-    // Check if all issued ranges are valid (within allocated range)
-    const allIssuedRangesValid = rollInput.issuedRanges && 
-      rollInput.issuedRanges.every((range: any) => !range.fromSerial || !range.toSerial || range.isValid !== false);
-    
-    if (!allIssuedRangesValid) return false;
+      // Must have at least one complete issued range with valid serials
+      const hasValidIssuedRange = rollInput.issuedRanges.some((range: any) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        return hasFrom && hasTo && range.quantity > 0;
+      });
+      
+      if (!hasValidIssuedRange) return false;
 
-    // Check if all wastage ranges are valid (within allocated range)
-    const allWastageRangesValid = rollInput.wastageRanges && 
-      rollInput.wastageRanges.every((range: any) => !range.fromSerial || !range.toSerial || range.isValid !== false);
-    
-    if (!allWastageRangesValid) return false;
+      // Check if all complete issued ranges are valid (within allocated range)
+      const allIssuedRangesValid = rollInput.issuedRanges.every((range: any) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If range is incomplete, skip validation (already checked above)
+        if (!hasFrom || !hasTo) return true;
+        // If range is complete, check if it's valid
+        return range.isValid !== false;
+      });
+      
+      if (!allIssuedRangesValid) return false;
+    } else {
+      // No issued ranges at all
+      return false;
+    }
+
+    // Check WASTAGE ranges: Both FROM and TO must be filled for any range that has started
+    if (rollInput.wastageRanges && rollInput.wastageRanges.length > 0) {
+      // Check if any wastage range has only one field filled (incomplete)
+      const hasIncompleteWastageRange = rollInput.wastageRanges.some((range: any) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If either FROM or TO is filled, both must be filled
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      if (hasIncompleteWastageRange) return false;
+
+      // Check if all complete wastage ranges are valid (within allocated range)
+      const allWastageRangesValid = rollInput.wastageRanges.every((range: any) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If range is incomplete, skip validation (already checked above)
+        if (!hasFrom || !hasTo) return true;
+        // If range is complete, check if it's valid
+        return range.isValid !== false;
+      });
+      
+      if (!allWastageRangesValid) return false;
+    }
 
     // Left over must not be negative
     if (rollInput.leftOver < 0) return false;
@@ -2242,10 +2313,35 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       const invalidIssuedRanges = rollInput.issuedRanges?.filter((r: any) => r.isValid === false && r.errorMessage);
       const invalidWastageRanges = rollInput.wastageRanges?.filter((r: any) => r.isValid === false && r.errorMessage);
       
+      // Check for incomplete ranges
+      const incompleteIssuedRanges = rollInput.issuedRanges?.filter((r: any) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      const incompleteWastageRanges = rollInput.wastageRanges?.filter((r: any) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
       let errorMessage = 'Cannot lock roll. Please fix the following errors:\n\n';
       
+      if (incompleteIssuedRanges && incompleteIssuedRanges.length > 0) {
+        errorMessage += 'Issued Ranges - Incomplete:\n';
+        errorMessage += 'Both "ISSUED FROM" and "ISSUED TO" must be filled for each range.\n';
+        errorMessage += 'Please complete all started ranges or remove them.\n\n';
+      }
+      
+      if (incompleteWastageRanges && incompleteWastageRanges.length > 0) {
+        errorMessage += 'Wastage Ranges - Incomplete:\n';
+        errorMessage += 'Both "WASTAGE FROM" and "WASTAGE TO" must be filled for each range.\n';
+        errorMessage += 'Please complete all started ranges or remove them.\n\n';
+      }
+      
       if (invalidIssuedRanges && invalidIssuedRanges.length > 0) {
-        errorMessage += 'Issued Ranges:\n';
+        errorMessage += 'Issued Ranges - Validation Errors:\n';
         invalidIssuedRanges.forEach((r: any, i: number) => {
           errorMessage += `${i + 1}. ${r.errorMessage}\n`;
         });
@@ -2253,7 +2349,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       }
       
       if (invalidWastageRanges && invalidWastageRanges.length > 0) {
-        errorMessage += 'Wastage Ranges:\n';
+        errorMessage += 'Wastage Ranges - Validation Errors:\n';
         invalidWastageRanges.forEach((r: any, i: number) => {
           errorMessage += `${i + 1}. ${r.errorMessage}\n`;
         });
@@ -2264,8 +2360,12 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         errorMessage += `Left Over is negative: ${rollInput.leftOver}. Please adjust quantities.\n`;
       }
       
-      if (!rollInput.issuedRanges || !rollInput.issuedRanges.some((r: any) => r.fromSerial && r.toSerial && r.quantity > 0)) {
-        errorMessage += 'Please enter at least one valid issued range.\n';
+      if (!rollInput.issuedRanges || !rollInput.issuedRanges.some((r: any) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return hasFrom && hasTo && r.quantity > 0;
+      })) {
+        errorMessage += 'Please enter at least one complete issued range (both FROM and TO).\n';
       }
       
       alert(errorMessage);
@@ -2277,8 +2377,13 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       (entry as any).lockedRolls = [];
     }
 
-    // Add to locked rolls
-    (entry as any).lockedRolls.push({ ...rollInput });
+    // Add to locked rolls - ensure damageReason is included
+    const rollToLock = {
+      ...rollInput,
+      damageReason: rollInput.damageReason || '' // Explicitly include damageReason
+    };
+    (entry as any).lockedRolls.push(rollToLock);
+    console.log('🔒 Locked roll with damageReason:', rollToLock.cartoonNumber, 'damageReason:', rollToLock.damageReason);
 
     // Clear current selection
     (entry as any).currentRollSelection = null;
@@ -2360,7 +2465,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
               fromSerial: range.fromSerial,
               toSerial: range.toSerial,
               quantity: range.quantity,
-              damageReason: entry.damageReason || ''
+              damageReason: roll.damageReason || range.damageReason || entry.damageReason || ''
             });
           }
         });

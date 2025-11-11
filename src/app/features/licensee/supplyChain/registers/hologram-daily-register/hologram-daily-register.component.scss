@@ -1427,8 +1427,8 @@
   }
 
   .damage-reason {
-    min-width: 120px !important;
-    max-width: 120px !important;
+    min-width: 200px !important;
+    max-width: 250px !important;
   }
 
   .actions {
@@ -1598,13 +1598,37 @@
   background: #e7f5e7;
   border: 1px solid #28a745;
   border-radius: 0.25rem;
-  padding: 0.375rem;
+  padding: 0.5rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.375rem;
+  flex-direction: column;
+  gap: 0.5rem;
   width: 100%;
   box-sizing: border-box;
+  margin-bottom: 0.5rem;
+
+  .roll-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+
+    i {
+      font-size: 0.75rem;
+    }
+  }
+
+  .reason-input {
+    width: 100%;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.25rem;
+    min-height: 60px;
+    resize: vertical;
+    box-sizing: border-box;
+  }
 
   .roll-name {
     font-size: 0.7rem;
@@ -1639,6 +1663,43 @@
     font-family: 'Courier New', monospace;
     white-space: nowrap;
   }
+}
+
+/* ========================================
+   DAMAGE REASON CONTAINER
+   ======================================== */
+.damage-reason-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+
+  .current-roll-section {
+    .roll-label {
+      margin-bottom: 0.5rem;
+    }
+
+    .reason-input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+}
+
+.damage-reason-value {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  padding: 0.25rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.roll-group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
 }
 
 /* ========================================
