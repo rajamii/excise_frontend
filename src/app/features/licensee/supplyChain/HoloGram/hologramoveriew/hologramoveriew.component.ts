@@ -1130,7 +1130,8 @@ export class HologramoveriewComponent implements OnInit {
               toSerial,
               quantity,
               reason: u.damageReason || 'Not specified',
-              officerName: u.approvedBy || 'Officer In Charge'
+              officerName: u.approvedBy || 'Officer In Charge',
+              referenceNo: u.referenceNo || 'N/A'
             });
           }
         }
@@ -1182,7 +1183,8 @@ export class HologramoveriewComponent implements OnInit {
                 toSerial: wastage.toSerial,
                 quantity: wastage.quantity,
                 reason: wastage.damageReason || entry.damageReason || 'Not specified',
-                officerName: entry.officerName || 'System'
+                officerName: entry.officerName || 'System',
+                referenceNo: entry.referenceNo || 'N/A'
               });
             }
           });
@@ -1193,7 +1195,8 @@ export class HologramoveriewComponent implements OnInit {
             toSerial: entry.wastageToSerial,
             quantity: entry.wastageQuantity,
             reason: entry.damageReason || 'Not specified',
-            officerName: entry.officerName || 'System'
+            officerName: entry.officerName || 'System',
+            referenceNo: entry.referenceNo || 'N/A'
           });
         }
       });
@@ -1474,9 +1477,10 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 description: historyEntry.damageReason || 'Damaged during production',
                 damageDate: historyEntry.date || historyEntry.approvedAt,
                 damageReason: historyEntry.damageReason || 'Not specified',
-                reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System'
+                reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System',
+                referenceNo: historyEntry.referenceNo || 'N/A' // Add reference number for damaged entries
               });
-              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'refNo:', historyEntry.referenceNo);
             }
           }
         } else {
@@ -1558,7 +1562,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                   description: wastage.damageReason || entry.damageReason || 'Damaged during production',
                   damageDate: entry.date,
                   damageReason: wastage.damageReason || entry.damageReason || 'Not specified',
-                  reportedBy: entry.officerName || 'System'
+                  reportedBy: entry.officerName || 'System',
+                  referenceNo: entry.referenceNo || 'N/A' // Add reference number for damaged entries
                 });
               }
             }
@@ -1575,7 +1580,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
               description: entry.damageReason || 'Damaged during production',
               damageDate: entry.date,
               damageReason: entry.damageReason || 'Not specified',
-              reportedBy: entry.officerName || 'System'
+              reportedBy: entry.officerName || 'System',
+              referenceNo: entry.referenceNo || 'N/A' // Add reference number for damaged entries
             });
           }
         }

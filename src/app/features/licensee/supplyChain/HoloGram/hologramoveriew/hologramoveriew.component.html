@@ -1174,10 +1174,11 @@
                   <thead class="table-light">
                     <tr>
                       <th style="width: 12%;">Date Reported</th>
-                      <th style="width: 25%;">Serial Range</th>
+                      <th style="width: 15%;">Reference No.</th>
+                      <th style="width: 20%;">Serial Range</th>
                       <th style="width: 10%;" class="text-end">Quantity</th>
-                      <th style="width: 35%;">Damage Reason</th>
-                      <th style="width: 18%;">Reported By</th>
+                      <th style="width: 28%;">Damage Reason</th>
+                      <th style="width: 15%;">Reported By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1188,6 +1189,13 @@
                         {{ wastage.date | date:'dd-MMM-yyyy' }}
                         <br>
                         <small class="text-muted">{{ wastage.date | date:'EEEE' }}</small>
+                      </td>
+                      <td>
+                        @if (wastage.referenceNo && wastage.referenceNo !== 'N/A') {
+                          <span class="badge bg-danger">{{ wastage.referenceNo }}</span>
+                        } @else {
+                          <span class="text-muted">-</span>
+                        }
                       </td>
                       <td>
                         <span class="font-monospace small" style="background: #fef2f2; padding: 4px 8px; border-radius: 4px; border: 1px solid #fecaca;">
@@ -1212,7 +1220,7 @@
                   </tbody>
                   <tfoot class="table-light">
                     <tr>
-                      <td colspan="2" class="text-end"><strong>Total Wastage/Damaged:</strong></td>
+                      <td colspan="3" class="text-end"><strong>Total Wastage/Damaged:</strong></td>
                       <td class="text-end">
                         <strong class="text-danger fs-5">{{ usageData.totalWastage | number }}</strong>
                       </td>

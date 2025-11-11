@@ -798,7 +798,8 @@ export class HologramDailyRegisterComponent implements OnInit {
                 fromSerial: range.fromSerial,
                 toSerial: range.toSerial,
                 quantity: range.quantity,
-                cartoonNumber: cartoonNumber
+                cartoonNumber: cartoonNumber,
+                referenceNo: (entry as any).referenceNo || this.getEntryMetadata(entry).referenceNo || 'N/A' // Add reference number
               });
             }
           });
