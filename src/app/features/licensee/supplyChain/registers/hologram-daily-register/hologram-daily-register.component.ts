@@ -2041,21 +2041,150 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Validate if a serial number is within the allocated range for a roll
+   */
+  validateSerialInRange(serial: string, allocatedFromSerial: string, allocatedToSerial: string): boolean {
+    if (!serial || !allocatedFromSerial || !allocatedToSerial) {
+      return false;
+    }
+
+    // Extract numeric parts from serials (assuming format like HG000001 or 000001)
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const serialNum = extractNumber(serial);
+    const fromNum = extractNumber(allocatedFromSerial);
+    const toNum = extractNumber(allocatedToSerial);
+
+    return serialNum >= fromNum && serialNum <= toNum;
+  }
+
+  /**
+   * Validate if a serial range is within the allocated range for a roll
+   */
+  validateSerialRangeInAllocatedRange(
+    fromSerial: string, 
+    toSerial: string, 
+    allocatedFromSerial: string, 
+    allocatedToSerial: string
+  ): { isValid: boolean; errorMessage: string } {
+    if (!fromSerial || !toSerial) {
+      return { isValid: true, errorMessage: '' }; // Empty is valid (not required yet)
+    }
+
+    if (!allocatedFromSerial || !allocatedToSerial) {
+      return { isValid: false, errorMessage: 'Allocated range not found for this roll' };
+    }
+
+    // Extract numeric parts
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const fromNum = extractNumber(fromSerial);
+    const toNum = extractNumber(toSerial);
+    const allocatedFromNum = extractNumber(allocatedFromSerial);
+    const allocatedToNum = extractNumber(allocatedToSerial);
+
+    // Check if range is valid (from <= to)
+    if (fromNum > toNum) {
+      return { isValid: false, errorMessage: 'From serial must be less than or equal to To serial' };
+    }
+
+    // Check if range is within allocated range
+    if (fromNum < allocatedFromNum || toNum > allocatedToNum) {
+      return { 
+        isValid: false, 
+        errorMessage: `Serial range must be within allocated range: ${allocatedFromSerial} - ${allocatedToSerial}` 
+      };
+    }
+
+    return { isValid: true, errorMessage: '' };
+  }
+
+  /**
+   * Get allocated serial range for a specific roll
+   */
+  getAllocatedRangeForRoll(entry: HologramDailyEntry, cartoonNumber: string): { fromSerial: string; toSerial: string } | null {
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    
+    if (allocationData && allocationData.allocatedCartoons) {
+      const cartoon = allocationData.allocatedCartoons.find((c: any) => c.cartoonNumber === cartoonNumber);
+      if (cartoon && cartoon.fromSerial && cartoon.toSerial) {
+        return {
+          fromSerial: cartoon.fromSerial,
+          toSerial: cartoon.toSerial
+        };
+      }
+    }
+
+    // Fallback: try to get from available rolls
+    const availableRolls = this.getAvailableRollsForEntry(entry);
+    const roll = availableRolls.find(r => r.cartoonNumber === cartoonNumber);
+    if (roll && roll.fromSerial && roll.toSerial) {
+      return {
+        fromSerial: roll.fromSerial,
+        toSerial: roll.toSerial
+      };
+    }
+
+    return null;
+  }
+
+  /**
    * Handle roll input changes
    */
   onRollInputChange(entry: HologramDailyEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
 
-    // Calculate total issued quantity from all ranges
+    const cartoonNumber = rollInput.cartoonNumber;
+    const allocatedRange = this.getAllocatedRangeForRoll(entry, cartoonNumber);
+
+    // Validate and calculate issued ranges
     rollInput.issuedQty = (rollInput.issuedRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      
+      // Validate range against allocated range
+      if (allocatedRange) {
+        const validation = this.validateSerialRangeInAllocatedRange(
+          range.fromSerial,
+          range.toSerial,
+          allocatedRange.fromSerial,
+          allocatedRange.toSerial
+        );
+        range.isValid = validation.isValid;
+        range.errorMessage = validation.errorMessage;
+      } else {
+        range.isValid = true; // No allocated range found, skip validation
+        range.errorMessage = '';
+      }
+      
       return sum + range.quantity;
     }, 0);
 
-    // Calculate total wastage quantity from all ranges
+    // Validate and calculate wastage ranges
     rollInput.wastageQty = (rollInput.wastageRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      
+      // Validate range against allocated range
+      if (allocatedRange) {
+        const validation = this.validateSerialRangeInAllocatedRange(
+          range.fromSerial,
+          range.toSerial,
+          allocatedRange.fromSerial,
+          allocatedRange.toSerial
+        );
+        range.isValid = validation.isValid;
+        range.errorMessage = validation.errorMessage;
+      } else {
+        range.isValid = true; // No allocated range found, skip validation
+        range.errorMessage = '';
+      }
+      
       return sum + range.quantity;
     }, 0);
 
@@ -2080,6 +2209,18 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     
     if (!hasValidIssuedRange) return false;
 
+    // Check if all issued ranges are valid (within allocated range)
+    const allIssuedRangesValid = rollInput.issuedRanges && 
+      rollInput.issuedRanges.every((range: any) => !range.fromSerial || !range.toSerial || range.isValid !== false);
+    
+    if (!allIssuedRangesValid) return false;
+
+    // Check if all wastage ranges are valid (within allocated range)
+    const allWastageRangesValid = rollInput.wastageRanges && 
+      rollInput.wastageRanges.every((range: any) => !range.fromSerial || !range.toSerial || range.isValid !== false);
+    
+    if (!allWastageRangesValid) return false;
+
     // Left over must not be negative
     if (rollInput.leftOver < 0) return false;
 
@@ -2091,8 +2232,43 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
    */
   lockRollForEntry(entry: HologramDailyEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
-    if (!rollInput || !this.canLockRoll(entry)) {
-      alert('Please enter valid serial numbers before locking.');
+    if (!rollInput) {
+      alert('Please select a roll first.');
+      return;
+    }
+
+    if (!this.canLockRoll(entry)) {
+      // Check for validation errors
+      const invalidIssuedRanges = rollInput.issuedRanges?.filter((r: any) => r.isValid === false && r.errorMessage);
+      const invalidWastageRanges = rollInput.wastageRanges?.filter((r: any) => r.isValid === false && r.errorMessage);
+      
+      let errorMessage = 'Cannot lock roll. Please fix the following errors:\n\n';
+      
+      if (invalidIssuedRanges && invalidIssuedRanges.length > 0) {
+        errorMessage += 'Issued Ranges:\n';
+        invalidIssuedRanges.forEach((r: any, i: number) => {
+          errorMessage += `${i + 1}. ${r.errorMessage}\n`;
+        });
+        errorMessage += '\n';
+      }
+      
+      if (invalidWastageRanges && invalidWastageRanges.length > 0) {
+        errorMessage += 'Wastage Ranges:\n';
+        invalidWastageRanges.forEach((r: any, i: number) => {
+          errorMessage += `${i + 1}. ${r.errorMessage}\n`;
+        });
+        errorMessage += '\n';
+      }
+      
+      if (rollInput.leftOver < 0) {
+        errorMessage += `Left Over is negative: ${rollInput.leftOver}. Please adjust quantities.\n`;
+      }
+      
+      if (!rollInput.issuedRanges || !rollInput.issuedRanges.some((r: any) => r.fromSerial && r.toSerial && r.quantity > 0)) {
+        errorMessage += 'Please enter at least one valid issued range.\n';
+      }
+      
+      alert(errorMessage);
       return;
     }
 

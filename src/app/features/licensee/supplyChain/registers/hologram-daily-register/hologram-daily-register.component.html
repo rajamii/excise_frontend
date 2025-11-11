@@ -449,7 +449,7 @@
                       }
                     </select>
 
-                    <!-- Current Selected Roll - Show Roll Name -->
+                    <!-- Current Selected Roll - Show Roll Name and Allocated Range -->
                     @if (getCurrentSelectedRoll(entry)) {
                       <div class="current-roll-badge">
                         <span class="roll-name-badge" 
@@ -457,19 +457,45 @@
                               [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
                           {{ getCurrentSelectedRoll(entry) }}
                         </span>
+                        @if (getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)) {
+                          <div class="allocated-range-info">
+                            <div class="allocated-range-label">
+                              <i class="bi bi-info-circle me-1"></i>
+                              <span>Allocated Range:</span>
+                            </div>
+                            <div class="allocated-range-value">
+                              {{ getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)?.fromSerial }} - 
+                              {{ getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)?.toSerial }}
+                            </div>
+                          </div>
+                        }
                       </div>
                     }
 
-                    <!-- Locked Rolls Display - Show Roll Names -->
+                    <!-- Locked Rolls Display - Show Roll Names and Allocated Ranges -->
                     <div class="locked-rolls-display">
                       @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
-                        <div class="locked-roll-badge" 
-                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)">
-                          <span class="roll-name-badge" 
-                                [style.background-color]="getRollColor(lockedRoll.cartoonNumber)"
-                                [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                            {{ lockedRoll.cartoonNumber }}
-                          </span>
+                        <div class="locked-roll-badge-wrapper">
+                          <div class="locked-roll-badge" 
+                               [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)">
+                            <span class="roll-name-badge" 
+                                  [style.background-color]="getRollColor(lockedRoll.cartoonNumber)"
+                                  [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
+                              {{ lockedRoll.cartoonNumber }}
+                            </span>
+                            @if (getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)) {
+                              <div class="allocated-range-info">
+                                <div class="allocated-range-label">
+                                  <i class="bi bi-info-circle me-1"></i>
+                                  <span>Range:</span>
+                                </div>
+                                <div class="allocated-range-value">
+                                  {{ getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)?.fromSerial }} - 
+                                  {{ getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)?.toSerial }}
+                                </div>
+                              </div>
+                            }
+                          </div>
                           <button class="btn-unlock" 
                                   (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"
                                   title="Unlock this roll">
@@ -519,18 +545,29 @@
                           <div class="ranges-list">
                             @for (range of getCurrentRollInput(entry).issuedRanges; track $index; let i = $index) {
                               <div class="range-input-row">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [(ngModel)]="range.fromSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="From"
-                                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                                @if (getCurrentRollInput(entry).issuedRanges.length > 1) {
-                                  <button class="btn-remove" 
-                                          (click)="removeIssuedRangeForRoll(entry, i)"
-                                          title="Remove">
-                                    <i class="bi bi-x"></i>
-                                  </button>
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.fromSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="From"
+                                         [readonly]="false"
+                                         [disabled]="false"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                                  @if (getCurrentRollInput(entry).issuedRanges.length > 1) {
+                                    <button class="btn-remove" 
+                                            (click)="removeIssuedRangeForRoll(entry, i)"
+                                            title="Remove">
+                                      <i class="bi bi-x"></i>
+                                    </button>
+                                  }
+                                </div>
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ range.errorMessage }}
+                                  </div>
                                 }
                               </div>
                             }
@@ -592,11 +629,23 @@
                           <div class="ranges-list">
                             @for (range of getCurrentRollInput(entry).issuedRanges; track $index) {
                               <div class="range-input-row">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [(ngModel)]="range.toSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="To">
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.toSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="To"
+                                         [readonly]="false"
+                                         [disabled]="false"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                                </div>
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ range.errorMessage }}
+                                  </div>
+                                }
                               </div>
                             }
                           </div>
@@ -726,18 +775,29 @@
                           <div class="ranges-list">
                             @for (range of getCurrentRollInput(entry).wastageRanges; track $index; let i = $index) {
                               <div class="range-input-row">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [(ngModel)]="range.fromSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="From"
-                                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                                @if (getCurrentRollInput(entry).wastageRanges.length > 1) {
-                                  <button class="btn-remove" 
-                                          (click)="removeWastageRangeForRoll(entry, i)"
-                                          title="Remove">
-                                    <i class="bi bi-x"></i>
-                                  </button>
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.fromSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="From"
+                                         [readonly]="false"
+                                         [disabled]="false"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                                  @if (getCurrentRollInput(entry).wastageRanges.length > 1) {
+                                    <button class="btn-remove" 
+                                            (click)="removeWastageRangeForRoll(entry, i)"
+                                            title="Remove">
+                                      <i class="bi bi-x"></i>
+                                    </button>
+                                  }
+                                </div>
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ range.errorMessage }}
+                                  </div>
                                 }
                               </div>
                             }
@@ -797,12 +857,23 @@
                           <div class="ranges-list">
                             @for (range of getCurrentRollInput(entry).wastageRanges; track $index) {
                               <div class="range-input-row">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [(ngModel)]="range.toSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="To"
-                                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.toSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="To"
+                                         [readonly]="false"
+                                         [disabled]="false"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                                </div>
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ range.errorMessage }}
+                                  </div>
+                                }
                               </div>
                             }
                           </div>
