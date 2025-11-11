@@ -1299,6 +1299,11 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Use a Set to track unique ranges and prevent duplicates
     const processedRanges = new Set<string>();
 
+    // NOTE: We do NOT include IN_PROGRESS issued holograms as USED here
+    // because we don't know how many will actually be used, damaged, or leftover
+    // until the officer in charge approves from the manufacturing register.
+    // Only after approval will the usage history be updated with actual used/damaged ranges.
+
     // Process usage history from serial roll (this is the most accurate source)
     if (serialRoll && serialRoll.usageHistory && serialRoll.usageHistory.length > 0) {
       console.log('Using usage history from serial roll:', serialRoll.usageHistory.length, 'entries');
@@ -1547,6 +1552,26 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         const end = parseInt(range.toSerial.match(/\d+/)?.[0] || '0');
         for (let i = start; i <= end; i++) {
           usedSerials.add(i);
+        }
+      });
+
+      // Also exclude IN_PROGRESS issued holograms from available ranges
+      // (but don't mark them as USED since we don't know final usage until approval)
+      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+      const inProgressIssued = issuedData.filter((issued: any) => 
+        issued.status === 'IN_PROGRESS' &&
+        issued.cartoonNumber === cartoonNumber &&
+        (issued.hologramType === hologramType || !issued.hologramType)
+      );
+
+      inProgressIssued.forEach((issued: any) => {
+        if (issued.fromSerial && issued.toSerial) {
+          const start = parseInt(issued.fromSerial.match(/\d+/)?.[0] || '0');
+          const end = parseInt(issued.toSerial.match(/\d+/)?.[0] || '0');
+          for (let i = start; i <= end; i++) {
+            usedSerials.add(i); // Exclude from available, but don't add as USED range
+          }
+          console.log('Excluding IN_PROGRESS range from available:', issued.fromSerial, '-', issued.toSerial);
         }
       });
       
