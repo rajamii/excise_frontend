@@ -17,6 +17,7 @@ interface HologramRoll {
   receivedDate: string;
   isNew?: boolean;
   newUntil?: number;
+  usageHistory?: any[]; // Add usage history for Rolls tab
 }
 
 interface SerialNumber {
@@ -185,6 +186,7 @@ export class HologramoveriewComponent implements OnInit {
   // Usage Details Modal
   showUsageDetailsModal: boolean = false;
   selectedRollForUsage: SerialRollData | null = null;
+  selectedRollForUsageRolls: HologramRoll | null = null; // For Rolls tab
 
   // Chart Filters
   chartFilters: ChartFilters = {
@@ -1101,22 +1103,61 @@ export class HologramoveriewComponent implements OnInit {
 
   viewUsageDetails(roll: SerialRollData): void {
     this.selectedRollForUsage = roll;
+    this.selectedRollForUsageRolls = null;
+    this.showUsageDetailsModal = true;
+  }
+
+  viewUsageDetailsForRoll(roll: HologramRoll): void {
+    // Convert HologramRoll to SerialRollData format for the modal
+    this.selectedRollForUsageRolls = roll;
+    this.selectedRollForUsage = null;
     this.showUsageDetailsModal = true;
   }
 
   closeUsageDetailsModal(): void {
     this.showUsageDetailsModal = false;
     this.selectedRollForUsage = null;
+    this.selectedRollForUsageRolls = null;
   }
 
   getUsageDetailsData() {
-    if (!this.selectedRollForUsage) return null;
+    // Handle both SerialRollData (from Serial Numbers Data tab) and HologramRoll (from Rolls tab)
+    let roll: any = null;
+    let rollType: 'serial' | 'rolls' = 'serial';
+    
+    if (this.selectedRollForUsage) {
+      roll = this.selectedRollForUsage;
+      rollType = 'serial';
+    } else if (this.selectedRollForUsageRolls) {
+      roll = this.selectedRollForUsageRolls;
+      rollType = 'rolls';
+    } else {
+      return null;
+    }
 
-    const roll = this.selectedRollForUsage;
+    const cartoonNumber = roll.rollNumber || roll.cartoonNumber;
+    const hologramType = roll.hologramType || roll.type;
 
-    // Primary source: usage history stored in hologramOverviewSerialData for this roll
+    // Primary source: usage history stored in hologramOverviewSerialData or hologramOverviewRolls
     const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-    const serialRoll = serialData.find((r: any) => r.rollNumber === roll.rollNumber && r.hologramType === roll.hologramType);
+    const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    
+    // Try to find in serial data first (more detailed)
+    let serialRoll = serialData.find((r: any) => 
+      (r.rollNumber === cartoonNumber || r.cartoonNumber === cartoonNumber) && 
+      (r.hologramType === hologramType || r.type === hologramType)
+    );
+    
+    // If not found in serial data, try rolls data
+    if (!serialRoll && rollType === 'rolls') {
+      const rollData = rollsData.find((r: any) => 
+        (r.cartoonNumber === cartoonNumber || r.rollNumber === cartoonNumber) && 
+        (r.type === hologramType || r.hologramType === hologramType)
+      );
+      if (rollData && rollData.usageHistory) {
+        serialRoll = rollData;
+      }
+    }
 
     const issuedDetails: any[] = [];
     const wastageDetails: any[] = [];
@@ -1124,7 +1165,7 @@ export class HologramoveriewComponent implements OnInit {
     if (serialRoll && Array.isArray(serialRoll.usageHistory)) {
       serialRoll.usageHistory.forEach((u: any) => {
         // Respect cartoonNumber routing; if present and doesn't match, skip
-        if (u.cartoonNumber && u.cartoonNumber !== roll.rollNumber) return;
+        if (u.cartoonNumber && u.cartoonNumber !== cartoonNumber) return;
 
         if (u.type === 'ISSUED') {
           const fromSerial = u.issuedFromSerial || u.fromSerial || '';
@@ -1164,8 +1205,8 @@ export class HologramoveriewComponent implements OnInit {
       const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
       const allEntries = [...dailyEntries, ...approvedEntries];
       const relevantEntries = allEntries.filter((entry: any) => 
-        entry.cartoonNumber === roll.rollNumber && 
-        entry.hologramType === roll.hologramType &&
+        (entry.cartoonNumber === cartoonNumber || entry.cartoonNumber === roll.rollNumber) && 
+        (entry.hologramType === hologramType || entry.hologramType === roll.hologramType) &&
         (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
       );
 

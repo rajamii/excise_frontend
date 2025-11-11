@@ -349,6 +349,7 @@
                         <th>Used</th>
                         <th>Damaged</th>
                         <th>Status</th>
+                        <th>Usage Details</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -382,10 +383,16 @@
                             }
                           </div>
                         </td>
+                        <td>
+                          <button class="btn btn-outline-info btn-sm" (click)="viewUsageDetailsForRoll(roll)"
+                            [disabled]="!roll.usageHistory || roll.usageHistory.length === 0">
+                            <i class="bi bi-eye me-1"></i>View
+                          </button>
+                        </td>
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="10" class="text-center text-muted">No data available - rollsData is empty</td>
+                        <td colspan="11" class="text-center text-muted">No data available - rollsData is empty</td>
                       </tr>
                       }
                     </tbody>
@@ -951,7 +958,7 @@
         <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
           <h5 class="modal-title">
             <i class="bi bi-graph-up-arrow me-2"></i>
-            Usage Details - {{ selectedRollForUsage?.rollNumber }}
+            Usage Details - {{ selectedRollForUsage?.rollNumber || selectedRollForUsageRolls?.cartoonNumber }}
           </h5>
           <button type="button" class="btn-close btn-close-white" (click)="closeUsageDetailsModal()"></button>
         </div>
