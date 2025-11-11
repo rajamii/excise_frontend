@@ -1297,37 +1297,183 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
   ): SerialRange[] {
     const ranges: SerialRange[] = [];
 
-    // Load daily register entries from localStorage (both sources)
-    const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
-    const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
-    
-    // Combine both sources
-    const allEntries = [...dailyEntries, ...approvedEntries];
-    
-    // Filter entries for this specific cartoon number and type
-    // Only show APPROVED entries (not pending)
-    const relevantEntries = allEntries.filter((entry: any) => 
-      entry.cartoonNumber === cartoonNumber && 
-      entry.hologramType === hologramType &&
-      (entry.isFixed === true || entry.approvalStatus === 'APPROVED') // Show saved or approved entries
+    // PRIMARY SOURCE: Load usage history from hologramOverviewSerialData
+    // This is the most accurate source because it has the cartoonNumber stored with each range
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    const serialRoll = serialData.find((roll: any) => 
+      roll.rollNumber === cartoonNumber && 
+      roll.hologramType === hologramType
     );
 
     console.log('Generating real serial ranges for:', cartoonNumber, hologramType);
-    console.log('Found entries:', relevantEntries.length);
-    console.log('Entries:', relevantEntries);
+    console.log('Found serial roll:', serialRoll);
 
-    // If we have actual entries, use them to create ranges
-    if (relevantEntries.length > 0) {
-      // Process each entry to create serial ranges
-      // Use a Set to track unique ranges and prevent duplicates
-      const processedRanges = new Set<string>();
+    // Use a Set to track unique ranges and prevent duplicates
+    const processedRanges = new Set<string>();
+
+    // Process usage history from serial roll (this is the most accurate source)
+    if (serialRoll && serialRoll.usageHistory && serialRoll.usageHistory.length > 0) {
+      console.log('Using usage history from serial roll:', serialRoll.usageHistory.length, 'entries');
+      console.log('Serial roll data:', {
+        rollNumber: serialRoll.rollNumber,
+        fromSerial: serialRoll.fromSerial,
+        toSerial: serialRoll.toSerial,
+        usageHistoryCount: serialRoll.usageHistory.length
+      });
       
-      relevantEntries.forEach((entry: any) => {
-        console.log('Processing entry:', entry.id, entry);
+      // Extract the cartoon number's serial range to validate entries
+      const rollFromSerial = serialRoll.fromSerial || '';
+      const rollToSerial = serialRoll.toSerial || '';
+      let rollStart = 0;
+      let rollEnd = 0;
+      
+      if (rollFromSerial && rollToSerial) {
+        const fromMatch = rollFromSerial.match(/(\d+)$/);
+        const toMatch = rollToSerial.match(/(\d+)$/);
+        if (fromMatch && toMatch) {
+          rollStart = parseInt(fromMatch[1], 10);
+          rollEnd = parseInt(toMatch[1], 10);
+        }
+      }
+      
+      serialRoll.usageHistory.forEach((historyEntry: any, index: number) => {
+        console.log(`Processing history entry ${index}:`, historyEntry);
         
-        // Add issued ranges - Check for issuedEntries array first
+        // Only process entries that belong to this cartoon number
+        // The cartoonNumber field was added in our fix to ensure correct routing
+        // If cartoonNumber is present, it must match; if not present, validate by serial number range
+        if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) {
+          console.log('Skipping entry - belongs to different cartoon:', historyEntry.cartoonNumber, 'expected:', cartoonNumber);
+          return; // Skip entries that don't belong to this cartoon number
+        }
+
+        // Validate that the serial number belongs to this cartoon number's range
+        let fromSerial = '';
+        let toSerial = '';
+        let quantity = 0;
+        let isValid = false;
+
+        if (historyEntry.type === 'ISSUED') {
+          // Handle issued ranges
+          fromSerial = historyEntry.issuedFromSerial || historyEntry.fromSerial || '';
+          toSerial = historyEntry.issuedToSerial || historyEntry.toSerial || '';
+          quantity = historyEntry.issuedQuantity || historyEntry.quantity || 0;
+
+          if (fromSerial && toSerial && quantity > 0) {
+            // Validate serial numbers belong to this cartoon number's range
+            const fromMatch = fromSerial.match(/(\d+)$/);
+            const toMatch = toSerial.match(/(\d+)$/);
+            
+            if (fromMatch && toMatch) {
+              const fromNum = parseInt(fromMatch[1], 10);
+              const toNum = parseInt(toMatch[1], 10);
+              
+              // If we have a roll range, validate that the range overlaps with the cartoon number's range
+              // Accept if: range starts within roll, range ends within roll, or range completely contains roll
+              if (rollStart > 0 && rollEnd > 0) {
+                isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
+                         (toNum >= rollStart && toNum <= rollEnd) ||
+                         (fromNum <= rollStart && toNum >= rollEnd);
+              } else {
+                isValid = true; // No range to validate against, accept it
+              }
+            } else {
+              isValid = true; // Can't parse, accept it
+            }
+          }
+        } else if (historyEntry.type === 'WASTAGE' || historyEntry.type === 'DAMAGED') {
+          // Handle wastage/damaged ranges
+          fromSerial = historyEntry.wastageFromSerial || historyEntry.fromSerial || '';
+          toSerial = historyEntry.wastageToSerial || historyEntry.toSerial || '';
+          quantity = historyEntry.wastageQuantity || historyEntry.quantity || 0;
+
+          if (fromSerial && toSerial && quantity > 0) {
+            // Validate serial numbers belong to this cartoon number's range
+            const fromMatch = fromSerial.match(/(\d+)$/);
+            const toMatch = toSerial.match(/(\d+)$/);
+            
+            if (fromMatch && toMatch) {
+              const fromNum = parseInt(fromMatch[1], 10);
+              const toNum = parseInt(toMatch[1], 10);
+              
+              // If we have a roll range, validate that the range overlaps with the cartoon number's range
+              // Accept if: range starts within roll, range ends within roll, or range completely contains roll
+              if (rollStart > 0 && rollEnd > 0) {
+                isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
+                         (toNum >= rollStart && toNum <= rollEnd) ||
+                         (fromNum <= rollStart && toNum >= rollEnd);
+              } else {
+                isValid = true; // No range to validate against, accept it
+              }
+            } else {
+              isValid = true; // Can't parse, accept it
+            }
+          }
+        }
+
+        if (isValid && fromSerial && toSerial && quantity > 0) {
+          const rangeKey = historyEntry.type === 'ISSUED' 
+            ? `USED-${fromSerial}-${toSerial}` 
+            : `DAMAGED-${fromSerial}-${toSerial}`;
+            
+          if (!processedRanges.has(rangeKey)) {
+            processedRanges.add(rangeKey);
+            
+            if (historyEntry.type === 'ISSUED') {
+              ranges.push({
+                fromSerial: fromSerial,
+                toSerial: toSerial,
+                count: quantity,
+                status: 'USED',
+                description: `Production batch - Used on ${new Date(historyEntry.date || historyEntry.approvedAt).toLocaleDateString()}`,
+                usedDate: historyEntry.date || historyEntry.approvedAt,
+                referenceNo: historyEntry.referenceNo || 'N/A',
+                productionLine: historyEntry.brandName || 'N/A'
+              });
+              console.log('Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+            } else {
+              ranges.push({
+                fromSerial: fromSerial,
+                toSerial: toSerial,
+                count: quantity,
+                status: 'DAMAGED',
+                description: historyEntry.damageReason || 'Damaged during production',
+                damageDate: historyEntry.date || historyEntry.approvedAt,
+                damageReason: historyEntry.damageReason || 'Not specified',
+                reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System'
+              });
+              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+            }
+          }
+        } else {
+          console.log('Skipping invalid entry:', historyEntry);
+        }
+      });
+      
+      console.log('Total ranges generated from usage history:', ranges.length);
+    }
+
+    // FALLBACK: If no usage history found, try daily register entries
+    // This is for backward compatibility with older data
+    if (ranges.length === 0) {
+      console.log('No usage history found, falling back to daily register entries');
+      
+      const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+      const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+      const allEntries = [...dailyEntries, ...approvedEntries];
+      
+      // Filter entries for this specific cartoon number and type
+      const relevantEntries = allEntries.filter((entry: any) => 
+        entry.cartoonNumber === cartoonNumber && 
+        entry.hologramType === hologramType &&
+        (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
+      );
+
+      console.log('Found fallback entries:', relevantEntries.length);
+
+      relevantEntries.forEach((entry: any) => {
+        // Add issued ranges
         if (entry.issuedEntries && entry.issuedEntries.length > 0) {
-          console.log('Using issuedEntries array:', entry.issuedEntries);
           entry.issuedEntries.forEach((issued: any) => {
             if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
               const rangeKey = `USED-${issued.fromSerial}-${issued.toSerial}`;
@@ -1340,15 +1486,13 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                   status: 'USED',
                   description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
                   usedDate: entry.date,
-                  referenceNo: entry.referenceNo || 'N/A', // Changed from batchNumber to referenceNo
+                  referenceNo: entry.referenceNo || 'N/A',
                   productionLine: entry.brandDetails?.brandName || 'N/A'
                 });
               }
             }
           });
         } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
-          // Handle single entry format (only if issuedEntries doesn't exist)
-          console.log('Using single issued entry:', entry.issuedFromSerial, '-', entry.issuedToSerial);
           const rangeKey = `USED-${entry.issuedFromSerial}-${entry.issuedToSerial}`;
           if (!processedRanges.has(rangeKey)) {
             processedRanges.add(rangeKey);
@@ -1359,15 +1503,14 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
               status: 'USED',
               description: `Production batch - Used on ${new Date(entry.date).toLocaleDateString()}`,
               usedDate: entry.date,
-              referenceNo: entry.referenceNo || 'N/A', // Changed from batchNumber to referenceNo
+              referenceNo: entry.referenceNo || 'N/A',
               productionLine: entry.brandDetails?.brandName || 'N/A'
             });
           }
         }
 
-        // Add wastage/damaged ranges - Check for wastageEntries array first
+        // Add wastage/damaged ranges
         if (entry.wastageEntries && entry.wastageEntries.length > 0) {
-          console.log('Using wastageEntries array:', entry.wastageEntries);
           entry.wastageEntries.forEach((wastage: any) => {
             if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
               const rangeKey = `DAMAGED-${wastage.fromSerial}-${wastage.toSerial}`;
@@ -1387,8 +1530,6 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             }
           });
         } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
-          // Handle single entry format (only if wastageEntries doesn't exist)
-          console.log('Using single wastage entry:', entry.wastageFromSerial, '-', entry.wastageToSerial);
           const rangeKey = `DAMAGED-${entry.wastageFromSerial}-${entry.wastageToSerial}`;
           if (!processedRanges.has(rangeKey)) {
             processedRanges.add(rangeKey);

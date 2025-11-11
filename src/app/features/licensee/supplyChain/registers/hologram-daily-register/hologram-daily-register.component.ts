@@ -453,11 +453,10 @@ export class HologramDailyRegisterComponent implements OnInit {
     // Save to localStorage for Officer in Charge verification
     this.saveEntryForOfficerVerification(entry);
     
-    // Update roll data for each locked roll
-    const lockedRolls = (entry as any).lockedRolls || [];
-    lockedRolls.forEach((roll: any) => {
-      this.updateRollDataForLockedRoll(entry, roll);
-    });
+    // IMPORTANT: DO NOT update roll data here - wait for Officer approval
+    // Roll data (Rolls, Available Hologram Data, Serial Numbers Data, Issued Hologram, Issued History)
+    // will be updated ONLY after Officer In Charge approves the entry from Pending Verification Entries
+    // This ensures data integrity and prevents premature updates
     
     // Update the service with all entries
     this.hologramDataService.updateDailyEntries(this.dailyEntries);
@@ -480,9 +479,10 @@ export class HologramDailyRegisterComponent implements OnInit {
     this.entryToSave = null;
     
     // Show success message
-    alert('✅ Entry saved successfully! Roll data updated in hologram overview.');
+    alert('✅ Entry saved successfully! Entry is now pending approval. Roll data will be updated after Officer In Charge approves the entry.');
     
-    console.log('Entry saved successfully:', entry);
+    console.log('Entry saved successfully (pending approval):', entry);
+    console.log('Roll data will NOT be updated until Officer In Charge approves this entry');
   }
 
   /**

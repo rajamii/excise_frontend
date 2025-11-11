@@ -555,105 +555,261 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   /**
    * Update Serial Numbers Data Tab
    */
+  /**
+   * Helper function to find which cartoon number a serial number belongs to
+   */
+  private findCartoonNumberForSerial(serialNumber: string, hologramType: string, serialData: any[]): string | null {
+    if (!serialNumber) return null;
+    
+    // Extract numeric part from serial number
+    const serialMatch = serialNumber.match(/(\d+)$/);
+    if (!serialMatch) return null;
+    
+    const serialNum = parseInt(serialMatch[1], 10);
+    
+    // Find the cartoon number that contains this serial number
+    for (const roll of serialData) {
+      if (roll.hologramType !== hologramType) continue;
+      
+      // Extract numeric parts from roll's serial range
+      const fromMatch = roll.fromSerial?.match(/(\d+)$/);
+      const toMatch = roll.toSerial?.match(/(\d+)$/);
+      
+      if (fromMatch && toMatch) {
+        const fromNum = parseInt(fromMatch[1], 10);
+        const toNum = parseInt(toMatch[1], 10);
+        
+        // Check if serial number falls within this roll's range
+        if (serialNum >= fromNum && serialNum <= toNum) {
+          return roll.rollNumber;
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Helper function to store a serial range in the correct cartoon number
+   */
+  private storeSerialRangeInCorrectCartoon(
+    serialData: any[],
+    range: { fromSerial: string; toSerial: string; quantity: number },
+    entry: any,
+    type: 'ISSUED' | 'WASTAGE'
+  ): void {
+    // Find which cartoon number the fromSerial belongs to
+    const cartoonNumber = this.findCartoonNumberForSerial(range.fromSerial, entry.hologramType, serialData);
+    
+    if (!cartoonNumber) {
+      console.warn(`Could not find cartoon number for serial range: ${range.fromSerial} - ${range.toSerial}`);
+      return;
+    }
+    
+    // Find the serial roll for this cartoon number
+    const serialIndex = serialData.findIndex((roll: any) => 
+      roll.rollNumber === cartoonNumber && 
+      roll.hologramType === entry.hologramType
+    );
+    
+    if (serialIndex === -1) {
+      console.warn(`Serial roll not found for cartoon number: ${cartoonNumber}`);
+      return;
+    }
+    
+    const serialRoll = serialData[serialIndex];
+    
+    // Initialize usage history if needed
+    if (!serialRoll.usageHistory) {
+      serialRoll.usageHistory = [];
+    }
+    
+    // Store the range in the correct cartoon number's history
+    if (type === 'ISSUED') {
+      serialRoll.usageHistory.push({
+        date: entry.date,
+        referenceNo: entry.referenceNo || 'N/A',
+        brandName: entry.brandDetails?.brandName || 'N/A',
+        type: 'ISSUED',
+        issuedFromSerial: range.fromSerial || '',
+        issuedToSerial: range.toSerial || '',
+        issuedQuantity: range.quantity || 0,
+        approvedBy: 'Officer In Charge',
+        approvedAt: new Date().toISOString(),
+        cartoonNumber: cartoonNumber
+      });
+      
+      // Update counts for this cartoon number
+      serialRoll.usedCount = (serialRoll.usedCount || 0) + (range.quantity || 0);
+    } else {
+      serialRoll.usageHistory.push({
+        date: entry.date,
+        referenceNo: entry.referenceNo || 'N/A',
+        brandName: entry.brandDetails?.brandName || 'N/A',
+        type: 'WASTAGE',
+        wastageFromSerial: range.fromSerial || '',
+        wastageToSerial: range.toSerial || '',
+        wastageQuantity: range.quantity || 0,
+        approvedBy: 'Officer In Charge',
+        approvedAt: new Date().toISOString(),
+        cartoonNumber: cartoonNumber
+      });
+      
+      // Update counts for this cartoon number
+      serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (range.quantity || 0);
+    }
+    
+    // Update available count
+    const totalUsed = (serialRoll.usedCount || 0) + (serialRoll.damagedCount || 0);
+    const totalCount = serialRoll.totalCount || 0;
+    serialRoll.availableCount = Math.max(0, totalCount - totalUsed);
+    
+    // Update status
+    if (serialRoll.availableCount === 0) {
+      serialRoll.status = 'COMPLETED';
+    } else {
+      serialRoll.status = 'AVAILABLE';
+    }
+    
+    serialData[serialIndex] = serialRoll;
+  }
+
   private updateSerialNumbersData(entry: any, cartoonNumber: string): void {
     try {
       const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
       
+      // Find the serial roll for this specific cartoon number
       const serialIndex = serialData.findIndex((roll: any) => 
         roll.rollNumber === cartoonNumber && 
         roll.hologramType === entry.hologramType
       );
       
-      if (serialIndex !== -1) {
-        const serialRoll = serialData[serialIndex];
-        
-        serialRoll.usedCount = (serialRoll.usedCount || 0) + (entry.issuedQuantity || 0);
-        serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (entry.wastageQuantity || 0);
-        
-        // Add back leftover to available (it was subtracted during allocation but not used)
-        const leftoverQuantity = entry.leftOverQuantity || 0;
-        serialRoll.availableCount = (serialRoll.availableCount || 0) + leftoverQuantity;
-        
-        // Update status based on available count
-        if (serialRoll.availableCount === 0) {
-          serialRoll.status = 'COMPLETED'; // All holograms used up
-        } else {
-          serialRoll.status = 'AVAILABLE'; // Still has holograms available for use
-        }
-        
-        // Add usage history entry with request reference number
-        // Handle multiple issued/wastage ranges from locked rolls
-        if (!serialRoll.usageHistory) {
-          serialRoll.usageHistory = [];
-        }
-        
-        // Add all issued ranges to history
-        const issuedEntries = entry.issuedEntries || [];
-        if (issuedEntries.length > 0) {
-          issuedEntries.forEach((issuedEntry: any) => {
+      if (serialIndex === -1) {
+        console.warn(`Serial roll not found for cartoon number: ${cartoonNumber}, type: ${entry.hologramType}`);
+        return;
+      }
+      
+      const serialRoll = serialData[serialIndex];
+      
+      // Initialize usage history if needed
+      if (!serialRoll.usageHistory) {
+        serialRoll.usageHistory = [];
+      }
+      
+      console.log(`Updating serial numbers data for cartoon ${cartoonNumber}:`, {
+        issuedEntries: entry.issuedEntries?.length || 0,
+        wastageEntries: entry.wastageEntries?.length || 0
+      });
+      
+      // Process issued ranges - store directly in this cartoon number's usage history
+      const issuedEntries = entry.issuedEntries || [];
+      if (issuedEntries.length > 0) {
+        issuedEntries.forEach((issuedEntry: any) => {
+          if (issuedEntry.fromSerial && issuedEntry.toSerial && issuedEntry.quantity > 0) {
             serialRoll.usageHistory.push({
               date: entry.date,
               referenceNo: entry.referenceNo || 'N/A',
               brandName: entry.brandDetails?.brandName || 'N/A',
               type: 'ISSUED',
-              issuedFromSerial: issuedEntry.fromSerial || '',
-              issuedToSerial: issuedEntry.toSerial || '',
+              issuedFromSerial: issuedEntry.fromSerial,
+              issuedToSerial: issuedEntry.toSerial,
               issuedQuantity: issuedEntry.quantity || 0,
               approvedBy: 'Officer In Charge',
-              approvedAt: new Date().toISOString()
+              approvedAt: new Date().toISOString(),
+              cartoonNumber: cartoonNumber // Store the correct cartoon number
             });
-          });
-        } else {
-          // Fallback to single range if no issuedEntries
-          serialRoll.usageHistory.push({
-            date: entry.date,
-            referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || 'N/A',
-            type: 'ISSUED',
-            issuedFromSerial: entry.issuedFromSerial || '',
-            issuedToSerial: entry.issuedToSerial || '',
-            issuedQuantity: entry.issuedQuantity || 0,
-            approvedBy: 'Officer In Charge',
-            approvedAt: new Date().toISOString()
-          });
-        }
+            
+            // Update counts for this cartoon number
+            serialRoll.usedCount = (serialRoll.usedCount || 0) + (issuedEntry.quantity || 0);
+            
+            console.log(`Added ISSUED range to ${cartoonNumber}:`, issuedEntry.fromSerial, '-', issuedEntry.toSerial, 'qty:', issuedEntry.quantity);
+          }
+        });
+      } else if (entry.issuedQuantity > 0 && entry.issuedFromSerial && entry.issuedToSerial) {
+        // Fallback to single range if no issuedEntries
+        serialRoll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'ISSUED',
+          issuedFromSerial: entry.issuedFromSerial,
+          issuedToSerial: entry.issuedToSerial,
+          issuedQuantity: entry.issuedQuantity || 0,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString(),
+          cartoonNumber: cartoonNumber // Store the correct cartoon number
+        });
         
-        // Add all wastage ranges to history
-        const wastageEntries = entry.wastageEntries || [];
-        if (wastageEntries.length > 0) {
-          wastageEntries.forEach((wastageEntry: any) => {
+        serialRoll.usedCount = (serialRoll.usedCount || 0) + (entry.issuedQuantity || 0);
+        console.log(`Added single ISSUED range to ${cartoonNumber}:`, entry.issuedFromSerial, '-', entry.issuedToSerial);
+      }
+      
+      // Process wastage ranges - store directly in this cartoon number's usage history
+      const wastageEntries = entry.wastageEntries || [];
+      if (wastageEntries.length > 0) {
+        wastageEntries.forEach((wastageEntry: any) => {
+          if (wastageEntry.fromSerial && wastageEntry.toSerial && wastageEntry.quantity > 0) {
             serialRoll.usageHistory.push({
               date: entry.date,
               referenceNo: entry.referenceNo || 'N/A',
               brandName: entry.brandDetails?.brandName || 'N/A',
               type: 'WASTAGE',
-              wastageFromSerial: wastageEntry.fromSerial || '',
-              wastageToSerial: wastageEntry.toSerial || '',
+              wastageFromSerial: wastageEntry.fromSerial,
+              wastageToSerial: wastageEntry.toSerial,
               wastageQuantity: wastageEntry.quantity || 0,
               approvedBy: 'Officer In Charge',
-              approvedAt: new Date().toISOString()
+              approvedAt: new Date().toISOString(),
+              cartoonNumber: cartoonNumber // Store the correct cartoon number
             });
-          });
-        } else if (entry.wastageQuantity > 0) {
-          // Fallback to single range if no wastageEntries but wastage exists
-          serialRoll.usageHistory.push({
-            date: entry.date,
-            referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || 'N/A',
-            type: 'WASTAGE',
-            wastageFromSerial: entry.wastageFromSerial || '',
-            wastageToSerial: entry.wastageToSerial || '',
-            wastageQuantity: entry.wastageQuantity || 0,
-            approvedBy: 'Officer In Charge',
-            approvedAt: new Date().toISOString()
-          });
-        }
+            
+            // Update counts for this cartoon number
+            serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (wastageEntry.quantity || 0);
+            
+            console.log(`Added WASTAGE range to ${cartoonNumber}:`, wastageEntry.fromSerial, '-', wastageEntry.toSerial, 'qty:', wastageEntry.quantity);
+          }
+        });
+      } else if (entry.wastageQuantity > 0 && entry.wastageFromSerial && entry.wastageToSerial) {
+        // Fallback to single range if no wastageEntries but wastage exists
+        serialRoll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'WASTAGE',
+          wastageFromSerial: entry.wastageFromSerial,
+          wastageToSerial: entry.wastageToSerial,
+          wastageQuantity: entry.wastageQuantity || 0,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString(),
+          cartoonNumber: cartoonNumber // Store the correct cartoon number
+        });
         
-        serialData[serialIndex] = serialRoll;
-        localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
-        
-        console.log('Serial numbers data updated - added back leftover:', leftoverQuantity);
+        serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (entry.wastageQuantity || 0);
+        console.log(`Added single WASTAGE range to ${cartoonNumber}:`, entry.wastageFromSerial, '-', entry.wastageToSerial);
       }
+      
+      // Update available count and status
+      const totalUsed = (serialRoll.usedCount || 0) + (serialRoll.damagedCount || 0);
+      const totalCount = serialRoll.totalCount || 0;
+      const leftoverQuantity = entry.leftOverQuantity || 0;
+      serialRoll.availableCount = Math.max(0, totalCount - totalUsed + leftoverQuantity);
+      
+      if (serialRoll.availableCount === 0) {
+        serialRoll.status = 'COMPLETED';
+      } else {
+        serialRoll.status = 'AVAILABLE';
+      }
+      
+      serialData[serialIndex] = serialRoll;
+      
+      // Save all changes
+      localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+      
+      console.log(`Serial numbers data updated for cartoon ${cartoonNumber}:`, {
+        usedCount: serialRoll.usedCount,
+        damagedCount: serialRoll.damagedCount,
+        availableCount: serialRoll.availableCount,
+        usageHistoryCount: serialRoll.usageHistory.length
+      });
     } catch (error) {
       console.error('Error updating serial numbers data:', error);
     }
