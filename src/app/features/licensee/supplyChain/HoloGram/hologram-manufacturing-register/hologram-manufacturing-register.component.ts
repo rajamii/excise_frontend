@@ -279,39 +279,84 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     // Refresh data
     this.loadPendingEntries();
     this.loadFilteredData();
+    
+    // Get roll count for success message
+    const lockedRolls = savedEntries[entryIndex].lockedRolls || [];
+    const rollCount = lockedRolls.length || (savedEntries[entryIndex].cartoonNumber ? 1 : 0);
+    const rollText = rollCount === 1 ? 'roll' : 'rolls';
+    
     this.entryToProcess = null;
     
-    alert('✅ Entry approved successfully! Roll status automatically updated to AVAILABLE/COMPLETED and issued holograms moved to history.');
+    alert(`✅ Entry approved successfully! ${rollCount} ${rollText} automatically updated. Roll status set to AVAILABLE/COMPLETED and issued holograms moved to history.`);
   }
 
   /**
    * Update roll data in hologram overview after Officer approval
    * Updates Rolls, Available Hologram Data, Serial Numbers Data, Issued Hologram, and Issued History
+   * HANDLES MULTIPLE ROLLS: Processes each locked roll separately
    */
   private updateRollDataAfterApproval(entry: any): void {
     try {
-      const cartoonNumber = entry.cartoonNumber;
+      const lockedRolls = entry.lockedRolls || [];
       
-      if (!cartoonNumber) {
-        console.warn('No cartoon number found in entry, skipping roll data update');
+      // If no locked rolls, fallback to single cartoon number (backward compatibility)
+      if (lockedRolls.length === 0) {
+        const cartoonNumber = entry.cartoonNumber;
+        if (!cartoonNumber) {
+          console.warn('No cartoon number or locked rolls found in entry, skipping roll data update');
+          return;
+        }
+        
+        console.log('Updating single roll data after approval for:', cartoonNumber);
+        this.updateRollsData(entry, cartoonNumber);
+        this.updateAvailableHologramData(entry, cartoonNumber);
+        this.updateSerialNumbersData(entry, cartoonNumber);
         return;
       }
       
-      console.log('Updating roll data after approval for:', cartoonNumber);
+      console.log(`Updating roll data after approval for ${lockedRolls.length} roll(s):`, 
+        lockedRolls.map((r: any) => r.cartoonNumber));
       
-      // 1. Update Rolls Tab Data (with usage history)
-      this.updateRollsData(entry, cartoonNumber);
+      // Process each locked roll separately
+      lockedRolls.forEach((lockedRoll: any) => {
+        const cartoonNumber = lockedRoll.cartoonNumber;
+        if (!cartoonNumber) {
+          console.warn('Skipping roll without cartoon number:', lockedRoll);
+          return;
+        }
+        
+        console.log(`Processing roll ${cartoonNumber}...`);
+        
+        // Create a roll-specific entry object with this roll's data
+        const rollEntry = {
+          ...entry,
+          cartoonNumber: cartoonNumber,
+          issuedQuantity: lockedRoll.issuedQty || 0,
+          wastageQuantity: lockedRoll.wastageQty || 0,
+          leftOverQuantity: lockedRoll.leftOver || 0,
+          issuedFromSerial: lockedRoll.issuedRanges?.[0]?.fromSerial || '',
+          issuedToSerial: lockedRoll.issuedRanges?.[lockedRoll.issuedRanges.length - 1]?.toSerial || '',
+          wastageFromSerial: lockedRoll.wastageRanges?.[0]?.fromSerial || '',
+          wastageToSerial: lockedRoll.wastageRanges?.[lockedRoll.wastageRanges.length - 1]?.toSerial || '',
+          issuedEntries: lockedRoll.issuedRanges?.map((r: any) => ({
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            quantity: r.quantity || 0
+          })) || [],
+          wastageEntries: lockedRoll.wastageRanges?.map((r: any) => ({
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            quantity: r.quantity || 0
+          })) || []
+        };
+        
+        // Update all tabs for this specific roll
+        this.updateRollsData(rollEntry, cartoonNumber);
+        this.updateAvailableHologramData(rollEntry, cartoonNumber);
+        this.updateSerialNumbersData(rollEntry, cartoonNumber);
+      });
       
-      // 2. Update Available Hologram Data Tab
-      this.updateAvailableHologramData(entry, cartoonNumber);
-      
-      // 3. Update Serial Numbers Data Tab (with usage history)
-      this.updateSerialNumbersData(entry, cartoonNumber);
-      
-      // NOTE: Issued Hologram and History updates are handled by moveIssuedHologramToHistory()
-      // which is called separately in confirmApproval()
-      
-      console.log('Roll data updated successfully after approval');
+      console.log('All roll data updated successfully after approval');
       
     } catch (error) {
       console.error('Error updating roll data after approval:', error);
@@ -380,24 +425,72 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       }
       
       // Add usage history entry with request reference number
+      // Handle multiple issued/wastage ranges from locked rolls
       if (!roll.usageHistory) {
         roll.usageHistory = [];
       }
       
-      roll.usageHistory.push({
-        date: entry.date,
-        referenceNo: entry.referenceNo || 'N/A',
-        brandName: entry.brandDetails?.brandName || 'N/A',
-        issuedFromSerial: entry.issuedFromSerial || '',
-        issuedToSerial: entry.issuedToSerial || '',
-        issuedQuantity: entry.issuedQuantity || 0,
-        wastageFromSerial: entry.wastageFromSerial || '',
-        wastageToSerial: entry.wastageToSerial || '',
-        wastageQuantity: entry.wastageQuantity || 0,
-        leftOverQuantity: entry.leftOverQuantity || 0,
-        approvedBy: 'Officer In Charge',
-        approvedAt: new Date().toISOString()
-      });
+      // Add all issued ranges to history
+      const issuedEntries = entry.issuedEntries || [];
+      if (issuedEntries.length > 0) {
+        issuedEntries.forEach((issuedEntry: any) => {
+          roll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'ISSUED',
+            issuedFromSerial: issuedEntry.fromSerial || '',
+            issuedToSerial: issuedEntry.toSerial || '',
+            issuedQuantity: issuedEntry.quantity || 0,
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString()
+          });
+        });
+      } else {
+        // Fallback to single range if no issuedEntries
+        roll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'ISSUED',
+          issuedFromSerial: entry.issuedFromSerial || '',
+          issuedToSerial: entry.issuedToSerial || '',
+          issuedQuantity: entry.issuedQuantity || 0,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString()
+        });
+      }
+      
+      // Add all wastage ranges to history
+      const wastageEntries = entry.wastageEntries || [];
+      if (wastageEntries.length > 0) {
+        wastageEntries.forEach((wastageEntry: any) => {
+          roll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'WASTAGE',
+            wastageFromSerial: wastageEntry.fromSerial || '',
+            wastageToSerial: wastageEntry.toSerial || '',
+            wastageQuantity: wastageEntry.quantity || 0,
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString()
+          });
+        });
+      } else if (entry.wastageQuantity > 0) {
+        // Fallback to single range if no wastageEntries but wastage exists
+        roll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'WASTAGE',
+          wastageFromSerial: entry.wastageFromSerial || '',
+          wastageToSerial: entry.wastageToSerial || '',
+          wastageQuantity: entry.wastageQuantity || 0,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString()
+        });
+      }
       
       rollsData[rollIndex] = roll;
       localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
@@ -489,24 +582,72 @@ export class HologramManufacturingRegisterComponent implements OnInit {
         }
         
         // Add usage history entry with request reference number
+        // Handle multiple issued/wastage ranges from locked rolls
         if (!serialRoll.usageHistory) {
           serialRoll.usageHistory = [];
         }
         
-        serialRoll.usageHistory.push({
-          date: entry.date,
-          referenceNo: entry.referenceNo || 'N/A',
-          brandName: entry.brandDetails?.brandName || 'N/A',
-          issuedFromSerial: entry.issuedFromSerial || '',
-          issuedToSerial: entry.issuedToSerial || '',
-          issuedQuantity: entry.issuedQuantity || 0,
-          wastageFromSerial: entry.wastageFromSerial || '',
-          wastageToSerial: entry.wastageToSerial || '',
-          wastageQuantity: entry.wastageQuantity || 0,
-          leftOverQuantity: entry.leftOverQuantity || 0,
-          approvedBy: 'Officer In Charge',
-          approvedAt: new Date().toISOString()
-        });
+        // Add all issued ranges to history
+        const issuedEntries = entry.issuedEntries || [];
+        if (issuedEntries.length > 0) {
+          issuedEntries.forEach((issuedEntry: any) => {
+            serialRoll.usageHistory.push({
+              date: entry.date,
+              referenceNo: entry.referenceNo || 'N/A',
+              brandName: entry.brandDetails?.brandName || 'N/A',
+              type: 'ISSUED',
+              issuedFromSerial: issuedEntry.fromSerial || '',
+              issuedToSerial: issuedEntry.toSerial || '',
+              issuedQuantity: issuedEntry.quantity || 0,
+              approvedBy: 'Officer In Charge',
+              approvedAt: new Date().toISOString()
+            });
+          });
+        } else {
+          // Fallback to single range if no issuedEntries
+          serialRoll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'ISSUED',
+            issuedFromSerial: entry.issuedFromSerial || '',
+            issuedToSerial: entry.issuedToSerial || '',
+            issuedQuantity: entry.issuedQuantity || 0,
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString()
+          });
+        }
+        
+        // Add all wastage ranges to history
+        const wastageEntries = entry.wastageEntries || [];
+        if (wastageEntries.length > 0) {
+          wastageEntries.forEach((wastageEntry: any) => {
+            serialRoll.usageHistory.push({
+              date: entry.date,
+              referenceNo: entry.referenceNo || 'N/A',
+              brandName: entry.brandDetails?.brandName || 'N/A',
+              type: 'WASTAGE',
+              wastageFromSerial: wastageEntry.fromSerial || '',
+              wastageToSerial: wastageEntry.toSerial || '',
+              wastageQuantity: wastageEntry.quantity || 0,
+              approvedBy: 'Officer In Charge',
+              approvedAt: new Date().toISOString()
+            });
+          });
+        } else if (entry.wastageQuantity > 0) {
+          // Fallback to single range if no wastageEntries but wastage exists
+          serialRoll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'WASTAGE',
+            wastageFromSerial: entry.wastageFromSerial || '',
+            wastageToSerial: entry.wastageToSerial || '',
+            wastageQuantity: entry.wastageQuantity || 0,
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString()
+          });
+        }
         
         serialData[serialIndex] = serialRoll;
         localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
@@ -545,60 +686,82 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   /**
    * AUTOMATIC WORKFLOW: Move issued hologram from "Issued Hologram" tab to "Issued History" tab
    * This happens automatically when officer approves the daily register entry
+   * HANDLES MULTIPLE ROLLS: Processes each roll separately
    */
   private moveIssuedHologramToHistory(entry: any): void {
     try {
       console.log('=== MOVING ISSUED HOLOGRAM TO HISTORY ===');
       
-      const cartoonNumber = entry.cartoonNumber;
       const referenceNo = entry.referenceNo;
-      
-      if (!cartoonNumber || !referenceNo) {
-        console.warn('Missing cartoon number or reference number, skipping move to history');
+      if (!referenceNo) {
+        console.warn('Missing reference number, skipping move to history');
         return;
       }
       
-      // Load issued holograms
-      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+      const lockedRolls = entry.lockedRolls || [];
+      const cartoonNumbers = lockedRolls.length > 0 
+        ? lockedRolls.map((r: any) => r.cartoonNumber)
+        : (entry.cartoonNumber ? [entry.cartoonNumber] : []);
       
-      // Find the issued hologram entry that matches this approval
-      const issuedIndex = issuedData.findIndex((issued: any) => 
-        issued.cartoonNumber === cartoonNumber && 
-        issued.requestReference === referenceNo &&
-        issued.status === 'IN_PROGRESS'
-      );
-      
-      if (issuedIndex !== -1) {
-        const issuedEntry = issuedData[issuedIndex];
-        
-        console.log('Found issued hologram to move:', issuedEntry);
-        
-        // Update status to COMPLETED
-        issuedEntry.status = 'COMPLETED';
-        issuedEntry.completionDate = new Date().toISOString().split('T')[0];
-        issuedEntry.completedBy = 'Officer In Charge';
-        issuedEntry.completedAt = new Date().toISOString();
-        
-        // Remove from issued holograms (move to history)
-        issuedData.splice(issuedIndex, 1);
-        localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedData));
-        
-        // Add to issued history
-        const historyData = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
-        historyData.push({
-          ...issuedEntry,
-          id: Date.now(),
-          issueDate: issuedEntry.issueDate || issuedEntry.issuedDate,
-          officer: issuedEntry.officer,
-          requestReference: issuedEntry.requestReference
-        });
-        localStorage.setItem('hologramOverviewHistory', JSON.stringify(historyData));
-        
-        console.log('Successfully moved issued hologram to history');
-      } else {
-        console.warn('No matching issued hologram found to move to history');
+      if (cartoonNumbers.length === 0) {
+        console.warn('No cartoon numbers found, skipping move to history');
+        return;
       }
       
+      console.log(`Moving issued holograms to history for ${cartoonNumbers.length} roll(s):`, cartoonNumbers);
+      
+      // Load issued holograms
+      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+      const historyData = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+      
+      let movedCount = 0;
+      
+      // Process each roll separately
+      cartoonNumbers.forEach((cartoonNumber: string) => {
+        if (!cartoonNumber) return;
+        
+        // Find the issued hologram entry that matches this approval and roll
+        const issuedIndex = issuedData.findIndex((issued: any) => 
+          issued.cartoonNumber === cartoonNumber && 
+          issued.requestReference === referenceNo &&
+          issued.status === 'IN_PROGRESS'
+        );
+        
+        if (issuedIndex !== -1) {
+          const issuedEntry = issuedData[issuedIndex];
+          
+          console.log(`Found issued hologram for roll ${cartoonNumber} to move:`, issuedEntry);
+          
+          // Update status to COMPLETED
+          issuedEntry.status = 'COMPLETED';
+          issuedEntry.completionDate = new Date().toISOString().split('T')[0];
+          issuedEntry.completedBy = 'Officer In Charge';
+          issuedEntry.completedAt = new Date().toISOString();
+          
+          // Remove from issued holograms (move to history)
+          issuedData.splice(issuedIndex, 1);
+          
+          // Add to issued history
+          historyData.push({
+            ...issuedEntry,
+            id: Date.now() + movedCount, // Ensure unique IDs
+            issueDate: issuedEntry.issueDate || issuedEntry.issuedDate,
+            officer: issuedEntry.officer,
+            requestReference: issuedEntry.requestReference
+          });
+          
+          movedCount++;
+          console.log(`Successfully moved issued hologram for roll ${cartoonNumber} to history`);
+        } else {
+          console.warn(`No matching issued hologram found for roll ${cartoonNumber} and reference ${referenceNo}`);
+        }
+      });
+      
+      // Save updated data
+      localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedData));
+      localStorage.setItem('hologramOverviewHistory', JSON.stringify(historyData));
+      
+      console.log(`Successfully moved ${movedCount} issued hologram(s) to history`);
       console.log('=== END MOVING ISSUED HOLOGRAM TO HISTORY ===');
     } catch (error) {
       console.error('Error moving issued hologram to history:', error);
