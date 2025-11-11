@@ -135,30 +135,9 @@ interface ChartFilters {
   maxQuantity: number | null;
 }
 
-interface SerialFilters {
-  rollStatus: string;
-  hologramType: string;
-  dateFrom: string;
-  dateTo: string;
-  serialSearch: string;
-}
 
-interface SerialRollData {
-  id: number;
-  rollNumber: string;
-  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  fromSerial: string;
-  toSerial: string;
-  totalCount: number;
-  availableCount: number;
-  usedCount: number;
-  damagedCount: number;
-  status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
-  receivedDate: string;
-  usageHistory: any[];
-  isNew?: boolean;
-  newUntil?: number;
-}
+
+
 
 @Component({
   selector: 'app-hologramoveriew',
@@ -174,8 +153,7 @@ export class HologramoveriewComponent implements OnInit {
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
-  serialRollsData: SerialRollData[] = [];
-  filteredSerialData: SerialRollData[] = [];
+
 
   // Serial Details Modal
   showSerialDetailsModal: boolean = false;
@@ -186,7 +164,6 @@ export class HologramoveriewComponent implements OnInit {
 
   // Usage Details Modal
   showUsageDetailsModal: boolean = false;
-  selectedRollForUsage: SerialRollData | null = null;
   selectedRollForUsageRolls: HologramRoll | null = null; // For Rolls tab
 
   // Chart Filters
@@ -202,8 +179,16 @@ export class HologramoveriewComponent implements OnInit {
     maxQuantity: null
   };
 
-  // Serial Filters
-  serialFilters: SerialFilters = {
+
+
+  // Rolls Filters
+  rollsFilters: {
+    rollStatus: string;
+    hologramType: string;
+    dateFrom: string;
+    dateTo: string;
+    serialSearch: string;
+  } = {
     rollStatus: '',
     hologramType: '',
     dateFrom: '',
@@ -211,18 +196,7 @@ export class HologramoveriewComponent implements OnInit {
     serialSearch: ''
   };
 
-  // Rolls Filters (same structure as Serial Filters)
-  rollsFilters: SerialFilters = {
-    rollStatus: '',
-    hologramType: '',
-    dateFrom: '',
-    dateTo: '',
-    serialSearch: ''
-  };
 
-  // Pagination for serial data
-  serialCurrentPage: number = 1;
-  serialDataPageSize: number = 10;
 
   // UI State
   showAdvancedFilters: boolean = false;
@@ -260,8 +234,6 @@ export class HologramoveriewComponent implements OnInit {
     this.loadAvailableData();
     this.loadIssuedData();
     this.loadHistoryData();
-    this.loadSerialRollsData();
-    this.applySerialFilters();
     
     // Force change detection to ensure UI updates
     setTimeout(() => {
@@ -336,49 +308,7 @@ export class HologramoveriewComponent implements OnInit {
     this.historyData = sortedSavedHistory;
   }
 
-  loadSerialRollsData(): void {
-    // Load data from localStorage (saved by arrival process)
-    const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
 
-    // Recalculate availableCount for each roll to ensure accuracy
-    // Formula: availableCount = totalCount - usedCount - damagedCount
-    const recalculatedSerialData = savedSerialData.map((roll: any) => {
-      const totalCount = roll.totalCount || 0;
-      const usedCount = roll.usedCount || 0;
-      const damagedCount = roll.damagedCount || 0;
-      
-      // Recalculate availableCount to ensure it's always correct
-      const calculatedAvailableCount = Math.max(0, totalCount - usedCount - damagedCount);
-      
-      // Update the roll with recalculated availableCount
-      return {
-        ...roll,
-        availableCount: calculatedAvailableCount,
-        // Update status based on recalculated availableCount
-        status: calculatedAvailableCount === 0 ? 'COMPLETED' : (calculatedAvailableCount < totalCount ? 'IN_USE' : 'AVAILABLE')
-      };
-    });
-
-    // Sort saved data by received date (newest first) and then by ID (newest first)
-    const sortedSavedSerialData = recalculatedSerialData.sort((a: any, b: any) => {
-      // First sort by date
-      const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
-      const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
-      
-      if (dateB !== dateA) {
-        return dateB - dateA; // Newer date first
-      }
-      
-      // If dates are same, sort by ID (newer ID first)
-      return (b.id || 0) - (a.id || 0);
-    });
-
-    // Use recalculated data
-    this.serialRollsData = sortedSavedSerialData;
-    
-    // Optionally save the recalculated data back to localStorage to fix any inconsistencies
-    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(sortedSavedSerialData));
-  }
 
   getTypeClass(type: string): string {
     switch (type) {
@@ -993,54 +923,7 @@ export class HologramoveriewComponent implements OnInit {
     return 1250; // Mock value
   }
 
-  // Serial filter methods
-  applySerialFilters(): void {
-    this.filteredSerialData = this.serialRollsData.filter(roll => {
-      if (this.serialFilters.rollStatus && roll.status !== this.serialFilters.rollStatus) {
-        return false;
-      }
-      if (this.serialFilters.hologramType && roll.hologramType !== this.serialFilters.hologramType) {
-        return false;
-      }
-      if (this.serialFilters.serialSearch &&
-        !roll.fromSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase()) &&
-        !roll.toSerial.toLowerCase().includes(this.serialFilters.serialSearch.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
-    this.serialCurrentPage = 1;
-  }
 
-  clearSerialFilters(): void {
-    this.serialFilters = {
-      rollStatus: '',
-      hologramType: '',
-      dateFrom: '',
-      dateTo: '',
-      serialSearch: ''
-    };
-    this.applySerialFilters();
-  }
-
-  hasActiveSerialFilters(): boolean {
-    return !!(this.serialFilters.rollStatus ||
-      this.serialFilters.hologramType ||
-      this.serialFilters.dateFrom ||
-      this.serialFilters.dateTo ||
-      this.serialFilters.serialSearch);
-  }
-
-  getSerialFilterSummary(): string {
-    const filters = [];
-    if (this.serialFilters.rollStatus) filters.push(`Status: ${this.serialFilters.rollStatus}`);
-    if (this.serialFilters.hologramType) filters.push(`Type: ${this.serialFilters.hologramType}`);
-    if (this.serialFilters.serialSearch) filters.push(`Search: ${this.serialFilters.serialSearch}`);
-
-    return filters.length > 0 ?
-      `Filtered by: ${filters.join(', ')} | Showing ${this.filteredSerialData.length} of ${this.serialRollsData.length} rolls` :
-      `Showing all ${this.serialRollsData.length} rolls`;
-  }
 
   // Rolls filter methods (same logic as Serial filters)
   applyRollsFilters(): void {
@@ -1104,25 +987,7 @@ export class HologramoveriewComponent implements OnInit {
       `Showing all ${this.rollsData.length} rolls`;
   }
 
-  // Serial data summary methods
-  getTotalRolls(): number {
-    return this.hasActiveSerialFilters() ? this.filteredSerialData.length : this.serialRollsData.length;
-  }
 
-  getAvailableHolograms(): number {
-    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
-    return data.reduce((total, roll) => total + roll.availableCount, 0);
-  }
-
-  getUsedInProduction(): number {
-    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
-    return data.reduce((total, roll) => total + roll.usedCount, 0);
-  }
-
-  getDamagedWastage(): number {
-    const data = this.hasActiveSerialFilters() ? this.filteredSerialData : this.serialRollsData;
-    return data.reduce((total, roll) => total + roll.damagedCount, 0);
-  }
 
   // Rolls data summary methods (for Rolls tab)
   getTotalRollsForRollsTab(): number {
@@ -1144,85 +1009,25 @@ export class HologramoveriewComponent implements OnInit {
     return data.reduce((total, roll) => total + roll.damagedCount, 0);
   }
 
-  // Serial data pagination methods
-  getPaginatedSerialData(): SerialRollData[] {
-    const startIndex = (this.serialCurrentPage - 1) * this.serialDataPageSize;
-    const endIndex = startIndex + this.serialDataPageSize;
-    return this.filteredSerialData.slice(startIndex, endIndex);
-  }
 
-  getSerialDataStartIndex(): number {
-    return (this.serialCurrentPage - 1) * this.serialDataPageSize;
-  }
-
-  getSerialDataEndIndex(): number {
-    const endIndex = this.serialCurrentPage * this.serialDataPageSize;
-    return Math.min(endIndex, this.filteredSerialData.length);
-  }
-
-  getTotalSerialDataPages(): number {
-    return Math.ceil(this.filteredSerialData.length / this.serialDataPageSize);
-  }
-
-  getSerialDataPageNumbers(): number[] {
-    const totalPages = this.getTotalSerialDataPages();
-    const pages: number[] = [];
-    const maxPagesToShow = 5;
-
-    let startPage = Math.max(1, this.serialCurrentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-
-    if (endPage - startPage + 1 < maxPagesToShow) {
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    return pages;
-  }
-
-  setSerialDataPage(page: number): void {
-    const totalPages = this.getTotalSerialDataPages();
-    if (page >= 1 && page <= totalPages) {
-      this.serialCurrentPage = page;
-    }
-  }
-
-  // Serial roll action methods
-  isNewSerialRoll(roll: SerialRollData): boolean {
-    return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
-  }
-
-  viewUsageDetails(roll: SerialRollData): void {
-    this.selectedRollForUsage = roll;
-    this.selectedRollForUsageRolls = null;
-    this.showUsageDetailsModal = true;
-  }
 
   viewUsageDetailsForRoll(roll: HologramRoll): void {
-    // Convert HologramRoll to SerialRollData format for the modal
+    // Show usage details for roll from Rolls tab
     this.selectedRollForUsageRolls = roll;
-    this.selectedRollForUsage = null;
     this.showUsageDetailsModal = true;
   }
 
   closeUsageDetailsModal(): void {
     this.showUsageDetailsModal = false;
-    this.selectedRollForUsage = null;
     this.selectedRollForUsageRolls = null;
   }
 
   getUsageDetailsData() {
-    // Handle both SerialRollData (from Serial Numbers Data tab) and HologramRoll (from Rolls tab)
+    // Handle HologramRoll (from Rolls tab)
     let roll: any = null;
-    let rollType: 'serial' | 'rolls' = 'serial';
+    let rollType: 'rolls' = 'rolls';
     
-    if (this.selectedRollForUsage) {
-      roll = this.selectedRollForUsage;
-      rollType = 'serial';
-    } else if (this.selectedRollForUsageRolls) {
+    if (this.selectedRollForUsageRolls) {
       roll = this.selectedRollForUsageRolls;
       rollType = 'rolls';
     } else {
@@ -1371,25 +1176,7 @@ export class HologramoveriewComponent implements OnInit {
     };
   }
 
-  editRoll(roll: SerialRollData): void {
-    alert(`Edit functionality for ${roll.rollNumber} will be implemented`);
-  }
 
-  viewRollDetails(roll: SerialRollData): void {
-    alert(`Detailed view for ${roll.rollNumber} will be implemented`);
-  }
-
-  markDamaged(roll: SerialRollData): void {
-    alert(`Mark damaged functionality for ${roll.rollNumber} will be implemented`);
-  }
-
-  refreshSerialData(): void {
-    this.loadAllData();
-  }
-
-  exportSerialData(): void {
-    alert('Serial data export functionality will be implemented with backend integration');
-  }
 
   exportRollsData(): void {
     alert('Rolls data export functionality will be implemented with backend integration');
@@ -1418,15 +1205,12 @@ export class HologramoveriewComponent implements OnInit {
       this.availableData = [];
       this.issuedData = [];
       this.historyData = [];
-      this.serialRollsData = [];
-      this.filteredSerialData = [];
       
       alert('✅ All hologram data cleared successfully!\n\nYou now have a fresh start. All tabs are empty.');
       
       console.log('=== ALL HOLOGRAM DATA CLEARED ===');
       console.log('Rolls:', this.rollsData.length);
       console.log('Available:', this.availableData.length);
-      console.log('Serial Data:', this.serialRollsData.length);
       console.log('Issued:', this.issuedData.length);
       console.log('History:', this.historyData.length);
     }
