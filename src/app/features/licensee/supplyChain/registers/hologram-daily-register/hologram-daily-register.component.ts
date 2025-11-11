@@ -1624,25 +1624,43 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   getAssignedRolls(entry: HologramDailyEntry): string[] {
     console.log('🎲 Getting assigned rolls for entry:', entry.id);
     
-    // First, try to get from hologram allocation data (source of truth)
+    // PRIORITY 1: For saved entries, use locked rolls order (this ensures colors match issued/wastage fields)
+    const lockedRolls = (entry as any).lockedRolls || [];
+    if (lockedRolls.length > 0) {
+      const cartoonNumbers = lockedRolls.map((r: any) => r.cartoonNumber).filter((cn: string) => cn); // Remove empty values
+      // Return unique rolls in the order they appear in lockedRolls (preserves color matching)
+      const uniqueRolls: string[] = [];
+      const seen = new Set<string>();
+      for (const cn of cartoonNumbers) {
+        if (!seen.has(cn)) {
+          uniqueRolls.push(cn);
+          seen.add(cn);
+        }
+      }
+      console.log('🔒 Assigned rolls from locked rolls (preserving order, unique):', uniqueRolls);
+      return uniqueRolls;
+    }
+    
+    // PRIORITY 2: Try to get from hologram allocation data (source of truth)
     const allocationData = this.getHologramAllocationForEntry(entry);
     console.log('📦 Allocation data:', allocationData);
     
     if (allocationData && allocationData.allocatedCartoons) {
-      const cartoonNumbers = allocationData.allocatedCartoons.map((c: any) => c.cartoonNumber);
-      console.log('✅ Assigned rolls from allocation:', cartoonNumbers);
-      return cartoonNumbers;
+      const cartoonNumbers = allocationData.allocatedCartoons.map((c: any) => c.cartoonNumber).filter((cn: string) => cn); // Remove empty values
+      // Return unique rolls in allocation order
+      const uniqueRolls: string[] = [];
+      const seen = new Set<string>();
+      for (const cn of cartoonNumbers) {
+        if (!seen.has(cn)) {
+          uniqueRolls.push(cn);
+          seen.add(cn);
+        }
+      }
+      console.log('✅ Assigned rolls from allocation (unique):', uniqueRolls);
+      return uniqueRolls;
     }
     
-    // Fallback to locked rolls if allocation data not available
-    const lockedRolls = (entry as any).lockedRolls || [];
-    if (lockedRolls.length > 0) {
-      const cartoonNumbers = lockedRolls.map((r: any) => r.cartoonNumber);
-      console.log('🔒 Assigned rolls from locked rolls:', cartoonNumbers);
-      return cartoonNumbers;
-    }
-    
-    // Last fallback: try to get from entry metadata
+    // PRIORITY 3: Last fallback: try to get from entry metadata
     const refNo = this.getEntryMetadata(entry).referenceNo;
     const allEntriesWithSameRef = this.filteredEntries.filter(e => 
       this.getEntryMetadata(e).referenceNo === refNo
@@ -1654,7 +1672,52 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     }).filter(roll => roll); // Remove empty values
     
     // Return unique rolls
-    return [...new Set(rolls)];
+    const uniqueRolls: string[] = Array.from(new Set(rolls));
+    console.log('📋 Assigned rolls from entries (unique):', uniqueRolls);
+    return uniqueRolls;
+  }
+
+  /**
+   * Get assigned rolls with their color indices (matching issued/wastage field colors)
+   * This ensures the ROLLS ASSIGNED badges use the same colors as the issued/wastage fields
+   */
+  getAssignedRollsWithColors(entry: HologramDailyEntry): Array<{roll: string, colorIndex: number}> {
+    const assignedRolls = this.getAssignedRolls(entry);
+    const lockedRolls = (entry as any).lockedRolls || [];
+    
+    // If we have locked rolls, use their order and color indices (same as issued/wastage fields)
+    if (lockedRolls.length > 0) {
+      const result: Array<{roll: string, colorIndex: number}> = [];
+      const seen = new Set<string>();
+      
+      // Process locked rolls in order (same order as issued/wastage fields)
+      for (const lockedRoll of lockedRolls) {
+        const cartoonNumber = lockedRoll.cartoonNumber;
+        if (cartoonNumber && !seen.has(cartoonNumber) && assignedRolls.includes(cartoonNumber)) {
+          // Use the same getRollColorIndex that's used in groupIssuedEntriesByRoll
+          const colorIndex = this.getRollColorIndex(cartoonNumber);
+          result.push({ roll: cartoonNumber, colorIndex });
+          seen.add(cartoonNumber);
+        }
+      }
+      
+      // Add any remaining assigned rolls that weren't in locked rolls
+      for (const roll of assignedRolls) {
+        if (!seen.has(roll)) {
+          const colorIndex = this.getRollColorIndex(roll);
+          result.push({ roll, colorIndex });
+          seen.add(roll);
+        }
+      }
+      
+      return result;
+    }
+    
+    // Fallback: assign colors based on order
+    return assignedRolls.map((roll) => {
+      const colorIndex = this.getRollColorIndex(roll);
+      return { roll, colorIndex };
+    });
   }
 
   /**

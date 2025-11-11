@@ -479,10 +479,15 @@
                       }
                     </div>
                   } @else {
-                    <!-- Show locked rolls for saved entries -->
+                    <!-- Show locked rolls for saved entries with color coding matching issued/wastage fields -->
                     <div class="rolls-list">
-                      @for (roll of getAssignedRolls(entry); track roll) {
-                        <span class="badge bg-secondary me-1 mb-1">{{ roll }}</span>
+                      @for (rollData of getAssignedRollsWithColors(entry); track rollData.roll) {
+                        <span class="badge me-1 mb-1" 
+                              [style.background-color]="getRollColor(rollData.colorIndex)"
+                              [style.border-color]="getRollColor(rollData.colorIndex)"
+                              [style.color]="'#fff'">
+                          {{ rollData.roll }}
+                        </span>
                       }
                     </div>
                   }
