@@ -1774,15 +1774,19 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         if (actualRollData) {
           console.log(`✅ Found actual roll data for ${cartoon.cartoonNumber}:`, actualRollData);
 
+          // PRIORITY: Use fromSerial/toSerial from allocation data (cartoon) if available, otherwise use roll data
+          const fromSerial = cartoon.fromSerial || actualRollData.fromSerial || '';
+          const toSerial = cartoon.toSerial || actualRollData.toSerial || '';
+
           return {
             cartoonNumber: actualRollData.cartoonNumber,
             allocatedQuantity,
             availableCount: allocatedQuantity, // Amount licensee can work with for this entry
             remainingInCartoon,
-            serialRange: actualRollData.serialRange || `${actualRollData.fromSerial} - ${actualRollData.toSerial}`,
+            serialRange: cartoon.serialRange || actualRollData.serialRange || `${fromSerial} - ${toSerial}`,
             totalCount,
-            fromSerial: actualRollData.fromSerial,
-            toSerial: actualRollData.toSerial,
+            fromSerial: fromSerial,
+            toSerial: toSerial,
             type: actualRollData.type,
             status: actualRollData.status,
             actualBalance: actualRollData.availableCount ?? remainingInCartoon
@@ -1797,8 +1801,8 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
           remainingInCartoon,
           serialRange: cartoon.serialRange || `${cartoon.fromSerial} - ${cartoon.toSerial}`,
           totalCount,
-          fromSerial: cartoon.fromSerial,
-          toSerial: cartoon.toSerial,
+          fromSerial: cartoon.fromSerial || '',
+          toSerial: cartoon.toSerial || '',
           type: cartoon.type || entry.hologramType,
           status: cartoon.status || 'ALLOCATED'
         };
@@ -2064,7 +2068,13 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     };
 
     this.updateEntryQuantitiesFromSelection(entry);
+    
+    // Force change detection to update allocated range display
     this.cdr.detectChanges();
+    
+    // Log the allocated range for debugging
+    const allocatedRange = this.getAllocatedRangeForRoll(entry, cartoonNumber);
+    console.log(`🎯 Selected roll ${cartoonNumber}, allocated range:`, allocatedRange);
   }
 
   /**
@@ -2134,30 +2144,131 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
 
   /**
    * Get allocated serial range for a specific roll
+   * This uses the range stored in allocation data (from Hologram Allocation Details)
    */
   getAllocatedRangeForRoll(entry: HologramDailyEntry, cartoonNumber: string): { fromSerial: string; toSerial: string } | null {
     const allocationData = this.getHologramAllocationForEntry(entry);
     
+    console.log(`🔍 Getting allocated range for ${cartoonNumber}`, {
+      hasAllocationData: !!allocationData,
+      allocatedCartoons: allocationData?.allocatedCartoons?.length
+    });
+    
     if (allocationData && allocationData.allocatedCartoons) {
       const cartoon = allocationData.allocatedCartoons.find((c: any) => c.cartoonNumber === cartoonNumber);
-      if (cartoon && cartoon.fromSerial && cartoon.toSerial) {
+      console.log(`🔍 Found cartoon:`, cartoon);
+      
+      if (cartoon) {
+        // PRIORITY 1: Use the stored fromSerial/toSerial from allocation data (this is the source of truth)
+        if (cartoon.fromSerial && cartoon.toSerial) {
+          console.log(`✅ Using stored allocated range for ${cartoonNumber}:`, cartoon.fromSerial, '-', cartoon.toSerial);
+          return {
+            fromSerial: cartoon.fromSerial,
+            toSerial: cartoon.toSerial
+          };
+        }
+        
+        // PRIORITY 2: If no stored range, calculate from roll's starting serial and allocated quantity
+        const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon);
+        
+        if (!allocatedQuantity || allocatedQuantity <= 0) {
+          console.warn(`⚠️ Invalid allocated quantity for ${cartoonNumber}:`, allocatedQuantity);
+          return null;
+        }
+        
+        // Get the roll's actual starting serial from hologramOverviewRolls
+        const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+        
+        let rollStartSerial: string | null = null;
+        let rollStartNumber = 1;
+        
+        // Try to get starting serial from actual roll data first
+        if (actualRollData && actualRollData.fromSerial) {
+          rollStartSerial = actualRollData.fromSerial;
+        } else if (cartoon.fromSerial) {
+          rollStartSerial = cartoon.fromSerial;
+        }
+        
+        if (!rollStartSerial) {
+          console.warn(`⚠️ No starting serial found for ${cartoonNumber}`);
+          return null;
+        }
+        
+        // Extract numeric part from serial (e.g., "000001" -> 1, "HG000001" -> 1)
+        const match = rollStartSerial.match(/(\d+)$/);
+        if (match) {
+          rollStartNumber = parseInt(match[1], 10);
+        } else {
+          console.warn(`⚠️ Could not extract number from serial: ${rollStartSerial}`);
+          return null;
+        }
+        
+        // Calculate end serial number
+        const endNumber = rollStartNumber + allocatedQuantity - 1;
+        
+        if (endNumber < rollStartNumber) {
+          console.error(`❌ Invalid range calculation: start=${rollStartNumber}, end=${endNumber}, qty=${allocatedQuantity}`);
+          return null;
+        }
+        
+        // Format the serial numbers (preserve prefix if any)
+        const prefix = rollStartSerial.replace(/\d+$/, '');
+        const fromSerial = prefix + String(rollStartNumber).padStart(6, '0');
+        const toSerial = prefix + String(endNumber).padStart(6, '0');
+        
+        console.log(`📊 Calculated allocated range for ${cartoonNumber}:`, {
+          allocatedQuantity,
+          rollStartSerial,
+          rollStartNumber,
+          endNumber,
+          fromSerial,
+          toSerial
+        });
+        
         return {
-          fromSerial: cartoon.fromSerial,
-          toSerial: cartoon.toSerial
+          fromSerial,
+          toSerial
         };
       }
     }
 
-    // Fallback: try to get from available rolls
+    // Fallback: try to get from available rolls (but calculate based on allocated quantity)
     const availableRolls = this.getAvailableRollsForEntry(entry);
     const roll = availableRolls.find(r => r.cartoonNumber === cartoonNumber);
-    if (roll && roll.fromSerial && roll.toSerial) {
-      return {
-        fromSerial: roll.fromSerial,
-        toSerial: roll.toSerial
-      };
+    if (roll) {
+      console.log(`🔍 Fallback: Found roll in availableRolls:`, roll);
+      
+      // PRIORITY 1: Use allocated quantity to calculate range
+      if (roll.allocatedQuantity && roll.allocatedQuantity > 0 && roll.fromSerial) {
+        const match = roll.fromSerial.match(/(\d+)$/);
+        if (match) {
+          const startNumber = parseInt(match[1], 10);
+          const endNumber = startNumber + roll.allocatedQuantity - 1;
+          
+          if (endNumber >= startNumber) {
+            const prefix = roll.fromSerial.replace(/\d+$/, '');
+            const calculatedRange = {
+              fromSerial: roll.fromSerial,
+              toSerial: prefix + String(endNumber).padStart(6, '0')
+            };
+            console.log(`✅ Calculated range from availableRolls:`, calculatedRange);
+            return calculatedRange;
+          }
+        }
+      }
+      
+      // PRIORITY 2: If roll has explicit fromSerial/toSerial, use them
+      if (roll.fromSerial && roll.toSerial) {
+        console.log(`✅ Using range from availableRolls:`, roll.fromSerial, '-', roll.toSerial);
+        return {
+          fromSerial: roll.fromSerial,
+          toSerial: roll.toSerial
+        };
+      }
     }
 
+    console.warn(`❌ No allocated range found for ${cartoonNumber}`);
     return null;
   }
 
@@ -3045,14 +3156,44 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         const matchingAllocations = data.filter((a: any) => 
           a.referenceNo === referenceNo || 
           a.ourRefNo === referenceNo ||
-          a.id === referenceNo
+          a.id === referenceNo ||
+          a.refNumber === referenceNo
         );
         
         console.log(`🔍 Found ${matchingAllocations.length} matching allocations for reference:`, referenceNo);
         
-        // If we found multiple allocations (one per cartoon), combine them
+        // If we found matching requests/allocations
         if (matchingAllocations.length > 0) {
           console.log('✅ Found allocations in', key, ':', matchingAllocations);
+          
+          // PRIORITY: Check if the request has an 'allocations' array directly (from Officer approval)
+          // This is the EXACT same data shown in Hologram Allocation Details modal
+          const requestWithAllocations = matchingAllocations.find((a: any) => 
+            a.allocations && Array.isArray(a.allocations) && a.allocations.length > 0
+          );
+          
+          if (requestWithAllocations) {
+            console.log('✅ Found request with allocations array:', requestWithAllocations.allocations);
+            const cartoons = requestWithAllocations.allocations.map((a: any) => ({
+              cartoonNumber: a.cartoonNumber || '',
+              quantity: a.quantity || 0,
+              fromSerial: a.fromSerial || '',
+              toSerial: a.toSerial || '',
+              serialRange: `${a.fromSerial} - ${a.toSerial}`,
+              remainingInCartoon: a.remainingInCartoon || 0
+            }));
+            
+            const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
+            
+            const normalized = {
+              referenceNo: referenceNo,
+              totalAllocated: totalQty,
+              allocatedCartoons: cartoons
+            };
+            
+            console.log('✅ Using allocations array directly:', normalized);
+            return normalized;
+          }
           
           // If we have multiple allocations (one per cartoon), combine them
           let normalized: any;
@@ -3060,14 +3201,46 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
           if (matchingAllocations.length > 1) {
             // Multiple allocations - combine them
             console.log('🔄 Combining multiple allocations');
-            const cartoons = matchingAllocations.map((alloc: any) => ({
-              cartoonNumber: alloc.cartoonNumber || alloc.cartoon || '',
-              quantity: alloc.quantity || alloc.allocatedQuantity || alloc.numberOfHolograms || 0,
-              fromSerial: alloc.fromSerial || '',
-              toSerial: alloc.toSerial || '',
-              serialRange: alloc.serialRange || `${alloc.fromSerial} - ${alloc.toSerial}`,
-              remainingInCartoon: alloc.remainingInCartoon || 0
-            }));
+            const cartoons: any[] = [];
+            
+            // First, check if any allocation has an 'allocations' array (from Officer approval)
+            for (const alloc of matchingAllocations) {
+              if (alloc.allocations && Array.isArray(alloc.allocations)) {
+                // This allocation has the direct allocations array - use it
+                alloc.allocations.forEach((a: any) => {
+                  cartoons.push({
+                    cartoonNumber: a.cartoonNumber || '',
+                    quantity: a.quantity || 0,
+                    fromSerial: a.fromSerial || '',
+                    toSerial: a.toSerial || '',
+                    serialRange: a.serialRange || `${a.fromSerial} - ${a.toSerial}`,
+                    remainingInCartoon: a.remainingInCartoon || 0
+                  });
+                });
+              } else {
+                // Individual allocation entry - extract from it
+                let fromSerial = alloc.fromSerial || alloc.serialFrom || '';
+                let toSerial = alloc.toSerial || alloc.serialTo || '';
+                
+                // If serialRange exists but fromSerial/toSerial don't, try to parse it
+                if ((!fromSerial || !toSerial) && alloc.serialRange) {
+                  const rangeMatch = alloc.serialRange.match(/(\d+)\s*-\s*(\d+)/);
+                  if (rangeMatch) {
+                    fromSerial = rangeMatch[1].padStart(6, '0');
+                    toSerial = rangeMatch[2].padStart(6, '0');
+                  }
+                }
+                
+                cartoons.push({
+                  cartoonNumber: alloc.cartoonNumber || alloc.cartoon || '',
+                  quantity: alloc.quantity || alloc.allocatedQuantity || alloc.numberOfHolograms || 0,
+                  fromSerial: fromSerial,
+                  toSerial: toSerial,
+                  serialRange: alloc.serialRange || `${fromSerial} - ${toSerial}`,
+                  remainingInCartoon: alloc.remainingInCartoon || 0
+                });
+              }
+            }
             
             const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
             
@@ -3079,11 +3252,63 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
           } else {
             // Single allocation - normalize it
             const allocation = matchingAllocations[0];
-            normalized = {
-              referenceNo: allocation.referenceNo || allocation.ourRefNo || allocation.id || referenceNo,
-              totalAllocated: allocation.totalAllocated || allocation.requestedQuantity || allocation.numberOfHolograms || allocation.utilizedQuantity || 0,
-              allocatedCartoons: allocation.allocatedCartoons || allocation.cartoons || allocation.cartoonsUsed || []
-            };
+            
+            // PRIORITY 1: Check if allocation has direct 'allocations' array (from Officer in Charge approval)
+            // This is the same structure used in the Hologram Allocation Details modal
+            if (allocation.allocations && Array.isArray(allocation.allocations) && allocation.allocations.length > 0) {
+              console.log('✅ Found allocations array directly:', allocation.allocations);
+              const cartoons = allocation.allocations.map((a: any) => ({
+                cartoonNumber: a.cartoonNumber || '',
+                quantity: a.quantity || 0,
+                fromSerial: a.fromSerial || '',
+                toSerial: a.toSerial || '',
+                serialRange: a.serialRange || `${a.fromSerial} - ${a.toSerial}`,
+                remainingInCartoon: a.remainingInCartoon || 0
+              }));
+              
+              const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
+              
+              normalized = {
+                referenceNo: allocation.referenceNo || allocation.ourRefNo || allocation.id || referenceNo,
+                totalAllocated: totalQty,
+                allocatedCartoons: cartoons
+              };
+            } else {
+              // PRIORITY 2: Normalize allocatedCartoons to ensure fromSerial/toSerial are preserved
+              let allocatedCartoons = allocation.allocatedCartoons || allocation.cartoons || allocation.cartoonsUsed || [];
+              
+              // If allocatedCartoons exist, ensure they have fromSerial/toSerial
+              if (Array.isArray(allocatedCartoons) && allocatedCartoons.length > 0) {
+                allocatedCartoons = allocatedCartoons.map((c: any) => {
+                  let fromSerial = c.fromSerial || c.serialFrom || '';
+                  let toSerial = c.toSerial || c.serialTo || '';
+                  
+                  // If serialRange exists but fromSerial/toSerial don't, try to parse it
+                  if ((!fromSerial || !toSerial) && c.serialRange) {
+                    const rangeMatch = c.serialRange.match(/(\d+)\s*-\s*(\d+)/);
+                    if (rangeMatch) {
+                      fromSerial = rangeMatch[1].padStart(6, '0');
+                      toSerial = rangeMatch[2].padStart(6, '0');
+                    }
+                  }
+                  
+                  return {
+                    ...c,
+                    cartoonNumber: c.cartoonNumber || c.number || c.id || '',
+                    quantity: c.quantity || c.allocatedQuantity || 0,
+                    fromSerial: fromSerial,
+                    toSerial: toSerial,
+                    serialRange: c.serialRange || `${fromSerial} - ${toSerial}`
+                  };
+                });
+              }
+              
+              normalized = {
+                referenceNo: allocation.referenceNo || allocation.ourRefNo || allocation.id || referenceNo,
+                totalAllocated: allocation.totalAllocated || allocation.requestedQuantity || allocation.numberOfHolograms || allocation.utilizedQuantity || 0,
+                allocatedCartoons: allocatedCartoons
+              };
+            }
           }
           
           console.log('🔍 Raw allocation data:', matchingAllocations);
@@ -3095,13 +3320,27 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
             
             // Check if allocation has cartoonDetails array
             if (allocation.cartoonDetails && Array.isArray(allocation.cartoonDetails)) {
-              normalized.allocatedCartoons = allocation.cartoonDetails.map((c: any) => ({
-                cartoonNumber: c.cartoonNumber || c.number || c.id,
-                quantity: c.quantity || c.allocatedQuantity || 0,
-                fromSerial: c.fromSerial || c.serialFrom || '',
-                toSerial: c.toSerial || c.serialTo || '',
-                serialRange: c.serialRange || `${c.fromSerial} - ${c.toSerial}`
-              }));
+              normalized.allocatedCartoons = allocation.cartoonDetails.map((c: any) => {
+                let fromSerial = c.fromSerial || c.serialFrom || '';
+                let toSerial = c.toSerial || c.serialTo || '';
+                
+                // If serialRange exists but fromSerial/toSerial don't, try to parse it
+                if ((!fromSerial || !toSerial) && c.serialRange) {
+                  const rangeMatch = c.serialRange.match(/(\d+)\s*-\s*(\d+)/);
+                  if (rangeMatch) {
+                    fromSerial = rangeMatch[1].padStart(6, '0');
+                    toSerial = rangeMatch[2].padStart(6, '0');
+                  }
+                }
+                
+                return {
+                  cartoonNumber: c.cartoonNumber || c.number || c.id,
+                  quantity: c.quantity || c.allocatedQuantity || 0,
+                  fromSerial: fromSerial,
+                  toSerial: toSerial,
+                  serialRange: c.serialRange || `${fromSerial} - ${toSerial}`
+                };
+              });
             }
             // Check if allocation has multiple cartoon fields (t1, t2, etc.)
             else if (allocation.t1 || allocation.t2 || allocation.t3) {

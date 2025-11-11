@@ -457,15 +457,14 @@
                               [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
                           {{ getCurrentSelectedRoll(entry) }}
                         </span>
-                        @if (getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)) {
+                        @if (getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!); as range) {
                           <div class="allocated-range-info">
                             <div class="allocated-range-label">
                               <i class="bi bi-info-circle me-1"></i>
                               <span>Allocated Range:</span>
                             </div>
                             <div class="allocated-range-value">
-                              {{ getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)?.fromSerial }} - 
-                              {{ getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!)?.toSerial }}
+                              {{ range.fromSerial }} - {{ range.toSerial }}
                             </div>
                           </div>
                         }
