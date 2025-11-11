@@ -416,21 +416,21 @@ export class HologramoveriewComponent implements OnInit {
     return !!(available.isNew === true && available.newUntil && Date.now() < available.newUntil);
   }
 
-  // Overview statistics calculated from Serial Numbers Data only
+  // Overview statistics calculated from Rolls tab data (NOT Serial Numbers Data)
   getTotalHolograms(): number {
-    return this.serialRollsData.reduce((total, roll) => total + (roll.totalCount || 0), 0);
+    return this.rollsData.reduce((total, roll) => total + (roll.totalCount || 0), 0);
   }
 
   getTotalAvailable(): number {
-    return this.serialRollsData.reduce((total, roll) => total + roll.availableCount, 0);
+    return this.rollsData.reduce((total, roll) => total + roll.availableCount, 0);
   }
 
   getTotalUsedInProduction(): number {
-    return this.serialRollsData.reduce((total, roll) => total + roll.usedCount, 0);
+    return this.rollsData.reduce((total, roll) => total + roll.usedCount, 0);
   }
 
   getTotalDamagedWastage(): number {
-    return this.serialRollsData.reduce((total, roll) => total + roll.damagedCount, 0);
+    return this.rollsData.reduce((total, roll) => total + roll.damagedCount, 0);
   }
 
   // Helper method to calculate percentage safely
@@ -439,8 +439,8 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   getAvailableByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
-    return this.serialRollsData
-      .filter(roll => roll.hologramType === type)
+    return this.rollsData
+      .filter(roll => roll.type === type)
       .reduce((total, roll) => total + roll.availableCount, 0);
   }
 
