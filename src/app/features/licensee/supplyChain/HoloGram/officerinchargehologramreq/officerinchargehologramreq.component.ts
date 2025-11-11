@@ -25,6 +25,7 @@ interface HologramRequest {
   approvedQuantity?: number;
   approvalDate?: string;
   rejectionReason?: string;
+  allocations?: HologramAllocation[]; // Allocation details saved when approved
 }
 
 interface FilterOptions {
@@ -50,6 +51,7 @@ interface HologramInventory {
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
   nextAvailableSerial?: string;
+  actualAvailableRange?: { fromSerial: string; toSerial: string; count: number }; // Actual available range excluding IN_PROGRESS
 }
 
 interface HologramAllocation {
@@ -150,8 +152,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Load actual submitted requests from localStorage
     const submittedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    
+
     console.log('Found hologramRequests:', submittedRequests);
+    
+    // Ensure allocation data is preserved when loading requests
+    submittedRequests.forEach((req: any) => {
+      if (req.allocations) {
+        console.log(`Request ${req.refNumber} has ${req.allocations.length} allocations`);
+      }
+    });
     console.log('Found hologramApplications:', hologramApplications);
     
     // Convert submitted requests to officer format
@@ -179,7 +188,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         officerComments: request.officerComments,
         approvedQuantity: request.approvedQuantity,
         approvalDate: request.approvalDate,
-        rejectionReason: request.rejectionReason
+        rejectionReason: request.rejectionReason,
+        allocations: request.allocations || undefined // Preserve allocation data if available
       };
     });
 
@@ -212,7 +222,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         officerComments: app.officerComments,
         approvedQuantity: app.approvedQuantity || totalHolograms,
         approvalDate: app.approvalDate,
-        rejectionReason: app.rejectionReason
+        rejectionReason: app.rejectionReason,
+        allocations: app.allocations || undefined // Preserve allocation data if available
       };
     });
 
@@ -390,9 +401,33 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   viewRequestDetails(request: HologramRequest) {
+    // Load allocation data if available
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const requestData = hologramRequests.find((req: any) => req.refNumber === request.referenceNo);
+    
+    if (requestData && requestData.allocations) {
+      request.allocations = requestData.allocations;
+    } else {
+      // Also check hologramApplications
+      const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      const appData = hologramApplications.find((app: any) => app.refNo === request.referenceNo);
+      if (appData && appData.allocations) {
+        request.allocations = appData.allocations;
+      }
+    }
+    
     this.selectedRequest = request;
-    // In real app, open modal or navigate to details page
     console.log('Viewing request details:', request);
+    console.log('Allocation details:', request.allocations);
+  }
+
+  getTotalAllocatedQuantityFromAllocations(allocations?: HologramAllocation[]): number {
+    if (!allocations || allocations.length === 0) return 0;
+    return allocations.reduce((sum, allocation) => sum + allocation.quantity, 0);
+  }
+
+  closeRequestDetailsModal(): void {
+    this.selectedRequest = null;
   }
 
   approveRequest(request: HologramRequest) {
@@ -648,23 +683,31 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     
     // Normalize the data structure to ensure consistent property names
     const normalizedInventory = uniqueInventory.map(item => {
-      const normalized = {
+      const cartoonNumber = item.cartoonNumber || item.rollNumber || 'UNKNOWN';
+      const hologramType = item.type || item.hologramType || 'LOCAL';
+      
+      // Calculate actual available range (excluding IN_PROGRESS issued holograms)
+      const actualAvailableRange = this.calculateActualAvailableRange(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+      
+      const normalized: HologramInventory = {
         id: item.id,
-        cartoonNumber: item.cartoonNumber || item.rollNumber || 'UNKNOWN',
-        type: item.type || item.hologramType || 'LOCAL',
+        cartoonNumber: cartoonNumber,
+        type: hologramType as 'LOCAL' | 'EXPORT' | 'DEFENCE',
         fromSerial: item.fromSerial,
         toSerial: item.toSerial,
         totalCount: item.totalCount,
-        availableCount: item.availableCount,
+        availableCount: actualAvailableRange ? actualAvailableRange.count : item.availableCount,
         usedCount: item.usedCount || 0,
         damagedCount: item.damagedCount || 0,
         status: item.status,
-        receivedDate: item.receivedDate
+        receivedDate: item.receivedDate,
+        actualAvailableRange: actualAvailableRange || undefined
       };
       
       console.log(`Normalized ${normalized.cartoonNumber}:`, {
         type: normalized.type,
         available: normalized.availableCount,
+        actualRange: actualAvailableRange ? `${actualAvailableRange.fromSerial}-${actualAvailableRange.toSerial}` : 'N/A',
         status: normalized.status
       });
       
@@ -702,6 +745,108 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('=== END LOADING HOLOGRAM INVENTORY ===');
   }
 
+  /**
+   * Calculate actual available range for a cartoon, excluding IN_PROGRESS issued holograms
+   * Returns the actual available range (e.g., 000700-000999) and count
+   */
+  calculateActualAvailableRange(
+    cartoonNumber: string,
+    hologramType: string,
+    fromSerial: string,
+    toSerial: string
+  ): { fromSerial: string; toSerial: string; count: number } | null {
+    if (!fromSerial || !toSerial) return null;
+
+    // Extract serial numbers
+    const prefix = fromSerial.replace(/\d+$/, '');
+    const rollStart = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
+    const rollEnd = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+
+    // Get IN_PROGRESS issued holograms for this cartoon
+    const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+    const inProgressIssued = issuedData.filter((issued: any) => 
+      issued.status === 'IN_PROGRESS' &&
+      issued.cartoonNumber === cartoonNumber &&
+      (issued.hologramType === hologramType || !issued.hologramType)
+    );
+
+    // Create a Set of all IN_PROGRESS serial numbers
+    const inProgressSerials = new Set<number>();
+    inProgressIssued.forEach((issued: any) => {
+      if (issued.fromSerial && issued.toSerial) {
+        const start = parseInt(issued.fromSerial.match(/\d+$/)?.[0] || '0');
+        const end = parseInt(issued.toSerial.match(/\d+$/)?.[0] || '0');
+        for (let i = start; i <= end; i++) {
+          inProgressSerials.add(i);
+        }
+      }
+    });
+
+    // Get USED and DAMAGED ranges from usage history
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    const serialRoll = serialData.find((roll: any) => 
+      roll.rollNumber === cartoonNumber && 
+      roll.hologramType === hologramType
+    );
+
+    const usedSerials = new Set<number>();
+    if (serialRoll && serialRoll.usageHistory) {
+      serialRoll.usageHistory.forEach((historyEntry: any) => {
+        if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) return;
+        
+        let fromSerial = '';
+        let toSerial = '';
+        
+        if (historyEntry.type === 'ISSUED') {
+          fromSerial = historyEntry.issuedFromSerial || historyEntry.fromSerial || '';
+          toSerial = historyEntry.issuedToSerial || historyEntry.toSerial || '';
+        } else if (historyEntry.type === 'WASTAGE' || historyEntry.type === 'DAMAGED') {
+          fromSerial = historyEntry.wastageFromSerial || historyEntry.fromSerial || '';
+          toSerial = historyEntry.wastageToSerial || historyEntry.toSerial || '';
+        }
+
+        if (fromSerial && toSerial) {
+          const start = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
+          const end = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+          for (let i = start; i <= end; i++) {
+            usedSerials.add(i);
+          }
+        }
+      });
+    }
+
+    // Find the first available range (gap after used/damaged/in-progress)
+    let availableStart: number | null = null;
+    let availableEnd: number | null = null;
+
+    for (let i = rollStart; i <= rollEnd; i++) {
+      const isUsed = usedSerials.has(i) || inProgressSerials.has(i);
+      
+      if (!isUsed) {
+        if (availableStart === null) {
+          availableStart = i; // Start of available range
+        }
+        availableEnd = i; // Update end as we continue
+      } else {
+        // If we found a used serial and we have an available range, that's our range
+        if (availableStart !== null && availableEnd !== null) {
+          break;
+        }
+      }
+    }
+
+    // If we found an available range
+    if (availableStart !== null && availableEnd !== null) {
+      return {
+        fromSerial: prefix + String(availableStart).padStart(6, '0'),
+        toSerial: prefix + String(availableEnd).padStart(6, '0'),
+        count: availableEnd - availableStart + 1
+      };
+    }
+
+    return null;
+  }
+
   showHologramAllocationModal(request: HologramRequest): void {
     console.log('=== SHOW HOLOGRAM ALLOCATION MODAL ===');
     console.log('Request:', request);
@@ -729,10 +874,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Requested Type:', hologramType);
     console.log('Total Inventory Items:', this.hologramInventory.length);
     
-    // Filter available inventory by type and status
+    // Filter available inventory by type and status (IN_USE is also allowed if it has available count)
     const availableInventory = this.hologramInventory.filter(item => {
       const typeMatch = item.type === hologramType;
-      const statusMatch = item.status === 'AVAILABLE';
+      const statusMatch = item.status === 'AVAILABLE' || item.status === 'IN_USE'; // Allow IN_USE if it has available
       const hasAvailable = item.availableCount > 0;
       
       console.log(`Checking ${item.cartoonNumber}:`, {
@@ -741,6 +886,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         status: item.status,
         statusMatch,
         availableCount: item.availableCount,
+        actualRange: item.actualAvailableRange ? `${item.actualAvailableRange.fromSerial}-${item.actualAvailableRange.toSerial}` : 'N/A',
         hasAvailable,
         passes: typeMatch && statusMatch && hasAvailable
       });
@@ -765,16 +911,35 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     }
 
     // FIFO allocation - use oldest cartoons first
+    // Allow multiple requests from the same cartoon if there's enough available
     const allocations: HologramAllocation[] = [];
     let remainingQuantity = requestedQuantity;
+    
+    // Track how much has been allocated from each cartoon in this allocation
+    const cartoonAllocations = new Map<string, number>();
 
     for (const item of availableInventory) {
       if (remainingQuantity <= 0) break;
 
-      const quantityFromThisCartoon = Math.min(remainingQuantity, item.availableCount);
+      // Get how much has already been allocated from this cartoon in this allocation
+      const alreadyAllocated = cartoonAllocations.get(item.cartoonNumber) || 0;
+      const availableFromThisCartoon = item.availableCount - alreadyAllocated;
+
+      if (availableFromThisCartoon <= 0) continue; // Skip if no more available from this cartoon
+
+      const quantityFromThisCartoon = Math.min(remainingQuantity, availableFromThisCartoon);
       
-      // Calculate serial range for this allocation
-      const startSerial = this.getNextAvailableSerial(item);
+      // Use actual available range if available, otherwise calculate
+      let startSerial: string;
+      if (item.actualAvailableRange) {
+        // Start from the actual available range, offset by already allocated
+        const rangeStart = parseInt(item.actualAvailableRange.fromSerial.match(/\d+$/)?.[0] || '0');
+        const prefix = item.actualAvailableRange.fromSerial.replace(/\d+$/, '');
+        startSerial = prefix + String(rangeStart + alreadyAllocated).padStart(6, '0');
+      } else {
+        startSerial = this.getNextAvailableSerial(item, alreadyAllocated);
+      }
+      
       const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
 
       allocations.push({
@@ -782,9 +947,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         fromSerial: startSerial,
         toSerial: endSerial,
         quantity: quantityFromThisCartoon,
-        remainingInCartoon: item.availableCount - quantityFromThisCartoon
+        remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromThisCartoon
       });
 
+      // Track allocation from this cartoon
+      cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + quantityFromThisCartoon);
       remainingQuantity -= quantityFromThisCartoon;
     }
 
@@ -799,15 +966,28 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     };
   }
 
-  getNextAvailableSerial(item: HologramInventory): string {
+  getNextAvailableSerial(item: HologramInventory, offset: number = 0): string {
+    // If we have actual available range, use it
+    if (item.actualAvailableRange) {
+      const rangeStart = parseInt(item.actualAvailableRange.fromSerial.match(/\d+$/)?.[0] || '0');
+      const prefix = item.actualAvailableRange.fromSerial.replace(/\d+$/, '');
+      return prefix + String(rangeStart + offset).padStart(6, '0');
+    }
+
     if (item.nextAvailableSerial) {
+      // If offset is provided, calculate from nextAvailableSerial
+      if (offset > 0) {
+        const prefix = item.nextAvailableSerial.replace(/\d+$/, '');
+        const startNumber = parseInt(item.nextAvailableSerial.match(/\d+$/)?.[0] || '0');
+        return prefix + String(startNumber + offset).padStart(6, '0');
+      }
       return item.nextAvailableSerial;
     }
 
     // Calculate next available serial based on used count
     const serialPrefix = item.fromSerial.replace(/\d+$/, '');
     const startNumber = parseInt(item.fromSerial.match(/\d+$/)?.[0] || '0');
-    const nextNumber = startNumber + item.usedCount;
+    const nextNumber = startNumber + item.usedCount + offset;
     
     return serialPrefix + nextNumber.toString().padStart(6, '0');
   }
@@ -849,8 +1029,18 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation';
     this.selectedRequest.approvedQuantity = this.approvedQuantity || this.selectedRequest.requestedQuantity;
     this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
+    
+    // Save allocation details for future reference
+    this.selectedRequest.allocations = this.allocationResult.allocations.map(allocation => ({
+      cartoonNumber: allocation.cartoonNumber,
+      fromSerial: allocation.fromSerial,
+      toSerial: allocation.toSerial,
+      quantity: allocation.quantity,
+      remainingInCartoon: allocation.remainingInCartoon
+    }));
 
     console.log('Request status set to APPROVED');
+    console.log('Allocation details saved:', this.selectedRequest.allocations);
 
     // Update localStorage
     this.updateRequestInStorage();
@@ -1135,6 +1325,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       hologramRequests[requestIndex].officerComments = this.selectedRequest.officerComments;
       hologramRequests[requestIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
       hologramRequests[requestIndex].approvalDate = this.selectedRequest.approvalDate;
+      // Save allocation details
+      if (this.selectedRequest.allocations) {
+        hologramRequests[requestIndex].allocations = this.selectedRequest.allocations;
+      }
       localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
       console.log('Updated hologramRequests in localStorage:', hologramRequests[requestIndex]);
     }
@@ -1150,6 +1344,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       hologramApplications[appIndex].officerComments = this.selectedRequest.officerComments;
       hologramApplications[appIndex].approvedQuantity = this.selectedRequest.approvedQuantity;
       hologramApplications[appIndex].approvalDate = this.selectedRequest.approvalDate;
+      // Save allocation details
+      if (this.selectedRequest.allocations) {
+        hologramApplications[appIndex].allocations = this.selectedRequest.allocations;
+      }
       localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
       console.log('Updated hologramApplications in localStorage:', hologramApplications[appIndex]);
     }

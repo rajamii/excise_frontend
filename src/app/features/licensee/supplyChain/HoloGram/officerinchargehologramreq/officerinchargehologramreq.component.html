@@ -264,8 +264,9 @@
                                 </td>
                                 <td class="actions">
                                     <div class="action-buttons">
-                                        <button class="btn-action view" (click)="viewRequestDetails(request)"
-                                            title="View Details">
+                                        <!-- Show view details button only for APPROVED requests (has allocation data) -->
+                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view" (click)="viewRequestDetails(request)"
+                                            title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
                                         <!-- Show approve/reject buttons only for PENDING status -->
@@ -386,185 +387,68 @@
     </div>
 </div>
 
-<!-- Request Details Modal -->
-<div class="modal fade" id="requestDetailsModal" tabindex="-1" *ngIf="selectedRequest">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
+<!-- Allocation Details Modal (Only for Approved Requests) -->
+<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
+    <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="z-index: 1052;">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title">
-                    <i class="bi bi-file-earmark-text me-2"></i>
-                    Hologram Request Details
+                    <i class="bi bi-list-check me-2"></i>
+                    Hologram Allocation Details - {{ selectedRequest.referenceNo }}
                 </h5>
-                <button type="button" class="btn-close btn-close-white" (click)="selectedRequest = null"></button>
+                <button type="button" class="btn-close btn-close-white" (click)="closeRequestDetailsModal()"></button>
             </div>
             <div class="modal-body">
-                <div class="request-details-container">
-                    <div class="request-header">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="info-card ref-info">
-                                    <div class="info-icon">
-                                        <i class="bi bi-hash"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Reference Number</div>
-                                        <div class="info-value">{{ selectedRequest.referenceNo }}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-card status-info">
-                                    <div class="info-icon">
-                                        <i class="bi bi-flag"></i>
-                                    </div>
-                                    <div class="info-content">
-                                        <div class="info-label">Current Status</div>
-                                        <div class="info-value">
-                                            <span class="status-badge"
-                                                [class.bg-warning-subtle]="selectedRequest.status === 'PENDING'"
-                                                [class.bg-success-subtle]="selectedRequest.status === 'APPROVED'"
-                                                [class.bg-danger-subtle]="selectedRequest.status === 'REJECTED'">
-                                                {{ selectedRequest.status }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Allocation Details Table -->
+                <div *ngIf="selectedRequest.allocations && selectedRequest.allocations.length > 0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Cartoon Number</th>
+                                    <th style="width: 45%;">Serial Range</th>
+                                    <th style="width: 15%;" class="text-end">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let allocation of selectedRequest.allocations; let i = index">
+                                    <td>{{ i + 1 }}</td>
+                                    <td>
+                                        <span class="fw-bold text-primary">{{ allocation.cartoonNumber }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="font-monospace small">
+                                            {{ allocation.fromSerial }} - {{ allocation.toSerial }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold text-success">{{ allocation.quantity | number }}</span>
+                                        <span class="text-muted small ms-1">units</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Total Allocated:</td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ getTotalAllocatedQuantityFromAllocations(selectedRequest.allocations) | number }}
+                                        <span class="text-muted small ms-1">units</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
-
-                    <div class="request-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="detail-group">
-                                    <h6 class="group-title">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        Request Information
-                                    </h6>
-                                    <div class="detail-items">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Submission Date:</span>
-                                            <span class="detail-value">{{ selectedRequest.submissionDate |
-                                                date:'dd/MM/yyyy HH:mm' }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Submitted By:</span>
-                                            <span class="detail-value">{{ selectedRequest.submittedBy }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Request Type:</span>
-                                            <span class="detail-value">{{ selectedRequest.requestType.replace('_', ' ')
-                                                }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Urgency Level:</span>
-                                            <span class="detail-value">{{ selectedRequest.urgencyLevel }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-group">
-                                    <h6 class="group-title">
-                                        <i class="bi bi-box me-2"></i>
-                                        Product Details
-                                    </h6>
-                                    <div class="detail-items">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Brand Name:</span>
-                                            <span class="detail-value">{{ selectedRequest.brandDetails.brandName
-                                                }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Liquor Type:</span>
-                                            <span class="detail-value">{{ selectedRequest.brandDetails.liquorType
-                                                }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Alcohol %:</span>
-                                            <span class="detail-value">{{ selectedRequest.brandDetails.alcoholPercent
-                                                }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Bottle Size:</span>
-                                            <span class="detail-value">{{ selectedRequest.brandDetails.sizeMl
-                                                }}ml</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Hologram Type:</span>
-                                            <span class="detail-value">{{ selectedRequest.hologramType }}</span>
-                                        </div>
-                                        <div class="detail-item">
-                                            <span class="detail-label">Requested Quantity:</span>
-                                            <span class="detail-value">{{ selectedRequest.requestedQuantity | number
-                                                }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mt-2">
-                            <div class="col-12">
-                                <div class="detail-group">
-                                    <h6 class="group-title">
-                                        <i class="bi bi-chat-text me-2"></i>
-                                        Justification
-                                    </h6>
-                                    <div class="remarks-content">
-                                        <p class="remarks-text">{{ selectedRequest.justification }}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mt-2" *ngIf="selectedRequest.status !== 'PENDING'">
-                            <div class="col-12">
-                                <div class="detail-group">
-                                    <h6 class="group-title">
-                                        <i class="bi bi-person-check me-2"></i>
-                                        Officer Decision
-                                    </h6>
-                                    <div class="detail-items">
-                                        <div class="detail-item">
-                                            <span class="detail-label">Decision Date:</span>
-                                            <span class="detail-value">{{ selectedRequest.approvalDate |
-                                                date:'dd/MM/yyyy' }}</span>
-                                        </div>
-                                        <div class="detail-item" *ngIf="selectedRequest.officerComments">
-                                            <span class="detail-label">Comments:</span>
-                                            <span class="detail-value">{{ selectedRequest.officerComments }}</span>
-                                        </div>
-                                        <div class="detail-item" *ngIf="selectedRequest.approvedQuantity">
-                                            <span class="detail-label">Approved Quantity:</span>
-                                            <span class="detail-value">{{ selectedRequest.approvedQuantity | number
-                                                }}</span>
-                                        </div>
-                                        <div class="detail-item" *ngIf="selectedRequest.rejectionReason">
-                                            <span class="detail-label">Rejection Reason:</span>
-                                            <span class="detail-value">{{ selectedRequest.rejectionReason }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </div>
+                <div *ngIf="!selectedRequest.allocations || selectedRequest.allocations.length === 0" class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-3">No allocation details available for this request.</p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" (click)="selectedRequest = null">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeRequestDetailsModal()">
                     <i class="bi bi-x-lg me-1"></i>
                     Close
-                </button>
-                <button *ngIf="selectedRequest.status === 'PENDING'" type="button" class="btn btn-success"
-                    (click)="approveRequest(selectedRequest)">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Approve Request
-                </button>
-                <button *ngIf="selectedRequest.status === 'PENDING'" type="button" class="btn btn-danger"
-                    (click)="rejectRequest(selectedRequest)">
-                    <i class="bi bi-x-circle me-1"></i>
-                    Reject Request
                 </button>
             </div>
         </div>
