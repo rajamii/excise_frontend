@@ -1091,83 +1091,123 @@ export class HologramoveriewComponent implements OnInit {
     if (!this.selectedRollForUsage) return null;
 
     const roll = this.selectedRollForUsage;
-    
-    // Load daily register entries to get actual usage data
-    const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
-    const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
-    const allEntries = [...dailyEntries, ...approvedEntries];
-    
-    // Filter entries for this specific roll
-    const relevantEntries = allEntries.filter((entry: any) => 
-      entry.cartoonNumber === roll.rollNumber && 
-      entry.hologramType === roll.hologramType &&
-      (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
-    );
 
-    // Process issued entries
+    // Primary source: usage history stored in hologramOverviewSerialData for this roll
+    const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+    const serialRoll = serialData.find((r: any) => r.rollNumber === roll.rollNumber && r.hologramType === roll.hologramType);
+
     const issuedDetails: any[] = [];
     const wastageDetails: any[] = [];
-    
-    relevantEntries.forEach((entry: any) => {
-      // Process issued entries
-      if (entry.issuedEntries && entry.issuedEntries.length > 0) {
-        entry.issuedEntries.forEach((issued: any) => {
-          if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
-            issuedDetails.push({
-              date: entry.date,
-              fromSerial: issued.fromSerial,
-              toSerial: issued.toSerial,
-              quantity: issued.quantity,
-              brandName: entry.brandDetails?.brandName || 'N/A',
-              referenceNo: entry.referenceNo || 'N/A',
-              officerName: entry.officerName || 'System'
-            });
-          }
-        });
-      } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
-        issuedDetails.push({
-          date: entry.date,
-          fromSerial: entry.issuedFromSerial,
-          toSerial: entry.issuedToSerial,
-          quantity: entry.issuedQuantity,
-          brandName: entry.brandDetails?.brandName || 'N/A',
-          referenceNo: entry.referenceNo || 'N/A',
-          officerName: entry.officerName || 'System'
-        });
-      }
 
-      // Process wastage entries
-      if (entry.wastageEntries && entry.wastageEntries.length > 0) {
-        entry.wastageEntries.forEach((wastage: any) => {
-          if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
-            wastageDetails.push({
-              date: entry.date,
-              fromSerial: wastage.fromSerial,
-              toSerial: wastage.toSerial,
-              quantity: wastage.quantity,
-              reason: wastage.damageReason || entry.damageReason || 'Not specified',
-              officerName: entry.officerName || 'System'
+    if (serialRoll && Array.isArray(serialRoll.usageHistory)) {
+      serialRoll.usageHistory.forEach((u: any) => {
+        // Respect cartoonNumber routing; if present and doesn't match, skip
+        if (u.cartoonNumber && u.cartoonNumber !== roll.rollNumber) return;
+
+        if (u.type === 'ISSUED') {
+          const fromSerial = u.issuedFromSerial || u.fromSerial || '';
+          const toSerial = u.issuedToSerial || u.toSerial || '';
+          const quantity = u.issuedQuantity || u.quantity || 0;
+          if (fromSerial && toSerial && quantity > 0) {
+            issuedDetails.push({
+              date: u.date || u.approvedAt,
+              fromSerial,
+              toSerial,
+              quantity,
+              brandName: u.brandName || 'N/A',
+              referenceNo: u.referenceNo || 'N/A',
+              officerName: u.approvedBy || 'Officer In Charge'
             });
           }
-        });
-      } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
-        wastageDetails.push({
-          date: entry.date,
-          fromSerial: entry.wastageFromSerial,
-          toSerial: entry.wastageToSerial,
-          quantity: entry.wastageQuantity,
-          reason: entry.damageReason || 'Not specified',
-          officerName: entry.officerName || 'System'
-        });
-      }
-    });
+        } else if (u.type === 'WASTAGE' || u.type === 'DAMAGED') {
+          const fromSerial = u.wastageFromSerial || u.fromSerial || '';
+          const toSerial = u.wastageToSerial || u.toSerial || '';
+          const quantity = u.wastageQuantity || u.quantity || 0;
+          if (fromSerial && toSerial && quantity > 0) {
+            wastageDetails.push({
+              date: u.date || u.approvedAt,
+              fromSerial,
+              toSerial,
+              quantity,
+              reason: u.damageReason || 'Not specified',
+              officerName: u.approvedBy || 'Officer In Charge'
+            });
+          }
+        }
+      });
+    } else {
+      // Fallback: derive from daily register entries (backward compatibility)
+      const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+      const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+      const allEntries = [...dailyEntries, ...approvedEntries];
+      const relevantEntries = allEntries.filter((entry: any) => 
+        entry.cartoonNumber === roll.rollNumber && 
+        entry.hologramType === roll.hologramType &&
+        (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
+      );
+
+      relevantEntries.forEach((entry: any) => {
+        if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+          entry.issuedEntries.forEach((issued: any) => {
+            if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
+              issuedDetails.push({
+                date: entry.date,
+                fromSerial: issued.fromSerial,
+                toSerial: issued.toSerial,
+                quantity: issued.quantity,
+                brandName: entry.brandDetails?.brandName || 'N/A',
+                referenceNo: entry.referenceNo || 'N/A',
+                officerName: entry.officerName || 'System'
+              });
+            }
+          });
+        } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity > 0) {
+          issuedDetails.push({
+            date: entry.date,
+            fromSerial: entry.issuedFromSerial,
+            toSerial: entry.issuedToSerial,
+            quantity: entry.issuedQuantity,
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            referenceNo: entry.referenceNo || 'N/A',
+            officerName: entry.officerName || 'System'
+          });
+        }
+
+        if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+          entry.wastageEntries.forEach((wastage: any) => {
+            if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
+              wastageDetails.push({
+                date: entry.date,
+                fromSerial: wastage.fromSerial,
+                toSerial: wastage.toSerial,
+                quantity: wastage.quantity,
+                reason: wastage.damageReason || entry.damageReason || 'Not specified',
+                officerName: entry.officerName || 'System'
+              });
+            }
+          });
+        } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
+          wastageDetails.push({
+            date: entry.date,
+            fromSerial: entry.wastageFromSerial,
+            toSerial: entry.wastageToSerial,
+            quantity: entry.wastageQuantity,
+            reason: entry.damageReason || 'Not specified',
+            officerName: entry.officerName || 'System'
+          });
+        }
+      });
+    }
+
+    const issuedSorted = issuedDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const wastageSorted = wastageDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       roll: roll,
-      issuedDetails: issuedDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-      wastageDetails: wastageDetails.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-      totalIssued: issuedDetails.reduce((sum, item) => sum + item.quantity, 0),
-      totalWastage: wastageDetails.reduce((sum, item) => sum + item.quantity, 0)
+      issuedDetails: issuedSorted,
+      wastageDetails: wastageSorted,
+      totalIssued: issuedSorted.reduce((sum, item) => sum + item.quantity, 0),
+      totalWastage: wastageSorted.reduce((sum, item) => sum + item.quantity, 0)
     };
   }
 
