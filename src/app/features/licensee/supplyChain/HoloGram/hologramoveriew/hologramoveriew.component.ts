@@ -1341,17 +1341,18 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         
         // Only process entries that belong to this cartoon number
         // The cartoonNumber field was added in our fix to ensure correct routing
-        // If cartoonNumber is present, it must match; if not present, validate by serial number range
+        // If cartoonNumber is present and doesn't match, skip it
         if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) {
           console.log('Skipping entry - belongs to different cartoon:', historyEntry.cartoonNumber, 'expected:', cartoonNumber);
           return; // Skip entries that don't belong to this cartoon number
         }
 
-        // Validate that the serial number belongs to this cartoon number's range
+        // If cartoonNumber matches (or is not present for backward compatibility), trust it
+        // Only validate by serial number range if cartoonNumber is not present (old data)
         let fromSerial = '';
         let toSerial = '';
         let quantity = 0;
-        let isValid = false;
+        let isValid = true; // Default to valid if cartoonNumber matches
 
         if (historyEntry.type === 'ISSUED') {
           // Handle issued ranges
@@ -1359,26 +1360,21 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           toSerial = historyEntry.issuedToSerial || historyEntry.toSerial || '';
           quantity = historyEntry.issuedQuantity || historyEntry.quantity || 0;
 
-          if (fromSerial && toSerial && quantity > 0) {
-            // Validate serial numbers belong to this cartoon number's range
+          if (!fromSerial || !toSerial || quantity <= 0) {
+            isValid = false;
+          } else if (!historyEntry.cartoonNumber) {
+            // Only validate by serial number range if cartoonNumber is not present (old data)
             const fromMatch = fromSerial.match(/(\d+)$/);
             const toMatch = toSerial.match(/(\d+)$/);
             
-            if (fromMatch && toMatch) {
+            if (fromMatch && toMatch && rollStart > 0 && rollEnd > 0) {
               const fromNum = parseInt(fromMatch[1], 10);
               const toNum = parseInt(toMatch[1], 10);
               
-              // If we have a roll range, validate that the range overlaps with the cartoon number's range
-              // Accept if: range starts within roll, range ends within roll, or range completely contains roll
-              if (rollStart > 0 && rollEnd > 0) {
-                isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
-                         (toNum >= rollStart && toNum <= rollEnd) ||
-                         (fromNum <= rollStart && toNum >= rollEnd);
-              } else {
-                isValid = true; // No range to validate against, accept it
-              }
-            } else {
-              isValid = true; // Can't parse, accept it
+              // Validate that the range overlaps with the cartoon number's range
+              isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
+                       (toNum >= rollStart && toNum <= rollEnd) ||
+                       (fromNum <= rollStart && toNum >= rollEnd);
             }
           }
         } else if (historyEntry.type === 'WASTAGE' || historyEntry.type === 'DAMAGED') {
@@ -1387,28 +1383,26 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           toSerial = historyEntry.wastageToSerial || historyEntry.toSerial || '';
           quantity = historyEntry.wastageQuantity || historyEntry.quantity || 0;
 
-          if (fromSerial && toSerial && quantity > 0) {
-            // Validate serial numbers belong to this cartoon number's range
+          if (!fromSerial || !toSerial || quantity <= 0) {
+            isValid = false;
+          } else if (!historyEntry.cartoonNumber) {
+            // Only validate by serial number range if cartoonNumber is not present (old data)
             const fromMatch = fromSerial.match(/(\d+)$/);
             const toMatch = toSerial.match(/(\d+)$/);
             
-            if (fromMatch && toMatch) {
+            if (fromMatch && toMatch && rollStart > 0 && rollEnd > 0) {
               const fromNum = parseInt(fromMatch[1], 10);
               const toNum = parseInt(toMatch[1], 10);
               
-              // If we have a roll range, validate that the range overlaps with the cartoon number's range
-              // Accept if: range starts within roll, range ends within roll, or range completely contains roll
-              if (rollStart > 0 && rollEnd > 0) {
-                isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
-                         (toNum >= rollStart && toNum <= rollEnd) ||
-                         (fromNum <= rollStart && toNum >= rollEnd);
-              } else {
-                isValid = true; // No range to validate against, accept it
-              }
-            } else {
-              isValid = true; // Can't parse, accept it
+              // Validate that the range overlaps with the cartoon number's range
+              isValid = (fromNum >= rollStart && fromNum <= rollEnd) || 
+                       (toNum >= rollStart && toNum <= rollEnd) ||
+                       (fromNum <= rollStart && toNum >= rollEnd);
             }
           }
+        } else {
+          // Unknown type
+          isValid = false;
         }
 
         if (isValid && fromSerial && toSerial && quantity > 0) {
