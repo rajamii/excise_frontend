@@ -48,7 +48,7 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalHolograms() | number }}</h3>
               <p class="card-label">Total Holograms</p>
-              <small class="card-change neutral">Sum of Available Column</small>
+              <small class="card-change neutral">Sum of Total Count from Serial Numbers Data</small>
             </div>
           </div>
         </div>
@@ -61,7 +61,7 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalAvailable() | number }}</h3>
               <p class="card-label">Available</p>
-              <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>
@@ -74,7 +74,7 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalUsedInProduction() | number }}</h3>
               <p class="card-label">Used in Production</p>
-              <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
               <p class="card-label">Damaged/Wastage</p>
-              <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) | number:'1.1-1' }}% of total</small>
+              <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>

@@ -326,8 +326,27 @@ export class HologramoveriewComponent implements OnInit {
     // Load data from localStorage (saved by arrival process)
     const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
 
+    // Recalculate availableCount for each roll to ensure accuracy
+    // Formula: availableCount = totalCount - usedCount - damagedCount
+    const recalculatedSerialData = savedSerialData.map((roll: any) => {
+      const totalCount = roll.totalCount || 0;
+      const usedCount = roll.usedCount || 0;
+      const damagedCount = roll.damagedCount || 0;
+      
+      // Recalculate availableCount to ensure it's always correct
+      const calculatedAvailableCount = Math.max(0, totalCount - usedCount - damagedCount);
+      
+      // Update the roll with recalculated availableCount
+      return {
+        ...roll,
+        availableCount: calculatedAvailableCount,
+        // Update status based on recalculated availableCount
+        status: calculatedAvailableCount === 0 ? 'COMPLETED' : (calculatedAvailableCount < totalCount ? 'IN_USE' : 'AVAILABLE')
+      };
+    });
+
     // Sort saved data by received date (newest first) and then by ID (newest first)
-    const sortedSavedSerialData = savedSerialData.sort((a: any, b: any) => {
+    const sortedSavedSerialData = recalculatedSerialData.sort((a: any, b: any) => {
       // First sort by date
       const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
       const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
@@ -340,8 +359,11 @@ export class HologramoveriewComponent implements OnInit {
       return (b.id || 0) - (a.id || 0);
     });
 
-    // Use only saved data (no sample data for clean testing)
+    // Use recalculated data
     this.serialRollsData = sortedSavedSerialData;
+    
+    // Optionally save the recalculated data back to localStorage to fix any inconsistencies
+    localStorage.setItem('hologramOverviewSerialData', JSON.stringify(sortedSavedSerialData));
   }
 
   getTypeClass(type: string): string {
@@ -382,7 +404,7 @@ export class HologramoveriewComponent implements OnInit {
 
   // Overview statistics calculated from Serial Numbers Data only
   getTotalHolograms(): number {
-    return this.serialRollsData.reduce((total, roll) => total + roll.availableCount, 0);
+    return this.serialRollsData.reduce((total, roll) => total + (roll.totalCount || 0), 0);
   }
 
   getTotalAvailable(): number {

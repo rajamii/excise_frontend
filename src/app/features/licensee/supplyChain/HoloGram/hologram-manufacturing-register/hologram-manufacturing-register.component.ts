@@ -398,23 +398,36 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       });
       
       // IMPORTANT: When officer allocated, the entire amount was subtracted from available
-      // Now we need to ADD BACK the leftover quantity since it wasn't actually used
+      // Now we need to update counts based on what was actually used
       const leftoverQuantity = entry.leftOverQuantity || 0;
       
-      // Update counts
-      // Subtract what was actually used (issued + wastage)
-      // Add back what was returned (leftover)
-      roll.usedCount = (roll.usedCount || 0) + (entry.issuedQuantity || 0);
-      roll.damagedCount = (roll.damagedCount || 0) + (entry.wastageQuantity || 0);
+      // Calculate total issued and wastage quantities from arrays if available, otherwise use single values
+      const totalIssuedQty = entry.issuedEntries && entry.issuedEntries.length > 0
+        ? entry.issuedEntries.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0)
+        : (entry.issuedQuantity || 0);
       
-      // Add back leftover to available (it was subtracted during allocation but not used)
-      roll.availableCount = (roll.availableCount || 0) + leftoverQuantity;
+      const totalWastageQty = entry.wastageEntries && entry.wastageEntries.length > 0
+        ? entry.wastageEntries.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0)
+        : (entry.wastageQuantity || 0);
+      
+      // Update counts - increment used and damaged
+      roll.usedCount = (roll.usedCount || 0) + totalIssuedQty;
+      roll.damagedCount = (roll.damagedCount || 0) + totalWastageQty;
+      
+      // Recalculate availableCount from total to ensure accuracy (same formula as Serial Numbers Data)
+      // This ensures consistency between Rolls tab and Serial Numbers Data tab
+      const totalCount = roll.totalCount || 0;
+      const totalUsed = (roll.usedCount || 0) + (roll.damagedCount || 0);
+      roll.availableCount = Math.max(0, totalCount - totalUsed);
       
       console.log(`After update:`, {
-        available: roll.availableCount,
+        totalCount: totalCount,
         used: roll.usedCount,
         damaged: roll.damagedCount,
-        note: `Added back leftover ${leftoverQuantity} to available`
+        available: roll.availableCount,
+        addedIssued: totalIssuedQty,
+        addedWastage: totalWastageQty,
+        calculated: `totalCount (${totalCount}) - usedCount (${roll.usedCount}) - damagedCount (${roll.damagedCount}) = ${roll.availableCount}`
       });
       
       // Update status based on available count
