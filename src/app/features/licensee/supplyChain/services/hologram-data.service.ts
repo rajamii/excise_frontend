@@ -47,12 +47,56 @@ export interface MonthlyTotals {
   wastageToSerial: string;
 }
 
+export interface MonthlyStatementSummary {
+  monthKey: string;
+  month: string;
+  year: string;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  openingStock: number;
+  freshArrival: number;
+  totals: MonthlyTotals;
+  closingBalance: number;
+  entries: HologramDailyEntry[];
+  arrivals: HologramArrivalRecord[];
+}
+
+export interface HologramArrivalRecord {
+  id: number | string;
+  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
+  totalCount: number;
+  receivedDate: string;
+  cartoonNumber?: string;
+  fromSerial?: string;
+  toSerial?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class HologramDataService {
   private dailyEntriesSubject = new BehaviorSubject<HologramDailyEntry[]>([]);
   public dailyEntries$ = this.dailyEntriesSubject.asObservable();
+
+  private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
+  private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
+
+  private readonly monthNumberMap: { [key: string]: string } = {
+    jan: '01', feb: '02', mar: '03', apr: '04',
+    may: '05', jun: '06', jul: '07', aug: '08',
+    sep: '09', oct: '10', nov: '11', dec: '12'
+  };
+
+  private readonly monthCodeMap: { [key: string]: string } = {
+    '01': 'jan', '02': 'feb', '03': 'mar', '04': 'apr',
+    '05': 'may', '06': 'jun', '07': 'jul', '08': 'aug',
+    '09': 'sep', '10': 'oct', '11': 'nov', '12': 'dec'
+  };
+
+  private readonly defaultInitialOpening: Record<'LOCAL' | 'EXPORT' | 'DEFENCE', number> = {
+    LOCAL: 0,
+    EXPORT: 0,
+    DEFENCE: 0
+  };
 
   constructor() {
     // Load initial data from localStorage if available
@@ -114,96 +158,79 @@ export class HologramDataService {
     year: string,
     hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
   ): MonthlyTotals {
-    const entries = this.getDailyEntries();
     const monthNumber = this.getMonthNumber(month);
-
-    const filteredEntries = entries.filter(entry =>
-      entry.hologramType === hologramType &&
-      entry.date.startsWith(`${year}-${monthNumber}`) &&
-      entry.isFixed // Only include saved entries
+    const monthKey = `${year}-${monthNumber}`;
+    const entries = this.getApprovedEntriesForType(hologramType).filter(
+      entry => this.getMonthKeyFromDate(entry.date) === monthKey
     );
+    return this.aggregateMonthlyTotals(entries);
+  }
 
-    let totalIssued = 0;
-    let totalUtilized = 0;
-    let totalWastage = 0;
-    let totalLeftOver = 0;
+  getMonthlyStatement(
+    month: string,
+    year: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): MonthlyStatementSummary {
+    const monthNumber = this.getMonthNumber(month);
+    const monthKey = `${year}-${monthNumber}`;
+    const { summaries, sortedKeys, initialOpening } = this.buildMonthlyStatementCache(hologramType);
 
-    let utilizationFromSerial = '';
-    let utilizationToSerial = '';
-    let wastageFromSerial = '';
-    let wastageToSerial = '';
-
-    if (filteredEntries.length > 0) {
-      // Collect all issued entries from all daily entries
-      const allIssuedEntries: HologramIssuedEntry[] = [];
-      const allWastageEntries: HologramWastageEntry[] = [];
-
-      filteredEntries.forEach(entry => {
-        // Handle new multiple entries structure
-        if (entry.issuedEntries && entry.issuedEntries.length > 0) {
-          allIssuedEntries.push(...entry.issuedEntries);
-        } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity) {
-          // Handle legacy single entry
-          allIssuedEntries.push({
-            id: `${entry.id}-legacy-issued`,
-            fromSerial: entry.issuedFromSerial,
-            toSerial: entry.issuedToSerial,
-            quantity: entry.issuedQuantity
-          });
-        }
-
-        if (entry.wastageEntries && entry.wastageEntries.length > 0) {
-          allWastageEntries.push(...entry.wastageEntries);
-        } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity) {
-          // Handle legacy single entry
-          allWastageEntries.push({
-            id: `${entry.id}-legacy-wastage`,
-            fromSerial: entry.wastageFromSerial,
-            toSerial: entry.wastageToSerial,
-            quantity: entry.wastageQuantity,
-            damageReason: entry.damageReason || ''
-          });
-        }
-      });
-
-      // Find first and last utilization serials
-      if (allIssuedEntries.length > 0) {
-        utilizationFromSerial = allIssuedEntries[0].fromSerial;
-        utilizationToSerial = allIssuedEntries[allIssuedEntries.length - 1].toSerial;
-      }
-
-      // Find first and last wastage serials
-      if (allWastageEntries.length > 0) {
-        wastageFromSerial = allWastageEntries[0].fromSerial;
-        wastageToSerial = allWastageEntries[allWastageEntries.length - 1].toSerial;
-      }
-
-      // Calculate totals
-      totalIssued = allIssuedEntries.reduce((sum, entry) => sum + entry.quantity, 0);
-      totalUtilized = filteredEntries.reduce((sum, entry) => sum + entry.utilizedQuantity, 0);
-      totalWastage = allWastageEntries.reduce((sum, entry) => sum + entry.quantity, 0);
-      totalLeftOver = filteredEntries.reduce((sum, entry) => sum + entry.leftOverQuantity, 0);
+    if (summaries.has(monthKey)) {
+      const summary = summaries.get(monthKey)!;
+      return {
+        monthKey,
+        month: this.getMonthCodeFromNumber(monthNumber),
+        year,
+        hologramType,
+        openingStock: summary.openingStock,
+        freshArrival: summary.freshArrival,
+        totals: summary.totals,
+        closingBalance: summary.closingBalance,
+        entries: summary.entries,
+        arrivals: summary.arrivals
+      };
     }
 
+    const previousKey = this.findPreviousKey(sortedKeys, monthKey);
+    const openingStock = previousKey
+      ? summaries.get(previousKey)!.closingBalance
+      : initialOpening;
+
+    const totals = this.createEmptyMonthlyTotals();
+    const freshArrival = 0;
+
     return {
-      totalIssued,
-      totalUtilized,
-      totalWastage,
-      totalLeftOver,
-      utilizationFromSerial,
-      utilizationToSerial,
-      wastageFromSerial,
-      wastageToSerial
+      monthKey,
+      month: this.getMonthCodeFromNumber(monthNumber),
+      year,
+      hologramType,
+      openingStock,
+      freshArrival,
+      totals,
+      closingBalance: openingStock,
+      entries: [],
+      arrivals: []
     };
   }
 
   private getMonthNumber(month: string): string {
-    const months: { [key: string]: string } = {
-      'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
-      'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
-      'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
-    };
-    return months[month] || '01';
+    if (!month) {
+      return '01';
+    }
+    const lower = month.toLowerCase();
+    if (this.monthNumberMap[lower]) {
+      return this.monthNumberMap[lower];
+    }
+    const numeric = parseInt(month, 10);
+    if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 12) {
+      return numeric.toString().padStart(2, '0');
+    }
+    return '01';
+  }
+
+  private getMonthCodeFromNumber(monthNumber: string): string {
+    const normalized = monthNumber?.padStart(2, '0');
+    return this.monthCodeMap[normalized] || 'jan';
   }
 
   /**
@@ -321,5 +348,335 @@ export class HologramDataService {
     }
     
     return true;
+  }
+
+  private getApprovedEntriesFromStorage(): HologramDailyEntry[] {
+    const stored = localStorage.getItem(this.APPROVED_ENTRIES_KEY);
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      const uniqueEntries = new Map<string, HologramDailyEntry>();
+
+      parsed.forEach((entry: any) => {
+        if (!entry?.id) {
+          return;
+        }
+
+        const migrated = this.migrateLegacyEntry(entry);
+        const toNumber = (value: any): number => {
+          const numeric = Number(value);
+          return Number.isFinite(numeric) ? numeric : 0;
+        };
+        const normalized: HologramDailyEntry = {
+          ...migrated,
+          issuedEntries: (migrated.issuedEntries || []).map(issued => ({ ...issued })),
+          wastageEntries: (migrated.wastageEntries || []).map(waste => ({ ...waste })),
+          issuedQuantity: toNumber(
+            migrated.issuedQuantity ?? entry.issuedQuantity ?? this.getTotalIssuedQuantity(migrated)
+          ),
+          wastageQuantity: toNumber(
+            migrated.wastageQuantity ?? entry.wastageQuantity ?? this.getTotalWastageQuantity(migrated)
+          ),
+          utilizedQuantity: toNumber(migrated.utilizedQuantity ?? entry.utilizedQuantity ?? 0),
+          leftOverQuantity: toNumber(migrated.leftOverQuantity ?? entry.leftOverQuantity ?? 0),
+          isFixed: true
+        };
+
+        const status = (entry as any).approvalStatus;
+        if (status && status !== 'APPROVED') {
+          return;
+        }
+
+        uniqueEntries.set(normalized.id, normalized);
+      });
+
+      const result = Array.from(uniqueEntries.values());
+      result.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      return result;
+    } catch (error) {
+      console.error('Error parsing approved hologram entries:', error);
+      return [];
+    }
+  }
+
+  private getApprovedEntriesForType(
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): HologramDailyEntry[] {
+    return this.getApprovedEntriesFromStorage().filter(
+      entry => entry.hologramType === hologramType
+    );
+  }
+
+  private groupEntriesByMonth(entries: HologramDailyEntry[]): Map<string, HologramDailyEntry[]> {
+    const grouped = new Map<string, HologramDailyEntry[]>();
+
+    entries.forEach(entry => {
+      const monthKey = this.getMonthKeyFromDate(entry.date);
+      if (!monthKey) {
+        return;
+      }
+
+      if (!grouped.has(monthKey)) {
+        grouped.set(monthKey, []);
+      }
+      grouped.get(monthKey)!.push(entry);
+    });
+
+    grouped.forEach(list => list.sort((a, b) => (a.date || '').localeCompare(b.date || '')));
+    return grouped;
+  }
+
+  private getMonthKeyFromDate(date: string | undefined): string | null {
+    if (!date) {
+      return null;
+    }
+    const match = date.match(/^(\d{4})-(\d{2})/);
+    if (!match) {
+      return null;
+    }
+    return `${match[1]}-${match[2]}`;
+  }
+
+  private aggregateMonthlyTotals(entries: HologramDailyEntry[]): MonthlyTotals {
+    if (!entries || entries.length === 0) {
+      return this.createEmptyMonthlyTotals();
+    }
+
+    const allIssuedEntries: HologramIssuedEntry[] = [];
+    const allWastageEntries: HologramWastageEntry[] = [];
+
+    let totalUtilized = 0;
+    let totalLeftOver = 0;
+
+    entries.forEach(entry => {
+      totalUtilized += entry.utilizedQuantity || 0;
+      totalLeftOver += entry.leftOverQuantity || 0;
+
+      if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+        entry.issuedEntries.forEach(issued => {
+          allIssuedEntries.push({ ...issued });
+        });
+      } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity) {
+        allIssuedEntries.push({
+          id: `${entry.id}-legacy-issued`,
+          fromSerial: entry.issuedFromSerial,
+          toSerial: entry.issuedToSerial,
+          quantity: entry.issuedQuantity
+        });
+      }
+
+      if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+        entry.wastageEntries.forEach(waste => {
+          allWastageEntries.push({ ...waste });
+        });
+      } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity) {
+        allWastageEntries.push({
+          id: `${entry.id}-legacy-wastage`,
+          fromSerial: entry.wastageFromSerial,
+          toSerial: entry.wastageToSerial,
+          quantity: entry.wastageQuantity,
+          damageReason: entry.damageReason || ''
+        });
+      }
+    });
+
+    const totalIssued = allIssuedEntries.reduce((sum, entry) => sum + (entry.quantity || 0), 0);
+    const totalWastage = allWastageEntries.reduce((sum, entry) => sum + (entry.quantity || 0), 0);
+
+    const utilizationFromSerial = allIssuedEntries.length > 0 ? allIssuedEntries[0].fromSerial : '';
+    const utilizationToSerial = allIssuedEntries.length > 0
+      ? allIssuedEntries[allIssuedEntries.length - 1].toSerial
+      : '';
+    const wastageFromSerial = allWastageEntries.length > 0 ? allWastageEntries[0].fromSerial : '';
+    const wastageToSerial = allWastageEntries.length > 0
+      ? allWastageEntries[allWastageEntries.length - 1].toSerial
+      : '';
+
+    return {
+      totalIssued,
+      totalUtilized,
+      totalWastage,
+      totalLeftOver,
+      utilizationFromSerial,
+      utilizationToSerial,
+      wastageFromSerial,
+      wastageToSerial
+    };
+  }
+
+  private createEmptyMonthlyTotals(): MonthlyTotals {
+    return {
+      totalIssued: 0,
+      totalUtilized: 0,
+      totalWastage: 0,
+      totalLeftOver: 0,
+      utilizationFromSerial: '',
+      utilizationToSerial: '',
+      wastageFromSerial: '',
+      wastageToSerial: ''
+    };
+  }
+
+  private findPreviousKey(sortedKeys: string[], targetKey: string): string | null {
+    let previous: string | null = null;
+    for (const key of sortedKeys) {
+      if (key >= targetKey) {
+        break;
+      }
+      previous = key;
+    }
+    return previous;
+  }
+
+  private getInitialOpeningStock(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
+    const stored = localStorage.getItem(this.INITIAL_OPENING_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const value = parsed?.[type];
+        if (typeof value === 'number' && !Number.isNaN(value)) {
+          return value;
+        }
+        if (typeof value === 'string') {
+          const numeric = Number(value);
+          if (!Number.isNaN(numeric)) {
+            return numeric;
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing initial opening stock:', error);
+      }
+    }
+    return this.defaultInitialOpening[type];
+  }
+
+  private getArrivalRecordsFromStorage(): HologramArrivalRecord[] {
+    const stored = localStorage.getItem('hologramOverviewRolls');
+    if (!stored) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((item: any) => {
+          const type = (item?.type || 'LOCAL').toString().toUpperCase();
+          const normalizedType = ['LOCAL', 'EXPORT', 'DEFENCE'].includes(type) ? type as 'LOCAL' | 'EXPORT' | 'DEFENCE' : 'LOCAL';
+          const totalCount = Number(item?.totalCount ?? item?.availableCount ?? 0);
+          const receivedDate = item?.receivedDate || item?.arrivedDate || item?.date;
+
+          if (!receivedDate || !Number.isFinite(totalCount) || totalCount <= 0) {
+            return null;
+          }
+
+          return {
+            id: item?.id ?? this.generateId(),
+            type: normalizedType,
+            totalCount,
+            receivedDate,
+            cartoonNumber: item?.cartoonNumber || item?.rollNumber || '',
+            fromSerial: item?.fromSerial || item?.availableRange?.split('-')?.[0]?.trim() || '',
+            toSerial: item?.toSerial || item?.availableRange?.split('-')?.[1]?.trim() || ''
+          } as HologramArrivalRecord;
+        })
+        .filter((record: HologramArrivalRecord | null): record is HologramArrivalRecord => record !== null);
+    } catch (error) {
+      console.error('Error parsing hologramOverviewRolls:', error);
+      return [];
+    }
+  }
+
+  private getArrivalRecordsForType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): HologramArrivalRecord[] {
+    return this.getArrivalRecordsFromStorage().filter(record => record.type === type);
+  }
+
+  private groupArrivalsByMonth(
+    arrivals: HologramArrivalRecord[]
+  ): Map<string, number> {
+    const grouped = new Map<string, number>();
+
+    arrivals.forEach(record => {
+      const monthKey = this.getMonthKeyFromDate(record.receivedDate);
+      if (!monthKey) {
+        return;
+      }
+
+      const current = grouped.get(monthKey) ?? 0;
+      grouped.set(monthKey, current + record.totalCount);
+    });
+
+    return grouped;
+  }
+
+  private buildMonthlyStatementCache(
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): {
+    summaries: Map<string, {
+      openingStock: number;
+      freshArrival: number;
+      totals: MonthlyTotals;
+      closingBalance: number;
+      entries: HologramDailyEntry[];
+      arrivals: HologramArrivalRecord[];
+    }>;
+    sortedKeys: string[];
+    initialOpening: number;
+  } {
+    const entries = this.getApprovedEntriesForType(hologramType);
+    const grouped = this.groupEntriesByMonth(entries);
+    const arrivals = this.getArrivalRecordsForType(hologramType);
+    const arrivalMap = this.groupArrivalsByMonth(arrivals);
+    const initialOpening = this.getInitialOpeningStock(hologramType);
+
+    const allKeysSet = new Set<string>([...grouped.keys(), ...arrivalMap.keys()]);
+    const sortedKeys = Array.from(allKeysSet).sort();
+
+    const summaries = new Map<string, {
+      openingStock: number;
+      freshArrival: number;
+      totals: MonthlyTotals;
+      closingBalance: number;
+      entries: HologramDailyEntry[];
+      arrivals: HologramArrivalRecord[];
+    }>();
+
+    let runningClosing = initialOpening;
+
+    sortedKeys.forEach(key => {
+      const monthEntries = grouped.get(key) || [];
+      const totals = this.aggregateMonthlyTotals(monthEntries);
+      const freshArrival = arrivalMap.get(key) ?? 0;
+      const monthArrivals = arrivals.filter(record => this.getMonthKeyFromDate(record.receivedDate) === key);
+      const openingStock = runningClosing;
+      const closingBalance = openingStock + freshArrival - totals.totalIssued - totals.totalWastage;
+
+      summaries.set(key, {
+        openingStock,
+        freshArrival,
+        totals,
+        closingBalance,
+        entries: monthEntries,
+        arrivals: monthArrivals
+      });
+
+      runningClosing = closingBalance;
+    });
+
+    return {
+      summaries,
+      sortedKeys,
+      initialOpening
+    };
   }
 }
