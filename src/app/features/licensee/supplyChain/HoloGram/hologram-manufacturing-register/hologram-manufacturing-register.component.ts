@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { MonthlyhologramstatementOICComponent } from '../monthlyhologramstatement-oic/monthlyhologramstatement-oic.component';
 
 interface RollBreakdown {
   rollName: string;
@@ -48,7 +49,7 @@ interface PendingEntry {
 @Component({
   selector: 'app-hologram-manufacturing-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MonthlyhologramstatementOICComponent],
   templateUrl: './hologram-manufacturing-register.component.html',
   styleUrl: './hologram-manufacturing-register.component.scss'
 })
@@ -56,6 +57,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   private rollColorMap: Map<string, number> = new Map();
   private nextColorIndex = 0;
 
+  activeTab: 'verification' | 'monthly-statement' = 'verification';
   pendingEntries: PendingEntry[] = [];
   filteredEntries: PendingEntry[] = [];
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
@@ -1011,6 +1013,16 @@ export class HologramManufacturingRegisterComponent implements OnInit {
   // Navigate back
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
+  }
+
+  // Navigate to Monthly Hologram Statement in new tab
+  goToMonthlyStatement(): void {
+    window.open('/dev/monthlyhologramstatement-oic', '_blank');
+  }
+
+  // Set active tab
+  setActiveTab(tab: 'verification' | 'monthly-statement'): void {
+    this.activeTab = tab;
   }
 
   // Get counts

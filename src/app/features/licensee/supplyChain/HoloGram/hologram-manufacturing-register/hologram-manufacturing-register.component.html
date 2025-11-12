@@ -281,9 +281,9 @@
         <div class="header-info">
           <h4 class="register-title">
             <i class="bi bi-shield-check me-2"></i>
-            Officer In Charge - Hologram Entry Verification
+            Officer In Charge - Hologram Management
           </h4>
-          <p class="text-muted mb-0">Review and approve entries submitted by Supply Chain users</p>
+          <p class="text-muted mb-0">Review and approve entries & view monthly statements</p>
         </div>
         <div class="header-actions">
           <button class="btn btn-outline-info me-2" (click)="refreshEntries()" title="Refresh entries">
@@ -297,329 +297,353 @@
         </div>
       </div>
 
-      <!-- Summary Cards -->
-      <div class="row g-3 mb-4">
-        <div class="col-md-3">
-          <div class="summary-card total-entries">
-            <div class="card-icon">
-              <i class="bi bi-list-ul"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ filteredEntries.length }}</h3>
-              <p class="card-label">Total Entries</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="summary-card pending-entries">
-            <div class="card-icon">
-              <i class="bi bi-clock"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getPendingCount() }}</h3>
-              <p class="card-label">Pending Approval</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="summary-card approved-entries">
-            <div class="card-icon">
-              <i class="bi bi-check-circle"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getApprovedCount() }}</h3>
-              <p class="card-label">Approved</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="summary-card rejected-entries">
-            <div class="card-icon">
-              <i class="bi bi-x-circle"></i>
-            </div>
-            <div class="card-content">
-              <h3 class="card-value">{{ getRejectedCount() }}</h3>
-              <p class="card-label">Rejected</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="compact-filter-section mb-3">
-      <div class="d-flex align-items-center gap-3 flex-wrap">
-        <div class="filter-label-text">
-          <i class="bi bi-funnel me-1"></i>
-          <small class="text-muted">Filters:</small>
-        </div>
-
-        <div class="compact-filter">
-          <label class="form-label small mb-1">Date</label>
-          <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate" 
-                 (ngModelChange)="onDateFilterChange()">
-        </div>
-
-        <div class="compact-filter">
-          <label class="form-label small mb-1">Month</label>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
-            <option value="jan">January</option>
-            <option value="feb">February</option>
-            <option value="mar">March</option>
-            <option value="apr">April</option>
-            <option value="may">May</option>
-            <option value="jun">June</option>
-            <option value="jul">July</option>
-            <option value="aug">August</option>
-            <option value="sep">September</option>
-            <option value="oct">October</option>
-            <option value="nov">November</option>
-            <option value="dec">December</option>
-          </select>
-        </div>
-
-        <div class="compact-filter">
-          <label class="form-label small mb-1">Year</label>
-          <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-          </select>
-        </div>
-
-        <div class="compact-filter" *ngIf="hasActiveFilters()">
-          <button class="btn btn-outline-danger btn-sm" (click)="clearAllFilters()">
-            <i class="bi bi-x-circle me-1"></i>
-            Clear Filters
-          </button>
-        </div>
-      </div>
-
-      <div class="filter-results-compact mt-2">
-        <small class="text-info">
-          <i class="bi bi-info-circle me-1"></i>
-          Showing <strong>{{ filteredEntries.length }}</strong> entries for <strong>{{ getCurrentHologramTypeDisplay() }}</strong>
-        </small>
-      </div>
-    </div>
-
-    <!-- Hologram Type Tabs -->
-    <div class="hologram-type-tabs mb-3">
-      <ul class="nav nav-pills nav-fill">
+      <!-- Tab Navigation -->
+      <ul class="nav nav-tabs mb-4">
         <li class="nav-item">
-          <button class="nav-link" 
-            [class.active]="selectedHologramType === 'LOCAL'"
-            (click)="onHologramTypeChange('LOCAL')">
-            <i class="bi bi-house-door me-2"></i>
-            LOCAL
-            <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'LOCAL'">
-              {{ filteredEntries.length }}
-            </span>
+          <button class="nav-link" [class.active]="activeTab === 'verification'" (click)="setActiveTab('verification')">
+            <i class="bi bi-check-circle me-2"></i>
+            Entry Verification
           </button>
         </li>
         <li class="nav-item">
-          <button class="nav-link"
-            [class.active]="selectedHologramType === 'EXPORT'"
-            (click)="onHologramTypeChange('EXPORT')">
-            <i class="bi bi-globe me-2"></i>
-            EXPORT
-            <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'EXPORT'">
-              {{ filteredEntries.length }}
-            </span>
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link"
-            [class.active]="selectedHologramType === 'DEFENCE'"
-            (click)="onHologramTypeChange('DEFENCE')">
-            <i class="bi bi-shield-check me-2"></i>
-            DEFENCE
-            <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'DEFENCE'">
-              {{ filteredEntries.length }}
-            </span>
+          <button class="nav-link" [class.active]="activeTab === 'monthly-statement'" (click)="setActiveTab('monthly-statement')">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            Monthly Hologram Statement
           </button>
         </li>
       </ul>
-    </div>
 
-    <!-- Status Filter Buttons -->
-    <div class="status-filter-tabs mb-3">
-      <div class="btn-group w-100" role="group">
-        <button type="button" class="btn" 
-          [class.btn-secondary]="selectedStatus === 'ALL'"
-          [class.btn-outline-secondary]="selectedStatus !== 'ALL'"
-          (click)="onStatusChange('ALL')">
-          <i class="bi bi-list-ul me-2"></i>
-          All
-          <span class="badge bg-light text-dark ms-2">{{ pendingEntries.length }}</span>
-        </button>
-        <button type="button" class="btn"
-          [class.btn-warning]="selectedStatus === 'PENDING'"
-          [class.btn-outline-warning]="selectedStatus !== 'PENDING'"
-          (click)="onStatusChange('PENDING')">
-          <i class="bi bi-clock me-2"></i>
-          Pending
-          <span class="badge bg-light text-dark ms-2">{{ getPendingCount() }}</span>
-        </button>
-        <button type="button" class="btn"
-          [class.btn-success]="selectedStatus === 'APPROVED'"
-          [class.btn-outline-success]="selectedStatus !== 'APPROVED'"
-          (click)="onStatusChange('APPROVED')">
-          <i class="bi bi-check-circle me-2"></i>
-          Approved
-          <span class="badge bg-light text-dark ms-2">{{ getApprovedCount() }}</span>
-        </button>
-        <button type="button" class="btn"
-          [class.btn-danger]="selectedStatus === 'REJECTED'"
-          [class.btn-outline-danger]="selectedStatus !== 'REJECTED'"
-          (click)="onStatusChange('REJECTED')">
-          <i class="bi bi-x-circle me-2"></i>
-          Rejected
-          <span class="badge bg-light text-dark ms-2">{{ getRejectedCount() }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Entries Table -->
-    <div class="daily-register-table">
-      <div class="register-container">
-        <div class="register-header-bar">
-          <div class="d-flex align-items-center">
-            <i class="bi bi-table me-2 text-white"></i>
-            <h5 class="register-table-title text-white mb-0">
-              Pending Verification Entries
-            </h5>
-          </div>
-          <div class="register-info">
-            <span class="entries-count">{{ filteredEntries.length }} Entries</span>
-          </div>
-        </div>
-
-        <div class="table-responsive" *ngIf="filteredEntries.length > 0">
-          <table class="table register-table">
-            <thead>
-              <tr>
-                <th>SL. NO.</th>
-                <th>REF NO.</th>
-                <th>DATE</th>
-                <th>BRAND</th>
-                <th>BOTTLE SIZE</th>
-                <th>ROLLS ASSIGNED</th>
-                <th>HOLOGRAM QTY</th>
-                <th>ISSUED QTY</th>
-                <th>WASTAGE QTY</th>
-                <th>LEFT OVER</th>
-                <th>TOTAL</th>
-                <th>STATUS</th>
-                <th>SUBMITTED BY</th>
-                <th>ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (entry of getPagedEntries(); track entry.id; let i = $index) {
-              <tr [class.table-success]="entry.status === 'APPROVED'" 
-                  [class.table-danger]="entry.status === 'REJECTED'">
-                <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
-                <td>{{ entry.referenceNo }}</td>
-                <td>{{ entry.date | date:'dd/MM/yyyy' }}</td>
-                <td>{{ entry.brandDetails.brandName }}</td>
-                <td>{{ entry.bottleSize }}</td>
-                <td class="rolls-cell">
-                  @if (getRollBreakdown(entry).length > 0) {
-                    <button class="btn btn-sm btn-outline-primary" 
-                            (click)="openRollDetailsModal(entry)"
-                            title="View roll details">
-                      <i class="bi bi-box-seam me-1"></i>
-                      View Rolls ({{ getRollBreakdown(entry).length }})
-                    </button>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-                <td>{{ entry.hologramQty | number }}</td>
-                <td>{{ entry.issuedQuantity | number }}</td>
-                <td>{{ entry.wastageQuantity | number }}</td>
-                <td [class.text-success]="entry.leftOverQuantity > 0"
-                    [class.text-danger]="entry.leftOverQuantity < 0">
-                  {{ entry.leftOverQuantity | number }}
-                </td>
-                <td [class.text-success]="isCalculationMatching(entry)"
-                    [class.text-danger]="!isCalculationMatching(entry)">
-                  {{ getTotalCalculation(entry) | number }}
-                  <i class="bi" 
-                     [class.bi-check-circle]="isCalculationMatching(entry)"
-                     [class.bi-x-circle]="!isCalculationMatching(entry)"></i>
-                </td>
-                <td>
-                  <span class="badge" 
-                        [class.bg-warning]="entry.status === 'PENDING'"
-                        [class.bg-success]="entry.status === 'APPROVED'"
-                        [class.bg-danger]="entry.status === 'REJECTED'">
-                    {{ entry.status }}
-                  </span>
-                </td>
-                <td>
-                  <small>{{ entry.submittedBy }}</small><br>
-                  <small class="text-muted">{{ entry.submittedAt | date:'dd/MM/yyyy HH:mm' }}</small>
-                </td>
-                <td>
-                  @if (entry.status === 'PENDING') {
-                    <div class="btn-group" role="group">
-                      <button class="btn btn-sm btn-success" 
-                              (click)="openApprovalModal(entry)"
-                              title="Approve Entry">
-                        <i class="bi bi-check-circle"></i>
-                      </button>
-                      <button class="btn btn-sm btn-danger" 
-                              (click)="openRejectionModal(entry)"
-                              title="Reject Entry">
-                        <i class="bi bi-x-circle"></i>
-                      </button>
-                    </div>
-                  } @else {
-                    <span class="text-muted">
-                      {{ entry.status === 'APPROVED' ? 'Approved' : 'Rejected' }}
-                    </span>
-                  }
-                </td>
-              </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Empty State -->
-        <div *ngIf="filteredEntries.length === 0" class="text-center py-5">
-          <div class="empty-state">
-            <div class="empty-icon">
-              <i class="bi bi-inbox"></i>
+      <!-- Verification Tab Content -->
+      @if (activeTab === 'verification') {
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="summary-card total-entries">
+              <div class="card-icon">
+                <i class="bi bi-list-ul"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ filteredEntries.length }}</h3>
+                <p class="card-label">Total Entries</p>
+              </div>
             </div>
-            <h5 class="empty-title">No Pending Entries</h5>
-            <p class="empty-message">
-              No entries are pending verification for {{ getCurrentHologramTypeDisplay() }}.
-            </p>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card pending-entries">
+              <div class="card-icon">
+                <i class="bi bi-clock"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getPendingCount() }}</h3>
+                <p class="card-label">Pending Approval</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card approved-entries">
+              <div class="card-icon">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getApprovedCount() }}</h3>
+                <p class="card-label">Approved</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card rejected-entries">
+              <div class="card-icon">
+                <i class="bi bi-x-circle"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getRejectedCount() }}</h3>
+                <p class="card-label">Rejected</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination-container" *ngIf="getTotalPages() > 1">
-          <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center">
-              <li class="page-item" [class.disabled]="currentPage === 1">
-                <button class="page-link" (click)="goToPage(currentPage - 1)">Previous</button>
-              </li>
-              @for (page of [].constructor(getTotalPages()); track $index) {
-                <li class="page-item" [class.active]="currentPage === $index + 1">
-                  <button class="page-link" (click)="goToPage($index + 1)">{{ $index + 1 }}</button>
-                </li>
-              }
-              <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
-                <button class="page-link" (click)="goToPage(currentPage + 1)">Next</button>
-              </li>
-            </ul>
-          </nav>
+        <!-- Filters -->
+        <div class="compact-filter-section mb-3">
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="filter-label-text">
+              <i class="bi bi-funnel me-1"></i>
+              <small class="text-muted">Filters:</small>
+            </div>
+
+            <div class="compact-filter">
+              <label class="form-label small mb-1">Date</label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate" 
+                     (ngModelChange)="onDateFilterChange()">
+            </div>
+
+            <div class="compact-filter">
+              <label class="form-label small mb-1">Month</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
+                <option value="jan">January</option>
+                <option value="feb">February</option>
+                <option value="mar">March</option>
+                <option value="apr">April</option>
+                <option value="may">May</option>
+                <option value="jun">June</option>
+                <option value="jul">July</option>
+                <option value="aug">August</option>
+                <option value="sep">September</option>
+                <option value="oct">October</option>
+                <option value="nov">November</option>
+                <option value="dec">December</option>
+              </select>
+            </div>
+
+            <div class="compact-filter">
+              <label class="form-label small mb-1">Year</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+
+            <div class="compact-filter" *ngIf="hasActiveFilters()">
+              <button class="btn btn-outline-danger btn-sm" (click)="clearAllFilters()">
+                <i class="bi bi-x-circle me-1"></i>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-results-compact mt-2">
+            <small class="text-info">
+              <i class="bi bi-info-circle me-1"></i>
+              Showing <strong>{{ filteredEntries.length }}</strong> entries for <strong>{{ getCurrentHologramTypeDisplay() }}</strong>
+            </small>
+          </div>
         </div>
-      </div>
+
+        <!-- Hologram Type Tabs -->
+        <div class="hologram-type-tabs mb-3">
+          <ul class="nav nav-pills nav-fill">
+            <li class="nav-item">
+              <button class="nav-link" 
+                [class.active]="selectedHologramType === 'LOCAL'"
+                (click)="onHologramTypeChange('LOCAL')">
+                <i class="bi bi-house-door me-2"></i>
+                LOCAL
+                <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'LOCAL'">
+                  {{ filteredEntries.length }}
+                </span>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link"
+                [class.active]="selectedHologramType === 'EXPORT'"
+                (click)="onHologramTypeChange('EXPORT')">
+                <i class="bi bi-globe me-2"></i>
+                EXPORT
+                <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'EXPORT'">
+                  {{ filteredEntries.length }}
+                </span>
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link"
+                [class.active]="selectedHologramType === 'DEFENCE'"
+                (click)="onHologramTypeChange('DEFENCE')">
+                <i class="bi bi-shield-check me-2"></i>
+                DEFENCE
+                <span class="badge bg-light text-dark ms-2" *ngIf="selectedHologramType === 'DEFENCE'">
+                  {{ filteredEntries.length }}
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Status Filter Buttons -->
+        <div class="status-filter-tabs mb-3">
+          <div class="btn-group w-100" role="group">
+            <button type="button" class="btn" 
+              [class.btn-secondary]="selectedStatus === 'ALL'"
+              [class.btn-outline-secondary]="selectedStatus !== 'ALL'"
+              (click)="onStatusChange('ALL')">
+              <i class="bi bi-list-ul me-2"></i>
+              All
+              <span class="badge bg-light text-dark ms-2">{{ pendingEntries.length }}</span>
+            </button>
+            <button type="button" class="btn"
+              [class.btn-warning]="selectedStatus === 'PENDING'"
+              [class.btn-outline-warning]="selectedStatus !== 'PENDING'"
+              (click)="onStatusChange('PENDING')">
+              <i class="bi bi-clock me-2"></i>
+              Pending
+              <span class="badge bg-light text-dark ms-2">{{ getPendingCount() }}</span>
+            </button>
+            <button type="button" class="btn"
+              [class.btn-success]="selectedStatus === 'APPROVED'"
+              [class.btn-outline-success]="selectedStatus !== 'APPROVED'"
+              (click)="onStatusChange('APPROVED')">
+              <i class="bi bi-check-circle me-2"></i>
+              Approved
+              <span class="badge bg-light text-dark ms-2">{{ getApprovedCount() }}</span>
+            </button>
+            <button type="button" class="btn"
+              [class.btn-danger]="selectedStatus === 'REJECTED'"
+              [class.btn-outline-danger]="selectedStatus !== 'REJECTED'"
+              (click)="onStatusChange('REJECTED')">
+              <i class="bi bi-x-circle me-2"></i>
+              Rejected
+              <span class="badge bg-light text-dark ms-2">{{ getRejectedCount() }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Entries Table -->
+        <div class="daily-register-table">
+          <div class="register-container">
+            <div class="register-header-bar">
+              <div class="d-flex align-items-center">
+                <i class="bi bi-table me-2 text-white"></i>
+                <h5 class="register-table-title text-white mb-0">
+                  Pending Verification Entries
+                </h5>
+              </div>
+              <div class="register-info">
+                <span class="entries-count">{{ filteredEntries.length }} Entries</span>
+              </div>
+            </div>
+
+            <div class="table-responsive" *ngIf="filteredEntries.length > 0">
+              <table class="table register-table">
+                <thead>
+                  <tr>
+                    <th>SL. NO.</th>
+                    <th>REF NO.</th>
+                    <th>DATE</th>
+                    <th>BRAND</th>
+                    <th>BOTTLE SIZE</th>
+                    <th>ROLLS ASSIGNED</th>
+                    <th>HOLOGRAM QTY</th>
+                    <th>ISSUED QTY</th>
+                    <th>WASTAGE QTY</th>
+                    <th>LEFT OVER</th>
+                    <th>TOTAL</th>
+                    <th>STATUS</th>
+                    <th>SUBMITTED BY</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of getPagedEntries(); track entry.id; let i = $index) {
+                  <tr [class.table-success]="entry.status === 'APPROVED'" 
+                      [class.table-danger]="entry.status === 'REJECTED'">
+                    <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                    <td>{{ entry.referenceNo }}</td>
+                    <td>{{ entry.date | date:'dd/MM/yyyy' }}</td>
+                    <td>{{ entry.brandDetails.brandName }}</td>
+                    <td>{{ entry.bottleSize }}</td>
+                    <td class="rolls-cell">
+                      @if (getRollBreakdown(entry).length > 0) {
+                        <button class="btn btn-sm btn-outline-primary" 
+                                (click)="openRollDetailsModal(entry)"
+                                title="View roll details">
+                          <i class="bi bi-box-seam me-1"></i>
+                          View Rolls ({{ getRollBreakdown(entry).length }})
+                        </button>
+                      } @else {
+                        <span class="text-muted">-</span>
+                      }
+                    </td>
+                    <td>{{ entry.hologramQty | number }}</td>
+                    <td>{{ entry.issuedQuantity | number }}</td>
+                    <td>{{ entry.wastageQuantity | number }}</td>
+                    <td [class.text-success]="entry.leftOverQuantity > 0"
+                        [class.text-danger]="entry.leftOverQuantity < 0">
+                      {{ entry.leftOverQuantity | number }}
+                    </td>
+                    <td [class.text-success]="isCalculationMatching(entry)"
+                        [class.text-danger]="!isCalculationMatching(entry)">
+                      {{ getTotalCalculation(entry) | number }}
+                      <i class="bi" 
+                         [class.bi-check-circle]="isCalculationMatching(entry)"
+                         [class.bi-x-circle]="!isCalculationMatching(entry)"></i>
+                    </td>
+                    <td>
+                      <span class="badge" 
+                            [class.bg-warning]="entry.status === 'PENDING'"
+                            [class.bg-success]="entry.status === 'APPROVED'"
+                            [class.bg-danger]="entry.status === 'REJECTED'">
+                        {{ entry.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <small>{{ entry.submittedBy }}</small><br>
+                      <small class="text-muted">{{ entry.submittedAt | date:'dd/MM/yyyy HH:mm' }}</small>
+                    </td>
+                    <td>
+                      @if (entry.status === 'PENDING') {
+                        <div class="btn-group" role="group">
+                          <button class="btn btn-sm btn-success" 
+                                  (click)="openApprovalModal(entry)"
+                                  title="Approve Entry">
+                            <i class="bi bi-check-circle"></i>
+                          </button>
+                          <button class="btn btn-sm btn-danger" 
+                                  (click)="openRejectionModal(entry)"
+                                  title="Reject Entry">
+                            <i class="bi bi-x-circle"></i>
+                          </button>
+                        </div>
+                      } @else {
+                        <span class="text-muted">
+                          {{ entry.status === 'APPROVED' ? 'Approved' : 'Rejected' }}
+                        </span>
+                      }
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="filteredEntries.length === 0" class="text-center py-5">
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="bi bi-inbox"></i>
+                </div>
+                <h5 class="empty-title">No Pending Entries</h5>
+                <p class="empty-message">
+                  No entries are pending verification for {{ getCurrentHologramTypeDisplay() }}.
+                </p>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-container" *ngIf="getTotalPages() > 1">
+              <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                  <li class="page-item" [class.disabled]="currentPage === 1">
+                    <button class="page-link" (click)="goToPage(currentPage - 1)">Previous</button>
+                  </li>
+                  @for (page of [].constructor(getTotalPages()); track $index) {
+                    <li class="page-item" [class.active]="currentPage === $index + 1">
+                      <button class="page-link" (click)="goToPage($index + 1)">{{ $index + 1 }}</button>
+                    </li>
+                  }
+                  <li class="page-item" [class.disabled]="currentPage === getTotalPages()">
+                    <button class="page-link" (click)="goToPage(currentPage + 1)">Next</button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Monthly Statement Tab Content -->
+      @if (activeTab === 'monthly-statement') {
+        <app-monthlyhologramstatement-oic></app-monthlyhologramstatement-oic>
+      }
     </div>
   </div>
 </div>
