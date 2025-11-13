@@ -450,6 +450,10 @@ export class HologramDailyRegisterComponent implements OnInit {
     // Mark as pending approval for Officer in Charge
     (entry as any).approvalStatus = 'PENDING';
     
+    // CRITICAL FIX: Store only USED allocated ranges in the entry
+    // This prevents unused ranges from appearing in "Currently Issued Holograms"
+    this.storeOnlyUsedAllocatedRanges(entry);
+    
     // Save to localStorage for Officer in Charge verification
     this.saveEntryForOfficerVerification(entry);
     
@@ -483,6 +487,93 @@ export class HologramDailyRegisterComponent implements OnInit {
     
     console.log('Entry saved successfully (pending approval):', entry);
     console.log('Roll data will NOT be updated until Officer In Charge approves this entry');
+  }
+
+  /**
+   * Store only USED allocated ranges in the entry
+   * This prevents unused ranges from appearing in "Currently Issued Holograms"
+   * 
+   * Example:
+   * - Allocated: 000001-000049 (49), 000100-000500 (401) = Total 450
+   * - Used: 1-49 (issued)
+   * - Result: Only store 000001-000049 in allocatedRanges, remove 000100-000500
+   */
+  private storeOnlyUsedAllocatedRanges(entry: HologramDailyEntry): void {
+    try {
+      // Get all allocated ranges
+      const allocatedRanges = (entry as any).allocatedRanges || [];
+      if (allocatedRanges.length === 0) {
+        console.log('No allocated ranges found');
+        return;
+      }
+
+      // Get all used ranges (issued + wastage)
+      const usedRanges: any[] = [];
+      
+      // Collect issued ranges
+      if (entry.issuedEntries && entry.issuedEntries.length > 0) {
+        entry.issuedEntries.forEach(issued => {
+          if (issued.fromSerial && issued.toSerial && issued.quantity > 0) {
+            usedRanges.push({
+              fromSerial: issued.fromSerial,
+              toSerial: issued.toSerial,
+              quantity: issued.quantity,
+              type: 'ISSUED'
+            });
+          }
+        });
+      }
+
+      // Collect wastage ranges
+      if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+        entry.wastageEntries.forEach(wastage => {
+          if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
+            usedRanges.push({
+              fromSerial: wastage.fromSerial,
+              toSerial: wastage.toSerial,
+              quantity: wastage.quantity,
+              type: 'WASTAGE'
+            });
+          }
+        });
+      }
+
+      // Helper function to check if a serial is within a range
+      const isSerialInRange = (serial: string, rangeFrom: string, rangeTo: string): boolean => {
+        const extractNumber = (s: string): number => {
+          const match = s.match(/(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        };
+        const serialNum = extractNumber(serial);
+        const fromNum = extractNumber(rangeFrom);
+        const toNum = extractNumber(rangeTo);
+        return serialNum >= fromNum && serialNum <= toNum;
+      };
+
+      // Filter allocated ranges to keep only those that were actually used
+      const usedAllocatedRanges = allocatedRanges.filter((allocatedRange: any) => {
+        // Check if ANY used range overlaps with this allocated range
+        const wasUsed = usedRanges.some(usedRange => {
+          // Check if the used range is within this allocated range
+          return isSerialInRange(usedRange.fromSerial, allocatedRange.fromSerial, allocatedRange.toSerial) ||
+                 isSerialInRange(usedRange.toSerial, allocatedRange.fromSerial, allocatedRange.toSerial);
+        });
+        return wasUsed;
+      });
+
+      // Update the entry with only used allocated ranges
+      (entry as any).allocatedRanges = usedAllocatedRanges;
+
+      console.log('✅ Filtered allocated ranges:', {
+        original: allocatedRanges.length,
+        used: usedAllocatedRanges.length,
+        removed: allocatedRanges.length - usedAllocatedRanges.length,
+        usedRanges: usedAllocatedRanges.map((r: any) => `${r.fromSerial}-${r.toSerial}`)
+      });
+
+    } catch (error) {
+      console.error('Error storing only used allocated ranges:', error);
+    }
   }
 
   /**

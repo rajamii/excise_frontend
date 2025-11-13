@@ -540,13 +540,40 @@ export class HologramdetailsComponent implements OnInit {
 
     const uniqueId = Date.now(); // Use timestamp as unique ID
 
+    // CRITICAL: Load allocated ranges from allocation data
+    const allocationData = JSON.parse(
+      localStorage.getItem(`hologramAllocation_${record.ourRefNo}`) || '{}'
+    );
+    
+    console.log('📦 Loading allocation data for', record.ourRefNo, ':', allocationData);
+    
+    // Find allocated ranges for this cartoon
+    const cartoonAllocation = allocationData.allocatedCartoons?.find(
+      (c: any) => c.cartoonNumber === record.cartoonNumber
+    );
+    
+    let allocatedRanges = cartoonAllocation?.allocatedRanges || [];
+    
+    console.log('🎯 Found allocated ranges for', record.cartoonNumber, ':', allocatedRanges);
+    
+    // If no allocated ranges found, create from fromSerial/toSerial (backward compatibility)
+    if (allocatedRanges.length === 0) {
+      allocatedRanges = [{
+        fromSerial: record.fromSerial,
+        toSerial: record.toSerial,
+        count: record.numberOfHolograms
+      }];
+      console.log('⚠️ No allocated ranges found, using fromSerial/toSerial:', allocatedRanges);
+    }
+
     // Create new roll entry for Rolls tab
     const newRoll = {
       id: uniqueId,
       cartoonNumber: record.cartoonNumber,
       type: hologramType,
-      fromSerial: record.fromSerial,
-      toSerial: record.toSerial,
+      fromSerial: allocatedRanges[0].fromSerial,  // First range start
+      toSerial: allocatedRanges[allocatedRanges.length - 1].toSerial,  // Last range end
+      allocatedRanges: allocatedRanges,  // CRITICAL: Store all allocated ranges
       totalCount: record.numberOfHolograms,
       availableCount: record.numberOfHolograms, // All available initially
       usedCount: 0, // None used initially
@@ -556,6 +583,8 @@ export class HologramdetailsComponent implements OnInit {
       isNew: true, // Flag to highlight as new
       newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
     };
+    
+    console.log('✅ Created roll with allocated ranges:', newRoll);
 
     // Create new available entry for Available Hologram Data tab
     const newAvailable = {
@@ -576,8 +605,9 @@ export class HologramdetailsComponent implements OnInit {
       id: uniqueId,
       rollNumber: record.cartoonNumber,
       hologramType: hologramType,
-      fromSerial: record.fromSerial,
-      toSerial: record.toSerial,
+      fromSerial: allocatedRanges[0].fromSerial,  // First range start
+      toSerial: allocatedRanges[allocatedRanges.length - 1].toSerial,  // Last range end
+      allocatedRanges: allocatedRanges,  // CRITICAL: Store all allocated ranges
       totalCount: record.numberOfHolograms,
       availableCount: record.numberOfHolograms, // All available initially
       usedCount: 0, // None used initially

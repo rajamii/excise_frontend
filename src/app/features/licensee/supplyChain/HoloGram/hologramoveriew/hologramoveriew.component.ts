@@ -1304,6 +1304,19 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // until the officer in charge approves from the manufacturing register.
     // Only after approval will the usage history be updated with actual used/damaged ranges.
 
+    // Also load daily register entries to supplement usage history (especially for wastage data)
+    const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
+    const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
+    const approvedHologramEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    const allDailyEntries = [...dailyEntries, ...approvedEntries, ...approvedHologramEntries];
+    
+    // Filter entries for this specific cartoon number and type
+    const relevantDailyEntries = allDailyEntries.filter((entry: any) => 
+      entry.cartoonNumber === cartoonNumber && 
+      entry.hologramType === hologramType &&
+      (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
+    );
+
     // Process usage history from serial roll (this is the most accurate source)
     if (serialRoll && serialRoll.usageHistory && serialRoll.usageHistory.length > 0) {
       console.log('Using usage history from serial roll:', serialRoll.usageHistory.length, 'entries');
@@ -1313,6 +1326,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         toSerial: serialRoll.toSerial,
         usageHistoryCount: serialRoll.usageHistory.length
       });
+      console.log('Also checking daily register entries:', relevantDailyEntries.length, 'entries');
       
       // Extract the cartoon number's serial range to validate entries
       const rollFromSerial = serialRoll.fromSerial || '';
@@ -1425,7 +1439,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 // Fallback: try to find it from daily register entries
                 const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
                 const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
-                const allEntries = [...dailyEntries, ...approvedEntries];
+                const approvedHologramEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+                const allEntries = [...dailyEntries, ...approvedEntries, ...approvedHologramEntries];
                 
                 const matchingEntry = allEntries.find((entry: any) => {
                   // Check if this entry matches the wastage range
@@ -1471,6 +1486,53 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
       });
       
       console.log('Total ranges generated from usage history:', ranges.length);
+      
+      // SUPPLEMENT: Also check daily register entries for any wastage ranges that might not be in usage history
+      // This ensures we capture all wastage data even if usage history is incomplete
+      console.log('Supplementing with daily register entries for wastage data:', relevantDailyEntries.length, 'entries');
+      
+      relevantDailyEntries.forEach((entry: any) => {
+        // Add wastage/damaged ranges from daily register (might not be in usage history yet)
+        if (entry.wastageEntries && entry.wastageEntries.length > 0) {
+          entry.wastageEntries.forEach((wastage: any) => {
+            if (wastage.fromSerial && wastage.toSerial && wastage.quantity > 0) {
+              const rangeKey = `DAMAGED-${wastage.fromSerial}-${wastage.toSerial}`;
+              if (!processedRanges.has(rangeKey)) {
+                processedRanges.add(rangeKey);
+                ranges.push({
+                  fromSerial: wastage.fromSerial,
+                  toSerial: wastage.toSerial,
+                  count: wastage.quantity,
+                  status: 'DAMAGED',
+                  description: wastage.damageReason || entry.damageReason || 'Damaged during production',
+                  damageDate: entry.date,
+                  damageReason: wastage.damageReason || entry.damageReason || 'Not specified',
+                  reportedBy: entry.officerName || 'System',
+                  referenceNo: entry.referenceNo || 'N/A'
+                });
+                console.log('Added DAMAGED range from daily register:', wastage.fromSerial, '-', wastage.toSerial, 'quantity:', wastage.quantity);
+              }
+            }
+          });
+        } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity > 0) {
+          const rangeKey = `DAMAGED-${entry.wastageFromSerial}-${entry.wastageToSerial}`;
+          if (!processedRanges.has(rangeKey)) {
+            processedRanges.add(rangeKey);
+            ranges.push({
+              fromSerial: entry.wastageFromSerial,
+              toSerial: entry.wastageToSerial,
+              count: entry.wastageQuantity,
+              status: 'DAMAGED',
+              description: entry.damageReason || 'Damaged during production',
+              damageDate: entry.date,
+              damageReason: entry.damageReason || 'Not specified',
+              reportedBy: entry.officerName || 'System',
+              referenceNo: entry.referenceNo || 'N/A'
+            });
+            console.log('Added DAMAGED range from daily register (legacy):', entry.wastageFromSerial, '-', entry.wastageToSerial, 'quantity:', entry.wastageQuantity);
+          }
+        }
+      });
     }
 
     // FALLBACK: If no usage history found, try daily register entries
@@ -1478,16 +1540,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     if (ranges.length === 0) {
       console.log('No usage history found, falling back to daily register entries');
       
-      const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
-      const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
-      const allEntries = [...dailyEntries, ...approvedEntries];
-      
-      // Filter entries for this specific cartoon number and type
-      const relevantEntries = allEntries.filter((entry: any) => 
-        entry.cartoonNumber === cartoonNumber && 
-        entry.hologramType === hologramType &&
-        (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
-      );
+      // Use the already filtered relevantDailyEntries
+      const relevantEntries = relevantDailyEntries;
 
       console.log('Found fallback entries:', relevantEntries.length);
 
