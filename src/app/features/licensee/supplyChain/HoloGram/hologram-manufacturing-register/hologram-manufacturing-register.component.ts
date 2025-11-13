@@ -496,6 +496,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
             wastageFromSerial: wastageEntry.fromSerial || '',
             wastageToSerial: wastageEntry.toSerial || '',
             wastageQuantity: wastageEntry.quantity || 0,
+            damageReason: wastageEntry.damageReason || entry.damageReason || '',
             approvedBy: 'Officer In Charge',
             approvedAt: new Date().toISOString()
           });
@@ -510,6 +511,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
           wastageFromSerial: entry.wastageFromSerial || '',
           wastageToSerial: entry.wastageToSerial || '',
           wastageQuantity: entry.wastageQuantity || 0,
+          damageReason: entry.damageReason || '',
           approvedBy: 'Officer In Charge',
           approvedAt: new Date().toISOString()
         });
@@ -780,6 +782,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
               wastageFromSerial: wastageEntry.fromSerial,
               wastageToSerial: wastageEntry.toSerial,
               wastageQuantity: wastageEntry.quantity || 0,
+              damageReason: wastageEntry.damageReason || entry.damageReason || '',
               approvedBy: 'Officer In Charge',
               approvedAt: new Date().toISOString(),
               cartoonNumber: cartoonNumber // Store the correct cartoon number
@@ -788,7 +791,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
             // Update counts for this cartoon number
             serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (wastageEntry.quantity || 0);
             
-            console.log(`Added WASTAGE range to ${cartoonNumber}:`, wastageEntry.fromSerial, '-', wastageEntry.toSerial, 'qty:', wastageEntry.quantity);
+            console.log(`Added WASTAGE range to ${cartoonNumber}:`, wastageEntry.fromSerial, '-', wastageEntry.toSerial, 'qty:', wastageEntry.quantity, 'damage:', wastageEntry.damageReason);
           }
         });
       } else if (entry.wastageQuantity > 0 && entry.wastageFromSerial && entry.wastageToSerial) {
@@ -801,13 +804,14 @@ export class HologramManufacturingRegisterComponent implements OnInit {
           wastageFromSerial: entry.wastageFromSerial,
           wastageToSerial: entry.wastageToSerial,
           wastageQuantity: entry.wastageQuantity || 0,
+          damageReason: entry.damageReason || '',
           approvedBy: 'Officer In Charge',
           approvedAt: new Date().toISOString(),
           cartoonNumber: cartoonNumber // Store the correct cartoon number
         });
         
         serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (entry.wastageQuantity || 0);
-        console.log(`Added single WASTAGE range to ${cartoonNumber}:`, entry.wastageFromSerial, '-', entry.wastageToSerial);
+        console.log(`Added single WASTAGE range to ${cartoonNumber}:`, entry.wastageFromSerial, '-', entry.wastageToSerial, 'damage:', entry.damageReason);
       }
       
       // Update available count and status
