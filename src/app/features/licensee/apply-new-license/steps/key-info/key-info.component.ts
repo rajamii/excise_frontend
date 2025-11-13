@@ -6,16 +6,8 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { MasterService } from '../../../../../core/services/master.service';
-
-interface LicenseCategory {
-  id: number;
-  name: string;
-}
-
-interface District {
-  id: number;
-  name: string;
-}
+import { LicenseCategory } from '../../../../../core/models/license-category.model';
+import { LicenseSubcategory } from '../../../../../core/models/license-subcategory.model';
 
 @Component({
   selector: 'app-key-info',
@@ -29,10 +21,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   // Reactive form group
   keyInfoForm: FormGroup;
 
+  private allSubCategories: LicenseSubcategory[] = [];
+
   // Dropdown options
   licenseCategories: LicenseCategory[] = [];
-  licenseSubCategories: LicenseCategory[] = [];
-  districts: District[] = [];
+  licenseSubCategories: LicenseSubcategory[] = [];
 
   // Event emitters for navigation
   @Output() readonly next = new EventEmitter<void>();
@@ -46,7 +39,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     licenseCategory: signal(''),
     licenseSubCategory: signal(''),
     establishmentName: signal(''),
-    locationDistrict: signal(''),
     siteType: signal('')
   };
 
@@ -66,7 +58,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.maxLength(150),
         Validators.pattern(PatternConstants.ORGANISATION_NAME),
       ]),
-      locationDistrict: new FormControl(storedValues.locationDistrict, [Validators.required]),
       siteType: new FormControl(storedValues.siteType, [Validators.required])
     });
 
@@ -81,15 +72,14 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadDropdownData();
+    this.loadAllSubCategories();
 
-    // Watch for category changes to load sub-categories
     this.keyInfoForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe((categoryId) => {
         if (categoryId) {
-          this.loadSubCategories(categoryId);
+          this.filterSubCategories(categoryId);
         } else {
-          // Clear subcategories if no category selected
           this.licenseSubCategories = [];
           this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
         }
@@ -104,92 +94,57 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private loadDropdownData(): void {
     // Load license categories
     this.masterService.getLicenseCategories().subscribe(
-      (data: any[]) => {
-        console.log(' Backend license categories:', data);
+      (data: LicenseCategory[]) => {
+        console.log('📦 Backend license categories:', data);
 
         this.licenseCategories = data.map(item => ({
           id: item.id,
-          name: item.licenseCategory || item.license_category || item.name
+          licenseCategory: item.licenseCategory
         }));
-
-        console.log(' Mapped categories:', this.licenseCategories);
       },
       error => {
-        console.error(' Failed to load license categories:', error);
-      }
-    );
-
-    // Load districts
-    this.masterService.getDistrict().subscribe(
-      (data: any[]) => {
-        console.log(' Backend districts:', data);
-
-        this.districts = data.map(item => ({
-          id: item.id,
-          name: item.district || item.name
-        }));
-
-        console.log(' Mapped districts:', this.districts);
-      },
-      error => {
-        console.error(' Failed to load districts:', error);
+        console.error('❌ Failed to load license categories:', error);
       }
     );
   }
 
-  private loadSubCategories(categoryId: number): void {
-    console.log(' Loading subcategories for category:', categoryId);
-
+  private loadAllSubCategories(): void {
     this.masterService.getLicenseSubcategories().subscribe(
-      (data: any[]) => {
-        console.log(' Raw subcategories from backend:', data);
+      (data: LicenseSubcategory[]) => {
+        console.log('📦 Backend subcategories:', data);
+        
+        this.allSubCategories = (data || []).map(d => ({
+          id: d.id,
+          description: d.description ?? '',
+          category: d.category ?? ''
+        } as LicenseSubcategory));
 
-        if (data.length > 0) {
-          console.log(' First item structure:', JSON.stringify(data[0], null, 2));
+        // Trigger reload if category is already selected
+        const currentCategory = this.keyInfoForm.get('licenseCategory')?.value;
+        if (currentCategory) {
+          this.filterSubCategories(currentCategory);
         }
-        this.licenseSubCategories = data
-          .filter(item => {
-            // Extract category ID from various possible formats:
-            // 1. item.categoryId (if backend returns flat structure)
-            // 2. item.category_id (snake_case)
-            // 3. item.category.id (nested object)
-            // 4. item.category (if it's just the ID)
-            let itemCategoryId;
-
-            if (item.categoryId !== undefined) {
-              itemCategoryId = item.categoryId;
-            } else if (item.category_id !== undefined) {
-              itemCategoryId = item.category_id;
-            } else if (item.category && typeof item.category === 'object' && item.category.id) {
-              itemCategoryId = item.category.id;
-            } else if (item.category && typeof item.category === 'number') {
-              itemCategoryId = item.category;
-            }
-
-            const matches = Number(itemCategoryId) === Number(categoryId);
-            console.log(`  Item ${item.id}: categoryId=${itemCategoryId}, matches=${matches}`);
-
-            return matches;
-          })
-          .map(item => ({
-            id: item.id,
-            name: item.description || item.name || item.subcategory
-          }));
-
-        console.log(' Filtered subcategories:', this.licenseSubCategories);
-
-        if (this.licenseSubCategories.length === 0) {
-          console.warn(' No subcategories found for category:', categoryId);
-          console.warn(' Check the logs above to see the data structure');
-        }
-
-        // Reset subcategory selection
-        this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
       },
       error => {
         console.error('❌ Failed to load subcategories:', error);
       }
     );
+  }
+
+  private filterSubCategories(categoryId: number): void {
+    console.log('🔍 Filtering subcategories for category:', categoryId);
+    
+    // Filter subcategories where category matches
+    this.licenseSubCategories = this.allSubCategories.filter(sub => {
+      // Handle both number and object
+      const subCatId = typeof sub.category === 'object' ? (sub.category as any)?.id : sub.category;
+      return subCatId === categoryId;
+    });
+
+    console.log('✅ Filtered subcategories:', this.licenseSubCategories);
+
+    // Reset selection
+    this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
   }
 
   private getFromSessionStorage(): Partial<LicenseApplication> {

@@ -1,208 +1,105 @@
-/**
- * New License Application Model
- * Maps to Django backend NewLicenseApplication model
- */
-export interface NewLicenseApplication {
-  // System fields (read-only)
-  applicationId?: string;
-  currentStage?: string;
-  isApproved?: boolean;
-  printCount?: number;
-  isPrintFeePaid?: boolean;
-  isFeeCalculated?: boolean;
-  isLicenseCategoryUpdated?: boolean;
-  yearlyLicenseFee?: string;
-  createdAt?: string;
-  updatedAt?: string;
+import { Account } from './account.model';
+import { District } from './district.model';
+import { LicenseCategory } from './license-category.model';
+import { LicenseSubcategory } from './license-subcategory.model';
+import { LicenseType } from './license-type.model';
+import { PoliceStation } from './policestation.model';
+import { Road } from './road.model';
+import { Role } from './role.model';
+import { Subdivision } from './subdivision.model';
 
-  // Step 1: License Type Selection
-  licenseType: number; // Foreign key ID
 
-  // Step 2: Basic Information
-  licenseCategory: number; // Foreign key ID
-  licenseSubCategory: number; // Foreign key ID
-  establishmentName: string;
-  locationDistrict: number; // Foreign key ID
-  siteType: 'New' | 'Existing';
-
-  // Step 3: Applicant Details
-  status: 'Single' | 'Married' | 'Divorced';
-  applicantName: string;
-  fatherHusbandName: string;
-  nationality: string;
-  gender: 'Male' | 'Female';
-  pan: string;
-  applicantMobileNumber: number | string;
-  applicantEmail: string;
-  photo?: File | string; // File for upload, string for URL
-
-  // Step 4: Site Details
-  siteSubdivision: number; // Foreign key ID
-  policeStation: number; // Foreign key ID
-  locationCategory: string;
-  locationName: string;
-  wardName: string;
-  businessAddress: string;
-  roadName: string;
-  pinCode: number | string;
-  latitude?: number | string;
-  longitude?: number | string;
-  constructionType: string;
-  length?: number | string;
-  breadth?: number | string;
-  siteOwned: 'Yes' | 'No';
-  nocObtained: 'Yes' | 'No';
-  tradeLicenseCovered: 'Yes' | 'No';
-
-  // Step 5: Company Details (conditional - only if licenseType is Company)
-  companyName?: string;
-  companyAddress?: string;
-  companyPan?: string;
-  companyCin?: string;
-  incorporationDate?: string;
-  companyPhoneNumber?: number | string;
-  companyEmail?: string;
-
-  // Site Documents (optional based on requirements)
-  aadharCard?: File | string;
-  sikkimCertificate?: File | string;
-  birthProof?: File | string;
-  nocLandlord?: File | string;
-  tradeLicense?: File | string;
-
-  // Related data (populated by backend)
-  licenseTypeName?: string;
-  licenseCategoryName?: string;
-  licenseSubCategoryName?: string;
-  locationDistrictName?: string;
-  siteSubdivisionName?: string;
-  policeStationName?: string;
-  transactions?: NewLicenseTransaction[];
-  latestTransaction?: NewLicenseTransaction;
+export class Transaction {
+  id!: number;
+  licenseApplication!: string | NewLicenseApplication;
+  performedBy!: Account | null;
+  forwardedBy!: number;
+  forwardedTo!: Role | null;
+  stage!: number;
+  remarks?: string | null;
+  timestamp!: string;
 }
 
-/**
- * Transaction model for New License Application
- */
-export interface NewLicenseTransaction {
+export class Objection {
   id?: number;
-  licenseApplication: string;
-  performedBy?: any;
-  forwardedBy?: any;
-  forwardedTo?: any;
-  stage: string;
-  remarks?: string;
-  timestamp: string;
+  application!: string | NewLicenseApplication;
+  fieldName!: string;
+  remarks!: string;
+  raisedBy!: Account | null;
+  isResolved!: boolean;
+  raisedOn!: string;
+  resolvedOn?: string | null;
 }
 
-/**
- * Objection model for New License Application
- */
-export interface NewLicenseObjection {
-  id?: number;
-  application: string;
-  fieldName: string;
-  remarks: string;
-  raisedBy?: any;
-  isResolved: boolean;
-  raisedOn: string;
-  resolvedOn?: string;
-}
+export class NewLicenseApplication {
 
-/**
- * Site Enquiry Report model
- */
-export interface NewLicenseSiteEnquiryReport {
-  id?: number;
-  application: string;
+  applicationId!: number;
   
-  // Traditional place
-  hasTraditionalPlace: boolean;
-  traditionalPlaceDistance?: number;
-  traditionalPlaceName?: string;
-  traditionalPlaceNature?: string;
-  traditionalPlaceConstruction?: 'rcc' | 'wooden_structure' | 'temporary';
-  
-  // Educational institution
-  hasEducationalInstitution: boolean;
-  educationalInstitutionDistance?: number;
-  educationalInstitutionName?: string;
-  educationalInstitutionNature?: string;
-  
-  // Hospital
-  hasHospital: boolean;
-  hospitalDistance?: number;
-  hospitalName?: string;
-  
-  // Taxi stand
-  hasTaxiStand: boolean;
-  taxiStandName?: string;
-  taxiStandDistance?: number;
-  
-  // Shop details
-  shopConstructionType: 'rcc' | 'wooden_structure' | 'temporary';
-  isInterconnectedWithShops: boolean;
-  interconnectivityRemarks?: string;
-  hasExciseShopsNearby: boolean;
-  nearbyExciseShopCount?: number;
-  nearbyExciseShopsRemarks?: string;
-  
-  // Location
-  isOnHighway: boolean;
-  highwayName?: string;
-  latitude?: number;
-  longitude?: number;
-  shopImageDocument: File | string;
-  
-  // Size verification
-  isShopSizeCorrect: boolean;
-  shopSizeRemarks?: string;
-  
-  // Document verification
-  hasIdProof: boolean;
-  idProofComments?: string;
-  hasAgeProof: boolean;
-  ageProofComments?: string;
-  hasNocFromLandlord: boolean;
-  nocComments?: string;
-  hasOwnershipProof: boolean;
-  ownershipProofComments?: string;
-  hasTradeLicense: boolean;
-  tradeLicenseComments?: string;
-  
-  // Worker information
-  proposesBarmanOrSalesman: boolean;
-  workerProposalComments?: string;
-  workerDocsValid: boolean;
-  workerDocsComments?: string;
-  
-  // Recommendation
-  licenseRecommendation: boolean;
-  recommendationComments?: string;
-  enquiryOfficerComments?: string;
-  additionalEnquiryOfficerComments?: string;
-  specialRemarks?: string;
-  reportingPlace?: string;
-  
-  createdAt?: string;
-}
+  //Application Type
+  licenseType!: LicenseType;
 
-/**
- * Dashboard counts for New License Application
- */
-export interface NewLicenseDashboardCount {
-  pending?: number;
-  approved?: number;
-  rejected?: number;
-  applied?: number; // For licensee role
-}
+  //Basic Information
+  licenseCategory!: LicenseCategory;
+  licenseSubCategory!: LicenseSubcategory;
+  establishmentName!: string;
+  siteType!: string;
 
-/**
- * Applications grouped by status
- */
-export interface NewLicenseApplicationsByStatus {
-  pending?: NewLicenseApplication[];
-  approved?: NewLicenseApplication[];
-  rejected?: NewLicenseApplication[];
-  applied?: NewLicenseApplication[]; // For licensee role
+  //Applicant Details
+  applicantName!: string;
+  fatherHusbandName!: string;
+  dob!: string;
+  gender!: string;
+  nationality!: string;
+  residentialStatus!: string;
+  presentAddress!: string;
+  permanentAddress!: string;
+  pan!: string;
+  email!: string;
+  mobileNumber!: string;
+  modeOfOperation!: string;
+  hasSikkimCertificate!: boolean;
+  hasExciseLicense!: boolean;
+  familyExciseLicense!: boolean;
+  criminalConviction!: boolean;
+
+  //Site Details
+  siteDistrict!: District;
+  siteSubdivision!: Subdivision;
+  policeStation!: PoliceStation;
+  locationCategory!: string;
+  locationName!: string;
+  wardName!: string;
+  businessAddress!: string;
+  roadName!: Road;
+  pinCode!: number;
+  ConstructionType!: string;
+  length!: number;
+  breadth!: number;
+  siteOwned!: boolean;
+  nocObtained!: boolean;
+
+  //Company Details
+  companyName!: string;
+  companyAddress!: string;
+  companyPan!: string;
+  companyCin!: string;
+  incorporationDate!: string;
+  companyPhoneNumber!: string;
+  companyEmail!: string;
+
+  //document uploads
+  passPhoto!: File;
+  panCard!: File;
+  sikkimCertificate!: File;
+  dobProof!: File;
+  nocLandlord!: File | null;
+
+  //transactions
+  currentStage!: string;
+  isApproved!: boolean;
+  printCount: number = 0;
+
+  //Related Models
+  objections!: Objection[];
+  transactions!: Transaction[];
 }
