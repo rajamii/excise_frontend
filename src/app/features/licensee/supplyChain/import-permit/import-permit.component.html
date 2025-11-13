@@ -134,23 +134,49 @@
               <div class="row mb-4">
                 <div class="col-md-6">
                   <label class="form-label">Lifted From:</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="formData.liftedFrom"
-                    (change)="onLiftedFromChange()"
-                    required
-                  >
-                    <option value="">Select Distillery</option>
-                    <option value="sikkim-distilleries">
-                      Sikkim Distilleries Ltd
-                    </option>
-                    <option value="mountain-spirits">
-                      Mountain Spirits Pvt Ltd
-                    </option>
-                    <option value="highland-breweries">
-                      Highland Breweries
-                    </option>
-                  </select>
+                  <div *ngIf="isLoading" class="d-flex align-items-center mb-2">
+                    <div
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                    >
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Loading distilleries...</span>
+                  </div>
+
+                  <div *ngIf="!isLoading">
+                    <select
+                      class="form-select"
+                      [(ngModel)]="formData.liftedFrom"
+                      (ngModelChange)="onLiftedFromChange()"
+                      [disabled]="distilleries.length === 0"
+                      [class.is-invalid]="distilleries.length === 0"
+                      required
+                    >
+                      <option [ngValue]="''">Select Distillery</option>
+                      <option
+                        *ngFor="let distillery of distilleries"
+                        [value]="distillery.id.toString()"
+                      >
+                        {{
+                          distillery.distilleryName ||
+                            distillery.distillery_name
+                        }}
+                        ({{
+                          distillery.distilleryState ||
+                            distillery.distillery_state
+                        }})
+                      </option>
+                    </select>
+
+                    <div
+                      *ngIf="distilleries.length === 0"
+                      class="invalid-feedback"
+                    >
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                      No distilleries available. Please try again later.
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Via Route:</label>
@@ -170,26 +196,42 @@
                   <select
                     class="form-select"
                     [(ngModel)]="formData.checkpostEntry"
+                    name="checkpostEntry"
                     required
+                    [disabled]="isLoading"
                   >
-                    <option value="">Select Checkpost</option>
-                    <option value="rangpo">Rangpo Checkpost</option>
-                    <option value="melli">Melli Checkpost</option>
-                    <option value="nathu-la">Nathu La Checkpost</option>
+                    <option [ngValue]="''">Select Checkpost</option>
+                    <option
+                      *ngFor="let checkpost of checkposts"
+                      [ngValue]="checkpost.checkpostName"
+                    >
+                      {{ checkpost.checkpostName }}
+                    </option>
                   </select>
+                  <div *ngIf="isLoading" class="text-muted small">
+                    Loading checkposts...
+                  </div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Choose Purpose:</label>
                   <select
                     class="form-select"
                     [(ngModel)]="formData.purpose"
+                    name="purpose"
                     required
+                    [disabled]="isLoading"
                   >
-                    <option value="">Select Purpose</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="blending">Blending</option>
-                    <option value="bottling">Bottling</option>
+                    <option [ngValue]="''">Select Purpose</option>
+                    <option
+                      *ngFor="let purpose of purposes"
+                      [ngValue]="purpose.purposeName"
+                    >
+                      {{ purpose.purposeName }}
+                    </option>
                   </select>
+                  <div *ngIf="isLoading" class="text-muted small">
+                    Loading purposes...
+                  </div>
                 </div>
               </div>
 

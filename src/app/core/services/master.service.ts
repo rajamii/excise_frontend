@@ -23,13 +23,36 @@ export interface BulkSpiritType {
   updatedAt: string;
 }
 
+export interface Checkpost {
+  id: number;
+  checkpost_name: string;
+}
+
+export interface Purpose {
+  id: number;
+  purpose_name: string;
+}
+
+export interface Distillery {
+  id: number;
+  distilleryName: string;
+  distilleryAddress: string;
+  distilleryState: string;
+  viaRoute: string;
+  // Keeping the old properties for backward compatibility
+  distillery_name?: string;
+  distillery_address?: string;
+  distillery_state?: string;
+  via_route?: string;
+}
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MasterService {
   private readonly baseUrl = `${environment.apiBaseUrl}/masters/core`;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   // Fetches a list of all districts
   getDistrict(): Observable<District[]> {
@@ -53,7 +76,9 @@ export class MasterService {
 
   // Retrieves police stations within a specified subdivision (by code)
   getPoliceStationBySubDivision(code: number): Observable<PoliceStation[]> {
-    return this.http.get<PoliceStation[]>(`${this.baseUrl}/subdivision/detail/${code}`);
+    return this.http.get<PoliceStation[]>(
+      `${this.baseUrl}/subdivision/detail/${code}`
+    );
   }
 
   // Fetches all available license types
@@ -63,12 +88,16 @@ export class MasterService {
 
   // Fetches all license categories
   getLicenseCategories(): Observable<LicenseCategory[]> {
-    return this.http.get<LicenseCategory[]>(`${this.baseUrl}/license-categories`);
+    return this.http.get<LicenseCategory[]>(
+      `${this.baseUrl}/license-categories`
+    );
   }
 
   // Fetches all license subcategories
   getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
-    return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/license-subcategories`);
+    return this.http.get<LicenseSubcategory[]>(
+      `${this.baseUrl}/license-subcategories`
+    );
   }
 
   // Fetches all available license titles
@@ -82,14 +111,60 @@ export class MasterService {
   }
 
   /**
-   * Fetches all active bulk spirit types from the server
-   * @returns Observable containing an array of BulkSpiritType objects
+   * Fetches all active bulk spirit types from the server done by ishwar
    */
   getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
-    return this.http.get<{success: boolean, data: BulkSpiritType[]}>(
-      `${environment.apiBaseUrl}/transactional/supply_chain/bulk-spirit/bulk-spirit-types/`
-    ).pipe(
-      map(response => response.data)
-    );
+    return this.http
+      .get<{ success: boolean; data: BulkSpiritType[] }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/bulk-spirit/bulk-spirit-types/`
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  /**
+   * Fetches all distilleries from the server done by ishwar
+   */
+  getDistilleries(): Observable<Distillery[]> {
+    return this.http
+      .get<{ success: boolean; data: Distillery[] }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/ena-distillery-types/`
+      )
+      .pipe(map((response) => response.data || []));
+  }
+
+  /**
+   * Fetches all checkposts from the server
+   */
+  getCheckposts(): Observable<Checkpost[]> {
+    return this.http
+      .get<{ status: string; data: Checkpost[] }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/checkposts/`
+      )
+      .pipe(
+        map((response) => {
+          if (response.status === 'success') {
+            return response.data || [];
+          }
+          throw new Error('Failed to fetch checkposts');
+        })
+      );
+  }
+
+  /**
+   * Fetches all purposes from the server
+   */
+  getPurposes(): Observable<Purpose[]> {
+    return this.http
+      .get<{ status: string; data: Purpose[] }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/purposes/`
+      )
+      .pipe(
+        map((response) => {
+          if (response.status === 'success') {
+            return response.data || [];
+          }
+          throw new Error('Failed to fetch purposes');
+        })
+      );
   }
 }
