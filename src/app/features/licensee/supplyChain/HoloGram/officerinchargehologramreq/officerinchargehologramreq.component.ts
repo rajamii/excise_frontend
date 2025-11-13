@@ -51,7 +51,8 @@ interface HologramInventory {
   status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED';
   receivedDate: string;
   nextAvailableSerial?: string;
-  actualAvailableRange?: { fromSerial: string; toSerial: string; count: number }; // Actual available range excluding IN_PROGRESS
+  actualAvailableRange?: { fromSerial: string; toSerial: string; count: number }; // Actual available range excluding IN_PROGRESS (deprecated - use actualAvailableRanges)
+  actualAvailableRanges?: Array<{ fromSerial: string; toSerial: string; count: number }>; // ALL available ranges excluding IN_PROGRESS
 }
 
 interface HologramAllocation {
@@ -686,8 +687,14 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const cartoonNumber = item.cartoonNumber || item.rollNumber || 'UNKNOWN';
       const hologramType = item.type || item.hologramType || 'LOCAL';
       
-      // Calculate actual available range (excluding IN_PROGRESS issued holograms)
-      const actualAvailableRange = this.calculateActualAvailableRange(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+      // Calculate ALL actual available ranges (excluding IN_PROGRESS issued holograms)
+      const actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+      
+      // Calculate total available count from ALL ranges
+      const totalAvailableFromRanges = actualAvailableRanges.reduce((sum, range) => sum + range.count, 0);
+      
+      // Use the calculated total from ranges, or fall back to item.availableCount
+      const finalAvailableCount = totalAvailableFromRanges > 0 ? totalAvailableFromRanges : item.availableCount;
       
       const normalized: HologramInventory = {
         id: item.id,
@@ -696,18 +703,20 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         fromSerial: item.fromSerial,
         toSerial: item.toSerial,
         totalCount: item.totalCount,
-        availableCount: actualAvailableRange ? actualAvailableRange.count : item.availableCount,
+        availableCount: finalAvailableCount,
         usedCount: item.usedCount || 0,
         damagedCount: item.damagedCount || 0,
         status: item.status,
         receivedDate: item.receivedDate,
-        actualAvailableRange: actualAvailableRange || undefined
+        actualAvailableRange: actualAvailableRanges.length > 0 ? actualAvailableRanges[0] : undefined, // Keep for backward compatibility
+        actualAvailableRanges: actualAvailableRanges.length > 0 ? actualAvailableRanges : undefined
       };
       
       console.log(`Normalized ${normalized.cartoonNumber}:`, {
         type: normalized.type,
         available: normalized.availableCount,
-        actualRange: actualAvailableRange ? `${actualAvailableRange.fromSerial}-${actualAvailableRange.toSerial}` : 'N/A',
+        rangesCount: actualAvailableRanges.length,
+        ranges: actualAvailableRanges.map(r => `${r.fromSerial}-${r.toSerial} (${r.count})`).join(', '),
         status: normalized.status
       });
       
@@ -746,16 +755,17 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   /**
-   * Calculate actual available range for a cartoon, excluding IN_PROGRESS issued holograms
-   * Returns the actual available range (e.g., 000700-000999) and count
+   * Calculate ALL actual available ranges for a cartoon, excluding IN_PROGRESS issued holograms
+   * Returns ALL available ranges (e.g., [{000011-000029}, {000040-000500}]) and their counts
+   * This handles non-contiguous ranges properly
    */
-  calculateActualAvailableRange(
+  calculateActualAvailableRanges(
     cartoonNumber: string,
     hologramType: string,
     fromSerial: string,
     toSerial: string
-  ): { fromSerial: string; toSerial: string; count: number } | null {
-    if (!fromSerial || !toSerial) return null;
+  ): Array<{ fromSerial: string; toSerial: string; count: number }> {
+    if (!fromSerial || !toSerial) return [];
 
     // Extract serial numbers
     const prefix = fromSerial.replace(/\d+$/, '');
@@ -815,36 +825,59 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       });
     }
 
-    // Find the first available range (gap after used/damaged/in-progress)
-    let availableStart: number | null = null;
-    let availableEnd: number | null = null;
+    // Find ALL available ranges (handles non-contiguous ranges)
+    const availableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
+    let currentRangeStart: number | null = null;
+    let currentRangeEnd: number | null = null;
 
     for (let i = rollStart; i <= rollEnd; i++) {
       const isUsed = usedSerials.has(i) || inProgressSerials.has(i);
       
       if (!isUsed) {
-        if (availableStart === null) {
-          availableStart = i; // Start of available range
+        // Start a new range or extend current range
+        if (currentRangeStart === null) {
+          currentRangeStart = i;
         }
-        availableEnd = i; // Update end as we continue
+        currentRangeEnd = i;
       } else {
-        // If we found a used serial and we have an available range, that's our range
-        if (availableStart !== null && availableEnd !== null) {
-          break;
+        // End of current range - save it if valid
+        if (currentRangeStart !== null && currentRangeEnd !== null) {
+          availableRanges.push({
+            fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
+            toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+            count: currentRangeEnd - currentRangeStart + 1
+          });
+          currentRangeStart = null;
+          currentRangeEnd = null;
         }
       }
     }
 
-    // If we found an available range
-    if (availableStart !== null && availableEnd !== null) {
-      return {
-        fromSerial: prefix + String(availableStart).padStart(6, '0'),
-        toSerial: prefix + String(availableEnd).padStart(6, '0'),
-        count: availableEnd - availableStart + 1
-      };
+    // Don't forget the last range if it extends to the end
+    if (currentRangeStart !== null && currentRangeEnd !== null) {
+      availableRanges.push({
+        fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
+        toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+        count: currentRangeEnd - currentRangeStart + 1
+      });
     }
 
-    return null;
+    return availableRanges;
+  }
+
+  /**
+   * Calculate actual available range for a cartoon, excluding IN_PROGRESS issued holograms
+   * Returns the FIRST available range (e.g., 000700-000999) and count
+   * @deprecated Use calculateActualAvailableRanges() to get ALL ranges
+   */
+  calculateActualAvailableRange(
+    cartoonNumber: string,
+    hologramType: string,
+    fromSerial: string,
+    toSerial: string
+  ): { fromSerial: string; toSerial: string; count: number } | null {
+    const ranges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, fromSerial, toSerial);
+    return ranges.length > 0 ? ranges[0] : null;
   }
 
   showHologramAllocationModal(request: HologramRequest): void {
@@ -911,12 +944,14 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     }
 
     // FIFO allocation - use oldest cartoons first
-    // Allow multiple requests from the same cartoon if there's enough available
+    // Handle multiple ranges per cartoon properly
     const allocations: HologramAllocation[] = [];
     let remainingQuantity = requestedQuantity;
     
     // Track how much has been allocated from each cartoon in this allocation
     const cartoonAllocations = new Map<string, number>();
+    // Track which ranges have been used from each cartoon
+    const cartoonRangeUsage = new Map<string, number>(); // Map<cartoonNumber, usedCount>
 
     for (const item of availableInventory) {
       if (remainingQuantity <= 0) break;
@@ -927,32 +962,66 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
       if (availableFromThisCartoon <= 0) continue; // Skip if no more available from this cartoon
 
-      const quantityFromThisCartoon = Math.min(remainingQuantity, availableFromThisCartoon);
+      // Get all available ranges for this cartoon
+      const availableRanges = item.actualAvailableRanges || (item.actualAvailableRange ? [item.actualAvailableRange] : []);
       
-      // Use actual available range if available, otherwise calculate
-      let startSerial: string;
-      if (item.actualAvailableRange) {
-        // Start from the actual available range, offset by already allocated
-        const rangeStart = parseInt(item.actualAvailableRange.fromSerial.match(/\d+$/)?.[0] || '0');
-        const prefix = item.actualAvailableRange.fromSerial.replace(/\d+$/, '');
-        startSerial = prefix + String(rangeStart + alreadyAllocated).padStart(6, '0');
-      } else {
-        startSerial = this.getNextAvailableSerial(item, alreadyAllocated);
+      if (availableRanges.length === 0) {
+        // Fallback: calculate from item data
+        const quantityFromThisCartoon = Math.min(remainingQuantity, availableFromThisCartoon);
+        const startSerial = this.getNextAvailableSerial(item, alreadyAllocated);
+        const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
+
+        allocations.push({
+          cartoonNumber: item.cartoonNumber,
+          fromSerial: startSerial,
+          toSerial: endSerial,
+          quantity: quantityFromThisCartoon,
+          remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromThisCartoon
+        });
+
+        cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + quantityFromThisCartoon);
+        remainingQuantity -= quantityFromThisCartoon;
+        continue;
       }
+
+      // Allocate from all available ranges in order
+      let usedFromThisCartoon = 0;
       
-      const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
+      for (const range of availableRanges) {
+        if (remainingQuantity <= 0) break;
+        
+        // Check how much has been used from this specific range
+        const rangeKey = `${item.cartoonNumber}_${range.fromSerial}_${range.toSerial}`;
+        const usedFromRange = cartoonRangeUsage.get(rangeKey) || 0;
+        const availableInRange = range.count - usedFromRange;
+        
+        if (availableInRange <= 0) continue; // This range is fully used
+        
+        // Allocate from this range
+        const quantityFromRange = Math.min(remainingQuantity, availableInRange);
+        
+        // Calculate start serial (offset by what's already been used from this range)
+        const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
+        const prefix = range.fromSerial.replace(/\d+$/, '');
+        const startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
+        const endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
 
-      allocations.push({
-        cartoonNumber: item.cartoonNumber,
-        fromSerial: startSerial,
-        toSerial: endSerial,
-        quantity: quantityFromThisCartoon,
-        remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromThisCartoon
-      });
+        allocations.push({
+          cartoonNumber: item.cartoonNumber,
+          fromSerial: startSerial,
+          toSerial: endSerial,
+          quantity: quantityFromRange,
+          remainingInCartoon: item.availableCount - alreadyAllocated - usedFromThisCartoon - quantityFromRange
+        });
 
-      // Track allocation from this cartoon
-      cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + quantityFromThisCartoon);
-      remainingQuantity -= quantityFromThisCartoon;
+        // Track usage
+        cartoonRangeUsage.set(rangeKey, usedFromRange + quantityFromRange);
+        usedFromThisCartoon += quantityFromRange;
+        remainingQuantity -= quantityFromRange;
+      }
+
+      // Update total allocation from this cartoon
+      cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + usedFromThisCartoon);
     }
 
     console.log('Final Allocations:', allocations);

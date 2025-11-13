@@ -1764,49 +1764,72 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
       
-      // For each allocated roll, fetch its CURRENT available count from hologramOverviewRolls
-      return allocationData.allocatedCartoons.map((cartoon: any) => {
-        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoon.cartoonNumber);
+      // Group allocations by cartoonNumber to handle multiple ranges per roll
+      const rollMap = new Map<string, any>();
+      
+      allocationData.allocatedCartoons.forEach((cartoon: any) => {
+        const cartoonNumber = cartoon.cartoonNumber;
+        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
         const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
-        const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
-        const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+        
+        if (rollMap.has(cartoonNumber)) {
+          // Roll already exists - sum the quantities and collect all ranges
+          const existing = rollMap.get(cartoonNumber);
+          const previousQuantity = existing.allocatedQuantity;
+          existing.allocatedQuantity += allocatedQuantity;
+          existing.availableCount += allocatedQuantity;
+          
+          // Collect all ranges for this roll
+          if (!existing.ranges) {
+            // First time adding a range - create ranges array with the first range
+            existing.ranges = [{
+              fromSerial: existing.fromSerial,
+              toSerial: existing.toSerial,
+              quantity: previousQuantity
+            }];
+          }
+          // Add the new range
+          existing.ranges.push({
+            fromSerial: cartoon.fromSerial || '',
+            toSerial: cartoon.toSerial || '',
+            quantity: allocatedQuantity
+          });
+          
+          // Update serial range to show all ranges
+          const allRanges = existing.ranges.map((r: any) => `${r.fromSerial}-${r.toSerial}`).join(', ');
+          existing.serialRange = allRanges;
+        } else {
+          // New roll - create entry
+          const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+          const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+          const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+          const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
 
-        if (actualRollData) {
-          console.log(`✅ Found actual roll data for ${cartoon.cartoonNumber}:`, actualRollData);
-
-          // PRIORITY: Use fromSerial/toSerial from allocation data (cartoon) if available, otherwise use roll data
-          const fromSerial = cartoon.fromSerial || actualRollData.fromSerial || '';
-          const toSerial = cartoon.toSerial || actualRollData.toSerial || '';
-
-          return {
-            cartoonNumber: actualRollData.cartoonNumber,
+          rollMap.set(cartoonNumber, {
+            cartoonNumber: cartoonNumber,
             allocatedQuantity,
-            availableCount: allocatedQuantity, // Amount licensee can work with for this entry
+            availableCount: allocatedQuantity,
             remainingInCartoon,
-            serialRange: cartoon.serialRange || actualRollData.serialRange || `${fromSerial} - ${toSerial}`,
+            serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
             totalCount,
             fromSerial: fromSerial,
             toSerial: toSerial,
-            type: actualRollData.type,
-            status: actualRollData.status,
-            actualBalance: actualRollData.availableCount ?? remainingInCartoon
-          };
+            type: actualRollData?.type || cartoon.type || entry.hologramType,
+            status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+            actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+            ranges: [{
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              quantity: allocatedQuantity
+            }]
+          });
         }
-
-        console.warn(`⚠️ Roll ${cartoon.cartoonNumber} not found in hologramOverviewRolls, using allocation data`);
-        return {
-          cartoonNumber: cartoon.cartoonNumber,
-          allocatedQuantity,
-          availableCount: allocatedQuantity,
-          remainingInCartoon,
-          serialRange: cartoon.serialRange || `${cartoon.fromSerial} - ${cartoon.toSerial}`,
-          totalCount,
-          fromSerial: cartoon.fromSerial || '',
-          toSerial: cartoon.toSerial || '',
-          type: cartoon.type || entry.hologramType,
-          status: cartoon.status || 'ALLOCATED'
-        };
       });
+      
+      // Convert map to array
+      const groupedRolls = Array.from(rollMap.values());
+      console.log('✅ Grouped rolls (multiple ranges combined):', groupedRolls);
+      return groupedRolls;
     }
     
     console.log('⚠️ No allocation data found, using fallback logic');
@@ -2099,20 +2122,19 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Validate if a serial range is within the allocated range for a roll
+   * Validate if a serial range is within ANY of the allocated ranges for a roll
    */
-  validateSerialRangeInAllocatedRange(
-    fromSerial: string, 
-    toSerial: string, 
-    allocatedFromSerial: string, 
-    allocatedToSerial: string
+  public validateSerialRangeInAllocatedRanges(
+    fromSerial: string,
+    toSerial: string,
+    allocatedRanges: Array<{ fromSerial: string; toSerial: string }>
   ): { isValid: boolean; errorMessage: string } {
     if (!fromSerial || !toSerial) {
       return { isValid: true, errorMessage: '' }; // Empty is valid (not required yet)
     }
 
-    if (!allocatedFromSerial || !allocatedToSerial) {
-      return { isValid: false, errorMessage: 'Allocated range not found for this roll' };
+    if (!allocatedRanges || allocatedRanges.length === 0) {
+      return { isValid: false, errorMessage: 'Allocated ranges not found for this roll' };
     }
 
     // Extract numeric parts
@@ -2123,49 +2145,74 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
 
     const fromNum = extractNumber(fromSerial);
     const toNum = extractNumber(toSerial);
-    const allocatedFromNum = extractNumber(allocatedFromSerial);
-    const allocatedToNum = extractNumber(allocatedToSerial);
 
     // Check if range is valid (from <= to)
     if (fromNum > toNum) {
       return { isValid: false, errorMessage: 'From serial must be less than or equal to To serial' };
     }
 
-    // Check if range is within allocated range
-    if (fromNum < allocatedFromNum || toNum > allocatedToNum) {
-      return { 
-        isValid: false, 
-        errorMessage: `Serial range must be within allocated range: ${allocatedFromSerial} - ${allocatedToSerial}` 
-      };
+    // Check if range is within ANY of the allocated ranges
+    for (const allocatedRange of allocatedRanges) {
+      const allocatedFromNum = extractNumber(allocatedRange.fromSerial);
+      const allocatedToNum = extractNumber(allocatedRange.toSerial);
+
+      if (fromNum >= allocatedFromNum && toNum <= allocatedToNum) {
+        return { isValid: true, errorMessage: '' };
+      }
     }
 
-    return { isValid: true, errorMessage: '' };
+    // Range is not within any allocated range
+    const rangesStr = allocatedRanges.map(r => `${r.fromSerial}-${r.toSerial}`).join(', ');
+    return {
+      isValid: false,
+      errorMessage: `Serial range must be within one of the allocated ranges: ${rangesStr}` 
+    };
   }
 
   /**
-   * Get allocated serial range for a specific roll
-   * This uses the range stored in allocation data (from Hologram Allocation Details)
+   * Validate if a serial range is within the allocated range for a roll
+   * @deprecated Use validateSerialRangeInAllocatedRanges() to validate against all ranges
    */
-  getAllocatedRangeForRoll(entry: HologramDailyEntry, cartoonNumber: string): { fromSerial: string; toSerial: string } | null {
+  validateSerialRangeInAllocatedRange(
+    fromSerial: string, 
+    toSerial: string, 
+    allocatedFromSerial: string, 
+    allocatedToSerial: string
+  ): { isValid: boolean; errorMessage: string } {
+    return this.validateSerialRangeInAllocatedRanges(fromSerial, toSerial, [
+      { fromSerial: allocatedFromSerial, toSerial: allocatedToSerial }
+    ]);
+  }
+
+  /**
+   * Get ALL allocated serial ranges for a specific roll
+   * This uses the range stored in allocation data (from Hologram Allocation Details)
+   * Returns an array of all ranges allocated to this roll
+   */
+  getAllocatedRangesForRoll(entry: HologramDailyEntry, cartoonNumber: string): Array<{ fromSerial: string; toSerial: string }> {
     const allocationData = this.getHologramAllocationForEntry(entry);
     
-    console.log(`🔍 Getting allocated range for ${cartoonNumber}`, {
+    console.log(`🔍 Getting ALL allocated ranges for ${cartoonNumber}`, {
       hasAllocationData: !!allocationData,
       allocatedCartoons: allocationData?.allocatedCartoons?.length
     });
     
+    const ranges: Array<{ fromSerial: string; toSerial: string }> = [];
+    
     if (allocationData && allocationData.allocatedCartoons) {
-      const cartoon = allocationData.allocatedCartoons.find((c: any) => c.cartoonNumber === cartoonNumber);
-      console.log(`🔍 Found cartoon:`, cartoon);
+      // Find ALL cartoons matching this roll (a roll can have multiple allocations/ranges)
+      const matchingCartoons = allocationData.allocatedCartoons.filter((c: any) => c.cartoonNumber === cartoonNumber);
+      console.log(`🔍 Found ${matchingCartoons.length} allocation(s) for ${cartoonNumber}:`, matchingCartoons);
       
-      if (cartoon) {
+      for (const cartoon of matchingCartoons) {
         // PRIORITY 1: Use the stored fromSerial/toSerial from allocation data (this is the source of truth)
         if (cartoon.fromSerial && cartoon.toSerial) {
           console.log(`✅ Using stored allocated range for ${cartoonNumber}:`, cartoon.fromSerial, '-', cartoon.toSerial);
-          return {
+          ranges.push({
             fromSerial: cartoon.fromSerial,
             toSerial: cartoon.toSerial
-          };
+          });
+          continue;
         }
         
         // PRIORITY 2: If no stored range, calculate from roll's starting serial and allocated quantity
@@ -2173,7 +2220,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         
         if (!allocatedQuantity || allocatedQuantity <= 0) {
           console.warn(`⚠️ Invalid allocated quantity for ${cartoonNumber}:`, allocatedQuantity);
-          return null;
+          continue;
         }
         
         // Get the roll's actual starting serial from hologramOverviewRolls
@@ -2192,7 +2239,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         
         if (!rollStartSerial) {
           console.warn(`⚠️ No starting serial found for ${cartoonNumber}`);
-          return null;
+          continue;
         }
         
         // Extract numeric part from serial (e.g., "000001" -> 1, "HG000001" -> 1)
@@ -2201,7 +2248,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
           rollStartNumber = parseInt(match[1], 10);
         } else {
           console.warn(`⚠️ Could not extract number from serial: ${rollStartSerial}`);
-          return null;
+          continue;
         }
         
         // Calculate end serial number
@@ -2209,7 +2256,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         
         if (endNumber < rollStartNumber) {
           console.error(`❌ Invalid range calculation: start=${rollStartNumber}, end=${endNumber}, qty=${allocatedQuantity}`);
-          return null;
+          continue;
         }
         
         // Format the serial numbers (preserve prefix if any)
@@ -2226,50 +2273,65 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
           toSerial
         });
         
-        return {
+        ranges.push({
           fromSerial,
           toSerial
-        };
+        });
       }
     }
 
     // Fallback: try to get from available rolls (but calculate based on allocated quantity)
-    const availableRolls = this.getAvailableRollsForEntry(entry);
-    const roll = availableRolls.find(r => r.cartoonNumber === cartoonNumber);
-    if (roll) {
-      console.log(`🔍 Fallback: Found roll in availableRolls:`, roll);
-      
-      // PRIORITY 1: Use allocated quantity to calculate range
-      if (roll.allocatedQuantity && roll.allocatedQuantity > 0 && roll.fromSerial) {
-        const match = roll.fromSerial.match(/(\d+)$/);
-        if (match) {
-          const startNumber = parseInt(match[1], 10);
-          const endNumber = startNumber + roll.allocatedQuantity - 1;
-          
-          if (endNumber >= startNumber) {
-            const prefix = roll.fromSerial.replace(/\d+$/, '');
-            const calculatedRange = {
-              fromSerial: roll.fromSerial,
-              toSerial: prefix + String(endNumber).padStart(6, '0')
-            };
-            console.log(`✅ Calculated range from availableRolls:`, calculatedRange);
-            return calculatedRange;
+    if (ranges.length === 0) {
+      const availableRolls = this.getAvailableRollsForEntry(entry);
+      const roll = availableRolls.find(r => r.cartoonNumber === cartoonNumber);
+      if (roll) {
+        console.log(`🔍 Fallback: Found roll in availableRolls:`, roll);
+        
+        // PRIORITY 1: Use allocated quantity to calculate range
+        if (roll.allocatedQuantity && roll.allocatedQuantity > 0 && roll.fromSerial) {
+          const match = roll.fromSerial.match(/(\d+)$/);
+          if (match) {
+            const startNumber = parseInt(match[1], 10);
+            const endNumber = startNumber + roll.allocatedQuantity - 1;
+            
+            if (endNumber >= startNumber) {
+              const prefix = roll.fromSerial.replace(/\d+$/, '');
+              ranges.push({
+                fromSerial: roll.fromSerial,
+                toSerial: prefix + String(endNumber).padStart(6, '0')
+              });
+              console.log(`✅ Calculated range from availableRolls:`, ranges[ranges.length - 1]);
+            }
           }
         }
-      }
-      
-      // PRIORITY 2: If roll has explicit fromSerial/toSerial, use them
-      if (roll.fromSerial && roll.toSerial) {
-        console.log(`✅ Using range from availableRolls:`, roll.fromSerial, '-', roll.toSerial);
-        return {
-          fromSerial: roll.fromSerial,
-          toSerial: roll.toSerial
-        };
+        
+        // PRIORITY 2: If roll has explicit fromSerial/toSerial, use them
+        if (ranges.length === 0 && roll.fromSerial && roll.toSerial) {
+          console.log(`✅ Using range from availableRolls:`, roll.fromSerial, '-', roll.toSerial);
+          ranges.push({
+            fromSerial: roll.fromSerial,
+            toSerial: roll.toSerial
+          });
+        }
       }
     }
 
-    console.warn(`❌ No allocated range found for ${cartoonNumber}`);
-    return null;
+    if (ranges.length === 0) {
+      console.warn(`❌ No allocated ranges found for ${cartoonNumber}`);
+    } else {
+      console.log(`✅ Found ${ranges.length} allocated range(s) for ${cartoonNumber}:`, ranges);
+    }
+    
+    return ranges;
+  }
+
+  /**
+   * Get allocated serial range for a specific roll (returns first range for backward compatibility)
+   * @deprecated Use getAllocatedRangesForRoll() to get ALL ranges
+   */
+  getAllocatedRangeForRoll(entry: HologramDailyEntry, cartoonNumber: string): { fromSerial: string; toSerial: string } | null {
+    const ranges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
+    return ranges.length > 0 ? ranges[0] : null;
   }
 
   /**
@@ -2280,24 +2342,23 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (!rollInput) return;
 
     const cartoonNumber = rollInput.cartoonNumber;
-    const allocatedRange = this.getAllocatedRangeForRoll(entry, cartoonNumber);
+    const allocatedRanges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
 
     // Validate and calculate issued ranges
     rollInput.issuedQty = (rollInput.issuedRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
       
-      // Validate range against allocated range
-      if (allocatedRange) {
-        const validation = this.validateSerialRangeInAllocatedRange(
+      // Validate range against ALL allocated ranges
+      if (allocatedRanges.length > 0) {
+        const validation = this.validateSerialRangeInAllocatedRanges(
           range.fromSerial,
           range.toSerial,
-          allocatedRange.fromSerial,
-          allocatedRange.toSerial
+          allocatedRanges
         );
         range.isValid = validation.isValid;
         range.errorMessage = validation.errorMessage;
       } else {
-        range.isValid = true; // No allocated range found, skip validation
+        range.isValid = true; // No allocated ranges found, skip validation
         range.errorMessage = '';
       }
       
@@ -2308,18 +2369,17 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     rollInput.wastageQty = (rollInput.wastageRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
       
-      // Validate range against allocated range
-      if (allocatedRange) {
-        const validation = this.validateSerialRangeInAllocatedRange(
+      // Validate range against ALL allocated ranges
+      if (allocatedRanges.length > 0) {
+        const validation = this.validateSerialRangeInAllocatedRanges(
           range.fromSerial,
           range.toSerial,
-          allocatedRange.fromSerial,
-          allocatedRange.toSerial
+          allocatedRanges
         );
         range.isValid = validation.isValid;
         range.errorMessage = validation.errorMessage;
       } else {
-        range.isValid = true; // No allocated range found, skip validation
+        range.isValid = true; // No allocated ranges found, skip validation
         range.errorMessage = '';
       }
       
@@ -2589,10 +2649,15 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
    */
   private getLockedRollsAllocatedTotal(entry: HologramDailyEntry): number {
     const lockedRolls = (entry as any).lockedRolls || [];
-    return lockedRolls.reduce((sum: number, roll: any) => {
-      const allocated = roll.availableCount ?? roll.allocatedQuantity ?? roll.leftOver ?? 0;
+    const total = lockedRolls.reduce((sum: number, roll: any) => {
+      // Priority: use allocatedQuantity (from grouped rolls with multiple ranges)
+      // Fallback to availableCount, then leftOver
+      const allocated = roll.allocatedQuantity ?? roll.availableCount ?? roll.leftOver ?? 0;
+      console.log(`📊 Locked roll ${roll.cartoonNumber}: allocatedQuantity=${roll.allocatedQuantity}, availableCount=${roll.availableCount}, leftOver=${roll.leftOver}, using=${allocated}`);
       return sum + (allocated || 0);
     }, 0);
+    console.log(`📊 Total from locked rolls: ${total}`);
+    return total;
   }
 
   /**

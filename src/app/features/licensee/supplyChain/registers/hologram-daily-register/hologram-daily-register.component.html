@@ -449,7 +449,7 @@
                       }
                     </select>
 
-                    <!-- Current Selected Roll - Show Roll Name and Allocated Range -->
+                    <!-- Current Selected Roll - Show Roll Name and Allocated Ranges -->
                     @if (getCurrentSelectedRoll(entry)) {
                       <div class="current-roll-badge">
                         <span class="roll-name-badge" 
@@ -457,14 +457,18 @@
                               [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
                           {{ getCurrentSelectedRoll(entry) }}
                         </span>
-                        @if (getAllocatedRangeForRoll(entry, getCurrentSelectedRoll(entry)!); as range) {
+                        @if (getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 0) {
                           <div class="allocated-range-info">
                             <div class="allocated-range-label">
                               <i class="bi bi-info-circle me-1"></i>
-                              <span>Allocated Range:</span>
+                              <span>Allocated Range{{ getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 1 ? 's' : '' }}:</span>
                             </div>
                             <div class="allocated-range-value">
-                              {{ range.fromSerial }} - {{ range.toSerial }}
+                              @for (range of getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!); track range.fromSerial) {
+                                <div class="range-item">
+                                  {{ range.fromSerial }} - {{ range.toSerial }}
+                                </div>
+                              }
                             </div>
                           </div>
                         }
@@ -482,15 +486,18 @@
                                   [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                               {{ lockedRoll.cartoonNumber }}
                             </span>
-                            @if (getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)) {
+                            @if (getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 0) {
                               <div class="allocated-range-info">
                                 <div class="allocated-range-label">
                                   <i class="bi bi-info-circle me-1"></i>
-                                  <span>Range:</span>
+                                  <span>Range{{ getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 1 ? 's' : '' }}:</span>
                                 </div>
                                 <div class="allocated-range-value">
-                                  {{ getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)?.fromSerial }} - 
-                                  {{ getAllocatedRangeForRoll(entry, lockedRoll.cartoonNumber)?.toSerial }}
+                                  @for (range of getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber); track range.fromSerial) {
+                                    <div class="range-item">
+                                      {{ range.fromSerial }} - {{ range.toSerial }}
+                                    </div>
+                                  }
                                 </div>
                               </div>
                             }

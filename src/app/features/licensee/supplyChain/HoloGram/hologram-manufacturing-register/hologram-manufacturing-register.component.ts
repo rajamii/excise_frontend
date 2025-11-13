@@ -7,6 +7,7 @@ import { MonthlyhologramstatementOICComponent } from '../monthlyhologramstatemen
 interface RollBreakdown {
   rollName: string;
   allocatedQty: number;
+  allocatedRanges: Array<{ fromSerial: string; toSerial: string }>; // All allocated ranges for this roll
   issuedQty: number;
   issuedRanges: any[];
   wastageQty: number;
@@ -1040,6 +1041,96 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     return lockedRolls.map((roll: any) => roll.cartoonNumber);
   }
 
+  /**
+   * Get allocated ranges for a specific roll from allocation data
+   */
+  getAllocatedRangesForRoll(entry: PendingEntry, cartoonNumber: string): Array<{ fromSerial: string; toSerial: string }> {
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    
+    if (allocationData && allocationData.allocatedCartoons) {
+      // Find ALL cartoons matching this roll (a roll can have multiple allocations/ranges)
+      const matchingCartoons = allocationData.allocatedCartoons.filter((c: any) => c.cartoonNumber === cartoonNumber);
+      
+      const ranges: Array<{ fromSerial: string; toSerial: string }> = [];
+      
+      for (const cartoon of matchingCartoons) {
+        if (cartoon.fromSerial && cartoon.toSerial) {
+          ranges.push({
+            fromSerial: cartoon.fromSerial,
+            toSerial: cartoon.toSerial
+          });
+        }
+      }
+      
+      return ranges;
+    }
+    
+    return [];
+  }
+
+  /**
+   * Get hologram allocation data for an entry
+   */
+  private getHologramAllocationForEntry(entry: PendingEntry): any {
+    try {
+      const referenceNo = entry.referenceNo;
+      
+      if (!referenceNo) {
+        return null;
+      }
+      
+      // Try multiple localStorage keys where allocation data might be stored
+      const possibleKeys = [
+        'hologramAllocations',
+        'hologramRequests', 
+        'hologramApplications',
+        'approvedHologramEntries'
+      ];
+      
+      for (const key of possibleKeys) {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        
+        // Find matching allocations
+        const matchingAllocations = data.filter((a: any) => 
+          a.referenceNo === referenceNo || 
+          a.ourRefNo === referenceNo ||
+          a.id === referenceNo ||
+          a.refNumber === referenceNo
+        );
+        
+        if (matchingAllocations.length > 0) {
+          const requestWithAllocations = matchingAllocations.find((a: any) => 
+            a.allocations && Array.isArray(a.allocations) && a.allocations.length > 0
+          );
+          
+          if (requestWithAllocations) {
+            const cartoons = requestWithAllocations.allocations.map((a: any) => ({
+              cartoonNumber: a.cartoonNumber || '',
+              quantity: a.quantity || 0,
+              fromSerial: a.fromSerial || '',
+              toSerial: a.toSerial || '',
+              serialRange: `${a.fromSerial} - ${a.toSerial}`,
+              remainingInCartoon: a.remainingInCartoon || 0
+            }));
+            
+            const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
+            
+            return {
+              referenceNo: referenceNo,
+              totalAllocated: totalQty,
+              allocatedCartoons: cartoons
+            };
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting allocation data:', error);
+      return null;
+    }
+  }
+
   // Get roll-wise breakdown for an entry
   getRollBreakdown(entry: PendingEntry): RollBreakdown[] {
     const lockedRolls = entry.lockedRolls || [];
@@ -1059,9 +1150,13 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       const damageReason = roll.damageReason || entry.damageReason || '';
       console.log(`🔍 Roll ${roll.cartoonNumber} - damageReason from roll:`, roll.damageReason, 'from entry:', entry.damageReason, 'final:', damageReason);
 
+      // Get allocated ranges for this roll
+      const allocatedRanges = this.getAllocatedRangesForRoll(entry, roll.cartoonNumber);
+
       return {
         rollName: roll.cartoonNumber,
         allocatedQty,
+        allocatedRanges,
         issuedRanges,
         issuedQty,
         wastageRanges,

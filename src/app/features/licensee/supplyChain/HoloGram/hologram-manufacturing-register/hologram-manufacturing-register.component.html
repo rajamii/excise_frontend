@@ -232,6 +232,14 @@
                     <span class="value">{{ rollData.leftOver | number }}</span>
                   </div>
                 </div>
+                <div class="roll-ranges" *ngIf="rollData.allocatedRanges && rollData.allocatedRanges.length > 0">
+                  <small class="range-title">Allocated Range{{ rollData.allocatedRanges.length > 1 ? 's' : '' }}</small>
+                  <div class="range-list">
+                    @for (range of rollData.allocatedRanges; track range.fromSerial) {
+                      <span class="range-pill allocated">{{ range.fromSerial }} → {{ range.toSerial }}</span>
+                    }
+                  </div>
+                </div>
                 <div class="roll-ranges" *ngIf="rollData.issuedRanges.length > 0">
                   <small class="range-title">Issued Ranges</small>
                   <div class="range-list">
