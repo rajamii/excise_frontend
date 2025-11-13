@@ -1855,72 +1855,59 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
       
-      // Group allocations by cartoonNumber to handle multiple ranges per roll
-      const rollMap = new Map<string, any>();
+      // CRITICAL FIX: Create SEPARATE dropdown entries for each range
+      // Instead of grouping multiple ranges into one roll, each range gets its own entry
+      // Example: Roll "1" with 2 ranges becomes:
+      //   - "1 - Range 1 (000001-000049): 49 units"
+      //   - "1 - Range 2 (000100-000500): 401 units"
+      
+      const separateRangeEntries: any[] = [];
+      const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
       
       allocationData.allocatedCartoons.forEach((cartoon: any) => {
         const cartoonNumber = cartoon.cartoonNumber;
         const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
         const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+        const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+        const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+        const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+        const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
         
-        if (rollMap.has(cartoonNumber)) {
-          // Roll already exists - sum the quantities and collect all ranges
-          const existing = rollMap.get(cartoonNumber);
-          const previousQuantity = existing.allocatedQuantity;
-          existing.allocatedQuantity += allocatedQuantity;
-          existing.availableCount += allocatedQuantity;
-          
-          // Collect all ranges for this roll
-          if (!existing.ranges) {
-            // First time adding a range - create ranges array with the first range
-            existing.ranges = [{
-              fromSerial: existing.fromSerial,
-              toSerial: existing.toSerial,
-              quantity: previousQuantity
-            }];
-          }
-          // Add the new range
-          existing.ranges.push({
-            fromSerial: cartoon.fromSerial || '',
-            toSerial: cartoon.toSerial || '',
-            quantity: allocatedQuantity
-          });
-          
-          // Update serial range to show all ranges
-          const allRanges = existing.ranges.map((r: any) => `${r.fromSerial}-${r.toSerial}`).join(', ');
-          existing.serialRange = allRanges;
-        } else {
-          // New roll - create entry
-          const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
-          const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
-          const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
-          const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
-
-          rollMap.set(cartoonNumber, {
-            cartoonNumber: cartoonNumber,
-            allocatedQuantity,
-            availableCount: allocatedQuantity,
-            remainingInCartoon,
-            serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
-            totalCount,
-            fromSerial: fromSerial,
-            toSerial: toSerial,
-            type: actualRollData?.type || cartoon.type || entry.hologramType,
-            status: actualRollData?.status || cartoon.status || 'ALLOCATED',
-            actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
-            ranges: [{
-              fromSerial: fromSerial,
-              toSerial: toSerial,
-              quantity: allocatedQuantity
-            }]
-          });
-        }
+        // Increment range count for this roll
+        const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
+        rangeCountPerRoll.set(cartoonNumber, currentRangeCount + 1);
+        const rangeIndex = currentRangeCount + 1;
+        
+        // Create a unique identifier for this specific range
+        const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
+        
+        // Create separate entry for this range
+        separateRangeEntries.push({
+          cartoonNumber: cartoonNumber,
+          rangeId: rangeId, // Unique ID for this specific range
+          rangeIndex: rangeIndex, // Which range number (1, 2, 3, etc.)
+          displayName: rangeCountPerRoll.get(cartoonNumber)! > 1 || currentRangeCount > 0 
+            ? `${cartoonNumber} - Range ${rangeIndex}` 
+            : cartoonNumber, // Show "1 - Range 1" if multiple ranges exist
+          allocatedQuantity,
+          availableCount: allocatedQuantity,
+          remainingInCartoon,
+          serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
+          totalCount,
+          fromSerial: fromSerial,
+          toSerial: toSerial,
+          type: actualRollData?.type || cartoon.type || entry.hologramType,
+          status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+          actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+          // Store this as a single range (not an array)
+          isSingleRange: true,
+          originalCartoonNumber: cartoonNumber // Store original cartoon number for reference
+        });
       });
       
-      // Convert map to array
-      const groupedRolls = Array.from(rollMap.values());
-      console.log('✅ Grouped rolls (multiple ranges combined):', groupedRolls);
-      return groupedRolls;
+      console.log('✅ Separate range entries (each range is independent):', separateRangeEntries);
+      console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
+      return separateRangeEntries;
     }
     
     console.log('⚠️ No allocation data found, using fallback logic');
@@ -2142,27 +2129,38 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   /**
    * Select a roll for entry
    */
-  selectRollForEntry(entry: HologramDailyEntry, cartoonNumber: string): void {
-    if (!cartoonNumber) return;
+  selectRollForEntry(entry: HologramDailyEntry, cartoonNumberOrRangeId: string): void {
+    if (!cartoonNumberOrRangeId) return;
 
-    // Find the roll details
-    const roll = this.getAvailableRollsForEntry(entry).find(r => r.cartoonNumber === cartoonNumber);
+    // Find the roll details (could be a rangeId like "1_RANGE_1" or just cartoon number)
+    const roll = this.getAvailableRollsForEntry(entry).find(r => 
+      r.rangeId === cartoonNumberOrRangeId || r.cartoonNumber === cartoonNumberOrRangeId
+    );
     if (!roll) return;
 
-    // Check if already locked
+    // Check if this specific range is already locked
     const lockedRolls = this.getLockedRollsForEntry(entry);
-    if (lockedRolls.some((lr: any) => lr.cartoonNumber === cartoonNumber)) {
-      alert('This roll is already locked.');
+    const rangeIdToCheck = roll.rangeId || roll.cartoonNumber;
+    if (lockedRolls.some((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck)) {
+      alert('This range is already locked.');
       return;
     }
 
     // Initialize roll selection data with arrays for multiple ranges
+    const rangeId = roll.rangeId || roll.cartoonNumber;
+    const displayName = roll.displayName || roll.cartoonNumber;
+    
     (entry as any).currentRollSelection = {
-      selectedRoll: cartoonNumber,
+      selectedRoll: rangeId, // Use rangeId instead of cartoonNumber
       rollInput: {
-        cartoonNumber: cartoonNumber,
+        cartoonNumber: roll.originalCartoonNumber || roll.cartoonNumber, // Store original cartoon number
+        rangeId: rangeId, // Store range ID for tracking
+        displayName: displayName, // Store display name for UI
+        rangeIndex: roll.rangeIndex, // Store which range this is (1, 2, 3, etc.)
         availableCount: roll.allocatedQuantity ?? roll.availableCount ?? roll.remainingInCartoon ?? roll.totalCount ?? 0,
         serialRange: roll.serialRange,
+        fromSerial: roll.fromSerial, // Store the specific range's from serial
+        toSerial: roll.toSerial, // Store the specific range's to serial
         issuedRanges: [{
           fromSerial: '',
           toSerial: '',
@@ -2187,8 +2185,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     this.cdr.detectChanges();
     
     // Log the allocated range for debugging
-    const allocatedRange = this.getAllocatedRangeForRoll(entry, cartoonNumber);
-    console.log(`🎯 Selected roll ${cartoonNumber}, allocated range:`, allocatedRange);
+    console.log(`🎯 Selected range ${displayName} (${rangeId}), serial range: ${roll.serialRange}`);
   }
 
   /**
@@ -2639,13 +2636,15 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       (entry as any).lockedRolls = [];
     }
 
-    // Add to locked rolls - ensure damageReason is included
+    // Add to locked rolls - ensure damageReason and rangeId are included
     const rollToLock = {
       ...rollInput,
-      damageReason: rollInput.damageReason || '' // Explicitly include damageReason
+      damageReason: rollInput.damageReason || '', // Explicitly include damageReason
+      rangeId: rollInput.rangeId || rollInput.cartoonNumber, // Ensure rangeId is stored
+      displayName: rollInput.displayName || rollInput.cartoonNumber // Store display name
     };
     (entry as any).lockedRolls.push(rollToLock);
-    console.log('🔒 Locked roll with damageReason:', rollToLock.cartoonNumber, 'damageReason:', rollToLock.damageReason);
+    console.log('🔒 Locked range:', rollToLock.displayName, '(rangeId:', rollToLock.rangeId, '), damageReason:', rollToLock.damageReason);
 
     // Clear current selection
     (entry as any).currentRollSelection = null;
@@ -2659,11 +2658,14 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
-   * Unlock a roll
+   * Unlock a roll/range
    */
-  unlockRollForEntry(entry: HologramDailyEntry, cartoonNumber: string): void {
+  unlockRollForEntry(entry: HologramDailyEntry, cartoonNumberOrRangeId: string): void {
     const lockedRolls = (entry as any).lockedRolls || [];
-    const index = lockedRolls.findIndex((r: any) => r.cartoonNumber === cartoonNumber);
+    // Find by rangeId first, then fall back to cartoonNumber
+    const index = lockedRolls.findIndex((r: any) => 
+      (r.rangeId && r.rangeId === cartoonNumberOrRangeId) || r.cartoonNumber === cartoonNumberOrRangeId
+    );
 
     if (index !== -1) {
       lockedRolls.splice(index, 1);

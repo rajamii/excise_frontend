@@ -442,12 +442,26 @@
                             (change)="selectRollForEntry(entry, $any($event.target).value)"
                             [disabled]="isRollInputLocked(entry)">
                       <option value="">Select Roll...</option>
-                      @for (roll of getAvailableRollsForEntry(entry); track roll.cartoonNumber) {
-                        <option [value]="roll.cartoonNumber">
-                          {{ roll.cartoonNumber }} ({{ roll.allocatedQuantity ?? roll.availableCount }} allocated)
+                      @for (roll of getAvailableRollsForEntry(entry); track roll.rangeId || roll.cartoonNumber) {
+                        <option [value]="roll.rangeId || roll.cartoonNumber">
+                          {{ roll.displayName || roll.cartoonNumber }} - {{ roll.serialRange }} ({{ roll.allocatedQuantity ?? roll.availableCount }} units)
                         </option>
                       }
                     </select>
+
+                    <!-- Show allocated range info ONLY when a roll is selected -->
+                    @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry)) {
+                      <div class="selected-range-info">
+                        <div class="range-info-label">
+                          <i class="bi bi-info-circle me-1"></i>
+                          Allocated Range:
+                        </div>
+                        <div class="range-info-value">
+                          {{ getCurrentRollInput(entry).serialRange }}
+                          <span class="range-qty-badge">{{ getCurrentRollInput(entry).availableCount }} units</span>
+                        </div>
+                      </div>
+                    }
 
                     <!-- Current Selected Roll - Show Roll Name and Allocated Ranges -->
                     @if (getCurrentSelectedRoll(entry)) {
