@@ -1475,7 +1475,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 damageDate: historyEntry.date || historyEntry.approvedAt,
                 damageReason: damageReason || 'Not specified',
                 reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System',
-                referenceNo: historyEntry.referenceNo || 'N/A' // Add reference number for damaged entries
+                referenceNo: historyEntry.referenceNo || 'N/A', // Add reference number for damaged entries
+                productionLine: historyEntry.brandName || 'N/A' // Add brand name for damaged entries
               });
               console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'damageReason:', damageReason || 'Not specified', 'refNo:', historyEntry.referenceNo);
             }
