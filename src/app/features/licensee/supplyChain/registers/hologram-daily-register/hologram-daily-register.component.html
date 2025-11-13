@@ -454,7 +454,7 @@
                       <div class="selected-range-info">
                         <div class="range-info-label">
                           <i class="bi bi-info-circle me-1"></i>
-                          Allocated Range:
+                          Available:
                         </div>
                         <div class="range-info-value">
                           {{ getCurrentRollInput(entry).serialRange }}
@@ -469,13 +469,13 @@
                         <span class="roll-name-badge" 
                               [style.background-color]="getRollColor(getCurrentRollIndex(entry))"
                               [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                          {{ getCurrentSelectedRoll(entry) }}
+                          {{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}
                         </span>
                         @if (getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 0) {
                           <div class="allocated-range-info">
                             <div class="allocated-range-label">
                               <i class="bi bi-info-circle me-1"></i>
-                              <span>Allocated Range{{ getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 1 ? 's' : '' }}:</span>
+                              <span>Allocated:</span>
                             </div>
                             <div class="allocated-range-value">
                               @for (range of getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!); track range.fromSerial) {
@@ -498,13 +498,13 @@
                             <span class="roll-name-badge" 
                                   [style.background-color]="getRollColor(lockedRoll.cartoonNumber)"
                                   [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                              {{ lockedRoll.cartoonNumber }}
+                              {{ lockedRoll.cartoonNumber.split('_')[0] }}
                             </span>
                             @if (getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 0) {
                               <div class="allocated-range-info">
                                 <div class="allocated-range-label">
                                   <i class="bi bi-info-circle me-1"></i>
-                                  <span>Range{{ getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 1 ? 's' : '' }}:</span>
+                                  <span>Allocated:</span>
                                 </div>
                                 <div class="allocated-range-value">
                                   @for (range of getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber); track range.fromSerial) {
@@ -532,7 +532,7 @@
                               [style.background-color]="getRollColor(rollData.colorIndex)"
                               [style.border-color]="getRollColor(rollData.colorIndex)"
                               [style.color]="'#fff'">
-                          {{ rollData.roll }}
+                          {{ rollData.roll.split('_')[0] }}
                         </span>
                       }
                     </div>
@@ -558,7 +558,7 @@
                           <div class="roll-label" 
                                [style.color]="getRollColor(getCurrentRollIndex(entry))">
                             <i class="bi bi-box-seam"></i>
-                            <span>{{ getCurrentSelectedRoll(entry) }}</span>
+                            <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
                           </div>
                           
                           <!-- Multiple Issued Ranges -->
@@ -602,7 +602,7 @@
                              [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
                           <div class="roll-name" 
                                [style.color]="getRollColor(lockedRoll.cartoonNumber)">
-                            {{ lockedRoll.cartoonNumber }}
+                            {{ lockedRoll.cartoonNumber.split('_')[0] }}
                           </div>
                           <div class="roll-values">
                             @for (range of lockedRoll.issuedRanges || []; track $index) {
@@ -625,7 +625,7 @@
                              [style.border-color]="getRollColor(group.rollIndex)">
                           @if (group.rollName) {
                             <div class="roll-group-label" [style.color]="getRollColor(group.rollIndex)">
-                              {{ group.rollName }}
+                              {{ group.rollName.split('_')[0] }}
                             </div>
                           }
                           @for (rangeEntry of group.entries; track $index) {
@@ -851,7 +851,7 @@
                              [style.border-color]="getRollColor(group.rollIndex)">
                           @if (group.rollName) {
                             <div class="roll-group-label" [style.color]="getRollColor(group.rollIndex)">
-                              {{ group.rollName }}
+                              {{ group.rollName.split('_')[0] }}
                             </div>
                           }
                           @for (rangeEntry of group.entries; track $index) {
@@ -1112,7 +1112,7 @@
                           <div class="roll-label" 
                                [style.color]="getRollColor(getCurrentRollIndex(entry))">
                             <i class="bi bi-box-seam"></i>
-                            <span>{{ getCurrentSelectedRoll(entry) }}</span>
+                            <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
                           </div>
                           <textarea class="form-control form-control-sm reason-input"
                             [(ngModel)]="getCurrentRollInput(entry).damageReason" 
@@ -1131,7 +1131,7 @@
                           <div class="roll-label" 
                                [style.color]="getRollColor(lockedRoll.cartoonNumber)">
                             <i class="bi bi-box-seam"></i>
-                            <span>{{ lockedRoll.cartoonNumber }}</span>
+                            <span>{{ lockedRoll.cartoonNumber.split('_')[0] }}</span>
                           </div>
                           <textarea class="form-control form-control-sm reason-input"
                             [(ngModel)]="lockedRoll.damageReason" 
@@ -1150,7 +1150,7 @@
                              [style.background-color]="getRollBackgroundColor(rollData.colorIndex)"
                              [style.border-color]="getRollColor(rollData.colorIndex)">
                           <div class="roll-group-label" [style.color]="getRollColor(rollData.colorIndex)">
-                            {{ rollData.roll }}
+                            {{ rollData.roll.split('_')[0] }}
                           </div>
                           <div class="damage-reason-value" [style.color]="getRollColor(rollData.colorIndex)">
                             {{ getDamageReasonForRoll(entry, rollData.roll) || 'No damage reason specified' }}
