@@ -379,15 +379,20 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           rollDetails.forEach((rollDetail, index) => {
             const rollName = rollDetail.rollName;
             
-            // Calculate quantities for this specific roll
+            // Calculate quantities for this specific roll/range
             const rollUtilizationQty = this.sumRanges(rollDetail.utilizationRanges);
             const rollWastageQty = this.sumRanges(rollDetail.wastageRanges);
             
             // Get the serial range for this roll (from allocated range, not issued/wastage)
             const serialRange = this.extractSerialRangeFromSingleRoll(rollDetail);
             
-            // For leftover, only show it on the last roll row
-            const leftOver = (index === rollDetails.length - 1) ? totalLeftOver : null;
+            // Calculate leftover for THIS specific range
+            // Leftover = Allocated - (Issued + Wastage)
+            const allocatedQty = (rollDetail as any).availableCount || (rollDetail as any).allocatedQuantity || 0;
+            const rollLeftOver = allocatedQty - (rollUtilizationQty + rollWastageQty);
+            
+            // Get damage reason for this specific range
+            const damageReason = (rollDetail as any).damageReason || '';
             
             // Only show label on first row, leave blank for subsequent rows
             const label = (index === 0) ? `Utilization - ${this.formatDate(event.date)}` : '';
@@ -399,13 +404,14 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
               closingBalance: (index === rollDetails.length - 1) ? runningBalance : null,
-              leftOver: leftOver,
+              leftOver: rollLeftOver,  // Show leftover for each range
               utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
               wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
               meta: {
-                referenceNo: event.referenceNo,  // Show reference number on all rows
+                referenceNo: event.referenceNo,
                 cartoonNumber: rollName,
-                serialRange: serialRange
+                serialRange: serialRange,
+                damageReason: damageReason  // Add damage reason to meta
               }
             });
           });
@@ -593,7 +599,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     if (lockedRolls.length > 0) {
       lockedRolls.forEach((roll: any) => {
         const rollName = roll.cartoonNumber || entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
-        details.push({
+        const rollDetail: any = {
           rollName,
           utilizationRanges: (roll.issuedRanges || []).map((range: any) => ({
             fromSerial: range.fromSerial || '',
@@ -606,7 +612,31 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             quantity: range.quantity || range.qty || 0,
             damageReason: range.damageReason || roll.damageReason || entry.damageReason
           }))
-        });
+        };
+        
+        // IMPORTANT: Preserve the allocated range info from the locked roll
+        if (roll.serialRange) {
+          rollDetail.serialRange = roll.serialRange;
+        }
+        if (roll.fromSerial) {
+          rollDetail.fromSerial = roll.fromSerial;
+        }
+        if (roll.toSerial) {
+          rollDetail.toSerial = roll.toSerial;
+        }
+        
+        // Preserve allocated quantity and damage reason for leftover calculation
+        if (roll.availableCount !== undefined) {
+          rollDetail.availableCount = roll.availableCount;
+        }
+        if (roll.allocatedQuantity !== undefined) {
+          rollDetail.allocatedQuantity = roll.allocatedQuantity;
+        }
+        if (roll.damageReason) {
+          rollDetail.damageReason = roll.damageReason;
+        }
+        
+        details.push(rollDetail);
       });
     }
 
@@ -707,15 +737,27 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
   /**
    * Extract serial range from a single roll detail
+   * IMPORTANT: This should return the ALLOCATED range, not the used range
    */
-  private extractSerialRangeFromSingleRoll(rollDetail: RollDetail): string | undefined {
-    const allRanges = [...rollDetail.utilizationRanges, ...rollDetail.wastageRanges];
+  private extractSerialRangeFromSingleRoll(rollDetail: any): string | undefined {
+    // PRIORITY 1: Use the stored serialRange from the locked roll (this is the allocated range)
+    if ((rollDetail as any).serialRange) {
+      return (rollDetail as any).serialRange;
+    }
+
+    // PRIORITY 2: Use fromSerial and toSerial from the locked roll (allocated range)
+    if ((rollDetail as any).fromSerial && (rollDetail as any).toSerial) {
+      return `${(rollDetail as any).fromSerial} - ${(rollDetail as any).toSerial}`;
+    }
+
+    // FALLBACK: Calculate from utilization/wastage ranges (not ideal, but better than nothing)
+    const allRanges = [...(rollDetail.utilizationRanges || []), ...(rollDetail.wastageRanges || [])];
     
     if (allRanges.length === 0) {
       return undefined;
     }
 
-    // Find the min and max serials across all ranges to get the allocated range
+    // Find the min and max serials across all ranges
     const serials = allRanges
       .filter(r => r.fromSerial && r.toSerial)
       .flatMap(r => [r.fromSerial!, r.toSerial!]);
