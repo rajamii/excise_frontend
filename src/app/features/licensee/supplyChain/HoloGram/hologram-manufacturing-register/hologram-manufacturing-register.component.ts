@@ -265,9 +265,43 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       
       localStorage.setItem('dailyRegisterEntries', JSON.stringify(savedEntries));
       
-      // Add to approved entries for daily register
+      // CRITICAL FIX: Update existing approved entry instead of creating duplicate
+      // Find existing entry by reference number and date, update it instead of pushing new one
       const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-      approvedEntries.push(savedEntries[entryIndex]);
+      
+      // Check if this is a utilization approval (has issued/wastage data) or just allocation approval
+      const hasUtilizationData = (savedEntries[entryIndex].issuedQuantity > 0) || 
+                                  (savedEntries[entryIndex].wastageQuantity > 0) ||
+                                  (savedEntries[entryIndex].lockedRolls && savedEntries[entryIndex].lockedRolls.length > 0);
+      
+      const existingApprovedIndex = approvedEntries.findIndex((e: any) => 
+        e.referenceNo === savedEntries[entryIndex].referenceNo && 
+        e.date === savedEntries[entryIndex].date
+      );
+      
+      if (existingApprovedIndex !== -1) {
+        // UPDATE existing entry with utilization data
+        console.log('✅ Updating existing approved entry with utilization:', savedEntries[entryIndex].referenceNo);
+        approvedEntries[existingApprovedIndex] = {
+          ...approvedEntries[existingApprovedIndex],
+          ...savedEntries[entryIndex],
+          // Preserve original allocation data if it exists
+          originalAllocation: approvedEntries[existingApprovedIndex].originalAllocation || approvedEntries[existingApprovedIndex].utilizedQuantity,
+          // Mark that utilization has been approved
+          utilizationApproved: hasUtilizationData
+        };
+      } else if (hasUtilizationData) {
+        // CREATE new entry ONLY if it has utilization data (not just allocation)
+        console.log('✅ Creating new approved entry with utilization:', savedEntries[entryIndex].referenceNo);
+        approvedEntries.push({
+          ...savedEntries[entryIndex],
+          utilizationApproved: true
+        });
+      } else {
+        // Skip creating entry if it's just allocation approval without utilization
+        console.log('⏭️ Skipping entry creation - no utilization data yet:', savedEntries[entryIndex].referenceNo);
+      }
+      
       localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
       
       // AUTOMATIC WORKFLOW: Update roll data and move issued holograms to history
