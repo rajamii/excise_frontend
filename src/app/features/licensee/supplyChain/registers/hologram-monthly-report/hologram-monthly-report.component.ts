@@ -43,6 +43,7 @@ interface MonthlyReportRow {
     referenceNo?: string;
     damageReason?: string;
     notes?: string;
+    serialRange?: string;
   };
   utilizationDetails?: RollDisplayDetail[];
   wastageDetails?: RollDisplayDetail[];
@@ -367,38 +368,88 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       } else if (event.rowType === 'UTILIZATION') {
         runningBalance -= event.quantity;
         runningBalance -= event.totalWastage || 0;
-        const utilizationDetails = this.mapRollDisplayDetails(event.rollDetails, 'utilization');
-        const wastageDetails = this.mapRollDisplayDetails(event.rollDetails, 'wastage');
-        rows.push({
-          rowType: 'UTILIZATION',
-          label: `Utilization - ${this.formatDate(event.date)}`,
-          date: event.date,
-          utilizationQty: event.quantity,
-          wastageQty: event.totalWastage || 0,
-          closingBalance: runningBalance,
-          leftOver: this.calculateLeftOverForDisplay(event.rollDetails),
-          utilizationDetails,
-          wastageDetails,
-          meta: {
-            referenceNo: event.referenceNo
-          }
-        });
+        
+        // Get leftover from the entry
+        const entry = (event as any).entry;
+        const totalLeftOver = this.calculateLeftOverForDisplay(entry);
+        
+        // Create separate rows for each roll/range
+        const rollDetails = event.rollDetails;
+        if (rollDetails && rollDetails.length > 0) {
+          rollDetails.forEach((rollDetail, index) => {
+            const rollName = rollDetail.rollName;
+            
+            // Calculate quantities for this specific roll
+            const rollUtilizationQty = this.sumRanges(rollDetail.utilizationRanges);
+            const rollWastageQty = this.sumRanges(rollDetail.wastageRanges);
+            
+            // Get the serial range for this roll (from allocated range, not issued/wastage)
+            const serialRange = this.extractSerialRangeFromSingleRoll(rollDetail);
+            
+            // For leftover, only show it on the last roll row
+            const leftOver = (index === rollDetails.length - 1) ? totalLeftOver : null;
+            
+            // Only show label on first row, leave blank for subsequent rows
+            const label = (index === 0) ? `Utilization - ${this.formatDate(event.date)}` : '';
+            
+            rows.push({
+              rowType: 'UTILIZATION',
+              label: label,
+              date: event.date,
+              utilizationQty: rollUtilizationQty,
+              wastageQty: rollWastageQty,
+              closingBalance: (index === rollDetails.length - 1) ? runningBalance : null,
+              leftOver: leftOver,
+              utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
+              wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
+              meta: {
+                referenceNo: event.referenceNo,  // Show reference number on all rows
+                cartoonNumber: rollName,
+                serialRange: serialRange
+              }
+            });
+          });
+        } else {
+          // Fallback: single row if no roll details
+          const utilizationDetails = this.mapRollDisplayDetails(rollDetails, 'utilization');
+          const wastageDetails = this.mapRollDisplayDetails(rollDetails, 'wastage');
+          
+          rows.push({
+            rowType: 'UTILIZATION',
+            label: `Utilization - ${this.formatDate(event.date)}`,
+            date: event.date,
+            utilizationQty: event.quantity,
+            wastageQty: event.totalWastage || 0,
+            closingBalance: runningBalance,
+            leftOver: totalLeftOver,
+            utilizationDetails,
+            wastageDetails,
+            meta: {
+              referenceNo: event.referenceNo
+            }
+          });
+        }
       }
     });
 
     this.statementRows = rows;
   }
 
-  private calculateLeftOverForDisplay(details: RollDetail[] | undefined): number {
-    if (!details || details.length === 0) {
-      return 0;
+  private calculateLeftOverForDisplay(entry: any): number {
+    // Get leftover directly from the entry
+    if (entry && typeof entry.leftOverQuantity === 'number') {
+      return entry.leftOverQuantity;
     }
-    const totalUtilized = this.sumRanges(details.flatMap(detail => detail.utilizationRanges));
-    const totalWastage = this.sumRanges(details.flatMap(detail => detail.wastageRanges));
-    const totalAssigned = details.reduce((sum, detail) => {
-      return sum + this.sumRanges(detail.utilizationRanges) + this.sumRanges(detail.wastageRanges);
-    }, 0);
-    return totalAssigned - (totalUtilized + totalWastage);
+    
+    // Fallback: calculate from entry data
+    if (entry) {
+      const utilizedQty = entry.utilizedQuantity || entry.issuedQuantity || 0;
+      const issuedQty = entry.issuedQuantity || 0;
+      const wastageQty = entry.wastageQuantity || 0;
+      return utilizedQty - issuedQty - wastageQty;
+    }
+    
+    return 0;
   }
 
   private buildStatementEvents(): StatementEvent[] {
@@ -443,7 +494,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           timestamp,
           totalUtilized,
           totalWastage,
-          rollDetails
+          rollDetails,
+          entry  // Pass the entry for leftover calculation
         );
       }
     });
@@ -461,7 +513,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     timestamp: number,
     totalUtilized: number,
     totalWastage: number,
-    rollDetails: RollDetail[]
+    rollDetails: RollDetail[],
+    entry?: any  // Add entry parameter
   ): void {
     const key = referenceNo || `ref-${timestamp}`;
     const existing = eventMap.get(key);
@@ -474,6 +527,10 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         existing.timestamp = timestamp;
         existing.date = entryDate;
       }
+      // Update entry if provided
+      if (entry) {
+        (existing as any).entry = entry;
+      }
     } else {
       const newEvent: StatementEvent = {
         rowType: 'UTILIZATION',
@@ -484,6 +541,10 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         referenceNo,
         rollDetails
       };
+      // Store entry for leftover calculation
+      if (entry) {
+        (newEvent as any).entry = entry;
+      }
       eventMap.set(key, newEvent);
       events.push(newEvent);
     }
@@ -629,5 +690,55 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
     this.selectedMonth = monthIndex;
     this.selectedYear = year;
+  }
+
+  /**
+   * Extract serial range from roll details (allocated range, not issued/wastage ranges)
+   */
+  private extractSerialRangeFromRollDetails(rollDetails: RollDetail[] | undefined): string | undefined {
+    if (!rollDetails || rollDetails.length === 0) {
+      return undefined;
+    }
+
+    // Get the first roll's utilization ranges to determine the allocated range
+    const firstRoll = rollDetails[0];
+    return this.extractSerialRangeFromSingleRoll(firstRoll);
+  }
+
+  /**
+   * Extract serial range from a single roll detail
+   */
+  private extractSerialRangeFromSingleRoll(rollDetail: RollDetail): string | undefined {
+    const allRanges = [...rollDetail.utilizationRanges, ...rollDetail.wastageRanges];
+    
+    if (allRanges.length === 0) {
+      return undefined;
+    }
+
+    // Find the min and max serials across all ranges to get the allocated range
+    const serials = allRanges
+      .filter(r => r.fromSerial && r.toSerial)
+      .flatMap(r => [r.fromSerial!, r.toSerial!]);
+    
+    if (serials.length === 0) {
+      return undefined;
+    }
+
+    // Extract numeric parts and find min/max
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const numbers = serials.map(extractNumber);
+    const minNum = Math.min(...numbers);
+    const maxNum = Math.max(...numbers);
+
+    // Format back to serial format (preserve prefix if any)
+    const prefix = serials[0].replace(/\d+$/, '');
+    const fromSerial = prefix + String(minNum).padStart(6, '0');
+    const toSerial = prefix + String(maxNum).padStart(6, '0');
+
+    return `${fromSerial} - ${toSerial}`;
   }
 }

@@ -376,6 +376,7 @@
               <tr>
                 <th rowspan="2" class="sl-no">SL. NO.</th>
                 <th rowspan="2" class="ref-number">REFERENCE NO.</th>
+                <th rowspan="2" class="roll-range">ROLL / RANGE</th>
                 <th rowspan="2" class="submission-date">SUBMISSION DATE</th>
                 <th rowspan="2" class="usage-date">USAGE DATE</th>
                 <th rowspan="2" class="brand-details">BRAND DETAILS</th>
@@ -411,6 +412,49 @@
                 <!-- Reference No -->
                 <td class="ref-number locked-field">
                   {{ getEntryMetadata(entry).referenceNo }}
+                </td>
+
+                <!-- Roll & Range Info -->
+                <td class="roll-range locked-field">
+                  @if (!entry.isFixed) {
+                    <!-- Show current selected roll and range -->
+                    @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry)) {
+                      <div class="roll-range-display">
+                        <div class="roll-name-text">
+                          <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                        </div>
+                        <div class="range-text">
+                          {{ getCurrentRollInput(entry).serialRange }}
+                        </div>
+                      </div>
+                    }
+                    <!-- Show locked rolls and ranges -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="roll-range-display">
+                        <div class="roll-name-text">
+                          <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
+                        </div>
+                        <div class="range-text">
+                          {{ lockedRoll.serialRange }}
+                        </div>
+                      </div>
+                    }
+                    @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0) {
+                      <span class="text-muted">-</span>
+                    }
+                  } @else {
+                    <!-- For saved entries, show locked rolls with their assigned ranges -->
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                      <div class="roll-range-display">
+                        <div class="roll-name-text">
+                          <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
+                        </div>
+                        <div class="range-text">
+                          {{ lockedRoll.serialRange || (lockedRoll.fromSerial + ' - ' + lockedRoll.toSerial) }}
+                        </div>
+                      </div>
+                    }
+                  }
                 </td>
 
                 <!-- Submission Date -->

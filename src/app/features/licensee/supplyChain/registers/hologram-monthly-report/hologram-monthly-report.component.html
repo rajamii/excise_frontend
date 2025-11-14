@@ -278,52 +278,20 @@
                 <tr [ngClass]="getRowClass(row)">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
-                    @if (row.meta?.cartoonNumber) {
-                    <small class="d-block text-muted" style="font-size: 0.7rem;">Cartoon: {{ row.meta?.cartoonNumber }}</small>
-                    }
                     @if (row.meta?.referenceNo) {
-                    <small class="d-block text-muted" style="font-size: 0.7rem;">Ref: {{ row.meta?.referenceNo }}</small>
+                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                      Ref: {{ row.meta?.referenceNo }}
+                    </small>
                     }
-                    @if (row.meta?.damageReason) {
-                    <small class="d-block text-danger" style="font-size: 0.7rem;">{{ row.meta?.damageReason }}</small>
+                    @if (row.meta?.cartoonNumber) {
+                    <small class="d-block text-primary fw-semibold" style="font-size: 0.75rem;">
+                      Roll: {{ row.meta?.cartoonNumber }}
+                    </small>
                     }
-                    @if (row.meta?.notes) {
-                    <small class="d-block text-muted" style="font-size: 0.7rem;">{{ row.meta?.notes }}</small>
-                    }
-                    @if (row.utilizationDetails?.length) {
-                      <div class="mt-1">
-                        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.6rem;">Utilization Rolls</small>
-                        @for (detail of row.utilizationDetails; track detail.rollName) {
-                          <small class="d-block" style="font-size: 0.7rem;">
-                            <span class="fw-semibold text-dark">{{ detail.rollName }}</span>:
-                            @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                              <span>{{ range.from || '-' }}-{{ range.to || '-' }} ({{ range.qty | number }})</span>
-                              @if (!$last) {
-                                <span>, </span>
-                              }
-                            }
-                          </small>
-                        }
-                      </div>
-                    }
-                    @if (row.wastageDetails?.length) {
-                      <div class="mt-1">
-                        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.6rem;">Wastage Rolls</small>
-                        @for (detail of row.wastageDetails; track detail.rollName) {
-                          <small class="d-block" style="font-size: 0.7rem;">
-                            <span class="fw-semibold text-dark">{{ detail.rollName }}</span>:
-                            @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                              <span>{{ range.from || '-' }}-{{ range.to || '-' }} ({{ range.qty | number }})</span>
-                              @if (range.reason) {
-                                <span class="text-danger">({{ range.reason }})</span>
-                              }
-                              @if (!$last) {
-                                <span>, </span>
-                              }
-                            }
-                          </small>
-                        }
-                      </div>
+                    @if (row.meta?.serialRange) {
+                    <small class="d-block text-muted" style="font-size: 0.7rem; font-family: 'Courier New', monospace;">
+                      Range: {{ row.meta?.serialRange }}
+                    </small>
                     }
                   </td>
                   <td class="text-end fw-bold p-2 align-middle" style="font-size: 0.875rem;">
