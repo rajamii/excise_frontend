@@ -146,9 +146,8 @@
       <div class="bg-white">
         <div class="container-fluid p-3">
           @if (overviewSummary) {
-          <div class="row g-3 mb-3">
-            <!-- Previous Month Balance Card -->
-            <div class="col-12 col-lg-2-4">
+          <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5 g-3 mb-3">
+            <div class="col">
               <div class="card border-info border-2 h-100" style="background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);">
                 <div class="card-body py-2 px-2">
                   <h6 class="text-info fw-bold mb-1" style="font-size: 0.85rem;">
@@ -162,9 +161,8 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Fresh Arrivals Card -->
-            <div class="col-12 col-lg-2-4">
+
+            <div class="col">
               <div class="card border-success border-2 h-100">
                 <div class="card-body py-2 px-2">
                   <h6 class="text-success fw-bold mb-1" style="font-size: 0.85rem;">
@@ -175,9 +173,8 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Total Utilized Card -->
-            <div class="col-12 col-lg-2-4">
+
+            <div class="col">
               <div class="card border-primary border-2 h-100">
                 <div class="card-body py-2 px-2">
                   <h6 class="text-primary fw-bold mb-1" style="font-size: 0.85rem;">
@@ -188,9 +185,8 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Total Wastage Card -->
-            <div class="col-12 col-lg-2-4">
+
+            <div class="col">
               <div class="card border-danger border-2 h-100">
                 <div class="card-body py-2 px-2">
                   <h6 class="text-danger fw-bold mb-1" style="font-size: 0.85rem;">
@@ -201,9 +197,8 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Closing Balance Card -->
-            <div class="col-12 col-lg-2-4">
+
+            <div class="col">
               <div class="card border-dark border-2 h-100">
                 <div class="card-body py-2 px-2">
                   <h6 class="text-dark fw-bold mb-1" style="font-size: 0.85rem;">
@@ -242,7 +237,7 @@
               <thead class="table-success">
                 <tr>
                   <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Month</th>
+                    style="width: 220px; min-width: 220px; font-size: 0.875rem;">Reference / Date</th>
                   <th class="text-center align-middle fw-semibold p-2"
                     style="width: 100px; min-width: 100px; font-size: 0.875rem;">Opening Stock</th>
                   <th class="text-center align-middle fw-semibold p-2"
@@ -252,9 +247,9 @@
                   <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Utilization</th>
                   <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
                   <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total Wastage</th>
+                    style="width: 110px; min-width: 110px; font-size: 0.875rem;">Left Over</th>
                   <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Closing Balance</th>
+                    style="width: 110px; min-width: 110px; font-size: 0.875rem;">Total</th>
                 </tr>
                 <tr>
                   <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
@@ -273,44 +268,13 @@
                     To Serial</th>
                   <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
                   </th>
-                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  </th>
                   <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
                 </tr>
               </thead>
               <tbody>
                 @for (row of statementRows; track $index) {
-                
-                <!-- Fresh Arrival Row - Simplified Display -->
-                @if (row.label && row.label.toLowerCase().includes('arrival')) {
-                <tr [ngClass]="getRowClass(row)">
-                  <td colspan="11" class="p-3" style="background: linear-gradient(135deg, #fff8e6 0%, #fffbf0 100%);">
-                    <div class="d-flex align-items-center justify-content-between">
-                      <div class="d-flex align-items-center gap-3">
-                        <div class="bg-success bg-opacity-10 p-2 rounded">
-                          <i class="bi bi-box-seam text-success fs-4"></i>
-                        </div>
-                        <div>
-                          <h6 class="mb-1 fw-bold text-success">{{ row.label }}</h6>
-                          <div class="d-flex gap-3 small text-muted">
-                            @if (row.meta?.cartoonNumber) {
-                            <span><i class="bi bi-box me-1"></i>Cartoon: <strong>{{ row.meta?.cartoonNumber }}</strong></span>
-                            }
-                            @if (row.meta?.serialRange) {
-                            <span><i class="bi bi-list-ol me-1"></i>Serial Range: <strong>{{ row.meta?.serialRange }}</strong></span>
-                            }
-                          </div>
-                        </div>
-                      </div>
-                      <div class="text-end">
-                        <div class="text-muted small mb-1">Fresh Arrival Quantity</div>
-                        <div class="fs-4 fw-bold text-success">{{ row.freshArrival | number }}</div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-                } @else {
-                
-                <!-- Regular Utilization Row - Full Display -->
                 <tr [ngClass]="getRowClass(row)">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
@@ -326,6 +290,41 @@
                     @if (row.meta?.notes) {
                     <small class="d-block text-muted" style="font-size: 0.7rem;">{{ row.meta?.notes }}</small>
                     }
+                    @if (row.utilizationDetails?.length) {
+                      <div class="mt-1">
+                        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.6rem;">Utilization Rolls</small>
+                        @for (detail of row.utilizationDetails; track detail.rollName) {
+                          <small class="d-block" style="font-size: 0.7rem;">
+                            <span class="fw-semibold text-dark">{{ detail.rollName }}</span>:
+                            @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                              <span>{{ range.from || '-' }}-{{ range.to || '-' }} ({{ range.qty | number }})</span>
+                              @if (!$last) {
+                                <span>, </span>
+                              }
+                            }
+                          </small>
+                        }
+                      </div>
+                    }
+                    @if (row.wastageDetails?.length) {
+                      <div class="mt-1">
+                        <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 0.6rem;">Wastage Rolls</small>
+                        @for (detail of row.wastageDetails; track detail.rollName) {
+                          <small class="d-block" style="font-size: 0.7rem;">
+                            <span class="fw-semibold text-dark">{{ detail.rollName }}</span>:
+                            @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                              <span>{{ range.from || '-' }}-{{ range.to || '-' }} ({{ range.qty | number }})</span>
+                              @if (range.reason) {
+                                <span class="text-danger">({{ range.reason }})</span>
+                              }
+                              @if (!$last) {
+                                <span>, </span>
+                              }
+                            }
+                          </small>
+                        }
+                      </div>
+                    }
                   </td>
                   <td class="text-end fw-bold p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.openingStock !== null && row.openingStock !== undefined ? (row.openingStock | number) : '-' }}
@@ -336,29 +335,87 @@
                   <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.total !== null && row.total !== undefined ? (row.total | number) : '-' }}
                   </td>
-                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
-                    {{ row.utilizationFrom || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
+                    @if (row.utilizationDetails?.length) {
+                    <div class="d-flex flex-column gap-1 text-start">
+                      @for (detail of row.utilizationDetails; track detail.rollName) {
+                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                      <div>
+                        {{ range.from || '-' }}
+                      </div>
+                      }
+                      }
+                    </div>
+                    } @else {
+                    <div class="text-center">{{ row.utilizationFrom || '-' }}</div>
+                    }
                   </td>
-                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
-                    {{ row.utilizationTo || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
+                    @if (row.utilizationDetails?.length) {
+                    <div class="d-flex flex-column gap-1 text-start">
+                      @for (detail of row.utilizationDetails; track detail.rollName) {
+                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                      <div>
+                        {{ range.to || '-' }}
+                      </div>
+                      }
+                      }
+                    </div>
+                    } @else {
+                    <div class="text-center">{{ row.utilizationTo || '-' }}</div>
+                    }
                   </td>
                   <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    @if (row.utilizationDetails?.length) {
                     {{ row.utilizationQty !== null && row.utilizationQty !== undefined ? (row.utilizationQty | number) : '-' }}
+                    } @else {
+                    {{ row.utilizationQty !== null && row.utilizationQty !== undefined ? (row.utilizationQty | number) : '-' }}
+                    }
                   </td>
-                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
-                    {{ row.wastageFrom || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
+                    @if (row.wastageDetails?.length) {
+                    <div class="d-flex flex-column gap-1 text-start">
+                      @for (detail of row.wastageDetails; track detail.rollName) {
+                    @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                    <div>
+                        {{ range.from || '-' }}
+                    </div>
+                    }
+                      }
+                    </div>
+                    } @else {
+                    <div class="text-center">{{ row.wastageFrom || '-' }}</div>
+                    }
                   </td>
-                  <td class="p-2 align-middle text-center fw-semibold" style="font-size: 0.875rem;">
-                    {{ row.wastageTo || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
+                    @if (row.wastageDetails?.length) {
+                    <div class="d-flex flex-column gap-1 text-start">
+                      @for (detail of row.wastageDetails; track detail.rollName) {
+                    @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                    <div>
+                        {{ range.to || '-' }}
+                    </div>
+                    }
+                      }
+                    </div>
+                    } @else {
+                    <div class="text-center">{{ row.wastageTo || '-' }}</div>
+                    }
                   </td>
                   <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
+                    @if (row.wastageDetails?.length) {
                     {{ row.wastageQty !== null && row.wastageQty !== undefined ? (row.wastageQty | number) : '-' }}
+                    } @else {
+                    {{ row.wastageQty !== null && row.wastageQty !== undefined ? (row.wastageQty | number) : '-' }}
+                    }
+                  </td>
+                  <td class="text-center fw-bold p-2 align-middle" style="font-size: 0.875rem;">
+                    {{ row.leftOver !== null && row.leftOver !== undefined ? (row.leftOver | number) : '-' }}
                   </td>
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.closingBalance !== null && row.closingBalance !== undefined ? (row.closingBalance | number) : '-' }}
+                    {{ row.total !== null && row.total !== undefined ? (row.total | number) : '-' }}
                   </td>
                 </tr>
-                }
                 }
 
                 @if (!isLoading && !hasDetailRows) {

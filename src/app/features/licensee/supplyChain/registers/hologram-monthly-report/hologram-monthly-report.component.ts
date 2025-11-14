@@ -11,6 +11,18 @@ import {
 
 type MonthlyReportRowType = 'SUMMARY' | 'ARRIVAL' | 'UTILIZATION' | 'WASTAGE';
 
+interface RollDisplayRange {
+  from: string;
+  to: string;
+  qty: number;
+  reason?: string;
+}
+
+interface RollDisplayDetail {
+  rollName: string;
+  ranges: RollDisplayRange[];
+}
+
 interface MonthlyReportRow {
   rowType: MonthlyReportRowType;
   label: string;
@@ -18,6 +30,7 @@ interface MonthlyReportRow {
   openingStock?: number | null;
   freshArrival?: number | null;
   total?: number | null;
+  leftOver?: number | null;
   utilizationFrom?: string;
   utilizationTo?: string;
   utilizationQty?: number | null;
@@ -30,8 +43,9 @@ interface MonthlyReportRow {
     referenceNo?: string;
     damageReason?: string;
     notes?: string;
-    serialRange?: string;
   };
+  utilizationDetails?: RollDisplayDetail[];
+  wastageDetails?: RollDisplayDetail[];
 }
 
 interface StatementEvent {
@@ -44,6 +58,21 @@ interface StatementEvent {
   cartoonNumber?: string;
   referenceNo?: string;
   damageReason?: string;
+  rollDetails?: RollDetail[];
+  totalWastage?: number;
+}
+
+interface RollRangeDetail {
+  fromSerial?: string;
+  toSerial?: string;
+  quantity?: number;
+  damageReason?: string;
+}
+
+interface RollDetail {
+  rollName: string;
+  utilizationRanges: RollRangeDetail[];
+  wastageRanges: RollRangeDetail[];
 }
 
 interface MonthlyOverviewSummary {
@@ -308,6 +337,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       openingStock: opening,
       freshArrival,
       total: opening + freshArrival,
+      leftOver: opening + freshArrival - totals.totalIssued - totals.totalWastage,
       utilizationFrom: totals.utilizationFromSerial || '',
       utilizationTo: totals.utilizationToSerial || '',
       utilizationQty: totals.totalIssued,
@@ -336,49 +366,39 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         });
       } else if (event.rowType === 'UTILIZATION') {
         runningBalance -= event.quantity;
+        runningBalance -= event.totalWastage || 0;
+        const utilizationDetails = this.mapRollDisplayDetails(event.rollDetails, 'utilization');
+        const wastageDetails = this.mapRollDisplayDetails(event.rollDetails, 'wastage');
         rows.push({
           rowType: 'UTILIZATION',
           label: `Utilization - ${this.formatDate(event.date)}`,
           date: event.date,
-          utilizationFrom: event.fromSerial,
-          utilizationTo: event.toSerial,
           utilizationQty: event.quantity,
+          wastageQty: event.totalWastage || 0,
           closingBalance: runningBalance,
+          leftOver: this.calculateLeftOverForDisplay(event.rollDetails),
+          utilizationDetails,
+          wastageDetails,
           meta: {
             referenceNo: event.referenceNo
           }
         });
-      } else if (event.rowType === 'WASTAGE') {
-        runningBalance -= event.quantity;
-        const utilizationRow = this.findMatchingUtilizationRow(rows, event.referenceNo);
-        if (utilizationRow) {
-          utilizationRow.wastageFrom = event.fromSerial;
-          utilizationRow.wastageTo = event.toSerial;
-          utilizationRow.wastageQty = event.quantity;
-          utilizationRow.closingBalance = runningBalance;
-          utilizationRow.meta = {
-            ...utilizationRow.meta,
-            damageReason: event.damageReason || utilizationRow.meta?.damageReason
-          };
-        } else {
-          rows.push({
-            rowType: 'WASTAGE',
-            label: `Wastage - ${this.formatDate(event.date)}`,
-            date: event.date,
-            wastageFrom: event.fromSerial,
-            wastageTo: event.toSerial,
-            wastageQty: event.quantity,
-            closingBalance: runningBalance,
-            meta: {
-              referenceNo: event.referenceNo,
-              damageReason: event.damageReason
-            }
-          });
-        }
       }
     });
 
     this.statementRows = rows;
+  }
+
+  private calculateLeftOverForDisplay(details: RollDetail[] | undefined): number {
+    if (!details || details.length === 0) {
+      return 0;
+    }
+    const totalUtilized = this.sumRanges(details.flatMap(detail => detail.utilizationRanges));
+    const totalWastage = this.sumRanges(details.flatMap(detail => detail.wastageRanges));
+    const totalAssigned = details.reduce((sum, detail) => {
+      return sum + this.sumRanges(detail.utilizationRanges) + this.sumRanges(detail.wastageRanges);
+    }, 0);
+    return totalAssigned - (totalUtilized + totalWastage);
   }
 
   private buildStatementEvents(): StatementEvent[] {
@@ -386,19 +406,14 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       return [];
     }
 
-    const priority: Record<StatementEvent['rowType'], number> = {
-      ARRIVAL: 0,
-      UTILIZATION: 1,
-      WASTAGE: 2
-    };
-
     const events: StatementEvent[] = [];
+    const utilizationEventMap = new Map<string, StatementEvent>();
 
     const arrivals = this.monthlyStatement.arrivals || [];
     arrivals.forEach((arrival: HologramArrivalRecord) => {
       if (!arrival.receivedDate || !arrival.totalCount) {
-        return;
-      }
+      return;
+    }
       events.push({
         rowType: 'ARRIVAL',
         date: arrival.receivedDate,
@@ -415,72 +430,63 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       const entryDate = entry.date || (entry as any).entryDate || '';
       const timestamp = this.getTimestamp(entryDate);
       const referenceNo = (entry as any).referenceNo || (entry as any).ourRefNo || entry.id;
+      const rollDetails = this.buildRollDetails(entry);
+      const totalUtilized = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.utilizationRanges), 0);
+      const totalWastage = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.wastageRanges), 0);
 
-      if (entry.issuedEntries && entry.issuedEntries.length > 0) {
-        entry.issuedEntries.forEach(issued => {
-          if (!issued.quantity || issued.quantity <= 0) {
-            return;
-          }
-          events.push({
-            rowType: 'UTILIZATION',
-            date: entryDate,
-            timestamp,
-            quantity: issued.quantity,
-            fromSerial: issued.fromSerial,
-            toSerial: issued.toSerial,
-            referenceNo
-          });
-        });
-      } else if (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity) {
-        events.push({
-          rowType: 'UTILIZATION',
-          date: entryDate,
-          timestamp,
-          quantity: entry.issuedQuantity,
-          fromSerial: entry.issuedFromSerial,
-          toSerial: entry.issuedToSerial,
-          referenceNo
-        });
-      }
-
-      if (entry.wastageEntries && entry.wastageEntries.length > 0) {
-        entry.wastageEntries.forEach(waste => {
-          if (!waste.quantity || waste.quantity <= 0) {
-            return;
-          }
-          events.push({
-            rowType: 'WASTAGE',
-            date: entryDate,
-            timestamp,
-            quantity: waste.quantity,
-            fromSerial: waste.fromSerial,
-            toSerial: waste.toSerial,
-            referenceNo,
-            damageReason: waste.damageReason
-          });
-        });
-      } else if (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity) {
-        events.push({
-          rowType: 'WASTAGE',
-          date: entryDate,
-          timestamp,
-          quantity: entry.wastageQuantity,
-          fromSerial: entry.wastageFromSerial,
-          toSerial: entry.wastageToSerial,
+      if (totalUtilized > 0 || totalWastage > 0) {
+        this.addOrUpdateUtilizationEvent(
+          events,
+          utilizationEventMap,
           referenceNo,
-          damageReason: (entry as any).damageReason
-        });
+          entryDate,
+          timestamp,
+          totalUtilized,
+          totalWastage,
+          rollDetails
+        );
       }
     });
 
-    events.sort((a, b) => {
-      if (a.timestamp === b.timestamp) {
-        return priority[a.rowType] - priority[b.rowType];
-      }
-      return a.timestamp - b.timestamp;
-    });
+    events.sort((a, b) => a.timestamp - b.timestamp);
 
     return events;
+  }
+
+  private addOrUpdateUtilizationEvent(
+    events: StatementEvent[],
+    eventMap: Map<string, StatementEvent>,
+    referenceNo: string,
+    entryDate: string,
+    timestamp: number,
+    totalUtilized: number,
+    totalWastage: number,
+    rollDetails: RollDetail[]
+  ): void {
+    const key = referenceNo || `ref-${timestamp}`;
+    const existing = eventMap.get(key);
+
+    if (existing) {
+      existing.quantity += totalUtilized;
+      existing.totalWastage = (existing.totalWastage || 0) + totalWastage;
+      existing.rollDetails = [...(existing.rollDetails || []), ...rollDetails];
+      if (timestamp > existing.timestamp) {
+        existing.timestamp = timestamp;
+        existing.date = entryDate;
+      }
+    } else {
+      const newEvent: StatementEvent = {
+        rowType: 'UTILIZATION',
+        date: entryDate,
+        timestamp,
+        quantity: totalUtilized,
+        totalWastage,
+        referenceNo,
+        rollDetails
+      };
+      eventMap.set(key, newEvent);
+      events.push(newEvent);
+    }
   }
 
   private getTimestamp(date: string): number {
@@ -519,17 +525,101 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     return undefined;
   }
 
-  private findMatchingUtilizationRow(rows: MonthlyReportRow[], referenceNo?: string): MonthlyReportRow | undefined {
-    if (!referenceNo) {
-      return undefined;
+  private buildRollDetails(entry: any): RollDetail[] {
+    const details: RollDetail[] = [];
+    const lockedRolls = entry.lockedRolls || [];
+
+    if (lockedRolls.length > 0) {
+      lockedRolls.forEach((roll: any) => {
+        const rollName = roll.cartoonNumber || entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
+        details.push({
+          rollName,
+          utilizationRanges: (roll.issuedRanges || []).map((range: any) => ({
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || range.qty || 0
+          })),
+          wastageRanges: (roll.wastageRanges || []).map((range: any) => ({
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || range.qty || 0,
+            damageReason: range.damageReason || roll.damageReason || entry.damageReason
+          }))
+        });
+      });
     }
-    for (let i = rows.length - 1; i >= 0; i--) {
-      const row = rows[i];
-      if (row.rowType === 'UTILIZATION' && row.meta?.referenceNo === referenceNo) {
-        return row;
-      }
+
+    if (details.length === 0) {
+      const rollName = entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
+      const issuedEntries = entry.issuedEntries && entry.issuedEntries.length > 0
+        ? entry.issuedEntries
+        : (entry.issuedFromSerial && entry.issuedToSerial
+          ? [{
+              fromSerial: entry.issuedFromSerial,
+              toSerial: entry.issuedToSerial,
+              quantity: entry.issuedQuantity || entry.utilizedQuantity || 0
+            }]
+          : []);
+      const wastageEntries = entry.wastageEntries && entry.wastageEntries.length > 0
+        ? entry.wastageEntries
+        : (entry.wastageFromSerial && entry.wastageToSerial
+          ? [{
+              fromSerial: entry.wastageFromSerial,
+              toSerial: entry.wastageToSerial,
+              quantity: entry.wastageQuantity || 0,
+              damageReason: entry.damageReason
+            }]
+          : []);
+
+      details.push({
+        rollName,
+        utilizationRanges: issuedEntries.map((range: any) => ({
+          fromSerial: range.fromSerial || '',
+          toSerial: range.toSerial || '',
+          quantity: range.quantity || 0
+        })),
+        wastageRanges: wastageEntries.map((range: any) => ({
+          fromSerial: range.fromSerial || '',
+          toSerial: range.toSerial || '',
+          quantity: range.quantity || 0,
+          damageReason: range.damageReason || entry.damageReason
+        }))
+      });
     }
-    return undefined;
+
+    return details;
+  }
+
+  private sumRanges(ranges: RollRangeDetail[]): number {
+    return ranges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+  }
+
+  private mapRollDisplayDetails(details: RollDetail[] | undefined, type: 'utilization' | 'wastage'): RollDisplayDetail[] {
+    if (!details) {
+      return [];
+    }
+
+    return details
+      .map(detail => {
+        const rangesSource = type === 'utilization' ? detail.utilizationRanges : detail.wastageRanges;
+        const ranges = rangesSource
+          .filter(range =>
+            (range.fromSerial && range.fromSerial.trim().length > 0) ||
+            (range.toSerial && range.toSerial.trim().length > 0) ||
+            (range.quantity || 0) > 0)
+          .map(range => ({
+            from: range.fromSerial || '-',
+            to: range.toSerial || '-',
+            qty: range.quantity || 0,
+            reason: range.damageReason
+          }));
+
+        return {
+          rollName: detail.rollName,
+          ranges
+        };
+      })
+      .filter(detail => detail.ranges.length > 0);
   }
 
   private initializeFiltersToCurrentMonth(): void {
