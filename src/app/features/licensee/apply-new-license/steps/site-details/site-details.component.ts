@@ -130,7 +130,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.loadMasterData();
     this.restoreDocuments();
 
-    /// Watch district → subdivision → police station
+    // Watch district → subdivision → police station
     this.siteDetailsForm.get('siteDistrict')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(districtId => {
@@ -385,7 +385,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         { emitEvent: false }
       );
 
-      setTimeout(() => this.onDistrictChange(districtId), 0);
+      setTimeout(() => this.onDistrictChange(districtId!), 0);
     }
   }
 
@@ -500,18 +500,18 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   resetForm() {
-  this.siteDetailsForm.reset();
-  this.documents.forEach(doc => {
-    if (doc.fileUrl) {
-      URL.revokeObjectURL(doc.fileUrl);
-    }
-    doc.file = null;
-    doc.fileUrl = '';
-    doc.required = false; // Reset required flag
-    this.licenseApplicationService.removeSiteDocument(doc.name);
-  });
-  sessionStorage.removeItem('siteDetailsData');
-}
+    this.siteDetailsForm.reset();
+    this.documents.forEach(doc => {
+      if (doc.fileUrl) {
+        URL.revokeObjectURL(doc.fileUrl);
+      }
+      doc.file = null;
+      doc.fileUrl = '';
+      doc.required = false; // Reset required flag
+      this.licenseApplicationService.removeSiteDocument(doc.name);
+    });
+    sessionStorage.removeItem('siteDetailsData');
+  }
 
   goBack() {
     this.back.emit();
