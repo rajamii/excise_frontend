@@ -30,6 +30,7 @@ interface MonthlyReportRow {
     referenceNo?: string;
     damageReason?: string;
     notes?: string;
+    serialRange?: string;
   };
 }
 
