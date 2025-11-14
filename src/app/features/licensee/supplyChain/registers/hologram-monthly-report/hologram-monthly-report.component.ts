@@ -376,7 +376,21 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         // Create separate rows for each roll/range
         const rollDetails = event.rollDetails;
         if (rollDetails && rollDetails.length > 0) {
-          rollDetails.forEach((rollDetail, index) => {
+          // Filter out invalid roll details (those with no utilization or wastage, or invalid serial ranges)
+          const validRollDetails = rollDetails.filter((rollDetail: any) => {
+            const hasUtilization = rollDetail.utilizationRanges && rollDetail.utilizationRanges.length > 0 && 
+                                   rollDetail.utilizationRanges.some((r: any) => r.quantity > 0);
+            const hasWastage = rollDetail.wastageRanges && rollDetail.wastageRanges.length > 0 && 
+                              rollDetail.wastageRanges.some((r: any) => r.quantity > 0);
+            
+            // Also check if the serial range is valid (fromSerial should be less than toSerial)
+            const serialRange = this.extractSerialRangeFromSingleRoll(rollDetail);
+            const hasValidRange = serialRange && !serialRange.includes('undefined') && !serialRange.includes('NaN');
+            
+            return (hasUtilization || hasWastage) && hasValidRange;
+          });
+          
+          validRollDetails.forEach((rollDetail: any, index: number) => {
             const rollName = rollDetail.rollName;
             
             // Calculate quantities for this specific roll/range
@@ -403,7 +417,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
               date: event.date,
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
-              closingBalance: (index === rollDetails.length - 1) ? runningBalance : null,
+              closingBalance: (index === validRollDetails.length - 1) ? runningBalance : null,
               leftOver: rollLeftOver,  // Show leftover for each range
               utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
               wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
