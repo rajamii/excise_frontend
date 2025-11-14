@@ -9,7 +9,7 @@ import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
 import { LicenseSubcategory } from '../models/license-subcategory.model';
 import { LicenseTitle } from '../models/license-title.model';
-import { Road } from '../models/road.model';
+import { Road } from '../models/Road.model';
 
 @Injectable({
   providedIn: 'root'
@@ -54,18 +54,36 @@ export class MasterService {
     return this.http.get<LicenseCategory[]>(`${this.baseUrl}/license-categories`);
   }
 
-  // Fetches all license subcategories
+  // ✅ Removed duplicate - Choose the correct endpoint for your API
+  // Option 1: /license-subcategories
   getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
     return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/license-subcategories`);
   }
 
-  // Fetches all available license titles
+  // Option 2: If you need the /licensesubcategories/list endpoint, use this instead:
+  // getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
+  //   return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/licensesubcategories/list`);
+  // }
+
+  // ✅ Removed duplicate - Choose the correct endpoint for your API
+  // Option 1: /license-titles
   getLicenseTitles(): Observable<LicenseTitle[]> {
     return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
   }
 
-  // Fetches all available roads
+  // Option 2: If you need the /licensetitles/list endpoint, use this instead:
+  // getLicenseTitles(): Observable<LicenseTitle[]> {
+  //   return this.http.get<LicenseTitle[]>(`${this.baseUrl}/licensetitles/list`);
+  // }
+
+  // ✅ Removed duplicate - Choose the correct endpoint for your API
+  // Option 1: /roads
   getRoads(): Observable<Road[]> {
     return this.http.get<Road[]>(`${this.baseUrl}/roads`);
   }
+
+  // Option 2: If you need the /roads/list endpoint, use this instead:
+  // getRoads(): Observable<Road[]> {
+  //   return this.http.get<Road[]>(`${this.baseUrl}/roads/list`);
+  // }
 }

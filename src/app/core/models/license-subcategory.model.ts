@@ -1,7 +1,6 @@
-import { LicenseCategory } from "./license-category.model";
-
-export class LicenseSubcategory {
-    id?: number;
-    description!: string;
-    category!: number | LicenseCategory | undefined;
+export interface LicenseSubcategory {
+  id?: number;
+  description?: string;
+  category?: number;      // category id from backend
+  categoryName?: string;  // category name from backend
 }
