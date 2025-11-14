@@ -2211,6 +2211,8 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
 
   /**
    * Validate if a serial range is within ANY of the allocated ranges for a roll
+   * CRITICAL FIX: Ensures the ENTIRE range (from-to) is within a SINGLE allocated range
+   * This prevents users from entering ranges that span across multiple non-contiguous slots
    */
   public validateSerialRangeInAllocatedRanges(
     fromSerial: string,
@@ -2239,21 +2241,23 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       return { isValid: false, errorMessage: 'From serial must be less than or equal to To serial' };
     }
 
-    // Check if range is within ANY of the allocated ranges
+    // CRITICAL FIX: Check if the ENTIRE range (both from AND to) is within a SINGLE allocated range
+    // This prevents spanning across multiple non-contiguous ranges
     for (const allocatedRange of allocatedRanges) {
       const allocatedFromNum = extractNumber(allocatedRange.fromSerial);
       const allocatedToNum = extractNumber(allocatedRange.toSerial);
 
+      // Both fromNum AND toNum must be within the SAME allocated range
       if (fromNum >= allocatedFromNum && toNum <= allocatedToNum) {
         return { isValid: true, errorMessage: '' };
       }
     }
 
-    // Range is not within any allocated range
+    // Range is not within any single allocated range
     const rangesStr = allocatedRanges.map(r => `${r.fromSerial}-${r.toSerial}`).join(', ');
     return {
       isValid: false,
-      errorMessage: `Serial range must be within one of the allocated ranges: ${rangesStr}` 
+      errorMessage: `Serial range must be entirely within ONE of the allocated ranges: ${rangesStr}` 
     };
   }
 
@@ -2424,19 +2428,36 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
 
   /**
    * Handle roll input changes
+   * CRITICAL FIX: Validate against ONLY the selected range, not all ranges for the roll
    */
   onRollInputChange(entry: HologramDailyEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
 
     const cartoonNumber = rollInput.cartoonNumber;
-    const allocatedRanges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
+    
+    // CRITICAL FIX: If a specific range was selected (rangeId exists), validate against ONLY that range
+    // Otherwise, validate against all ranges for backward compatibility
+    let allocatedRanges: Array<{ fromSerial: string; toSerial: string }>;
+    
+    if (rollInput.fromSerial && rollInput.toSerial) {
+      // Use the SPECIFIC range that was selected (stored in rollInput)
+      allocatedRanges = [{
+        fromSerial: rollInput.fromSerial,
+        toSerial: rollInput.toSerial
+      }];
+      console.log(`🎯 Validating against SELECTED range only: ${rollInput.fromSerial}-${rollInput.toSerial}`);
+    } else {
+      // Fallback: get all ranges for this roll (for backward compatibility)
+      allocatedRanges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
+      console.log(`⚠️ Validating against ALL ranges for ${cartoonNumber}:`, allocatedRanges);
+    }
 
     // Validate and calculate issued ranges
     rollInput.issuedQty = (rollInput.issuedRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
       
-      // Validate range against ALL allocated ranges
+      // Validate range against the allocated range(s)
       if (allocatedRanges.length > 0) {
         const validation = this.validateSerialRangeInAllocatedRanges(
           range.fromSerial,
@@ -2457,7 +2478,7 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     rollInput.wastageQty = (rollInput.wastageRanges || []).reduce((sum: number, range: any) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
       
-      // Validate range against ALL allocated ranges
+      // Validate range against the allocated range(s)
       if (allocatedRanges.length > 0) {
         const validation = this.validateSerialRangeInAllocatedRanges(
           range.fromSerial,
