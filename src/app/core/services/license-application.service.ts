@@ -18,7 +18,7 @@ import {
 export class LicenseApplicationService {
 
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/masters/new_license_application`;
+  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
   
   // Store for passport photo
   private passPhotoSubject = new BehaviorSubject<File | null>(null);

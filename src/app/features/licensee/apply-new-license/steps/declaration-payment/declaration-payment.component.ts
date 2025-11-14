@@ -56,7 +56,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     licenseSubCategory: 'License Sub Category',
     establishmentName: 'Establishment Name',
     siteType: 'Site Type',
-    applicantName: 'First Name',
+    applicantName: 'Applicant Name',
     fatherHusbandName: 'Father/Husband Name',
     dob: 'Date of Birth',
     nationality: 'Nationality',

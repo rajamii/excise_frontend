@@ -74,19 +74,19 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-  this.loadDropdownData(); // Loads categories + all subcategories
+    this.loadDropdownData(); // Loads categories + all subcategories
 
-  this.keyInfoForm.get('licenseCategory')?.valueChanges
-    .pipe(takeUntil(this.destroy$))
-    .subscribe((categoryId) => {
-      if (categoryId) {
-        this.loadSubCategories(categoryId);
-      } else {
-        this.licenseSubCategories = [];
-        this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
-      }
-    });
-}
+    this.keyInfoForm.get('licenseCategory')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((categoryId) => {
+        if (categoryId) {
+          this.loadSubCategories(categoryId);
+        } else {
+          this.licenseSubCategories = [];
+          this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
+        }
+      });
+  }
 
   ngOnDestroy() {
     this.destroy$.next();
@@ -97,8 +97,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     // Load license categories
     this.masterService.getLicenseCategories().subscribe(
       (data: LicenseCategory[]) => {
-        console.log(' Backend license categories:', data);
-
         this.licenseCategories = data.map(item => ({
           id: item.id,
           licenseCategory: item.licenseCategory
