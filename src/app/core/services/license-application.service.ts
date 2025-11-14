@@ -8,7 +8,6 @@ import { LocationFee } from '../models/location-fee.model';
 import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
 import { 
   NewLicenseApplication, 
- 
 } from '../models/new-license-application.model';
 
 @Injectable({
@@ -318,16 +317,16 @@ export class LicenseApplicationService {
   /**
    * Get dashboard counts for new license applications
    */
-  // getNewLicenseDashboardCounts(): Observable<NewLicenseDashboardCount> {
-  //   return this.http.get<NewLicenseDashboardCount>(`${this.newLicenseBaseUrl}/dashboard-counts/`);
-  // }
+  getNewLicenseDashboardCounts(): Observable<DashboardCount> {
+    return this.http.get<DashboardCount>(`${this.newLicenseBaseUrl}/dashboard-counts/`);
+  }
 
   /**
    * Get new license applications grouped by status
    */
-  // getNewLicenseApplicationsByStatus(): Observable<NewLicenseApplicationsByStatus> {
-  //   return this.http.get<NewLicenseApplicationsByStatus>(`${this.newLicenseBaseUrl}/list-by-status/`);
-  // }
+  getNewLicenseApplicationsByStatus(): Observable<ApplicationStatus> {
+    return this.http.get<ApplicationStatus>(`${this.newLicenseBaseUrl}/list-by-status/`);
+  }
 
   /**
    * Advance new license application to next stage
@@ -365,10 +364,10 @@ export class LicenseApplicationService {
   /**
    * Get objections for new license application
    */
-  // getNewLicenseObjections(applicationId: string): Observable<NewLicenseObjection[]> {
-  //   const encodedId = encodeURIComponent(applicationId);
-  //   return this.http.get<NewLicenseObjection[]>(`${this.newLicenseBaseUrl}/${encodedId}/objections/`);
-  // }
+  getNewLicenseObjections(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.newLicenseBaseUrl}/${encodedId}/objections/`);
+  }
 
   /**
    * Resolve objections for new license application
@@ -381,18 +380,18 @@ export class LicenseApplicationService {
   /**
    * Submit site enquiry report for new license application (Level 2)
    */
-  // submitNewLicenseSiteEnquiry(applicationId: string, formData: FormData): Observable<NewLicenseSiteEnquiryReport> {
-  //   const encodedId = encodeURIComponent(applicationId);
-  //   return this.http.post<NewLicenseSiteEnquiryReport>(`${this.newLicenseBaseUrl}/${encodedId}/site-enquiry/`, formData);
-  // }
+  submitNewLicenseSiteEnquiry(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post<any>(`${this.newLicenseBaseUrl}/${encodedId}/site-enquiry/`, formData);
+  }
 
   /**
    * Get site enquiry details for new license application
    */
-  // getNewLicenseSiteEnquiryDetail(applicationId: string): Observable<NewLicenseSiteEnquiryReport> {
-  //   const encodedId = encodeURIComponent(applicationId);
-  //   return this.http.get<NewLicenseSiteEnquiryReport>(`${this.newLicenseBaseUrl}/${encodedId}/site-detail/`);
-  // }
+  getNewLicenseSiteEnquiryDetail(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any>(`${this.newLicenseBaseUrl}/${encodedId}/site-detail/`);
+  }
 
   /**
    * Print new license (only for approved applications)
