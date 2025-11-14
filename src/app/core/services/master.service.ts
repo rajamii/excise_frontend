@@ -155,16 +155,20 @@ export class MasterService {
    */
   getPurposes(): Observable<Purpose[]> {
     return this.http
-      .get<{ status: string; data: Purpose[] }>(
+      .get<{ success: boolean; data: Purpose[] }>(
         `${environment.apiBaseUrl}/transactional/supply_chain/purposes/`
       )
-      .pipe(
-        map((response) => {
-          if (response.status === 'success') {
-            return response.data || [];
-          }
-          throw new Error('Failed to fetch purposes');
-        })
-      );
+      .pipe(map((response) => response.data || []));
+  }
+
+  /**
+   * Fetches all liquor brands with their sizes
+   */
+  getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
+    return this.http
+      .get<{ success: boolean; data: { brandName: string; sizes: number[] }[] }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/liquor-data/brands/`
+      )
+      .pipe(map((response) => response.data || []));
   }
 }

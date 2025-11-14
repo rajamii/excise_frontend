@@ -11,12 +11,13 @@
           <div class="col-md-6">
             <div class="input-group-custom">
               <label class="form-label">Bill No:</label>
-              <input 
-                type="text" 
-                class="form-control input-field bg-light" 
+              <input
+                type="text"
+                class="form-control input-field bg-light"
                 [(ngModel)]="formData.billNo"
-                readonly 
-                placeholder="TRP/2/EXCISE">
+                readonly
+                placeholder="TRP/2/EXCISE"
+              />
             </div>
           </div>
 
@@ -26,12 +27,13 @@
               <label class="form-label">
                 <i class="fas fa-user me-2"></i>Sole Distributor Name:
               </label>
-              <input 
-                type="text" 
-                class="form-control input-field bg-light" 
+              <input
+                type="text"
+                class="form-control input-field bg-light"
                 [(ngModel)]="formData.soleDistributor"
-                readonly 
-                placeholder="M/s Karma Chopel Bhutia">
+                readonly
+                placeholder="M/s Karma Chopel Bhutia"
+              />
             </div>
           </div>
 
@@ -42,11 +44,12 @@
                 <i class="fas fa-calendar me-2"></i>Date:
               </label>
               <div class="input-group">
-                <input 
-                  type="date" 
-                  class="form-control input-field date-picker" 
+                <input
+                  type="date"
+                  class="form-control input-field date-picker"
                   [(ngModel)]="formData.date"
-                  placeholder="Click to select date">
+                  placeholder="Click to select date"
+                />
                 <span class="input-group-text">
                   <i class="fas fa-calendar-alt"></i>
                 </span>
@@ -60,7 +63,10 @@
               <label class="form-label">
                 <i class="fas fa-map-marker-alt me-2"></i>Depot Address:
               </label>
-              <select class="form-control input-field" [(ngModel)]="formData.depotAddress">
+              <select
+                class="form-control input-field"
+                [(ngModel)]="formData.depotAddress"
+              >
                 <option value="">-- Select Depot Address --</option>
                 <option value="gangtok">Gangtok</option>
                 <option value="namchi">Namchi</option>
@@ -76,12 +82,16 @@
               <label class="form-label">
                 <i class="fas fa-tag me-2"></i>Brand:
               </label>
-              <select class="form-control input-field" [(ngModel)]="formData.brand" (change)="onBrandChange()">
+              <select
+                class="form-control input-field"
+                [(ngModel)]="formData.brand"
+                (change)="onBrandChange()"
+                [disabled]="isLocked"
+              >
                 <option value="">-- Select Brand --</option>
-                <option value="royal-stag">Royal Stag</option>
-                <option value="blenders-pride">Blenders Pride</option>
-                <option value="officers-choice">Officers Choice</option>
-                <option value="imperial-blue">Imperial Blue</option>
+                <option *ngFor="let brand of brandOptions" [value]="brand">
+                  {{ brand }}
+                </option>
               </select>
             </div>
           </div>
@@ -92,11 +102,15 @@
               <label class="form-label">
                 <i class="fas fa-ruler me-2"></i>Size (ml):
               </label>
-              <select class="form-control input-field" [(ngModel)]="formData.size">
+              <select
+                class="form-control input-field"
+                [(ngModel)]="formData.size"
+                [disabled]="!formData.brand || isLocked"
+              >
                 <option value="">-- Select Size --</option>
-                <option value="180">180ml</option>
-                <option value="375">375ml</option>
-                <option value="750">750ml</option>
+                <option *ngFor="let size of sizeOptions" [value]="size">
+                  {{ size }}ml
+                </option>
               </select>
             </div>
           </div>
@@ -107,12 +121,13 @@
               <label class="form-label">
                 <i class="fas fa-boxes me-2"></i>Cases:
               </label>
-              <input 
-                type="number" 
-                class="form-control input-field" 
+              <input
+                type="number"
+                class="form-control input-field"
                 [(ngModel)]="formData.cases"
                 placeholder="Enter number of cases"
-                min="0">
+                min="0"
+              />
             </div>
           </div>
 
@@ -122,9 +137,14 @@
               <label class="form-label">
                 <i class="fas fa-truck me-2"></i>Vehicle Number:
               </label>
-              <select class="form-control input-field" [(ngModel)]="formData.vehicleNumber">
+              <select
+                class="form-control input-field"
+                [(ngModel)]="formData.vehicleNumber"
+              >
                 <option value="">-- Select Vehicle --</option>
-                <option *ngFor="let v of vehicleNumbers" [value]="v">{{ v }}</option>
+                <option *ngFor="let v of vehicleNumbers" [value]="v">
+                  {{ v }}
+                </option>
               </select>
             </div>
           </div>
@@ -139,7 +159,10 @@
 
         <!-- Action Buttons -->
         <div class="text-center mt-4">
-          <button class="btn btn-custom btn-save me-3" (click)="showDeclarationModal()">
+          <button
+            class="btn btn-custom btn-save me-3"
+            (click)="showDeclarationModal()"
+          >
             Save
           </button>
           <button class="btn btn-outline-secondary me-3" (click)="clearForm()">
@@ -153,7 +176,8 @@
         <!-- Validation Messages -->
         <div class="mt-3" *ngIf="validationErrors.length > 0">
           <div class="alert alert-danger validation-summary">
-            <i class="fas fa-exclamation-triangle me-2"></i>Please correct the following errors:
+            <i class="fas fa-exclamation-triangle me-2"></i>Please correct the
+            following errors:
             <ul class="mb-0 mt-2">
               <li *ngFor="let error of validationErrors">{{ error }}</li>
             </ul>
@@ -165,13 +189,11 @@
 
   <!-- Letter Preview Container -->
   <div class="container">
-    <div>
-      <strong>SOLE DISTRIBUTOR:</strong> {{ formData.soleDistributor }}
-    </div>
+    <div><strong>SOLE DISTRIBUTOR:</strong> {{ formData.soleDistributor }}</div>
     <div class="authorised-signatory">
       <p>Bill No: {{ formData.billNo }}</p>
     </div>
-    
+
     <div class="to-date">
       <div class="to">
         <p><strong>TO,</strong></p>
@@ -181,7 +203,7 @@
         <p>Rangpo (Sikkim)</p>
       </div>
       <div class="date">
-        <p>Date: {{ formData.date | date:'dd-MMM-yyyy' }}</p>
+        <p>Date: {{ formData.date | date : "dd-MMM-yyyy" }}</p>
       </div>
     </div>
 
@@ -189,7 +211,11 @@
 
     <div class="content">
       <p>Dear Sir,</p>
-      <p>We would be ever grateful if you could kindly issue Transit permit to the following brands of liquor for our sales depot at {{ formData.depotAddress }}.</p>
+      <p>
+        We would be ever grateful if you could kindly issue Transit permit to
+        the following brands of liquor for our sales depot at
+        {{ formData.depotAddress }}.
+      </p>
     </div>
     <div class="vehiclenumber mb-3" *ngIf="formData.vehicleNumber">
       <strong>Vehicle Number:</strong> {{ formData.vehicleNumber }}
@@ -203,9 +229,9 @@
             <th>Brand</th>
             <th>Size</th>
             <th>Cases</th>
-            <th>Education Cess<br><small>(₹ per case)</small></th>
-            <th>Excise Duty<br><small>(₹ per case)</small></th>
-            <th>Additional Excise<br><small>(₹ per case)</small></th>
+            <th>Education Cess<br /><small>(₹ per case)</small></th>
+            <th>Excise Duty<br /><small>(₹ per case)</small></th>
+            <th>Additional Excise<br /><small>(₹ per case)</small></th>
             <th>Action</th>
           </tr>
         </thead>
@@ -214,11 +240,23 @@
             <td>{{ product.brand }}</td>
             <td>{{ product.size }}</td>
             <td>{{ product.cases }}</td>
-            <td>{{ product.educationCess | currency:'₹':'symbol':'1.2-2' }}</td>
-            <td>{{ product.exciseDuty | currency:'₹':'symbol':'1.2-2' }}</td>
-            <td>{{ product.additionalExcise | currency:'₹':'symbol':'1.2-2' }}</td>
             <td>
-              <button class="btn btn-danger btn-sm" (click)="deleteProduct(i)" title="Delete Product">
+              {{ product.educationCess | currency : "₹" : "symbol" : "1.2-2" }}
+            </td>
+            <td>
+              {{ product.exciseDuty | currency : "₹" : "symbol" : "1.2-2" }}
+            </td>
+            <td>
+              {{
+                product.additionalExcise | currency : "₹" : "symbol" : "1.2-2"
+              }}
+            </td>
+            <td>
+              <button
+                class="btn btn-danger btn-sm"
+                (click)="deleteProduct(i)"
+                title="Delete Product"
+              >
                 🗑️
               </button>
             </td>
@@ -227,15 +265,25 @@
         <tfoot>
           <tr>
             <td class="fw-bold">Education Cess Total:</td>
-            <td colspan="6" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
+            <td colspan="6" class="fw-bold">
+              {{
+                getTotalEducationCess() | currency : "₹" : "symbol" : "1.2-2"
+              }}
+            </td>
           </tr>
           <tr>
             <td class="fw-bold">Excise Duty Total:</td>
-            <td colspan="6" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
+            <td colspan="6" class="fw-bold">
+              {{ getTotalExciseDuty() | currency : "₹" : "symbol" : "1.2-2" }}
+            </td>
           </tr>
           <tr>
             <td class="fw-bold">Additional Excise Duty Total:</td>
-            <td colspan="6" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+            <td colspan="6" class="fw-bold">
+              {{
+                getTotalAdditionalExcise() | currency : "₹" : "symbol" : "1.2-2"
+              }}
+            </td>
           </tr>
         </tfoot>
       </table>
@@ -256,17 +304,26 @@
               <i class="fas fa-calculator me-2"></i>Bill Summary
             </h5>
             <div class="mt-2">
-              <span class="badge bg-primary">Bill No: {{ formData.billNo }}</span>
+              <span class="badge bg-primary"
+                >Bill No: {{ formData.billNo }}</span
+              >
             </div>
           </div>
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <span class="fw-bold">Total Amount (Education Cess):</span>
-              <span class="h4 text-primary mb-0">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</span>
+              <span class="h4 text-primary mb-0">{{
+                getTotalEducationCess() | currency : "₹" : "symbol" : "1.2-2"
+              }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
-              <span class="fw-bold">Excise + Additional Excise Duty Total:</span>
-              <span class="h5 text-primary mb-0">{{ (getTotalExciseDuty() + getTotalAdditionalExcise()) | currency:'₹':'symbol':'1.2-2' }}</span>
+              <span class="fw-bold"
+                >Excise + Additional Excise Duty Total:</span
+              >
+              <span class="h5 text-primary mb-0">{{
+                getTotalExciseDuty() + getTotalAdditionalExcise()
+                  | currency : "₹" : "symbol" : "1.2-2"
+              }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
               <span class="fw-bold">Number of Items:</span>
@@ -287,11 +344,18 @@
             </h5>
           </div>
           <div class="card-body text-center">
-            <p class="text-muted mb-3">This bill is locked and ready for payment</p>
-            <button class="btn btn-success btn-lg w-100" (click)="payAllItems()">
+            <p class="text-muted mb-3">
+              This bill is locked and ready for payment
+            </p>
+            <button
+              class="btn btn-success btn-lg w-100"
+              (click)="payAllItems()"
+            >
               PAY ALL ITEMS
             </button>
-            <small class="text-muted mt-2 d-block">Click to pay for all items in this bill</small>
+            <small class="text-muted mt-2 d-block"
+              >Click to pay for all items in this bill</small
+            >
           </div>
         </div>
       </div>
@@ -300,12 +364,27 @@
 </div>
 
 <!-- Declaration Modal -->
-<div class="modal fade" id="declarationModal" tabindex="-1" aria-labelledby="declarationModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+<div
+  class="modal fade"
+  id="declarationModal"
+  tabindex="-1"
+  aria-labelledby="declarationModalLabel"
+  aria-hidden="true"
+  data-bs-backdrop="static"
+  data-bs-keyboard="false"
+>
   <div class="modal-dialog modal-xl">
     <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+      <div
+        class="modal-header bg-gradient"
+        style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        "
+      >
         <h4 class="modal-title fw-bold" id="declarationModalLabel">
-          <i class="fas fa-file-contract me-3"></i>BILL CONFIRMATION & DECLARATION
+          <i class="fas fa-file-contract me-3"></i>BILL CONFIRMATION &
+          DECLARATION
         </h4>
       </div>
       <div class="modal-body p-4">
@@ -322,15 +401,28 @@
                 <table class="table table-borderless mb-0">
                   <tr>
                     <td class="fw-bold">Bill Number:</td>
-                    <td><span class="badge bg-primary fs-6">{{ formData.billNo }}</span></td>
+                    <td>
+                      <span class="badge bg-primary fs-6">{{
+                        formData.billNo
+                      }}</span>
+                    </td>
                   </tr>
                   <tr>
                     <td class="fw-bold">Total Products:</td>
-                    <td><span class="text-success fw-bold">{{ products.length }}</span> items</td>
+                    <td>
+                      <span class="text-success fw-bold">{{
+                        products.length
+                      }}</span>
+                      items
+                    </td>
                   </tr>
                   <tr>
                     <td class="fw-bold">Distributor:</td>
-                    <td><span class="text-info">{{ formData.soleDistributor }}</span></td>
+                    <td>
+                      <span class="text-info">{{
+                        formData.soleDistributor
+                      }}</span>
+                    </td>
                   </tr>
                 </table>
               </div>
@@ -341,48 +433,72 @@
               <h6 class="alert-heading">
                 <i class="fas fa-exclamation-triangle me-2"></i>Important Notice
               </h6>
-              <p class="mb-0">Once you proceed, this bill will be <strong>permanently locked</strong> and cannot be modified. Please review all information carefully.</p>
+              <p class="mb-0">
+                Once you proceed, this bill will be
+                <strong>permanently locked</strong> and cannot be modified.
+                Please review all information carefully.
+              </p>
             </div>
           </div>
         </div>
 
         <!-- Declaration Content -->
         <div class="declaration-content">
-          <div class="bg-light rounded p-4 border-start border-primary border-4">
+          <div
+            class="bg-light rounded p-4 border-start border-primary border-4"
+          >
             <h5 class="text-primary mb-3">
               <i class="fas fa-pen-fancy me-2"></i>OFFICIAL DECLARATION
             </h5>
-            <p class="fw-bold text-dark mb-3">I, as an authorized representative, hereby declare and acknowledge that:</p>
+            <p class="fw-bold text-dark mb-3">
+              I, as an authorized representative, hereby declare and acknowledge
+              that:
+            </p>
             <div class="row">
               <div class="col-md-6">
                 <ul class="list-group list-group-flush">
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>I have thoroughly reviewed all data entered for Bill No: <strong><span class="text-primary">{{ formData.billNo }}</span></strong>
+                    <i class="fas fa-check-circle text-success me-2"></i>I have
+                    thoroughly reviewed all data entered for Bill No:
+                    <strong
+                      ><span class="text-primary">{{
+                        formData.billNo
+                      }}</span></strong
+                    >
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>All product information, quantities, and details are accurate and complete
+                    <i class="fas fa-check-circle text-success me-2"></i>All
+                    product information, quantities, and details are accurate
+                    and complete
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>The distributor information is correct and verified
+                    <i class="fas fa-check-circle text-success me-2"></i>The
+                    distributor information is correct and verified
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-check-circle text-success me-2"></i>I am authorized to submit this bill on behalf of the organization
+                    <i class="fas fa-check-circle text-success me-2"></i>I am
+                    authorized to submit this bill on behalf of the organization
                   </li>
                 </ul>
               </div>
               <div class="col-md-6">
                 <ul class="list-group list-group-flush">
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-lock text-warning me-2"></i>Once locked, <strong>NO FURTHER MODIFICATIONS</strong> will be allowed
+                    <i class="fas fa-lock text-warning me-2"></i>Once locked,
+                    <strong>NO FURTHER MODIFICATIONS</strong> will be allowed
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-lock text-warning me-2"></i>This action is <strong>IRREVERSIBLE</strong> and will affect payment processing
+                    <i class="fas fa-lock text-warning me-2"></i>This action is
+                    <strong>IRREVERSIBLE</strong> and will affect payment
+                    processing
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-lock text-warning me-2"></i>The bill will be permanently locked and cannot be unlocked
+                    <i class="fas fa-lock text-warning me-2"></i>The bill will
+                    be permanently locked and cannot be unlocked
                   </li>
                   <li class="list-group-item border-0 px-0">
-                    <i class="fas fa-lock text-warning me-2"></i>This serves as final confirmation of all entered data
+                    <i class="fas fa-lock text-warning me-2"></i>This serves as
+                    final confirmation of all entered data
                   </li>
                 </ul>
               </div>
@@ -396,17 +512,29 @@
             <i class="fas fa-exclamation-triangle fa-2x text-danger me-3"></i>
             <div>
               <h6 class="alert-heading mb-1">CRITICAL WARNING</h6>
-              <p class="mb-0">This action cannot be undone. Please ensure all data is correct before proceeding. Once confirmed, the bill will be locked and ready for payment processing.</p>
+              <p class="mb-0">
+                This action cannot be undone. Please ensure all data is correct
+                before proceeding. Once confirmed, the bill will be locked and
+                ready for payment processing.
+              </p>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer bg-light border-top-0 p-4">
         <div class="d-flex justify-content-between w-100">
-          <button type="button" class="btn btn-outline-secondary btn-lg px-4" (click)="cancelDeclaration()">
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-lg px-4"
+            (click)="cancelDeclaration()"
+          >
             <i class="fas fa-times me-2"></i>Cancel & Continue Editing
           </button>
-          <button type="button" class="btn btn-success btn-lg px-4 fw-bold" (click)="acceptDeclaration()">
+          <button
+            type="button"
+            class="btn btn-success btn-lg px-4 fw-bold"
+            (click)="acceptDeclaration()"
+          >
             I Accept
           </button>
         </div>

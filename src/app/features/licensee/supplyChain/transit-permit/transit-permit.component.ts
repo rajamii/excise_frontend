@@ -1,7 +1,30 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  FormsModule,
+} from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { MasterService } from '../../../../core/services/master.service';
+import { environment } from '../../../../../environments/environment';
+
+interface BrandSizeData {
+  brandName: string;
+  sizes: number[];
+}
+
+interface Brand {
+  id: number;
+  name: string;
+  sizes: number[];
+}
+
+interface LiquorData {
+  brand_name: string;
+  pack_size_ml: number;
+}
 
 interface FormData {
   billNo: string;
@@ -28,7 +51,7 @@ interface Product {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transit-permit.component.html',
-  styleUrls: ['./transit-permit.component.scss']
+  styleUrls: ['./transit-permit.component.scss'],
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
@@ -39,8 +62,12 @@ export class TransitPermitComponent implements OnInit {
     brand: '',
     size: '',
     cases: 0,
-    vehicleNumber: ''
+    vehicleNumber: '',
   };
+
+  brands: { [key: string]: number[] } = {}; // Store brands and their sizes
+  brandOptions: string[] = [];
+  sizeOptions: number[] = [];
 
   products: Product[] = [];
   validationErrors: string[] = [];
@@ -48,32 +75,58 @@ export class TransitPermitComponent implements OnInit {
 
   // Sample rates for calculation
   private rates = {
-    'royal-stag': { educationCess: 15.50, exciseDuty: 125.00, additionalExcise: 45.00 },
-    'blenders-pride': { educationCess: 18.00, exciseDuty: 140.00, additionalExcise: 50.00 },
-    'officers-choice': { educationCess: 12.00, exciseDuty: 95.00, additionalExcise: 35.00 },
-    'imperial-blue': { educationCess: 14.00, exciseDuty: 110.00, additionalExcise: 40.00 }
+    'royal-stag': {
+      educationCess: 15.5,
+      exciseDuty: 125.0,
+      additionalExcise: 45.0,
+    },
+    'blenders-pride': {
+      educationCess: 18.0,
+      exciseDuty: 140.0,
+      additionalExcise: 50.0,
+    },
+    'officers-choice': {
+      educationCess: 12.0,
+      exciseDuty: 95.0,
+      additionalExcise: 35.0,
+    },
+    'imperial-blue': {
+      educationCess: 14.0,
+      exciseDuty: 110.0,
+      additionalExcise: 40.0,
+    },
   };
 
   vehicleNumbers: string[] = [
     'SK 01 AB 1234',
     'SK 02 CD 5678',
-    'SK 03 EF 9012'
+    'SK 03 EF 9012',
   ];
 
+  private apiUrl = environment.apiBaseUrl;
   private isBrowser = false;
-  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+
+  constructor(
+    private masterService: MasterService,
+    private router: Router,
+    private route: ActivatedRoute,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
+    this.fetchBrands();
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
     // Load by ref if provided
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
-      const list: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-      const found = list.find(r => r.billNo === ref);
+      const list: any[] = JSON.parse(
+        localStorage.getItem('transitPermitRequests') || '[]'
+      );
+      const found = list.find((r) => r.billNo === ref);
       if (found) {
         this.formData = { ...this.formData, ...found };
         this.products = found.products || [];
@@ -81,9 +134,59 @@ export class TransitPermitComponent implements OnInit {
     }
   }
 
+  fetchBrands(): void {
+    this.masterService.getLiquorBrands().subscribe({
+      next: (data: BrandSizeData[]) => {
+        // Process the brand and size data
+        this.brands = {};
+        data.forEach((item: BrandSizeData) => {
+          if (item.brandName) {
+            this.brands[item.brandName] = item.sizes || [];
+          }
+        });
+
+        // Update brand options
+        this.brandOptions = Object.keys(this.brands).sort();
+
+        console.log('Fetched brands and sizes:', this.brands);
+      },
+      error: (error: any) => {
+        console.error('Error fetching brands:', error);
+        // Fallback to default data if API fails
+        this.initializeDefaultBrands();
+      },
+    });
+  }
+
+  private initializeDefaultBrands(): void {
+    // Fallback to default data if API fails
+    this.brands = {
+      'Royal Stag': [180, 375, 750],
+      'Blenders Pride': [180, 375, 750],
+      'Officers Choice': [180, 375, 750],
+      'Imperial Blue': [180, 375, 750],
+    };
+    this.brandOptions = Object.keys(this.brands).sort();
+
+    // Sort sizes for each brand
+    for (const brand in this.brands) {
+      this.brands[brand].sort((a: number, b: number) => a - b);
+    }
+  }
+
   onBrandChange(): void {
     // Reset size when brand changes
-    this.formData.size = '';
+    if (this.formData) {
+      this.formData.size = '';
+
+      // Update available sizes based on selected brand
+      const brandName = this.formData.brand;
+      if (brandName && this.brands[brandName]) {
+        this.sizeOptions = [...this.brands[brandName]];
+      } else {
+        this.sizeOptions = [];
+      }
+    }
   }
 
   addProduct(): void {
@@ -95,7 +198,8 @@ export class TransitPermitComponent implements OnInit {
     }
 
     // Get rates for the selected brand
-    const brandRates = this.rates[this.formData.brand as keyof typeof this.rates];
+    const brandRates =
+      this.rates[this.formData.brand as keyof typeof this.rates];
     if (!brandRates) {
       this.validationErrors.push('Invalid brand selected');
       return;
@@ -108,7 +212,7 @@ export class TransitPermitComponent implements OnInit {
       cases: this.formData.cases,
       educationCess: brandRates.educationCess,
       exciseDuty: brandRates.exciseDuty,
-      additionalExcise: brandRates.additionalExcise
+      additionalExcise: brandRates.additionalExcise,
     };
 
     // Add to products list
@@ -153,28 +257,37 @@ export class TransitPermitComponent implements OnInit {
   }
 
   getBrandDisplayName(brandValue: string): string {
-    const brandNames: { [key: string]: string } = {
-      'royal-stag': 'Royal Stag',
-      'blenders-pride': 'Blenders Pride',
-      'officers-choice': 'Officers Choice',
-      'imperial-blue': 'Imperial Blue'
-    };
-    return brandNames[brandValue] || brandValue;
+    // Convert from URL-friendly format to display format
+    return brandValue
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  getBrandValue(displayName: string): string {
+    // Convert from display format to URL-friendly format
+    return displayName.toLowerCase().replace(/\s+/g, '-');
   }
 
   getTotalEducationCess(): number {
-    return this.products.reduce((total, product) => 
-      total + (product.educationCess * product.cases), 0);
+    return this.products.reduce(
+      (total, product) => total + product.educationCess * product.cases,
+      0
+    );
   }
 
   getTotalExciseDuty(): number {
-    return this.products.reduce((total, product) => 
-      total + (product.exciseDuty * product.cases), 0);
+    return this.products.reduce(
+      (total, product) => total + product.exciseDuty * product.cases,
+      0
+    );
   }
 
   getTotalAdditionalExcise(): number {
-    return this.products.reduce((total, product) => 
-      total + (product.additionalExcise * product.cases), 0);
+    return this.products.reduce(
+      (total, product) => total + product.additionalExcise * product.cases,
+      0
+    );
   }
 
   showDeclarationModal(): void {
@@ -206,7 +319,7 @@ export class TransitPermitComponent implements OnInit {
   acceptDeclaration(): void {
     // Lock the bill
     this.isLocked = true;
-    
+
     // Hide modal
     const modalElement = document.getElementById('declarationModal');
     if (modalElement) {
@@ -217,14 +330,17 @@ export class TransitPermitComponent implements OnInit {
     }
 
     console.log('Bill locked successfully');
-    alert('Bill has been locked successfully and is ready for payment processing.');
+    alert(
+      'Bill has been locked successfully and is ready for payment processing.'
+    );
     // Save to local storage for later viewing
     if (this.isBrowser) {
       const key = 'transitPermitRequests';
       const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
       const entry = { ...this.formData, products: this.products };
-      const idx = list.findIndex(r => r.billNo === this.formData.billNo);
-      if (idx >= 0) list[idx] = entry; else list.unshift(entry);
+      const idx = list.findIndex((r) => r.billNo === this.formData.billNo);
+      if (idx >= 0) list[idx] = entry;
+      else list.unshift(entry);
       localStorage.setItem(key, JSON.stringify(list));
     }
   }
@@ -232,11 +348,14 @@ export class TransitPermitComponent implements OnInit {
   payAllItems(): void {
     // Navigate to payment confirmation page
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'transit',
         billNo: this.formData.billNo,
-        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
-      }
+        totalAmount:
+          this.getTotalEducationCess() +
+          this.getTotalExciseDuty() +
+          this.getTotalAdditionalExcise(),
+      },
     });
   }
 
@@ -248,7 +367,7 @@ export class TransitPermitComponent implements OnInit {
     this.formData.size = '';
     this.formData.cases = 0;
     this.formData.vehicleNumber = '';
-    
+
     // Clear products and errors
     this.products = [];
     this.validationErrors = [];
