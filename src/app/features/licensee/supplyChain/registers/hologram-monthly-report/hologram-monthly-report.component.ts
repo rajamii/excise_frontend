@@ -417,7 +417,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
               date: event.date,
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
-              closingBalance: (index === validRollDetails.length - 1) ? runningBalance : null,
+              closingBalance: runningBalance,  // Show closing balance on all rows
               leftOver: rollLeftOver,  // Show leftover for each range
               utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
               wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
@@ -449,6 +449,22 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             }
           });
         }
+      }
+    });
+
+    // Add closing balance row at the end
+    rows.push({
+      rowType: 'SUMMARY',
+      label: 'Closing Balance',
+      openingStock: null,
+      freshArrival: null,
+      total: null,
+      leftOver: null,
+      utilizationQty: null,
+      wastageQty: null,
+      closingBalance: runningBalance,
+      meta: {
+        notes: `Opening (${opening}) + Fresh Arrival (${freshArrival}) - Utilized (${totals.totalIssued}) - Wastage (${totals.totalWastage}) = ${runningBalance}`
       }
     });
 

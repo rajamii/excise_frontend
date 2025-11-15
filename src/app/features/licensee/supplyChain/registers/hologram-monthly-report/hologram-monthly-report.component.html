@@ -275,9 +275,26 @@
               </thead>
               <tbody>
                 @for (row of statementRows; track $index) {
+                @if (row.label === 'Closing Balance') {
+                  <!-- Closing Balance Row - Span all columns -->
+                  <tr class="table-success">
+                    <td colspan="12" class="p-3 align-middle fw-bold bg-success bg-opacity-10 border-success border-2" style="font-size: 1rem;">
+                      <div class="d-flex align-items-center justify-content-center">
+                        <i class="bi bi-calculator-fill text-success me-2 fs-4"></i>
+                        <span class="text-success">{{ row.label }}:</span>
+                        <span class="text-dark ms-2">{{ row.meta?.notes }}</span>
+                      </div>
+                    </td>
+                  </tr>
+                } @else {
                 <tr [ngClass]="getRowClass(row)">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
+                    @if (row.meta?.notes) {
+                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
+                      {{ row.meta?.notes }}
+                    </small>
+                    }
                     @if (row.meta?.referenceNo) {
                     <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
                       Ref: {{ row.meta?.referenceNo }}
@@ -294,6 +311,7 @@
                     </small>
                     }
                   </td>
+                  @if (row.label !== 'Closing Balance' || !row.meta?.notes) {
                   <td class="text-end fw-bold p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.openingStock !== null && row.openingStock !== undefined ? (row.openingStock | number) : '-' }}
                   </td>
@@ -406,7 +424,9 @@
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.total !== null && row.total !== undefined ? (row.total | number) : '-' }}
                   </td>
+                  }
                 </tr>
+                }
                 }
 
                 @if (!isLoading && !hasDetailRows) {
