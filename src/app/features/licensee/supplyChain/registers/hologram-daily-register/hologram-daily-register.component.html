@@ -377,8 +377,7 @@
                 <th rowspan="2" class="sl-no">SL. NO.</th>
                 <th rowspan="2" class="ref-number">REFERENCE NO.</th>
                 <th rowspan="2" class="roll-range">ROLL / RANGE</th>
-                <th rowspan="2" class="submission-date">SUBMISSION DATE</th>
-                <th rowspan="2" class="usage-date">USAGE DATE</th>
+                <th rowspan="2" class="dates-column">DATES</th>
                 <th rowspan="2" class="brand-details">BRAND DETAILS</th>
                 <th rowspan="2" class="bottle-size">BOTTLE SIZE</th>
                 <th rowspan="2" class="rolls-assigned">ROLLS ASSIGNED</th>
@@ -457,14 +456,18 @@
                   }
                 </td>
 
-                <!-- Submission Date -->
-                <td class="submission-date locked-field">
-                  {{ getEntryMetadata(entry).submissionDate | date:'dd/MM/yyyy' }}
-                </td>
-
-                <!-- Usage Date -->
-                <td class="usage-date locked-field">
-                  {{ entry.date | date:'dd/MM/yyyy' }}
+                <!-- Combined Dates Column -->
+                <td class="dates-column locked-field">
+                  <div class="dates-container">
+                    <div class="date-row">
+                      <span class="date-label">Submission:</span>
+                      <span class="date-value">{{ getEntryMetadata(entry).submissionDate | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                    <div class="date-row">
+                      <span class="date-label">Usage:</span>
+                      <span class="date-value">{{ entry.date | date:'dd/MM/yyyy' }}</span>
+                    </div>
+                  </div>
                 </td>
 
                 <!-- Brand Details -->

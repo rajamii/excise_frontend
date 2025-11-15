@@ -280,7 +280,7 @@
   margin-bottom: 0;
   font-size: 0.875rem;
   table-layout: fixed; // Fixed table layout to prevent width changes
-  min-width: 2400px; // Minimum width to accommodate all columns with proper spacing
+  min-width: 2350px; // Minimum width reduced after merging date columns
 
   thead th {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -364,11 +364,11 @@
     overflow: visible;
   }
 
-  .submission-date,
-  .usage-date {
-    width: 90px;
-    min-width: 90px;
-    max-width: 90px;
+  .dates-column {
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+    padding: 0.5rem 0.4rem !important;
   }
 
   .brand-details {
@@ -382,6 +382,34 @@
     min-width: 70px;
     max-width: 70px;
     text-align: center;
+  }
+
+  // Dates column styling
+  .dates-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    
+    .date-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      
+      .date-label {
+        font-size: 0.65rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+      
+      .date-value {
+        font-size: 0.8rem;
+        color: #2c3e50;
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+      }
+    }
   }
 
   .hologram-qty {
