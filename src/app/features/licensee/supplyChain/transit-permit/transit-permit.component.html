@@ -27,13 +27,19 @@
               <label class="form-label">
                 <i class="fas fa-user me-2"></i>Sole Distributor Name:
               </label>
-              <input
-                type="text"
-                class="form-control input-field bg-light"
+              <select
+                class="form-control input-field"
                 [(ngModel)]="formData.soleDistributor"
-                readonly
-                placeholder="M/s Karma Chopel Bhutia"
-              />
+                (change)="onDistributorChange()"
+              >
+                <option value="" disabled>-- Select Distributor --</option>
+                <option
+                  *ngFor="let distributor of distributors; trackBy: trackByDistributorId"
+                  [value]="distributor.distributorName"
+                >
+                  {{ distributor.distributorName }}
+                </option>
+              </select>
             </div>
           </div>
 
@@ -63,16 +69,33 @@
               <label class="form-label">
                 <i class="fas fa-map-marker-alt me-2"></i>Depot Address:
               </label>
+              <!-- Show dropdown if multiple addresses available, otherwise show input -->
               <select
+                *ngIf="availableDepotAddresses.length > 1"
                 class="form-control input-field"
                 [(ngModel)]="formData.depotAddress"
+                (change)="onDepotAddressChange()"
               >
-                <option value="">-- Select Depot Address --</option>
-                <option value="gangtok">Gangtok</option>
-                <option value="namchi">Namchi</option>
-                <option value="gyalshing">Gyalshing</option>
-                <option value="mangan">Mangan</option>
+                <option value="" disabled>-- Select Depot Address ({{ availableDepotAddresses.length }} available) --</option>
+                <option
+                  *ngFor="let address of availableDepotAddresses"
+                  [value]="address"
+                >
+                  {{ address }}
+                </option>
               </select>
+              <input
+                *ngIf="availableDepotAddresses.length <= 1"
+                type="text"
+                class="form-control input-field bg-light"
+                [(ngModel)]="formData.depotAddress"
+                readonly
+                placeholder="Depot address will be auto-filled"
+              />
+              <!-- Helper text for multiple addresses -->
+              <small *ngIf="availableDepotAddresses.length > 1" class="text-muted">
+                This distributor has multiple depot locations. Please select one.
+              </small>
             </div>
           </div>
 

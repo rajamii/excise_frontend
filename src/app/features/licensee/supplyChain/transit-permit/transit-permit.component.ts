@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -56,7 +56,7 @@ interface Product {
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
     billNo: 'TRP/2/EXCISE',
-    soleDistributor: 'M/s Karma Chopel Bhutia',
+    soleDistributor: '',
     date: '',
     depotAddress: '',
     brand: '',
@@ -64,6 +64,11 @@ export class TransitPermitComponent implements OnInit {
     cases: 0,
     vehicleNumber: '',
   };
+
+  // Distributor data
+  distributors: Array<{ id: number; distributorName: string; depoAddress: string }> = [];
+  depotAddresses: string[] = [];
+  availableDepotAddresses: string[] = []; // Available depot addresses for selected distributor
 
   brands: { [key: string]: number[] } = {}; // Store brands and their sizes
   brandOptions: string[] = [];
@@ -110,16 +115,84 @@ export class TransitPermitComponent implements OnInit {
     private masterService: MasterService,
     private router: Router,
     private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
+  // Method to fetch distributors from the API
+  private fetchDistributors(): void {
+    this.masterService.getDistributors().subscribe({
+      next: (
+        data: Array<{ id: number; distributorName: string; depoAddress: string }>
+      ) => {
+        this.distributors = [...data]; // Create new array reference
+        
+        // Force change detection
+        this.cdr.detectChanges();
+      },
+      error: (error: Error) => {
+        console.error('Error fetching distributors:', error);
+        this.distributors = []; // Ensure array is initialized even on error
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // Update depot address when distributor changes
+  onDistributorChange(): void {
+    this.updateDepotAddress();
+  }
+
+  // Helper method to update depot address based on selected distributor
+  private updateDepotAddress(): void {
+    if (!this.formData.soleDistributor) {
+      this.formData.depotAddress = '';
+      this.availableDepotAddresses = [];
+      return;
+    }
+    
+    // Find all distributors with the same name (multiple depot addresses)
+    const matchingDistributors = this.distributors.filter(
+      (d) => d.distributorName === this.formData.soleDistributor
+    );
+
+    if (matchingDistributors.length > 0) {
+      // Get all unique depot addresses for this distributor
+      this.availableDepotAddresses = [...new Set(matchingDistributors.map(d => d.depoAddress))];
+      
+      if (this.availableDepotAddresses.length === 1) {
+        // Only one address, auto-fill it
+        this.formData.depotAddress = this.availableDepotAddresses[0];
+      } else {
+        // Multiple addresses, clear the field and let user choose
+        this.formData.depotAddress = '';
+      }
+    } else {
+      this.formData.depotAddress = 'Address not available';
+      this.availableDepotAddresses = [];
+    }
+  }
+
+  // Method to handle depot address selection
+  onDepotAddressChange(): void {
+    // This method can be used for additional logic when depot address changes
+    // Currently no additional logic needed
+  }
+
   ngOnInit(): void {
+    // Initialize distributors array
+    this.distributors = [];
+    
+    this.initializeDefaultBrands();
     this.fetchBrands();
+    this.fetchDistributors();
+
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
+
     // Load by ref if provided
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
@@ -134,11 +207,12 @@ export class TransitPermitComponent implements OnInit {
     }
   }
 
-  fetchBrands(): void {
+  private fetchBrands(): void {
     this.masterService.getLiquorBrands().subscribe({
       next: (data: BrandSizeData[]) => {
         // Process the brand and size data
         this.brands = {};
+        this.brandOptions = [];
         data.forEach((item: BrandSizeData) => {
           if (item.brandName) {
             this.brands[item.brandName] = item.sizes || [];
@@ -159,7 +233,14 @@ export class TransitPermitComponent implements OnInit {
   }
 
   private initializeDefaultBrands(): void {
-    // Fallback to default data if API fails
+    // Initialize with default brands if needed
+    this.brands = {
+      'Royal Stag': [180, 375, 750, 1000],
+      'Blenders Pride': [180, 375, 750, 1000],
+      'Officers Choice': [180, 375, 750, 1000],
+      'Imperial Blue': [180, 375, 750, 1000],
+    };
+    this.brandOptions = Object.keys(this.brands);
     this.brands = {
       'Royal Stag': [180, 375, 750],
       'Blenders Pride': [180, 375, 750],
@@ -378,5 +459,10 @@ export class TransitPermitComponent implements OnInit {
 
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
+  }
+
+  // TrackBy function for better performance with ngFor
+  trackByDistributorId(index: number, distributor: any): number {
+    return distributor.id;
   }
 }
