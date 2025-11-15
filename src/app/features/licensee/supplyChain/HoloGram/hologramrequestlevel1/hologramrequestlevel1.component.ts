@@ -8,6 +8,7 @@ interface HologramRequest {
   brandName: string;
   bottleSize: string;
   totalHolograms: number;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   remarks: string;
 }
 
@@ -29,6 +30,7 @@ export class Hologramrequestlevel1Component implements OnInit {
     brandName: '',
     bottleSize: '',
     totalHolograms: 0,
+    hologramType: 'LOCAL',
     remarks: ''
   };
 
@@ -84,7 +86,8 @@ export class Hologramrequestlevel1Component implements OnInit {
       this.requestData.usageDate &&
       this.requestData.brandName &&
       this.requestData.bottleSize &&
-      this.requestData.totalHolograms > 0
+      this.requestData.totalHolograms > 0 &&
+      this.requestData.hologramType
     );
   }
 
@@ -207,6 +210,7 @@ End of Application
       brandName: '',
       bottleSize: '',
       totalHolograms: 0,
+      hologramType: 'LOCAL',
       remarks: ''
     };
     

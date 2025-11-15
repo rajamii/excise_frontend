@@ -380,6 +380,11 @@
             width: 180px;
           }
 
+          &.type {
+            width: 100px;
+            text-align: center;
+          }
+
           &.bottle-size {
             width: 100px;
             text-align: center;
@@ -491,6 +496,32 @@
                   font-size: 0.75rem;
                   margin-top: 0.25rem;
                   font-family: 'Courier New', monospace;
+                }
+              }
+            }
+
+            &.type {
+              text-align: center;
+
+              .badge {
+                padding: 0.4rem 0.8rem;
+                border-radius: 20px;
+                font-weight: 600;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: inline-block;
+
+                &.bg-success {
+                  background: linear-gradient(135deg, #10b981, #059669) !important;
+                }
+
+                &.bg-primary {
+                  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+                }
+
+                &.bg-warning {
+                  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
                 }
               }
             }

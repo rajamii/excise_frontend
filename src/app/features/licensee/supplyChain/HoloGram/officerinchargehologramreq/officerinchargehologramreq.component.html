@@ -45,17 +45,6 @@
             <!-- Summary Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-md-2">
-                    <div class="summary-card total-requests">
-                        <div class="card-icon">
-                            <i class="bi bi-list-ul"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 class="card-value">{{ filteredRequests.length }}</h3>
-                            <p class="card-label">Total Requests</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
                     <div class="summary-card pending-requests">
                         <div class="card-icon">
                             <i class="bi bi-clock"></i>
@@ -89,24 +78,38 @@
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <div class="summary-card rejected-requests">
-                        <div class="card-icon">
-                            <i class="bi bi-x-circle"></i>
-                        </div>
-                        <div class="card-content">
-                            <h3 class="card-value">{{ getRequestCount('REJECTED') }}</h3>
-                            <p class="card-label">Rejected</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="summary-card total-holograms">
+                    <div class="summary-card local-holograms">
                         <div class="card-icon">
                             <i class="bi bi-qr-code"></i>
                         </div>
                         <div class="card-content">
-                            <h3 class="card-value">{{ getTotalRequestedHolograms() }}</h3>
-                            <p class="card-label">Total Holograms</p>
+                            <h3 class="card-value">{{ getAvailableHologramsByType('LOCAL') | number }}</h3>
+                            <p class="card-label">Local Holograms</p>
+                            <small class="card-change">Available</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card export-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getAvailableHologramsByType('EXPORT') | number }}</h3>
+                            <p class="card-label">Export Holograms</p>
+                            <small class="card-change">Available</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card defence-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</h3>
+                            <p class="card-label">Defence Holograms</p>
+                            <small class="card-change">Available</small>
                         </div>
                     </div>
                 </div>
@@ -209,6 +212,7 @@
                                 <th class="submission-date">SUBMISSION DATE</th>
                                 <th class="usage-date">USAGE DATE</th>
                                 <th class="brand-details">BRAND DETAILS</th>
+                                <th class="type">TYPE</th>
                                 <th class="bottle-size">BOTTLE SIZE</th>
                                 <th class="hologram-qty">HOLOGRAM QTY</th>
                                 <th class="status">STATUS</th>
@@ -242,6 +246,16 @@
                                         <span class="brand-code">{{ request.brandDetails.liquorType }} - {{
                                             request.brandDetails.alcoholPercent }}</span>
                                     </div>
+                                </td>
+                                <td class="type">
+                                    <span class="badge" 
+                                        [class.bg-success]="request.hologramType === 'LOCAL'"
+                                        [class.bg-primary]="request.hologramType === 'EXPORT'"
+                                        [class.bg-warning]="request.hologramType === 'DEFENCE'"
+                                        [class.text-white]="request.hologramType === 'LOCAL' || request.hologramType === 'EXPORT'"
+                                        [class.text-dark]="request.hologramType === 'DEFENCE'">
+                                        {{ request.hologramType }}
+                                    </span>
                                 </td>
                                 <td class="bottle-size">
                                     <span class="size-badge">{{ request.brandDetails.sizeMl }}ml</span>

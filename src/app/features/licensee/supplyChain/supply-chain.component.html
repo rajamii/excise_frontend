@@ -1888,6 +1888,7 @@
                         <th class="submission-date">Submission Date</th>
                         <th class="usage-date">Usage Date</th>
                         <th class="brand-details">Brand Details</th>
+                        <th class="type">Type</th>
                         <th class="bottle-size">Bottle Size</th>
                         <th class="hologram-qty">Hologram Qty</th>
                         <th class="status">Status</th>
@@ -1926,6 +1927,16 @@
                             <span class="brand-name">{{ getBrandLabel(request.brandName) }}</span>
                             <span class="brand-code">{{ request.brandName }}</span>
                           </div>
+                        </td>
+                        <td class="type">
+                          <span class="badge" 
+                            [class.bg-success]="request.hologramType === 'LOCAL' || !request.hologramType"
+                            [class.bg-primary]="request.hologramType === 'EXPORT'"
+                            [class.bg-warning]="request.hologramType === 'DEFENCE'"
+                            [class.text-white]="request.hologramType === 'LOCAL' || request.hologramType === 'EXPORT' || !request.hologramType"
+                            [class.text-dark]="request.hologramType === 'DEFENCE'">
+                            {{ request.hologramType || 'LOCAL' }}
+                          </span>
                         </td>
                         <td class="bottle-size">
                           <span class="size-badge">{{ request.bottleSize }}</span>

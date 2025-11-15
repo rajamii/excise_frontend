@@ -168,13 +168,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const convertedRequests = submittedRequests.map((request: any, index: number) => {
       console.log('Converting request:', request);
       
+      // Determine hologram type from request data
+      let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
+      if (request.hologramType) {
+        hologramType = request.hologramType;
+      } else if (request.type) {
+        hologramType = request.type;
+      }
+      
       return {
         id: `HR${String(Date.now() + index).slice(-6)}`,
         referenceNo: request.refNumber || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
         submissionDate: request.submissionDate ? new Date(request.submissionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
         submittedBy: 'Supply Chain User - Sikkim Distilleries Ltd',
         requestType: 'NEW_ALLOCATION' as const,
-        hologramType: 'LOCAL' as const,
+        hologramType: hologramType,
         requestedQuantity: request.totalHolograms || 0,
         brandDetails: {
           brandName: this.getBrandLabel(request.brandName) || request.brandName || 'Unknown Brand',
@@ -559,6 +567,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getTotalRequestedHolograms(): number {
     return this.filteredRequests.reduce((total, request) => total + request.requestedQuantity, 0);
+  }
+
+  getAvailableHologramsByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
+    // Load hologram inventory from localStorage
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    
+    // Filter by type and sum available counts
+    return savedRolls
+      .filter((roll: any) => roll.type === type)
+      .reduce((total: number, roll: any) => total + (roll.availableCount || 0), 0);
   }
 
   exportData() {
