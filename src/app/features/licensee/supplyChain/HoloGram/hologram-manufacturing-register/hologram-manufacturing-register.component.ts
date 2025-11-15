@@ -265,44 +265,31 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       
       localStorage.setItem('dailyRegisterEntries', JSON.stringify(savedEntries));
       
-      // CRITICAL FIX: Update existing approved entry instead of creating duplicate
-      // Find existing entry by reference number and date, update it instead of pushing new one
+      // UPDATE the existing entry in approvedHologramEntries with lockedRolls data
+      // This ensures the Monthly Statement shows the correct serial ranges
+      // DO NOT create a new entry - just update the existing one
       const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-      
-      // Check if this is a utilization approval (has issued/wastage data) or just allocation approval
-      const hasUtilizationData = (savedEntries[entryIndex].issuedQuantity > 0) || 
-                                  (savedEntries[entryIndex].wastageQuantity > 0) ||
-                                  (savedEntries[entryIndex].lockedRolls && savedEntries[entryIndex].lockedRolls.length > 0);
-      
-      const existingApprovedIndex = approvedEntries.findIndex((e: any) => 
+      const approvedIndex = approvedEntries.findIndex((e: any) => 
         e.referenceNo === savedEntries[entryIndex].referenceNo && 
         e.date === savedEntries[entryIndex].date
       );
       
-      if (existingApprovedIndex !== -1) {
-        // UPDATE existing entry with utilization data
-        console.log('✅ Updating existing approved entry with utilization:', savedEntries[entryIndex].referenceNo);
-        approvedEntries[existingApprovedIndex] = {
-          ...approvedEntries[existingApprovedIndex],
+      if (approvedIndex !== -1) {
+        // UPDATE existing entry with lockedRolls data (preserves serial ranges)
+        console.log('✅ Updating existing approved entry with lockedRolls data:', savedEntries[entryIndex].referenceNo);
+        approvedEntries[approvedIndex] = {
+          ...approvedEntries[approvedIndex],
           ...savedEntries[entryIndex],
-          // Preserve original allocation data if it exists
-          originalAllocation: approvedEntries[existingApprovedIndex].originalAllocation || approvedEntries[existingApprovedIndex].utilizedQuantity,
+          // Ensure lockedRolls data is preserved
+          lockedRolls: savedEntries[entryIndex].lockedRolls || approvedEntries[approvedIndex].lockedRolls || [],
           // Mark that utilization has been approved
-          utilizationApproved: hasUtilizationData
-        };
-      } else if (hasUtilizationData) {
-        // CREATE new entry ONLY if it has utilization data (not just allocation)
-        console.log('✅ Creating new approved entry with utilization:', savedEntries[entryIndex].referenceNo);
-        approvedEntries.push({
-          ...savedEntries[entryIndex],
           utilizationApproved: true
-        });
+        };
+        localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
+        console.log('✅ Serial ranges preserved in approved entry');
       } else {
-        // Skip creating entry if it's just allocation approval without utilization
-        console.log('⏭️ Skipping entry creation - no utilization data yet:', savedEntries[entryIndex].referenceNo);
+        console.log('⚠️ No existing approved entry found to update');
       }
-      
-      localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
       
       // AUTOMATIC WORKFLOW: Update roll data and move issued holograms to history
       this.updateRollDataAfterApproval(savedEntries[entryIndex]);
