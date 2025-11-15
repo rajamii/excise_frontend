@@ -7,7 +7,7 @@
         <div class="container-fluid">
           <div class="row align-items-center py-3">
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturing Unit - {{
+              <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturing Units - {{
                 getCurrentHologramTypeDisplay() }}</h1>
               <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
             </div>
@@ -304,7 +304,10 @@
                     {{ row.total !== null && row.total !== undefined ? (row.total | number) : '-' }}
                   </td>
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.utilizationDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.utilizationDetails?.length) {
                     <div class="d-flex flex-column gap-1 text-start">
                       @for (detail of row.utilizationDetails; track detail.rollName) {
                       @for (range of detail.ranges; track range.from + range.to + range.qty) {
@@ -319,7 +322,10 @@
                     }
                   </td>
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.utilizationDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.utilizationDetails?.length) {
                     <div class="d-flex flex-column gap-1 text-start">
                       @for (detail of row.utilizationDetails; track detail.rollName) {
                       @for (range of detail.ranges; track range.from + range.to + range.qty) {
@@ -334,14 +340,20 @@
                     }
                   </td>
                   <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    @if (row.utilizationDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.utilizationDetails?.length) {
                     {{ row.utilizationQty !== null && row.utilizationQty !== undefined ? (row.utilizationQty | number) : '-' }}
                     } @else {
                     {{ row.utilizationQty !== null && row.utilizationQty !== undefined ? (row.utilizationQty | number) : '-' }}
                     }
                   </td>
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.wastageDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.wastageDetails?.length) {
                     <div class="d-flex flex-column gap-1 text-start">
                       @for (detail of row.wastageDetails; track detail.rollName) {
                     @for (range of detail.ranges; track range.from + range.to + range.qty) {
@@ -356,7 +368,10 @@
                     }
                   </td>
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.wastageDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.wastageDetails?.length) {
                     <div class="d-flex flex-column gap-1 text-start">
                       @for (detail of row.wastageDetails; track detail.rollName) {
                     @for (range of detail.ranges; track range.from + range.to + range.qty) {
@@ -371,14 +386,22 @@
                     }
                   </td>
                   <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    @if (row.wastageDetails?.length) {
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else if (row.wastageDetails?.length) {
                     {{ row.wastageQty !== null && row.wastageQty !== undefined ? (row.wastageQty | number) : '-' }}
                     } @else {
                     {{ row.wastageQty !== null && row.wastageQty !== undefined ? (row.wastageQty | number) : '-' }}
                     }
                   </td>
                   <td class="text-center fw-bold p-2 align-middle" style="font-size: 0.875rem;">
+                    @if (row.rowType === 'SUMMARY') {
+                    <!-- Empty for month summary row -->
+                    <div class="text-center text-muted">-</div>
+                    } @else {
                     {{ row.leftOver !== null && row.leftOver !== undefined ? (row.leftOver | number) : '-' }}
+                    }
                   </td>
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.total !== null && row.total !== undefined ? (row.total | number) : '-' }}
