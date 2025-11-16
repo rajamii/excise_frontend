@@ -2,6 +2,7 @@ import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
+import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 
 interface CommissionerTableData {
   referenceNo: string;
@@ -30,7 +31,7 @@ interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
