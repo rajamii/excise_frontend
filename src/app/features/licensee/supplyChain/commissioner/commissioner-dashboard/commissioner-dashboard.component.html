@@ -122,6 +122,27 @@
         </div>
       </div>
 
+      <!-- Overdue Alert -->
+      <div *ngIf="showOverdueAlert && overdueHologramEntries.length > 0" class="container-fluid mt-3">
+        <div class="alert alert-danger d-flex align-items-center alert-dismissible fade show" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-3 fs-3"></i>
+          <div class="flex-grow-1">
+            <h5 class="alert-heading mb-1">
+              <strong>Overdue Hologram Processing Alert!</strong>
+            </h5>
+            <p class="mb-2">
+              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the 5 PM deadline and are still under process.
+              Immediate action required to complete the workflow.
+            </p>
+            <button class="btn btn-sm btn-outline-danger" (click)="viewDailyRegister()">
+              <i class="bi bi-journal-text me-1"></i>
+              View Daily Register
+            </button>
+          </div>
+          <button type="button" class="btn-close" (click)="dismissOverdueAlert()" aria-label="Close"></button>
+        </div>
+      </div>
+
       <!-- Tabs Section -->
       <div class="bg-white border-bottom">
         <div class="container-fluid">
@@ -155,8 +176,12 @@
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')">
-                <i class="bi bi-journal-text me-2"></i> HOLOGRAM REGISTER RECORD
+              <button class="nav-link" [class.active]="activeTab === 'daily-register'" (click)="setActiveTab('daily-register')">
+                <i class="bi bi-journal-text me-2"></i>
+                DAILY HOLOGRAM REGISTER
+                <span *ngIf="overdueHologramEntries.length > 0" class="badge bg-danger ms-2">
+                  {{ overdueHologramEntries.length }}
+                </span>
               </button>
             </li>
           </ul>
@@ -1272,7 +1297,8 @@
             }
 
             <!-- Hologram Register Record Tab Content -->
-            @if (activeTab === "hologram-register") {
+            <!-- Daily Hologram Register Tab Content -->
+            @if (activeTab === "daily-register") {
             <app-dailyhologramrecordregister></app-dailyhologramrecordregister>
             }
 
@@ -1453,6 +1479,8 @@
     </div>
   </div>
 </div>
+
+
 
 <!-- Hologram Quantity Details Modal -->
 <div class="modal-overlay" *ngIf="showHologramDetailsModal" (click)="closeHologramDetailsModal()">

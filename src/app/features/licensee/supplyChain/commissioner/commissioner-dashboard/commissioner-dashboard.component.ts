@@ -81,6 +81,10 @@ export class CommissionerDashboardComponent implements OnInit {
   showHologramDetailsModal = false;
   selectedHologramApplication: CommissionerTableData | null = null;
 
+  // Overdue hologram entries
+  overdueHologramEntries: any[] = [];
+  showOverdueAlert = false;
+
   // Sample data for requisition applications (from commissioner's perspective)
   requisitionData: CommissionerTableData[] = [
     {
@@ -451,7 +455,40 @@ export class CommissionerDashboardComponent implements OnInit {
       if (tab) {
         this.setActiveTab(tab);
       }
+
+      // Load overdue hologram entries
+      this.loadOverdueEntries();
+
+      // Listen for overdue alerts from daily register
+      window.addEventListener('overdueHologramAlert', (event: any) => {
+        this.overdueHologramEntries = event.detail.entries || [];
+        this.showOverdueAlert = this.overdueHologramEntries.length > 0;
+      });
+
+      // Check for overdue entries every minute
+      setInterval(() => {
+        this.loadOverdueEntries();
+      }, 60000);
     }
+  }
+
+  loadOverdueEntries(): void {
+    const overdueData = localStorage.getItem('overdueHologramEntries');
+    if (overdueData) {
+      this.overdueHologramEntries = JSON.parse(overdueData);
+      this.showOverdueAlert = this.overdueHologramEntries.length > 0;
+    } else {
+      this.overdueHologramEntries = [];
+      this.showOverdueAlert = false;
+    }
+  }
+
+  dismissOverdueAlert(): void {
+    this.showOverdueAlert = false;
+  }
+
+  viewDailyRegister(): void {
+    this.setActiveTab('daily-register');
   }
 
   setActiveTab(tab: string): void {
