@@ -237,7 +237,7 @@ export const routes: Routes = [
     path: "dev-commissioner-dashboard",
     loadComponent: () =>
       import(
-        "./features/commissioner/commissioner-dashboard/commissioner-dashboard.component"
+        "./features/licensee/supplyChain/commissioner/commissioner-dashboard/commissioner-dashboard.component"
       ).then((m) => m.CommissionerDashboardComponent),
   },
   {
