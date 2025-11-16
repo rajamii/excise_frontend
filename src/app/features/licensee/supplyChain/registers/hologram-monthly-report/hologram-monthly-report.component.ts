@@ -167,6 +167,17 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     this.router.navigate(['/dev-hologram-daily-register']);
   }
 
+  goToMonthlyReport(): void {
+    this.router.navigate(['/dev/monthlyhologramstatement-oic'], {
+      queryParams: {
+        month: this.selectedMonth,
+        year: this.selectedYear,
+        type: this.selectedHologramType,
+        referrer: 'monthly-report'
+      }
+    });
+  }
+
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
   }

@@ -9,18 +9,16 @@
             <div class="col">
               <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturing Units - {{
                 getCurrentHologramTypeDisplay() }}</h1>
-              <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
+              <p class="mb-0 small text-muted" *ngIf="!isCommissionerView">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
+              <p class="mb-0 small text-muted" *ngIf="isCommissionerView">
+                <i class="bi bi-building me-1"></i>
+                <strong>{{ getFilteredDistilleryName() }}</strong>
+              </p>
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm" (click)="goToDailyRegister()" title="Go to Daily Register">
-                  <i class="bi bi-calendar-day me-1"></i>Daily Register
-                </button>
                 <button class="btn btn-info btn-sm" (click)="autoCalculateFromDaily()" title="Refresh data from daily register">
                   <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                </button>
-                <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
-                  <i class="bi bi-arrow-left me-1"></i>Back
                 </button>
               </div>
             </div>
@@ -62,6 +60,18 @@
                   <option value="2024">2024</option>
                   <option value="2025">2025</option>
                   <option value="2026">2026</option>
+                </select>
+              </div>
+
+              <!-- Distillery Filter (Commissioner View Only) -->
+              <div *ngIf="isCommissionerView">
+                <label class="form-label small mb-1">Distillery/Brewery</label>
+                <select class="form-select form-select-sm" [(ngModel)]="selectedDistillery"
+                  (ngModelChange)="onDistilleryChange()">
+                  <option value="">All Distilleries/Breweries</option>
+                  <option *ngFor="let distillery of availableDistilleries" [value]="distillery">
+                    {{ distillery }}
+                  </option>
                 </select>
               </div>
 

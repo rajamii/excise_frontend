@@ -533,6 +533,22 @@ export class CommissionerDashboardComponent implements OnInit {
     console.log('View Reports clicked');
   }
 
+  viewMonthlyReport(): void {
+    // Navigate to monthly hologram statement for distilleries and breweries
+    const now = new Date();
+    const month = now.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    const year = now.getFullYear().toString();
+    
+    this.router.navigate(['/dev/monthlyhologramstatement-oic'], {
+      queryParams: {
+        month: month,
+        year: year,
+        type: 'LOCAL',
+        referrer: 'commissioner'
+      }
+    });
+  }
+
   // Status count methods
   getRequisitionStatusCount(status: string): number {
     return this.filteredRequisitionData.filter(item => item.status === status).length;

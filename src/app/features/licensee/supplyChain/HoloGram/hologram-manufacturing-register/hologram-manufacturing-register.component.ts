@@ -1031,18 +1031,7 @@ export class HologramManufacturingRegisterComponent implements OnInit {
     return this.getTotalCalculation(entry) === entry.hologramQty;
   }
 
-  // Refresh entries
-  refreshEntries(): void {
-    this.loadPendingEntries();
-    this.loadFilteredData();
-    this.cdr.detectChanges();
-    alert(`Entries refreshed! Found ${this.filteredEntries.length} pending entries.`);
-  }
 
-  // Navigate back
-  goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
-  }
 
   // Navigate to Monthly Hologram Statement in new tab
   goToMonthlyStatement(): void {

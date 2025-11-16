@@ -98,6 +98,9 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
   selectedMonth = 'jul';
   selectedYear = '2025';
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
+  selectedDistillery = '';
+  isCommissionerView = false;
+  availableDistilleries: string[] = [];
 
   monthlyStatement: MonthlyStatementSummary | null = null;
   monthlyTotals: MonthlyTotals = this.createEmptyTotals();
@@ -129,10 +132,18 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
       if (params['month']) this.selectedMonth = params['month'];
       if (params['year']) this.selectedYear = params['year'];
       if (params['type']) this.selectedHologramType = params['type'];
+      if (params['referrer'] === 'commissioner') {
+        this.isCommissionerView = true;
+      }
+      if (params['distillery']) {
+        this.selectedDistillery = params['distillery'];
+      }
+      this.loadAvailableDistilleries();
       this.refreshMonthlyData();
     });
 
     window.addEventListener('storage', this.storageListener);
+    this.loadAvailableDistilleries();
     this.refreshMonthlyData();
   }
 
@@ -147,6 +158,30 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
     this.selectedHologramType = type;
     this.refreshMonthlyData();
+  }
+
+  onDistilleryChange(): void {
+    this.refreshMonthlyData();
+  }
+
+  loadAvailableDistilleries(): void {
+    // Get all approved entries from localStorage
+    const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    
+    // Extract unique distillery names
+    const distillerySet = new Set<string>();
+    approvedEntries.forEach((entry: any) => {
+      const distilleryName = entry.distilleryName || entry.companyName || entry.licensee;
+      if (distilleryName) {
+        distillerySet.add(distilleryName);
+      }
+    });
+    
+    this.availableDistilleries = Array.from(distillerySet).sort();
+  }
+
+  getFilteredDistilleryName(): string {
+    return this.selectedDistillery || 'All Distilleries/Breweries';
   }
 
   autoCalculateFromDaily(): void {
@@ -168,7 +203,23 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Check if there's a referrer query param to determine where to go back
+    const referrer = this.route.snapshot.queryParamMap.get('referrer');
+    
+    if (referrer === 'commissioner') {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+    } else if (referrer === 'monthly-report') {
+      this.router.navigate(['/dev-hologram-monthly-report'], {
+        queryParams: {
+          month: this.selectedMonth,
+          year: this.selectedYear,
+          type: this.selectedHologramType
+        }
+      });
+    } else {
+      // Default fallback - use browser history
+      window.history.back();
+    }
   }
 
   getMonthlyTotalsFromDailyRegister(): MonthlyTotals {
@@ -212,11 +263,34 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
 
   private refreshMonthlyData(): void {
     this.isLoading = true;
-    const statement = this.hologramDataService.getMonthlyStatement(
+    let statement = this.hologramDataService.getMonthlyStatement(
       this.selectedMonth,
       this.selectedYear,
       this.selectedHologramType
     );
+
+    // Filter by distillery if selected (for commissioner view)
+    if (this.selectedDistillery && statement) {
+      const filteredEntries = (statement.entries || []).filter((entry: any) => {
+        const distilleryName = entry.distilleryName || entry.companyName || entry.licensee;
+        return distilleryName === this.selectedDistillery;
+      });
+      
+      const filteredArrivals = (statement.arrivals || []).filter((arrival: any) => {
+        const distilleryName = arrival.distilleryName || arrival.companyName || arrival.licensee;
+        return distilleryName === this.selectedDistillery;
+      });
+      
+      // Recalculate totals for filtered data
+      const filteredTotals = this.calculateTotalsFromEntries(filteredEntries);
+      
+      statement = {
+        ...statement,
+        entries: filteredEntries,
+        arrivals: filteredArrivals,
+        totals: filteredTotals
+      };
+    }
 
     this.monthlyStatement = statement;
     this.monthlyTotals = statement?.totals ?? this.createEmptyTotals();
@@ -225,6 +299,44 @@ export class MonthlyhologramstatementOICComponent implements OnInit, OnDestroy {
     this.buildOverviewSummary();
     this.isLoading = false;
     this.cdr.detectChanges();
+  }
+
+  private calculateTotalsFromEntries(entries: any[]): MonthlyTotals {
+    let totalIssued = 0;
+    let totalWastage = 0;
+    let minIssuedSerial = '';
+    let maxIssuedSerial = '';
+    let minWastageSerial = '';
+    let maxWastageSerial = '';
+
+    entries.forEach(entry => {
+      totalIssued += entry.issuedQuantity || 0;
+      totalWastage += entry.wastageQuantity || 0;
+      
+      if (entry.issuedFromSerial && (!minIssuedSerial || entry.issuedFromSerial < minIssuedSerial)) {
+        minIssuedSerial = entry.issuedFromSerial;
+      }
+      if (entry.issuedToSerial && (!maxIssuedSerial || entry.issuedToSerial > maxIssuedSerial)) {
+        maxIssuedSerial = entry.issuedToSerial;
+      }
+      if (entry.wastageFromSerial && (!minWastageSerial || entry.wastageFromSerial < minWastageSerial)) {
+        minWastageSerial = entry.wastageFromSerial;
+      }
+      if (entry.wastageToSerial && (!maxWastageSerial || entry.wastageToSerial > maxWastageSerial)) {
+        maxWastageSerial = entry.wastageToSerial;
+      }
+    });
+
+    return {
+      totalIssued,
+      totalUtilized: totalIssued,
+      totalWastage,
+      totalLeftOver: 0,
+      utilizationFromSerial: minIssuedSerial,
+      utilizationToSerial: maxIssuedSerial,
+      wastageFromSerial: minWastageSerial,
+      wastageToSerial: maxWastageSerial
+    };
   }
 
   private getPreviousMonthYear(): { prevMonth: string; prevYear: string } {
