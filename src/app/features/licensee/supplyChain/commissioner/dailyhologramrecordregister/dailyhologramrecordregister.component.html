@@ -31,7 +31,7 @@
 
     <!-- Statistics Cards -->
     <div class="row g-3 mb-4">
-      <div class="col-md-3">
+      <div class="col-md-2">
         <div class="stat-card bg-primary text-white">
           <div class="stat-icon">
             <i class="bi bi-list-check"></i>
@@ -42,7 +42,18 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
+        <div class="stat-card bg-info text-white">
+          <div class="stat-icon">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+          <div class="stat-content">
+            <h3 class="mb-0">{{ getEntryCount('APPLIED') }}</h3>
+            <p class="mb-0">Applied</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
         <div class="stat-card bg-warning text-dark">
           <div class="stat-icon">
             <i class="bi bi-hourglass-split"></i>
@@ -53,7 +64,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <div class="stat-card bg-success text-white">
           <div class="stat-icon">
             <i class="bi bi-check-circle-fill"></i>
@@ -64,7 +75,18 @@
           </div>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
+        <div class="stat-card bg-secondary text-white">
+          <div class="stat-icon">
+            <i class="bi bi-clock-history"></i>
+          </div>
+          <div class="stat-content">
+            <h3 class="mb-0">{{ getCompletedLateCount() }}</h3>
+            <p class="mb-0">Completed Late</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
         <div class="stat-card bg-danger text-white">
           <div class="stat-icon">
             <i class="bi bi-exclamation-triangle-fill"></i>
@@ -124,6 +146,7 @@
               [(ngModel)]="filters.status"
               (ngModelChange)="applyFilters()">
               <option value="">All Status</option>
+              <option value="APPLIED">Applied</option>
               <option value="UNDER_PROCESS">Under Process</option>
               <option value="COMPLETED">Completed</option>
             </select>
@@ -245,11 +268,11 @@
               </td>
               <td>
                 <span [ngClass]="getTimeRemainingClass(entry)">
-                  <i class="bi" [ngClass]="entry.isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-clock'"></i>
+                  <i class="bi" [ngClass]="entry.isOverdue ? 'bi-exclamation-triangle-fill' : (entry.status === 'APPLIED' ? 'bi-clock-history' : 'bi-clock')"></i>
                   {{ getTimeRemaining(entry) }}
                 </span>
-                <br>
-                <small class="text-muted">Deadline: {{ entry.deadline | date: 'dd/MM/yyyy HH:mm' }}</small>
+                <br *ngIf="entry.deadline">
+                <small class="text-muted" *ngIf="entry.deadline">Deadline: {{ entry.deadline | date: 'dd/MM/yyyy HH:mm' }}</small>
               </td>
               <td>
                 <span *ngIf="entry.status === 'COMPLETED'" 

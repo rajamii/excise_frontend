@@ -296,6 +296,9 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       
       // AUTOMATIC WORKFLOW: Move issued hologram to history
       this.moveIssuedHologramToHistory(savedEntries[entryIndex]);
+      
+      // SAVE COMPLETION DATA FOR DAILY HOLOGRAM RECORD REGISTER
+      this.saveCompletionToManufacturingRegister(savedEntries[entryIndex]);
     }
     
     // Close modal
@@ -1260,6 +1263,65 @@ export class HologramManufacturingRegisterComponent implements OnInit {
       if (modal) {
         modal.hide();
       }
+    }
+  }
+
+  /**
+   * Save completion data to manufacturing register for Daily Hologram Record Register
+   * This allows the Commissioner Dashboard to track when manufacturing is completed
+   */
+  private saveCompletionToManufacturingRegister(entry: any): void {
+    try {
+      console.log('💾 Saving completion data to manufacturing register for:', entry.referenceNo);
+      
+      // Load existing manufacturing register
+      const manufacturingRegister = JSON.parse(localStorage.getItem('hologramManufacturingRegister') || '[]');
+      
+      // Create completion record
+      const completionRecord = {
+        referenceNo: entry.referenceNo,
+        status: 'COMPLETED',
+        completionDate: new Date().toISOString(),
+        completionTime: new Date().toTimeString().split(' ')[0],
+        approvedBy: 'Officer In Charge',
+        approvedAt: new Date().toISOString(),
+        hologramQty: entry.hologramQty || entry.issuedQuantity,
+        hologramType: entry.hologramType,
+        brandDetails: entry.brandDetails,
+        cartoonNumber: entry.cartoonNumber,
+        lockedRolls: entry.lockedRolls
+      };
+      
+      // Check if entry already exists
+      const existingIndex = manufacturingRegister.findIndex((r: any) => r.referenceNo === entry.referenceNo);
+      
+      if (existingIndex !== -1) {
+        // Update existing entry
+        manufacturingRegister[existingIndex] = {
+          ...manufacturingRegister[existingIndex],
+          ...completionRecord
+        };
+        console.log('✅ Updated existing completion record');
+      } else {
+        // Add new entry
+        manufacturingRegister.push(completionRecord);
+        console.log('✅ Added new completion record');
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem('hologramManufacturingRegister', JSON.stringify(manufacturingRegister));
+      
+      console.log('✅ Completion data saved successfully for Daily Hologram Record Register');
+      
+      // Trigger storage event for Daily Register to pick up
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'hologramManufacturingRegister',
+        newValue: JSON.stringify(manufacturingRegister),
+        url: window.location.href
+      }));
+      
+    } catch (error) {
+      console.error('❌ Error saving completion data:', error);
     }
   }
 }

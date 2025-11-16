@@ -17,13 +17,15 @@ interface DailyRegisterEntry {
   type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   bottleSize: string;
   hologramQty: number;
-  status: 'APPROVED' | 'UNDER_PROCESS' | 'COMPLETED';
+  status: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED';
   completedOnTime: boolean;
-  approvalDate: string;
-  approvalTime: string;
+  submittedDate: string;
+  submittedTime: string;
+  approvalDate?: string;
+  approvalTime?: string;
   completionDate?: string;
   completionTime?: string;
-  deadline: string; // 5 PM on approval date
+  deadline?: string; // 5 PM on approval date (only set when approved)
   isOverdue: boolean;
   overdueHours?: number;
   allocations?: any[];
@@ -148,36 +150,63 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   loadDailyRegisterEntries() {
     console.log('Loading daily register entries...');
     
-    // Load approved requests from hologramRequests
+    // Load ALL requests from hologramRequests (not just approved)
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const approvedRequests = hologramRequests.filter((req: any) => req.status === 'APPROVED');
     
-    console.log('Found approved requests:', approvedRequests.length);
+    console.log('Found hologram requests:', hologramRequests.length);
     
     // Add sample historical data if no real data exists
     const sampleData = this.getSampleHistoricalData();
-    const allRequests = approvedRequests.length > 0 ? approvedRequests : sampleData;
+    const allRequests = hologramRequests.length > 0 ? hologramRequests : sampleData;
     
     // Convert to daily register entries
     this.dailyRegisterEntries = allRequests.map((req: any, index: number) => {
-      const approvalDateTime = new Date(req.approvalDate || new Date());
-      const approvalDateStr = approvalDateTime.toISOString().split('T')[0];
-      const approvalTimeStr = req.approvalTime || approvalDateTime.toTimeString().split(' ')[0];
+      // Determine status based on request status
+      let entryStatus: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED' = 'APPLIED';
+      let deadline: Date | null = null;
+      let isOverdue = false;
+      let overdueHours = 0;
       
-      // Deadline is 5 PM (17:00) on the approval date
-      const deadline = new Date(approvalDateStr + 'T17:00:00');
+      // Submission date and time
+      const submissionDateTime = new Date(req.submissionDate || new Date());
+      const submittedDateStr = submissionDateTime.toISOString().split('T')[0];
+      const submittedTimeStr = req.submissionTime || submissionDateTime.toTimeString().split(' ')[0];
       
-      // Check if completed
-      const isCompleted = this.checkIfCompleted(req.referenceNo || req.refNumber);
-      const completionInfo = isCompleted ? this.getCompletionInfo(req.referenceNo || req.refNumber) : null;
+      // Approval date and time (if approved)
+      let approvalDateStr: string | undefined;
+      let approvalTimeStr: string | undefined;
       
-      // Calculate if overdue
-      const now = new Date();
-      const isOverdue = !isCompleted && now > deadline;
-      const overdueHours = isOverdue ? Math.floor((now.getTime() - deadline.getTime()) / (1000 * 60 * 60)) : 0;
+      if (req.status === 'APPROVED') {
+        // Check if completed in manufacturing register
+        const isCompleted = this.checkIfCompleted(req.referenceNo || req.refNumber);
+        
+        if (isCompleted) {
+          entryStatus = 'COMPLETED';
+        } else {
+          entryStatus = 'UNDER_PROCESS';
+        }
+        
+        // Set approval date and deadline
+        const approvalDateTime = new Date(req.approvalDate || new Date());
+        approvalDateStr = approvalDateTime.toISOString().split('T')[0];
+        approvalTimeStr = req.approvalTime || approvalDateTime.toTimeString().split(' ')[0];
+        
+        // Deadline is 5 PM (17:00) on the approval date
+        deadline = new Date(approvalDateStr + 'T17:00:00');
+        
+        // Calculate if overdue (only for UNDER_PROCESS)
+        if (entryStatus === 'UNDER_PROCESS') {
+          const now = new Date();
+          isOverdue = now > deadline;
+          overdueHours = isOverdue ? Math.floor((now.getTime() - deadline.getTime()) / (1000 * 60 * 60)) : 0;
+        }
+      }
+      
+      // Check completion info
+      const completionInfo = entryStatus === 'COMPLETED' ? this.getCompletionInfo(req.referenceNo || req.refNumber) : null;
       
       // Check if completed on time
-      const completedOnTime = isCompleted && completionInfo 
+      const completedOnTime = entryStatus === 'COMPLETED' && completionInfo && deadline
         ? new Date(completionInfo.completionDate + 'T' + completionInfo.completionTime) <= deadline
         : false;
       
@@ -185,8 +214,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         id: req.id || `DR${Date.now() + index}`,
         slNo: index + 1,
         referenceNo: req.referenceNo || req.refNumber,
-        submissionDate: req.submissionDate || approvalDateStr,
-        usageDate: req.usageDate || approvalDateStr,
+        submissionDate: req.submissionDate || submittedDateStr,
+        usageDate: req.usageDate || submittedDateStr,
         brandDetails: {
           brandName: this.getBrandLabel(req.brandName) || req.brandName || 'Unknown Brand',
           alcoholPercent: '42.8%',
@@ -196,17 +225,19 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         type: req.hologramType || req.type || 'LOCAL',
         bottleSize: req.bottleSize || '750ml',
         hologramQty: req.approvedQuantity || req.totalHolograms || 0,
-        status: isCompleted ? 'COMPLETED' : 'UNDER_PROCESS',
+        status: entryStatus,
         completedOnTime: completedOnTime,
+        submittedDate: submittedDateStr,
+        submittedTime: submittedTimeStr,
         approvalDate: approvalDateStr,
         approvalTime: approvalTimeStr,
         completionDate: completionInfo?.completionDate,
         completionTime: completionInfo?.completionTime,
-        deadline: deadline.toISOString(),
+        deadline: deadline?.toISOString(),
         isOverdue: isOverdue,
         overdueHours: overdueHours,
         allocations: req.allocations,
-        distilleryName: req.distilleryName || req.companyName || 'Unknown Distillery'
+        distilleryName: req.distilleryName || req.companyName || 'Sikkim Distilleries Ltd'
       };
       
       return entry;
@@ -321,6 +352,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         hologramType: 'LOCAL',
         type: 'LOCAL',
         status: 'APPROVED',
+        submissionTime: '09:00:00',
         approvalDate: threeDaysAgo.toISOString().split('T')[0],
         approvalTime: '10:30:00',
         approvedQuantity: 5000,
@@ -341,6 +373,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         hologramType: 'EXPORT',
         type: 'EXPORT',
         status: 'APPROVED',
+        submissionTime: '10:00:00',
         approvalDate: twoDaysAgo.toISOString().split('T')[0],
         approvalTime: '11:15:00',
         approvedQuantity: 3000,
@@ -361,6 +394,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         hologramType: 'LOCAL',
         type: 'LOCAL',
         status: 'APPROVED',
+        submissionTime: '08:30:00',
         approvalDate: yesterday.toISOString().split('T')[0],
         approvalTime: '09:45:00',
         approvedQuantity: 2500,
@@ -381,6 +415,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         hologramType: 'DEFENCE',
         type: 'DEFENCE',
         status: 'APPROVED',
+        submissionTime: '13:00:00',
         approvalDate: yesterday.toISOString().split('T')[0],
         approvalTime: '14:20:00',
         approvedQuantity: 4000,
@@ -401,6 +436,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         hologramType: 'LOCAL',
         type: 'LOCAL',
         status: 'APPROVED',
+        submissionTime: '07:00:00',
         approvalDate: today.toISOString().split('T')[0],
         approvalTime: '08:00:00',
         approvedQuantity: 6000,
@@ -420,9 +456,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         totalHolograms: 3500,
         hologramType: 'EXPORT',
         type: 'EXPORT',
-        status: 'APPROVED',
-        approvalDate: today.toISOString().split('T')[0],
-        approvalTime: '13:30:00',
+        status: 'PENDING',
+        submissionTime: '12:00:00',
         approvedQuantity: 3500,
         distilleryName: 'Teesta Valley Breweries',
         allocations: [
@@ -441,10 +476,12 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       const matchesType = !this.filters.type || entry.type === this.filters.type;
 
       const matchesDateFrom = !this.filters.dateFrom ||
-        new Date(entry.approvalDate) >= new Date(this.filters.dateFrom);
+        (entry.approvalDate ? new Date(entry.approvalDate) >= new Date(this.filters.dateFrom) : 
+         new Date(entry.submittedDate) >= new Date(this.filters.dateFrom));
 
       const matchesDateTo = !this.filters.dateTo ||
-        new Date(entry.approvalDate) <= new Date(this.filters.dateTo);
+        (entry.approvalDate ? new Date(entry.approvalDate) <= new Date(this.filters.dateTo) :
+         new Date(entry.submittedDate) <= new Date(this.filters.dateTo));
 
       const matchesOverdue = !this.filters.onlyOverdue || entry.isOverdue;
 
@@ -505,16 +542,16 @@ export class DailyhologramrecordregisterComponent implements OnInit {
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'APPROVED': return 'bg-success';
+      case 'APPLIED': return 'bg-info text-white';
       case 'UNDER_PROCESS': return 'bg-warning text-dark';
-      case 'COMPLETED': return 'bg-primary';
+      case 'COMPLETED': return 'bg-success text-white';
       default: return 'bg-secondary';
     }
   }
 
   getStatusIcon(status: string): string {
     switch (status) {
-      case 'APPROVED': return 'bi bi-check-circle';
+      case 'APPLIED': return 'bi bi-file-earmark-text';
       case 'UNDER_PROCESS': return 'bi bi-hourglass-split';
       case 'COMPLETED': return 'bi bi-check-circle-fill';
       default: return 'bi bi-question-circle';
@@ -601,8 +638,16 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   }
 
   getTimeRemaining(entry: DailyRegisterEntry): string {
+    if (entry.status === 'APPLIED') {
+      return 'Awaiting Approval';
+    }
+    
     if (entry.status === 'COMPLETED') {
       return 'Completed';
+    }
+
+    if (!entry.deadline) {
+      return 'No deadline set';
     }
 
     const now = new Date();
@@ -621,8 +666,16 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   }
 
   getTimeRemainingClass(entry: DailyRegisterEntry): string {
+    if (entry.status === 'APPLIED') {
+      return 'text-info';
+    }
+    
     if (entry.status === 'COMPLETED') {
       return 'text-success';
+    }
+
+    if (!entry.deadline) {
+      return 'text-muted';
     }
 
     const now = new Date();
