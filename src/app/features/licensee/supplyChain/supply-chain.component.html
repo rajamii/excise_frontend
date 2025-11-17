@@ -1441,6 +1441,10 @@
                     <i class="bi bi-plus-circle me-2"></i>
                     New Hologram
                   </button>
+                  <button class="btn btn-warning me-2" (click)="clearPaymentSlipData()" title="Clear payment slip data for testing">
+                    <i class="bi bi-file-earmark-x me-2"></i>
+                    Clear Slips
+                  </button>
                   <button class="btn btn-danger" (click)="clearHologramData()" title="Clear all hologram data for testing">
                     <i class="bi bi-trash me-2"></i>
                     Clear Data
@@ -1664,10 +1668,24 @@
                               <span class="d-none d-md-inline">View Application</span>
                               <span class="d-md-none">View</span>
                             </button>
-                            <button class="btn btn-success btn-sm" (click)="openPaymentUploadModal(item)" title="Upload Payment Slip">
+                            <!-- Show "View Upload" if slip is uploaded, otherwise "Upload Slip" -->
+                            <button 
+                              *ngIf="!isPaymentSlipUploaded(item)"
+                              class="btn btn-success btn-sm" 
+                              (click)="openPaymentUploadModal(item)" 
+                              title="Upload Payment Slip">
                               <i class="bi bi-upload me-1"></i>
                               <span class="d-none d-md-inline">Upload Slip</span>
                               <span class="d-md-none">Upload</span>
+                            </button>
+                            <button 
+                              *ngIf="isPaymentSlipUploaded(item)"
+                              class="btn btn-info btn-sm" 
+                              (click)="viewUploadedSlip(item)" 
+                              title="View Uploaded Payment Slip">
+                              <i class="bi bi-file-earmark-check me-1"></i>
+                              <span class="d-none d-md-inline">View Upload</span>
+                              <span class="d-md-none">View</span>
                             </button>
                           </div>
                         </td>
@@ -2424,7 +2442,154 @@
               </div>
             </div>
 
+            <!-- View Uploaded Payment Slip Modal -->
+            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
+              *ngIf="showViewUploadModal">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content shadow-lg border-0">
+                  <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                      <i class="bi bi-file-earmark-check me-2"></i>
+                      Payment Slip Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close"
+                      (click)="closeViewUploadModal()"></button>
+                  </div>
+                  <div class="modal-body bg-light">
+                    <!-- Hologram Details -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">Hologram Procurement Details</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col-md-6">
+                            <p class="mb-2"><strong>Reference No:</strong> {{ selectedPaymentRecord?.hologramRefNo }}</p>
+                            <p class="mb-2"><strong>Company:</strong> {{ selectedPaymentRecord?.companyName }}</p>
+                            <p class="mb-2"><strong>Type:</strong> 
+                              <span class="badge text-white" 
+                                [ngClass]="{
+                                  'bg-success': selectedPaymentRecord?.procurementType === 'Local',
+                                  'bg-dark': selectedPaymentRecord?.procurementType === 'Export',
+                                  'bg-warning text-dark': selectedPaymentRecord?.procurementType === 'Defence'
+                                }">
+                                {{ selectedPaymentRecord?.procurementType }}
+                              </span>
+                            </p>
+                          </div>
+                          <div class="col-md-6">
+                            <p class="mb-2"><strong>Total Quantity:</strong> {{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }} pieces</p>
+                            <p class="mb-2"><strong>Payment Amount:</strong> 
+                              <span class="text-success fw-bold">₹{{ selectedPaymentRecord?.paymentAmount | number:'1.2-2' }}</span>
+                            </p>
+                            <p class="mb-2"><strong>Status:</strong> 
+                              <span class="badge bg-success">{{ selectedPaymentRecord?.status }}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
+                    <!-- Uploaded File Details -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                          <i class="bi bi-file-earmark-arrow-up me-2"></i>
+                          Uploaded File Information
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col-md-12 mb-3">
+                            <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded border">
+                              <div>
+                                <strong>Uploaded File:</strong><br>
+                                <span class="text-muted">{{ selectedPaymentRecord?.fileName }}</span>
+                              </div>
+                              <button class="btn btn-primary" (click)="viewUploadedFile()" title="View uploaded file">
+                                <i class="bi bi-eye me-2"></i>
+                                View File
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div class="row">
+                          <div class="col-md-4">
+                            <p class="mb-2">
+                              <strong>File Size:</strong> 
+                              <span class="badge bg-secondary">{{ (selectedPaymentRecord?.fileSize / 1024) | number:'1.2-2' }} KB</span>
+                            </p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-2">
+                              <strong>File Type:</strong> 
+                              <span class="badge bg-info">{{ selectedPaymentRecord?.fileType }}</span>
+                            </p>
+                          </div>
+                          <div class="col-md-4">
+                            <p class="mb-2">
+                              <strong>Upload Date:</strong><br>
+                              <span class="text-muted">{{ selectedPaymentRecord?.uploadDate | date:'dd-MMM-yyyy, hh:mm a' }}</span>
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div class="mt-3" *ngIf="selectedPaymentRecord?.remarks">
+                          <strong>Remarks:</strong>
+                          <div class="alert alert-light mt-2 mb-0">
+                            <i class="bi bi-chat-left-text me-2"></i>
+                            {{ selectedPaymentRecord?.remarks }}
+                          </div>
+                        </div>
+                        
+                        <div class="mt-3" *ngIf="!selectedPaymentRecord?.remarks">
+                          <p class="text-muted mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No remarks provided
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Payment Calculation Summary -->
+                    <div class="card">
+                      <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">Payment Summary</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Description</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Rate per Hologram</th>
+                                <th class="text-end">Amount (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>Total Holograms</td>
+                                <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
+                                <td class="text-end">₹0.72</td>
+                                <td class="text-end"><strong>₹{{ selectedPaymentRecord?.paymentAmount | number:'1.2-2' }}</strong></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" (click)="closeViewUploadModal()">
+                      <i class="bi bi-check-circle me-2"></i>
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>

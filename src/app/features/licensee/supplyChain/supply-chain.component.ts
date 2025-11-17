@@ -51,8 +51,10 @@ export class SupplyChainComponent implements OnInit {
   private isBrowser = false;
   showHologramModal = false;
   showPaymentUploadModal = false;
+  showViewUploadModal = false;
   selectedPaymentHologram: HologramRow | null = null;
   selectedPaymentSlipFile: File | null = null;
+  selectedPaymentRecord: any = null;
   paymentRemarks: string = '';
 
   // Filter properties for hologram requests
@@ -1800,38 +1802,155 @@ End of Application
       return;
     }
 
-    // Create payment record
-    const paymentRecord = {
-      hologramRefNo: this.selectedPaymentHologram.refNo,
-      hologramDate: this.selectedPaymentHologram.date,
-      companyName: this.selectedPaymentHologram.companyName,
-      procurementType: this.getProcurementType(this.selectedPaymentHologram),
-      totalQuantity: this.getHologramTotal(this.selectedPaymentHologram),
-      paymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram),
-      fileName: this.selectedPaymentSlipFile.name,
-      fileSize: this.selectedPaymentSlipFile.size,
-      fileType: this.selectedPaymentSlipFile.type,
-      remarks: this.paymentRemarks,
-      uploadDate: new Date().toISOString(),
-      status: 'Uploaded'
+    // Convert file to base64 for storage
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const fileData = e.target.result;
+
+      // Create payment record with file data
+      const paymentRecord = {
+        hologramRefNo: this.selectedPaymentHologram!.refNo,
+        hologramDate: this.selectedPaymentHologram!.date,
+        companyName: this.selectedPaymentHologram!.companyName,
+        procurementType: this.getProcurementType(this.selectedPaymentHologram!),
+        totalQuantity: this.getHologramTotal(this.selectedPaymentHologram!),
+        paymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram!),
+        fileName: this.selectedPaymentSlipFile!.name,
+        fileSize: this.selectedPaymentSlipFile!.size,
+        fileType: this.selectedPaymentSlipFile!.type,
+        fileData: fileData, // Store the base64 file data
+        remarks: this.paymentRemarks,
+        uploadDate: new Date().toISOString(),
+        status: 'Uploaded'
+      };
+
+      // Store payment record in localStorage
+      const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+      existingPayments.push(paymentRecord);
+      localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
+
+      // Update the hologram status to "Slip Uploaded"
+      const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
+      const appIndex = storedApplications.findIndex((app: any) => app.refNo === this.selectedPaymentHologram?.refNo);
+      if (appIndex !== -1) {
+        storedApplications[appIndex].status = "Slip Uploaded";
+        storedApplications[appIndex].paymentSlipUploaded = true;
+        localStorage.setItem("hologramApplications", JSON.stringify(storedApplications));
+      }
+
+      // Show success message
+      alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nAmount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}`);
+
+      // Close modal
+      this.closePaymentUploadModal();
+
+      // Refresh the hologram list to show updated status
+      this.refreshHologramList();
     };
 
-    // Store payment record in localStorage
-    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    existingPayments.push(paymentRecord);
-    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
+    reader.readAsDataURL(this.selectedPaymentSlipFile);
+  }
 
-    // In a real application, you would upload the file to a server here
-    // For now, we'll just store the file information
+  // Check if payment slip is uploaded for a hologram
+  isPaymentSlipUploaded(hologram: HologramRow): boolean {
+    if (!this.isBrowser) return false;
     
-    // Show success message
-    alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nAmount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}`);
+    try {
+      const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+      const hasPayment = existingPayments.some((payment: any) => payment.hologramRefNo === hologram.refNo);
+      return hasPayment;
+    } catch (error) {
+      console.error('Error checking payment slip:', error);
+      return false;
+    }
+  }
 
-    // Close modal
-    this.closePaymentUploadModal();
+  // View uploaded payment slip
+  viewUploadedSlip(hologram: HologramRow): void {
+    if (!this.isBrowser) return;
+    
+    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    const payment = existingPayments.find((p: any) => p.hologramRefNo === hologram.refNo);
+    
+    if (payment) {
+      this.selectedPaymentRecord = payment;
+      this.selectedPaymentHologram = hologram;
+      this.showViewUploadModal = true;
+    } else {
+      alert('No payment slip found for this hologram.');
+    }
+  }
 
-    // Optionally refresh the hologram list to show updated status
+  closeViewUploadModal(): void {
+    this.showViewUploadModal = false;
+    this.selectedPaymentRecord = null;
+    this.selectedPaymentHologram = null;
+  }
+
+  viewUploadedFile(): void {
+    if (!this.selectedPaymentRecord || !this.selectedPaymentRecord.fileData) {
+      alert('File data not available.');
+      return;
+    }
+
+    // Open the file in a new window/tab
+    const fileType = this.selectedPaymentRecord.fileType;
+    const fileData = this.selectedPaymentRecord.fileData;
+
+    if (fileType.includes('pdf')) {
+      // For PDF files, open in new tab
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(
+          `<iframe src="${fileData}" style="width:100%; height:100%; border:none;" title="Payment Slip"></iframe>`
+        );
+      }
+    } else if (fileType.includes('image')) {
+      // For image files, open in new tab
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(
+          `<html><head><title>Payment Slip - ${this.selectedPaymentRecord.fileName}</title></head>
+          <body style="margin:0; display:flex; justify-content:center; align-items:center; background:#000;">
+            <img src="${fileData}" style="max-width:100%; max-height:100vh;" alt="Payment Slip">
+          </body></html>`
+        );
+      }
+    } else {
+      // For other file types, trigger download
+      const link = document.createElement('a');
+      link.href = fileData;
+      link.download = this.selectedPaymentRecord.fileName;
+      link.click();
+    }
+  }
+
+  // Clear payment slip data for testing
+  clearPaymentSlipData(): void {
+    if (!this.isBrowser) return;
+    
+    const confirmed = confirm('⚠️ This will delete ALL payment slip data from localStorage.\n\nAre you sure you want to continue?');
+    if (!confirmed) return;
+    
+    // Clear the payment slips storage
+    localStorage.removeItem('hologramPayments');
+    
+    // Reset status in hologram applications
+    const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
+    storedApplications.forEach((app: any) => {
+      if (app.status === "Slip Uploaded") {
+        app.status = "Submitted";
+        app.paymentSlipUploaded = false;
+      }
+    });
+    localStorage.setItem("hologramApplications", JSON.stringify(storedApplications));
+    
+    console.log('🗑️ Cleared all payment slip data from localStorage');
+    
+    // Refresh the list
     this.refreshHologramList();
+    
+    alert('✅ All payment slip data has been cleared successfully!');
   }
 
   // Clear hologram data for testing
@@ -1846,6 +1965,9 @@ End of Application
     
     // Also reset the sequence number
     localStorage.removeItem('hologramRefSeqNext');
+    
+    // Also clear payment slips
+    localStorage.removeItem('hologramPayments');
     
     console.log('🗑️ Cleared all hologram data from localStorage');
     
