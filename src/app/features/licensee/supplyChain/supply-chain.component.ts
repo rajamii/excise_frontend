@@ -303,24 +303,13 @@ export class SupplyChainComponent implements OnInit {
       return;
     }
 
-    // Load from both old hologramRequests and new hologramApplications
-    const storedRequests = JSON.parse(localStorage.getItem("hologramRequests") || "[]");
+    // Load ONLY from hologramApplications (single source of truth)
     const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
+    
+    console.log('📦 Loading hologram data from hologramApplications:', storedApplications.length, 'items');
 
-    // Map old format
-    const mappedRequests: HologramRow[] = (storedRequests || []).map((r: any) => ({
-      refNo: r.refNo,
-      date: r.date,
-      companyName: r.companyName,
-      localQtyLakh: r.localQtyLakh,
-      exportQtyLakh: r.exportQtyLakh,
-      defenceQtyLakh: r.defenceQtyLakh,
-      procurementType: r.procurementType, // Include procurement type
-      status: "Submitted",
-    }));
-
-    // Map new format from dashboard
-    const mappedApplications: HologramRow[] = (storedApplications || []).map((a: any) => ({
+    // Map the data
+    let mapped: HologramRow[] = (storedApplications || []).map((a: any) => ({
       refNo: a.refNo,
       date: a.date,
       companyName: a.companyName,
@@ -331,70 +320,10 @@ export class SupplyChainComponent implements OnInit {
       status: a.status || "Submitted",
     }));
 
-    // Combine both lists and remove duplicates by refNo + procurementType
-    const combined = [...mappedApplications, ...mappedRequests];
-    const uniqueMap = new Map();
-    combined.forEach(item => {
-      const key = `${item.refNo}_${item.procurementType || 'Unknown'}`;
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, item);
-      }
-    });
+    console.log('📦 Mapped hologram data:', mapped.length, 'items');
 
-    let mapped = Array.from(uniqueMap.values());
-
-    if (!mapped.length) {
-      // Seed with demo rows so user can see how it looks
-      const today = new Date().toISOString().split("T")[0];
-      mapped.push(
-        {
-          refNo: "YB/1/BREW/" + String(new Date().getFullYear()).slice(-2),
-          date: today,
-          companyName: "Yuksom Breweries Ltd.",
-          localQtyLakh: 15,
-          exportQtyLakh: 0,
-          defenceQtyLakh: 0,
-          procurementType: 'Local' as 'Local' | 'Export' | 'Defence',
-          status: "Draft",
-        },
-        {
-          refNo: "YB/2/BREW/" + String(new Date().getFullYear()).slice(-2),
-          date: today,
-          companyName: "Yuksom Breweries Ltd.",
-          localQtyLakh: 10,
-          exportQtyLakh: 0,
-          defenceQtyLakh: 0,
-          procurementType: 'Local' as 'Local' | 'Export' | 'Defence',
-          status: "Submitted",
-        },
-        {
-          refNo: "YB/2/BREW/" + String(new Date().getFullYear()).slice(-2),
-          date: today,
-          companyName: "Yuksom Breweries Ltd.",
-          localQtyLakh: 0,
-          exportQtyLakh: 2,
-          defenceQtyLakh: 0,
-          procurementType: 'Export' as 'Local' | 'Export' | 'Defence',
-          status: "Submitted",
-        },
-      );
-      // Persist the seeded rows so the hologram view page can find them by ref
-      localStorage.setItem(
-        "hologramRequests",
-        JSON.stringify(
-          mapped.map((m) => ({
-            refNo: m.refNo,
-            date: m.date,
-            companyName: m.companyName,
-            localQtyLakh: m.localQtyLakh,
-            exportQtyLakh: m.exportQtyLakh,
-            defenceQtyLakh: m.defenceQtyLakh,
-            procurementType: m.procurementType,
-          })),
-        ),
-      );
-    } else {
-      // Sort by date (newest first)
+    // Sort by date (newest first) if we have data
+    if (mapped.length > 0) {
       mapped = mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
 
@@ -1832,10 +1761,8 @@ End of Application
     if (!hologram) return 0;
     
     const totalHolograms = this.getHologramTotal(hologram);
-    // Convert lakh to actual number (1 lakh = 100,000)
-    const actualHolograms = totalHolograms * 100000;
     // Rate is 0.72 rupees per hologram
-    const amount = actualHolograms * 0.72;
+    const amount = totalHolograms * 0.72;
     
     return amount;
   }
@@ -1906,5 +1833,25 @@ End of Application
     // Optionally refresh the hologram list to show updated status
     this.refreshHologramList();
   }
-}
 
+  // Clear hologram data for testing
+  clearHologramData(): void {
+    if (!this.isBrowser) return;
+    
+    const confirmed = confirm('⚠️ This will delete ALL hologram procurement data from localStorage.\n\nAre you sure you want to continue?');
+    if (!confirmed) return;
+    
+    // Clear the hologram applications storage
+    localStorage.removeItem('hologramApplications');
+    
+    // Also reset the sequence number
+    localStorage.removeItem('hologramRefSeqNext');
+    
+    console.log('🗑️ Cleared all hologram data from localStorage');
+    
+    // Refresh the list
+    this.refreshHologramList();
+    
+    alert('✅ All hologram data has been cleared successfully!');
+  }
+}

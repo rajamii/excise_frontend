@@ -154,24 +154,30 @@
                   </tr>
                 </thead>
                 <tbody>
+                  @if (submittedData && submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
                   <tr>
-                    <td>1</td>
+                    <td>{{ getSeriesRowNumber('local') }}</td>
                     <td>Local Series</td>
-                    <td>{{ submittedData?.localQtyLakh || 0 | number:'1.0-0' }}</td>
+                    <td>{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
+                  @if (submittedData && submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
                   <tr>
-                    <td>2</td>
+                    <td>{{ getSeriesRowNumber('export') }}</td>
                     <td>Export Series</td>
-                    <td>{{ submittedData?.exportQtyLakh || 0 | number:'1.0-0' }}</td>
+                    <td>{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
+                  @if (submittedData && submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
                   <tr>
-                    <td>3</td>
+                    <td>{{ getSeriesRowNumber('defence') }}</td>
                     <td>Defence Series</td>
-                    <td>{{ submittedData?.defenceQtyLakh || 0 | number:'1.0-0' }}</td>
+                    <td>{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
                   <tr class="total-row">
                     <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
                     <td><strong>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) +

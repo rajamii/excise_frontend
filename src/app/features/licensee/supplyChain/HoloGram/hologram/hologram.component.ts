@@ -130,6 +130,26 @@ export class HologramComponent {
     return l + e + d;
   }
 
+  getSeriesRowNumber(series: 'local' | 'export' | 'defence'): number {
+    if (!this.submittedData) return 0;
+    
+    let rowNumber = 0;
+    
+    // Count rows before this series
+    if (series === 'local') {
+      rowNumber = 1;
+    } else if (series === 'export') {
+      rowNumber = 1;
+      if (this.submittedData.localQtyLakh && this.submittedData.localQtyLakh > 0) rowNumber++;
+    } else if (series === 'defence') {
+      rowNumber = 1;
+      if (this.submittedData.localQtyLakh && this.submittedData.localQtyLakh > 0) rowNumber++;
+      if (this.submittedData.exportQtyLakh && this.submittedData.exportQtyLakh > 0) rowNumber++;
+    }
+    
+    return rowNumber;
+  }
+
   validateForm(): boolean {
     if (!this.formData.date) {
       this.errorMessage = 'Please select date';
@@ -213,6 +233,8 @@ export class HologramComponent {
       types.push({ type: 'Defence', qty: this.submittedData.defenceQtyLakh });
     }
 
+    console.log('📊 Creating separate rows for types:', types);
+
     // Create separate application for each type with same Ref. No
     types.forEach((typeInfo, index) => {
       const newApplication = {
@@ -231,36 +253,20 @@ export class HologramComponent {
       };
 
       applications.unshift(newApplication);
+      console.log(`  ✓ Added ${typeInfo.type} row:`, newApplication);
     });
 
     localStorage.setItem(dashboardKey, JSON.stringify(applications));
-
-    // 2. Also save to hologramRequests (for supply chain compatibility) - Create separate rows
-    const requestsKey = 'hologramRequests';
-    const requests = JSON.parse(localStorage.getItem(requestsKey) || '[]');
-
-    types.forEach((typeInfo) => {
-      const requestData = {
-        refNo: this.submittedData!.refNo,
-        date: this.submittedData!.date,
-        companyName: this.submittedData!.companyName,
-        procurementType: typeInfo.type, // Add type field
-        localQtyLakh: typeInfo.type === 'Local' ? typeInfo.qty : 0,
-        exportQtyLakh: typeInfo.type === 'Export' ? typeInfo.qty : 0,
-        defenceQtyLakh: typeInfo.type === 'Defence' ? typeInfo.qty : 0,
-      };
-
-      requests.unshift(requestData);
-    });
-
-    localStorage.setItem(requestsKey, JSON.stringify(requests));
 
     console.log('✅ Application registered with separate rows for each type:', {
       refNo: this.submittedData.refNo,
       date: this.submittedData.date,
       company: this.submittedData.companyName,
-      types: types.map(t => `${t.type}: ${t.qty}`).join(', ')
+      types: types.map(t => `${t.type}: ${t.qty}`).join(', '),
+      totalRows: types.length
     });
+    
+    console.log('📦 Final hologramApplications (first 5):', applications.slice(0, 5));
   }
 
   openPrintPreview(): void {

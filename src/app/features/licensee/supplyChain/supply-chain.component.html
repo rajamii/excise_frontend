@@ -1437,9 +1437,13 @@
                   <p class="register-subtitle">Track and manage all hologram applications</p>
                 </div>
                 <div class="header-actions">
-                  <button class="btn btn-success">
+                  <button class="btn btn-success me-2">
                     <i class="bi bi-plus-circle me-2"></i>
                     New Hologram
+                  </button>
+                  <button class="btn btn-danger" (click)="clearHologramData()" title="Clear all hologram data for testing">
+                    <i class="bi bi-trash me-2"></i>
+                    Clear Data
                   </button>
                 </div>
               </div>
@@ -2343,7 +2347,7 @@
                             <thead class="table-light">
                               <tr>
                                 <th>Description</th>
-                                <th class="text-end">Quantity (Lakh)</th>
+                                <th class="text-end">Quantity</th>
                                 <th class="text-end">Rate per Hologram</th>
                                 <th class="text-end">Amount (₹)</th>
                               </tr>
@@ -2351,7 +2355,7 @@
                             <tbody>
                               <tr>
                                 <td>Total Holograms</td>
-                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) }}</td>
+                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
                                 <td class="text-end">₹0.72</td>
                                 <td class="text-end"><strong>₹{{ calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2' }}</strong></td>
                               </tr>
