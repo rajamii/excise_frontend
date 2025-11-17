@@ -298,3 +298,18 @@
     border-left: 4px solid #EF4444;
   }
 }
+
+// Highlight row animation for navigation from supply chain
+.highlight-row {
+  animation: highlightPulse 2s ease-in-out;
+  background-color: #FEF3C7 !important;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #FEF3C7;
+  }
+}

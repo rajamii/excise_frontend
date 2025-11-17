@@ -1606,9 +1606,10 @@
                         <th class="date" style="width: 120px;">Date</th>
                         <th class="company">Company</th>
                         <th class="type" style="width: 90px;">Type</th>
-                        <th class="total-qty" style="width: 180px;">Quantity</th>
-                        <th class="status" style="width: 110px;">Status</th>
-                        <th class="actions" style="width: 180px;">Action</th>
+                        <th class="total-qty" style="width: 140px;">Quantity</th>
+                        <th class="payment-amount" style="width: 120px;">Payment Amount</th>
+                        <th class="status" style="width: 140px;">Status</th>
+                        <th class="actions" style="width: 280px;">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1653,40 +1654,59 @@
                             </button>
                           </div>
                         </td>
+                        <td class="payment-amount">
+                          <div class="d-flex align-items-center">
+                            <span class="fw-bold text-success">₹{{ calculatePaymentAmount(item) | number:'1.2-2' }}</span>
+                            <small class="text-muted ms-1">(&#64; ₹0.15)</small>
+                          </div>
+                        </td>
                         <td class="status">
                           <span
-                            class="status-badge status-{{ item.status.toLowerCase().includes('submitted') ? 'submitted' : 
-                                                                  item.status.toLowerCase().includes('draft') ? 'draft' : 
-                                                                  item.status.toLowerCase().includes('approved') ? 'approved' : 'default' }}">
+                            class="status-badge"
+                            [ngClass]="getPaymentStatusClass(item)">
                             {{ item.status }}
                           </span>
                         </td>
                         <td class="actions">
-                          <div class="action-buttons d-flex gap-1">
+                          <div class="action-buttons d-flex gap-1 flex-wrap">
                             <button class="btn btn-primary btn-sm" (click)="viewHologramApplication(item)" title="View Application">
                               <i class="bi bi-eye me-1"></i>
-                              <span class="d-none d-md-inline">View Application</span>
-                              <span class="d-md-none">View</span>
+                              <span class="d-none d-md-inline">View</span>
                             </button>
-                            <!-- Show "View Upload" if slip is uploaded, otherwise "Upload Slip" -->
+                            <!-- Upload Slip button - opens modal for uploading payment slip -->
                             <button 
-                              *ngIf="!isPaymentSlipUploaded(item)"
+                              *ngIf="!isPaymentSlipUploaded(item) && !item.paymentCompleted"
                               class="btn btn-success btn-sm" 
                               (click)="openPaymentUploadModal(item)" 
-                              title="Upload Payment Slip">
+                              title="Upload Payment Slip (₹0.72 per hologram)">
                               <i class="bi bi-upload me-1"></i>
                               <span class="d-none d-md-inline">Upload Slip</span>
-                              <span class="d-md-none">Upload</span>
                             </button>
+                            <!-- View Slip button - show uploaded slip details -->
                             <button 
-                              *ngIf="isPaymentSlipUploaded(item)"
+                              *ngIf="isPaymentSlipUploaded(item) && !item.paymentCompleted"
                               class="btn btn-info btn-sm" 
                               (click)="viewUploadedSlip(item)" 
                               title="View Uploaded Payment Slip">
                               <i class="bi bi-file-earmark-check me-1"></i>
-                              <span class="d-none d-md-inline">View Upload</span>
-                              <span class="d-md-none">View</span>
+                              <span class="d-none d-md-inline">View Slip</span>
                             </button>
+                            <!-- Make Payment button - only show if slip is uploaded and payment not completed -->
+                            <button 
+                              *ngIf="isPaymentSlipUploaded(item) && !item.paymentCompleted"
+                              class="btn btn-warning btn-sm" 
+                              (click)="navigateToPaymentPage(item)" 
+                              title="Make Wallet Payment (₹0.15 per hologram)">
+                              <i class="bi bi-wallet2 me-1"></i>
+                              <span class="d-none d-md-inline">Make Payment</span>
+                            </button>
+                            <!-- Payment Completed badge -->
+                            <span 
+                              *ngIf="item.paymentCompleted"
+                              class="badge bg-success align-self-center"
+                              title="Payment Completed">
+                              <i class="bi bi-check-circle me-1"></i>Paid
+                            </span>
                           </div>
                         </td>
                       </tr>
@@ -2308,7 +2328,7 @@
               </div>
             </div>
 
-            <!-- Payment Upload Modal -->
+            <!-- Payment Slip Upload Modal -->
             <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
               *ngIf="showPaymentUploadModal">
               <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2316,7 +2336,7 @@
                   <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">
                       <i class="bi bi-upload me-2"></i>
-                      Upload Payment Slip
+                      Upload Payment Slip (Offline Payment)
                     </h5>
                     <button type="button" class="btn-close btn-close-white" aria-label="Close"
                       (click)="closePaymentUploadModal()"></button>
@@ -2357,7 +2377,10 @@
                     <!-- Payment Calculation -->
                     <div class="card mb-3">
                       <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0">Payment Calculation</h6>
+                        <h6 class="mb-0">
+                          <i class="bi bi-calculator me-2"></i>
+                          Offline Payment (₹0.72 per hologram)
+                        </h6>
                       </div>
                       <div class="card-body">
                         <div class="table-responsive">
@@ -2372,17 +2395,53 @@
                             </thead>
                             <tbody>
                               <tr>
-                                <td>Total Holograms</td>
+                                <td>Offline Payment to Printing Press</td>
                                 <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
                                 <td class="text-end">₹0.72</td>
-                                <td class="text-end"><strong>₹{{ calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2' }}</strong></td>
+                                <td class="text-end"><strong>₹{{ (getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) * 0.72) | number:'1.2-2' }}</strong></td>
                               </tr>
                             </tbody>
                           </table>
                         </div>
                         <div class="alert alert-info mt-3 mb-0">
                           <i class="bi bi-info-circle me-2"></i>
-                          <strong>Note:</strong> Payment must be made offline to the printing press or tendered company. Upload the payment slip received after payment.
+                          <strong>Note:</strong> This payment must be made offline to the printing press or tendered company. Upload the payment slip received after making this payment.
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Wallet Payment Information -->
+                    <div class="card mb-3 border-success">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0">
+                          <i class="bi bi-wallet2 me-2"></i>
+                          Wallet Payment (After Slip Upload) - ₹0.15 per hologram
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Description</th>
+                                <th class="text-end">Quantity</th>
+                                <th class="text-end">Rate per Hologram</th>
+                                <th class="text-end">Amount (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr class="table-success">
+                                <td><strong>Wallet Payment (Excise/Additional Balance)</strong></td>
+                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
+                                <td class="text-end"><strong>₹0.15</strong></td>
+                                <td class="text-end"><strong class="text-success">₹{{ selectedPaymentHologram ? (calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2') : '0.00' }}</strong></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0">
+                          <i class="bi bi-exclamation-triangle me-2"></i>
+                          <strong>Important:</strong> After uploading the payment slip, you will need to make an additional payment of <strong>₹{{ selectedPaymentHologram ? (calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2') : '0.00' }}</strong> from your Excise/Additional Wallet Balance. The "Make Payment" button will be activated after slip upload.
                         </div>
                       </div>
                     </div>
@@ -2479,11 +2538,11 @@
                           </div>
                           <div class="col-md-6">
                             <p class="mb-2"><strong>Total Quantity:</strong> {{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }} pieces</p>
-                            <p class="mb-2"><strong>Payment Amount:</strong> 
-                              <span class="text-success fw-bold">₹{{ selectedPaymentRecord?.paymentAmount | number:'1.2-2' }}</span>
+                            <p class="mb-2"><strong>Offline Payment:</strong> 
+                              <span class="text-warning fw-bold">₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}</span>
                             </p>
-                            <p class="mb-2"><strong>Status:</strong> 
-                              <span class="badge bg-success">{{ selectedPaymentRecord?.status }}</span>
+                            <p class="mb-2"><strong>Wallet Payment Required:</strong> 
+                              <span class="text-success fw-bold">₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }}</span>
                             </p>
                           </div>
                         </div>
@@ -2552,17 +2611,20 @@
                       </div>
                     </div>
 
-                    <!-- Payment Calculation Summary -->
+                    <!-- Payment Summary -->
                     <div class="card">
                       <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0">Payment Summary</h6>
+                        <h6 class="mb-0">
+                          <i class="bi bi-calculator me-2"></i>
+                          Payment Summary
+                        </h6>
                       </div>
                       <div class="card-body">
                         <div class="table-responsive">
-                          <table class="table table-sm table-bordered mb-0">
+                          <table class="table table-sm table-bordered mb-3">
                             <thead class="table-light">
                               <tr>
-                                <th>Description</th>
+                                <th>Payment Type</th>
                                 <th class="text-end">Quantity</th>
                                 <th class="text-end">Rate per Hologram</th>
                                 <th class="text-end">Amount (₹)</th>
@@ -2570,13 +2632,23 @@
                             </thead>
                             <tbody>
                               <tr>
-                                <td>Total Holograms</td>
+                                <td>Offline Payment (Printing Press)</td>
                                 <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
                                 <td class="text-end">₹0.72</td>
-                                <td class="text-end"><strong>₹{{ selectedPaymentRecord?.paymentAmount | number:'1.2-2' }}</strong></td>
+                                <td class="text-end"><strong>₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}</strong></td>
+                              </tr>
+                              <tr class="table-success">
+                                <td><strong>Wallet Payment (Excise/Additional)</strong></td>
+                                <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
+                                <td class="text-end"><strong>₹0.15</strong></td>
+                                <td class="text-end"><strong class="text-success">₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }}</strong></td>
                               </tr>
                             </tbody>
                           </table>
+                        </div>
+                        <div class="alert alert-info mb-0">
+                          <i class="bi bi-info-circle me-2"></i>
+                          <strong>Note:</strong> This slip confirms the offline payment of ₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}. An additional wallet payment of ₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }} is required from Excise/Additional Wallet Balance.
                         </div>
                       </div>
                     </div>

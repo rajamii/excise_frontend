@@ -336,14 +336,24 @@
 
       <!-- Hologram Tab -->
       @if (activeTab === 'hologram') {
+        <!-- Info Alert -->
+        <div class="alert alert-info mb-3">
+          <h5><i class="bi bi-info-circle me-2"></i>Hologram Payment Information</h5>
+          <p class="mb-0">
+            This section shows hologram requisitions where payment slips have been uploaded. 
+            The payment amount shown (₹0.15 per hologram) is the additional wallet payment required from your Excise/Additional Wallet Balance.
+          </p>
+        </div>
+
         <div class="table-responsive">
           <table class="table table-hover table-bordered">
             <thead class="table-success">
               <tr>
                 <th>Reference Number</th>
                 <th>Company Name</th>
-                <th>Total Quantity (Lakh)</th>
-                <th>Hologram Fee</th>
+                <th>Type</th>
+                <th>Total Quantity</th>
+                <th>Hologram Fee (₹0.15/unit)</th>
                 <th>HOA</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -351,10 +361,20 @@
             </thead>
             <tbody>
               @for (item of hologramData; track item.id) {
-                <tr>
+                <tr [id]="'hologram-' + item.referenceNo + '-' + item.procurementType">
                   <td>{{ item.referenceNo }}</td>
                   <td>{{ item.companyName }}</td>
-                  <td class="text-end">{{ item.totalQuantity | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="badge text-white" 
+                      [ngClass]="{
+                        'bg-success': item.procurementType === 'Local',
+                        'bg-dark': item.procurementType === 'Export',
+                        'bg-warning text-dark': item.procurementType === 'Defence'
+                      }">
+                      {{ item.procurementType || 'Local' }}
+                    </span>
+                  </td>
+                  <td class="text-end">{{ item.totalQuantity | number:'1.0-0' }} pieces</td>
                   <td class="text-end">₹{{ item.hologramFee | number:'1.2-2' }}</td>
                   <td>{{ item.hoa }}</td>
                   <td>
@@ -367,6 +387,19 @@
                       (click)="payHologramItem(item)">
                       <i class="bi bi-credit-card me-1"></i>Pay
                     </button>
+                    <span 
+                      class="badge bg-success" 
+                      *ngIf="item.status === 'Payment Successful'">
+                      <i class="bi bi-check-circle me-1"></i>Paid
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (hologramData.length === 0) {
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    <p class="mb-0">No hologram payments pending. Upload payment slips from the Supply Chain dashboard to make payments here.</p>
                   </td>
                 </tr>
               }

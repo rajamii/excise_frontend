@@ -22,6 +22,8 @@ interface HologramRow {
   defenceQtyLakh?: number;
   procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
   status: string;
+  paymentSlipUploaded?: boolean;
+  paymentCompleted?: boolean;
 }
 
 @Component({
@@ -320,6 +322,8 @@ export class SupplyChainComponent implements OnInit {
       defenceQtyLakh: a.defenceQtyLakh,
       procurementType: a.procurementType, // Include procurement type
       status: a.status || "Submitted",
+      paymentSlipUploaded: a.paymentSlipUploaded || false,
+      paymentCompleted: a.paymentCompleted || false,
     }));
 
     console.log('📦 Mapped hologram data:', mapped.length, 'items');
@@ -1744,7 +1748,7 @@ End of Application
     );
   }
 
-  // Payment Upload Methods
+  // Open payment upload modal
   openPaymentUploadModal(hologram: HologramRow): void {
     this.selectedPaymentHologram = hologram;
     this.selectedPaymentSlipFile = null;
@@ -1759,21 +1763,11 @@ End of Application
     this.paymentRemarks = '';
   }
 
-  calculatePaymentAmount(hologram: HologramRow | null): number {
-    if (!hologram) return 0;
-    
-    const totalHolograms = this.getHologramTotal(hologram);
-    // Rate is 0.72 rupees per hologram
-    const amount = totalHolograms * 0.72;
-    
-    return amount;
-  }
-
   onPaymentSlipFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
       // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         alert('File size exceeds 5MB. Please select a smaller file.');
         event.target.value = '';
@@ -1802,178 +1796,188 @@ End of Application
       return;
     }
 
-    // Convert file to base64 for storage
-    const reader = new FileReader();
-    reader.onload = (e: any) => {
-      const fileData = e.target.result;
+    // Calculate offline payment amount (₹0.72 per hologram)
+    const totalQty = this.getHologramTotal(this.selectedPaymentHologram);
+    const offlinePaymentAmount = totalQty * 0.72;
 
-      // Create payment record with file data
-      const paymentRecord = {
-        hologramRefNo: this.selectedPaymentHologram!.refNo,
-        hologramDate: this.selectedPaymentHologram!.date,
-        companyName: this.selectedPaymentHologram!.companyName,
-        procurementType: this.getProcurementType(this.selectedPaymentHologram!),
-        totalQuantity: this.getHologramTotal(this.selectedPaymentHologram!),
-        paymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram!),
-        fileName: this.selectedPaymentSlipFile!.name,
-        fileSize: this.selectedPaymentSlipFile!.size,
-        fileType: this.selectedPaymentSlipFile!.type,
-        fileData: fileData, // Store the base64 file data
-        remarks: this.paymentRemarks,
-        uploadDate: new Date().toISOString(),
-        status: 'Uploaded'
-      };
-
-      // Store payment record in localStorage
-      const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-      existingPayments.push(paymentRecord);
-      localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
-
-      // Update the hologram status to "Slip Uploaded"
-      const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
-      const appIndex = storedApplications.findIndex((app: any) => app.refNo === this.selectedPaymentHologram?.refNo);
-      if (appIndex !== -1) {
-        storedApplications[appIndex].status = "Slip Uploaded";
-        storedApplications[appIndex].paymentSlipUploaded = true;
-        localStorage.setItem("hologramApplications", JSON.stringify(storedApplications));
-      }
-
-      // Show success message
-      alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nAmount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}`);
-
-      // Close modal
-      this.closePaymentUploadModal();
-
-      // Refresh the hologram list to show updated status
-      this.refreshHologramList();
+    // Create payment record
+    const paymentRecord = {
+      hologramRefNo: this.selectedPaymentHologram.refNo,
+      hologramDate: this.selectedPaymentHologram.date,
+      companyName: this.selectedPaymentHologram.companyName,
+      procurementType: this.getProcurementType(this.selectedPaymentHologram),
+      localQtyLakh: this.selectedPaymentHologram.localQtyLakh || 0,
+      exportQtyLakh: this.selectedPaymentHologram.exportQtyLakh || 0,
+      defenceQtyLakh: this.selectedPaymentHologram.defenceQtyLakh || 0,
+      totalQuantity: totalQty,
+      offlinePaymentAmount: offlinePaymentAmount,
+      walletPaymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram),
+      fileName: this.selectedPaymentSlipFile.name,
+      fileSize: this.selectedPaymentSlipFile.size,
+      fileType: this.selectedPaymentSlipFile.type,
+      remarks: this.paymentRemarks,
+      uploadDate: new Date().toISOString(),
+      status: 'Slip Uploaded - Ready for Wallet Payment'
     };
 
-    reader.readAsDataURL(this.selectedPaymentSlipFile);
+    // Store payment record in localStorage
+    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    existingPayments.push(paymentRecord);
+    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
+
+    // Update hologram application status to mark slip as uploaded
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const updatedApplications = applications.map((app: any) => {
+      if (app.refNo === this.selectedPaymentHologram!.refNo && 
+          app.procurementType === this.getProcurementType(this.selectedPaymentHologram!)) {
+        return { ...app, paymentSlipUploaded: true };
+      }
+      return app;
+    });
+    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+
+    // Refresh the hologram list to show updated status
+    this.refreshHologramList();
+
+    // Show success message
+    alert(
+      `Payment Slip Uploaded Successfully!\n\n` +
+      `Reference: ${paymentRecord.hologramRefNo}\n` +
+      `Type: ${paymentRecord.procurementType}\n` +
+      `Total Quantity: ${totalQty.toLocaleString('en-IN')} holograms\n\n` +
+      `Offline Payment (Slip): ₹${offlinePaymentAmount.toFixed(2)} (₹0.72 per hologram)\n` +
+      `Wallet Payment Required: ₹${paymentRecord.walletPaymentAmount.toFixed(2)} (₹0.15 per hologram)\n\n` +
+      `File: ${paymentRecord.fileName}\n\n` +
+      `You can now proceed to make the wallet payment of ₹${paymentRecord.walletPaymentAmount.toFixed(2)}.`
+    );
+
+    // Close modal
+    this.closePaymentUploadModal();
   }
 
-  // Check if payment slip is uploaded for a hologram
-  isPaymentSlipUploaded(hologram: HologramRow): boolean {
-    if (!this.isBrowser) return false;
-    
-    try {
-      const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-      const hasPayment = existingPayments.some((payment: any) => payment.hologramRefNo === hologram.refNo);
-      return hasPayment;
-    } catch (error) {
-      console.error('Error checking payment slip:', error);
-      return false;
-    }
-  }
-
-  // View uploaded payment slip
   viewUploadedSlip(hologram: HologramRow): void {
     if (!this.isBrowser) return;
     
-    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    const payment = existingPayments.find((p: any) => p.hologramRefNo === hologram.refNo);
-    
+    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    const payment = payments.find((p: any) => 
+      p.hologramRefNo === hologram.refNo && 
+      p.procurementType === this.getProcurementType(hologram)
+    );
+
     if (payment) {
       this.selectedPaymentRecord = payment;
-      this.selectedPaymentHologram = hologram;
       this.showViewUploadModal = true;
-    } else {
-      alert('No payment slip found for this hologram.');
     }
   }
 
   closeViewUploadModal(): void {
     this.showViewUploadModal = false;
     this.selectedPaymentRecord = null;
-    this.selectedPaymentHologram = null;
   }
 
   viewUploadedFile(): void {
-    if (!this.selectedPaymentRecord || !this.selectedPaymentRecord.fileData) {
-      alert('File data not available.');
+    if (this.selectedPaymentRecord) {
+      alert(`File: ${this.selectedPaymentRecord.fileName}\n\nIn a real application, this would open the uploaded file for viewing.`);
+    }
+  }
+
+  // Navigate to payment confirmation page for hologram wallet payment (₹0.15 per hologram)
+  navigateToPaymentPage(hologram: HologramRow): void {
+    if (!this.isBrowser) return;
+
+    // Check if payment slip is uploaded
+    if (!this.isPaymentSlipUploaded(hologram)) {
+      alert('Please upload the payment slip first before making wallet payment.');
       return;
     }
 
-    // Open the file in a new window/tab
-    const fileType = this.selectedPaymentRecord.fileType;
-    const fileData = this.selectedPaymentRecord.fileData;
+    // Navigate to payment confirmation page with hologram tab active
+    this.router.navigate(['/dev-payment-confirmation'], {
+      queryParams: { 
+        tab: 'hologram',
+        refNo: hologram.refNo,
+        type: this.getProcurementType(hologram),
+        action: 'makePayment'
+      }
+    });
+  }
 
-    if (fileType.includes('pdf')) {
-      // For PDF files, open in new tab
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(
-          `<iframe src="${fileData}" style="width:100%; height:100%; border:none;" title="Payment Slip"></iframe>`
-        );
-      }
-    } else if (fileType.includes('image')) {
-      // For image files, open in new tab
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(
-          `<html><head><title>Payment Slip - ${this.selectedPaymentRecord.fileName}</title></head>
-          <body style="margin:0; display:flex; justify-content:center; align-items:center; background:#000;">
-            <img src="${fileData}" style="max-width:100%; max-height:100vh;" alt="Payment Slip">
-          </body></html>`
-        );
-      }
-    } else {
-      // For other file types, trigger download
-      const link = document.createElement('a');
-      link.href = fileData;
-      link.download = this.selectedPaymentRecord.fileName;
-      link.click();
-    }
+  isPaymentSlipUploaded(hologram: HologramRow): boolean {
+    if (!this.isBrowser) return false;
+    
+    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    return payments.some((payment: any) => 
+      payment.hologramRefNo === hologram.refNo && 
+      payment.procurementType === this.getProcurementType(hologram)
+    );
+  }
+
+  calculatePaymentAmount(hologram: HologramRow): number {
+    // Wallet payment rate is ₹0.15 per hologram
+    const totalQty = this.getHologramTotal(hologram);
+    return totalQty * 0.15;
   }
 
   // Clear payment slip data for testing
   clearPaymentSlipData(): void {
     if (!this.isBrowser) return;
     
-    const confirmed = confirm('⚠️ This will delete ALL payment slip data from localStorage.\n\nAre you sure you want to continue?');
+    const confirmed = window.confirm('This will clear all uploaded payment slips. Are you sure?');
     if (!confirmed) return;
-    
-    // Clear the payment slips storage
+
+    // Clear payment slips from localStorage
     localStorage.removeItem('hologramPayments');
     
-    // Reset status in hologram applications
-    const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
-    storedApplications.forEach((app: any) => {
-      if (app.status === "Slip Uploaded") {
-        app.status = "Submitted";
-        app.paymentSlipUploaded = false;
-      }
+    // Update hologram applications to remove paymentSlipUploaded flag
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const updatedApplications = applications.map((app: any) => {
+      const { paymentSlipUploaded, ...rest } = app;
+      return rest;
     });
-    localStorage.setItem("hologramApplications", JSON.stringify(storedApplications));
+    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
     
-    console.log('🗑️ Cleared all payment slip data from localStorage');
-    
-    // Refresh the list
+    // Refresh the hologram list
     this.refreshHologramList();
     
-    alert('✅ All payment slip data has been cleared successfully!');
+    alert('Payment slip data cleared successfully!');
   }
 
-  // Clear hologram data for testing
+  // Clear all hologram data for testing
   clearHologramData(): void {
     if (!this.isBrowser) return;
     
-    const confirmed = confirm('⚠️ This will delete ALL hologram procurement data from localStorage.\n\nAre you sure you want to continue?');
+    const confirmed = window.confirm('This will clear ALL hologram data including applications, payments, and transactions. Are you sure?');
     if (!confirmed) return;
-    
-    // Clear the hologram applications storage
+
+    // Clear all hologram-related data from localStorage
     localStorage.removeItem('hologramApplications');
-    
-    // Also reset the sequence number
-    localStorage.removeItem('hologramRefSeqNext');
-    
-    // Also clear payment slips
     localStorage.removeItem('hologramPayments');
+    localStorage.removeItem('hologramPaymentTransactions');
+    localStorage.removeItem('hologramRequests');
     
-    console.log('🗑️ Cleared all hologram data from localStorage');
-    
-    // Refresh the list
+    // Refresh the hologram list
     this.refreshHologramList();
     
-    alert('✅ All hologram data has been cleared successfully!');
+    alert('All hologram data cleared successfully!');
   }
+
+  // Get payment status class for styling
+  getPaymentStatusClass(item: HologramRow): string {
+    const status = item.status?.toLowerCase() || '';
+    
+    if (status.includes('payment completed') || item.paymentCompleted) {
+      return 'bg-success-subtle text-success';
+    } else if (status.includes('slip uploaded') || item.paymentSlipUploaded) {
+      return 'bg-info-subtle text-info';
+    } else if (status.includes('approved')) {
+      return 'bg-primary-subtle text-primary';
+    } else if (status.includes('pending')) {
+      return 'bg-warning-subtle text-warning';
+    } else if (status.includes('rejected')) {
+      return 'bg-danger-subtle text-danger';
+    } else {
+      return 'bg-secondary-subtle text-secondary';
+    }
+  }
+
 }

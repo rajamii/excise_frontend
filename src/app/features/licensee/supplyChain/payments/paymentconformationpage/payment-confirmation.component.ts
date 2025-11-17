@@ -49,6 +49,7 @@ interface HologramItem {
   id: string;
   referenceNo: string;
   companyName: string;
+  procurementType?: string;
   totalQuantity: number;
   hologramFee: number;
   hoa: string;
@@ -57,6 +58,7 @@ interface HologramItem {
   exportQty: number;
   defenceQty: number;
   paymentDate: Date | null;
+  paymentSlipUploaded?: boolean;
 }
 
 @Component({
@@ -206,6 +208,9 @@ export class PaymentConfirmationComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Load hologram data from localStorage
+    this.loadHologramDataFromStorage();
+
     // Get query parameters
     this.route.queryParams.subscribe(params => {
       if (params['billNo']) {
@@ -215,6 +220,19 @@ export class PaymentConfirmationComponent implements OnInit {
       }
       if (params['tab']) {
         this.activeTab = params['tab'];
+      }
+      // Handle hologram payment navigation
+      if (params['refNo'] && params['type'] && params['action'] === 'makePayment') {
+        this.activeTab = 'hologram';
+        // Optionally highlight or scroll to the specific hologram item
+        setTimeout(() => {
+          const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('highlight-row');
+            setTimeout(() => element.classList.remove('highlight-row'), 3000);
+          }
+        }, 500);
       }
     });
 
@@ -227,6 +245,58 @@ export class PaymentConfirmationComponent implements OnInit {
         this.cleanupModalArtifacts();
       }
     });
+  }
+
+  loadHologramDataFromStorage(): void {
+    try {
+      // Load hologram applications from localStorage
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      
+      // Load payment records to check which ones have slips uploaded
+      const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+      
+      // Transform applications into hologram payment items
+      this.hologramData = applications
+        .filter((app: any) => {
+          // Only include items that have payment slips uploaded
+          return payments.some((payment: any) => 
+            payment.hologramRefNo === app.refNo && 
+            payment.procurementType === app.procurementType
+          );
+        })
+        .map((app: any) => {
+          // Find the corresponding payment record
+          const payment = payments.find((p: any) => 
+            p.hologramRefNo === app.refNo && 
+            p.procurementType === app.procurementType
+          );
+
+          // Calculate hologram fee (₹0.15 per hologram)
+          const totalQty = (app.localQtyLakh || 0) + (app.exportQtyLakh || 0) + (app.defenceQtyLakh || 0);
+          const hologramFee = totalQty * 0.15;
+
+          return {
+            id: app.id || app.refNo,
+            referenceNo: app.refNo,
+            companyName: app.companyName,
+            procurementType: app.procurementType,
+            totalQuantity: totalQty,
+            hologramFee: hologramFee,
+            hoa: '0039-00-105-45-04',
+            status: app.paymentCompleted ? 'Payment Successful' : 'ApprovedByCommissioner',
+            localQty: app.localQtyLakh || 0,
+            exportQty: app.exportQtyLakh || 0,
+            defenceQty: app.defenceQtyLakh || 0,
+            paymentDate: app.paymentCompleted ? new Date(app.paymentDate) : null,
+            paymentSlipUploaded: true
+          };
+        });
+
+      console.log('Loaded hologram data for payment:', this.hologramData);
+    } catch (error) {
+      console.error('Error loading hologram data:', error);
+      // Keep sample data if loading fails
+    }
   }
 
   // Wallet history (utilization and additions)
@@ -371,9 +441,52 @@ export class PaymentConfirmationComponent implements OnInit {
     
     // Update item status
     item.status = 'Payment Successful';
+
+    // If this is a hologram payment, update the hologram application in localStorage
+    if (this.activeTab === 'hologram') {
+      this.updateHologramPaymentStatus(item.referenceNo);
+    }
     
     // Show success message
     this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
+  }
+
+  updateHologramPaymentStatus(refNo: string): void {
+    try {
+      // Update hologram applications
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      const updatedApplications = applications.map((app: any) => {
+        if (app.refNo === refNo) {
+          return { 
+            ...app, 
+            paymentCompleted: true,
+            paymentDate: new Date().toISOString(),
+            status: 'Payment Completed'
+          };
+        }
+        return app;
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+
+      // Update hologram payments
+      const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+      const updatedPayments = payments.map((payment: any) => {
+        if (payment.hologramRefNo === refNo) {
+          return { 
+            ...payment, 
+            status: 'Payment Completed',
+            paymentCompletedDate: new Date().toISOString()
+          };
+        }
+        return payment;
+      });
+      localStorage.setItem('hologramPayments', JSON.stringify(updatedPayments));
+
+      // Reload hologram data
+      this.loadHologramDataFromStorage();
+    } catch (error) {
+      console.error('Error updating hologram payment status:', error);
+    }
   }
 
   payAllTransit(): void {
