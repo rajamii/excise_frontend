@@ -1485,8 +1485,8 @@
                       <i class="bi bi-boxes"></i>
                     </div>
                     <div class="card-content">
-                      <h3 class="card-value">{{ getTotalHologramQuantity() }}</h3>
-                      <p class="card-label">Total Qty (Lakh)</p>
+                      <h3 class="card-value">{{ getTotalHologramQuantity() | number:'1.0-0' }}</h3>
+                      <p class="card-label">Total Quantity</p>
                     </div>
                   </div>
                 </div>
@@ -1598,7 +1598,7 @@
                         <th class="date" style="width: 120px;">Date</th>
                         <th class="company">Company</th>
                         <th class="type" style="width: 90px;">Type</th>
-                        <th class="total-qty" style="width: 180px;">Qty (Lakh)</th>
+                        <th class="total-qty" style="width: 180px;">Quantity</th>
                         <th class="status" style="width: 110px;">Status</th>
                         <th class="actions" style="width: 180px;">Action</th>
                       </tr>
@@ -1634,9 +1634,9 @@
                           <div class="qty-display">
                             <span class="qty-number">
                               {{
-                              (item.localQtyLakh || 0) +
+                              ((item.localQtyLakh || 0) +
                               (item.exportQtyLakh || 0) +
-                              (item.defenceQtyLakh || 0)
+                              (item.defenceQtyLakh || 0)) | number:'1.0-0'
                               }}
                             </span>
                             <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="openHologramDetails(item)" title="View Details">
@@ -1654,11 +1654,16 @@
                           </span>
                         </td>
                         <td class="actions">
-                          <div class="action-buttons">
+                          <div class="action-buttons d-flex gap-1">
                             <button class="btn btn-primary btn-sm" (click)="viewHologramApplication(item)" title="View Application">
                               <i class="bi bi-eye me-1"></i>
                               <span class="d-none d-md-inline">View Application</span>
                               <span class="d-md-none">View</span>
+                            </button>
+                            <button class="btn btn-success btn-sm" (click)="openPaymentUploadModal(item)" title="Upload Payment Slip">
+                              <i class="bi bi-upload me-1"></i>
+                              <span class="d-none d-md-inline">Upload Slip</span>
+                              <span class="d-md-none">Upload</span>
                             </button>
                           </div>
                         </td>
@@ -1696,7 +1701,7 @@
                     </div>
                     <div class="summary-item">
                       <span class="summary-label">Total Quantity:</span>
-                      <span class="summary-value">{{ getTotalHologramQuantity() }} Lakh</span>
+                      <span class="summary-value">{{ getTotalHologramQuantity() | number:'1.0-0' }}</span>
                     </div>
                   </div>
                 </div>
@@ -2228,26 +2233,26 @@
                         <thead class="table-success">
                           <tr>
                             <th>Series</th>
-                            <th class="text-end">Quantity (Lakh)</th>
+                            <th class="text-end">Quantity</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
                             <td>Local</td>
                             <td class="text-end">
-                              {{ selectedHologram?.localQtyLakh || 0 }}
+                              {{ selectedHologram?.localQtyLakh || 0 | number:'1.0-0' }}
                             </td>
                           </tr>
                           <tr>
                             <td>Export</td>
                             <td class="text-end">
-                              {{ selectedHologram?.exportQtyLakh || 0 }}
+                              {{ selectedHologram?.exportQtyLakh || 0 | number:'1.0-0' }}
                             </td>
                           </tr>
                           <tr>
                             <td>Defence</td>
                             <td class="text-end">
-                              {{ selectedHologram?.defenceQtyLakh || 0 }}
+                              {{ selectedHologram?.defenceQtyLakh || 0 | number:'1.0-0' }}
                             </td>
                           </tr>
                           <tr class="table-light">
@@ -2264,7 +2269,7 @@
                               exportQtyLakh: 0,
                               defenceQtyLakh: 0,
                               }
-                              )
+                              ) | number:'1.0-0'
                               }}
                             </th>
                           </tr>
@@ -2275,6 +2280,140 @@
                   <div class="modal-footer">
                     <button class="btn btn-outline-secondary" (click)="closeHologramDetails()">
                       <i class="bi bi-x-circle me-1"></i>Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Upload Modal -->
+            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
+              *ngIf="showPaymentUploadModal">
+              <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content shadow-lg border-0">
+                  <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                      <i class="bi bi-upload me-2"></i>
+                      Upload Payment Slip
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close"
+                      (click)="closePaymentUploadModal()"></button>
+                  </div>
+                  <div class="modal-body bg-light">
+                    <!-- Hologram Details -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">Hologram Procurement Details</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="row">
+                          <div class="col-md-6">
+                            <p class="mb-2"><strong>Reference No:</strong> {{ selectedPaymentHologram?.refNo }}</p>
+                            <p class="mb-2"><strong>Date:</strong> {{ selectedPaymentHologram?.date | date: "dd-MMM-yyyy" }}</p>
+                            <p class="mb-2"><strong>Company:</strong> {{ selectedPaymentHologram?.companyName }}</p>
+                          </div>
+                          <div class="col-md-6">
+                            <p class="mb-2"><strong>Type:</strong> 
+                              <span class="badge text-white" 
+                                [ngClass]="{
+                                  'bg-success': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Local',
+                                  'bg-dark': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Export',
+                                  'bg-warning text-dark': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Defence'
+                                }">
+                                {{ getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) }}
+                              </span>
+                            </p>
+                            <p class="mb-2"><strong>Total Quantity:</strong> {{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }} pieces</p>
+                            <p class="mb-2"><strong>Status:</strong> 
+                              <span class="badge bg-info">{{ selectedPaymentHologram?.status }}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Payment Calculation -->
+                    <div class="card mb-3">
+                      <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0">Payment Calculation</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Description</th>
+                                <th class="text-end">Quantity (Lakh)</th>
+                                <th class="text-end">Rate per Hologram</th>
+                                <th class="text-end">Amount (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td>Total Holograms</td>
+                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) }}</td>
+                                <td class="text-end">₹0.72</td>
+                                <td class="text-end"><strong>₹{{ calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2' }}</strong></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0">
+                          <i class="bi bi-info-circle me-2"></i>
+                          <strong>Note:</strong> Payment must be made offline to the printing press or tendered company. Upload the payment slip received after payment.
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- File Upload Section -->
+                    <div class="card">
+                      <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0">Upload Payment Slip</h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-3">
+                          <label for="paymentSlipFile" class="form-label">Select Payment Slip (PDF, JPG, PNG)</label>
+                          <input 
+                            type="file" 
+                            class="form-control" 
+                            id="paymentSlipFile"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            (change)="onPaymentSlipFileSelected($event)">
+                          <small class="text-muted">Maximum file size: 5MB</small>
+                        </div>
+                        
+                        <div class="mb-3" *ngIf="selectedPaymentSlipFile">
+                          <div class="alert alert-success">
+                            <i class="bi bi-file-earmark-check me-2"></i>
+                            <strong>Selected File:</strong> {{ selectedPaymentSlipFile.name }} 
+                            ({{ (selectedPaymentSlipFile.size / 1024).toFixed(2) }} KB)
+                          </div>
+                        </div>
+
+                        <div class="mb-3">
+                          <label for="paymentRemarks" class="form-label">Remarks (Optional)</label>
+                          <textarea 
+                            class="form-control" 
+                            id="paymentRemarks"
+                            rows="3"
+                            [(ngModel)]="paymentRemarks"
+                            placeholder="Enter any additional remarks about the payment..."></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" (click)="closePaymentUploadModal()">
+                      <i class="bi bi-x-circle me-2"></i>
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      class="btn btn-success" 
+                      (click)="uploadPaymentSlip()"
+                      [disabled]="!selectedPaymentSlipFile">
+                      <i class="bi bi-upload me-2"></i>
+                      Upload Payment Slip
                     </button>
                   </div>
                 </div>

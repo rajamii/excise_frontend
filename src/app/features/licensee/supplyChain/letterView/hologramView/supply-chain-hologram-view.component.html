@@ -4,7 +4,7 @@
     <div class="header-content">
       <div class="left-section">
         <button class="btn btn-outline-secondary" (click)="goBack()">
-          <i class="bi bi-arrow-left me-1"></i>Back to Supply Chain Dashboard
+          <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
         </button>
       </div>
       <div class="right-section">
@@ -89,7 +89,7 @@
                   <tr>
                     <th style="width: 100px;">Sl. No.</th>
                     <th>Hologram Series</th>
-                    <th style="width: 200px;">Quantity (In Lakh)</th>
+                    <th style="width: 200px;">Quantity</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -97,21 +97,21 @@
                   <tr>
                     <td>1</td>
                     <td>Local Series</td>
-                    <td class="fw-bold fs-5 text-success">{{ submittedData.localQtyLakh }}</td>
+                    <td class="fw-bold fs-5 text-success">{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
                   </tr>
                   }
                   @if (submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
                   <tr>
                     <td>1</td>
                     <td>Export Series</td>
-                    <td class="fw-bold fs-5 text-primary">{{ submittedData.exportQtyLakh }}</td>
+                    <td class="fw-bold fs-5 text-primary">{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
                   </tr>
                   }
                   @if (submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
                   <tr>
                     <td>1</td>
                     <td>Defence Series</td>
-                    <td class="fw-bold fs-5 text-warning">{{ submittedData.defenceQtyLakh }}</td>
+                    <td class="fw-bold fs-5 text-warning">{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
                   </tr>
                   }
                 </tbody>
@@ -139,7 +139,7 @@
                       </span>
                     </div>
                     <div class="col-6"><strong>Quantity:</strong></div>
-                    <div class="col-6 fw-bold fs-5 text-primary">{{ getTotalQuantity() }} Lakh</div>
+                    <div class="col-6 fw-bold fs-5 text-primary">{{ getTotalQuantity() | number:'1.0-0' }}</div>
                     <div class="col-6"><strong>Status:</strong></div>
                     <div class="col-6">
                       <span class="badge bg-success">Approved</span>
@@ -175,7 +175,7 @@
             <p class="mb-1">
               The hologram requisition application for <strong>{{ submittedData.procurementType || 'Local' }} Series</strong> 
               has been reviewed and approved by the Excise Department. The requested quantity of 
-              <strong>{{ getTotalQuantity() }} Lakh</strong> holograms is within the permitted limits and complies 
+              <strong>{{ getTotalQuantity() | number:'1.0-0' }}</strong> holograms is within the permitted limits and complies 
               with the regulatory requirements.
             </p>
             <p class="mb-0">
@@ -224,7 +224,7 @@
               <i class="bi bi-printer me-2"></i>Print Application
             </button>
             <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
-              <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+              <i class="bi bi-arrow-left me-2"></i>{{ getBackButtonText() }}
             </button>
           </div>
         </div>
@@ -234,7 +234,7 @@
         <h4><i class="bi bi-exclamation-triangle me-2"></i>No Data Found</h4>
         <p>The requested hologram application could not be found or loaded.</p>
         <button class="btn btn-primary" (click)="goBack()">
-          <i class="bi bi-arrow-left me-2"></i>Return to Supply Chain Dashboard
+          <i class="bi bi-arrow-left me-2"></i>Return to {{ getBackButtonText().replace('Back to ', '') }}
         </button>
       </div>
     }

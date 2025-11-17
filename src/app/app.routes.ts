@@ -240,13 +240,7 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/commissioner/commissioner-dashboard/commissioner-dashboard.component"
       ).then((m) => m.CommissionerDashboardComponent),
   },
-  {
-    path: "dev-hologram-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/HoloGram/hologram-letter-view/hologram-letter-view.component"
-      ).then((m) => m.HologramLetterViewComponent),
-  },
+
   {
     path: "dev-requisition-letter-view",
     loadComponent: () =>

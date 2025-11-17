@@ -77,13 +77,13 @@ export class SupplyChainHologramViewComponent implements OnInit {
   }
 
   private createSampleHologramData(refNo: string, type?: 'Local' | 'Export' | 'Defence' | null): HologramFormData {
-    // Create sample data for demonstration purposes
+    // Create sample data for demonstration purposes (includes both supply chain and commissioner data)
     const sampleData: { [key: string]: HologramFormData } = {
       'YB/1/BREW/24': {
         refNo: 'YB/1/BREW/24',
         date: '2025-01-13',
         companyName: 'Yuksom Breweries Ltd.',
-        localQtyLakh: 15,
+        localQtyLakh: 1500000,
         exportQtyLakh: 0,
         defenceQtyLakh: 0,
         procurementType: 'Local'
@@ -92,8 +92,8 @@ export class SupplyChainHologramViewComponent implements OnInit {
         refNo: 'YB/2/BREW/24',
         date: '2025-01-13',
         companyName: 'Yuksom Breweries Ltd.',
-        localQtyLakh: 10,
-        exportQtyLakh: 2,
+        localQtyLakh: 1000000,
+        exportQtyLakh: 200000,
         defenceQtyLakh: 0,
         procurementType: 'Local'
       },
@@ -101,9 +101,64 @@ export class SupplyChainHologramViewComponent implements OnInit {
         refNo: 'YB/4/BREW/25',
         date: '2025-01-15',
         companyName: 'Sikkim Breweries Ltd.',
-        localQtyLakh: 20,
-        exportQtyLakh: 8,
-        defenceQtyLakh: 3,
+        localQtyLakh: 2000000,
+        exportQtyLakh: 800000,
+        defenceQtyLakh: 300000,
+        procurementType: 'Local'
+      },
+      // Commissioner dashboard sample data
+      'HOL/BF901': {
+        refNo: 'HOL/BF901',
+        date: '2025-09-23',
+        companyName: 'Sikkim Distilleries Ltd',
+        localQtyLakh: 250000,
+        exportQtyLakh: 100000,
+        defenceQtyLakh: 50000,
+        procurementType: 'Local'
+      },
+      'HOL/BF902': {
+        refNo: 'HOL/BF902',
+        date: '2025-09-22',
+        companyName: 'Himalayan Distilleries Pvt Ltd',
+        localQtyLakh: 320000,
+        exportQtyLakh: 180000,
+        defenceQtyLakh: 0,
+        procurementType: 'Local'
+      },
+      'HOL/BF903': {
+        refNo: 'HOL/BF903',
+        date: '2025-09-21',
+        companyName: 'Royal Sikkim Brewery',
+        localQtyLakh: 280000,
+        exportQtyLakh: 70000,
+        defenceQtyLakh: 100000,
+        procurementType: 'Local'
+      },
+      'HOL/BF904': {
+        refNo: 'HOL/BF904',
+        date: '2025-09-20',
+        companyName: 'Mountain View Distilleries',
+        localQtyLakh: 200000,
+        exportQtyLakh: 50000,
+        defenceQtyLakh: 0,
+        procurementType: 'Local'
+      },
+      'HOL/BF905': {
+        refNo: 'HOL/BF905',
+        date: '2025-09-19',
+        companyName: 'Eastern Himalaya Distillery',
+        localQtyLakh: 400000,
+        exportQtyLakh: 200000,
+        defenceQtyLakh: 50000,
+        procurementType: 'Local'
+      },
+      'HOL/BF906': {
+        refNo: 'HOL/BF906',
+        date: '2025-09-18',
+        companyName: 'Gangtok Premium Spirits',
+        localQtyLakh: 150000,
+        exportQtyLakh: 0,
+        defenceQtyLakh: 0,
         procurementType: 'Local'
       }
     };
@@ -112,9 +167,9 @@ export class SupplyChainHologramViewComponent implements OnInit {
       refNo: refNo,
       date: new Date().toISOString().split('T')[0],
       companyName: 'Sikkim Distilleries Ltd',
-      localQtyLakh: 25,
-      exportQtyLakh: 5,
-      defenceQtyLakh: 2,
+      localQtyLakh: 2500000,
+      exportQtyLakh: 500000,
+      defenceQtyLakh: 200000,
       procurementType: type || 'Local'
     };
 
@@ -126,8 +181,26 @@ export class SupplyChainHologramViewComponent implements OnInit {
     return data;
   }
 
+  getBackButtonText(): string {
+    const from = this.route.snapshot.queryParamMap.get('from');
+    return from === 'commissioner' 
+      ? 'Back to Commissioner Dashboard' 
+      : 'Back to Supply Chain Dashboard';
+  }
+
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Check if there's a 'from' query parameter to determine where to go back
+    const from = this.route.snapshot.queryParamMap.get('from');
+    
+    if (from === 'commissioner') {
+      this.router.navigate(['/dev-commissioner-dashboard'], {
+        queryParams: { tab: 'hologram' }
+      });
+    } else {
+      this.router.navigate(['/dev-supply-chain'], {
+        queryParams: { tab: 'hologram' }
+      });
+    }
   }
 
   getTotalQuantity(): number {

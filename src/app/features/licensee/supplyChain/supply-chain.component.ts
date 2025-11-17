@@ -50,6 +50,10 @@ export class SupplyChainComponent implements OnInit {
   filteredHologramData: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
+  showPaymentUploadModal = false;
+  selectedPaymentHologram: HologramRow | null = null;
+  selectedPaymentSlipFile: File | null = null;
+  paymentRemarks: string = '';
 
   // Filter properties for hologram requests
   dateFilter: string = '';
@@ -1799,13 +1803,108 @@ End of Application
   // Hologram summary methods
   getHologramStatusCount(status: string): number {
     return this.hologramList.filter(item =>
-      item.status.toUpperCase() === status.toUpperCase()
+      item.status.toLowerCase().includes(status.toLowerCase())
     ).length;
   }
 
   getTotalHologramQuantity(): number {
-    return this.hologramList.reduce((total, item) => {
-      return total + (item.localQtyLakh || 0) + (item.exportQtyLakh || 0) + (item.defenceQtyLakh || 0);
-    }, 0);
+    return this.hologramList.reduce((total, item) => 
+      total + this.getHologramTotal(item), 0
+    );
+  }
+
+  // Payment Upload Methods
+  openPaymentUploadModal(hologram: HologramRow): void {
+    this.selectedPaymentHologram = hologram;
+    this.selectedPaymentSlipFile = null;
+    this.paymentRemarks = '';
+    this.showPaymentUploadModal = true;
+  }
+
+  closePaymentUploadModal(): void {
+    this.showPaymentUploadModal = false;
+    this.selectedPaymentHologram = null;
+    this.selectedPaymentSlipFile = null;
+    this.paymentRemarks = '';
+  }
+
+  calculatePaymentAmount(hologram: HologramRow | null): number {
+    if (!hologram) return 0;
+    
+    const totalHolograms = this.getHologramTotal(hologram);
+    // Convert lakh to actual number (1 lakh = 100,000)
+    const actualHolograms = totalHolograms * 100000;
+    // Rate is 0.72 rupees per hologram
+    const amount = actualHolograms * 0.72;
+    
+    return amount;
+  }
+
+  onPaymentSlipFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size exceeds 5MB. Please select a smaller file.');
+        event.target.value = '';
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Please select a PDF, JPG, or PNG file.');
+        event.target.value = '';
+        return;
+      }
+
+      this.selectedPaymentSlipFile = file;
+    }
+  }
+
+  uploadPaymentSlip(): void {
+    if (!this.selectedPaymentSlipFile || !this.selectedPaymentHologram) {
+      alert('Please select a payment slip file to upload.');
+      return;
+    }
+
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Create payment record
+    const paymentRecord = {
+      hologramRefNo: this.selectedPaymentHologram.refNo,
+      hologramDate: this.selectedPaymentHologram.date,
+      companyName: this.selectedPaymentHologram.companyName,
+      procurementType: this.getProcurementType(this.selectedPaymentHologram),
+      totalQuantity: this.getHologramTotal(this.selectedPaymentHologram),
+      paymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram),
+      fileName: this.selectedPaymentSlipFile.name,
+      fileSize: this.selectedPaymentSlipFile.size,
+      fileType: this.selectedPaymentSlipFile.type,
+      remarks: this.paymentRemarks,
+      uploadDate: new Date().toISOString(),
+      status: 'Uploaded'
+    };
+
+    // Store payment record in localStorage
+    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    existingPayments.push(paymentRecord);
+    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
+
+    // In a real application, you would upload the file to a server here
+    // For now, we'll just store the file information
+    
+    // Show success message
+    alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nAmount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}`);
+
+    // Close modal
+    this.closePaymentUploadModal();
+
+    // Optionally refresh the hologram list to show updated status
+    this.refreshHologramList();
   }
 }
+

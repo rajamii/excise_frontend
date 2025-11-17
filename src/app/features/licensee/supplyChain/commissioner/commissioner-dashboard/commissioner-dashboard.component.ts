@@ -878,9 +878,12 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   reviewHologram(item: CommissionerTableData): void {
-    // Navigate to hologram letter view with reference number
-    this.router.navigate(['/dev-hologram-letter-view'], {
-      queryParams: { ref: item.referenceNo }
+    // Navigate to supply chain hologram view with reference number and from parameter
+    this.router.navigate(['/dev-supply-chain-hologram-view'], {
+      queryParams: { 
+        ref: item.referenceNo,
+        from: 'commissioner'
+      }
     });
   }
 

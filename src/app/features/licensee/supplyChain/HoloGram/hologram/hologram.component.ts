@@ -27,13 +27,15 @@ export class HologramComponent {
   submittedData?: HologramFormData;
   isSubmitted = false;
   showSuccessMessage = false;
+  selectedPaymentSlipFile: File | null = null;
+  paymentRemarks: string = '';
 
   formData: HologramFormData = {
     refNo: '',
     date: '',
     companyName: 'Yuksom Breweries Ltd.',
     // Prefill sample data so the user can see how inputs look
-    localQtyLakh: 15,
+    localQtyLakh: 1500000,
     exportQtyLakh: 0,
     defenceQtyLakh: 0
   };
@@ -138,7 +140,7 @@ export class HologramComponent {
       return false;
     }
     if (!this.formData.localQtyLakh && !this.formData.exportQtyLakh && !this.formData.defenceQtyLakh) {
-      this.errorMessage = 'Enter at least one quantity (in lakh)';
+      this.errorMessage = 'Enter at least one quantity';
       return false;
     }
     this.errorMessage = '';
@@ -553,7 +555,7 @@ export class HologramComponent {
                     <tr>
                       <th>Sl. No.</th>
                       <th>Hologram Series</th>
-                      <th>Quantity (In Lakh)</th>
+                      <th>Quantity</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -561,24 +563,24 @@ export class HologramComponent {
                     <tr>
                       <td>1</td>
                       <td>Local Series</td>
-                      <td>${localQty}</td>
+                      <td>${localQty.toLocaleString('en-IN')}</td>
                       <td><span class="status-approved">Approved</span></td>
                     </tr>
                     <tr>
                       <td>2</td>
                       <td>Export Series</td>
-                      <td>${exportQty}</td>
+                      <td>${exportQty.toLocaleString('en-IN')}</td>
                       <td><span class="status-approved">Approved</span></td>
                     </tr>
                     <tr>
                       <td>3</td>
                       <td>Defence Series</td>
-                      <td>${defenceQty}</td>
+                      <td>${defenceQty.toLocaleString('en-IN')}</td>
                       <td><span class="status-approved">Approved</span></td>
                     </tr>
                     <tr class="total-row">
                       <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
-                      <td><strong>${totalQty}</strong></td>
+                      <td><strong>${totalQty.toLocaleString('en-IN')}</strong></td>
                       <td><span class="status-total">APPROVED</span></td>
                     </tr>
                   </tbody>
@@ -601,5 +603,103 @@ export class HologramComponent {
 
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
+  }
+
+  // Payment calculation methods
+  calculateAmount(quantity: number): number {
+    // Rate is 0.72 rupees per hologram
+    return quantity * 0.72;
+  }
+
+  calculateTotalAmount(): number {
+    if (!this.submittedData) return 0;
+    
+    const localAmount = this.submittedData.localQtyLakh ? this.calculateAmount(this.submittedData.localQtyLakh) : 0;
+    const exportAmount = this.submittedData.exportQtyLakh ? this.calculateAmount(this.submittedData.exportQtyLakh) : 0;
+    const defenceAmount = this.submittedData.defenceQtyLakh ? this.calculateAmount(this.submittedData.defenceQtyLakh) : 0;
+    
+    return localAmount + exportAmount + defenceAmount;
+  }
+
+  getTotalQuantityLakh(): number {
+    if (!this.submittedData) return 0;
+    
+    return (this.submittedData.localQtyLakh || 0) + 
+           (this.submittedData.exportQtyLakh || 0) + 
+           (this.submittedData.defenceQtyLakh || 0);
+  }
+
+  // Payment slip upload methods
+  onPaymentSlipFileSelected(event: any): void {
+    const file = event.target.files[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size exceeds 5MB. Please select a smaller file.');
+        event.target.value = '';
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Invalid file type. Please select a PDF, JPG, or PNG file.');
+        event.target.value = '';
+        return;
+      }
+
+      this.selectedPaymentSlipFile = file;
+    }
+  }
+
+  uploadPaymentSlip(): void {
+    if (!this.selectedPaymentSlipFile || !this.submittedData) {
+      alert('Please select a payment slip file to upload.');
+      return;
+    }
+
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Create payment record
+    const paymentRecord = {
+      hologramRefNo: this.submittedData.refNo,
+      hologramDate: this.submittedData.date,
+      companyName: this.submittedData.companyName,
+      localQtyLakh: this.submittedData.localQtyLakh || 0,
+      exportQtyLakh: this.submittedData.exportQtyLakh || 0,
+      defenceQtyLakh: this.submittedData.defenceQtyLakh || 0,
+      totalQuantity: this.getTotalQuantityLakh(),
+      paymentAmount: this.calculateTotalAmount(),
+      fileName: this.selectedPaymentSlipFile.name,
+      fileSize: this.selectedPaymentSlipFile.size,
+      fileType: this.selectedPaymentSlipFile.type,
+      remarks: this.paymentRemarks,
+      uploadDate: new Date().toISOString(),
+      status: 'Uploaded'
+    };
+
+    // Store payment record in localStorage
+    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+    existingPayments.push(paymentRecord);
+    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
+
+    // In a real application, you would upload the file to a server here
+    // For now, we'll just store the file information
+    
+    // Show success message
+    alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nTotal Amount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}\n\nYour payment has been recorded and will be verified by the department.`);
+
+    // Reset file input
+    this.selectedPaymentSlipFile = null;
+    this.paymentRemarks = '';
+    
+    // Clear the file input
+    const fileInput = document.getElementById('paymentSlipFile') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   }
 }

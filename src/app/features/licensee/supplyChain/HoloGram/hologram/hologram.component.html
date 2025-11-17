@@ -35,7 +35,7 @@
                     <tr>
                       <th style="width: 120px;">Sl. No.</th>
                       <th>Series</th>
-                      <th style="width: 260px;">Quantity (In Lakh)</th>
+                      <th style="width: 260px;">Quantity</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -44,7 +44,7 @@
                       <td>Local</td>
                       <td>
                         <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0"
-                          step="0.01" placeholder="e.g. 15">
+                          step="1" placeholder="e.g. 1500000">
                       </td>
                     </tr>
                     <tr>
@@ -52,7 +52,7 @@
                       <td>Export</td>
                       <td>
                         <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0"
-                          step="0.01">
+                          step="1">
                       </td>
                     </tr>
                     <tr>
@@ -60,13 +60,13 @@
                       <td>Defence</td>
                       <td>
                         <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0"
-                          step="0.01">
+                          step="1">
                       </td>
                     </tr>
                     <tr>
                       <th colspan="2" class="text-end">Total No. of Holograms</th>
                       <th>
-                        <div class="form-control-plaintext fw-bold">{{ totalQtyLakh || 0 }} Lakh</div>
+                        <div class="form-control-plaintext fw-bold">{{ totalQtyLakh || 0 }}</div>
                       </th>
                     </tr>
                   </tbody>
@@ -149,7 +149,7 @@
                   <tr>
                     <th>Sl. No.</th>
                     <th>Hologram Series</th>
-                    <th>Quantity (In Lakh)</th>
+                    <th>Quantity</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -157,25 +157,25 @@
                   <tr>
                     <td>1</td>
                     <td>Local Series</td>
-                    <td>{{ submittedData?.localQtyLakh || 0 }}</td>
+                    <td>{{ submittedData?.localQtyLakh || 0 | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
                   <tr>
                     <td>2</td>
                     <td>Export Series</td>
-                    <td>{{ submittedData?.exportQtyLakh || 0 }}</td>
+                    <td>{{ submittedData?.exportQtyLakh || 0 | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
                   <tr>
                     <td>3</td>
                     <td>Defence Series</td>
-                    <td>{{ submittedData?.defenceQtyLakh || 0 }}</td>
+                    <td>{{ submittedData?.defenceQtyLakh || 0 | number:'1.0-0' }}</td>
                     <td><span class="status-approved">Approved</span></td>
                   </tr>
                   <tr class="total-row">
                     <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
                     <td><strong>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) +
-                        (submittedData?.defenceQtyLakh || 0)) }}</strong></td>
+                        (submittedData?.defenceQtyLakh || 0)) | number:'1.0-0' }}</strong></td>
                     <td><span class="status-total">APPROVED</span></td>
                   </tr>
                 </tbody>
@@ -191,7 +191,7 @@
                 <div class="summary-row">
                   <span class="summary-label">Total Quantity:</span>
                   <span class="summary-value">{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh ||
-                    0) + (submittedData?.defenceQtyLakh || 0)) }} Lakh</span>
+                    0) + (submittedData?.defenceQtyLakh || 0)) | number:'1.0-0' }} pieces</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">Series Count:</span>
@@ -248,6 +248,150 @@
             <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
               <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
             </button>
+          </div>
+        </div>
+        }
+
+        <!-- Payment Section - Shows after submission -->
+        @if (isSubmitted) {
+        <div class="card shadow-lg border-0 mt-4">
+          <div class="card-header bg-warning text-dark text-center py-3">
+            <h4 class="mb-0 fw-bold">
+              <i class="bi bi-currency-rupee me-2"></i>
+              Payment Information
+            </h4>
+          </div>
+          <div class="card-body bg-white">
+            <!-- Payment Calculation -->
+            <div class="alert alert-info mb-4">
+              <h5 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>
+                Offline Payment Required
+              </h5>
+              <p class="mb-0">
+                Payment must be made offline to the printing press or tendered company. 
+                After making the payment, please upload the payment slip received from them.
+              </p>
+            </div>
+
+            <!-- Payment Calculation Table -->
+            <div class="table-responsive mb-4">
+              <table class="table table-bordered">
+                <thead class="table-primary">
+                  <tr>
+                    <th>Description</th>
+                    <th class="text-end">Quantity</th>
+                    <th class="text-end">Rate per Hologram</th>
+                    <th class="text-end">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (submittedData && submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
+                  <tr>
+                    <td>Local Series Holograms</td>
+                    <td class="text-end">{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.localQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  @if (submittedData && submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
+                  <tr>
+                    <td>Export Series Holograms</td>
+                    <td class="text-end">{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.exportQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  @if (submittedData && submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
+                  <tr>
+                    <td>Defence Series Holograms</td>
+                    <td class="text-end">{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.defenceQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  <tr class="table-success fw-bold">
+                    <td colspan="3" class="text-end">Total Payment Amount:</td>
+                    <td class="text-end">₹{{ calculateTotalAmount() | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Payment Details Card -->
+            <div class="card border-primary mb-4">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-calculator me-2"></i>
+                  Payment Breakdown
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Total Holograms:</strong> {{ getTotalQuantityLakh() | number:'1.0-0' }} pieces</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Rate per Hologram:</strong> ₹0.72</p>
+                    <p class="mb-2"><strong>Total Amount:</strong> <span class="text-success fw-bold fs-5">₹{{ calculateTotalAmount() | number:'1.2-2' }}</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Payment Slip Section -->
+            <div class="card border-success">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-upload me-2"></i>
+                  Upload Payment Slip
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="paymentSlipFile" class="form-label">
+                    Select Payment Slip (PDF, JPG, PNG)
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input 
+                    type="file" 
+                    class="form-control" 
+                    id="paymentSlipFile"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    (change)="onPaymentSlipFileSelected($event)">
+                  <small class="text-muted">Maximum file size: 5MB</small>
+                </div>
+                
+                @if (selectedPaymentSlipFile) {
+                <div class="alert alert-success mb-3">
+                  <i class="bi bi-file-earmark-check me-2"></i>
+                  <strong>Selected File:</strong> {{ selectedPaymentSlipFile.name }} 
+                  ({{ (selectedPaymentSlipFile.size / 1024).toFixed(2) }} KB)
+                </div>
+                }
+
+                <div class="mb-3">
+                  <label for="paymentRemarks" class="form-label">Remarks (Optional)</label>
+                  <textarea 
+                    class="form-control" 
+                    id="paymentRemarks"
+                    rows="3"
+                    [(ngModel)]="paymentRemarks"
+                    placeholder="Enter any additional remarks about the payment..."></textarea>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button 
+                    type="button" 
+                    class="btn btn-success btn-lg" 
+                    (click)="uploadPaymentSlip()"
+                    [disabled]="!selectedPaymentSlipFile">
+                    <i class="bi bi-upload me-2"></i>
+                    Upload Payment Slip
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         }
