@@ -15,6 +15,7 @@ export interface HologramRecord {
   status: 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL';
   approvedDate?: string;
   arrivedDate?: string;
+  procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
   supplyChainData?: any;
 }
 
@@ -103,13 +104,20 @@ export class HologramdetailsComponent implements OnInit {
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
 
     // Convert supply chain hologram data to register format
+    // Each item now represents a single type (Local, Export, or Defence)
     const supplyChainRecords = [...hologramRequests, ...hologramApplications].map((item: any, index: number) => {
-      // Determine the primary type based on quantities
-      let primaryType = 'Local';
-      if (item.exportQtyLakh > 0) {
-        primaryType = 'Export';
-      } else if (item.defenceQtyLakh > 0) {
-        primaryType = 'Defence';
+      // Determine the type - now each row has a specific type
+      let primaryType = item.procurementType || 'Local';
+      
+      // Fallback: determine type based on quantities if procurementType not set
+      if (!item.procurementType) {
+        if (item.exportQtyLakh > 0) {
+          primaryType = 'Export';
+        } else if (item.defenceQtyLakh > 0) {
+          primaryType = 'Defence';
+        } else {
+          primaryType = 'Local';
+        }
       }
 
       return {
@@ -124,8 +132,10 @@ export class HologramdetailsComponent implements OnInit {
         status: this.determineStatus(item),
         approvedDate: item.approvedDate,
         arrivedDate: item.arrivedDate,
+        procurementType: primaryType, // Store the type in the record
         supplyChainData: {
           ...item,
+          procurementType: primaryType,
           // Ensure we have the quantity fields for type determination
           localQtyLakh: item.localQtyLakh || 0,
           exportQtyLakh: item.exportQtyLakh || 0,
@@ -149,22 +159,23 @@ export class HologramdetailsComponent implements OnInit {
       arrivedDate: entry.arrivedDate
     }));
 
-    // Combine and deduplicate records based on ourRefNo
+    // Combine and deduplicate records based on ourRefNo + procurementType
     const allRecords = [...supplyChainRecords, ...officerRecords];
     const uniqueRecordsMap = new Map();
 
-    // Deduplicate by ourRefNo, keeping the most recent/complete record
+    // Deduplicate by ourRefNo + procurementType, keeping the most recent/complete record
     allRecords.forEach(record => {
-      const existingRecord = uniqueRecordsMap.get(record.ourRefNo);
+      const recordKey = this.getRecordKey(record);
+      const existingRecord = uniqueRecordsMap.get(recordKey);
 
       if (!existingRecord) {
         // No existing record, add this one
-        uniqueRecordsMap.set(record.ourRefNo, record);
+        uniqueRecordsMap.set(recordKey, record);
       } else {
         // Record exists, keep the one with more complete data or higher status
         const shouldReplace = this.shouldReplaceRecord(existingRecord, record);
         if (shouldReplace) {
-          uniqueRecordsMap.set(record.ourRefNo, record);
+          uniqueRecordsMap.set(recordKey, record);
         }
       }
     });
@@ -384,6 +395,11 @@ export class HologramdetailsComponent implements OnInit {
     }
 
     return false;
+  }
+
+  // Create unique key for deduplication that includes type
+  getRecordKey(record: HologramRecord): string {
+    return `${record.ourRefNo}_${record.procurementType || 'Unknown'}`;
   }
 
   applyFilters() {
@@ -719,7 +735,17 @@ export class HologramdetailsComponent implements OnInit {
 
   // Hologram type related methods
   getHologramType(record: HologramRecord): string {
-    // Check supply chain data first
+    // First check if procurementType is directly set
+    if (record.procurementType) {
+      return record.procurementType.toUpperCase();
+    }
+
+    // Check supply chain data for procurementType
+    if (record.supplyChainData?.procurementType) {
+      return record.supplyChainData.procurementType.toUpperCase();
+    }
+
+    // Fallback: Check supply chain data for quantities
     if (record.supplyChainData) {
       // Check which type has quantity > 0
       if (record.supplyChainData.exportQtyLakh > 0) {

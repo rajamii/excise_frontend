@@ -193,48 +193,71 @@ export class HologramComponent {
 
     // Save to both storage keys for compatibility
 
-    // 1. Save to hologramApplications (new format)
+    // 1. Save to hologramApplications (new format) - Create separate rows for each type
     const dashboardKey = 'hologramApplications';
     const applications = JSON.parse(localStorage.getItem(dashboardKey) || '[]');
 
-    const newApplication = {
-      id: Date.now().toString(),
-      refNo: this.submittedData.refNo,
-      date: this.submittedData.date,
-      companyName: this.submittedData.companyName,
-      localQtyLakh: this.submittedData.localQtyLakh || 0,
-      exportQtyLakh: this.submittedData.exportQtyLakh || 0,
-      defenceQtyLakh: this.submittedData.defenceQtyLakh || 0,
-      totalQtyLakh: (this.submittedData.localQtyLakh || 0) + (this.submittedData.exportQtyLakh || 0) + (this.submittedData.defenceQtyLakh || 0),
-      status: 'Submitted',
-      submittedAt: new Date().toISOString(),
-      type: 'Hologram Application'
-    };
+    const baseTimestamp = Date.now();
+    const types: Array<{ type: 'Local' | 'Export' | 'Defence', qty: number }> = [];
 
-    applications.unshift(newApplication);
+    // Collect types with quantities
+    if (this.submittedData.localQtyLakh && this.submittedData.localQtyLakh > 0) {
+      types.push({ type: 'Local', qty: this.submittedData.localQtyLakh });
+    }
+    if (this.submittedData.exportQtyLakh && this.submittedData.exportQtyLakh > 0) {
+      types.push({ type: 'Export', qty: this.submittedData.exportQtyLakh });
+    }
+    if (this.submittedData.defenceQtyLakh && this.submittedData.defenceQtyLakh > 0) {
+      types.push({ type: 'Defence', qty: this.submittedData.defenceQtyLakh });
+    }
+
+    // Create separate application for each type with same Ref. No
+    types.forEach((typeInfo, index) => {
+      const newApplication = {
+        id: (baseTimestamp + index).toString(),
+        refNo: this.submittedData!.refNo,
+        date: this.submittedData!.date,
+        companyName: this.submittedData!.companyName,
+        procurementType: typeInfo.type, // Add type field
+        localQtyLakh: typeInfo.type === 'Local' ? typeInfo.qty : 0,
+        exportQtyLakh: typeInfo.type === 'Export' ? typeInfo.qty : 0,
+        defenceQtyLakh: typeInfo.type === 'Defence' ? typeInfo.qty : 0,
+        totalQtyLakh: typeInfo.qty,
+        status: 'Submitted',
+        submittedAt: new Date().toISOString(),
+        type: 'Hologram Application'
+      };
+
+      applications.unshift(newApplication);
+    });
+
     localStorage.setItem(dashboardKey, JSON.stringify(applications));
 
-    // 2. Also save to hologramRequests (for supply chain compatibility)
+    // 2. Also save to hologramRequests (for supply chain compatibility) - Create separate rows
     const requestsKey = 'hologramRequests';
     const requests = JSON.parse(localStorage.getItem(requestsKey) || '[]');
 
-    const requestData = {
-      refNo: this.submittedData.refNo,
-      date: this.submittedData.date,
-      companyName: this.submittedData.companyName,
-      localQtyLakh: this.submittedData.localQtyLakh || 0,
-      exportQtyLakh: this.submittedData.exportQtyLakh || 0,
-      defenceQtyLakh: this.submittedData.defenceQtyLakh || 0,
-    };
+    types.forEach((typeInfo) => {
+      const requestData = {
+        refNo: this.submittedData!.refNo,
+        date: this.submittedData!.date,
+        companyName: this.submittedData!.companyName,
+        procurementType: typeInfo.type, // Add type field
+        localQtyLakh: typeInfo.type === 'Local' ? typeInfo.qty : 0,
+        exportQtyLakh: typeInfo.type === 'Export' ? typeInfo.qty : 0,
+        defenceQtyLakh: typeInfo.type === 'Defence' ? typeInfo.qty : 0,
+      };
 
-    requests.unshift(requestData);
+      requests.unshift(requestData);
+    });
+
     localStorage.setItem(requestsKey, JSON.stringify(requests));
 
-    console.log('✅ Application registered in both hologram storages:', {
-      refNo: newApplication.refNo,
-      date: newApplication.date,
-      company: newApplication.companyName,
-      totalQty: newApplication.totalQtyLakh
+    console.log('✅ Application registered with separate rows for each type:', {
+      refNo: this.submittedData.refNo,
+      date: this.submittedData.date,
+      company: this.submittedData.companyName,
+      types: types.map(t => `${t.type}: ${t.qty}`).join(', ')
     });
   }
 

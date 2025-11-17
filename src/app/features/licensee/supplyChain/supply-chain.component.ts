@@ -20,6 +20,7 @@ interface HologramRow {
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
+  procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
   status: string;
 }
 
@@ -310,6 +311,7 @@ export class SupplyChainComponent implements OnInit {
       localQtyLakh: r.localQtyLakh,
       exportQtyLakh: r.exportQtyLakh,
       defenceQtyLakh: r.defenceQtyLakh,
+      procurementType: r.procurementType, // Include procurement type
       status: "Submitted",
     }));
 
@@ -321,15 +323,17 @@ export class SupplyChainComponent implements OnInit {
       localQtyLakh: a.localQtyLakh,
       exportQtyLakh: a.exportQtyLakh,
       defenceQtyLakh: a.defenceQtyLakh,
+      procurementType: a.procurementType, // Include procurement type
       status: a.status || "Submitted",
     }));
 
-    // Combine both lists and remove duplicates by refNo
+    // Combine both lists and remove duplicates by refNo + procurementType
     const combined = [...mappedApplications, ...mappedRequests];
     const uniqueMap = new Map();
     combined.forEach(item => {
-      if (!uniqueMap.has(item.refNo)) {
-        uniqueMap.set(item.refNo, item);
+      const key = `${item.refNo}_${item.procurementType || 'Unknown'}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item);
       }
     });
 
@@ -346,6 +350,7 @@ export class SupplyChainComponent implements OnInit {
           localQtyLakh: 15,
           exportQtyLakh: 0,
           defenceQtyLakh: 0,
+          procurementType: 'Local' as 'Local' | 'Export' | 'Defence',
           status: "Draft",
         },
         {
@@ -353,8 +358,19 @@ export class SupplyChainComponent implements OnInit {
           date: today,
           companyName: "Yuksom Breweries Ltd.",
           localQtyLakh: 10,
+          exportQtyLakh: 0,
+          defenceQtyLakh: 0,
+          procurementType: 'Local' as 'Local' | 'Export' | 'Defence',
+          status: "Submitted",
+        },
+        {
+          refNo: "YB/2/BREW/" + String(new Date().getFullYear()).slice(-2),
+          date: today,
+          companyName: "Yuksom Breweries Ltd.",
+          localQtyLakh: 0,
           exportQtyLakh: 2,
           defenceQtyLakh: 0,
+          procurementType: 'Export' as 'Local' | 'Export' | 'Defence',
           status: "Submitted",
         },
       );
@@ -369,6 +385,7 @@ export class SupplyChainComponent implements OnInit {
             localQtyLakh: m.localQtyLakh,
             exportQtyLakh: m.exportQtyLakh,
             defenceQtyLakh: m.defenceQtyLakh,
+            procurementType: m.procurementType,
           })),
         ),
       );
@@ -376,6 +393,21 @@ export class SupplyChainComponent implements OnInit {
       // Sort by date (newest first)
       mapped = mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
+
+    // Ensure all items have procurementType set (fallback for old data)
+    mapped = mapped.map(item => {
+      if (!item.procurementType) {
+        // Determine type from quantities
+        if (item.exportQtyLakh && item.exportQtyLakh > 0) {
+          item.procurementType = 'Export';
+        } else if (item.defenceQtyLakh && item.defenceQtyLakh > 0) {
+          item.procurementType = 'Defence';
+        } else {
+          item.procurementType = 'Local';
+        }
+      }
+      return item;
+    });
 
     this.hologramList = mapped;
     this.filteredHologramData = [...this.hologramList];
@@ -590,9 +622,12 @@ export class SupplyChainComponent implements OnInit {
   }
 
   viewHologramApplication(item: HologramRow): void {
-    // Navigate to supply-chain hologram view
+    // Navigate to supply-chain hologram view with ref and type
     this.router.navigate(["/dev-supply-chain-hologram-view"], {
-      queryParams: { ref: item.refNo },
+      queryParams: { 
+        ref: item.refNo,
+        type: item.procurementType || this.getProcurementType(item)
+      },
     });
   }
 
@@ -648,6 +683,22 @@ export class SupplyChainComponent implements OnInit {
       (row.exportQtyLakh || 0) +
       (row.defenceQtyLakh || 0)
     );
+  }
+
+  getProcurementType(row: HologramRow): 'Local' | 'Export' | 'Defence' {
+    // Return the stored type if available
+    if (row.procurementType) {
+      return row.procurementType;
+    }
+    
+    // Fallback: determine from quantities
+    if (row.exportQtyLakh && row.exportQtyLakh > 0) {
+      return 'Export';
+    } else if (row.defenceQtyLakh && row.defenceQtyLakh > 0) {
+      return 'Defence';
+    } else {
+      return 'Local';
+    }
   }
 
   openApplicationView(): void {

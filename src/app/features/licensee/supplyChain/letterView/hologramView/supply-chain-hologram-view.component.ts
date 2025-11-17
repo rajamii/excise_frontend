@@ -9,6 +9,7 @@ interface HologramFormData {
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
+  procurementType?: 'Local' | 'Export' | 'Defence';
 }
 
 @Component({
@@ -33,13 +34,27 @@ export class SupplyChainHologramViewComponent implements OnInit {
   ngOnInit(): void {
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
+      const type = this.route.snapshot.queryParamMap.get('type') as 'Local' | 'Export' | 'Defence' | null;
+      
       if (ref) {
         const list: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-        let found = list.find(r => r.refNo === ref);
+        
+        // Find by both refNo and procurementType
+        let found = list.find(r => r.refNo === ref && (!type || r.procurementType === type));
+
+        // Fallback: if type not found, try without type filter (for old data)
+        if (!found && type) {
+          found = list.find(r => r.refNo === ref);
+          
+          // If found but doesn't have the specific type, filter the quantities
+          if (found) {
+            found = this.filterByType(found, type);
+          }
+        }
 
         if (!found) {
           // If not found in localStorage, create sample data for demonstration
-          found = this.createSampleHologramData(ref);
+          found = this.createSampleHologramData(ref, type);
         }
 
         this.submittedData = found;
@@ -50,7 +65,18 @@ export class SupplyChainHologramViewComponent implements OnInit {
     }
   }
 
-  private createSampleHologramData(refNo: string): HologramFormData {
+  private filterByType(data: HologramFormData, type: 'Local' | 'Export' | 'Defence'): HologramFormData {
+    // Create a new object with only the specified type's quantity
+    return {
+      ...data,
+      procurementType: type,
+      localQtyLakh: type === 'Local' ? data.localQtyLakh : 0,
+      exportQtyLakh: type === 'Export' ? data.exportQtyLakh : 0,
+      defenceQtyLakh: type === 'Defence' ? data.defenceQtyLakh : 0
+    };
+  }
+
+  private createSampleHologramData(refNo: string, type?: 'Local' | 'Export' | 'Defence' | null): HologramFormData {
     // Create sample data for demonstration purposes
     const sampleData: { [key: string]: HologramFormData } = {
       'YB/1/BREW/24': {
@@ -59,7 +85,8 @@ export class SupplyChainHologramViewComponent implements OnInit {
         companyName: 'Yuksom Breweries Ltd.',
         localQtyLakh: 15,
         exportQtyLakh: 0,
-        defenceQtyLakh: 0
+        defenceQtyLakh: 0,
+        procurementType: 'Local'
       },
       'YB/2/BREW/24': {
         refNo: 'YB/2/BREW/24',
@@ -67,7 +94,8 @@ export class SupplyChainHologramViewComponent implements OnInit {
         companyName: 'Yuksom Breweries Ltd.',
         localQtyLakh: 10,
         exportQtyLakh: 2,
-        defenceQtyLakh: 0
+        defenceQtyLakh: 0,
+        procurementType: 'Local'
       },
       'YB/4/BREW/25': {
         refNo: 'YB/4/BREW/25',
@@ -75,18 +103,27 @@ export class SupplyChainHologramViewComponent implements OnInit {
         companyName: 'Sikkim Breweries Ltd.',
         localQtyLakh: 20,
         exportQtyLakh: 8,
-        defenceQtyLakh: 3
+        defenceQtyLakh: 3,
+        procurementType: 'Local'
       }
     };
 
-    return sampleData[refNo] || {
+    let data = sampleData[refNo] || {
       refNo: refNo,
       date: new Date().toISOString().split('T')[0],
       companyName: 'Sikkim Distilleries Ltd',
       localQtyLakh: 25,
       exportQtyLakh: 5,
-      defenceQtyLakh: 2
+      defenceQtyLakh: 2,
+      procurementType: type || 'Local'
     };
+
+    // Filter by type if specified
+    if (type) {
+      data = this.filterByType(data, type);
+    }
+
+    return data;
   }
 
   goBack(): void {

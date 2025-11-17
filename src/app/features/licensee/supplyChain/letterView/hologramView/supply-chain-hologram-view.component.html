@@ -82,41 +82,38 @@
 
           <!-- Hologram Quantity Details -->
           <div class="mb-4">
-            <h5 class="fw-bold mb-3">Requested Hologram Quantities</h5>
+            <h5 class="fw-bold mb-3">Requested Hologram Quantity</h5>
             <div class="simple-table">
               <table class="table table-bordered">
                 <thead>
                   <tr>
-                    <th>Sl. No.</th>
+                    <th style="width: 100px;">Sl. No.</th>
                     <th>Hologram Series</th>
-                    <th>Quantity (In Lakh)</th>
-                    <th>Status</th>
+                    <th style="width: 200px;">Quantity (In Lakh)</th>
                   </tr>
                 </thead>
                 <tbody>
+                  @if (submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
                   <tr>
                     <td>1</td>
                     <td>Local Series</td>
-                    <td>{{ submittedData.localQtyLakh || 0 }}</td>
-                    <td><span class="status-approved">Approved</span></td>
+                    <td class="fw-bold fs-5 text-success">{{ submittedData.localQtyLakh }}</td>
                   </tr>
+                  }
+                  @if (submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
                   <tr>
-                    <td>2</td>
+                    <td>1</td>
                     <td>Export Series</td>
-                    <td>{{ submittedData.exportQtyLakh || 0 }}</td>
-                    <td><span class="status-approved">Approved</span></td>
+                    <td class="fw-bold fs-5 text-primary">{{ submittedData.exportQtyLakh }}</td>
                   </tr>
+                  }
+                  @if (submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
                   <tr>
-                    <td>3</td>
+                    <td>1</td>
                     <td>Defence Series</td>
-                    <td>{{ submittedData.defenceQtyLakh || 0 }}</td>
-                    <td><span class="status-approved">Approved</span></td>
+                    <td class="fw-bold fs-5 text-warning">{{ submittedData.defenceQtyLakh }}</td>
                   </tr>
-                  <tr class="total-row">
-                    <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
-                    <td><strong>{{ getTotalQuantity() }}</strong></td>
-                    <td><span class="status-total">APPROVED</span></td>
-                  </tr>
+                  }
                 </tbody>
               </table>
             </div>
@@ -131,10 +128,18 @@
                 </div>
                 <div class="card-body">
                   <div class="row g-2">
-                    <div class="col-6"><strong>Total Quantity:</strong></div>
-                    <div class="col-6">{{ getTotalQuantity() }} Lakh</div>
-                    <div class="col-6"><strong>Series Count:</strong></div>
-                    <div class="col-6">3 Series</div>
+                    <div class="col-6"><strong>Procurement Type:</strong></div>
+                    <div class="col-6">
+                      <span class="badge" 
+                        [class.bg-success]="submittedData.procurementType === 'Local'"
+                        [class.bg-dark]="submittedData.procurementType === 'Export'"
+                        [class.bg-warning]="submittedData.procurementType === 'Defence'"
+                        [class.text-dark]="submittedData.procurementType === 'Defence'">
+                        {{ submittedData.procurementType || 'Local' }} Series
+                      </span>
+                    </div>
+                    <div class="col-6"><strong>Quantity:</strong></div>
+                    <div class="col-6 fw-bold fs-5 text-primary">{{ getTotalQuantity() }} Lakh</div>
                     <div class="col-6"><strong>Status:</strong></div>
                     <div class="col-6">
                       <span class="badge bg-success">Approved</span>
@@ -168,10 +173,10 @@
           <div class="border p-3 bg-light mb-4">
             <h6 class="fw-bold mb-2">Official Remarks:</h6>
             <p class="mb-1">
-              The hologram requisition application has been reviewed and
-              approved by the Excise Department. The requested quantities for
-              all series (Local, Export, Defence) are within the permitted
-              limits and comply with the regulatory requirements.
+              The hologram requisition application for <strong>{{ submittedData.procurementType || 'Local' }} Series</strong> 
+              has been reviewed and approved by the Excise Department. The requested quantity of 
+              <strong>{{ getTotalQuantity() }} Lakh</strong> holograms is within the permitted limits and complies 
+              with the regulatory requirements.
             </p>
             <p class="mb-0">
               <strong>Approval Status:</strong>

@@ -1593,19 +1593,20 @@
                   <table class="table register-table">
                     <thead>
                       <tr>
-                        <th class="sl-no">Sl. No.</th>
-                        <th class="ref-number">Ref. No</th>
-                        <th class="date">Date</th>
+                        <th class="sl-no" style="width: 60px;">Sl. No.</th>
+                        <th class="ref-number" style="width: 140px;">Ref. No</th>
+                        <th class="date" style="width: 120px;">Date</th>
                         <th class="company">Company</th>
-                        <th class="total-qty">Total Qty (Lakh)</th>
-                        <th class="status">Status</th>
-                        <th class="actions">Action</th>
+                        <th class="type" style="width: 90px;">Type</th>
+                        <th class="total-qty" style="width: 180px;">Qty (Lakh)</th>
+                        <th class="status" style="width: 110px;">Status</th>
+                        <th class="actions" style="width: 180px;">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (
                       item of getPaged(filteredHologramData, "hologram");
-                      track item.refNo;
+                      track item.refNo + '_' + (item.procurementType || 'Unknown');
                       let i = $index
                       ) {
                       <tr class="register-row">
@@ -1619,6 +1620,16 @@
                         <td class="company">
                           <span class="company-name">{{ item.companyName }}</span>
                         </td>
+                        <td class="type">
+                          <span class="badge text-white" 
+                            [ngClass]="{
+                              'bg-success': getProcurementType(item) === 'Local',
+                              'bg-dark': getProcurementType(item) === 'Export',
+                              'bg-warning text-dark': getProcurementType(item) === 'Defence'
+                            }">
+                            {{ getProcurementType(item) }}
+                          </span>
+                        </td>
                         <td class="total-qty">
                           <div class="qty-display">
                             <span class="qty-number">
@@ -1629,7 +1640,8 @@
                               }}
                             </span>
                             <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="openHologramDetails(item)" title="View Details">
-                              <i class="bi bi-eye me-1"></i>View details
+                              <i class="bi bi-eye me-1"></i>
+                              <span class="d-none d-lg-inline">View details</span>
                             </button>
                           </div>
                         </td>
@@ -1645,7 +1657,8 @@
                           <div class="action-buttons">
                             <button class="btn btn-primary btn-sm" (click)="viewHologramApplication(item)" title="View Application">
                               <i class="bi bi-eye me-1"></i>
-                              View Application
+                              <span class="d-none d-md-inline">View Application</span>
+                              <span class="d-md-none">View</span>
                             </button>
                           </div>
                         </td>
