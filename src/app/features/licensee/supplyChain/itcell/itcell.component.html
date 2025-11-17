@@ -153,18 +153,13 @@
                           (click)="viewApplication(hologram)">
                     <i class="bi bi-eye me-1"></i>VIEW
                   </button>
-                  <button class="btn btn-primary btn-sm"
-                          style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
-                          (click)="updateHologramStatus(hologram, 'Under Review')"
-                          [disabled]="hologram.status === 'Under Review' || hologram.status === 'Approved'">
-                    FORWARD
-                  </button>
-                  <button class="btn btn-warning btn-sm"
-                          style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
-                          (click)="updateHologramStatus(hologram, 'Approved')"
-                          [disabled]="hologram.status === 'Approved'">
-                    APPROVE
-                  </button>
+                  @if (hologram.status !== 'Approved by IT Cell' && hologram.status !== 'Approved') {
+                    <button class="btn btn-success btn-sm"
+                            style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                            (click)="approveByITCell(hologram)">
+                      <i class="bi bi-check-circle me-1"></i>APPROVE
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -249,7 +244,7 @@
 
   <!-- Hologram Details Modal -->
   <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);" *ngIf="showHologramModal">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content shadow-lg border-0">
         <div class="modal-header bg-primary text-white">
           <div class="d-flex align-items-center">
@@ -275,24 +270,90 @@
                 </tr>
               </thead>
               <tbody>
+                @if (selectedHologram && selectedHologram.localQtyLakh && selectedHologram.localQtyLakh > 0) {
                 <tr>
                   <td>Local</td>
-                  <td class="text-end">{{ selectedHologram?.localQtyLakh || 0 }}</td>
+                  <td class="text-end">{{ selectedHologram.localQtyLakh | number:'1.0-0' }}</td>
                 </tr>
+                }
+                @if (selectedHologram && selectedHologram.exportQtyLakh && selectedHologram.exportQtyLakh > 0) {
                 <tr>
                   <td>Export</td>
-                  <td class="text-end">{{ selectedHologram?.exportQtyLakh || 0 }}</td>
+                  <td class="text-end">{{ selectedHologram.exportQtyLakh | number:'1.0-0' }}</td>
                 </tr>
+                }
+                @if (selectedHologram && selectedHologram.defenceQtyLakh && selectedHologram.defenceQtyLakh > 0) {
                 <tr>
                   <td>Defence</td>
-                  <td class="text-end">{{ selectedHologram?.defenceQtyLakh || 0 }}</td>
+                  <td class="text-end">{{ selectedHologram.defenceQtyLakh | number:'1.0-0' }}</td>
                 </tr>
+                }
                 <tr class="table-light">
                   <th>Total</th>
-                  <th class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) }}</th>
+                  <th class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</th>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Payment Calculation Details -->
+          <div class="card border-warning bg-warning-subtle mb-3">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0 fw-bold">
+                <i class="bi bi-currency-rupee me-2"></i>
+                Payment Calculation
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0 bg-white">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Payment Type</th>
+                      <th class="text-end">Rate per Hologram</th>
+                      <th class="text-end">Total Quantity</th>
+                      <th class="text-end">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <strong>Printing Cost</strong>
+                        <br><small class="text-muted">(Offline Payment to Printing Press)</small>
+                      </td>
+                      <td class="text-end">₹0.72</td>
+                      <td class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</td>
+                      <td class="text-end fw-bold text-primary">₹{{ calculatePrintingCost(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <strong>Wallet Payment</strong>
+                        <br><small class="text-muted">(Online Payment via Wallet)</small>
+                      </td>
+                      <td class="text-end">₹0.15</td>
+                      <td class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</td>
+                      <td class="text-end fw-bold text-success">₹{{ calculateWalletPayment(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</td>
+                    </tr>
+                    <tr class="table-warning">
+                      <th colspan="3" class="text-end">Total Payment Required:</th>
+                      <th class="text-end text-danger fs-6">₹{{ calculateTotalPayment(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</th>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="alert alert-info mt-3 mb-0">
+                <small>
+                  <i class="bi bi-info-circle me-1"></i>
+                  <strong>Payment Process:</strong>
+                  <ol class="mb-0 ps-3 mt-2">
+                    <li>Printing cost (₹0.72/hologram) must be paid offline to the printing press</li>
+                    <li>After payment, upload the payment slip for verification</li>
+                    <li>Wallet payment (₹0.15/hologram) will be processed online after slip verification</li>
+                  </ol>
+                </small>
+              </div>
+            </div>
           </div>
 
           <!-- Status and Review Information -->

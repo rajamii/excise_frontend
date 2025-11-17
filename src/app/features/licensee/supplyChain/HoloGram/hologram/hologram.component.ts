@@ -35,7 +35,7 @@ export class HologramComponent {
     date: '',
     companyName: 'Yuksom Breweries Ltd.',
     // Prefill sample data so the user can see how inputs look
-    localQtyLakh: 1500000,
+    localQtyLakh: 0,
     exportQtyLakh: 0,
     defenceQtyLakh: 0
   };
@@ -117,9 +117,19 @@ export class HologramComponent {
   }
 
   viewInDashboard(): void {
-    // Navigate to supply chain hologram tab to see the submitted application
-    this.router.navigate(['/dev-supply-chain'], {
-      queryParams: { tab: 'hologram' }
+    // Navigate to IT Cell dashboard to see the submitted application
+    this.router.navigate(['/dev-itcell']);
+  }
+
+  viewApplicationDetails(): void {
+    if (!this.submittedData) return;
+    
+    // Navigate to unified hologram view
+    this.router.navigate(['/dev-supply-chain-hologram-view'], {
+      queryParams: { 
+        ref: this.submittedData.refNo,
+        from: 'supplychain'
+      }
     });
   }
 
@@ -175,8 +185,8 @@ export class HologramComponent {
     if (!this.validateForm()) {
       return;
     }
-    // Ask for confirmation / declaration before forwarding
-    const confirmed = window.confirm('Declaration: After you click OK, this letter will be forwarded to the Commissioner. Do you want to proceed?');
+    // Ask for confirmation / declaration before forwarding to IT Cell
+    const confirmed = window.confirm('Declaration: After you click OK, this application will be forwarded to IT Cell for verification and approval. Do you want to proceed?');
     if (!confirmed) {
       return;
     }
@@ -187,11 +197,18 @@ export class HologramComponent {
     this.showSuccessMessage = true;
     this.showPreview = true;
 
-    // Persist to list as forwarded
+    // Persist to list as forwarded to IT Cell
     if (this.isBrowser) {
       const key = 'hologramRequests';
-      const list: HologramFormData[] = JSON.parse(localStorage.getItem(key) || '[]');
-      list.unshift({ ...this.submittedData });
+      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+      const newRequest = {
+        ...this.submittedData,
+        status: 'Forwarded to IT Cell', // Initial status - forwarded to IT Cell for review
+        submittedDate: new Date().toISOString().split('T')[0],
+        itCellStatus: 'Pending', // IT Cell review status
+        uploadSlipEnabled: false // Upload slip disabled until IT Cell approves
+      };
+      list.unshift(newRequest);
       localStorage.setItem(key, JSON.stringify(list));
 
       // Also register in hologram dashboard/daily register
@@ -247,9 +264,11 @@ export class HologramComponent {
         exportQtyLakh: typeInfo.type === 'Export' ? typeInfo.qty : 0,
         defenceQtyLakh: typeInfo.type === 'Defence' ? typeInfo.qty : 0,
         totalQtyLakh: typeInfo.qty,
-        status: 'Submitted',
+        status: 'Forwarded to IT Cell', // Initial status - needs IT Cell approval
         submittedAt: new Date().toISOString(),
-        type: 'Hologram Application'
+        type: 'Hologram Application',
+        itCellStatus: 'Pending',
+        uploadSlipEnabled: false
       };
 
       applications.unshift(newApplication);

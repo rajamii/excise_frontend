@@ -1674,11 +1674,13 @@
                               <span class="d-none d-md-inline">View</span>
                             </button>
                             <!-- Upload Slip button - opens modal for uploading payment slip -->
+                            <!-- Only enabled after IT Cell and Commissioner approval -->
                             <button 
-                              *ngIf="!isPaymentSlipUploaded(item) && !item.paymentCompleted"
+                              *ngIf="!isPaymentSlipUploaded(item)"
                               class="btn btn-success btn-sm" 
+                              [disabled]="!isUploadSlipEnabled(item)"
                               (click)="openPaymentUploadModal(item)" 
-                              title="Upload Payment Slip (₹0.72 per hologram)">
+                              [title]="isUploadSlipEnabled(item) ? 'Upload Payment Slip (₹0.72 per hologram)' : 'Awaiting IT Cell and Commissioner approval'">
                               <i class="bi bi-upload me-1"></i>
                               <span class="d-none d-md-inline">Upload Slip</span>
                             </button>

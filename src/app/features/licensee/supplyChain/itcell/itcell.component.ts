@@ -10,7 +10,7 @@ interface HologramFormData {
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
-  status: 'Draft' | 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Approved by IT Cell' | 'Approved' | 'Rejected';
   submittedDate?: string;
   reviewedBy?: string;
   reviewedDate?: string;
@@ -258,12 +258,73 @@ export class ITCELLComponent implements OnInit {
 
 
   viewApplication(hologram: HologramFormData): void {
-    // Navigate to hologram application view page
-    const applicationUrl = `/dev-hologram-application-view?ref=${encodeURIComponent(hologram.refNo)}`;
+    // Navigate to unified supply chain hologram view page with IT Cell context
+    const applicationUrl = `/dev-supply-chain-hologram-view?ref=${encodeURIComponent(hologram.refNo)}&from=itcell`;
     
     // Open in new tab/window
     window.open(applicationUrl, '_blank');
     
     console.log('Viewing application for:', hologram.refNo);
+  }
+
+  approveByITCell(hologram: HologramFormData): void {
+    // IT Cell approval - enables upload slip immediately (no Commissioner approval needed)
+    hologram.status = 'Approved by IT Cell';
+    hologram.reviewedBy = 'IT Cell';
+    hologram.reviewedDate = new Date().toISOString().split('T')[0];
+    hologram.remarks = 'Verified and approved by IT Cell. Upload slip enabled for supply chain user.';
+    
+    // Update in storage
+    if (this.isBrowser) {
+      // Update hologramRequests
+      const stored = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const index = stored.findIndex((h: any) => h.refNo === hologram.refNo);
+      if (index !== -1) {
+        stored[index] = {
+          ...stored[index],
+          ...hologram,
+          itCellStatus: 'Approved',
+          uploadSlipEnabled: true, // Enable upload slip immediately after IT Cell approval
+          status: 'Approved by IT Cell'
+        };
+        localStorage.setItem('hologramRequests', JSON.stringify(stored));
+      }
+
+      // Also update hologramApplications (used by supply chain dashboard)
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      // Update all rows with the same refNo
+      applications.forEach((app: any) => {
+        if (app.refNo === hologram.refNo) {
+          app.status = 'Approved by IT Cell';
+          app.itCellStatus = 'Approved';
+          app.uploadSlipEnabled = true; // Enable upload slip
+        }
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    }
+    
+    // Reload data to ensure UI updates
+    this.loadHologramData();
+    this.applyFilters();
+    
+    alert('Application approved by IT Cell. Upload slip is now enabled for supply chain user.');
+  }
+
+  // Payment calculation methods
+  calculatePrintingCost(hologram: HologramFormData): number {
+    // Printing cost: ₹0.72 per hologram
+    const total = (hologram.localQtyLakh || 0) + (hologram.exportQtyLakh || 0) + (hologram.defenceQtyLakh || 0);
+    return total * 0.72;
+  }
+
+  calculateWalletPayment(hologram: HologramFormData): number {
+    // Wallet payment: ₹0.15 per hologram
+    const total = (hologram.localQtyLakh || 0) + (hologram.exportQtyLakh || 0) + (hologram.defenceQtyLakh || 0);
+    return total * 0.15;
+  }
+
+  calculateTotalPayment(hologram: HologramFormData): number {
+    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram
+    return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
   }
 }

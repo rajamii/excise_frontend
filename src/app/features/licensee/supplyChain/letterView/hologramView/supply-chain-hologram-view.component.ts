@@ -31,13 +31,17 @@ export class SupplyChainHologramViewComponent implements OnInit {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
+  from: string = ''; // Track where the user came from (itcell, commissioner, supplychain)
+  uploadSlipEnabled: boolean = false; // Track if upload slip button should be enabled
+
   ngOnInit(): void {
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
       const type = this.route.snapshot.queryParamMap.get('type') as 'Local' | 'Export' | 'Defence' | null;
+      this.from = this.route.snapshot.queryParamMap.get('from') || 'supplychain';
       
       if (ref) {
-        const list: HologramFormData[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+        const list: any[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
         
         // Find by both refNo and procurementType
         let found = list.find(r => r.refNo === ref && (!type || r.procurementType === type));
@@ -58,9 +62,12 @@ export class SupplyChainHologramViewComponent implements OnInit {
         }
 
         this.submittedData = found;
+        
+        // Check if upload slip is enabled (only after commissioner approval)
+        this.uploadSlipEnabled = found.uploadSlipEnabled || false;
       } else {
-        // If no ref provided, redirect back to supply chain dashboard
-        this.router.navigate(['/dev-supply-chain']);
+        // If no ref provided, redirect back based on 'from' parameter
+        this.goBack();
       }
     }
   }
@@ -182,24 +189,97 @@ export class SupplyChainHologramViewComponent implements OnInit {
   }
 
   getBackButtonText(): string {
-    const from = this.route.snapshot.queryParamMap.get('from');
-    return from === 'commissioner' 
-      ? 'Back to Commissioner Dashboard' 
-      : 'Back to Supply Chain Dashboard';
+    switch (this.from) {
+      case 'itcell':
+        return 'Back to IT Cell Dashboard';
+      case 'commissioner':
+        return 'Back to Commissioner Dashboard';
+      default:
+        return 'Back to Supply Chain Dashboard';
+    }
   }
 
   goBack(): void {
-    // Check if there's a 'from' query parameter to determine where to go back
-    const from = this.route.snapshot.queryParamMap.get('from');
-    
-    if (from === 'commissioner') {
-      this.router.navigate(['/dev-commissioner-dashboard'], {
-        queryParams: { tab: 'hologram' }
-      });
-    } else {
-      this.router.navigate(['/dev-supply-chain'], {
-        queryParams: { tab: 'hologram' }
-      });
+    switch (this.from) {
+      case 'itcell':
+        this.router.navigate(['/dev-itcell']);
+        break;
+      case 'commissioner':
+        this.router.navigate(['/dev-commissioner-dashboard'], {
+          queryParams: { tab: 'hologram' }
+        });
+        break;
+      default:
+        this.router.navigate(['/dev-supply-chain'], {
+          queryParams: { tab: 'hologram' }
+        });
+        break;
+    }
+  }
+
+  // Action buttons for different user roles
+  canApprove(): boolean {
+    return this.from === 'itcell' || this.from === 'commissioner';
+  }
+
+  canUploadSlip(): boolean {
+    return this.from === 'supplychain' && this.uploadSlipEnabled;
+  }
+
+  approveApplication(): void {
+    if (!this.submittedData) return;
+
+    if (this.from === 'itcell') {
+      // IT Cell approval - forward to commissioner
+      if (confirm('Approve and forward this application to Commissioner?')) {
+        const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+        const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
+        if (index !== -1) {
+          hologramRequests[index].itCellStatus = 'Approved';
+          hologramRequests[index].commissionerStatus = 'Pending';
+          hologramRequests[index].status = 'Under Review';
+          hologramRequests[index].reviewedBy = 'IT Cell';
+          hologramRequests[index].reviewedDate = new Date().toISOString().split('T')[0];
+          localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+          alert('Application approved and forwarded to Commissioner');
+          this.goBack();
+        }
+      }
+    } else if (this.from === 'commissioner') {
+      // Commissioner approval - enable upload slip
+      if (confirm('Approve this hologram application? This will enable the supply chain user to upload payment slip.')) {
+        const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+        const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
+        if (index !== -1) {
+          hologramRequests[index].commissionerStatus = 'Approved';
+          hologramRequests[index].uploadSlipEnabled = true;
+          hologramRequests[index].status = 'Approved';
+          hologramRequests[index].approvedBy = 'Commissioner';
+          hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
+          localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+          alert('Application approved. Supply chain user can now upload payment slip.');
+          this.goBack();
+        }
+      }
+    }
+  }
+
+  rejectApplication(): void {
+    if (!this.submittedData) return;
+
+    const reason = prompt('Enter rejection reason:');
+    if (reason) {
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
+      if (index !== -1) {
+        hologramRequests[index].status = 'Rejected';
+        hologramRequests[index].rejectedBy = this.from === 'itcell' ? 'IT Cell' : 'Commissioner';
+        hologramRequests[index].rejectedDate = new Date().toISOString().split('T')[0];
+        hologramRequests[index].rejectionReason = reason;
+        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+        alert('Application rejected');
+        this.goBack();
+      }
     }
   }
 

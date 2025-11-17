@@ -220,6 +220,29 @@
 
           <!-- Action Buttons -->
           <div class="no-print d-flex justify-content-center gap-3 mt-4">
+            <!-- IT Cell and Commissioner Approval Buttons -->
+            @if (canApprove()) {
+              <button class="btn btn-success btn-lg" (click)="approveApplication()">
+                <i class="bi bi-check-circle me-2"></i>
+                @if (from === 'itcell') {
+                  Approve & Forward to Commissioner
+                } @else {
+                  Approve Application
+                }
+              </button>
+              <button class="btn btn-danger btn-lg" (click)="rejectApplication()">
+                <i class="bi bi-x-circle me-2"></i>Reject Application
+              </button>
+            }
+
+            <!-- Supply Chain Upload Slip Button -->
+            @if (canUploadSlip()) {
+              <button class="btn btn-warning btn-lg">
+                <i class="bi bi-upload me-2"></i>Upload Payment Slip
+              </button>
+            }
+
+            <!-- Common Buttons -->
             <button class="btn btn-primary btn-lg" (click)="printLetter()">
               <i class="bi bi-printer me-2"></i>Print Application
             </button>
@@ -227,6 +250,15 @@
               <i class="bi bi-arrow-left me-2"></i>{{ getBackButtonText() }}
             </button>
           </div>
+
+          <!-- Status Message for Supply Chain Users -->
+          @if (from === 'supplychain' && !uploadSlipEnabled) {
+            <div class="alert alert-info mt-4 text-center">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Awaiting Approval:</strong> This application is pending approval from IT Cell and Commissioner. 
+              Upload slip button will be enabled after approval.
+            </div>
+          }
         </div>
       </div>
     } @else {

@@ -442,6 +442,9 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Load hologram applications from IT Cell
+    this.loadHologramApplicationsFromITCell();
+
     // Initialize filtered data
     this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revalidationData];
@@ -470,6 +473,43 @@ export class CommissionerDashboardComponent implements OnInit {
         this.loadOverdueEntries();
       }, 60000);
     }
+  }
+
+  loadHologramApplicationsFromITCell(): void {
+    if (!this.isBrowser) return;
+
+    // Load hologram requests from IT Cell
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    
+    // Filter only those that have been approved by IT Cell and are pending commissioner approval
+    const pendingForCommissioner = hologramRequests.filter((req: any) => 
+      req.itCellStatus === 'Approved' && req.commissionerStatus === 'Pending'
+    );
+
+    // Convert to commissioner table format
+    const convertedData: CommissionerTableData[] = pendingForCommissioner.map((req: any) => ({
+      referenceNo: req.refNo,
+      submissionDate: req.date || req.submittedDate,
+      distilleryName: req.companyName,
+      status: 'PENDING',
+      amount: this.calculateHologramAmount(req).toString(),
+      priority: 'high',
+      localQtyLakh: req.localQtyLakh || 0,
+      exportQtyLakh: req.exportQtyLakh || 0,
+      defenceQtyLakh: req.defenceQtyLakh || 0,
+      totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
+      hologramType: 'Security Hologram'
+    }));
+
+    // Merge with existing sample data (or replace if you want only real data)
+    this.hologramData = [...convertedData, ...this.hologramData];
+    this.filteredHologramData = [...this.hologramData];
+  }
+
+  calculateHologramAmount(req: any): number {
+    const total = (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0);
+    // Rate is 0.72 rupees per hologram (convert lakh to pieces)
+    return total * 100000 * 0.72;
   }
 
   loadOverdueEntries(): void {
@@ -947,7 +987,37 @@ export class CommissionerDashboardComponent implements OnInit {
 
   approveHologram(item: CommissionerTableData): void {
     item.status = 'APPROVED';
+    
+    // Update in hologramRequests storage to enable upload slip
+    if (this.isBrowser) {
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const index = hologramRequests.findIndex((req: any) => req.refNo === item.referenceNo);
+      if (index !== -1) {
+        hologramRequests[index].commissionerStatus = 'Approved';
+        hologramRequests[index].uploadSlipEnabled = true; // Enable upload slip button
+        hologramRequests[index].status = 'Approved';
+        hologramRequests[index].approvedBy = 'Commissioner';
+        hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
+        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+      }
+
+      // Also update hologramApplications (used by supply chain dashboard)
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      // Update all rows with the same refNo
+      applications.forEach((app: any) => {
+        if (app.refNo === item.referenceNo) {
+          app.status = 'Approved';
+          app.commissionerStatus = 'Approved';
+          app.uploadSlipEnabled = true;
+          app.approvedBy = 'Commissioner';
+          app.approvedDate = new Date().toISOString().split('T')[0];
+        }
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    }
+    
     console.log('Approved hologram application:', item.referenceNo);
+    alert('Hologram application approved by Commissioner. Supply chain user can now upload payment slip.');
   }
 
   rejectHologram(item: CommissionerTableData): void {

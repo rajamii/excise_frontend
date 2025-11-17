@@ -298,6 +298,22 @@ export class SupplyChainComponent implements OnInit {
       if (tab) {
         this.setActiveTab(tab);
       }
+
+      // Add visibility change listener to refresh data when user returns to tab
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.activeTab === 'hologram') {
+          console.log('🔄 Tab became visible, refreshing hologram data...');
+          this.refreshHologramList();
+        }
+      });
+
+      // Add storage event listener to detect changes from other tabs/windows
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'hologramRequests' || event.key === 'hologramApplications') {
+          console.log('🔄 Storage changed, refreshing hologram data...');
+          this.refreshHologramList();
+        }
+      });
     }
   }
 
@@ -307,24 +323,33 @@ export class SupplyChainComponent implements OnInit {
       return;
     }
 
-    // Load ONLY from hologramApplications (single source of truth)
+    // Load from hologramApplications (single source of truth)
     const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
     
+    // Also load hologramRequests to get approval status
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    
     console.log('📦 Loading hologram data from hologramApplications:', storedApplications.length, 'items');
+    console.log('📦 Loading approval data from hologramRequests:', hologramRequests.length, 'items');
 
-    // Map the data
-    let mapped: HologramRow[] = (storedApplications || []).map((a: any) => ({
-      refNo: a.refNo,
-      date: a.date,
-      companyName: a.companyName,
-      localQtyLakh: a.localQtyLakh,
-      exportQtyLakh: a.exportQtyLakh,
-      defenceQtyLakh: a.defenceQtyLakh,
-      procurementType: a.procurementType, // Include procurement type
-      status: a.status || "Submitted",
-      paymentSlipUploaded: a.paymentSlipUploaded || false,
-      paymentCompleted: a.paymentCompleted || false,
-    }));
+    // Map the data and merge with approval status
+    let mapped: HologramRow[] = (storedApplications || []).map((a: any) => {
+      // Find matching request to get approval status
+      const request = hologramRequests.find((req: any) => req.refNo === a.refNo);
+      
+      return {
+        refNo: a.refNo,
+        date: a.date,
+        companyName: a.companyName,
+        localQtyLakh: a.localQtyLakh,
+        exportQtyLakh: a.exportQtyLakh,
+        defenceQtyLakh: a.defenceQtyLakh,
+        procurementType: a.procurementType, // Include procurement type
+        status: request?.status || a.status || "Submitted", // Use status from hologramRequests if available
+        paymentSlipUploaded: a.paymentSlipUploaded || false,
+        paymentCompleted: a.paymentCompleted || false,
+      };
+    });
 
     console.log('📦 Mapped hologram data:', mapped.length, 'items');
 
@@ -638,6 +663,55 @@ export class SupplyChainComponent implements OnInit {
     } else {
       return 'Local';
     }
+  }
+
+  // Check if upload slip button should be enabled
+  isUploadSlipEnabled(item: HologramRow): boolean {
+    if (!this.isBrowser) {
+      console.log('🔍 Upload slip check - not in browser');
+      return false;
+    }
+
+    // Get the hologram request from localStorage to check approval status
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === item.refNo);
+
+    console.log('🔍 Checking upload slip enabled for:', item.refNo);
+    console.log('  - Found in hologramRequests:', !!request);
+    
+    if (!request) {
+      console.log('  - ❌ Not found in hologramRequests - DISABLED');
+      // If not found in hologramRequests, disable upload
+      // This ensures new approval flow is enforced
+      return false;
+    }
+
+    // Check approval status - requires ONLY IT Cell approval (no Commissioner needed)
+    const itCellApproved = request.itCellStatus === 'Approved';
+    const uploadEnabled = request.uploadSlipEnabled === true;
+    const notUploaded = !item.paymentSlipUploaded;
+    const notCompleted = !item.paymentCompleted;
+
+    console.log('  - IT Cell Status:', request.itCellStatus, '(Approved:', itCellApproved, ')');
+    console.log('  - Upload Enabled Flag:', uploadEnabled);
+    console.log('  - Payment Slip Uploaded:', item.paymentSlipUploaded);
+    console.log('  - Payment Completed:', item.paymentCompleted);
+    console.log('  - Full request object:', request);
+
+    const result = itCellApproved && uploadEnabled && notUploaded && notCompleted;
+    console.log('  - Final Result:', result ? '✅ ENABLED' : '❌ DISABLED');
+
+    // Upload slip is only enabled if:
+    // 1. IT Cell has approved (itCellStatus === 'Approved')
+    // 2. uploadSlipEnabled flag is true (set by IT Cell approval)
+    // 3. Payment slip not already uploaded
+    // 4. Payment not completed
+    return result;
+  }
+
+  // Check if payment slip is already uploaded
+  isPaymentSlipUploaded(item: HologramRow): boolean {
+    return item.paymentSlipUploaded === true;
   }
 
   openApplicationView(): void {
@@ -1902,15 +1976,7 @@ End of Application
     });
   }
 
-  isPaymentSlipUploaded(hologram: HologramRow): boolean {
-    if (!this.isBrowser) return false;
-    
-    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    return payments.some((payment: any) => 
-      payment.hologramRefNo === hologram.refNo && 
-      payment.procurementType === this.getProcurementType(hologram)
-    );
-  }
+
 
   calculatePaymentAmount(hologram: HologramRow): number {
     // Wallet payment rate is ₹0.15 per hologram
