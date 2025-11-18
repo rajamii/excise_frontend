@@ -54,10 +54,12 @@ export class SupplyChainComponent implements OnInit {
   showHologramModal = false;
   showPaymentUploadModal = false;
   showViewUploadModal = false;
+  showMultiTypePaymentModal = false;
   selectedPaymentHologram: HologramRow | null = null;
   selectedPaymentSlipFile: File | null = null;
   selectedPaymentRecord: any = null;
   paymentRemarks: string = '';
+  multiTypePaymentItems: HologramRow[] = [];
 
   // Filter properties for hologram requests
   dateFilter: string = '';
@@ -2025,9 +2027,70 @@ End of Application
       return;
     }
 
+    // Check if payment already completed for this reference number
+    if (request.paymentCompleted === true) {
+      alert('Payment has already been completed for this reference number. You can view the payment slip from the "View Slip" button.');
+      return;
+    }
+
+    // Check if there are multiple types for the same reference number
+    const sameRefItems = this.hologramList.filter(item => item.refNo === hologram.refNo);
+    
+    if (sameRefItems.length > 1) {
+      // Multiple types exist - check if all are ready for payment
+      const allApproved = sameRefItems.every(item => {
+        const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
+        return req && req.commissionerStatus === 'Approved' && this.isPaymentSlipUploaded(item);
+      });
+
+      if (!allApproved) {
+        // Not all types are ready for payment
+        const notReadyTypes = sameRefItems.filter(item => {
+          const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
+          return !req || req.commissionerStatus !== 'Approved' || !this.isPaymentSlipUploaded(item);
+        }).map(item => this.getProcurementType(item));
+
+        alert(
+          `Multiple types exist for reference number ${hologram.refNo}.\n\n` +
+          `The following types are not yet ready for payment:\n${notReadyTypes.join(', ')}\n\n` +
+          `All types must be approved and have payment slips uploaded before making payment.`
+        );
+        return;
+      }
+
+      // All types are ready - show multi-type payment modal
+      this.multiTypePaymentItems = sameRefItems;
+      this.showMultiTypePaymentModal = true;
+      return;
+    }
+
+    // Single type - proceed with normal payment flow
+    this.proceedToPayment(hologram.refNo);
+  }
+
+  // Close multi-type payment modal
+  closeMultiTypePaymentModal(): void {
+    this.showMultiTypePaymentModal = false;
+    this.multiTypePaymentItems = [];
+  }
+
+  // Proceed to payment for all types
+  proceedToMultiTypePayment(): void {
+    if (this.multiTypePaymentItems.length === 0) return;
+    
+    const refNo = this.multiTypePaymentItems[0].refNo;
+    this.closeMultiTypePaymentModal();
+    this.proceedToPayment(refNo);
+  }
+
+  // Common method to proceed to payment page
+  private proceedToPayment(refNo: string): void {
+    if (!this.isBrowser) return;
+
     // Mark that payment page has been visited (for showing test button)
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const updatedRequests = hologramRequests.map((req: any) => {
-      if (req.refNo === hologram.refNo) {
+      if (req.refNo === refNo) {
         return { ...req, paymentPageVisited: true };
       }
       return req;
@@ -2035,14 +2098,26 @@ End of Application
     localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
 
     // Navigate to payment confirmation page with hologram tab active
+    // Note: We only pass refNo, not type, because payment is for ALL types under this ref
     this.router.navigate(['/dev-payment-confirmation'], {
       queryParams: { 
         tab: 'hologram',
-        refNo: hologram.refNo,
-        type: this.getProcurementType(hologram),
+        refNo: refNo,
         action: 'makePayment'
       }
     });
+  }
+
+  // Calculate total payment amount for all types under same reference
+  getTotalPaymentForRef(refNo: string): number {
+    const sameRefItems = this.hologramList.filter(item => item.refNo === refNo);
+    return sameRefItems.reduce((total, item) => total + this.calculatePaymentAmount(item), 0);
+  }
+
+  // Get total quantity for all types under same reference
+  getTotalQuantityForRef(refNo: string): number {
+    const sameRefItems = this.hologramList.filter(item => item.refNo === refNo);
+    return sameRefItems.reduce((total, item) => total + this.getHologramTotal(item), 0);
   }
 
   // Check if payment page has been visited (for showing test button)
@@ -2110,6 +2185,49 @@ End of Application
   markPaymentCompleted(refNo: string): void {
     if (!this.isBrowser) return;
 
+    // Get all applications with the same reference number
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const sameRefApplications = applications.filter((app: any) => app.refNo === refNo);
+    
+    // Check if ALL applications with this ref number have payment completed
+    const allPaid = sameRefApplications.every((app: any) => app.paymentCompleted === true);
+    
+    if (!allPaid) {
+      // Mark this specific application as paid
+      const updatedApplications = applications.map((app: any) => {
+        if (app.refNo === refNo && app.procurementType === this.getProcurementType(this.hologramList.find(h => h.refNo === refNo)!)) {
+          return {
+            ...app,
+            paymentCompleted: true,
+            paymentDate: new Date().toISOString()
+          };
+        }
+        return app;
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+      
+      // Check again if all are now paid
+      const updatedSameRefApps = updatedApplications.filter((app: any) => app.refNo === refNo);
+      const nowAllPaid = updatedSameRefApps.every((app: any) => app.paymentCompleted === true);
+      
+      if (nowAllPaid) {
+        // All payments completed - update status
+        this.updateAllPaymentsCompleted(refNo);
+      } else {
+        alert(`Payment marked for this type. ${updatedSameRefApps.filter((a: any) => !a.paymentCompleted).length} more payment(s) pending for ${refNo}.`);
+      }
+    } else {
+      alert(`All payments already completed for ${refNo}.`);
+    }
+
+    // Refresh the hologram list
+    this.refreshHologramList();
+  }
+
+  // Update status when all payments for a reference number are completed
+  private updateAllPaymentsCompleted(refNo: string): void {
+    if (!this.isBrowser) return;
+
     // Update hologramRequests
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const updatedRequests = hologramRequests.map((req: any) => {
@@ -2125,7 +2243,7 @@ End of Application
     });
     localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
 
-    // Update hologramApplications
+    // Update hologramApplications - set status for all with same ref
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const updatedApplications = applications.map((app: any) => {
       if (app.refNo === refNo) {
@@ -2140,10 +2258,7 @@ End of Application
     });
     localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
 
-    // Refresh the hologram list
-    this.refreshHologramList();
-
-    alert(`Payment marked as completed for ${refNo}. Status updated in all dashboards.`);
+    alert(`All payments completed for ${refNo}. Status updated to "Payment Completed" in all dashboards.`);
   }
 
   // Get payment status class for styling

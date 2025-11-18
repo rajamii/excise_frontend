@@ -123,17 +123,21 @@
               <table class="table table-bordered table-sm mb-2">
                 <thead class="table-light">
                   <tr>
-                    <th>Description</th>
+                    <th>Hologram Type</th>
+                    <th class="text-end">Quantity (Lakh)</th>
+                    <th class="text-end">Rate per Lakh</th>
                     <th class="text-end">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Wallet Payment (₹0.15 per hologram)</td>
-                    <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
+                  <tr *ngFor="let hologramType of paymentData.hologramTypes">
+                    <td>{{ hologramType.type }}</td>
+                    <td class="text-end">{{ hologramType.quantity | number:'1.2-2' }}</td>
+                    <td class="text-end">₹0.15</td>
+                    <td class="text-end">₹{{ hologramType.amount | number:'1.2-2' }}</td>
                   </tr>
-                  <tr class="fw-bold">
-                    <td>Total Paid</td>
+                  <tr class="fw-bold table-light">
+                    <td colspan="3">Total Wallet Payment</td>
                     <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
                   </tr>
                 </tbody>
@@ -142,8 +146,8 @@
             <div class="alert alert-info py-2 px-3 mb-3">
               <small>
                 <i class="bi bi-info-circle me-1"></i>
-                <strong>Note:</strong> This is the wallet payment component (₹0.15 per hologram). 
-                The offline payment slip (₹0.72 per hologram) was submitted separately to the printing press.
+                <strong>Note:</strong> This is the wallet payment component (₹0.15 per lakh hologram). 
+                The offline payment slip (₹0.72 per lakh hologram) was submitted separately to the printing press.
               </small>
             </div>
           </div>

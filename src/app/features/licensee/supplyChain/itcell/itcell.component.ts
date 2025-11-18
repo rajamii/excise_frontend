@@ -368,14 +368,18 @@ export class ITCELLComponent implements OnInit {
     return request?.paymentSlipUploaded === true;
   }
 
-  // Check if payment is completed
+  // Check if payment is completed (ALL types with same ref must be paid)
   isPaymentCompleted(hologram: HologramFormData): boolean {
     if (!this.isBrowser) return false;
     
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
+    // Check if ALL applications with the same reference number have payment completed
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const sameRefApplications = applications.filter((app: any) => app.refNo === hologram.refNo);
     
-    return request?.paymentCompleted === true;
+    if (sameRefApplications.length === 0) return false;
+    
+    // All applications with this ref must have paymentCompleted = true
+    return sameRefApplications.every((app: any) => app.paymentCompleted === true);
   }
 
   // View payment slip

@@ -13,6 +13,15 @@ interface PaymentTransaction {
   paymentMethod: string;
   transactionId: string;
   status: string;
+  // Hologram specific fields
+  localQtyLakh?: number;
+  exportQtyLakh?: number;
+  defenceQtyLakh?: number;
+  hologramTypes?: Array<{
+    type: string;
+    quantity: number;
+    amount: number;
+  }>;
 }
 
 @Component({
@@ -79,6 +88,9 @@ export class PayslipComponent implements OnInit {
     const transaction = transactions.find((t: any) => t.hologramRefNo === this.refNo);
 
     if (transaction) {
+      // Build hologram types array based on quantities
+      const hologramTypes = this.buildHologramTypesArray(transaction);
+      
       this.paymentData = {
         id: transaction.transactionId,
         refNo: transaction.hologramRefNo,
@@ -89,28 +101,75 @@ export class PayslipComponent implements OnInit {
         paymentDate: transaction.paymentDate,
         paymentMethod: 'Wallet Payment',
         transactionId: transaction.transactionId,
-        status: transaction.status
+        status: transaction.status,
+        localQtyLakh: transaction.localQtyLakh || 0,
+        exportQtyLakh: transaction.exportQtyLakh || 0,
+        defenceQtyLakh: transaction.defenceQtyLakh || 0,
+        hologramTypes: hologramTypes
       };
     } else {
       // Fallback: check hologramRequests for payment info
       const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const request = requests.find((r: any) => r.refNo === this.refNo && r.paymentCompleted);
+      const request = requests.find((r: any) => r.refNo === this.refNo);
       
       if (request) {
-        this.paymentData = {
-          id: request.refNo,
-          refNo: request.refNo,
-          type: 'HOLOGRAM',
-          companyName: request.companyName || 'Yuksom Breweries Ltd.',
-          date: request.date,
-          amount: this.calculateHologramAmount(request),
-          paymentDate: request.paymentDate || new Date().toISOString(),
-          paymentMethod: 'Wallet Payment',
-          transactionId: `TXN-${request.refNo}-${Date.now()}`,
-          status: 'Completed'
-        };
+        // Build hologram types array based on quantities from the original request
+        const hologramTypes = this.buildHologramTypesArray(request);
+        
+        // Only show payment slip if payment is completed
+        if (request.paymentCompleted) {
+          this.paymentData = {
+            id: request.refNo,
+            refNo: request.refNo,
+            type: 'HOLOGRAM',
+            companyName: request.companyName || 'Yuksom Breweries Ltd.',
+            date: request.date,
+            amount: this.calculateHologramAmount(request),
+            paymentDate: request.paymentDate || new Date().toISOString(),
+            paymentMethod: 'Wallet Payment',
+            transactionId: request.transactionId || `TXN-${request.refNo}-${Date.now()}`,
+            status: 'Completed',
+            localQtyLakh: request.localQtyLakh || 0,
+            exportQtyLakh: request.exportQtyLakh || 0,
+            defenceQtyLakh: request.defenceQtyLakh || 0,
+            hologramTypes: hologramTypes
+          };
+        }
       }
     }
+  }
+
+  private buildHologramTypesArray(request: any): Array<{type: string, quantity: number, amount: number}> {
+    const types: Array<{type: string, quantity: number, amount: number}> = [];
+    
+    // Add Local if quantity > 0
+    if (request.localQtyLakh && request.localQtyLakh > 0) {
+      types.push({
+        type: 'Local Series',
+        quantity: request.localQtyLakh,
+        amount: request.localQtyLakh * 0.15 // Wallet payment rate per lakh
+      });
+    }
+    
+    // Add Export if quantity > 0
+    if (request.exportQtyLakh && request.exportQtyLakh > 0) {
+      types.push({
+        type: 'Export Series',
+        quantity: request.exportQtyLakh,
+        amount: request.exportQtyLakh * 0.15 // Wallet payment rate per lakh
+      });
+    }
+    
+    // Add Defence if quantity > 0
+    if (request.defenceQtyLakh && request.defenceQtyLakh > 0) {
+      types.push({
+        type: 'Defence Series',
+        quantity: request.defenceQtyLakh,
+        amount: request.defenceQtyLakh * 0.15 // Wallet payment rate per lakh
+      });
+    }
+    
+    return types;
   }
 
   private calculateHologramAmount(request: any): number {
@@ -336,6 +395,10 @@ export class PayslipComponent implements OnInit {
             .table th {
               background: #f0f0f0;
               font-weight: bold;
+            }
+            
+            .table-light {
+              background: #f8f9fa;
             }
             
 

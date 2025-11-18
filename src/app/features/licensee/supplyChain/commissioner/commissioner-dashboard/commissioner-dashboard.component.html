@@ -1269,10 +1269,6 @@
                               title="Approve" *ngIf="item.status === 'PENDING'">
                               <i class="bi bi-check"></i>
                             </button>
-                            <button class="btn btn-outline-info btn-sm" (click)="issueHologram(item)"
-                              title="Issue Hologram" *ngIf="item.status === 'APPROVED'">
-                              <i class="bi bi-qr-code"></i>
-                            </button>
                             <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)"
                               title="Reject" *ngIf="item.status === 'PENDING'">
                               <i class="bi bi-x"></i>
@@ -1303,7 +1299,6 @@
             </div>
             }
 
-            <!-- Hologram Register Record Tab Content -->
             <!-- Daily Hologram Register Tab Content -->
             @if (activeTab === "daily-register") {
             <app-dailyhologramrecordregister></app-dailyhologramrecordregister>

@@ -75,6 +75,8 @@ export class PaymentConfirmationComponent implements OnInit {
   showRetryButton = false;
   showTransitPayment = false;
   selectedItem: PaymentItem | null = null;
+  showMultiTypePaymentModal = false;
+  multiTypePaymentItems: HologramItem[] = [];
 
   // Wallet Balances
   exciseWalletBalance = 9831806.35;
@@ -639,6 +641,149 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   payHologramItem(item: HologramItem): void {
+    // Check if there are multiple types for the same reference number
+    const sameRefItems = this.hologramData.filter(h => h.referenceNo === item.referenceNo);
+    
+    if (sameRefItems.length > 1) {
+      // Multiple types exist - check if all are ready for payment
+      const allReady = sameRefItems.every(h => this.canPayHologram(h));
+
+      if (!allReady) {
+        // Not all types are ready for payment
+        const notReadyTypes = sameRefItems
+          .filter(h => !this.canPayHologram(h))
+          .map(h => h.procurementType || 'Unknown');
+
+        alert(
+          `Multiple types exist for reference number ${item.referenceNo}.\n\n` +
+          `The following types are not yet ready for payment:\n${notReadyTypes.join(', ')}\n\n` +
+          `All types must be approved before making payment.`
+        );
+        return;
+      }
+
+      // All types are ready - show multi-type payment modal
+      this.multiTypePaymentItems = sameRefItems;
+      this.showMultiTypePaymentModal = true;
+      return;
+    }
+
+    // Single type - proceed with normal payment flow
+    this.proceedToSinglePayment(item);
+  }
+
+  // Close multi-type payment modal
+  closeMultiTypePaymentModal(): void {
+    this.showMultiTypePaymentModal = false;
+    this.multiTypePaymentItems = [];
+  }
+
+  // Proceed to payment for all types
+  proceedToMultiTypePayment(): void {
+    if (this.multiTypePaymentItems.length === 0) return;
+    
+    const totalAmount = this.multiTypePaymentItems.reduce((sum, item) => sum + item.hologramFee, 0);
+    
+    // Check if sufficient balance
+    if (totalAmount > this.getTotalWalletBalance()) {
+      this.closeMultiTypePaymentModal();
+      this.showInsufficientBalanceAlert();
+      return;
+    }
+
+    // Confirm payment for all types
+    const confirmed = confirm(
+      `You are about to pay for ${this.multiTypePaymentItems.length} types under reference ${this.multiTypePaymentItems[0].referenceNo}.\n\n` +
+      `Total Amount: ₹${totalAmount.toFixed(2)}\n\n` +
+      `A single payment slip will be generated for all types.\n\n` +
+      `Do you want to proceed?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Process payment for all types
+    let successCount = 0;
+    this.multiTypePaymentItems.forEach(item => {
+      try {
+        // Update wallet balance
+        this.educationCessBalance -= item.hologramFee;
+        
+        // Update item status
+        item.status = 'Payment Successful';
+        item.paymentDate = new Date();
+
+        // Update the specific hologram application in localStorage
+        this.updateHologramPaymentStatus(item.referenceNo, item.procurementType);
+        
+        successCount++;
+        console.log(`✅ Payment completed for ${item.referenceNo} - ${item.procurementType}`);
+      } catch (error) {
+        console.error(`❌ Failed to process payment for ${item.referenceNo} - ${item.procurementType}:`, error);
+      }
+    });
+
+    // Create unified payment transaction record
+    this.createUnifiedPaymentTransaction(this.multiTypePaymentItems);
+
+    // Close modal
+    this.closeMultiTypePaymentModal();
+
+    // Show success message
+    this.showSuccessMessage(
+      `Successfully processed payment for ${successCount} types totaling ₹${totalAmount.toFixed(2)}!\n\n` +
+      `A single unified payment slip has been generated for reference ${this.multiTypePaymentItems[0].referenceNo}.`
+    );
+
+    // Reload hologram data
+    this.loadHologramDataFromStorage();
+  }
+
+  // Create unified payment transaction for multiple types
+  private createUnifiedPaymentTransaction(items: HologramItem[]): void {
+    try {
+      const refNo = items[0].referenceNo;
+      const totalAmount = items.reduce((sum, item) => sum + item.hologramFee, 0);
+      const totalQuantity = items.reduce((sum, item) => sum + item.totalQuantity, 0);
+
+      // Build hologram types array
+      const hologramTypes = items.map(item => ({
+        type: `${item.procurementType} Series`,
+        quantity: item.totalQuantity,
+        amount: item.hologramFee
+      }));
+
+      // Create unified transaction record
+      const transaction = {
+        transactionId: `TXN-${refNo}-${Date.now()}`,
+        hologramRefNo: refNo,
+        hologramDate: items[0].paymentDate?.toISOString() || new Date().toISOString(),
+        companyName: items[0].companyName,
+        localQtyLakh: items.reduce((sum, item) => sum + item.localQty, 0),
+        exportQtyLakh: items.reduce((sum, item) => sum + item.exportQty, 0),
+        defenceQtyLakh: items.reduce((sum, item) => sum + item.defenceQty, 0),
+        totalQuantity: totalQuantity,
+        walletPaymentAmount: totalAmount,
+        paymentDate: new Date().toISOString(),
+        paymentMethod: 'Wallet Payment',
+        status: 'Completed',
+        hologramTypes: hologramTypes
+      };
+
+      // Store transaction in localStorage
+      const transactions = JSON.parse(localStorage.getItem('hologramPaymentTransactions') || '[]');
+      transactions.push(transaction);
+      localStorage.setItem('hologramPaymentTransactions', JSON.stringify(transactions));
+
+      console.log('✅ Unified payment transaction created:', transaction);
+    } catch (error) {
+      console.error('Error creating unified payment transaction:', error);
+    }
+  }
+
+  // Proceed to single payment (original flow)
+  private proceedToSinglePayment(item: HologramItem): void {
     // Store the procurement type in the selectedItem for later use
     this.selectedItem = {
       id: item.id,
@@ -654,6 +799,18 @@ export class PaymentConfirmationComponent implements OnInit {
       const bootstrapModal = new (window as any).bootstrap.Modal(modal);
       bootstrapModal.show();
     }
+  }
+
+  // Calculate total payment amount for all types under same reference
+  getTotalPaymentForRef(refNo: string): number {
+    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    return sameRefItems.reduce((total, item) => total + item.hologramFee, 0);
+  }
+
+  // Get total quantity for all types under same reference
+  getTotalQuantityForRef(refNo: string): number {
+    const sameRefItems = this.hologramData.filter(item => item.referenceNo === refNo);
+    return sameRefItems.reduce((total, item) => total + item.totalQuantity, 0);
   }
 
   payAllHologram(): void {

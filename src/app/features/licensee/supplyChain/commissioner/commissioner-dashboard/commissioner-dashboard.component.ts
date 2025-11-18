@@ -1232,14 +1232,18 @@ export class CommissionerDashboardComponent implements OnInit {
     this.currentPageByTab[tab] = 1;
   }
 
-  // Check if payment is completed for hologram
+  // Check if payment is completed for hologram (ALL types with same ref must be paid)
   isPaymentCompleted(item: CommissionerTableData): boolean {
     if (!this.isBrowser) return false;
     
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const request = hologramRequests.find((req: any) => req.refNo === item.referenceNo);
+    // Check if ALL applications with the same reference number have payment completed
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const sameRefApplications = applications.filter((app: any) => app.refNo === item.referenceNo);
     
-    return request?.paymentCompleted === true;
+    if (sameRefApplications.length === 0) return false;
+    
+    // All applications with this ref must have paymentCompleted = true
+    return sameRefApplications.every((app: any) => app.paymentCompleted === true);
   }
 
   // View payment slip for completed payments
