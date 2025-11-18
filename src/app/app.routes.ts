@@ -133,13 +133,7 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/letterView/hologramView/supply-chain-hologram-view.component"
       ).then((m) => m.SupplyChainHologramViewComponent),
   },
-  {
-    path: "dev-hologram-application-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/hologramitcellviewapp/hologramitcellviewapp.component"
-      ).then((m) => m.HologramitcellviewappComponent),
-  },
+
   {
     path: "dev-transit-permit",
     loadComponent: () =>
