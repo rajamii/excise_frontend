@@ -155,17 +155,44 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
 
     console.log('Found hologramRequests:', submittedRequests);
+    console.log('Found hologramApplications:', hologramApplications);
+    
+    // FILTER: Only include HRQ (Hologram Request) entries, exclude YB (Hologram Procurement) entries
+    // This component shows REQUEST register, not PROCUREMENT register
+    const filteredRequests = submittedRequests.filter((item: any) => {
+      const refNo = item.refNumber || item.refNo || '';
+      const isHRQ = refNo.startsWith('HRQ/');
+      
+      if (!isHRQ && refNo) {
+        console.log(`🚫 Filtering out hologramRequest: ${refNo} (not HRQ - this is procurement, not request)`);
+      }
+      
+      return isHRQ;
+    });
+    
+    const filteredApplications = hologramApplications.filter((item: any) => {
+      const refNo = item.refNo || item.referenceNo || '';
+      const isHRQ = refNo.startsWith('HRQ/');
+      
+      if (!isHRQ && refNo) {
+        console.log(`🚫 Filtering out hologramApplication: ${refNo} (not HRQ - this is procurement, not request)`);
+      }
+      
+      return isHRQ;
+    });
+    
+    console.log('✅ Filtered hologramRequests (HRQ only):', filteredRequests.length);
+    console.log('✅ Filtered hologramApplications (HRQ only):', filteredApplications.length);
     
     // Ensure allocation data is preserved when loading requests
-    submittedRequests.forEach((req: any) => {
+    filteredRequests.forEach((req: any) => {
       if (req.allocations) {
         console.log(`Request ${req.refNumber} has ${req.allocations.length} allocations`);
       }
     });
-    console.log('Found hologramApplications:', hologramApplications);
     
-    // Convert submitted requests to officer format
-    const convertedRequests = submittedRequests.map((request: any, index: number) => {
+    // Convert submitted requests to officer format (using filtered requests)
+    const convertedRequests = filteredRequests.map((request: any, index: number) => {
       console.log('Converting request:', request);
       
       // Determine hologram type from request data
@@ -202,8 +229,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       };
     });
 
-    // Convert hologram applications to officer format
-    const convertedApplications = hologramApplications.map((app: any, index: number) => {
+    // Convert hologram applications to officer format (using filtered applications)
+    const convertedApplications = filteredApplications.map((app: any, index: number) => {
       const totalHolograms = (app.localQtyLakh || 0) + (app.exportQtyLakh || 0) + (app.defenceQtyLakh || 0);
       let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
       

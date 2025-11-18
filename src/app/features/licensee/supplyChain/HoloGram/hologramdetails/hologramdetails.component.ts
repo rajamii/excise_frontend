@@ -103,11 +103,42 @@ export class HologramdetailsComponent implements OnInit {
     // Load approved entries from officer in-charge
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
 
+    // FILTER: Only include YB (Hologram Procurement) entries, exclude HRQ (Hologram Request) entries
+    // This component shows PROCUREMENT register, not REQUEST register
+    console.log('📋 Total hologramRequests before filter:', hologramRequests.length);
+    console.log('📋 Total hologramApplications before filter:', hologramApplications.length);
+    
+    const filteredRequests = hologramRequests.filter((item: any) => {
+      const refNo = item.refNo || item.referenceNo || '';
+      const isYB = refNo.startsWith('YB/');
+      
+      if (!isYB && refNo) {
+        console.log(`🚫 Filtering out hologramRequest: ${refNo} (not YB - not procurement)`);
+      }
+      
+      return isYB;
+    });
+    
+    const filteredApplications = hologramApplications.filter((item: any) => {
+      const refNo = item.refNo || item.referenceNo || '';
+      const isYB = refNo.startsWith('YB/');
+      
+      if (!isYB && refNo) {
+        console.log(`🚫 Filtering out hologramApplication: ${refNo} (not YB - not procurement)`);
+      }
+      
+      return isYB;
+    });
+    
+    console.log('✅ Filtered hologramRequests (YB only):', filteredRequests.length);
+    console.log('✅ Filtered hologramApplications (YB only):', filteredApplications.length);
+
     // Convert supply chain hologram data to register format
     // CRITICAL FIX: Create separate records for each type (Local, Export, Defence) that has quantity > 0
     const supplyChainRecords: HologramRecord[] = [];
     
-    [...hologramRequests, ...hologramApplications].forEach((item: any, index: number) => {
+    // USE FILTERED ARRAYS - NOT THE ORIGINAL ONES!
+    [...filteredRequests, ...filteredApplications].forEach((item: any, index: number) => {
       const baseRefNo = item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`;
       const baseDate = item.date || new Date().toISOString().split('T')[0];
       const companyName = item.companyName || 'Unknown Company';
@@ -197,20 +228,31 @@ export class HologramdetailsComponent implements OnInit {
       }
     });
 
-    // Convert officer approved entries
-    const officerRecords = approvedEntries.map((entry: any) => ({
-      id: entry.id,
-      date: entry.date,
-      ourRefNo: entry.ourRefNo,
-      cartoonNumber: entry.cartoonNumber || '',
-      fromSerial: entry.fromSerial || '',
-      toSerial: entry.toSerial || '',
-      numberOfHolograms: entry.numberOfHolograms,
-      remarks: entry.remarks,
-      status: entry.status,
-      approvedDate: entry.approvedDate,
-      arrivedDate: entry.arrivedDate
-    }));
+    // Convert officer approved entries - FILTER to only include YB (procurement) entries
+    const officerRecords = approvedEntries
+      .filter((entry: any) => {
+        const refNo = entry.ourRefNo || '';
+        const isYB = refNo.startsWith('YB/');
+        
+        if (!isYB && refNo) {
+          console.log(`🚫 Filtering out officer entry: ${refNo} (not YB - not procurement)`);
+        }
+        
+        return isYB;
+      })
+      .map((entry: any) => ({
+        id: entry.id,
+        date: entry.date,
+        ourRefNo: entry.ourRefNo,
+        cartoonNumber: entry.cartoonNumber || '',
+        fromSerial: entry.fromSerial || '',
+        toSerial: entry.toSerial || '',
+        numberOfHolograms: entry.numberOfHolograms,
+        remarks: entry.remarks,
+        status: entry.status,
+        approvedDate: entry.approvedDate,
+        arrivedDate: entry.arrivedDate
+      }));
 
     // Combine and deduplicate records based on ourRefNo + procurementType
     const allRecords = [...supplyChainRecords, ...officerRecords];
@@ -235,24 +277,41 @@ export class HologramdetailsComponent implements OnInit {
 
     // Convert map back to array
     this.hologramRecords = Array.from(uniqueRecordsMap.values());
+    
+    // FINAL FILTER: Ensure no HRQ (request) entries slip through
+    // Only keep YB (procurement) entries - this is the PROCUREMENT register
+    const beforeFinalFilter = this.hologramRecords.length;
+    this.hologramRecords = this.hologramRecords.filter(record => {
+      const refNo = record.ourRefNo || '';
+      const isYB = refNo.startsWith('YB/');
+      
+      if (!isYB) {
+        console.log(`🚫 FINAL FILTER: Removing non-YB entry: ${refNo} (not procurement)`);
+      }
+      
+      return isYB;
+    });
+    
+    console.log(`✅ Final records count: ${this.hologramRecords.length} (filtered out ${beforeFinalFilter - this.hologramRecords.length} non-YB entries)`);
 
     // Add sample data if no records exist (ensure unique reference numbers)
+    // Sample data for PROCUREMENT register (YB/ prefix)
     if (this.hologramRecords.length === 0) {
       const sampleRecords = [
         {
           id: 1,
           date: '2024-11-03',
-          ourRefNo: 'HRQ/2024/001',
+          ourRefNo: 'YB/1/BREW/25',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
           numberOfHolograms: 1000, // 1000 units - Ready for update
-          remarks: 'Hologram request for Premium Whisky production - Approved by Commissioner',
+          remarks: 'Hologram procurement for Premium Whisky production - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-03',
           supplyChainData: {
-            refNo: 'HRQ/2024/001',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/1/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 1000, // 1000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
@@ -262,17 +321,17 @@ export class HologramdetailsComponent implements OnInit {
         {
           id: 2,
           date: '2024-11-02',
-          ourRefNo: 'HRQ/2024/002',
+          ourRefNo: 'YB/2/BREW/25',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
           numberOfHolograms: 5000, // 5000 units - Ready for update
-          remarks: 'Hologram request for Export Rum - Approved by Commissioner',
+          remarks: 'Hologram procurement for Export Rum - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-02',
           supplyChainData: {
-            refNo: 'HRQ/2024/002',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/2/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 0,
             exportQtyLakh: 5000, // 5000 units (field name is misleading)
             defenceQtyLakh: 0,
@@ -282,18 +341,18 @@ export class HologramdetailsComponent implements OnInit {
         {
           id: 3,
           date: '2024-11-01',
-          ourRefNo: 'HRQ/2024/003',
+          ourRefNo: 'YB/3/BREW/25',
           cartoonNumber: 'CTN001',
           fromSerial: 'HG001001',
           toSerial: 'HG002000',
           numberOfHolograms: 2000, // 2000 units - Already arrived
-          remarks: 'Hologram request for Local Beer production - Completed',
+          remarks: 'Hologram procurement for Local Beer production - Completed',
           status: 'ARRIVED' as const,
           approvedDate: '2024-11-01',
           arrivedDate: '2024-11-01',
           supplyChainData: {
-            refNo: 'HRQ/2024/003',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/3/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 2000, // 2000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
@@ -303,17 +362,17 @@ export class HologramdetailsComponent implements OnInit {
         {
           id: 4,
           date: '2024-10-30',
-          ourRefNo: 'HRQ/2024/004',
+          ourRefNo: 'YB/4/BREW/25',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
           numberOfHolograms: 1500, // 1500 units - Ready for update
-          remarks: 'Hologram request for Defence supplies - Approved by Commissioner',
+          remarks: 'Hologram procurement for Defence supplies - Approved by Commissioner',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-10-30',
           supplyChainData: {
-            refNo: 'HRQ/2024/004',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/4/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 0,
             exportQtyLakh: 0,
             defenceQtyLakh: 1500, // 1500 units (field name is misleading)
@@ -323,18 +382,18 @@ export class HologramdetailsComponent implements OnInit {
         {
           id: 5,
           date: '2024-10-28',
-          ourRefNo: 'HRQ/2024/005',
+          ourRefNo: 'YB/5/BREW/25',
           cartoonNumber: 'CTN002',
           fromSerial: 'HG003001',
           toSerial: 'HG003500',
           numberOfHolograms: 500, // 500 units - Already arrived
-          remarks: 'Hologram request for Special Edition Vodka - Completed',
+          remarks: 'Hologram procurement for Special Edition Vodka - Completed',
           status: 'ARRIVED' as const,
           approvedDate: '2024-10-28',
           arrivedDate: '2024-10-29',
           supplyChainData: {
-            refNo: 'HRQ/2024/005',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/5/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 500, // 500 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
@@ -344,16 +403,16 @@ export class HologramdetailsComponent implements OnInit {
         {
           id: 6,
           date: '2024-10-25',
-          ourRefNo: 'HRQ/2024/006',
+          ourRefNo: 'YB/6/BREW/25',
           cartoonNumber: '',
           fromSerial: '',
           toSerial: '',
           numberOfHolograms: 1000, // 1000 units - Waiting for approval
-          remarks: 'Hologram request for Premium Gin production - Waiting for Commissioner Approval',
+          remarks: 'Hologram procurement for Premium Gin production - Waiting for Commissioner Approval',
           status: 'PENDING_APPROVAL' as const,
           supplyChainData: {
-            refNo: 'HRQ/2024/006',
-            companyName: 'Sikkim Distilleries Ltd',
+            refNo: 'YB/6/BREW/25',
+            companyName: 'Yuksom Breweries Ltd.',
             localQtyLakh: 1000, // 1000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
