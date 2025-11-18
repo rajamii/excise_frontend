@@ -1713,4 +1713,158 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     console.log('Generated ranges:', ranges);
     return ranges;
   }
+
+  // Payment Slip Upload Tracking Methods
+  
+  /**
+   * Upload payment slip for a specific type of hologram application
+   */
+  uploadPaymentSlipForType(refNo: string, procurementType: 'Local' | 'Export' | 'Defence', file: File): void {
+    if (!file) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    // Validate file
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      alert('File size exceeds 5MB. Please select a smaller file.');
+      return;
+    }
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Please select a PDF, JPG, or PNG file.');
+      return;
+    }
+
+    // Update payment slip tracking
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    
+    if (!slipTracking[refNo]) {
+      alert('Application not found');
+      return;
+    }
+
+    // Add this type to uploaded types if not already there
+    if (!slipTracking[refNo].uploadedTypes.includes(procurementType)) {
+      slipTracking[refNo].uploadedTypes.push(procurementType);
+    }
+
+    // Store slip details
+    slipTracking[refNo].slipDetails[procurementType] = {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      uploadDate: new Date().toISOString(),
+      uploadedBy: 'Current User' // Replace with actual user
+    };
+
+    // Check if all required slips are uploaded
+    const allUploaded = slipTracking[refNo].requiredTypes.every((type: string) => 
+      slipTracking[refNo].uploadedTypes.includes(type)
+    );
+
+    slipTracking[refNo].allSlipsUploaded = allUploaded;
+    slipTracking[refNo].commissionerVisible = allUploaded;
+
+    localStorage.setItem(slipTrackingKey, JSON.stringify(slipTracking));
+
+    // Update the application status in hologramApplications
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const appIndex = applications.findIndex((app: any) => 
+      app.refNo === refNo && app.procurementType === procurementType
+    );
+
+    if (appIndex !== -1) {
+      applications[appIndex].paymentSlipUploaded = true;
+      applications[appIndex].paymentSlipUploadDate = new Date().toISOString();
+      applications[appIndex].paymentSlipFileName = file.name;
+      
+      // Update status if all slips uploaded
+      if (allUploaded) {
+        applications[appIndex].status = 'Slip Uploaded - Pending Commissioner Approval';
+      }
+      
+      localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    }
+
+    // Show success message
+    const message = allUploaded 
+      ? `✅ Payment slip uploaded successfully for ${procurementType}!\n\nAll payment slips have been uploaded. This application is now visible to the Commissioner for approval.`
+      : `✅ Payment slip uploaded successfully for ${procurementType}!\n\nRemaining types to upload: ${slipTracking[refNo].requiredTypes.filter((t: string) => !slipTracking[refNo].uploadedTypes.includes(t)).join(', ')}`;
+    
+    alert(message);
+
+    // Reload data to reflect changes
+    this.loadAllData();
+  }
+
+  /**
+   * Get upload status for a reference number
+   */
+  getUploadStatus(refNo: string): any {
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    return slipTracking[refNo] || null;
+  }
+
+  /**
+   * Check if a specific type has slip uploaded
+   */
+  isSlipUploadedForType(refNo: string, procurementType: string): boolean {
+    const status = this.getUploadStatus(refNo);
+    return status ? status.uploadedTypes.includes(procurementType) : false;
+  }
+
+  /**
+   * Get applications that are ready for commissioner (all slips uploaded)
+   */
+  getApplicationsForCommissioner(): any[] {
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    
+    return Object.values(slipTracking).filter((tracking: any) => 
+      tracking.allSlipsUploaded && tracking.commissionerVisible
+    );
+  }
+
+  /**
+   * Get grouped applications by reference number with upload status
+   */
+  getGroupedApplicationsWithStatus(): any[] {
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    
+    // Group by reference number
+    const grouped: { [key: string]: any } = {};
+    
+    applications.forEach((app: any) => {
+      if (!grouped[app.refNo]) {
+        grouped[app.refNo] = {
+          refNo: app.refNo,
+          date: app.date,
+          companyName: app.companyName,
+          types: [],
+          uploadStatus: slipTracking[app.refNo] || {
+            totalTypes: 0,
+            uploadedTypes: [],
+            allSlipsUploaded: false
+          }
+        };
+      }
+      
+      grouped[app.refNo].types.push({
+        type: app.procurementType,
+        quantity: app.totalQtyLakh,
+        slipUploaded: app.paymentSlipUploaded || false,
+        uploadDate: app.paymentSlipUploadDate,
+        fileName: app.paymentSlipFileName
+      });
+    });
+    
+    return Object.values(grouped);
+  }
 }

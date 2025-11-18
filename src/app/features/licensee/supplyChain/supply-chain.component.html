@@ -2707,7 +2707,7 @@
                         <div>
                           <h6 class="fw-bold mb-2">Payment for All Types Required</h6>
                           <p class="mb-0">
-                            Reference number <strong>{{ multiTypePaymentItems[0]?.refNo }}</strong> has multiple procurement types. 
+                            Reference number <strong>{{ multiTypePaymentItems[0].refNo }}</strong> has multiple procurement types. 
                             You must make payment for <strong>ALL types together</strong> in a single transaction. 
                             This ensures a unified payment slip and easier tracking for the Commissioner.
                           </p>
@@ -2750,8 +2750,8 @@
                             <tfoot class="table-warning">
                               <tr>
                                 <th colspan="4" class="text-end">Total Payment Required:</th>
-                                <th class="text-end">{{ getTotalQuantityForRef(multiTypePaymentItems[0]?.refNo || '') | number:'1.2-2' }}</th>
-                                <th class="text-end text-danger fs-5">₹{{ getTotalPaymentForRef(multiTypePaymentItems[0]?.refNo || '') | number:'1.2-2' }}</th>
+                                <th class="text-end">{{ getTotalQuantityForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }}</th>
+                                <th class="text-end text-danger fs-5">₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }}</th>
                               </tr>
                             </tfoot>
                           </table>
@@ -2777,7 +2777,7 @@
                     </button>
                     <button type="button" class="btn btn-success btn-lg" (click)="proceedToMultiTypePayment()">
                       <i class="bi bi-wallet2 me-2"></i>
-                      Proceed to Pay All Types (₹{{ getTotalPaymentForRef(multiTypePaymentItems[0]?.refNo || '') | number:'1.2-2' }})
+                      Proceed to Pay All Types (₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }})
                     </button>
                   </div>
                 </div>

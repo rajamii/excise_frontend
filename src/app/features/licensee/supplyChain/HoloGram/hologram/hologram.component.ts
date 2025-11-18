@@ -268,7 +268,10 @@ export class HologramComponent {
         submittedAt: new Date().toISOString(),
         type: 'Hologram Application',
         itCellStatus: 'Pending',
-        uploadSlipEnabled: false
+        uploadSlipEnabled: false,
+        paymentSlipUploaded: false, // Track if payment slip is uploaded for this type
+        paymentSlipUploadDate: null,
+        paymentSlipFileName: null
       };
 
       applications.unshift(newApplication);
@@ -276,6 +279,24 @@ export class HologramComponent {
     });
 
     localStorage.setItem(dashboardKey, JSON.stringify(applications));
+
+    // Initialize payment slip tracking for this reference number
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    
+    slipTracking[this.submittedData.refNo] = {
+      refNo: this.submittedData.refNo,
+      companyName: this.submittedData.companyName,
+      date: this.submittedData.date,
+      totalTypes: types.length,
+      requiredTypes: types.map(t => t.type),
+      uploadedTypes: [],
+      allSlipsUploaded: false,
+      commissionerVisible: false, // Only visible when all slips uploaded
+      slipDetails: {}
+    };
+    
+    localStorage.setItem(slipTrackingKey, JSON.stringify(slipTracking));
 
     console.log('✅ Application registered with separate rows for each type:', {
       refNo: this.submittedData.refNo,

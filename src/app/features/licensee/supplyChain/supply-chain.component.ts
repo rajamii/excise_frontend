@@ -283,7 +283,6 @@ export class SupplyChainComponent implements OnInit {
     this.refreshHologramList();
     this.loadRequisitionData();
     this.loadTransitData();
-    this.loadHologramRequests();
   }
 
   ngOnInit(): void {
@@ -1908,13 +1907,14 @@ End of Application
     // Calculate offline payment amount (₹0.72 per hologram)
     const totalQty = this.getHologramTotal(this.selectedPaymentHologram);
     const offlinePaymentAmount = totalQty * 0.72;
+    const procurementType = this.getProcurementType(this.selectedPaymentHologram);
 
     // Create payment record
     const paymentRecord = {
       hologramRefNo: this.selectedPaymentHologram.refNo,
       hologramDate: this.selectedPaymentHologram.date,
       companyName: this.selectedPaymentHologram.companyName,
-      procurementType: this.getProcurementType(this.selectedPaymentHologram),
+      procurementType: procurementType,
       localQtyLakh: this.selectedPaymentHologram.localQtyLakh || 0,
       exportQtyLakh: this.selectedPaymentHologram.exportQtyLakh || 0,
       defenceQtyLakh: this.selectedPaymentHologram.defenceQtyLakh || 0,
@@ -1934,14 +1934,16 @@ End of Application
     existingPayments.push(paymentRecord);
     localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
 
-    // Update hologram application status to mark slip as uploaded and forward to Commissioner
+    // Update hologram application status to mark slip as uploaded
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const updatedApplications = applications.map((app: any) => {
       if (app.refNo === this.selectedPaymentHologram!.refNo && 
-          app.procurementType === this.getProcurementType(this.selectedPaymentHologram!)) {
+          app.procurementType === procurementType) {
         return { 
           ...app, 
           paymentSlipUploaded: true,
+          paymentSlipUploadDate: new Date().toISOString(),
+          paymentSlipFileName: this.selectedPaymentSlipFile!.name,
           status: 'Slip Uploaded - Pending Commissioner Approval'
         };
       }
@@ -1949,14 +1951,62 @@ End of Application
     });
     localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
 
+    // Update payment slip tracking
+    const slipTrackingKey = 'hologramPaymentSlipTracking';
+    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
+    
+    const refNo = this.selectedPaymentHologram.refNo;
+    
+    if (!slipTracking[refNo]) {
+      // Initialize tracking if it doesn't exist
+      const allApps = updatedApplications.filter((app: any) => app.refNo === refNo);
+      const requiredTypes = [...new Set(allApps.map((app: any) => app.procurementType))];
+      
+      slipTracking[refNo] = {
+        refNo: refNo,
+        companyName: this.selectedPaymentHologram.companyName,
+        date: this.selectedPaymentHologram.date,
+        totalTypes: requiredTypes.length,
+        requiredTypes: requiredTypes,
+        uploadedTypes: [],
+        allSlipsUploaded: false,
+        commissionerVisible: false,
+        slipDetails: {}
+      };
+    }
+
+    // Add this type to uploaded types if not already there
+    if (!slipTracking[refNo].uploadedTypes.includes(procurementType)) {
+      slipTracking[refNo].uploadedTypes.push(procurementType);
+    }
+
+    // Store slip details
+    slipTracking[refNo].slipDetails[procurementType] = {
+      fileName: this.selectedPaymentSlipFile.name,
+      fileSize: this.selectedPaymentSlipFile.size,
+      fileType: this.selectedPaymentSlipFile.type,
+      uploadDate: new Date().toISOString(),
+      uploadedBy: 'Current User'
+    };
+
+    // Check if all required slips are uploaded
+    const allUploaded = slipTracking[refNo].requiredTypes.every((type: string) => 
+      slipTracking[refNo].uploadedTypes.includes(type)
+    );
+
+    slipTracking[refNo].allSlipsUploaded = allUploaded;
+    slipTracking[refNo].commissionerVisible = allUploaded;
+
+    localStorage.setItem(slipTrackingKey, JSON.stringify(slipTracking));
+
     // Update hologramRequests to mark slip as uploaded
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const updatedRequests = hologramRequests.map((req: any) => {
-      if (req.refNo === this.selectedPaymentHologram!.refNo) {
+      if (req.refNo === refNo) {
         return {
           ...req,
-          paymentSlipUploaded: true,
-          status: 'Slip Uploaded - Pending Commissioner Approval'
+          paymentSlipUploaded: allUploaded, // Only mark as uploaded when ALL slips are uploaded
+          status: allUploaded ? 'Slip Uploaded - Pending Commissioner Approval' : req.status
         };
       }
       return req;
@@ -1967,16 +2017,21 @@ End of Application
     this.refreshHologramList();
 
     // Show success message
-    alert(
-      `Payment Slip Uploaded Successfully!\n\n` +
-      `Reference: ${paymentRecord.hologramRefNo}\n` +
-      `Type: ${paymentRecord.procurementType}\n` +
-      `Total Quantity: ${totalQty.toLocaleString('en-IN')} holograms\n\n` +
-      `Offline Payment (Slip): ₹${offlinePaymentAmount.toFixed(2)} (₹0.72 per hologram)\n` +
-      `Wallet Payment Required: ₹${paymentRecord.walletPaymentAmount.toFixed(2)} (₹0.15 per hologram)\n\n` +
-      `File: ${paymentRecord.fileName}\n\n` +
-      `Your application has been forwarded to Commissioner for approval. You can make the wallet payment after Commissioner approval.`
-    );
+    const message = allUploaded 
+      ? `✅ Payment Slip Uploaded Successfully!\n\n` +
+        `Reference: ${paymentRecord.hologramRefNo}\n` +
+        `Type: ${paymentRecord.procurementType}\n\n` +
+        `ALL PAYMENT SLIPS UPLOADED!\n` +
+        `This application is now visible to the Commissioner for approval.\n\n` +
+        `File: ${paymentRecord.fileName}`
+      : `✅ Payment Slip Uploaded Successfully!\n\n` +
+        `Reference: ${paymentRecord.hologramRefNo}\n` +
+        `Type: ${paymentRecord.procurementType}\n\n` +
+        `Remaining types to upload: ${slipTracking[refNo].requiredTypes.filter((t: string) => !slipTracking[refNo].uploadedTypes.includes(t)).join(', ')}\n\n` +
+        `File: ${paymentRecord.fileName}\n\n` +
+        `Note: Application will be visible to Commissioner only after ALL slips are uploaded.`;
+    
+    alert(message);
 
     // Close modal
     this.closePaymentUploadModal();

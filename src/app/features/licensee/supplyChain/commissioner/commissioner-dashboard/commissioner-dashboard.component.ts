@@ -32,6 +32,10 @@ interface CommissionerTableData {
   reviewedBy?: string;
   reviewedDate?: string;
   remarks?: string;
+  // Payment slip tracking fields
+  uploadedTypes?: string[];
+  requiredTypes?: string[];
+  slipDetails?: { [key: string]: any };
 }
 
 @Component({
@@ -86,6 +90,10 @@ export class CommissionerDashboardComponent implements OnInit {
   // Hologram details modal properties
   showHologramDetailsModal = false;
   selectedHologramApplication: CommissionerTableData | null = null;
+
+  // Payment slips modal properties (separate from hologram details)
+  showPaymentSlipsModal = false;
+  selectedApplicationForSlips: CommissionerTableData | null = null;
 
   // Overdue hologram entries
   overdueHologramEntries: any[] = [];
@@ -478,6 +486,32 @@ export class CommissionerDashboardComponent implements OnInit {
       setInterval(() => {
         this.loadOverdueEntries();
       }, 60000);
+
+      // Auto-refresh hologram data when storage changes (from IT Cell or other tabs)
+      window.addEventListener('storage', (event) => {
+        if (event.key === 'hologramRequests' || 
+            event.key === 'hologramPaymentSlipTracking' || 
+            event.key === 'hologramApplications') {
+          console.log('🔄 Storage changed, refreshing Commissioner hologram data...');
+          this.loadHologramApplicationsFromITCell();
+        }
+      });
+
+      // Refresh data when tab becomes visible
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.activeTab === 'hologram') {
+          console.log('🔄 Tab became visible, refreshing Commissioner hologram data...');
+          this.loadHologramApplicationsFromITCell();
+        }
+      });
+
+      // Refresh hologram data every 30 seconds when on hologram tab
+      setInterval(() => {
+        if (this.activeTab === 'hologram') {
+          console.log('🔄 Auto-refresh: Reloading Commissioner hologram data...');
+          this.loadHologramApplicationsFromITCell();
+        }
+      }, 30000); // 30 seconds
     }
   }
 
@@ -487,23 +521,39 @@ export class CommissionerDashboardComponent implements OnInit {
     // Load hologram requests from IT Cell
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     
+    // Load payment slip tracking to check if all slips are uploaded
+    const slipTracking = JSON.parse(localStorage.getItem('hologramPaymentSlipTracking') || '{}');
+    
     // Filter those that have:
     // 1. Been approved by IT Cell
-    // 2. Have payment slip uploaded
-    // Show ALL applications (pending, approved, rejected) - don't filter by commissionerStatus
-    const applicationsForCommissioner = hologramRequests.filter((req: any) => 
-      req.itCellStatus === 'Approved' && 
-      req.paymentSlipUploaded === true
-    );
+    // 2. ALL payment slips uploaded (checked via slipTracking)
+    const applicationsForCommissioner = hologramRequests.filter((req: any) => {
+      const tracking = slipTracking[req.refNo];
+      
+      // Must be approved by IT Cell
+      if (req.itCellStatus !== 'Approved') {
+        return false;
+      }
+      
+      // Must have all payment slips uploaded
+      if (!tracking || !tracking.allSlipsUploaded || !tracking.commissionerVisible) {
+        return false;
+      }
+      
+      return true;
+    });
 
     console.log('📊 Loading hologram applications for Commissioner:', {
       total: hologramRequests.length,
       applicationsForCommissioner: applicationsForCommissioner.length,
+      slipTrackingEntries: Object.keys(slipTracking).length,
       filtered: applicationsForCommissioner
     });
 
     // Convert to commissioner table format
     const convertedData: CommissionerTableData[] = applicationsForCommissioner.map((req: any) => {
+      const tracking = slipTracking[req.refNo];
+      
       // Determine status based on payment and approval stages
       let displayStatus = 'PENDING';
       
@@ -529,15 +579,19 @@ export class CommissionerDashboardComponent implements OnInit {
         exportQtyLakh: req.exportQtyLakh || 0,
         defenceQtyLakh: req.defenceQtyLakh || 0,
         totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
-        hologramType: 'Security Hologram'
+        hologramType: 'Security Hologram',
+        // Add slip upload info for display
+        uploadedTypes: tracking?.uploadedTypes || [],
+        requiredTypes: tracking?.requiredTypes || [],
+        slipDetails: tracking?.slipDetails || {}
       };
     });
 
-    // Replace sample data with real data (show all applications with uploaded slips)
+    // Replace sample data with real data (show only applications with ALL slips uploaded)
     this.hologramData = convertedData;
     this.filteredHologramData = [...this.hologramData];
     
-    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications');
+    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications (all with complete slip uploads)');
   }
 
   calculateHologramAmount(req: any): number {
@@ -1254,5 +1308,64 @@ export class CommissionerDashboardComponent implements OnInit {
         type: 'HOLOGRAM'
       }
     });
+  }
+
+  // View uploaded payment slips for an application (separate modal)
+  viewUploadedSlips(application: CommissionerTableData): void {
+    this.selectedApplicationForSlips = application;
+    this.showPaymentSlipsModal = true;
+  }
+
+  // Close payment slips modal
+  closePaymentSlipsModal(): void {
+    this.showPaymentSlipsModal = false;
+    this.selectedApplicationForSlips = null;
+  }
+
+  // Get slip details for a specific type
+  getSlipDetailsForType(application: CommissionerTableData, type: string): any {
+    return application.slipDetails?.[type] || null;
+  }
+
+  // Check if a type has slip uploaded
+  hasSlipForType(application: CommissionerTableData, type: string): boolean {
+    return application.uploadedTypes?.includes(type) || false;
+  }
+
+  // Get formatted file size
+  getFormattedFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // Get type badge class
+  getTypeBadgeClass(type: string): string {
+    switch (type) {
+      case 'Local':
+        return 'bg-success';
+      case 'Export':
+        return 'bg-dark';
+      case 'Defence':
+        return 'bg-warning text-dark';
+      default:
+        return 'bg-secondary';
+    }
+  }
+
+  // Download slip (placeholder - in real app would download from server)
+  downloadSlip(application: CommissionerTableData, type: string): void {
+    const slipDetails = this.getSlipDetailsForType(application, type);
+    if (slipDetails) {
+      alert(`Download functionality for: ${slipDetails.fileName}\n\nIn production, this would download the actual file from the server.`);
+    }
+  }
+
+  // View slip in new window (placeholder)
+  viewSlipInNewWindow(application: CommissionerTableData, type: string): void {
+    const slipDetails = this.getSlipDetailsForType(application, type);
+    if (slipDetails) {
+      alert(`View functionality for: ${slipDetails.fileName}\n\nIn production, this would open the file in a new window.`);
+    }
   }
 }

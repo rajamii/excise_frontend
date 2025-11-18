@@ -1097,6 +1097,10 @@
                   <p class="register-subtitle">Review and process hologram applications from licensees</p>
                 </div>
                 <div class="header-actions">
+                  <button class="btn btn-primary me-2" (click)="loadHologramApplicationsFromITCell()" title="Refresh Data">
+                    <i class="bi bi-arrow-clockwise me-2"></i>
+                    Refresh
+                  </button>
                   <button class="btn btn-success">
                     <i class="bi bi-download me-2"></i>
                     Export Report
@@ -1261,8 +1265,20 @@
                         </td>
                         <td class="actions">
                           <div class="action-buttons">
+                            <!-- View Uploaded Slips - Always visible -->
+                            <button class="btn btn-outline-info btn-sm" (click)="viewUploadedSlips(item)"
+                              title="View Uploaded Payment Slips">
+                              <i class="bi bi-file-earmark-pdf"></i>
+                            </button>
+                            
+                            <!-- View Payment Receipt - Show for APPROVED/COMPLETED applications -->
+                            <button class="btn btn-outline-success btn-sm" (click)="viewPaymentSlip(item)"
+                              title="View Payment Receipt" *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
+                              <i class="bi bi-receipt"></i>
+                            </button>
+                            
                             <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
-                              title="Preview Application">
+                              title="Review Application">
                               <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
@@ -1272,10 +1288,6 @@
                             <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)"
                               title="Reject" *ngIf="item.status === 'PENDING'">
                               <i class="bi bi-x"></i>
-                            </button>
-                            <button class="btn btn-primary btn-sm" (click)="viewPaymentSlip(item)"
-                              title="View Payment Slip" *ngIf="isPaymentCompleted(item)">
-                              <i class="bi bi-receipt"></i>
                             </button>
                           </div>
                         </td>
@@ -1615,6 +1627,221 @@
       <div class="modal-footer py-2">
         <button class="btn btn-outline-secondary btn-sm" (click)="closeHologramDetailsModal()">
           <i class="bi bi-x-circle me-1"></i>Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Payment Slips View Modal (Separate from Hologram Details) -->
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5)"
+  *ngIf="showPaymentSlipsModal && selectedApplicationForSlips">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-file-earmark-pdf-fill me-2 fs-4"></i>
+          <h5 class="modal-title mb-0 fw-bold">Uploaded Payment Slips</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="closePaymentSlipsModal()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Application Info -->
+        <div class="alert alert-info border-info mb-4">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="bi bi-info-circle me-2"></i>Application Details
+              </h6>
+              <p class="mb-1"><strong>Reference:</strong> {{ selectedApplicationForSlips.referenceNo }}</p>
+              <p class="mb-1"><strong>Company:</strong> {{ selectedApplicationForSlips.distilleryName }}</p>
+              <p class="mb-0"><strong>Date:</strong> {{ selectedApplicationForSlips.submissionDate }}</p>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="bi bi-boxes me-2"></i>Quantity Details
+              </h6>
+              <p class="mb-1"><strong>Total Quantity:</strong> {{ selectedApplicationForSlips.totalQtyLakh | number:'1.2-2' }} Lakh</p>
+              <p class="mb-1">
+                <span class="badge bg-success me-1" *ngIf="selectedApplicationForSlips.localQtyLakh && selectedApplicationForSlips.localQtyLakh > 0">
+                  Local: {{ selectedApplicationForSlips.localQtyLakh | number:'1.2-2' }}
+                </span>
+                <span class="badge bg-dark me-1" *ngIf="selectedApplicationForSlips.exportQtyLakh && selectedApplicationForSlips.exportQtyLakh > 0">
+                  Export: {{ selectedApplicationForSlips.exportQtyLakh | number:'1.2-2' }}
+                </span>
+                <span class="badge bg-warning text-dark" *ngIf="selectedApplicationForSlips.defenceQtyLakh && selectedApplicationForSlips.defenceQtyLakh > 0">
+                  Defence: {{ selectedApplicationForSlips.defenceQtyLakh | number:'1.2-2' }}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Status Summary -->
+        <div class="card border-success mb-4">
+          <div class="card-header bg-success text-white">
+            <h6 class="mb-0">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              Upload Status: ALL SLIPS UPLOADED
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="mb-2">
+              <strong>Required Types:</strong> {{ selectedApplicationForSlips.requiredTypes?.length || 0 }}
+            </p>
+            <p class="mb-0">
+              <strong>Uploaded Types:</strong> {{ selectedApplicationForSlips.uploadedTypes?.length || 0 }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Uploaded Slips by Type -->
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-file-earmark-check me-2"></i>
+          Uploaded Payment Slips by Type
+        </h6>
+
+        <div class="row g-3">
+          <!-- Local Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(selectedApplicationForSlips, 'Local')">
+            <div class="card border-success h-100">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Local Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(selectedApplicationForSlips, 'Local') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(selectedApplicationForSlips, 'Local')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(selectedApplicationForSlips, 'Local')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(selectedApplicationForSlips, 'Export')">
+            <div class="card border-dark h-100">
+              <div class="card-header bg-dark text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Export Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(selectedApplicationForSlips, 'Export') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(selectedApplicationForSlips, 'Export')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(selectedApplicationForSlips, 'Export')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Defence Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(selectedApplicationForSlips, 'Defence')">
+            <div class="card border-warning h-100">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Defence Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(selectedApplicationForSlips, 'Defence') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(selectedApplicationForSlips, 'Defence')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(selectedApplicationForSlips, 'Defence')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Note -->
+        <div class="alert alert-warning border-warning mt-4 mb-0">
+          <h6 class="fw-bold mb-2">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Verification Required
+          </h6>
+          <p class="mb-0">
+            Please verify all uploaded payment slips before approving this application. 
+            Ensure that the payment amounts and details match the application requirements.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closePaymentSlipsModal()">
+          <i class="bi bi-x-circle me-1"></i>
+          Close
+        </button>
+        <button type="button" class="btn btn-success" (click)="approveHologram(selectedApplicationForSlips); closePaymentSlipsModal()">
+          <i class="bi bi-check-circle me-1"></i>
+          Approve Application
+        </button>
+        <button type="button" class="btn btn-danger" (click)="rejectHologram(selectedApplicationForSlips); closePaymentSlipsModal()">
+          <i class="bi bi-x-circle me-1"></i>
+          Reject Application
         </button>
       </div>
     </div>
