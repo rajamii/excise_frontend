@@ -104,44 +104,88 @@ export class HologramdetailsComponent implements OnInit {
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
 
     // Convert supply chain hologram data to register format
-    // Each item now represents a single type (Local, Export, or Defence)
-    const supplyChainRecords = [...hologramRequests, ...hologramApplications].map((item: any, index: number) => {
-      // Determine the type - now each row has a specific type
-      let primaryType = item.procurementType || 'Local';
+    // CRITICAL FIX: Create separate records for each type (Local, Export, Defence) that has quantity > 0
+    const supplyChainRecords: HologramRecord[] = [];
+    
+    [...hologramRequests, ...hologramApplications].forEach((item: any, index: number) => {
+      const baseRefNo = item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`;
+      const baseDate = item.date || new Date().toISOString().split('T')[0];
+      const companyName = item.companyName || 'Unknown Company';
       
-      // Fallback: determine type based on quantities if procurementType not set
-      if (!item.procurementType) {
-        if (item.exportQtyLakh > 0) {
-          primaryType = 'Export';
-        } else if (item.defenceQtyLakh > 0) {
-          primaryType = 'Defence';
-        } else {
-          primaryType = 'Local';
-        }
+      // Create separate record for LOCAL if quantity > 0
+      if (item.localQtyLakh && item.localQtyLakh > 0) {
+        supplyChainRecords.push({
+          id: (1000 + index) * 10 + 1, // Unique ID for LOCAL
+          date: baseDate,
+          ourRefNo: baseRefNo,
+          cartoonNumber: item.cartoonNumber || '',
+          fromSerial: item.fromSerial || '',
+          toSerial: item.toSerial || '',
+          numberOfHolograms: item.localQtyLakh,
+          remarks: `Supply chain hologram request - ${companyName} (Local)`,
+          status: this.determineStatus(item),
+          approvedDate: item.approvedDate,
+          arrivedDate: item.arrivedDate,
+          procurementType: 'Local',
+          supplyChainData: {
+            ...item,
+            procurementType: 'Local',
+            localQtyLakh: item.localQtyLakh,
+            exportQtyLakh: 0,
+            defenceQtyLakh: 0
+          }
+        });
       }
-
-      return {
-        id: item.id || (1000 + index),
-        date: item.date || new Date().toISOString().split('T')[0],
-        ourRefNo: item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
-        cartoonNumber: item.cartoonNumber || '',
-        fromSerial: item.fromSerial || '',
-        toSerial: item.toSerial || '',
-        numberOfHolograms: this.calculateTotalHolograms(item),
-        remarks: `Supply chain hologram request - ${item.companyName || 'Unknown Company'} (${primaryType})`,
-        status: this.determineStatus(item),
-        approvedDate: item.approvedDate,
-        arrivedDate: item.arrivedDate,
-        procurementType: primaryType, // Store the type in the record
-        supplyChainData: {
-          ...item,
-          procurementType: primaryType,
-          // Ensure we have the quantity fields for type determination
-          localQtyLakh: item.localQtyLakh || 0,
-          exportQtyLakh: item.exportQtyLakh || 0,
-          defenceQtyLakh: item.defenceQtyLakh || 0
-        }
-      };
+      
+      // Create separate record for EXPORT if quantity > 0
+      if (item.exportQtyLakh && item.exportQtyLakh > 0) {
+        supplyChainRecords.push({
+          id: (1000 + index) * 10 + 2, // Unique ID for EXPORT
+          date: baseDate,
+          ourRefNo: baseRefNo,
+          cartoonNumber: item.cartoonNumber || '',
+          fromSerial: item.fromSerial || '',
+          toSerial: item.toSerial || '',
+          numberOfHolograms: item.exportQtyLakh,
+          remarks: `Supply chain hologram request - ${companyName} (Export)`,
+          status: this.determineStatus(item),
+          approvedDate: item.approvedDate,
+          arrivedDate: item.arrivedDate,
+          procurementType: 'Export',
+          supplyChainData: {
+            ...item,
+            procurementType: 'Export',
+            localQtyLakh: 0,
+            exportQtyLakh: item.exportQtyLakh,
+            defenceQtyLakh: 0
+          }
+        });
+      }
+      
+      // Create separate record for DEFENCE if quantity > 0
+      if (item.defenceQtyLakh && item.defenceQtyLakh > 0) {
+        supplyChainRecords.push({
+          id: (1000 + index) * 10 + 3, // Unique ID for DEFENCE
+          date: baseDate,
+          ourRefNo: baseRefNo,
+          cartoonNumber: item.cartoonNumber || '',
+          fromSerial: item.fromSerial || '',
+          toSerial: item.toSerial || '',
+          numberOfHolograms: item.defenceQtyLakh,
+          remarks: `Supply chain hologram request - ${companyName} (Defence)`,
+          status: this.determineStatus(item),
+          approvedDate: item.approvedDate,
+          arrivedDate: item.arrivedDate,
+          procurementType: 'Defence',
+          supplyChainData: {
+            ...item,
+            procurementType: 'Defence',
+            localQtyLakh: 0,
+            exportQtyLakh: 0,
+            defenceQtyLakh: item.defenceQtyLakh
+          }
+        });
+      }
     });
 
     // Convert officer approved entries
@@ -457,7 +501,47 @@ export class HologramdetailsComponent implements OnInit {
 
   // Update arrival methods
   canUpdateRecord(record: HologramRecord): boolean {
-    return record.status === 'PENDING_ARRIVAL';
+    // Button should only be active if:
+    // 1. Status is PENDING_ARRIVAL (approved by commissioner)
+    // 2. Payment slip has been uploaded by supply chain
+    if (record.status !== 'PENDING_ARRIVAL') {
+      return false;
+    }
+    
+    // Check if payment slip has been uploaded for this record
+    return this.isPaymentSlipUploaded(record);
+  }
+  
+  // Check if payment slip has been uploaded for this hologram record
+  private isPaymentSlipUploaded(record: HologramRecord): boolean {
+    // Check in supply chain data if payment slip is uploaded
+    if (record.supplyChainData) {
+      // Check if paymentSlipUploaded flag is set
+      if (record.supplyChainData.paymentSlipUploaded === true) {
+        return true;
+      }
+    }
+    
+    // Also check in hologramApplications storage
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const matchingApp = applications.find((app: any) => 
+      app.refNo === record.ourRefNo && 
+      app.procurementType === record.procurementType
+    );
+    
+    if (matchingApp && matchingApp.paymentSlipUploaded === true) {
+      return true;
+    }
+    
+    // Check in hologramRequests storage
+    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
+    
+    if (matchingReq && matchingReq.paymentSlipUploaded === true) {
+      return true;
+    }
+    
+    return false;
   }
 
   updateArrivalDetails(record: HologramRecord) {
@@ -884,7 +968,7 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: '',
         toSerial: '',
         numberOfHolograms: 500,
-        remarks: 'TEST: Hologram request for Local Whiskey - Ready for Arrival Update',
+        remarks: 'TEST: Hologram request for Local Whiskey - Payment Slip Uploaded, Ready for Arrival Update',
         status: 'PENDING_ARRIVAL',
         approvedDate: '2024-11-04',
         supplyChainData: {
@@ -893,7 +977,10 @@ export class HologramdetailsComponent implements OnInit {
           localQtyLakh: 1000,
           exportQtyLakh: 0,
           defenceQtyLakh: 0,
-          status: 'APPROVED'
+          status: 'APPROVED',
+          paymentSlipUploaded: true, // Payment slip uploaded - button should be active
+          paymentSlipUploadDate: '2024-11-04',
+          paymentSlipFileName: 'payment_slip_TEST_2024_001.pdf'
         }
       },
       {
@@ -904,7 +991,7 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: '',
         toSerial: '',
         numberOfHolograms: 2500,
-        remarks: 'TEST: Hologram request for Export Rum - Ready for Arrival Update',
+        remarks: 'TEST: Hologram request for Export Rum - Waiting for Payment Slip Upload',
         status: 'PENDING_ARRIVAL',
         approvedDate: '2024-11-04',
         supplyChainData: {
@@ -913,7 +1000,8 @@ export class HologramdetailsComponent implements OnInit {
           localQtyLakh: 0,
           exportQtyLakh: 2500,
           defenceQtyLakh: 0,
-          status: 'APPROVED'
+          status: 'APPROVED',
+          paymentSlipUploaded: false // Payment slip NOT uploaded - button should be disabled
         }
       },
       {
@@ -924,7 +1012,7 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: '',
         toSerial: '',
         numberOfHolograms: 500,
-        remarks: 'TEST: Hologram request for Defence Supplies - Ready for Arrival Update',
+        remarks: 'TEST: Hologram request for Defence Supplies - Payment Slip Uploaded, Ready for Arrival Update',
         status: 'PENDING_ARRIVAL',
         approvedDate: '2024-11-04',
         supplyChainData: {
@@ -933,7 +1021,10 @@ export class HologramdetailsComponent implements OnInit {
           localQtyLakh: 0,
           exportQtyLakh: 0,
           defenceQtyLakh: 500,
-          status: 'APPROVED'
+          status: 'APPROVED',
+          paymentSlipUploaded: true, // Payment slip uploaded - button should be active
+          paymentSlipUploadDate: '2024-11-04',
+          paymentSlipFileName: 'payment_slip_TEST_2024_003.pdf'
         }
       }
     ];
@@ -941,6 +1032,39 @@ export class HologramdetailsComponent implements OnInit {
     // Add test records to the beginning of the array for visibility
     this.hologramRecords = [...testRecords, ...this.hologramRecords];
     this.applyFilters();
+  }
+  
+  // Helper method for supply chain to mark payment slip as uploaded
+  // This should be called from the supply chain interface after payment slip upload
+  markPaymentSlipUploaded(refNo: string, procurementType: string, fileName: string): void {
+    // Update in hologramApplications
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const appIndex = applications.findIndex((app: any) => 
+      app.refNo === refNo && app.procurementType === procurementType
+    );
+    
+    if (appIndex !== -1) {
+      applications[appIndex].paymentSlipUploaded = true;
+      applications[appIndex].paymentSlipUploadDate = new Date().toISOString().split('T')[0];
+      applications[appIndex].paymentSlipFileName = fileName;
+      localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    }
+    
+    // Update in hologramRequests
+    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const reqIndex = requests.findIndex((req: any) => req.refNo === refNo);
+    
+    if (reqIndex !== -1) {
+      requests[reqIndex].paymentSlipUploaded = true;
+      requests[reqIndex].paymentSlipUploadDate = new Date().toISOString().split('T')[0];
+      requests[reqIndex].paymentSlipFileName = fileName;
+      localStorage.setItem('hologramRequests', JSON.stringify(requests));
+    }
+    
+    // Reload data to reflect changes
+    this.loadHologramRecords();
+    
+    console.log(`✅ Payment slip marked as uploaded for ${refNo} (${procurementType})`);
   }
 
 

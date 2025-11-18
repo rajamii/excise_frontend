@@ -194,7 +194,7 @@
                             </td>
                             <td class="actions">
                                 <div class="d-flex gap-1 align-items-center flex-wrap">
-                                    <!-- Update Arrival Button - Only for PENDING_ARRIVAL status -->
+                                    <!-- Update Arrival Button - Only for PENDING_ARRIVAL status with payment slip uploaded -->
                                     @if (canUpdateRecord(record)) {
                                     <button class="btn btn-success btn-sm"
                                         (click)="updateArrivalDetails(record)"
@@ -202,6 +202,16 @@
                                         <i class="bi bi-box-seam me-1"></i>
                                         <span class="d-none d-lg-inline">Update Arrival</span>
                                         <span class="d-lg-none">Update</span>
+                                    </button>
+                                    }
+
+                                    <!-- Disabled Button for Pending Arrival without Payment Slip -->
+                                    @if (record.status === 'PENDING_ARRIVAL' && !canUpdateRecord(record)) {
+                                    <button class="btn btn-warning btn-sm" disabled
+                                        title="Waiting for Payment Slip Upload from Supply Chain">
+                                        <i class="bi bi-receipt me-1"></i>
+                                        <span class="d-none d-lg-inline">Pending Slip</span>
+                                        <span class="d-lg-none">Pending</span>
                                     </button>
                                     }
 

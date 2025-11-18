@@ -233,6 +233,8 @@ export class HologramComponent {
     // Save to both storage keys for compatibility
 
     // 1. Save to hologramApplications (new format) - Create separate rows for each type
+    // NOTE: After IT Cell approval and Commissioner approval, supply chain must upload payment slip
+    // before Officer in Charge can update arrival details. The paymentSlipUploaded flag controls this.
     const dashboardKey = 'hologramApplications';
     const applications = JSON.parse(localStorage.getItem(dashboardKey) || '[]');
 

@@ -107,35 +107,79 @@ export class PayslipComponent implements OnInit {
         defenceQtyLakh: transaction.defenceQtyLakh || 0,
         hologramTypes: hologramTypes
       };
-    } else {
-      // Fallback: check hologramRequests for payment info
-      const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const request = requests.find((r: any) => r.refNo === this.refNo);
+      return;
+    }
+    
+    // Fallback 1: Check hologramRequests for payment info
+    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = requests.find((r: any) => r.refNo === this.refNo);
+    
+    if (request) {
+      // Build hologram types array based on quantities from the original request
+      const hologramTypes = this.buildHologramTypesArray(request);
       
-      if (request) {
-        // Build hologram types array based on quantities from the original request
-        const hologramTypes = this.buildHologramTypesArray(request);
-        
-        // Only show payment slip if payment is completed
-        if (request.paymentCompleted) {
-          this.paymentData = {
-            id: request.refNo,
-            refNo: request.refNo,
-            type: 'HOLOGRAM',
-            companyName: request.companyName || 'Yuksom Breweries Ltd.',
-            date: request.date,
-            amount: this.calculateHologramAmount(request),
-            paymentDate: request.paymentDate || new Date().toISOString(),
-            paymentMethod: 'Wallet Payment',
-            transactionId: request.transactionId || `TXN-${request.refNo}-${Date.now()}`,
-            status: 'Completed',
-            localQtyLakh: request.localQtyLakh || 0,
-            exportQtyLakh: request.exportQtyLakh || 0,
-            defenceQtyLakh: request.defenceQtyLakh || 0,
-            hologramTypes: hologramTypes
-          };
-        }
-      }
+      // Show payment slip if request exists (payment is assumed completed for approved requests)
+      this.paymentData = {
+        id: request.refNo,
+        refNo: request.refNo,
+        type: 'HOLOGRAM',
+        companyName: request.companyName || 'Yuksom Breweries Ltd.',
+        date: request.date,
+        amount: this.calculateHologramAmount(request),
+        paymentDate: request.paymentDate || new Date().toISOString().split('T')[0],
+        paymentMethod: 'Wallet Payment',
+        transactionId: request.transactionId || `TXN-${request.refNo.replace(/\//g, '-')}-${Date.now()}`,
+        status: 'Completed',
+        localQtyLakh: request.localQtyLakh || 0,
+        exportQtyLakh: request.exportQtyLakh || 0,
+        defenceQtyLakh: request.defenceQtyLakh || 0,
+        hologramTypes: hologramTypes
+      };
+      return;
+    }
+    
+    // Fallback 2: Check hologramApplications (separate rows per type)
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const matchingApps = applications.filter((app: any) => app.refNo === this.refNo);
+    
+    if (matchingApps.length > 0) {
+      // Aggregate all types for the same reference number
+      const aggregatedData = {
+        refNo: this.refNo,
+        companyName: matchingApps[0].companyName || 'Yuksom Breweries Ltd.',
+        date: matchingApps[0].date,
+        localQtyLakh: 0,
+        exportQtyLakh: 0,
+        defenceQtyLakh: 0
+      };
+      
+      // Sum up quantities from all matching applications
+      matchingApps.forEach((app: any) => {
+        aggregatedData.localQtyLakh += app.localQtyLakh || 0;
+        aggregatedData.exportQtyLakh += app.exportQtyLakh || 0;
+        aggregatedData.defenceQtyLakh += app.defenceQtyLakh || 0;
+      });
+      
+      // Build hologram types array
+      const hologramTypes = this.buildHologramTypesArray(aggregatedData);
+      
+      // Create payment data
+      this.paymentData = {
+        id: this.refNo,
+        refNo: this.refNo,
+        type: 'HOLOGRAM',
+        companyName: aggregatedData.companyName,
+        date: aggregatedData.date,
+        amount: this.calculateHologramAmount(aggregatedData),
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Wallet Payment',
+        transactionId: `TXN-${this.refNo.replace(/\//g, '-')}-${Date.now()}`,
+        status: 'Completed',
+        localQtyLakh: aggregatedData.localQtyLakh,
+        exportQtyLakh: aggregatedData.exportQtyLakh,
+        defenceQtyLakh: aggregatedData.defenceQtyLakh,
+        hologramTypes: hologramTypes
+      };
     }
   }
 
