@@ -1711,6 +1711,15 @@
                               <i class="bi bi-check-circle me-1"></i>
                               <span class="d-none d-md-inline">Mark Paid (Test)</span>
                             </button>
+                            <!-- View Payment Receipt button - shows after payment completed -->
+                            <button 
+                              *ngIf="item.paymentCompleted"
+                              class="btn btn-success btn-sm" 
+                              (click)="viewPaymentSlip(item)" 
+                              title="View Payment Receipt">
+                              <i class="bi bi-receipt me-1"></i>
+                              <span class="d-none d-md-inline">Payment Slip</span>
+                            </button>
                             <!-- Payment Completed badge -->
                             <span 
                               *ngIf="item.paymentCompleted"

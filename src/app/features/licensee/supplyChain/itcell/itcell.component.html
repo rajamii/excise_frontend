@@ -160,6 +160,13 @@
                       <i class="bi bi-check-circle me-1"></i>APPROVE
                     </button>
                   }
+                  @if (isPaymentCompleted(hologram)) {
+                    <button class="btn btn-primary btn-sm"
+                            style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                            (click)="viewPaymentSlip(hologram)">
+                      <i class="bi bi-receipt me-1"></i>PAYMENT SLIP
+                    </button>
+                  }
                 </div>
               </td>
             </tr>

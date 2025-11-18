@@ -367,4 +367,24 @@ export class ITCELLComponent implements OnInit {
     
     return request?.paymentSlipUploaded === true;
   }
+
+  // Check if payment is completed
+  isPaymentCompleted(hologram: HologramFormData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
+    
+    return request?.paymentCompleted === true;
+  }
+
+  // View payment slip
+  viewPaymentSlip(hologram: HologramFormData): void {
+    this.router.navigate(['/dev-payslip'], {
+      queryParams: {
+        ref: hologram.refNo,
+        type: 'HOLOGRAM'
+      }
+    });
+  }
 }

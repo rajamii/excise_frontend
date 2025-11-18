@@ -1231,4 +1231,24 @@ export class CommissionerDashboardComponent implements OnInit {
     this.pageSizeByTab[tab] = s;
     this.currentPageByTab[tab] = 1;
   }
+
+  // Check if payment is completed for hologram
+  isPaymentCompleted(item: CommissionerTableData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === item.referenceNo);
+    
+    return request?.paymentCompleted === true;
+  }
+
+  // View payment slip for completed payments
+  viewPaymentSlip(item: CommissionerTableData): void {
+    this.router.navigate(['/dev-payslip'], {
+      queryParams: {
+        ref: item.referenceNo,
+        type: 'HOLOGRAM'
+      }
+    });
+  }
 }

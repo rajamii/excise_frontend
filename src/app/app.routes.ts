@@ -285,6 +285,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "dev-payslip",
+    loadComponent: () =>
+      import("./features/licensee/supplyChain/letterView/payslip/payslip.component").then(
+        (m) => m.PayslipComponent,
+      ),
+  },
+  {
     path: "dev-hologram-monthly-report",
     loadComponent: () =>
       import(

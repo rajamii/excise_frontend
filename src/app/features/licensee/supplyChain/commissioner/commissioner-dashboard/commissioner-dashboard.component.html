@@ -1277,6 +1277,10 @@
                               title="Reject" *ngIf="item.status === 'PENDING'">
                               <i class="bi bi-x"></i>
                             </button>
+                            <button class="btn btn-primary btn-sm" (click)="viewPaymentSlip(item)"
+                              title="View Payment Slip" *ngIf="isPaymentCompleted(item)">
+                              <i class="bi bi-receipt"></i>
+                            </button>
                           </div>
                         </td>
                       </tr>

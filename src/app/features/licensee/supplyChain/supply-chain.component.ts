@@ -2165,4 +2165,15 @@ End of Application
     }
   }
 
+  // View payment slip for completed payments
+  viewPaymentSlip(item: HologramRow): void {
+    // Navigate to payslip component with ref and type
+    this.router.navigate(['/dev-payslip'], {
+      queryParams: {
+        ref: item.refNo,
+        type: 'HOLOGRAM'
+      }
+    });
+  }
+
 }

@@ -1,0 +1,202 @@
+<div class="payslip-container">
+  <!-- Header Section -->
+  <div class="payslip-header no-print">
+    <div class="container-fluid">
+      <div class="d-flex justify-content-between align-items-center py-3">
+        <div>
+          <h4 class="mb-1">
+            <i [class]="'bi ' + getTypeIcon() + ' me-2'"></i>
+            Payment Slip - {{ getTypeLabel() }}
+          </h4>
+          <p class="text-muted mb-0">Reference: {{ refNo }}</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-primary" (click)="printSlip()">
+            <i class="bi bi-printer me-1"></i>
+            Print
+          </button>
+          <button class="btn btn-success" (click)="downloadSlip()">
+            <i class="bi bi-download me-1"></i>
+            Download
+          </button>
+          <button class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Slip Content -->
+  <div class="payslip-content" *ngIf="paymentData">
+    <div class="container">
+      <div class="slip-card">
+        <!-- Government Header -->
+        <div class="gov-header text-center">
+          <div class="gov-seal mb-3">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal" class="seal-image">
+          </div>
+          <h2 class="gov-title mb-1">GOVERNMENT OF SIKKIM</h2>
+          <h3 class="dept-title mb-1">EXCISE DEPARTMENT</h3>
+          <p class="location mb-0">GANGTOK, SIKKIM</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Slip Title -->
+        <div class="slip-title text-center mb-4">
+          <h4 class="fw-bold text-decoration-underline">PAYMENT RECEIPT</h4>
+          <p class="text-muted mb-0">{{ getTypeLabel() }}</p>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="payment-details">
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Receipt No:</label>
+                <span class="detail-value">{{ paymentData.transactionId }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Payment Date:</label>
+                <span class="detail-value">{{ paymentData.paymentDate | date:'dd-MMM-yyyy' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Reference No:</label>
+                <span class="detail-value">{{ paymentData.refNo }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Application Date:</label>
+                <span class="detail-value">{{ paymentData.date | date:'dd-MMM-yyyy' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="detail-group">
+                <label class="detail-label">Company Name:</label>
+                <span class="detail-value">{{ paymentData.companyName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Payment Method:</label>
+                <span class="detail-value">{{ paymentData.paymentMethod }}</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="detail-group">
+                <label class="detail-label">Status:</label>
+                <span class="badge bg-success">{{ paymentData.status }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Amount Section -->
+          <div class="amount-section">
+            <div class="amount-box">
+              <div class="row align-items-center">
+                <div class="col-md-8">
+                  <h5 class="mb-0">Total Amount Paid:</h5>
+                </div>
+                <div class="col-md-4 text-end">
+                  <h3 class="amount-value mb-0">₹{{ paymentData.amount | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hologram Specific Details -->
+          <div *ngIf="type.toUpperCase() === 'HOLOGRAM'" class="hologram-details mt-4">
+            <h6 class="section-title">Payment Breakdown:</h6>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead class="table-light">
+                  <tr>
+                    <th>Description</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Wallet Payment (₹0.15 per hologram)</td>
+                    <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
+                  </tr>
+                  <tr class="table-success fw-bold">
+                    <td>Total Paid</td>
+                    <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="alert alert-info mt-3">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Note:</strong> This is the wallet payment component (₹0.15 per hologram). 
+              The offline payment slip (₹0.72 per hologram) was submitted separately to the printing press.
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="slip-footer mt-5">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="signature-section">
+                <p class="mb-1">Received By:</p>
+                <div class="signature-line"></div>
+                <p class="small text-muted mb-0">Authorized Officer</p>
+                <p class="small text-muted">Excise Department</p>
+              </div>
+            </div>
+            <div class="col-md-6 text-end">
+              <div class="signature-section">
+                <p class="mb-1">Paid By:</p>
+                <div class="signature-line"></div>
+                <p class="small text-muted mb-0">{{ paymentData.companyName }}</p>
+                <p class="small text-muted">Authorized Signatory</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-center mt-4 pt-3 border-top">
+            <p class="small text-muted mb-0">
+              This is a computer-generated receipt and does not require a physical signature.
+            </p>
+            <p class="small text-muted mb-0">
+              Generated on: {{ paymentData.paymentDate | date:'dd-MMM-yyyy HH:mm:ss' }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Data State -->
+  <div class="no-data-state" *ngIf="!paymentData">
+    <div class="container text-center py-5">
+      <i class="bi bi-receipt display-1 text-muted"></i>
+      <h4 class="mt-3">Payment Slip Not Found</h4>
+      <p class="text-muted">
+        No payment record found for reference: <strong>{{ refNo }}</strong>
+      </p>
+      <button class="btn btn-primary mt-3" (click)="goBack()">
+        <i class="bi bi-arrow-left me-1"></i>
+        Go Back
+      </button>
+    </div>
+  </div>
+</div>

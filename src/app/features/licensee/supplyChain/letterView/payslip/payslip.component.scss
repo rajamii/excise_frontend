@@ -1,0 +1,155 @@
+.payslip-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.payslip-header {
+  background: white;
+  border-bottom: 2px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.payslip-content {
+  padding: 2rem 0;
+}
+
+.slip-card {
+  background: white;
+  padding: 3rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.gov-header {
+  .seal-image {
+    height: 100px;
+    width: auto;
+  }
+
+  .gov-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #000;
+    letter-spacing: 1px;
+  }
+
+  .dept-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #000;
+    letter-spacing: 0.5px;
+  }
+
+  .location {
+    font-size: 1rem;
+    color: #333;
+  }
+}
+
+.divider {
+  border: none;
+  height: 2px;
+  background: #000;
+  margin: 1.5rem 0;
+}
+
+.slip-title {
+  h4 {
+    font-size: 1.3rem;
+    color: #000;
+  }
+}
+
+.payment-details {
+  .detail-group {
+    margin-bottom: 1rem;
+
+    .detail-label {
+      font-weight: 600;
+      color: #555;
+      display: inline-block;
+      min-width: 150px;
+      margin-right: 1rem;
+    }
+
+    .detail-value {
+      color: #000;
+      font-weight: 500;
+    }
+  }
+}
+
+.amount-section {
+  margin: 2rem 0;
+
+  .amount-box {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem;
+    border-radius: 8px;
+    color: white;
+
+    h5 {
+      color: white;
+      font-weight: 600;
+    }
+
+    .amount-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: white;
+    }
+  }
+}
+
+.hologram-details {
+  .section-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 1rem;
+  }
+}
+
+.slip-footer {
+  .signature-section {
+    .signature-line {
+      border-bottom: 2px solid #000;
+      margin: 2rem 0 0.5rem 0;
+      width: 200px;
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .payslip-container {
+    background: white;
+  }
+
+  .slip-card {
+    box-shadow: none;
+    padding: 1rem;
+  }
+
+  .amount-box {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    border: 2px solid #000;
+
+    h5, .amount-value {
+      color: #000 !important;
+    }
+  }
+}
+
+.no-data-state {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
