@@ -9,6 +9,7 @@ interface PaymentItem {
   amount: number;
   hoa: string;
   status: string;
+  procurementType?: string; // For hologram payments to track specific type
 }
 
 interface TransitItem {
@@ -258,25 +259,25 @@ export class PaymentConfirmationComponent implements OnInit {
       // Transform applications into hologram payment items
       this.hologramData = applications
         .filter((app: any) => {
-          // Only include items that have payment slips uploaded
+          // Only include items that have payment slips uploaded for this specific type
           return payments.some((payment: any) => 
             payment.hologramRefNo === app.refNo && 
             payment.procurementType === app.procurementType
           );
         })
         .map((app: any) => {
-          // Find the corresponding payment record
+          // Find the corresponding payment record for this specific type
           const payment = payments.find((p: any) => 
             p.hologramRefNo === app.refNo && 
             p.procurementType === app.procurementType
           );
 
-          // Calculate hologram fee (₹0.15 per hologram)
+          // Calculate hologram fee (₹0.15 per hologram) for this specific type
           const totalQty = (app.localQtyLakh || 0) + (app.exportQtyLakh || 0) + (app.defenceQtyLakh || 0);
           const hologramFee = totalQty * 0.15;
 
           return {
-            id: app.id || app.refNo,
+            id: `${app.refNo}-${app.procurementType}`, // Unique ID combining refNo and type
             referenceNo: app.refNo,
             companyName: app.companyName,
             procurementType: app.procurementType,
@@ -442,21 +443,43 @@ export class PaymentConfirmationComponent implements OnInit {
     // Update item status
     item.status = 'Payment Successful';
 
-    // If this is a hologram payment, update the hologram application in localStorage
+    // If this is a hologram payment, update the specific hologram application in localStorage
     if (this.activeTab === 'hologram') {
-      this.updateHologramPaymentStatus(item.referenceNo);
+      // Get procurement type from the item (stored when payHologramItem was called)
+      const procurementType = item.procurementType;
+      
+      if (procurementType) {
+        this.updateHologramPaymentStatus(item.referenceNo, procurementType);
+      } else {
+        // Fallback: Find the hologram item to get its procurement type
+        const hologramItem = this.hologramData.find(h => 
+          h.referenceNo === item.referenceNo && h.id === item.id
+        );
+        if (hologramItem) {
+          this.updateHologramPaymentStatus(item.referenceNo, hologramItem.procurementType);
+        }
+      }
     }
     
     // Show success message
     this.showSuccessMessage(`Payment of ₹${item.amount} processed successfully!`);
   }
 
-  updateHologramPaymentStatus(refNo: string): void {
+  updateHologramPaymentStatus(refNo: string, procurementType?: string): void {
     try {
-      // Update hologram applications
+      // Get the procurement type from the selected item if not provided
+      const selectedHologram = this.hologramData.find(h => h.referenceNo === refNo);
+      const typeToUpdate = procurementType || selectedHologram?.procurementType;
+
+      if (!typeToUpdate) {
+        console.error('Cannot update payment status: procurement type not found');
+        return;
+      }
+
+      // Update only the specific hologram application with matching refNo AND procurementType
       const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
       const updatedApplications = applications.map((app: any) => {
-        if (app.refNo === refNo) {
+        if (app.refNo === refNo && app.procurementType === typeToUpdate) {
           return { 
             ...app, 
             paymentCompleted: true,
@@ -468,10 +491,10 @@ export class PaymentConfirmationComponent implements OnInit {
       });
       localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
 
-      // Update hologram payments
+      // Update only the specific hologram payment with matching refNo AND procurementType
       const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
       const updatedPayments = payments.map((payment: any) => {
-        if (payment.hologramRefNo === refNo) {
+        if (payment.hologramRefNo === refNo && payment.procurementType === typeToUpdate) {
           return { 
             ...payment, 
             status: 'Payment Completed',
@@ -481,6 +504,8 @@ export class PaymentConfirmationComponent implements OnInit {
         return payment;
       });
       localStorage.setItem('hologramPayments', JSON.stringify(updatedPayments));
+
+      console.log(`✅ Payment completed for ${refNo} - ${typeToUpdate}`);
 
       // Reload hologram data
       this.loadHologramDataFromStorage();
@@ -565,12 +590,14 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   payHologramItem(item: HologramItem): void {
+    // Store the procurement type in the selectedItem for later use
     this.selectedItem = {
       id: item.id,
       referenceNo: item.referenceNo,
       amount: item.hologramFee,
       hoa: item.hoa,
-      status: item.status
+      status: item.status,
+      procurementType: item.procurementType // Store procurement type
     };
     // Show payment confirmation modal
     const modal = document.getElementById('paymentModal');
@@ -587,9 +614,44 @@ export class PaymentConfirmationComponent implements OnInit {
       return;
     }
 
-    // Process all hologram payments
-    console.log('Processing all hologram payments');
-    this.showSuccessMessage('All hologram payments processed successfully!');
+    // Confirm before processing all payments
+    const pendingCount = this.getPendingHologramCount();
+    const confirmed = confirm(
+      `You are about to process ${pendingCount} hologram payment(s) totaling ₹${totalHologramFee.toFixed(2)}.\n\n` +
+      `Each payment will be processed individually for its specific procurement type.\n\n` +
+      `Do you want to proceed?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Process all pending hologram payments individually
+    const pendingItems = this.hologramData.filter(item => this.canPayHologram(item));
+    let successCount = 0;
+
+    pendingItems.forEach(item => {
+      try {
+        // Update wallet balance
+        this.educationCessBalance -= item.hologramFee;
+        
+        // Update item status
+        item.status = 'Payment Successful';
+
+        // Update the specific hologram application in localStorage
+        this.updateHologramPaymentStatus(item.referenceNo, item.procurementType);
+        
+        successCount++;
+        console.log(`✅ Payment completed for ${item.referenceNo} - ${item.procurementType}`);
+      } catch (error) {
+        console.error(`❌ Failed to process payment for ${item.referenceNo} - ${item.procurementType}:`, error);
+      }
+    });
+
+    // Show success message
+    this.showSuccessMessage(
+      `Successfully processed ${successCount} hologram payment(s) totaling ₹${totalHologramFee.toFixed(2)}!`
+    );
   }
 
   getTotalHologramFee(): number {
