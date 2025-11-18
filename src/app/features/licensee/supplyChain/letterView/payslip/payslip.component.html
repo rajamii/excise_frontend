@@ -34,97 +34,93 @@
       <div class="slip-card">
         <!-- Government Header -->
         <div class="gov-header text-center">
-          <div class="gov-seal mb-3">
+          <div class="gov-seal mb-2">
             <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal" class="seal-image">
           </div>
-          <h2 class="gov-title mb-1">GOVERNMENT OF SIKKIM</h2>
-          <h3 class="dept-title mb-1">EXCISE DEPARTMENT</h3>
+          <h2 class="gov-title mb-0">GOVERNMENT OF SIKKIM</h2>
+          <h3 class="dept-title mb-0">EXCISE DEPARTMENT</h3>
           <p class="location mb-0">GANGTOK, SIKKIM</p>
         </div>
 
         <hr class="divider">
 
         <!-- Slip Title -->
-        <div class="slip-title text-center mb-4">
-          <h4 class="fw-bold text-decoration-underline">PAYMENT RECEIPT</h4>
-          <p class="text-muted mb-0">{{ getTypeLabel() }}</p>
+        <div class="slip-title text-center mb-3">
+          <h4 class="fw-bold text-decoration-underline mb-1">PAYMENT RECEIPT</h4>
+          <p class="text-muted mb-0 small">{{ getTypeLabel() }}</p>
         </div>
 
         <!-- Payment Details -->
         <div class="payment-details">
-          <div class="row mb-4">
+          <div class="row mb-2">
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Receipt No:</label>
+                <span class="detail-label">Receipt No:</span>
                 <span class="detail-value">{{ paymentData.transactionId }}</span>
               </div>
             </div>
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Payment Date:</label>
+                <span class="detail-label">Payment Date:</span>
                 <span class="detail-value">{{ paymentData.paymentDate | date:'dd-MMM-yyyy' }}</span>
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
+          <div class="row mb-2">
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Reference No:</label>
+                <span class="detail-label">Reference No:</span>
                 <span class="detail-value">{{ paymentData.refNo }}</span>
               </div>
             </div>
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Application Date:</label>
+                <span class="detail-label">Application Date:</span>
                 <span class="detail-value">{{ paymentData.date | date:'dd-MMM-yyyy' }}</span>
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
+          <div class="row mb-2">
             <div class="col-12">
               <div class="detail-group">
-                <label class="detail-label">Company Name:</label>
+                <span class="detail-label">Company Name:</span>
                 <span class="detail-value">{{ paymentData.companyName }}</span>
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
+          <div class="row mb-3">
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Payment Method:</label>
+                <span class="detail-label">Payment Method:</span>
                 <span class="detail-value">{{ paymentData.paymentMethod }}</span>
               </div>
             </div>
             <div class="col-md-6">
               <div class="detail-group">
-                <label class="detail-label">Status:</label>
+                <span class="detail-label">Status:</span>
                 <span class="badge bg-success">{{ paymentData.status }}</span>
               </div>
             </div>
           </div>
 
           <!-- Amount Section -->
-          <div class="amount-section">
+          <div class="amount-section mb-3">
             <div class="amount-box">
-              <div class="row align-items-center">
-                <div class="col-md-8">
-                  <h5 class="mb-0">Total Amount Paid:</h5>
-                </div>
-                <div class="col-md-4 text-end">
-                  <h3 class="amount-value mb-0">₹{{ paymentData.amount | number:'1.2-2' }}</h3>
-                </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="amount-label">Total Amount Paid:</span>
+                <span class="amount-value">₹{{ paymentData.amount | number:'1.2-2' }}</span>
               </div>
             </div>
           </div>
 
           <!-- Hologram Specific Details -->
-          <div *ngIf="type.toUpperCase() === 'HOLOGRAM'" class="hologram-details mt-4">
+          <div *ngIf="type.toUpperCase() === 'HOLOGRAM'" class="hologram-details">
             <h6 class="section-title">Payment Breakdown:</h6>
             <div class="table-responsive">
-              <table class="table table-bordered">
+              <table class="table table-bordered table-sm mb-2">
                 <thead class="table-light">
                   <tr>
                     <th>Description</th>
@@ -136,43 +132,45 @@
                     <td>Wallet Payment (₹0.15 per hologram)</td>
                     <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
                   </tr>
-                  <tr class="table-success fw-bold">
+                  <tr class="fw-bold">
                     <td>Total Paid</td>
                     <td class="text-end">₹{{ paymentData.amount | number:'1.2-2' }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div class="alert alert-info mt-3">
-              <i class="bi bi-info-circle me-2"></i>
-              <strong>Note:</strong> This is the wallet payment component (₹0.15 per hologram). 
-              The offline payment slip (₹0.72 per hologram) was submitted separately to the printing press.
+            <div class="alert alert-info py-2 px-3 mb-3">
+              <small>
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Note:</strong> This is the wallet payment component (₹0.15 per hologram). 
+                The offline payment slip (₹0.72 per hologram) was submitted separately to the printing press.
+              </small>
             </div>
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="slip-footer mt-5">
+        <div class="slip-footer">
           <div class="row">
-            <div class="col-md-6">
+            <div class="col-6">
               <div class="signature-section">
-                <p class="mb-1">Received By:</p>
+                <p class="mb-1 small">Received By:</p>
                 <div class="signature-line"></div>
                 <p class="small text-muted mb-0">Authorized Officer</p>
-                <p class="small text-muted">Excise Department</p>
+                <p class="small text-muted mb-0">Excise Department</p>
               </div>
             </div>
-            <div class="col-md-6 text-end">
+            <div class="col-6 text-end">
               <div class="signature-section">
-                <p class="mb-1">Paid By:</p>
-                <div class="signature-line"></div>
+                <p class="mb-1 small">Paid By:</p>
+                <div class="signature-line ms-auto"></div>
                 <p class="small text-muted mb-0">{{ paymentData.companyName }}</p>
-                <p class="small text-muted">Authorized Signatory</p>
+                <p class="small text-muted mb-0">Authorized Signatory</p>
               </div>
             </div>
           </div>
 
-          <div class="text-center mt-4 pt-3 border-top">
+          <div class="text-center mt-3 pt-2 border-top">
             <p class="small text-muted mb-0">
               This is a computer-generated receipt and does not require a physical signature.
             </p>

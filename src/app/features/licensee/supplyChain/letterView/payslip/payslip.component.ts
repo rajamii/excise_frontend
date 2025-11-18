@@ -161,7 +161,316 @@ export class PayslipComponent implements OnInit {
   }
 
   printSlip(): void {
-    window.print();
+    // Get only the slip content
+    const slipContent = document.querySelector('.slip-card');
+    if (!slipContent) {
+      alert('Payment slip content not found');
+      return;
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      alert('Please allow popups to print the slip');
+      return;
+    }
+
+    // Write the slip content to the new window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Slip - ${this.paymentData?.refNo}</title>
+          <meta charset="utf-8">
+          <style>
+            @page {
+              size: A4;
+              margin: 0.4in;
+            }
+            
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background: white;
+              color: #000;
+              line-height: 1.2;
+              font-size: 12px;
+            }
+            
+            .slip-card {
+              max-width: 100%;
+              width: 100%;
+              margin: 0;
+              padding: 0.8rem;
+              border: 3px solid #000;
+              background: white;
+              box-sizing: border-box;
+              page-break-inside: avoid;
+            }
+            
+            .gov-header {
+              text-align: center;
+              margin-bottom: 0.7rem;
+            }
+            
+            .seal-image {
+              height: 40px;
+              width: auto;
+              margin-bottom: 0.3rem;
+            }
+            
+            .gov-title {
+              font-size: 1rem;
+              font-weight: bold;
+              margin-bottom: 0.15rem;
+            }
+            
+            .dept-title {
+              font-size: 0.9rem;
+              font-weight: bold;
+              margin-bottom: 0.15rem;
+            }
+            
+            .location {
+              font-size: 0.8rem;
+              color: #333;
+            }
+            
+            .divider {
+              border: none;
+              height: 1px;
+              background: #000;
+              margin: 0.5rem 0;
+            }
+            
+            .slip-title {
+              text-align: center;
+              margin-bottom: 1rem;
+              padding-bottom: 0.5rem;
+              border-bottom: 1px solid #ddd;
+            }
+            
+            .slip-title h4 {
+              font-size: 1rem;
+              margin-bottom: 0.3rem;
+              text-decoration: underline;
+            }
+            
+            .slip-title p {
+              font-size: 0.85rem;
+              margin: 0;
+              font-weight: bold;
+              text-decoration: underline;
+              color: #000;
+            }
+            
+            .detail-group {
+              margin-bottom: 0.5rem;
+              display: flex;
+              align-items: center;
+              padding: 0.2rem 0;
+            }
+            
+            .detail-label {
+              font-weight: 600;
+              color: #555;
+              min-width: 140px;
+              margin-right: 0.8rem;
+              text-decoration: underline;
+              font-size: 0.85rem;
+            }
+            
+            .detail-value {
+              color: #000;
+              font-weight: 600;
+              font-size: 0.85rem;
+            }
+            
+            /* Add visual separation between detail sections */
+            .row:not(:last-child) {
+              border-bottom: 1px solid #f0f0f0;
+              padding-bottom: 0.3rem;
+            }
+            
+            .amount-box {
+              border: 3px solid #000;
+              padding: 0.8rem;
+              margin: 1rem 0;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: white;
+            }
+            
+            .amount-label {
+              font-weight: 700;
+              font-size: 0.95rem;
+            }
+            
+            .amount-value {
+              font-weight: 700;
+              font-size: 1.2rem;
+            }
+            
+            .section-title {
+              font-size: 0.8rem;
+              font-weight: 600;
+              margin-bottom: 0.3rem;
+            }
+            
+            .table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 0.4rem 0;
+              font-size: 0.8rem;
+            }
+            
+            .table th,
+            .table td {
+              border: 1px solid #000;
+              padding: 0.3rem 0.4rem;
+              text-align: left;
+            }
+            
+            .table th {
+              background: #f0f0f0;
+              font-weight: bold;
+            }
+            
+
+            
+            .text-end {
+              text-align: right;
+            }
+            
+            .alert {
+              background: #d1ecf1;
+              border: 1px solid #bee5eb;
+              padding: 0.3rem;
+              margin: 0.4rem 0;
+              border-radius: 3px;
+              font-size: 0.7rem;
+              line-height: 1.3;
+            }
+            
+            .slip-footer {
+              margin-top: 0.8rem;
+            }
+            
+            .slip-footer .row {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+            }
+            
+            .slip-footer .col-6 {
+              flex: 0 0 45%;
+            }
+            
+            .slip-footer .col-6:last-child {
+              text-align: right;
+            }
+            
+            .signature-section {
+              display: block;
+              width: 100%;
+            }
+            
+            .signature-line {
+              border-bottom: 2px solid #000;
+              margin: 0.8rem 0 0.3rem 0;
+              width: 120px;
+            }
+            
+            .slip-footer .col-6:last-child .signature-line {
+              margin-left: auto;
+              margin-right: 0;
+            }
+            
+            .text-center {
+              text-align: center;
+            }
+            
+            .border-top {
+              border-top: 1px solid #000;
+              margin-top: 0.5rem;
+              padding-top: 0.3rem;
+            }
+            
+            .badge {
+              background: #28a745;
+              color: white;
+              padding: 0.1rem 0.3rem;
+              border-radius: 2px;
+              font-size: 0.7rem;
+            }
+            
+            .row {
+              display: flex;
+              margin-bottom: 0.5rem;
+            }
+            
+            .col-md-6 {
+              flex: 0 0 50%;
+              padding-right: 0.5rem;
+            }
+            
+            .col-12 {
+              flex: 0 0 100%;
+              margin-bottom: 0.3rem;
+            }
+            
+            .payment-details {
+              margin-bottom: 0.8rem;
+            }
+            
+            .small {
+              font-size: 0.65rem;
+              line-height: 1.2;
+            }
+            
+            .mb-0 {
+              margin-bottom: 0;
+            }
+            
+            .mb-1 {
+              margin-bottom: 0.1rem;
+            }
+            
+            .mb-2 {
+              margin-bottom: 0.2rem;
+            }
+            
+            .mb-3 {
+              margin-bottom: 0.3rem;
+            }
+            
+            .text-muted {
+              color: #666;
+            }
+            
+            .fw-bold {
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          ${slipContent.outerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    };
   }
 
   downloadSlip(): void {
