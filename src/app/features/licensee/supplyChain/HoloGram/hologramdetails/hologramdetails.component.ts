@@ -132,7 +132,10 @@ export class HologramdetailsComponent implements OnInit {
             procurementType: 'Local',
             localQtyLakh: item.localQtyLakh,
             exportQtyLakh: 0,
-            defenceQtyLakh: 0
+            defenceQtyLakh: 0,
+            // Ensure payment flags exist (default to false if not set)
+            paymentSlipUploaded: item.paymentSlipUploaded === true,
+            paymentCompleted: item.paymentCompleted === true
           }
         });
       }
@@ -157,7 +160,10 @@ export class HologramdetailsComponent implements OnInit {
             procurementType: 'Export',
             localQtyLakh: 0,
             exportQtyLakh: item.exportQtyLakh,
-            defenceQtyLakh: 0
+            defenceQtyLakh: 0,
+            // Ensure payment flags exist (default to false if not set)
+            paymentSlipUploaded: item.paymentSlipUploaded === true,
+            paymentCompleted: item.paymentCompleted === true
           }
         });
       }
@@ -182,7 +188,10 @@ export class HologramdetailsComponent implements OnInit {
             procurementType: 'Defence',
             localQtyLakh: 0,
             exportQtyLakh: 0,
-            defenceQtyLakh: item.defenceQtyLakh
+            defenceQtyLakh: item.defenceQtyLakh,
+            // Ensure payment flags exist (default to false if not set)
+            paymentSlipUploaded: item.paymentSlipUploaded === true,
+            paymentCompleted: item.paymentCompleted === true
           }
         });
       }
@@ -503,21 +512,26 @@ export class HologramdetailsComponent implements OnInit {
   canUpdateRecord(record: HologramRecord): boolean {
     // Button should only be active if:
     // 1. Status is PENDING_ARRIVAL (approved by commissioner)
-    // 2. Payment slip has been uploaded by supply chain
+    // 2. Payment has been COMPLETED (not just slip uploaded)
     if (record.status !== 'PENDING_ARRIVAL') {
       return false;
     }
     
-    // Check if payment slip has been uploaded for this record
-    return this.isPaymentSlipUploaded(record);
+    // Check if payment has been completed for this record
+    return this.isPaymentCompleted(record);
   }
   
-  // Check if payment slip has been uploaded for this hologram record
-  private isPaymentSlipUploaded(record: HologramRecord): boolean {
-    // Check in supply chain data if payment slip is uploaded
+  // Check if payment has been COMPLETED for this hologram record
+  // This is different from paymentSlipUploaded - payment must be actually made
+  private isPaymentCompleted(record: HologramRecord): boolean {
+    console.log(`🔍 Checking payment completion for ${record.ourRefNo} (${record.procurementType})`);
+    
+    // Check in supply chain data if payment is completed
     if (record.supplyChainData) {
-      // Check if paymentSlipUploaded flag is set
-      if (record.supplyChainData.paymentSlipUploaded === true) {
+      console.log(`  - supplyChainData.paymentCompleted:`, record.supplyChainData.paymentCompleted);
+      // Check if paymentCompleted flag is set
+      if (record.supplyChainData.paymentCompleted === true) {
+        console.log(`  ✅ Payment completed (from supplyChainData)`);
         return true;
       }
     }
@@ -529,7 +543,15 @@ export class HologramdetailsComponent implements OnInit {
       app.procurementType === record.procurementType
     );
     
-    if (matchingApp && matchingApp.paymentSlipUploaded === true) {
+    console.log(`  - hologramApplications match:`, matchingApp ? 'found' : 'not found');
+    if (matchingApp) {
+      console.log(`    - paymentSlipUploaded:`, matchingApp.paymentSlipUploaded);
+      console.log(`    - paymentCompleted:`, matchingApp.paymentCompleted);
+    }
+    
+    // ONLY check paymentCompleted flag (not paymentSlipUploaded)
+    if (matchingApp && matchingApp.paymentCompleted === true) {
+      console.log(`  ✅ Payment completed (from hologramApplications)`);
       return true;
     }
     
@@ -537,10 +559,19 @@ export class HologramdetailsComponent implements OnInit {
     const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
     
-    if (matchingReq && matchingReq.paymentSlipUploaded === true) {
+    console.log(`  - hologramRequests match:`, matchingReq ? 'found' : 'not found');
+    if (matchingReq) {
+      console.log(`    - paymentSlipUploaded:`, matchingReq.paymentSlipUploaded);
+      console.log(`    - paymentCompleted:`, matchingReq.paymentCompleted);
+    }
+    
+    // ONLY check paymentCompleted flag (not paymentSlipUploaded)
+    if (matchingReq && matchingReq.paymentCompleted === true) {
+      console.log(`  ✅ Payment completed (from hologramRequests)`);
       return true;
     }
     
+    console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
   }
 
@@ -959,84 +990,14 @@ export class HologramdetailsComponent implements OnInit {
 
   // Add test data for arrival testing
   addTestDataForArrivalTesting(): void {
-    const testRecords: HologramRecord[] = [
-      {
-        id: 9001,
-        date: '2024-11-04',
-        ourRefNo: 'TEST/2024/001',
-        cartoonNumber: '',
-        fromSerial: '',
-        toSerial: '',
-        numberOfHolograms: 500,
-        remarks: 'TEST: Hologram request for Local Whiskey - Payment Slip Uploaded, Ready for Arrival Update',
-        status: 'PENDING_ARRIVAL',
-        approvedDate: '2024-11-04',
-        supplyChainData: {
-          refNo: 'TEST/2024/001',
-          companyName: 'Test Company Ltd',
-          localQtyLakh: 1000,
-          exportQtyLakh: 0,
-          defenceQtyLakh: 0,
-          status: 'APPROVED',
-          paymentSlipUploaded: true, // Payment slip uploaded - button should be active
-          paymentSlipUploadDate: '2024-11-04',
-          paymentSlipFileName: 'payment_slip_TEST_2024_001.pdf'
-        }
-      },
-      {
-        id: 9002,
-        date: '2024-11-04',
-        ourRefNo: 'TEST/2024/002',
-        cartoonNumber: '',
-        fromSerial: '',
-        toSerial: '',
-        numberOfHolograms: 2500,
-        remarks: 'TEST: Hologram request for Export Rum - Waiting for Payment Slip Upload',
-        status: 'PENDING_ARRIVAL',
-        approvedDate: '2024-11-04',
-        supplyChainData: {
-          refNo: 'TEST/2024/002',
-          companyName: 'Test Company Ltd',
-          localQtyLakh: 0,
-          exportQtyLakh: 2500,
-          defenceQtyLakh: 0,
-          status: 'APPROVED',
-          paymentSlipUploaded: false // Payment slip NOT uploaded - button should be disabled
-        }
-      },
-      {
-        id: 9003,
-        date: '2024-11-04',
-        ourRefNo: 'TEST/2024/003',
-        cartoonNumber: '',
-        fromSerial: '',
-        toSerial: '',
-        numberOfHolograms: 500,
-        remarks: 'TEST: Hologram request for Defence Supplies - Payment Slip Uploaded, Ready for Arrival Update',
-        status: 'PENDING_ARRIVAL',
-        approvedDate: '2024-11-04',
-        supplyChainData: {
-          refNo: 'TEST/2024/003',
-          companyName: 'Test Company Ltd',
-          localQtyLakh: 0,
-          exportQtyLakh: 0,
-          defenceQtyLakh: 500,
-          status: 'APPROVED',
-          paymentSlipUploaded: true, // Payment slip uploaded - button should be active
-          paymentSlipUploadDate: '2024-11-04',
-          paymentSlipFileName: 'payment_slip_TEST_2024_003.pdf'
-        }
-      }
-    ];
-
-    // Add test records to the beginning of the array for visibility
-    this.hologramRecords = [...testRecords, ...this.hologramRecords];
-    this.applyFilters();
+    // Don't add test data - use real data from storage only
+    // This prevents confusion with test data that has payment flags set
+    console.log('ℹ️ Test data disabled - using only real data from storage');
   }
   
-  // Helper method for supply chain to mark payment slip as uploaded
-  // This should be called from the supply chain interface after payment slip upload
-  markPaymentSlipUploaded(refNo: string, procurementType: string, fileName: string): void {
+  // Helper method for supply chain to mark payment as completed
+  // This should be called from the supply chain interface after actual payment is made
+  markPaymentCompleted(refNo: string, procurementType: string): void {
     // Update in hologramApplications
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const appIndex = applications.findIndex((app: any) => 
@@ -1044,9 +1005,8 @@ export class HologramdetailsComponent implements OnInit {
     );
     
     if (appIndex !== -1) {
-      applications[appIndex].paymentSlipUploaded = true;
-      applications[appIndex].paymentSlipUploadDate = new Date().toISOString().split('T')[0];
-      applications[appIndex].paymentSlipFileName = fileName;
+      applications[appIndex].paymentCompleted = true;
+      applications[appIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
     }
     
@@ -1055,16 +1015,15 @@ export class HologramdetailsComponent implements OnInit {
     const reqIndex = requests.findIndex((req: any) => req.refNo === refNo);
     
     if (reqIndex !== -1) {
-      requests[reqIndex].paymentSlipUploaded = true;
-      requests[reqIndex].paymentSlipUploadDate = new Date().toISOString().split('T')[0];
-      requests[reqIndex].paymentSlipFileName = fileName;
+      requests[reqIndex].paymentCompleted = true;
+      requests[reqIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramRequests', JSON.stringify(requests));
     }
     
     // Reload data to reflect changes
     this.loadHologramRecords();
     
-    console.log(`✅ Payment slip marked as uploaded for ${refNo} (${procurementType})`);
+    console.log(`✅ Payment marked as completed for ${refNo} (${procurementType})`);
   }
 
 
