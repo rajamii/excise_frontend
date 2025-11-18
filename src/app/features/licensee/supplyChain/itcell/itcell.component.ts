@@ -10,7 +10,7 @@ interface HologramFormData {
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
-  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Approved by IT Cell' | 'Approved' | 'Rejected';
+  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Approved by IT Cell' | 'Approved by IT Cell - Awaiting Slip Upload' | 'Forwarded to Commissioner for Approval' | 'Approved by Commissioner - Ready for Payment' | 'Payment Completed' | 'Approved' | 'Rejected';
   submittedDate?: string;
   reviewedBy?: string;
   reviewedDate?: string;
@@ -89,14 +89,42 @@ export class ITCELLComponent implements OnInit {
     }
     
     const stored = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    this.hologramData = stored.map((item: any) => ({
-      ...item,
-      status: item.status || 'Submitted',
-      submittedDate: item.submittedDate || item.date,
-      reviewedBy: item.reviewedBy || '',
-      reviewedDate: item.reviewedDate || '',
-      remarks: item.remarks || ''
-    }));
+    this.hologramData = stored.map((item: any) => {
+      // Determine the display status based on approval stages
+      let displayStatus = item.status || 'Submitted';
+      
+      // Check conditions in priority order (most specific first)
+      
+      // 1. If payment completed, show "Payment Completed"
+      if (item.paymentCompleted === true) {
+        displayStatus = 'Payment Completed';
+      }
+      // 2. If Commissioner approved (and payment not completed), show "Approved by Commissioner"
+      else if (item.commissionerStatus === 'Approved' && item.paymentCompleted !== true) {
+        displayStatus = 'Approved by Commissioner - Ready for Payment';
+      }
+      // 3. If IT Cell approved and slip uploaded and Commissioner pending, show "Forwarded to Commissioner"
+      else if (item.itCellStatus === 'Approved' && item.paymentSlipUploaded === true && item.commissionerStatus === 'Pending') {
+        displayStatus = 'Forwarded to Commissioner for Approval';
+      }
+      // 4. If IT Cell approved but slip not uploaded yet (check explicitly for false or undefined)
+      else if (item.itCellStatus === 'Approved' && (item.paymentSlipUploaded === false || item.paymentSlipUploaded === undefined || item.paymentSlipUploaded === null)) {
+        displayStatus = 'Approved by IT Cell - Awaiting Slip Upload';
+      }
+      // 5. If IT Cell approved (fallback for any other IT Cell approved state)
+      else if (item.itCellStatus === 'Approved') {
+        displayStatus = 'Approved by IT Cell';
+      }
+      
+      return {
+        ...item,
+        status: displayStatus,
+        submittedDate: item.submittedDate || item.date,
+        reviewedBy: item.reviewedBy || '',
+        reviewedDate: item.reviewedDate || '',
+        remarks: item.remarks || ''
+      };
+    });
 
     // Add sample data if none exists
     if (this.hologramData.length === 0) {
@@ -268,7 +296,7 @@ export class ITCELLComponent implements OnInit {
   }
 
   approveByITCell(hologram: HologramFormData): void {
-    // IT Cell approval - enables upload slip immediately (no Commissioner approval needed)
+    // IT Cell approval - enables upload slip, then requires Commissioner approval before payment
     hologram.status = 'Approved by IT Cell';
     hologram.reviewedBy = 'IT Cell';
     hologram.reviewedDate = new Date().toISOString().split('T')[0];
@@ -284,7 +312,8 @@ export class ITCELLComponent implements OnInit {
           ...stored[index],
           ...hologram,
           itCellStatus: 'Approved',
-          uploadSlipEnabled: true, // Enable upload slip immediately after IT Cell approval
+          uploadSlipEnabled: true, // Enable upload slip after IT Cell approval
+          commissionerStatus: 'Pending', // Set Commissioner status to Pending
           status: 'Approved by IT Cell'
         };
         localStorage.setItem('hologramRequests', JSON.stringify(stored));
@@ -298,6 +327,7 @@ export class ITCELLComponent implements OnInit {
           app.status = 'Approved by IT Cell';
           app.itCellStatus = 'Approved';
           app.uploadSlipEnabled = true; // Enable upload slip
+          app.commissionerStatus = 'Pending'; // Set Commissioner status to Pending
         }
       });
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
@@ -307,7 +337,7 @@ export class ITCELLComponent implements OnInit {
     this.loadHologramData();
     this.applyFilters();
     
-    alert('Application approved by IT Cell. Upload slip is now enabled for supply chain user.');
+    alert('Application approved by IT Cell. Upload slip is now enabled for supply chain user. After slip upload, it will be forwarded to Commissioner for final approval.');
   }
 
   // Payment calculation methods
@@ -326,5 +356,15 @@ export class ITCELLComponent implements OnInit {
   calculateTotalPayment(hologram: HologramFormData): number {
     // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram
     return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
+  }
+
+  // Check if payment slip has been uploaded
+  isSlipUploaded(hologram: HologramFormData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
+    
+    return request?.paymentSlipUploaded === true;
   }
 }

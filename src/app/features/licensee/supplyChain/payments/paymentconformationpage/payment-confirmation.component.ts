@@ -300,6 +300,55 @@ export class PaymentConfirmationComponent implements OnInit {
     }
   }
 
+  // Process hologram payment - called when user completes payment
+  processHologramPayment(hologramItem: HologramItem): void {
+    try {
+      const refNo = hologramItem.referenceNo;
+      
+      // Update hologramRequests
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const updatedRequests = hologramRequests.map((req: any) => {
+        if (req.refNo === refNo) {
+          return {
+            ...req,
+            paymentCompleted: true,
+            status: 'Payment Completed',
+            paymentDate: new Date().toISOString()
+          };
+        }
+        return req;
+      });
+      localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
+
+      // Update hologramApplications
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      const updatedApplications = applications.map((app: any) => {
+        if (app.refNo === refNo) {
+          return {
+            ...app,
+            paymentCompleted: true,
+            status: 'Payment Completed',
+            paymentDate: new Date().toISOString()
+          };
+        }
+        return app;
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+
+      // Update the item status in the current view
+      hologramItem.status = 'Payment Successful';
+      hologramItem.paymentDate = new Date();
+
+      // Reload hologram data to reflect changes
+      this.loadHologramDataFromStorage();
+
+      alert(`Payment completed successfully for ${refNo}!\n\nStatus has been updated to "Payment Completed" across all dashboards.`);
+    } catch (error) {
+      console.error('Error processing hologram payment:', error);
+      alert('Error processing payment. Please try again.');
+    }
+  }
+
   // Wallet history (utilization and additions)
   selectedWalletForHistory: 'excise' | 'education' | null = null;
   walletHistoryFilters = {

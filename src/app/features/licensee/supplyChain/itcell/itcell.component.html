@@ -153,7 +153,7 @@
                           (click)="viewApplication(hologram)">
                     <i class="bi bi-eye me-1"></i>VIEW
                   </button>
-                  @if (hologram.status !== 'Approved by IT Cell' && hologram.status !== 'Approved') {
+                  @if (hologram.status !== 'Approved by IT Cell' && hologram.status !== 'Approved by IT Cell - Awaiting Slip Upload' && hologram.status !== 'Forwarded to Commissioner for Approval' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && !isSlipUploaded(hologram)) {
                     <button class="btn btn-success btn-sm"
                             style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
                             (click)="approveByITCell(hologram)">

@@ -337,6 +337,14 @@ export class SupplyChainComponent implements OnInit {
       // Find matching request to get approval status
       const request = hologramRequests.find((req: any) => req.refNo === a.refNo);
       
+      // Determine display status based on payment and approval stages
+      let displayStatus = request?.status || a.status || "Submitted";
+      
+      // If payment completed, show "Payment Completed"
+      if (request?.paymentCompleted === true || a.paymentCompleted === true) {
+        displayStatus = "Payment Completed";
+      }
+      
       return {
         refNo: a.refNo,
         date: a.date,
@@ -345,9 +353,9 @@ export class SupplyChainComponent implements OnInit {
         exportQtyLakh: a.exportQtyLakh,
         defenceQtyLakh: a.defenceQtyLakh,
         procurementType: a.procurementType, // Include procurement type
-        status: request?.status || a.status || "Submitted", // Use status from hologramRequests if available
+        status: displayStatus, // Use determined status
         paymentSlipUploaded: a.paymentSlipUploaded || false,
-        paymentCompleted: a.paymentCompleted || false,
+        paymentCompleted: a.paymentCompleted || request?.paymentCompleted || false,
       };
     });
 
@@ -712,6 +720,31 @@ export class SupplyChainComponent implements OnInit {
   // Check if payment slip is already uploaded
   isPaymentSlipUploaded(item: HologramRow): boolean {
     return item.paymentSlipUploaded === true;
+  }
+
+  // Check if payment button should be enabled (requires Commissioner approval)
+  isPaymentEnabled(item: HologramRow): boolean {
+    if (!this.isBrowser) {
+      return false;
+    }
+
+    // Get the hologram request from localStorage to check Commissioner approval
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === item.refNo);
+
+    if (!request) {
+      return false;
+    }
+
+    // Payment is enabled only if:
+    // 1. IT Cell has approved
+    // 2. Payment slip is uploaded
+    // 3. Commissioner has approved
+    const itCellApproved = request.itCellStatus === 'Approved';
+    const slipUploaded = item.paymentSlipUploaded === true;
+    const commissionerApproved = request.commissionerStatus === 'Approved';
+
+    return itCellApproved && slipUploaded && commissionerApproved;
   }
 
   openApplicationView(): void {
@@ -1891,7 +1924,7 @@ End of Application
       fileType: this.selectedPaymentSlipFile.type,
       remarks: this.paymentRemarks,
       uploadDate: new Date().toISOString(),
-      status: 'Slip Uploaded - Ready for Wallet Payment'
+      status: 'Slip Uploaded - Pending Commissioner Approval'
     };
 
     // Store payment record in localStorage
@@ -1899,16 +1932,34 @@ End of Application
     existingPayments.push(paymentRecord);
     localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
 
-    // Update hologram application status to mark slip as uploaded
+    // Update hologram application status to mark slip as uploaded and forward to Commissioner
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const updatedApplications = applications.map((app: any) => {
       if (app.refNo === this.selectedPaymentHologram!.refNo && 
           app.procurementType === this.getProcurementType(this.selectedPaymentHologram!)) {
-        return { ...app, paymentSlipUploaded: true };
+        return { 
+          ...app, 
+          paymentSlipUploaded: true,
+          status: 'Slip Uploaded - Pending Commissioner Approval'
+        };
       }
       return app;
     });
     localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+
+    // Update hologramRequests to mark slip as uploaded
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const updatedRequests = hologramRequests.map((req: any) => {
+      if (req.refNo === this.selectedPaymentHologram!.refNo) {
+        return {
+          ...req,
+          paymentSlipUploaded: true,
+          status: 'Slip Uploaded - Pending Commissioner Approval'
+        };
+      }
+      return req;
+    });
+    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
 
     // Refresh the hologram list to show updated status
     this.refreshHologramList();
@@ -1922,7 +1973,7 @@ End of Application
       `Offline Payment (Slip): ₹${offlinePaymentAmount.toFixed(2)} (₹0.72 per hologram)\n` +
       `Wallet Payment Required: ₹${paymentRecord.walletPaymentAmount.toFixed(2)} (₹0.15 per hologram)\n\n` +
       `File: ${paymentRecord.fileName}\n\n` +
-      `You can now proceed to make the wallet payment of ₹${paymentRecord.walletPaymentAmount.toFixed(2)}.`
+      `Your application has been forwarded to Commissioner for approval. You can make the wallet payment after Commissioner approval.`
     );
 
     // Close modal
@@ -1965,6 +2016,24 @@ End of Application
       return;
     }
 
+    // Check if Commissioner has approved
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
+    
+    if (!request || request.commissionerStatus !== 'Approved') {
+      alert('Payment is pending Commissioner approval. Please wait for Commissioner to approve your application after reviewing the uploaded payment slip.');
+      return;
+    }
+
+    // Mark that payment page has been visited (for showing test button)
+    const updatedRequests = hologramRequests.map((req: any) => {
+      if (req.refNo === hologram.refNo) {
+        return { ...req, paymentPageVisited: true };
+      }
+      return req;
+    });
+    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
+
     // Navigate to payment confirmation page with hologram tab active
     this.router.navigate(['/dev-payment-confirmation'], {
       queryParams: { 
@@ -1974,6 +2043,16 @@ End of Application
         action: 'makePayment'
       }
     });
+  }
+
+  // Check if payment page has been visited (for showing test button)
+  hasVisitedPaymentPage(item: HologramRow): boolean {
+    if (!this.isBrowser) return false;
+    
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === item.refNo);
+    
+    return request?.paymentPageVisited === true;
   }
 
 
@@ -2025,6 +2104,46 @@ End of Application
     this.refreshHologramList();
     
     alert('All hologram data cleared successfully!');
+  }
+
+  // Mark payment as completed (for testing - this should be called from payment confirmation component)
+  markPaymentCompleted(refNo: string): void {
+    if (!this.isBrowser) return;
+
+    // Update hologramRequests
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const updatedRequests = hologramRequests.map((req: any) => {
+      if (req.refNo === refNo) {
+        return {
+          ...req,
+          paymentCompleted: true,
+          status: 'Payment Completed',
+          paymentDate: new Date().toISOString()
+        };
+      }
+      return req;
+    });
+    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
+
+    // Update hologramApplications
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const updatedApplications = applications.map((app: any) => {
+      if (app.refNo === refNo) {
+        return {
+          ...app,
+          paymentCompleted: true,
+          status: 'Payment Completed',
+          paymentDate: new Date().toISOString()
+        };
+      }
+      return app;
+    });
+    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
+
+    // Refresh the hologram list
+    this.refreshHologramList();
+
+    alert(`Payment marked as completed for ${refNo}. Status updated in all dashboards.`);
   }
 
   // Get payment status class for styling

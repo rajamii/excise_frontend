@@ -26,6 +26,12 @@ interface CommissionerTableData {
   defenceQtyLakh?: number;
   totalQtyLakh?: number;
   hologramType?: string;
+  // Additional fields for detailed view
+  date?: string;
+  submittedDate?: string;
+  reviewedBy?: string;
+  reviewedDate?: string;
+  remarks?: string;
 }
 
 @Component({
@@ -481,29 +487,57 @@ export class CommissionerDashboardComponent implements OnInit {
     // Load hologram requests from IT Cell
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     
-    // Filter only those that have been approved by IT Cell and are pending commissioner approval
-    const pendingForCommissioner = hologramRequests.filter((req: any) => 
-      req.itCellStatus === 'Approved' && req.commissionerStatus === 'Pending'
+    // Filter those that have:
+    // 1. Been approved by IT Cell
+    // 2. Have payment slip uploaded
+    // Show ALL applications (pending, approved, rejected) - don't filter by commissionerStatus
+    const applicationsForCommissioner = hologramRequests.filter((req: any) => 
+      req.itCellStatus === 'Approved' && 
+      req.paymentSlipUploaded === true
     );
 
-    // Convert to commissioner table format
-    const convertedData: CommissionerTableData[] = pendingForCommissioner.map((req: any) => ({
-      referenceNo: req.refNo,
-      submissionDate: req.date || req.submittedDate,
-      distilleryName: req.companyName,
-      status: 'PENDING',
-      amount: this.calculateHologramAmount(req).toString(),
-      priority: 'high',
-      localQtyLakh: req.localQtyLakh || 0,
-      exportQtyLakh: req.exportQtyLakh || 0,
-      defenceQtyLakh: req.defenceQtyLakh || 0,
-      totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
-      hologramType: 'Security Hologram'
-    }));
+    console.log('📊 Loading hologram applications for Commissioner:', {
+      total: hologramRequests.length,
+      applicationsForCommissioner: applicationsForCommissioner.length,
+      filtered: applicationsForCommissioner
+    });
 
-    // Merge with existing sample data (or replace if you want only real data)
-    this.hologramData = [...convertedData, ...this.hologramData];
+    // Convert to commissioner table format
+    const convertedData: CommissionerTableData[] = applicationsForCommissioner.map((req: any) => {
+      // Determine status based on payment and approval stages
+      let displayStatus = 'PENDING';
+      
+      // Check payment completion first
+      if (req.paymentCompleted === true) {
+        displayStatus = 'PAYMENT COMPLETED';
+      }
+      // Then check commissioner approval
+      else if (req.commissionerStatus === 'Approved') {
+        displayStatus = 'APPROVED';
+      } else if (req.commissionerStatus === 'Rejected') {
+        displayStatus = 'REJECTED';
+      }
+
+      return {
+        referenceNo: req.refNo,
+        submissionDate: req.date || req.submittedDate,
+        distilleryName: req.companyName,
+        status: displayStatus,
+        amount: this.calculateHologramAmount(req).toString(),
+        priority: req.commissionerStatus === 'Pending' ? 'high' : 'normal',
+        localQtyLakh: req.localQtyLakh || 0,
+        exportQtyLakh: req.exportQtyLakh || 0,
+        defenceQtyLakh: req.defenceQtyLakh || 0,
+        totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
+        hologramType: 'Security Hologram'
+      };
+    });
+
+    // Replace sample data with real data (show all applications with uploaded slips)
+    this.hologramData = convertedData;
     this.filteredHologramData = [...this.hologramData];
+    
+    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications');
   }
 
   calculateHologramAmount(req: any): number {
@@ -988,14 +1022,14 @@ export class CommissionerDashboardComponent implements OnInit {
   approveHologram(item: CommissionerTableData): void {
     item.status = 'APPROVED';
     
-    // Update in hologramRequests storage to enable upload slip
+    // Update in hologramRequests storage to enable payment (slip already uploaded)
     if (this.isBrowser) {
       const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const index = hologramRequests.findIndex((req: any) => req.refNo === item.referenceNo);
       if (index !== -1) {
         hologramRequests[index].commissionerStatus = 'Approved';
-        hologramRequests[index].uploadSlipEnabled = true; // Enable upload slip button
-        hologramRequests[index].status = 'Approved';
+        hologramRequests[index].uploadSlipEnabled = true; // Keep this true (slip already uploaded)
+        hologramRequests[index].status = 'Approved by Commissioner - Ready for Payment';
         hologramRequests[index].approvedBy = 'Commissioner';
         hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
         localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
@@ -1006,18 +1040,31 @@ export class CommissionerDashboardComponent implements OnInit {
       // Update all rows with the same refNo
       applications.forEach((app: any) => {
         if (app.refNo === item.referenceNo) {
-          app.status = 'Approved';
+          app.status = 'Approved by Commissioner - Ready for Payment';
           app.commissionerStatus = 'Approved';
-          app.uploadSlipEnabled = true;
+          app.uploadSlipEnabled = true; // Keep this true (slip already uploaded)
           app.approvedBy = 'Commissioner';
           app.approvedDate = new Date().toISOString().split('T')[0];
         }
       });
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
+
+      // Update payment record status
+      const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
+      payments.forEach((payment: any) => {
+        if (payment.hologramRefNo === item.referenceNo) {
+          payment.status = 'Approved by Commissioner - Ready for Wallet Payment';
+        }
+      });
+      localStorage.setItem('hologramPayments', JSON.stringify(payments));
     }
     
+    // Reload hologram data to reflect changes
+    this.loadHologramApplicationsFromITCell();
+    this.applyHologramFilters();
+    
     console.log('Approved hologram application:', item.referenceNo);
-    alert('Hologram application approved by Commissioner. Supply chain user can now upload payment slip.');
+    alert('Hologram application approved by Commissioner. Supply chain user can now make the wallet payment.');
   }
 
   rejectHologram(item: CommissionerTableData): void {
@@ -1091,14 +1138,60 @@ export class CommissionerDashboardComponent implements OnInit {
   // Hologram details modal methods
   viewHologramDetails(item: CommissionerTableData): void {
     console.log('viewHologramDetails called with:', item);
-    this.selectedHologramApplication = item;
+    
+    // Load full details from hologramRequests
+    if (this.isBrowser) {
+      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const fullDetails = hologramRequests.find((req: any) => req.refNo === item.referenceNo);
+      
+      if (fullDetails) {
+        // Merge full details with table data
+        this.selectedHologramApplication = {
+          ...item,
+          ...fullDetails,
+          referenceNo: item.referenceNo,
+          submissionDate: item.submissionDate,
+          distilleryName: item.distilleryName
+        };
+      } else {
+        this.selectedHologramApplication = item;
+      }
+    } else {
+      this.selectedHologramApplication = item;
+    }
+    
     this.showHologramDetailsModal = true;
     console.log('Modal should be visible now:', this.showHologramDetailsModal);
+    console.log('Selected hologram details:', this.selectedHologramApplication);
   }
 
   closeHologramDetailsModal(): void {
     this.showHologramDetailsModal = false;
     this.selectedHologramApplication = null;
+  }
+
+  // Payment calculation methods for hologram details
+  getTotalHolograms(hologram: any): number {
+    return (hologram?.localQtyLakh || 0) + (hologram?.exportQtyLakh || 0) + (hologram?.defenceQtyLakh || 0);
+  }
+
+  calculatePrintingCost(hologram: any): number {
+    // Printing cost: ₹0.72 per hologram
+    // Values are already in Lakh, so just multiply by 0.72
+    const totalLakh = this.getTotalHolograms(hologram);
+    return totalLakh * 0.72;
+  }
+
+  calculateWalletPayment(hologram: any): number {
+    // Wallet payment: ₹0.15 per hologram
+    // Values are already in Lakh, so just multiply by 0.15
+    const totalLakh = this.getTotalHolograms(hologram);
+    return totalLakh * 0.15;
+  }
+
+  calculateTotalPayment(hologram: any): number {
+    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram
+    return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
   }
 
   // Pagination methods
