@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from "@angular/router";
 import { RequisitionComponent } from "./supplychaincomponents/requisition/requisition.component";
 import { RevalidationComponent } from "./supplychaincomponents/revalidation/revalidation.component";
 import { CancellationComponent } from "./supplychaincomponents/cancellation/cancellation.component";
+import { TransitComponent } from "./supplychaincomponents/transit/transit.component";
 
 interface TableData {
   referenceNo: string;
@@ -32,7 +33,7 @@ interface HologramRow {
 @Component({
   selector: "app-supply-chain",
   standalone: true,
-  imports: [CommonModule, FormsModule, RequisitionComponent, RevalidationComponent, CancellationComponent],
+  imports: [CommonModule, FormsModule, RequisitionComponent, RevalidationComponent, CancellationComponent, TransitComponent],
   templateUrl: "./supply-chain.component.html",
   styleUrls: ["./supply-chain.component.scss"],
 })
@@ -48,7 +49,6 @@ export class SupplyChainComponent implements OnInit {
   hologramList: HologramRow[] = [];
   hologramRequestList: any[] = [];
   filteredHologramRequestList: any[] = [];
-  filteredTransitData: TableData[] = [];
   filteredHologramData: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
@@ -66,12 +66,6 @@ export class SupplyChainComponent implements OnInit {
   monthFilter: string = '';
   statusFilter: string = '';
   
-  // Filter properties for transit
-  transitDateFilter: string = '';
-  transitMonthFilter: string = '';
-  transitYearFilter: string = '';
-  transitStatusFilter: string = '';
-  
   // Filter properties for hologram
   hologramDateFilter: string = '';
   hologramMonthFilter: string = '';
@@ -81,23 +75,6 @@ export class SupplyChainComponent implements OnInit {
   showRequestModal = false;
   selectedRequest: any = null;
 
-  transitData: TableData[] = [
-    {
-      referenceNo: "TRN/BF801",
-      submissionDate: "13-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "TRANSIT PERMIT ISSUED",
-      amount: "10.00",
-    },
-    {
-      referenceNo: "TRN/BF802",
-      submissionDate: "12-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "TRANSIT APPLICATION PROCESSING",
-      amount: "8.50",
-    },
-  ];
-
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -105,12 +82,10 @@ export class SupplyChainComponent implements OnInit {
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.refreshHologramList();
-    this.loadTransitData();
   }
 
   ngOnInit(): void {
     // Initialize filtered data
-    this.filteredTransitData = [...this.transitData];
     this.filteredHologramData = [...this.hologramList];
 
     // Check for tab query parameter
@@ -206,79 +181,7 @@ export class SupplyChainComponent implements OnInit {
     this.filteredHologramData = [...this.hologramList];
   }
 
-  private loadTransitData(): void {
-    if (!this.isBrowser) {
-      return;
-    }
 
-    // Load transit permit requests from localStorage
-    const transitPermitRequests = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-
-    // Also check importPermitRequests for transit permits (for backward compatibility)
-    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-    const transitFromImport = importPermitRequests.filter((permit: any) => permit.type === 'transit-permit');
-
-    // Combine both sources
-    const allTransitRequests = [...transitPermitRequests, ...transitFromImport];
-
-    // Sort by submission time (newest first)
-    allTransitRequests.sort((a: any, b: any) => {
-      const dateA = new Date(a.submissionDate || a.date).getTime();
-      const dateB = new Date(b.submissionDate || b.date).getTime();
-      return dateB - dateA; // Newest first
-    });
-
-    // Convert transit permit data to table format
-    const transitPermitData: TableData[] = allTransitRequests.map((permit: any) => ({
-      referenceNo: permit.billNo || permit.refNo,
-      submissionDate: new Date(permit.submissionDate || permit.date).toLocaleDateString('en-GB'),
-      distilleryName: permit.soleDistributor || permit.distilleryName || 'Unknown Distributor',
-      status: permit.status || 'TRANSIT PERMIT ISSUED',
-      amount: (permit.totalAmount || permit.brAmount || 0).toFixed(2)
-    }));
-
-    // Get the original sample data
-    const originalTransitData: TableData[] = [
-      {
-        referenceNo: "TRN/BF801",
-        submissionDate: "13-Sep-2025",
-        distilleryName: "Royal Sikkim Brewery",
-        status: "TRANSIT PERMIT ISSUED",
-        amount: "10.00",
-      },
-      {
-        referenceNo: "TRN/BF802",
-        submissionDate: "12-Sep-2025",
-        distilleryName: "Mountain View Distilleries",
-        status: "TRANSIT APPLICATION PROCESSING",
-        amount: "8.50",
-      },
-    ];
-
-    // Combine with sample data, putting new submissions at the top
-    this.transitData = [...transitPermitData, ...originalTransitData];
-  }
-
-  private getDistilleryDisplayName(value: string): string {
-    switch (value) {
-      case 'sikkim-distilleries':
-        return 'Sikkim Distilleries Ltd';
-      case 'mountain-spirits':
-        return 'Mountain Spirits Pvt Ltd';
-      case 'highland-breweries':
-        return 'Highland Breweries';
-      case 'gangtok':
-        return 'Gangtok Depot';
-      case 'namchi':
-        return 'Namchi Depot';
-      case 'gyalshing':
-        return 'Gyalshing Depot';
-      case 'mangan':
-        return 'Mangan Depot';
-      default:
-        return value || 'Unknown Distillery';
-    }
-  }
 
   // UI interaction methods only
   onSearch(): void {
@@ -303,9 +206,6 @@ export class SupplyChainComponent implements OnInit {
       console.log('Loading hologram requests for tab');
       // refresh hologram requests on each visit
       this.loadHologramRequests();
-    } else if (tab === "transit") {
-      // refresh transit data on each visit
-      this.loadTransitData();
     }
   }
 
@@ -368,14 +268,13 @@ export class SupplyChainComponent implements OnInit {
     this.router.navigate(["/dev-payment-confirmation"]);
   }
 
-  viewHologram(refNo: string): void {
-    this.router.navigate(["/dev-hologram"], { queryParams: { ref: refNo } });
+  toggleSidebar(): void {
+    this.sidebarHidden = !this.sidebarHidden;
+    console.log('Sidebar toggled. sidebarHidden:', this.sidebarHidden);
   }
 
-  openTransitApplication(refNo: string): void {
-    this.router.navigate(["/dev-transit-permit"], {
-      queryParams: { ref: refNo },
-    });
+  viewHologram(refNo: string): void {
+    this.router.navigate(["/dev-hologram"], { queryParams: { ref: refNo } });
   }
 
   openHologramDetails(row: HologramRow): void {
@@ -486,22 +385,6 @@ export class SupplyChainComponent implements OnInit {
     return itCellApproved && slipUploaded && commissionerApproved;
   }
 
-  openApplicationView(): void {
-    // Navigate to transit application view
-    console.log('Application View button clicked');
-    this.router.navigate(["/dev-supply-chain-transit-view"], {
-      queryParams: { ref: "TRP/12/EXCISE" },
-    });
-  }
-
-  applicationCheck(item: TableData): void {
-    // Navigate to transit view level 1 component
-    console.log('Application Check clicked for:', item.referenceNo);
-    this.router.navigate(["/dev-supply-chain-transit-view-level1"], {
-      queryParams: { ref: item.referenceNo },
-    });
-  }
-
   navigateTo(route: string): void {
     switch (route) {
       case "import-permit":
@@ -554,19 +437,13 @@ export class SupplyChainComponent implements OnInit {
     }
   }
 
-  toggleSidebar(): void {
-    this.sidebarHidden = !this.sidebarHidden;
-  }
-
   // Pagination state per tab
   pageSizeOptions: number[] = [5, 10, 15];
   pageSizeByTab: Record<string, number> = {
-    transit: 5,
     hologram: 5,
     'hologram-request': 5,
   };
   currentPageByTab: Record<string, number> = {
-    transit: 1,
     hologram: 1,
     'hologram-request': 1,
   };
@@ -893,116 +770,6 @@ End of Application
       default:
         return 'bi bi-question-circle';
     }
-  }
-
-  // Transit filter methods
-  applyTransitFilters(): void {
-    console.log('Applying transit filters:', {
-      dateFilter: this.transitDateFilter,
-      monthFilter: this.transitMonthFilter,
-      yearFilter: this.transitYearFilter,
-      statusFilter: this.transitStatusFilter
-    });
-
-    this.filteredTransitData = this.transitData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
-
-      // Parse the date from the format "13-Sep-2025"
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
-
-        // Convert month name to number
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
-
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
-
-          // Date filter (exact date match)
-          if (this.transitDateFilter) {
-            const filterDate = new Date(this.transitDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
-
-          // Month filter (month and year match)
-          if (this.transitMonthFilter) {
-            const filterDate = new Date(this.transitMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
-
-          // Year filter
-          if (this.transitYearFilter) {
-            const filterYear = parseInt(this.transitYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
-        }
-      }
-
-      // Status filter (partial match for long status messages)
-      if (this.transitStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.transitStatusFilter.toLowerCase());
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-      console.log('Transit match for:', item.referenceNo, finalMatch);
-
-      return finalMatch;
-    });
-
-    console.log('Filtered transit results:', this.filteredTransitData.length, 'out of', this.transitData.length);
-
-    // Reset pagination to first page when filters are applied
-    this.resetPagination('transit');
-  }
-
-  clearTransitFilters(): void {
-    this.transitDateFilter = '';
-    this.transitMonthFilter = '';
-    this.transitYearFilter = '';
-    this.transitStatusFilter = '';
-    this.filteredTransitData = [...this.transitData];
-    this.resetPagination('transit');
-  }
-
-  onTransitDateFilterChange(): void {
-    console.log('Transit date filter changed to:', this.transitDateFilter);
-    this.applyTransitFilters();
-  }
-
-  onTransitMonthFilterChange(): void {
-    console.log('Transit month filter changed to:', this.transitMonthFilter);
-    this.applyTransitFilters();
-  }
-
-  onTransitYearFilterChange(): void {
-    console.log('Transit year filter changed to:', this.transitYearFilter);
-    this.applyTransitFilters();
-  }
-
-  onTransitStatusFilterChange(): void {
-    console.log('Transit status filter changed to:', this.transitStatusFilter);
-    this.applyTransitFilters();
-  }
-
-  // Transit summary methods
-  getTransitStatusCount(status: string): number {
-    return this.transitData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
-  }
-
-  getTotalTransitAmount(): number {
-    return this.transitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
   }
 
   // Hologram filter methods
