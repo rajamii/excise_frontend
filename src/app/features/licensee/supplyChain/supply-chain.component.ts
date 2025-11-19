@@ -896,46 +896,6 @@ export class SupplyChainComponent implements OnInit {
     let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     console.log('Stored requests:', storedRequests);
 
-    // Add sample data if no requests exist (for demonstration)
-    if (storedRequests.length === 0) {
-      const sampleRequests = [
-        {
-          refNumber: 'HRQ/241101/001',
-          usageDate: '2024-11-15',
-          brandName: 'sikkim-supreme',
-          bottleSize: '375ml',
-          totalHolograms: 5000,
-          remarks: 'Urgent requirement for festival season',
-          submissionDate: '2024-11-01T10:30:00.000Z',
-          status: 'APPROVED'
-        },
-        {
-          refNumber: 'HRQ/241031/002',
-          usageDate: '2024-11-20',
-          brandName: 'himalayan-gold',
-          bottleSize: '180ml',
-          totalHolograms: 3000,
-          remarks: 'Regular monthly requirement',
-          submissionDate: '2024-10-31T14:15:00.000Z',
-          status: 'PENDING'
-        },
-        {
-          refNumber: 'HRQ/241030/003',
-          usageDate: '2024-11-25',
-          brandName: 'royal-sikkim',
-          bottleSize: '750ml',
-          totalHolograms: 2000,
-          remarks: 'Premium brand production',
-          submissionDate: '2024-10-30T09:45:00.000Z',
-          status: 'PROCESSING'
-        }
-      ];
-
-      // Save sample data to localStorage
-      localStorage.setItem('hologramRequests', JSON.stringify(sampleRequests));
-      storedRequests = sampleRequests;
-    }
-
     // Sort by submission date (newest first)
     this.hologramRequestList = storedRequests.sort((a: any, b: any) => {
       const dateA = new Date(a.submissionDate).getTime();
