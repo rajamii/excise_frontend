@@ -306,7 +306,7 @@ export class HologramdetailsComponent implements OnInit {
           fromSerial: '',
           toSerial: '',
           numberOfHolograms: 1000, // 1000 units - Ready for update
-          remarks: 'Hologram procurement for Premium Whisky production - Approved by Commissioner',
+          remarks: 'Hologram procurement for Premium Whisky production - Approved by Commissioner - PAYMENT COMPLETED ✅',
           status: 'PENDING_ARRIVAL' as const,
           approvedDate: '2024-11-03',
           supplyChainData: {
@@ -315,7 +315,9 @@ export class HologramdetailsComponent implements OnInit {
             localQtyLakh: 1000, // 1000 units (field name is misleading)
             exportQtyLakh: 0,
             defenceQtyLakh: 0,
-            status: 'APPROVED'
+            status: 'APPROVED',
+            paymentSlipUploaded: true,  // Payment slip uploaded
+            paymentCompleted: true      // ✅ PAYMENT COMPLETED - Button will be ENABLED
           }
         },
         {

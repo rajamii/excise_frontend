@@ -2427,8 +2427,187 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Check if two serial ranges overlap
+   */
+  private checkRangeOverlap(
+    range1From: string,
+    range1To: string,
+    range2From: string,
+    range2To: string
+  ): boolean {
+    if (!range1From || !range1To || !range2From || !range2To) {
+      return false; // Empty ranges don't overlap
+    }
+
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const r1From = extractNumber(range1From);
+    const r1To = extractNumber(range1To);
+    const r2From = extractNumber(range2From);
+    const r2To = extractNumber(range2To);
+
+    // Check if ranges overlap: range1 overlaps range2 if:
+    // - range1 starts within range2, OR
+    // - range1 ends within range2, OR
+    // - range1 completely contains range2
+    return (
+      (r1From >= r2From && r1From <= r2To) || // range1 starts within range2
+      (r1To >= r2From && r1To <= r2To) ||     // range1 ends within range2
+      (r1From <= r2From && r1To >= r2To)      // range1 contains range2
+    );
+  }
+
+  /**
+   * Validate that issued and wastage ranges don't overlap
+   */
+  private validateNoOverlapBetweenIssuedAndWastage(
+    issuedRanges: any[],
+    wastageRanges: any[]
+  ): { isValid: boolean; overlappingRanges: string[] } {
+    const overlappingRanges: string[] = [];
+
+    // Check each issued range against all wastage ranges
+    for (let i = 0; i < issuedRanges.length; i++) {
+      const issued = issuedRanges[i];
+      if (!issued.fromSerial || !issued.toSerial) continue;
+
+      for (let j = 0; j < wastageRanges.length; j++) {
+        const wastage = wastageRanges[j];
+        if (!wastage.fromSerial || !wastage.toSerial) continue;
+
+        if (this.checkRangeOverlap(
+          issued.fromSerial,
+          issued.toSerial,
+          wastage.fromSerial,
+          wastage.toSerial
+        )) {
+          overlappingRanges.push(
+            `Issued (${issued.fromSerial}-${issued.toSerial}) overlaps with Wastage (${wastage.fromSerial}-${wastage.toSerial})`
+          );
+        }
+      }
+    }
+
+    return {
+      isValid: overlappingRanges.length === 0,
+      overlappingRanges
+    };
+  }
+
+  /**
+   * Validate that ranges within the same category don't overlap
+   */
+  private validateNoOverlapWithinCategory(ranges: any[]): { isValid: boolean; overlappingRanges: string[] } {
+    const overlappingRanges: string[] = [];
+
+    for (let i = 0; i < ranges.length; i++) {
+      const range1 = ranges[i];
+      if (!range1.fromSerial || !range1.toSerial) continue;
+
+      for (let j = i + 1; j < ranges.length; j++) {
+        const range2 = ranges[j];
+        if (!range2.fromSerial || !range2.toSerial) continue;
+
+        if (this.checkRangeOverlap(
+          range1.fromSerial,
+          range1.toSerial,
+          range2.fromSerial,
+          range2.toSerial
+        )) {
+          overlappingRanges.push(
+            `Range ${i + 1} (${range1.fromSerial}-${range1.toSerial}) overlaps with Range ${j + 1} (${range2.fromSerial}-${range2.toSerial})`
+          );
+        }
+      }
+    }
+
+    return {
+      isValid: overlappingRanges.length === 0,
+      overlappingRanges
+    };
+  }
+
+  /**
+   * Get all used ranges from locked rolls (for cross-roll validation)
+   */
+  private getAllUsedRangesFromLockedRolls(entry: HologramDailyEntry): Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const usedRanges: Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> = [];
+
+    lockedRolls.forEach((roll: any) => {
+      // Collect issued ranges from locked roll
+      if (roll.issuedRanges && Array.isArray(roll.issuedRanges)) {
+        roll.issuedRanges.forEach((range: any) => {
+          if (range.fromSerial && range.toSerial) {
+            usedRanges.push({
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              rollName: roll.displayName || roll.cartoonNumber,
+              type: 'issued'
+            });
+          }
+        });
+      }
+
+      // Collect wastage ranges from locked roll
+      if (roll.wastageRanges && Array.isArray(roll.wastageRanges)) {
+        roll.wastageRanges.forEach((range: any) => {
+          if (range.fromSerial && range.toSerial) {
+            usedRanges.push({
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              rollName: roll.displayName || roll.cartoonNumber,
+              type: 'wastage'
+            });
+          }
+        });
+      }
+    });
+
+    return usedRanges;
+  }
+
+  /**
+   * Validate that current roll ranges don't overlap with locked rolls
+   */
+  private validateNoOverlapWithLockedRolls(
+    currentRanges: any[],
+    lockedRanges: Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }>
+  ): { isValid: boolean; conflicts: Array<{ currentRange: any; lockedRange: any }> } {
+    const conflicts: Array<{ currentRange: any; lockedRange: any }> = [];
+
+    currentRanges.forEach((currentRange: any) => {
+      if (!currentRange.fromSerial || !currentRange.toSerial) return;
+
+      lockedRanges.forEach((lockedRange) => {
+        if (this.checkRangeOverlap(
+          currentRange.fromSerial,
+          currentRange.toSerial,
+          lockedRange.fromSerial,
+          lockedRange.toSerial
+        )) {
+          conflicts.push({
+            currentRange,
+            lockedRange
+          });
+        }
+      });
+    });
+
+    return {
+      isValid: conflicts.length === 0,
+      conflicts
+    };
+  }
+
+  /**
    * Handle roll input changes
    * CRITICAL FIX: Validate against ONLY the selected range, not all ranges for the roll
+   * OVERLAP VALIDATION: Ensure issued and wastage ranges don't overlap
+   * CROSS-ROLL VALIDATION: Ensure ranges don't overlap with locked rolls
    */
   onRollInputChange(entry: HologramDailyEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
@@ -2495,12 +2674,179 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       return sum + range.quantity;
     }, 0);
 
-    // Calculate left over
+    // NEW: Validate that issued ranges don't overlap with each other (within current roll)
+    const issuedOverlapCheck = this.validateNoOverlapWithinCategory(rollInput.issuedRanges || []);
+    if (!issuedOverlapCheck.isValid) {
+      // Mark all issued ranges as invalid if there's overlap
+      (rollInput.issuedRanges || []).forEach((range: any, index: number) => {
+        if (range.fromSerial && range.toSerial) {
+          range.isValid = false;
+          range.errorMessage = `Issued ranges overlap within this roll: ${issuedOverlapCheck.overlappingRanges[0]}`;
+        }
+      });
+    }
+
+    // NEW: Validate that wastage ranges don't overlap with each other (within current roll)
+    const wastageOverlapCheck = this.validateNoOverlapWithinCategory(rollInput.wastageRanges || []);
+    if (!wastageOverlapCheck.isValid) {
+      // Mark all wastage ranges as invalid if there's overlap
+      (rollInput.wastageRanges || []).forEach((range: any, index: number) => {
+        if (range.fromSerial && range.toSerial) {
+          range.isValid = false;
+          range.errorMessage = `Wastage ranges overlap within this roll: ${wastageOverlapCheck.overlappingRanges[0]}`;
+        }
+      });
+    }
+
+    // NEW: Validate that issued and wastage ranges don't overlap (within current roll)
+    const crossOverlapCheck = this.validateNoOverlapBetweenIssuedAndWastage(
+      rollInput.issuedRanges || [],
+      rollInput.wastageRanges || []
+    );
+    
+    if (!crossOverlapCheck.isValid) {
+      // Mark overlapping ranges as invalid
+      (rollInput.issuedRanges || []).forEach((issued: any) => {
+        if (!issued.fromSerial || !issued.toSerial) return;
+        
+        (rollInput.wastageRanges || []).forEach((wastage: any) => {
+          if (!wastage.fromSerial || !wastage.toSerial) return;
+          
+          if (this.checkRangeOverlap(
+            issued.fromSerial,
+            issued.toSerial,
+            wastage.fromSerial,
+            wastage.toSerial
+          )) {
+            issued.isValid = false;
+            issued.errorMessage = `Overlaps with wastage range (${wastage.fromSerial}-${wastage.toSerial}) in this roll`;
+            wastage.isValid = false;
+            wastage.errorMessage = `Overlaps with issued range (${issued.fromSerial}-${issued.toSerial}) in this roll`;
+          }
+        });
+      });
+    }
+
+    // NEW: CROSS-ROLL VALIDATION - Check against locked rolls
+    const lockedRanges = this.getAllUsedRangesFromLockedRolls(entry);
+    
+    if (lockedRanges.length > 0) {
+      // Validate issued ranges against locked rolls
+      const issuedCrossRollCheck = this.validateNoOverlapWithLockedRolls(
+        rollInput.issuedRanges || [],
+        lockedRanges
+      );
+      
+      if (!issuedCrossRollCheck.isValid) {
+        issuedCrossRollCheck.conflicts.forEach(conflict => {
+          conflict.currentRange.isValid = false;
+          conflict.currentRange.errorMessage = 
+            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
+            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
+            `from locked roll "${conflict.lockedRange.rollName}"`;
+        });
+      }
+
+      // Validate wastage ranges against locked rolls
+      const wastageCrossRollCheck = this.validateNoOverlapWithLockedRolls(
+        rollInput.wastageRanges || [],
+        lockedRanges
+      );
+      
+      if (!wastageCrossRollCheck.isValid) {
+        wastageCrossRollCheck.conflicts.forEach(conflict => {
+          conflict.currentRange.isValid = false;
+          conflict.currentRange.errorMessage = 
+            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
+            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
+            `from locked roll "${conflict.lockedRange.rollName}"`;
+        });
+      }
+    }
+
+    // Calculate left over for current roll
     const totalUsed = rollInput.issuedQty + rollInput.wastageQty;
     rollInput.leftOver = rollInput.availableCount - totalUsed;
 
-    this.updateEntryQuantitiesFromSelection(entry);
+    // Update entry-level quantities (sum from all rolls)
+    this.updateEntryQuantitiesFromAllRolls(entry);
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Update entry-level quantities by summing from all rolls (locked + current)
+   */
+  private updateEntryQuantitiesFromAllRolls(entry: HologramDailyEntry): void {
+    if (entry.isFixed) {
+      return; // Don't recalculate for saved entries
+    }
+
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const currentRoll = this.getCurrentRollInput(entry);
+
+    console.log('🔄 Updating entry quantities from all rolls:', {
+      lockedRollsCount: lockedRolls.length,
+      hasCurrentRoll: !!currentRoll
+    });
+
+    // Sum issued quantities from all rolls
+    let totalIssued = 0;
+    lockedRolls.forEach((roll: any) => {
+      console.log(`  Locked roll ${roll.cartoonNumber}: issued=${roll.issuedQty}`);
+      totalIssued += roll.issuedQty || 0;
+    });
+    if (currentRoll) {
+      console.log(`  Current roll: issued=${currentRoll.issuedQty}`);
+      totalIssued += currentRoll.issuedQty || 0;
+    }
+
+    // Sum wastage quantities from all rolls
+    let totalWastage = 0;
+    lockedRolls.forEach((roll: any) => {
+      console.log(`  Locked roll ${roll.cartoonNumber}: wastage=${roll.wastageQty}`);
+      totalWastage += roll.wastageQty || 0;
+    });
+    if (currentRoll) {
+      console.log(`  Current roll: wastage=${currentRoll.wastageQty}`);
+      totalWastage += currentRoll.wastageQty || 0;
+    }
+
+    // Sum left over from all rolls
+    let totalLeftOver = 0;
+    lockedRolls.forEach((roll: any) => {
+      console.log(`  Locked roll ${roll.cartoonNumber}: leftOver=${roll.leftOver}`);
+      totalLeftOver += roll.leftOver || 0;
+    });
+    if (currentRoll) {
+      console.log(`  Current roll: leftOver=${currentRoll.leftOver}`);
+      totalLeftOver += currentRoll.leftOver || 0;
+    }
+
+    console.log('📊 Calculated totals:', {
+      totalIssued,
+      totalWastage,
+      totalLeftOver
+    });
+
+    // Update entry-level quantities
+    entry.issuedQuantity = totalIssued;
+    entry.wastageQuantity = totalWastage;
+    entry.leftOverQuantity = totalLeftOver;
+
+    // Update utilized quantity to reflect total from all rolls
+    const totalAllocated = lockedRolls.reduce((sum: number, roll: any) => {
+      return sum + (roll.availableCount || roll.allocatedQuantity || 0);
+    }, 0) + (currentRoll ? (currentRoll.availableCount || currentRoll.allocatedQuantity || 0) : 0);
+
+    entry.utilizedQuantity = totalAllocated;
+    (entry as any).originalHologramQty = totalAllocated;
+
+    console.log('✅ Entry quantities updated:', {
+      issuedQuantity: entry.issuedQuantity,
+      wastageQuantity: entry.wastageQuantity,
+      leftOverQuantity: entry.leftOverQuantity,
+      utilizedQuantity: entry.utilizedQuantity
+    });
   }
 
   /**
@@ -2756,6 +3102,9 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
         });
       }
     });
+
+    // Also update from current roll if it exists
+    this.updateEntryQuantitiesFromAllRolls(entry);
   }
 
   /**
