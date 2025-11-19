@@ -1497,3 +1497,56 @@ ologram Details Modal Styles
     }
   }
 }
+
+// Hologram table specific column widths - balanced layout
+.hologram-register-table {
+  .register-table {
+    thead th,
+    tbody td {
+      &.sl-no {
+        width: 60px !important;
+        max-width: 60px !important;
+      }
+      
+      &.ref-number {
+        width: 140px !important;
+        max-width: 140px !important;
+      }
+      
+      &.submission-date {
+        width: 110px !important;
+        max-width: 110px !important;
+      }
+      
+      &.company-name {
+        width: 180px !important;
+        max-width: 180px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        
+        .company-name {
+          display: block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+      
+      &.total-qty {
+        width: 200px !important;
+        max-width: 200px !important;
+      }
+      
+      &.status {
+        width: 120px !important;
+        max-width: 120px !important;
+      }
+      
+      &.actions {
+        width: 180px !important;
+        max-width: 180px !important;
+      }
+    }
+  }
+}
