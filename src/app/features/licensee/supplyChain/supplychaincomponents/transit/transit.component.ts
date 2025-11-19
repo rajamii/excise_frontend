@@ -28,22 +28,7 @@ export class TransitComponent implements OnInit {
   transitYearFilter: string = '';
   transitStatusFilter: string = '';
   
-  transitData: TableData[] = [
-    {
-      referenceNo: "TRN/BF801",
-      submissionDate: "13-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "TRANSIT PERMIT ISSUED",
-      amount: "10.00",
-    },
-    {
-      referenceNo: "TRN/BF802",
-      submissionDate: "12-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "TRANSIT APPLICATION PROCESSING",
-      amount: "8.50",
-    },
-  ];
+  transitData: TableData[] = [];
   
   filteredTransitData: TableData[] = [];
   
@@ -80,15 +65,25 @@ export class TransitComponent implements OnInit {
     // Combine both sources
     const allTransitRequests = [...transitPermitRequests, ...transitFromImport];
 
+    // Remove duplicates based on reference number (billNo or refNo)
+    const uniqueTransitRequests = allTransitRequests.reduce((acc: any[], current: any) => {
+      const refNo = current.billNo || current.refNo;
+      const isDuplicate = acc.some((item: any) => (item.billNo || item.refNo) === refNo);
+      if (!isDuplicate) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+
     // Sort by submission time (newest first)
-    allTransitRequests.sort((a: any, b: any) => {
+    uniqueTransitRequests.sort((a: any, b: any) => {
       const dateA = new Date(a.submissionDate || a.date).getTime();
       const dateB = new Date(b.submissionDate || b.date).getTime();
       return dateB - dateA; // Newest first
     });
 
     // Convert transit permit data to table format
-    const transitPermitData: TableData[] = allTransitRequests.map((permit: any) => ({
+    const transitPermitData: TableData[] = uniqueTransitRequests.map((permit: any) => ({
       referenceNo: permit.billNo || permit.refNo,
       submissionDate: new Date(permit.submissionDate || permit.date).toLocaleDateString('en-GB'),
       distilleryName: permit.soleDistributor || permit.distilleryName || 'Unknown Distributor',
@@ -96,26 +91,8 @@ export class TransitComponent implements OnInit {
       amount: (permit.totalAmount || permit.brAmount || 0).toFixed(2)
     }));
 
-    // Get the original sample data
-    const originalTransitData: TableData[] = [
-      {
-        referenceNo: "TRN/BF801",
-        submissionDate: "13-Sep-2025",
-        distilleryName: "Royal Sikkim Brewery",
-        status: "TRANSIT PERMIT ISSUED",
-        amount: "10.00",
-      },
-      {
-        referenceNo: "TRN/BF802",
-        submissionDate: "12-Sep-2025",
-        distilleryName: "Mountain View Distilleries",
-        status: "TRANSIT APPLICATION PROCESSING",
-        amount: "8.50",
-      },
-    ];
-
-    // Combine with sample data, putting new submissions at the top
-    this.transitData = [...transitPermitData, ...originalTransitData];
+    // Set transit data (no sample data)
+    this.transitData = transitPermitData;
     this.filteredTransitData = [...this.transitData];
   }
 
@@ -299,26 +276,11 @@ export class TransitComponent implements OnInit {
     const filteredImportRequests = importPermitRequests.filter((permit: any) => permit.type !== 'transit-permit');
     localStorage.setItem('importPermitRequests', JSON.stringify(filteredImportRequests));
 
-    // Reset to sample data only
-    this.transitData = [
-      {
-        referenceNo: "TRN/BF801",
-        submissionDate: "13-Sep-2025",
-        distilleryName: "Royal Sikkim Brewery",
-        status: "TRANSIT PERMIT ISSUED",
-        amount: "10.00",
-      },
-      {
-        referenceNo: "TRN/BF802",
-        submissionDate: "12-Sep-2025",
-        distilleryName: "Mountain View Distilleries",
-        status: "TRANSIT APPLICATION PROCESSING",
-        amount: "8.50",
-      },
-    ];
+    // Reset to empty data
+    this.transitData = [];
 
     // Reset filtered data
-    this.filteredTransitData = [...this.transitData];
+    this.filteredTransitData = [];
 
     // Reset pagination
     this.resetPagination();
