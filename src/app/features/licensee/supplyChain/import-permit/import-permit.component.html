@@ -144,9 +144,9 @@
                             <div class="col-md-6">
                                 <div class="info-card">
                                     <h6 class="text-primary mb-2">Application Details</h6>
-                                    <p><strong>Reference No:</strong> {{ formData.refNo }}</p>
-                                    <p><strong>Submission Date:</strong> {{ formData.date | date: "dd-MM-yyyy" }}</p>
-                                    <p><strong>Distillery:</strong> {{ getDistilleryName(formData.liftedFrom) }}</p>
+                                    <p><strong>Reference No:</strong> {{ submittedFormData?.refNo }}</p>
+                                    <p><strong>Submission Date:</strong> {{ submittedFormData?.date | date: "dd-MM-yyyy" }}</p>
+                                    <p><strong>Distillery:</strong> {{ getDistilleryName(submittedFormData?.liftedFrom || '') }}</p>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -169,27 +169,27 @@
                                     <tbody>
                                         <tr>
                                             <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
-                                            <td>{{ getBulkSpiritDisplayName(formData.bulkSpiritType) }}</td>
+                                            <td>{{ getBulkSpiritDisplayName(submittedFormData?.bulkSpiritType || '') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Quantity per Permit</td>
-                                            <td>{{ formData.quantity }} BL</td>
+                                            <td>{{ submittedFormData?.quantity }} BL</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Number of Permits</td>
-                                            <td>{{ formData.numberOfPermits }}</td>
+                                            <td>{{ submittedFormData?.numberOfPermits }}</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Total Quantity</td>
-                                            <td class="text-success fw-bold">{{ calculatedTotal }} BL</td>
+                                            <td class="text-success fw-bold">{{ (submittedFormData?.quantity || 0) * (submittedFormData?.numberOfPermits || 0) }} BL</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Strength</td>
-                                            <td>{{ formData.strengthTo }}°</td>
+                                            <td>{{ submittedFormData?.strengthTo }}°</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Purpose</td>
-                                            <td>{{ getPurposeDisplayName(formData.purpose) }}</td>
+                                            <td>{{ getPurposeDisplayName(submittedFormData?.purpose || '') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Amount Paid</td>
@@ -208,15 +208,15 @@
                                     <tbody>
                                         <tr>
                                             <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
-                                            <td>{{ getDistilleryName(formData.liftedFrom) }}</td>
+                                            <td>{{ getDistilleryName(submittedFormData?.liftedFrom || '') }}</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Via Route</td>
-                                            <td>{{ formData.viaRoute }}</td>
+                                            <td>{{ submittedFormData?.viaRoute }}</td>
                                         </tr>
                                         <tr>
                                             <td class="fw-semibold bg-light">Checkpost Entry</td>
-                                            <td>{{ getCheckpostDisplayName(formData.checkpostEntry) }}</td>
+                                            <td>{{ getCheckpostDisplayName(submittedFormData?.checkpostEntry || '') }}</td>
                                         </tr>
                                     </tbody>
                                 </table>

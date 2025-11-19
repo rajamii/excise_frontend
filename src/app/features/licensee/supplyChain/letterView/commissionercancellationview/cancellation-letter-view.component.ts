@@ -147,7 +147,7 @@ export class CancellationLetterViewComponent implements OnInit {
         status: "Cancellation Pending",
         brAmount: 15.0,
         cancellationAmount: 0.0,
-        originalPermitNo: "IBPS/08/EXCISE",
+        originalPermitNo: "IBPS/08/EXCISEss",
         originalPermitDate: new Date("2025-07-25"),
         reasonForCancellation:
           "Regulatory Violation",

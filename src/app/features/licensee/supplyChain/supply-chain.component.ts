@@ -2,6 +2,7 @@ import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
+import { RequisitionComponent } from "./supplychaincomponents/requisition/requisition.component";
 
 interface TableData {
   referenceNo: string;
@@ -29,7 +30,7 @@ interface HologramRow {
 @Component({
   selector: "app-supply-chain",
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RequisitionComponent],
   templateUrl: "./supply-chain.component.html",
   styleUrls: ["./supply-chain.component.scss"],
 })

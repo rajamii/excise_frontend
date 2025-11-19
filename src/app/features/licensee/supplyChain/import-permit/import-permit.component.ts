@@ -32,6 +32,7 @@ export class ImportPermitComponent implements OnInit {
   private isBrowser = false;
   viewModeRef?: string;
   showApplicationTemplate = false;
+  submittedFormData?: FormData; // Store the submitted data separately for the template
 
   formData: FormData = {
     refNo: 'IBPS/01/EXCISE',
@@ -202,6 +203,10 @@ export class ImportPermitComponent implements OnInit {
   submitForm(): void {
     if (this.validateForm()) {
       console.log('Submitting form:', this.formData);
+      
+      // Store a copy of the submitted data for the template BEFORE any changes
+      this.submittedFormData = { ...this.formData };
+      
       // Frontend submit logic only
       if (this.isBrowser) {
         const key = 'importPermitRequests';
@@ -221,9 +226,6 @@ export class ImportPermitComponent implements OnInit {
       // Show the application template
       this.showApplicationTemplate = true;
 
-      // Generate new reference number for next submission
-      this.generateRefNumber();
-
       // Scroll to the template
       setTimeout(() => {
         const templateElement = document.querySelector('.card.shadow-sm.border-0.mt-4');
@@ -232,7 +234,10 @@ export class ImportPermitComponent implements OnInit {
         }
       }, 100);
 
-      alert('Form submitted successfully! Application template is now displayed below. A new reference number has been generated for your next submission.');
+      alert('Form submitted successfully! Application template is now displayed below.');
+
+      // Reset the form for next submission
+      this.resetForm();
     }
   }
 
@@ -325,7 +330,7 @@ export class ImportPermitComponent implements OnInit {
     const win = window.open('', '_blank', 'width=900,height=1000');
     if (!win) return;
     win.document.open();
-    const ref = this.formData.refNo || '';
+    const ref = this.submittedFormData?.refNo || '';
     win.document.write(`<!doctype html>
       <html>
         <head>
@@ -348,6 +353,35 @@ export class ImportPermitComponent implements OnInit {
       win.print();
       win.close();
     };
+  }
+
+  resetForm(): void {
+    // Get today's date
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+
+    // Reset form data to initial state
+    this.formData = {
+      refNo: '',
+      date: todayString,
+      quantity: 0,
+      numberOfPermits: 0,
+      bulkSpiritType: '',
+      strengthTo: '',
+      liftedFrom: '',
+      viaRoute: '',
+      checkpostEntry: '',
+      purpose: ''
+    };
+
+    // Reset calculated values
+    this.calculatedTotal = 0;
+    this.strengthFrom = '';
+    this.errorMessage = '';
+    this.refNoError = '';
+
+    // Generate new reference number
+    this.generateRefNumber();
   }
 
   goBack(): void {
