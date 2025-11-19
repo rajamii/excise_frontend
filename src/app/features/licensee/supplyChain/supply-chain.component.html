@@ -1171,7 +1171,7 @@
                   <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">
                       <i class="bi bi-upload me-2"></i>
-                      Upload Payment Slip (Offline Payment)
+                      Upload Payment Slip (Offline Payment - Hologram Making Cost)
                     </h5>
                     <button type="button" class="btn-close btn-close-white" aria-label="Close"
                       (click)="closePaymentUploadModal()"></button>
@@ -1230,7 +1230,7 @@
                             </thead>
                             <tbody>
                               <tr>
-                                <td>Offline Payment to Printing Press</td>
+                                <td>Offline Payment - Hologram Making Cost</td>
                                 <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
                                 <td class="text-end">₹0.72</td>
                                 <td class="text-end"><strong>₹{{ (getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) * 0.72) | number:'1.2-2' }}</strong></td>
@@ -1266,7 +1266,7 @@
                             </thead>
                             <tbody>
                               <tr class="table-success">
-                                <td><strong>Wallet Payment (Excise/Additional Balance)</strong></td>
+                                <td><strong>Wallet Payment (Administrative Cost)</strong></td>
                                 <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
                                 <td class="text-end"><strong>₹0.15</strong></td>
                                 <td class="text-end"><strong class="text-success">₹{{ selectedPaymentHologram ? (calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2') : '0.00' }}</strong></td>
@@ -1467,13 +1467,13 @@
                             </thead>
                             <tbody>
                               <tr>
-                                <td>Offline Payment (Printing Press)</td>
+                                <td>Offline Payment (Hologram Making Cost)</td>
                                 <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
                                 <td class="text-end">₹0.72</td>
                                 <td class="text-end"><strong>₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}</strong></td>
                               </tr>
                               <tr class="table-success">
-                                <td><strong>Wallet Payment (Excise/Additional)</strong></td>
+                                <td><strong>Wallet Payment (Administrative Cost)</strong></td>
                                 <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
                                 <td class="text-end"><strong>₹0.15</strong></td>
                                 <td class="text-end"><strong class="text-success">₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }}</strong></td>
