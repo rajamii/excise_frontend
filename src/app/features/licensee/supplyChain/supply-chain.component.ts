@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
 import { RequisitionComponent } from "./supplychaincomponents/requisition/requisition.component";
+import { RevalidationComponent } from "./supplychaincomponents/revalidation/revalidation.component";
 
 interface TableData {
   referenceNo: string;
@@ -30,7 +31,7 @@ interface HologramRow {
 @Component({
   selector: "app-supply-chain",
   standalone: true,
-  imports: [CommonModule, FormsModule, RequisitionComponent],
+  imports: [CommonModule, FormsModule, RequisitionComponent, RevalidationComponent],
   templateUrl: "./supply-chain.component.html",
   styleUrls: ["./supply-chain.component.scss"],
 })
@@ -46,8 +47,6 @@ export class SupplyChainComponent implements OnInit {
   hologramList: HologramRow[] = [];
   hologramRequestList: any[] = [];
   filteredHologramRequestList: any[] = [];
-  filteredRequisitionData: TableData[] = [];
-  filteredRevalidationData: TableData[] = [];
   filteredCancellationData: TableData[] = [];
   filteredTransitData: TableData[] = [];
   filteredHologramData: any[] = [];
@@ -66,18 +65,6 @@ export class SupplyChainComponent implements OnInit {
   dateFilter: string = '';
   monthFilter: string = '';
   statusFilter: string = '';
-
-  // Filter properties for requisition
-  requisitionDateFilter: string = '';
-  requisitionMonthFilter: string = '';
-  requisitionYearFilter: string = '';
-  requisitionStatusFilter: string = '';
-  
-  // Filter properties for revalidation
-  revalidationDateFilter: string = '';
-  revalidationMonthFilter: string = '';
-  revalidationYearFilter: string = '';
-  revalidationStatusFilter: string = '';
   
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
@@ -99,148 +86,6 @@ export class SupplyChainComponent implements OnInit {
   selectedHologram: HologramRow | null = null;
   showRequestModal = false;
   selectedRequest: any = null;
-
-  // Sample data for display only
-  requisitionData: TableData[] = [
-    {
-      referenceNo: "BF502/EXCISE",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status:
-        "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-      amount: "8.00",
-    },
-    {
-      referenceNo: "BF503/EXCISE",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "APPLICATION UNDER REVIEW BY DEPARTMENT.",
-      amount: "12.50",
-    },
-    {
-      referenceNo: "BF504/EXCISE",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "PERMIT APPROVED AND READY FOR COLLECTION.",
-      amount: "15.75",
-    },
-    {
-      referenceNo: "BF505/EXCISE",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "DOCUMENTATION VERIFICATION IN PROGRESS.",
-      amount: "9.25",
-    },
-    {
-      referenceNo: "BF506/EXCISE",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PERMIT PROCESSING - AWAITING FINAL APPROVAL.",
-      amount: "11.00",
-    },
-    {
-      referenceNo: "BF507/EXCISE",
-      submissionDate: "17-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "APPLICATION SUBMITTED - INITIAL REVIEW COMPLETED.",
-      amount: "14.25",
-    },
-    {
-      referenceNo: "BF508/EXCISE",
-      submissionDate: "16-Sep-2025",
-      distilleryName: "Khangchendzonga Breweries",
-      status: "PERMIT READY FOR DISPATCH TO LICENSEE.",
-      amount: "13.50",
-    },
-    {
-      referenceNo: "BF509/EXCISE",
-      submissionDate: "15-Sep-2025",
-      distilleryName: "Teesta Valley Distilleries",
-      status: "TECHNICAL EVALUATION IN PROGRESS.",
-      amount: "16.80",
-    },
-    {
-      referenceNo: "BF510/EXCISE",
-      submissionDate: "14-Sep-2025",
-      distilleryName: "Rangit River Spirits",
-      status: "COMPLIANCE CHECK COMPLETED - AWAITING CLEARANCE.",
-      amount: "10.75",
-    },
-    {
-      referenceNo: "BF511/EXCISE",
-      submissionDate: "13-Sep-2025",
-      distilleryName: "Sikkim Highland Brewery",
-      status: "PERMIT APPROVED - COLLECTION NOTICE SENT.",
-      amount: "18.90",
-    },
-    {
-      referenceNo: "BF512/EXCISE",
-      submissionDate: "12-Sep-2025",
-      distilleryName: "Pelling Craft Distillery",
-      status: "APPLICATION UNDER DEPARTMENTAL REVIEW.",
-      amount: "7.60",
-    },
-    {
-      referenceNo: "BF513/EXCISE",
-      submissionDate: "11-Sep-2025",
-      distilleryName: "Yuksom Traditional Spirits",
-      status: "PERMIT GENERATION IN FINAL STAGE.",
-      amount: "20.25",
-    },
-    {
-      referenceNo: "BF514/EXCISE",
-      submissionDate: "10-Sep-2025",
-      distilleryName: "Namchi Valley Breweries",
-      status: "DOCUMENTATION REVIEW COMPLETED - PROCESSING.",
-      amount: "12.40",
-    },
-    {
-      referenceNo: "BF515/EXCISE",
-      submissionDate: "09-Sep-2025",
-      distilleryName: "Jorethang Premium Distillery",
-      status: "PERMIT ISSUED - READY FOR COLLECTION.",
-      amount: "19.15",
-    },
-  ];
-
-  revlidationData: TableData[] = [
-    {
-      referenceNo: "IMP/SUP-AGDIST",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "IMPORT PERMIT EXTENDS 45 DAYS - INVALID",
-      amount: "0.00",
-      isLive: true,
-      isInvalid: true,
-    },
-    {
-      referenceNo: "REV/BF601",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "REVALIDATION REQUEST PENDING APPROVAL",
-      amount: "5.00",
-      isLive: false,
-      isInvalid: false,
-    },
-    {
-      referenceNo: "REV/BF602",
-      submissionDate: "17-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "PERMIT EXPIRED - REQUIRES IMMEDIATE REVALIDATION",
-      amount: "7.50",
-      isLive: true,
-      isInvalid: true,
-    },
-    {
-      referenceNo: "REV/BF603",
-      submissionDate: "16-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "REVALIDATION APPROVED - PERMIT EXTENDED",
-      amount: "6.25",
-      isLive: false,
-      isInvalid: false,
-    },
-  ];
 
   cancellationData: TableData[] = [
     {
@@ -282,14 +127,11 @@ export class SupplyChainComponent implements OnInit {
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.refreshHologramList();
-    this.loadRequisitionData();
     this.loadTransitData();
   }
 
   ngOnInit(): void {
     // Initialize filtered data
-    this.filteredRequisitionData = [...this.requisitionData];
-    this.filteredRevalidationData = [...this.revlidationData];
     this.filteredCancellationData = [...this.cancellationData];
     this.filteredTransitData = [...this.transitData];
     this.filteredHologramData = [...this.hologramList];
@@ -385,75 +227,6 @@ export class SupplyChainComponent implements OnInit {
 
     this.hologramList = mapped;
     this.filteredHologramData = [...this.hologramList];
-  }
-
-  private loadRequisitionData(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    // Load import permit requests from localStorage
-    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-
-    // Sort by submission time (newest first) to ensure proper ordering
-    importPermitRequests.sort((a: any, b: any) => {
-      const dateA = new Date(a.submittedAt || a.date).getTime();
-      const dateB = new Date(b.submittedAt || b.date).getTime();
-      return dateB - dateA; // Newest first
-    });
-
-    // Convert import permit data to requisition format
-    const importPermitData: TableData[] = importPermitRequests
-      .filter((permit: any) => permit.type !== 'transit-permit') // Exclude transit permits from requisition tab
-      .map((permit: any) => ({
-        referenceNo: permit.refNo,
-        submissionDate: new Date(permit.date).toLocaleDateString('en-GB'),
-        distilleryName: this.getDistilleryDisplayName(permit.liftedFrom),
-        status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: "8.00"
-      }));
-
-    // Get the original sample data (without any previously added import permits)
-    const originalSampleData: TableData[] = [
-      {
-        referenceNo: "BF502/EXCISE",
-        submissionDate: "22-Sep-2025",
-        distilleryName: "Sikkim Distilleries Ltd",
-        status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-        amount: "8.00",
-      },
-      {
-        referenceNo: "BF503/EXCISE",
-        submissionDate: "21-Sep-2025",
-        distilleryName: "Himalayan Distilleries Pvt Ltd",
-        status: "APPLICATION UNDER REVIEW BY DEPARTMENT.",
-        amount: "12.50",
-      },
-      {
-        referenceNo: "BF504/EXCISE",
-        submissionDate: "20-Sep-2025",
-        distilleryName: "Royal Sikkim Brewery",
-        status: "PERMIT APPROVED AND READY FOR COLLECTION.",
-        amount: "15.75",
-      },
-      {
-        referenceNo: "BF505/EXCISE",
-        submissionDate: "19-Sep-2025",
-        distilleryName: "Mountain View Distilleries",
-        status: "DOCUMENTATION VERIFICATION IN PROGRESS.",
-        amount: "9.25",
-      },
-      {
-        referenceNo: "BF506/EXCISE",
-        submissionDate: "18-Sep-2025",
-        distilleryName: "Eastern Himalaya Distillery",
-        status: "PERMIT PROCESSING - AWAITING FINAL APPROVAL.",
-        amount: "11.00",
-      }
-    ];
-
-    // Combine with sample data, putting new submissions at the top
-    this.requisitionData = [...importPermitData, ...originalSampleData];
   }
 
   private loadTransitData(): void {
@@ -553,9 +326,6 @@ export class SupplyChainComponent implements OnInit {
       console.log('Loading hologram requests for tab');
       // refresh hologram requests on each visit
       this.loadHologramRequests();
-    } else if (tab === "requisition") {
-      // refresh requisition data on each visit
-      this.loadRequisitionData();
     } else if (tab === "transit") {
       // refresh transit data on each visit
       this.loadTransitData();
@@ -612,16 +382,6 @@ export class SupplyChainComponent implements OnInit {
         tab: "requisition",
         referenceNo: item.referenceNo,
         action: "viewSlip",
-      },
-    });
-  }
-
-  requestRevlidation(item: TableData): void {
-    // Navigate to payment confirmation page (development route)
-    this.router.navigate(["/dev-payment-confirmation"], {
-      queryParams: {
-        tab: "revalidation",
-        referenceNo: item.referenceNo,
       },
     });
   }
@@ -824,16 +584,12 @@ export class SupplyChainComponent implements OnInit {
   // Pagination state per tab
   pageSizeOptions: number[] = [5, 10, 15];
   pageSizeByTab: Record<string, number> = {
-    requisition: 5,
-    revalidation: 5,
     cancellation: 5,
     transit: 5,
     hologram: 5,
     'hologram-request': 5,
   };
   currentPageByTab: Record<string, number> = {
-    requisition: 1,
-    revalidation: 1,
     cancellation: 1,
     transit: 1,
     hologram: 1,
@@ -1162,341 +918,6 @@ End of Application
       default:
         return 'bi bi-question-circle';
     }
-  }
-
-  // Requisition summary methods
-  getTotalRequisitionAmount(): number {
-    return this.requisitionData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
-  }
-
-  getRequisitionStatusCount(status: string): number {
-    return this.requisitionData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
-  }
-
-  // Requisition filter methods
-  applyRequisitionFilters(): void {
-    console.log('Applying requisition filters:', {
-      dateFilter: this.requisitionDateFilter,
-      monthFilter: this.requisitionMonthFilter,
-      yearFilter: this.requisitionYearFilter,
-      statusFilter: this.requisitionStatusFilter
-    });
-
-    this.filteredRequisitionData = this.requisitionData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
-
-      // Parse the date from the format "22-Sep-2025"
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
-
-        // Convert month name to number
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
-
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
-
-          // Date filter (exact date match)
-          if (this.requisitionDateFilter) {
-            const filterDate = new Date(this.requisitionDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
-
-          // Month filter (month and year match)
-          if (this.requisitionMonthFilter) {
-            const filterDate = new Date(this.requisitionMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
-
-          // Year filter
-          if (this.requisitionYearFilter) {
-            const filterYear = parseInt(this.requisitionYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
-        }
-      }
-
-      // Status filter (partial match for long status messages)
-      if (this.requisitionStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-      console.log('Requisition match for:', item.referenceNo, finalMatch);
-
-      return finalMatch;
-    });
-
-    console.log('Filtered requisition results:', this.filteredRequisitionData.length, 'out of', this.requisitionData.length);
-
-    // Reset pagination to first page when filters are applied
-    this.resetPagination('requisition');
-  }
-
-  clearRequisitionFilters(): void {
-    this.requisitionDateFilter = '';
-    this.requisitionMonthFilter = '';
-    this.requisitionYearFilter = '';
-    this.requisitionStatusFilter = '';
-    this.filteredRequisitionData = [...this.requisitionData];
-    this.resetPagination('requisition');
-  }
-
-  onRequisitionDateFilterChange(): void {
-    console.log('Requisition date filter changed to:', this.requisitionDateFilter);
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionMonthFilterChange(): void {
-    console.log('Requisition month filter changed to:', this.requisitionMonthFilter);
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionYearFilterChange(): void {
-    console.log('Requisition year filter changed to:', this.requisitionYearFilter);
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionStatusFilterChange(): void {
-    console.log('Requisition status filter changed to:', this.requisitionStatusFilter);
-    this.applyRequisitionFilters();
-  }
-
-  // Revalidation filter methods
-  applyRevalidationFilters(): void {
-    console.log('Applying revalidation filters:', { 
-      dateFilter: this.revalidationDateFilter, 
-      monthFilter: this.revalidationMonthFilter, 
-      yearFilter: this.revalidationYearFilter,
-      statusFilter: this.revalidationStatusFilter 
-    });
-    
-    this.filteredRevalidationData = this.revlidationData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
-
-      // Parse the date from the format "22-Sep-2025"
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
-        
-        // Convert month name to number
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
-        
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
-          
-          // Date filter (exact date match)
-          if (this.revalidationDateFilter) {
-            const filterDate = new Date(this.revalidationDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-                         itemDate.getMonth() === filterDate.getMonth() &&
-                         itemDate.getDate() === filterDate.getDate();
-          }
-
-          // Month filter (month and year match)
-          if (this.revalidationMonthFilter) {
-            const filterDate = new Date(this.revalidationMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() && 
-                          itemDate.getMonth() === filterDate.getMonth();
-          }
-
-          // Year filter
-          if (this.revalidationYearFilter) {
-            const filterYear = parseInt(this.revalidationYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
-        }
-      }
-
-      // Status filter (partial match for long status messages)
-      if (this.revalidationStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.revalidationStatusFilter.toLowerCase());
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-      console.log('Revalidation match for:', item.referenceNo, finalMatch);
-      
-      return finalMatch;
-    });
-    
-    console.log('Filtered revalidation results:', this.filteredRevalidationData.length, 'out of', this.revlidationData.length);
-    
-    // Reset pagination to first page when filters are applied
-    this.resetPagination('revalidation');
-  }
-
-  clearRevalidationFilters(): void {
-    this.revalidationDateFilter = '';
-    this.revalidationMonthFilter = '';
-    this.revalidationYearFilter = '';
-    this.revalidationStatusFilter = '';
-    this.filteredRevalidationData = [...this.revlidationData];
-    this.resetPagination('revalidation');
-  }
-
-  onRevalidationDateFilterChange(): void {
-    console.log('Revalidation date filter changed to:', this.revalidationDateFilter);
-    this.applyRevalidationFilters();
-  }
-
-  onRevalidationMonthFilterChange(): void {
-    console.log('Revalidation month filter changed to:', this.revalidationMonthFilter);
-    this.applyRevalidationFilters();
-  }
-
-  onRevalidationYearFilterChange(): void {
-    console.log('Revalidation year filter changed to:', this.revalidationYearFilter);
-    this.applyRevalidationFilters();
-  }
-
-  onRevalidationStatusFilterChange(): void {
-    console.log('Revalidation status filter changed to:', this.revalidationStatusFilter);
-    this.applyRevalidationFilters();
-  }
-
-  // Revalidation summary methods
-  getRevalidationStatusCount(status: string): number {
-    return this.revlidationData.filter(item => 
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
-  }
-
-  getLiveRevalidationCount(): number {
-    return this.revlidationData.filter(item => item.isLive).length;
-  }
-
-  getTotalRevalidationAmount(): number {
-    return this.revlidationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
-  }
-
-  // Requisition modal methods
-  viewRequisitionApplication(requisition: any): void {
-    // Navigate to the dedicated requisition view component
-    this.router.navigate(['/dev-supply-chain-application-view'], {
-      queryParams: { ref: requisition.referenceNo }
-    });
-  }
-
-
-
-  getRequisitionStatusClass(status: string): string {
-    if (status.toLowerCase().includes('approved')) return 'status-approved';
-    if (status.toLowerCase().includes('review')) return 'status-pending';
-    if (status.toLowerCase().includes('processing')) return 'status-processing';
-    if (status.toLowerCase().includes('verification')) return 'status-processing';
-    return 'status-default';
-  }
-
-  getRequisitionStatusIcon(status: string): string {
-    if (status.toLowerCase().includes('approved')) return 'bi bi-check-circle-fill';
-    if (status.toLowerCase().includes('review')) return 'bi bi-clock-fill';
-    if (status.toLowerCase().includes('processing')) return 'bi bi-gear-fill';
-    if (status.toLowerCase().includes('verification')) return 'bi bi-search';
-    return 'bi bi-info-circle-fill';
-  }
-
-  downloadRequisitionApplication(requisition: any): void {
-    const applicationContent = this.generateRequisitionApplicationTemplate(requisition);
-    this.downloadRequisitionFile(applicationContent, `Requisition_Application_${requisition.referenceNo.replace(/\//g, '_')}.txt`);
-  }
-
-  private generateRequisitionApplicationTemplate(requisition: any): string {
-    const currentDate = new Date().toLocaleDateString('en-IN');
-
-    return `
-REQUISITION APPLICATION
-=======================
-
-Reference Number: ${requisition.referenceNo}
-Application Date: ${currentDate}
-
-APPLICANT DETAILS:
-------------------
-Company Name: ${requisition.distilleryName}
-License Number: SDL/2024/001
-Address: Industrial Area, Rangpo, East Sikkim - 737132
-Contact: +91-3592-252001
-Email: info@sikkimdistilleries.com
-
-APPLICATION DETAILS:
---------------------
-Submission Date: ${requisition.submissionDate}
-Import Pass Fee Amount: ₹${requisition.amount}
-Current Status: ${requisition.status}
-
-DECLARATION:
-------------
-I hereby declare that the information provided above is true and correct to the best of my knowledge. 
-I understand that any false information may lead to rejection of this application and/or legal action.
-
-I agree to comply with all rules and regulations set forth by the Excise Department, Government of Sikkim, 
-regarding the requisition process and import procedures.
-
-I undertake to pay all applicable fees and charges as determined by the department and understand that 
-the approval of this requisition is subject to verification of all submitted documents and compliance 
-with statutory requirements.
-
-
-Signature: _____________________
-Name: [Authorized Signatory]
-Designation: [Managing Director/Authorized Representative]
-Date: ${currentDate}
-
-
-FOR OFFICE USE ONLY:
---------------------
-Application Received Date: ___________
-Received By: ___________
-Processing Fee: ₹${requisition.amount}
-Approval Status: ${requisition.status}
-Approved By: ___________
-Date of Approval: ___________
-Permit Issue Date: ___________
-
-Remarks: ________________________________
-________________________________________
-________________________________________
-
-Signature of Approving Authority: ___________
-Name: ___________
-Designation: ___________
-Date: ___________
-
-============================
-End of Application
-============================
-`;
-  }
-
-  private downloadRequisitionFile(content: string, filename: string): void {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
   }
 
   // Cancellation filter methods
