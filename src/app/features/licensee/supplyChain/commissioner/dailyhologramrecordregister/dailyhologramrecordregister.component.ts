@@ -89,9 +89,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   overdueEntries: DailyRegisterEntry[] = [];
 
   ngOnInit() {
-    // Initialize sample manufacturing register data if needed
-    this.initializeSampleManufacturingData();
-    
+    // Load only real data from workflow - no sample data
     this.loadDailyRegisterEntries();
     
     // Listen for storage changes to auto-refresh
@@ -108,44 +106,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     }, 30000);
   }
 
-  private initializeSampleManufacturingData() {
-    const manufacturingRegister = JSON.parse(localStorage.getItem('hologramManufacturingRegister') || '[]');
-    
-    // Only add sample data if manufacturing register is empty
-    if (manufacturingRegister.length === 0) {
-      const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-      const twoDaysAgo = new Date(today);
-      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-      const threeDaysAgo = new Date(today);
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-      const sampleManufacturingData = [
-        {
-          referenceNo: 'HRQ/2025/001',
-          status: 'COMPLETED',
-          completionDate: threeDaysAgo.toISOString().split('T')[0] + 'T16:30:00',
-          completionTime: '16:30:00'
-        },
-        {
-          referenceNo: 'HRQ/2025/002',
-          status: 'COMPLETED',
-          completionDate: twoDaysAgo.toISOString().split('T')[0] + 'T18:45:00',
-          completionTime: '18:45:00'
-        },
-        {
-          referenceNo: 'HRQ/2025/003',
-          status: 'COMPLETED',
-          completionDate: yesterday.toISOString().split('T')[0] + 'T14:20:00',
-          completionTime: '14:20:00'
-        }
-        // HRQ/2025/004 and later are still under process
-      ];
-
-      localStorage.setItem('hologramManufacturingRegister', JSON.stringify(sampleManufacturingData));
-    }
-  }
+  // Removed: initializeSampleManufacturingData() - No longer creating sample data
+  // All entries must come from the real workflow
 
   loadDailyRegisterEntries() {
     console.log('Loading daily register entries...');
@@ -155,12 +117,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     
     console.log('Found hologram requests:', hologramRequests.length);
     
-    // Add sample historical data if no real data exists
-    const sampleData = this.getSampleHistoricalData();
-    const allRequests = hologramRequests.length > 0 ? hologramRequests : sampleData;
-    
-    // Convert to daily register entries
-    this.dailyRegisterEntries = allRequests.map((req: any, index: number) => {
+    // Convert to daily register entries - ONLY real data, no samples
+    this.dailyRegisterEntries = hologramRequests.map((req: any, index: number) => {
       // Determine status based on request status
       let entryStatus: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED' = 'APPLIED';
       let deadline: Date | null = null;
@@ -330,143 +288,6 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     return 'Whisky';
   }
 
-  private getSampleHistoricalData(): any[] {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const twoDaysAgo = new Date(today);
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-
-    return [
-      {
-        id: 'SAMPLE001',
-        referenceNo: 'HRQ/2025/001',
-        refNumber: 'HRQ/2025/001',
-        submissionDate: threeDaysAgo.toISOString().split('T')[0],
-        usageDate: threeDaysAgo.toISOString().split('T')[0],
-        brandName: 'Sikkim Supreme Whisky',
-        bottleSize: '750ml',
-        totalHolograms: 5000,
-        hologramType: 'LOCAL',
-        type: 'LOCAL',
-        status: 'APPROVED',
-        submissionTime: '09:00:00',
-        approvalDate: threeDaysAgo.toISOString().split('T')[0],
-        approvalTime: '10:30:00',
-        approvedQuantity: 5000,
-        distilleryName: 'Sikkim Distilleries Ltd',
-        allocations: [
-          { cartoonNumber: 'CTN001', fromSerial: 'LOC000001', toSerial: 'LOC005000', quantity: 5000 }
-        ]
-      },
-      {
-        id: 'SAMPLE002',
-        referenceNo: 'HRQ/2025/002',
-        refNumber: 'HRQ/2025/002',
-        submissionDate: twoDaysAgo.toISOString().split('T')[0],
-        usageDate: twoDaysAgo.toISOString().split('T')[0],
-        brandName: 'Himalayan Gold Rum',
-        bottleSize: '750ml',
-        totalHolograms: 3000,
-        hologramType: 'EXPORT',
-        type: 'EXPORT',
-        status: 'APPROVED',
-        submissionTime: '10:00:00',
-        approvalDate: twoDaysAgo.toISOString().split('T')[0],
-        approvalTime: '11:15:00',
-        approvedQuantity: 3000,
-        distilleryName: 'Himalayan Distilleries Pvt Ltd',
-        allocations: [
-          { cartoonNumber: 'CTN002', fromSerial: 'EXP000001', toSerial: 'EXP003000', quantity: 3000 }
-        ]
-      },
-      {
-        id: 'SAMPLE003',
-        referenceNo: 'HRQ/2025/003',
-        refNumber: 'HRQ/2025/003',
-        submissionDate: yesterday.toISOString().split('T')[0],
-        usageDate: yesterday.toISOString().split('T')[0],
-        brandName: 'Royal Sikkim Brandy',
-        bottleSize: '375ml',
-        totalHolograms: 2500,
-        hologramType: 'LOCAL',
-        type: 'LOCAL',
-        status: 'APPROVED',
-        submissionTime: '08:30:00',
-        approvalDate: yesterday.toISOString().split('T')[0],
-        approvalTime: '09:45:00',
-        approvedQuantity: 2500,
-        distilleryName: 'Royal Sikkim Brewery',
-        allocations: [
-          { cartoonNumber: 'CTN003', fromSerial: 'LOC005001', toSerial: 'LOC007500', quantity: 2500 }
-        ]
-      },
-      {
-        id: 'SAMPLE004',
-        referenceNo: 'HRQ/2025/004',
-        refNumber: 'HRQ/2025/004',
-        submissionDate: yesterday.toISOString().split('T')[0],
-        usageDate: yesterday.toISOString().split('T')[0],
-        brandName: 'Mountain Dew Vodka',
-        bottleSize: '750ml',
-        totalHolograms: 4000,
-        hologramType: 'DEFENCE',
-        type: 'DEFENCE',
-        status: 'APPROVED',
-        submissionTime: '13:00:00',
-        approvalDate: yesterday.toISOString().split('T')[0],
-        approvalTime: '14:20:00',
-        approvedQuantity: 4000,
-        distilleryName: 'Mountain View Distilleries',
-        allocations: [
-          { cartoonNumber: 'CTN004', fromSerial: 'DEF000001', toSerial: 'DEF004000', quantity: 4000 }
-        ]
-      },
-      {
-        id: 'SAMPLE005',
-        referenceNo: 'HRQ/2025/005',
-        refNumber: 'HRQ/2025/005',
-        submissionDate: today.toISOString().split('T')[0],
-        usageDate: today.toISOString().split('T')[0],
-        brandName: 'Gangtok Special Whisky',
-        bottleSize: '750ml',
-        totalHolograms: 6000,
-        hologramType: 'LOCAL',
-        type: 'LOCAL',
-        status: 'APPROVED',
-        submissionTime: '07:00:00',
-        approvalDate: today.toISOString().split('T')[0],
-        approvalTime: '08:00:00',
-        approvedQuantity: 6000,
-        distilleryName: 'Gangtok Premium Spirits',
-        allocations: [
-          { cartoonNumber: 'CTN005', fromSerial: 'LOC007501', toSerial: 'LOC013500', quantity: 6000 }
-        ]
-      },
-      {
-        id: 'SAMPLE006',
-        referenceNo: 'HRQ/2025/006',
-        refNumber: 'HRQ/2025/006',
-        submissionDate: today.toISOString().split('T')[0],
-        usageDate: today.toISOString().split('T')[0],
-        brandName: 'Teesta Valley Rum',
-        bottleSize: '1000ml',
-        totalHolograms: 3500,
-        hologramType: 'EXPORT',
-        type: 'EXPORT',
-        status: 'PENDING',
-        submissionTime: '12:00:00',
-        approvedQuantity: 3500,
-        distilleryName: 'Teesta Valley Breweries',
-        allocations: [
-          { cartoonNumber: 'CTN006', fromSerial: 'EXP003001', toSerial: 'EXP006500', quantity: 3500 }
-        ]
-      }
-    ];
-  }
-
   applyFilters() {
     this.filteredEntries = this.dailyRegisterEntries.filter(entry => {
       const matchesReference = !this.filters.referenceNumber ||
@@ -606,20 +427,6 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   refreshData() {
     this.loadDailyRegisterEntries();
     alert('Daily register refreshed successfully!');
-  }
-
-  loadSampleData() {
-    // Clear existing data
-    localStorage.removeItem('hologramRequests');
-    localStorage.removeItem('hologramManufacturingRegister');
-    
-    // Initialize sample data
-    this.initializeSampleManufacturingData();
-    
-    // Reload entries
-    this.loadDailyRegisterEntries();
-    
-    alert('Sample historical data loaded successfully! You can now see 6 sample entries with different statuses.');
   }
 
   clearAllData() {
