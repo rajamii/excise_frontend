@@ -596,8 +596,8 @@ export class CommissionerDashboardComponent implements OnInit {
 
   calculateHologramAmount(req: any): number {
     const total = (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0);
-    // Rate is 0.72 rupees per hologram (convert lakh to pieces)
-    return total * 100000 * 0.72;
+    // Rate is 0.72 rupees per hologram piece (data is already in pieces)
+    return total * 0.72;
   }
 
   loadOverdueEntries(): void {
@@ -984,6 +984,13 @@ export class CommissionerDashboardComponent implements OnInit {
     });
   }
 
+  viewPermitSlip(item: CommissionerTableData): void {
+    // Navigate to final requisition letters (permit slip) with reference number
+    this.router.navigate(['/dev-final-requisition-letters'], {
+      queryParams: { ref: item.referenceNo }
+    });
+  }
+
   reviewRevalidation(item: CommissionerTableData): void {
     // Navigate to revalidation letter view with reference number
     this.router.navigate(['/dev-revalidation-letter-view'], {
@@ -1226,25 +1233,26 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Payment calculation methods for hologram details
   getTotalHolograms(hologram: any): number {
+    // Returns total pieces (data is already in pieces, not Lakh)
     return (hologram?.localQtyLakh || 0) + (hologram?.exportQtyLakh || 0) + (hologram?.defenceQtyLakh || 0);
   }
 
   calculatePrintingCost(hologram: any): number {
-    // Printing cost: ₹0.72 per hologram
-    // Values are already in Lakh, so just multiply by 0.72
-    const totalLakh = this.getTotalHolograms(hologram);
-    return totalLakh * 0.72;
+    // Printing cost: ₹0.72 per hologram piece
+    // Data is already in pieces, no conversion needed
+    const totalPieces = this.getTotalHolograms(hologram);
+    return totalPieces * 0.72;
   }
 
   calculateWalletPayment(hologram: any): number {
-    // Wallet payment: ₹0.15 per hologram
-    // Values are already in Lakh, so just multiply by 0.15
-    const totalLakh = this.getTotalHolograms(hologram);
-    return totalLakh * 0.15;
+    // Wallet payment: ₹0.15 per hologram piece
+    // Data is already in pieces, no conversion needed
+    const totalPieces = this.getTotalHolograms(hologram);
+    return totalPieces * 0.15;
   }
 
   calculateTotalPayment(hologram: any): number {
-    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram
+    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram piece
     return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
   }
 

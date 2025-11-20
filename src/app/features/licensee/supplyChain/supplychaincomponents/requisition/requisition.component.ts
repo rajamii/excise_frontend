@@ -210,11 +210,9 @@ export class RequisitionComponent implements OnInit {
   }
 
   viewSlip(item: TableData): void {
-    this.router.navigate(["/dev-payment-confirmation"], {
+    this.router.navigate(["/dev-final-requisition-letters"], {
       queryParams: {
-        tab: "requisition",
-        referenceNo: item.referenceNo,
-        action: "viewSlip",
+        ref: item.referenceNo,
       },
     });
   }

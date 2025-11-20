@@ -33,7 +33,7 @@ export class HologramComponent {
   formData: HologramFormData = {
     refNo: '',
     date: '',
-    companyName: 'Yuksom Breweries Ltd.',
+    companyName: 'Sikkim Distillery',
     // Prefill sample data so the user can see how inputs look
     localQtyLakh: 0,
     exportQtyLakh: 0,

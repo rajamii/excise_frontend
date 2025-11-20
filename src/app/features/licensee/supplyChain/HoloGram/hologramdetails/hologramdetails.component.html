@@ -147,7 +147,7 @@
                             <th class="sl-no">Sl. No.</th>
                             <th class="date-col">Date</th>
                             <th class="ref-no">Our Ref. No.</th>
-                            <th class="cartoon-no">Cartoon Number</th>
+                            <th class="cartoon-no">Carton Number</th>
                             <th class="type-col">Type</th>
                             <th class="serial-from">From Serial</th>
                             <th class="serial-to">To Serial</th>
@@ -309,11 +309,11 @@
                             <div class="form-group">
                                 <label class="form-label fw-bold">
                                     <i class="bi bi-box me-1"></i>
-                                    Cartoon Number <span class="text-danger">*</span>
+                                    Carton Number <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" class="form-control form-control-lg" placeholder="e.g., CTN001"
                                     [(ngModel)]="updateForm.cartoonNumber" required>
-                                <div class="form-text">Enter the cartoon/box number from physical delivery</div>
+                                <div class="form-text">Enter the carton/box number from physical delivery</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -339,7 +339,7 @@
                                 <input type="text" 
                                     class="form-control form-control-lg font-monospace"
                                     [class.is-invalid]="serialRangeValidationError"
-                                    placeholder="e.g., HG001001" 
+                                    placeholder="e.g., 1" 
                                     [(ngModel)]="updateForm.fromSerial"
                                     (input)="calculateUpdateHologramCount()" 
                                     required>
@@ -355,7 +355,7 @@
                                 <input type="text" 
                                     class="form-control form-control-lg font-monospace"
                                     [class.is-invalid]="serialRangeValidationError"
-                                    placeholder="e.g., HG500000" 
+                                    placeholder="e.g., 500" 
                                     [(ngModel)]="updateForm.toSerial"
                                     (input)="calculateUpdateHologramCount()" 
                                     required>
@@ -403,7 +403,7 @@
                                     <div class="col-md-4">
                                         <div class="border-end">
                                             <h4 class="text-success">{{ updateForm.cartoonNumber || '-' }}</h4>
-                                            <small class="text-muted">Cartoon Number</small>
+                                            <small class="text-muted">Carton Number</small>
                                         </div>
                                     </div>
                                     <div class="col-md-4">

@@ -376,6 +376,10 @@
                               title="Review Application">
                               <i class="bi bi-eye"></i>
                             </button>
+                            <button class="btn btn-outline-info btn-sm" (click)="viewPermitSlip(item)"
+                              title="View Permit Slip">
+                              <i class="bi bi-file-earmark-text"></i>
+                            </button>
                             <button class="btn btn-outline-success btn-sm" (click)="approveApplication(item)"
                               title="Approve" *ngIf="item.status === 'PENDING'">
                               <i class="bi bi-check"></i>
@@ -1427,21 +1431,21 @@
             </div>
             <div class="col-md-6" *ngIf="selectedApplication.totalQtyLakh">
               <strong>Total Quantity:</strong>
-              <span class="qty-value">{{ selectedApplication.totalQtyLakh | number:'1.1-1' }} Lakh</span>
+              <span class="qty-value">{{ selectedApplication.totalQtyLakh | number:'1.0-0' }} pieces</span>
             </div>
           </div>
           <div class="row mb-3" *ngIf="activeTab === 'hologram'">
             <div class="col-md-4" *ngIf="selectedApplication.localQtyLakh !== undefined">
               <strong>Local Qty:</strong>
-              <span class="qty-value">{{ selectedApplication.localQtyLakh | number:'1.1-1' }} Lakh</span>
+              <span class="qty-value">{{ selectedApplication.localQtyLakh | number:'1.0-0' }} pieces</span>
             </div>
             <div class="col-md-4" *ngIf="selectedApplication.exportQtyLakh !== undefined">
               <strong>Export Qty:</strong>
-              <span class="qty-value">{{ selectedApplication.exportQtyLakh | number:'1.1-1' }} Lakh</span>
+              <span class="qty-value">{{ selectedApplication.exportQtyLakh | number:'1.0-0' }} pieces</span>
             </div>
             <div class="col-md-4" *ngIf="selectedApplication.defenceQtyLakh !== undefined">
               <strong>Defence Qty:</strong>
-              <span class="qty-value">{{ selectedApplication.defenceQtyLakh | number:'1.1-1' }} Lakh</span>
+              <span class="qty-value">{{ selectedApplication.defenceQtyLakh | number:'1.0-0' }} pieces</span>
             </div>
           </div>
 
@@ -1524,15 +1528,15 @@
                 <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
                   <tbody>
                     @if (selectedHologramApplication.localQtyLakh && selectedHologramApplication.localQtyLakh > 0) {
-                    <tr><td>Local</td><td class="text-end fw-bold">{{ selectedHologramApplication.localQtyLakh | number:'1.0-0' }}</td></tr>
+                    <tr><td>Local</td><td class="text-end fw-bold">{{ selectedHologramApplication.localQtyLakh | number:'1.0-0' }} pieces</td></tr>
                     }
                     @if (selectedHologramApplication.exportQtyLakh && selectedHologramApplication.exportQtyLakh > 0) {
-                    <tr><td>Export</td><td class="text-end fw-bold">{{ selectedHologramApplication.exportQtyLakh | number:'1.0-0' }}</td></tr>
+                    <tr><td>Export</td><td class="text-end fw-bold">{{ selectedHologramApplication.exportQtyLakh | number:'1.0-0' }} pieces</td></tr>
                     }
                     @if (selectedHologramApplication.defenceQtyLakh && selectedHologramApplication.defenceQtyLakh > 0) {
-                    <tr><td>Defence</td><td class="text-end fw-bold">{{ selectedHologramApplication.defenceQtyLakh | number:'1.0-0' }}</td></tr>
+                    <tr><td>Defence</td><td class="text-end fw-bold">{{ selectedHologramApplication.defenceQtyLakh | number:'1.0-0' }} pieces</td></tr>
                     }
-                    <tr class="border-top"><td class="fw-bold">Total</td><td class="text-end fw-bold text-primary">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }}</td></tr>
+                    <tr class="border-top"><td class="fw-bold">Total</td><td class="text-end fw-bold text-primary">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }} pieces</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1658,16 +1662,16 @@
               <h6 class="fw-bold mb-2">
                 <i class="bi bi-boxes me-2"></i>Quantity Details
               </h6>
-              <p class="mb-1"><strong>Total Quantity:</strong> {{ selectedApplicationForSlips.totalQtyLakh | number:'1.2-2' }} Lakh</p>
+              <p class="mb-1"><strong>Total Quantity:</strong> {{ selectedApplicationForSlips.totalQtyLakh | number:'1.0-0' }} pieces</p>
               <p class="mb-1">
                 <span class="badge bg-success me-1" *ngIf="selectedApplicationForSlips.localQtyLakh && selectedApplicationForSlips.localQtyLakh > 0">
-                  Local: {{ selectedApplicationForSlips.localQtyLakh | number:'1.2-2' }}
+                  Local: {{ selectedApplicationForSlips.localQtyLakh | number:'1.0-0' }}
                 </span>
                 <span class="badge bg-dark me-1" *ngIf="selectedApplicationForSlips.exportQtyLakh && selectedApplicationForSlips.exportQtyLakh > 0">
-                  Export: {{ selectedApplicationForSlips.exportQtyLakh | number:'1.2-2' }}
+                  Export: {{ selectedApplicationForSlips.exportQtyLakh | number:'1.0-0' }}
                 </span>
                 <span class="badge bg-warning text-dark" *ngIf="selectedApplicationForSlips.defenceQtyLakh && selectedApplicationForSlips.defenceQtyLakh > 0">
-                  Defence: {{ selectedApplicationForSlips.defenceQtyLakh | number:'1.2-2' }}
+                  Defence: {{ selectedApplicationForSlips.defenceQtyLakh | number:'1.0-0' }}
                 </span>
               </p>
             </div>
