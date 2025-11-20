@@ -2397,3 +2397,31 @@ main.flex-grow-1 {
   }
 }
 
+
+// Edited row highlighting
+.register-row.edited-row {
+  background-color: #fff3cd !important; // Light yellow background
+  border-left: 4px solid #ffc107 !important; // Yellow left border
+  
+  &:hover {
+    background-color: #ffe69c !important; // Slightly darker on hover
+  }
+}
+
+// Edited badge styling
+.badge.bg-warning.text-dark {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

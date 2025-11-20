@@ -1269,12 +1269,6 @@
                         </td>
                         <td class="actions">
                           <div class="action-buttons">
-                            <!-- View Uploaded Slips - Always visible -->
-                            <button class="btn btn-outline-info btn-sm" (click)="viewUploadedSlips(item)"
-                              title="View Uploaded Payment Slips">
-                              <i class="bi bi-file-earmark-pdf"></i>
-                            </button>
-                            
                             <!-- View Payment Receipt - Show for APPROVED/COMPLETED applications -->
                             <button class="btn btn-outline-success btn-sm" (click)="viewPaymentSlip(item)"
                               title="View Payment Receipt" *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
@@ -1525,20 +1519,53 @@
                 <small class="fw-bold text-success">Series</small>
               </div>
               <div class="card-body p-2">
-                <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
-                  <tbody>
-                    @if (selectedHologramApplication.localQtyLakh && selectedHologramApplication.localQtyLakh > 0) {
-                    <tr><td>Local</td><td class="text-end fw-bold">{{ selectedHologramApplication.localQtyLakh | number:'1.0-0' }} pieces</td></tr>
-                    }
-                    @if (selectedHologramApplication.exportQtyLakh && selectedHologramApplication.exportQtyLakh > 0) {
-                    <tr><td>Export</td><td class="text-end fw-bold">{{ selectedHologramApplication.exportQtyLakh | number:'1.0-0' }} pieces</td></tr>
-                    }
-                    @if (selectedHologramApplication.defenceQtyLakh && selectedHologramApplication.defenceQtyLakh > 0) {
-                    <tr><td>Defence</td><td class="text-end fw-bold">{{ selectedHologramApplication.defenceQtyLakh | number:'1.0-0' }} pieces</td></tr>
-                    }
-                    <tr class="border-top"><td class="fw-bold">Total</td><td class="text-end fw-bold text-primary">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }} pieces</td></tr>
-                  </tbody>
-                </table>
+                @if (!isEditingQuantity) {
+                  <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
+                    <tbody>
+                      @if (selectedHologramApplication.localQtyLakh && selectedHologramApplication.localQtyLakh > 0) {
+                      <tr><td>Local</td><td class="text-end fw-bold">{{ selectedHologramApplication.localQtyLakh | number:'1.0-0' }} pieces</td></tr>
+                      }
+                      @if (selectedHologramApplication.exportQtyLakh && selectedHologramApplication.exportQtyLakh > 0) {
+                      <tr><td>Export</td><td class="text-end fw-bold">{{ selectedHologramApplication.exportQtyLakh | number:'1.0-0' }} pieces</td></tr>
+                      }
+                      @if (selectedHologramApplication.defenceQtyLakh && selectedHologramApplication.defenceQtyLakh > 0) {
+                      <tr><td>Defence</td><td class="text-end fw-bold">{{ selectedHologramApplication.defenceQtyLakh | number:'1.0-0' }} pieces</td></tr>
+                      }
+                      <tr class="border-top"><td class="fw-bold">Total</td><td class="text-end fw-bold text-primary">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }} pieces</td></tr>
+                    </tbody>
+                  </table>
+                } @else {
+                  <!-- Edit Mode - Show only requested types -->
+                  @if (originalLocalQty > 0) {
+                    <div class="mb-2">
+                      <label class="form-label mb-0" style="font-size: 0.75rem;">Local Quantity</label>
+                      <input type="number" class="form-control form-control-sm" [(ngModel)]="editedLocalQty" min="0">
+                    </div>
+                  }
+                  @if (originalExportQty > 0) {
+                    <div class="mb-2">
+                      <label class="form-label mb-0" style="font-size: 0.75rem;">Export Quantity</label>
+                      <input type="number" class="form-control form-control-sm" [(ngModel)]="editedExportQty" min="0">
+                    </div>
+                  }
+                  @if (originalDefenceQty > 0) {
+                    <div class="mb-2">
+                      <label class="form-label mb-0" style="font-size: 0.75rem;">Defence Quantity</label>
+                      <input type="number" class="form-control form-control-sm" [(ngModel)]="editedDefenceQty" min="0">
+                    </div>
+                  }
+                  <div class="border-top pt-2 mb-2">
+                    <small class="fw-bold">New Total: {{ (editedLocalQty + editedExportQty + editedDefenceQty) | number:'1.0-0' }} pieces</small>
+                  </div>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-success btn-sm flex-fill" (click)="saveQuantityEdit()">
+                      <i class="bi bi-check-circle me-1"></i>Save
+                    </button>
+                    <button class="btn btn-secondary btn-sm flex-fill" (click)="cancelQuantityEdit()">
+                      <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                  </div>
+                }
               </div>
             </div>
           </div>
@@ -1554,30 +1581,113 @@
                   <thead><tr><th style="width: 45%;">Payment Type</th><th class="text-end" style="width: 20%;">Rate</th><th class="text-end" style="width: 15%;">Qty</th><th class="text-end" style="width: 20%;">Amount</th></tr></thead>
                   <tbody>
                     <tr>
-                      <td><strong>Printing Cost</strong><br><small class="text-muted">(Offline Payment)</small></td>
-                      <td class="text-end">₹0.72</td>
-                      <td class="text-end">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }}</td>
-                      <td class="text-end fw-bold text-primary">₹{{ calculatePrintingCost(selectedHologramApplication) | number:'1.2-2' }}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Wallet Payment</strong><br><small class="text-muted">(Online Payment)</small></td>
+                      <td><strong>Wallet Payment</strong><br><small class="text-muted">(Online Payment - After Approval)</small></td>
                       <td class="text-end">₹0.15</td>
                       <td class="text-end">{{ getTotalHolograms(selectedHologramApplication) | number:'1.0-0' }}</td>
                       <td class="text-end fw-bold text-success">₹{{ calculateWalletPayment(selectedHologramApplication) | number:'1.2-2' }}</td>
-                    </tr>
-                    <tr class="table-warning border-top">
-                      <th colspan="3" class="text-end">Total Payment Required:</th>
-                      <th class="text-end text-danger">₹{{ calculateTotalPayment(selectedHologramApplication) | number:'1.2-2' }}</th>
                     </tr>
                   </tbody>
                 </table>
                 <div class="alert alert-info py-1 px-2 mb-0" style="font-size: 0.75rem;">
                   <i class="bi bi-info-circle me-1"></i><strong>Payment Process:</strong>
                   <ol class="mb-0 ps-3 mt-1" style="line-height: 1.3;">
-                    <li>Printing cost (₹0.72/hologram) must be paid offline to the printing press</li>
-                    <li>After payment, upload the payment slip for verification</li>
-                    <li>Wallet payment (₹0.15/hologram) will be processed online after slip verification</li>
+                    <li>Review and approve the hologram application</li>
+                    <li>After approval, supply chain user can make wallet payment (₹0.15/hologram)</li>
+                    <li>Payment will be processed online from Excise/Additional Wallet Balance</li>
                   </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edit History Section (if edited) -->
+        <div class="row g-2 mt-2" *ngIf="selectedHologramApplication.editHistory">
+          <div class="col-12">
+            <div class="card border-warning">
+              <div class="card-header bg-warning py-1">
+                <small class="fw-bold"><i class="bi bi-pencil-square me-1"></i>Quantity Edit History</small>
+              </div>
+              <div class="card-body p-2">
+                <div class="row">
+                  <div class="col-md-6">
+                    <h6 class="text-danger mb-1" style="font-size: 0.8rem;">Original Quantities</h6>
+                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
+                      <tbody>
+                        @if (selectedHologramApplication.editHistory.originalQuantities.local > 0) {
+                          <tr><td>Local:</td><td class="text-end">{{ selectedHologramApplication.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.export > 0) {
+                          <tr><td>Export:</td><td class="text-end">{{ selectedHologramApplication.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.defence > 0) {
+                          <tr><td>Defence:</td><td class="text-end">{{ selectedHologramApplication.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">{{ selectedHologramApplication.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-success mb-1" style="font-size: 0.8rem;">Updated Quantities</h6>
+                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
+                      <tbody>
+                        @if (selectedHologramApplication.editHistory.originalQuantities.local > 0) {
+                          <tr><td>Local:</td><td class="text-end">{{ selectedHologramApplication.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.export > 0) {
+                          <tr><td>Export:</td><td class="text-end">{{ selectedHologramApplication.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.defence > 0) {
+                          <tr><td>Defence:</td><td class="text-end">{{ selectedHologramApplication.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td></tr>
+                        }
+                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">{{ selectedHologramApplication.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Amount Comparison -->
+                <div class="row mt-2">
+                  <div class="col-md-6">
+                    <h6 class="text-danger mb-1" style="font-size: 0.8rem;"><i class="bi bi-currency-rupee me-1"></i>Original Amount</h6>
+                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
+                      <tbody>
+                        @if (selectedHologramApplication.editHistory.originalQuantities.local > 0) {
+                          <tr><td>Local:</td><td class="text-end">₹{{ (selectedHologramApplication.editHistory.originalQuantities.local * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.export > 0) {
+                          <tr><td>Export:</td><td class="text-end">₹{{ (selectedHologramApplication.editHistory.originalQuantities.export * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.defence > 0) {
+                          <tr><td>Defence:</td><td class="text-end">₹{{ (selectedHologramApplication.editHistory.originalQuantities.defence * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">₹{{ (selectedHologramApplication.editHistory.originalQuantities.total * 0.15) | number:'1.2-2' }}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="col-md-6">
+                    <h6 class="text-success mb-1" style="font-size: 0.8rem;"><i class="bi bi-currency-rupee me-1"></i>Updated Amount</h6>
+                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
+                      <tbody>
+                        @if (selectedHologramApplication.editHistory.originalQuantities.local > 0) {
+                          <tr><td>Local:</td><td class="text-end text-success">₹{{ (selectedHologramApplication.editHistory.updatedQuantities.local * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.export > 0) {
+                          <tr><td>Export:</td><td class="text-end text-success">₹{{ (selectedHologramApplication.editHistory.updatedQuantities.export * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        @if (selectedHologramApplication.editHistory.originalQuantities.defence > 0) {
+                          <tr><td>Defence:</td><td class="text-end text-success">₹{{ (selectedHologramApplication.editHistory.updatedQuantities.defence * 0.15) | number:'1.2-2' }}</td></tr>
+                        }
+                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold text-success">₹{{ (selectedHologramApplication.editHistory.updatedQuantities.total * 0.15) | number:'1.2-2' }}</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="mt-2 pt-2 border-top">
+                  <small class="text-muted">
+                    <i class="bi bi-person me-1"></i>Edited by: <strong>{{ selectedHologramApplication.editHistory.editedBy }}</strong> on {{ selectedHologramApplication.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                  </small>
                 </div>
               </div>
             </div>
@@ -1609,17 +1719,22 @@
         </div>
 
         <!-- Approval Actions (if pending) -->
-        <div class="mt-2" *ngIf="selectedHologramApplication.status === 'PENDING'">
-          <div class="alert alert-warning py-2 mb-2">
-            <small><i class="bi bi-exclamation-triangle me-1"></i><strong>Action Required:</strong> Please review the payment slip and hologram details before approving.</small>
+        <div class="mt-3" *ngIf="selectedHologramApplication.status === 'PENDING' || selectedHologramApplication.commissionerStatus === 'Pending'">
+          <div class="alert alert-info py-2 mb-2" style="background-color: #e7f3ff; border-color: #b3d9ff;">
+            <small>
+              <i class="bi bi-info-circle me-1"></i>
+              <strong>Action Required:</strong> Review the hologram details. You can edit quantities if needed, then approve the request.
+            </small>
           </div>
           <div class="d-flex gap-2 justify-content-end">
-            <button class="btn btn-success btn-sm" (click)="approveHologram(selectedHologramApplication); closeHologramDetailsModal()">
-              <i class="bi bi-check-circle me-1"></i>Approve
+            <button class="btn btn-success" (click)="approveHologram(selectedHologramApplication); closeHologramDetailsModal()" [disabled]="isEditingQuantity">
+              <i class="bi bi-check-circle me-1"></i>Approve Request
             </button>
-            <button class="btn btn-danger btn-sm" (click)="rejectHologram(selectedHologramApplication); closeHologramDetailsModal()">
-              <i class="bi bi-x-circle me-1"></i>Reject
-            </button>
+            @if (!isEditingQuantity) {
+              <button class="btn btn-warning" (click)="enableQuantityEdit()">
+                <i class="bi bi-pencil-square me-1"></i>Edit Quantity
+              </button>
+            }
           </div>
         </div>
       </div>

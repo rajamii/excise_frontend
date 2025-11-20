@@ -119,6 +119,179 @@
             </div>
           </div>
 
+          <!-- Edit History Section (if edited by Commissioner) -->
+          @if (submittedData.editedByCommissioner && submittedData.editHistory) {
+            <div class="mb-4">
+              <div class="alert alert-warning border-warning">
+                <h5 class="fw-bold mb-3">
+                  <i class="bi bi-pencil-square me-2"></i>
+                  Quantity Modified by Commissioner
+                </h5>
+                <p class="mb-3">
+                  <i class="bi bi-info-circle me-1"></i>
+                  The quantities for this hologram request have been reviewed and modified by the Commissioner.
+                </p>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card border-danger">
+                      <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-arrow-left-circle me-1"></i>
+                          Original Requested Quantity
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="card border-danger mt-3">
+                      <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-currency-rupee me-1"></i>
+                          Original Amount
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card border-success">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-arrow-right-circle me-1"></i>
+                          Approved Quantity (Modified)
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="card border-success mt-3">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-currency-rupee me-1"></i>
+                          Updated Amount
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                  <p class="mb-0">
+                    <i class="bi bi-person-badge me-1"></i>
+                    <strong>Modified by:</strong> {{ submittedData.editHistory.editedBy }} on {{ submittedData.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+
           <!-- Application Summary -->
           <div class="row mb-4">
             <div class="col-md-6">

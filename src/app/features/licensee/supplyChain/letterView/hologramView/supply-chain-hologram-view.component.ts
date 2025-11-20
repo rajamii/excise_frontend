@@ -10,6 +10,23 @@ interface HologramFormData {
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
   procurementType?: 'Local' | 'Export' | 'Defence';
+  editedByCommissioner?: boolean;
+  editHistory?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+  };
 }
 
 @Component({

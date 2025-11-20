@@ -428,10 +428,17 @@
                       track item.refNo + '_' + (item.procurementType || 'Unknown');
                       let i = $index
                       ) {
-                      <tr class="register-row">
+                      <tr class="register-row" [class.edited-row]="item.editedByCommissioner">
                         <td class="sl-no">{{ (getCurrentPage('hologram') - 1) * getPageSize('hologram') + i + 1 }}</td>
                         <td class="ref-number">
-                          <span class="ref-text">{{ item.refNo }}</span>
+                          <div class="d-flex align-items-center gap-2">
+                            <span class="ref-text">{{ item.refNo }}</span>
+                            @if (item.editedByCommissioner) {
+                              <span class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
+                                <i class="bi bi-pencil-fill me-1"></i>EDITED
+                              </span>
+                            }
+                          </div>
                         </td>
                         <td class="date">
                           <span class="date-text">{{ item.date | date: "dd-MMM-yyyy" }}</span>
@@ -483,38 +490,19 @@
                               <i class="bi bi-eye me-1"></i>
                               <span class="d-none d-md-inline">View</span>
                             </button>
-                            <!-- Upload Slip button - opens modal for uploading payment slip -->
-                            <!-- Only enabled after IT Cell and Commissioner approval -->
+
+                            <!-- Make Payment button - navigate to payment page (NEW FLOW: No slip upload required) -->
                             <button 
-                              *ngIf="!isPaymentSlipUploaded(item)"
-                              class="btn btn-success btn-sm" 
-                              [disabled]="!isUploadSlipEnabled(item)"
-                              (click)="openPaymentUploadModal(item)" 
-                              [title]="isUploadSlipEnabled(item) ? 'Upload Payment Slip (₹0.72 per hologram)' : 'Awaiting IT Cell and Commissioner approval'">
-                              <i class="bi bi-upload me-1"></i>
-                              <span class="d-none d-md-inline">Upload Slip</span>
-                            </button>
-                            <!-- View Slip button - show uploaded slip details (available after upload) -->
-                            <button 
-                              *ngIf="isPaymentSlipUploaded(item)"
-                              class="btn btn-info btn-sm" 
-                              (click)="viewUploadedSlip(item)" 
-                              title="View Uploaded Payment Slip">
-                              <i class="bi bi-file-earmark-check me-1"></i>
-                              <span class="d-none d-md-inline">View Slip</span>
-                            </button>
-                            <!-- Make Payment button - navigate to payment page -->
-                            <button 
-                              *ngIf="isPaymentSlipUploaded(item) && !item.paymentCompleted && isPaymentEnabled(item)"
+                              *ngIf="!item.paymentCompleted && isPaymentEnabled(item)"
                               class="btn btn-warning btn-sm" 
                               (click)="navigateToPaymentPage(item)" 
                               title="Make Wallet Payment (₹0.15 per hologram)">
                               <i class="bi bi-wallet2 me-1"></i>
                               <span class="d-none d-md-inline">Make Payment</span>
                             </button>
-                            <!-- Temporary: Mark as Paid button (for testing) - Always visible after slip upload -->
+                            <!-- Temporary: Mark as Paid button (for testing) - Always visible after Commissioner approval -->
                             <button 
-                              *ngIf="isPaymentSlipUploaded(item) && isPaymentEnabled(item)"
+                              *ngIf="isPaymentEnabled(item) && !item.paymentCompleted"
                               class="btn btn-info btn-sm" 
                               (click)="markPaymentCompleted(item.refNo)" 
                               title="Test: Mark payment as completed (for testing only)">
@@ -1085,518 +1073,364 @@
               </div>
             </div>
 
-            <!-- Hologram details modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
-              *ngIf="showHologramModal">
-              <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content shadow-lg border-0">
-                  <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Hologram Quantity Breakdown</h5>
-                    <button type="button" class="btn-close" aria-label="Close"
-                      (click)="closeHologramDetails()"></button>
-                  </div>
-                  <div class="modal-body bg-light">
-                    <div class="mb-3">
-                      <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo
-                        }}</span>
-                      <span class="badge bg-info-subtle text-info me-2">Date:
-                        {{ selectedHologram?.date | date: "dd-MMM-yyyy" }}</span>
-                      <span class="badge bg-success-subtle text-success">{{
-                        selectedHologram?.companyName
-                        }}</span>
-                    </div>
-                    <div class="table-responsive">
-                      <table class="table table-sm table-bordered mb-0 bg-white">
-                        <thead class="table-success">
-                          <tr>
-                            <th>Series</th>
-                            <th class="text-end">Quantity</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>Local</td>
-                            <td class="text-end">
-                              {{ selectedHologram?.localQtyLakh || 0 | number:'1.0-0' }}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>Export</td>
-                            <td class="text-end">
-                              {{ selectedHologram?.exportQtyLakh || 0 | number:'1.0-0' }}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td>Defence</td>
-                            <td class="text-end">
-                              {{ selectedHologram?.defenceQtyLakh || 0 | number:'1.0-0' }}
-                            </td>
-                          </tr>
-                          <tr class="table-light">
-                            <th>Total</th>
-                            <th class="text-end">
-                              {{
-                              getHologramTotal(
-                              selectedHologram || {
-                              refNo: "",
-                              date: "",
-                              companyName: "",
-                              status: "",
-                              localQtyLakh: 0,
-                              exportQtyLakh: 0,
-                              defenceQtyLakh: 0,
-                              }
-                              ) | number:'1.0-0'
-                              }}
-                            </th>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button class="btn btn-outline-secondary" (click)="closeHologramDetails()">
-                      <i class="bi bi-x-circle me-1"></i>Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- Payment Slip Upload Modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
-              *ngIf="showPaymentUploadModal">
-              <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content shadow-lg border-0">
-                  <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                      <i class="bi bi-upload me-2"></i>
-                      Upload Payment Slip (Offline Payment - Hologram Making Cost)
+            <!-- Hologram Details Modal -->
+            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5); z-index: 1050;"
+              *ngIf="showHologramModal" (click)="closeHologramDetailsModal()">
+              <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 1051;" (click)="$event.stopPropagation()">
+                <div class="modal-content shadow-lg border-0" style="z-index: 1052;">
+                  <!-- Modal Header -->
+                  <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="modal-title fw-bold">
+                      <i class="bi bi-eye me-2"></i>
+                      Hologram Request Details
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Close"
-                      (click)="closePaymentUploadModal()"></button>
+                    <button type="button" class="btn-close btn-close-white" (click)="closeHologramDetailsModal()"></button>
                   </div>
-                  <div class="modal-body bg-light">
-                    <!-- Hologram Details -->
-                    <div class="card mb-3">
-                      <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">Hologram Procurement Details</h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="row">
-                          <div class="col-md-6">
-                            <p class="mb-2"><strong>Reference No:</strong> {{ selectedPaymentHologram?.refNo }}</p>
-                            <p class="mb-2"><strong>Date:</strong> {{ selectedPaymentHologram?.date | date: "dd-MMM-yyyy" }}</p>
-                            <p class="mb-2"><strong>Company:</strong> {{ selectedPaymentHologram?.companyName }}</p>
-                          </div>
-                          <div class="col-md-6">
-                            <p class="mb-2"><strong>Type:</strong> 
-                              <span class="badge text-white" 
-                                [ngClass]="{
-                                  'bg-success': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Local',
-                                  'bg-dark': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Export',
-                                  'bg-warning text-dark': getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) === 'Defence'
-                                }">
-                                {{ getProcurementType(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: ''}) }}
-                              </span>
-                            </p>
-                            <p class="mb-2"><strong>Total Quantity:</strong> {{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }} pieces</p>
-                            <p class="mb-2"><strong>Status:</strong> 
-                              <span class="badge bg-info">{{ selectedPaymentHologram?.status }}</span>
-                            </p>
-                          </div>
+
+                  <!-- Modal Body -->
+                  <div class="modal-body p-4" *ngIf="selectedHologram">
+                    <!-- Reference and Date Info -->
+                    <div class="row mb-4">
+                      <div class="col-md-4">
+                        <div class="info-card p-3 rounded" style="background: #f8f9fa; border-left: 4px solid #667eea;">
+                          <small class="text-muted d-block mb-1">Ref: </small>
+                          <strong class="text-primary">{{ selectedHologram.refNo }}</strong>
                         </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="info-card p-3 rounded" style="background: #f8f9fa; border-left: 4px solid #17a2b8;">
+                          <small class="text-muted d-block mb-1">Date: </small>
+                          <strong class="text-info">{{ selectedHologram.date | date:'dd-MMM-yyyy' }}</strong>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="info-card p-3 rounded" style="background: #f8f9fa; border-left: 4px solid #28a745;">
+                          <small class="text-muted d-block mb-1">Company: </small>
+                          <strong class="text-success">{{ selectedHologram.companyName }}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Quantity Breakdown Table -->
+                    <div class="card border-0 shadow-sm mb-4">
+                      <div class="card-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-list-ul me-2"></i>
+                          Series Quantity Breakdown
+                        </h6>
+                      </div>
+                      <div class="card-body p-0">
+                        <table class="table table-hover mb-0">
+                          <thead class="table-light">
+                            <tr>
+                              <th style="width: 60%;">Series</th>
+                              <th class="text-end" style="width: 40%;">Quantity (Lakh)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr *ngIf="selectedHologram.localQtyLakh && selectedHologram.localQtyLakh > 0">
+                              <td>
+                                <span class="badge bg-success me-2">Local</span>
+                                Local Series
+                              </td>
+                              <td class="text-end fw-bold">{{ selectedHologram.localQtyLakh | number:'1.0-0' }}</td>
+                            </tr>
+                            <tr *ngIf="selectedHologram.exportQtyLakh && selectedHologram.exportQtyLakh > 0">
+                              <td>
+                                <span class="badge bg-primary me-2">Export</span>
+                                Export Series
+                              </td>
+                              <td class="text-end fw-bold">{{ selectedHologram.exportQtyLakh | number:'1.0-0' }}</td>
+                            </tr>
+                            <tr *ngIf="selectedHologram.defenceQtyLakh && selectedHologram.defenceQtyLakh > 0">
+                              <td>
+                                <span class="badge bg-warning text-dark me-2">Defence</span>
+                                Defence Series
+                              </td>
+                              <td class="text-end fw-bold">{{ selectedHologram.defenceQtyLakh | number:'1.0-0' }}</td>
+                            </tr>
+                            <tr class="table-active">
+                              <td><strong>Total</strong></td>
+                              <td class="text-end"><strong class="text-primary fs-5">{{ getTotalHolograms(selectedHologram) | number:'1.0-0' }}</strong></td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
 
                     <!-- Payment Calculation -->
-                    <div class="card mb-3">
-                      <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0">
-                          <i class="bi bi-calculator me-2"></i>
-                          Offline Payment (₹0.72 per hologram)
+                    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
+                      <div class="card-header bg-transparent border-0">
+                        <h6 class="mb-0 fw-bold text-dark">
+                          <i class="bi bi-currency-rupee me-2"></i>
+                          Payment Calculation
                         </h6>
                       </div>
                       <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm table-bordered mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Description</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-end">Rate per Hologram</th>
-                                <th class="text-end">Amount (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td>Offline Payment - Hologram Making Cost</td>
-                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
-                                <td class="text-end">₹0.72</td>
-                                <td class="text-end"><strong>₹{{ (getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) * 0.72) | number:'1.2-2' }}</strong></td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div class="alert alert-info mt-3 mb-0">
-                          <i class="bi bi-info-circle me-2"></i>
-                          <strong>Note:</strong> This payment must be made offline to the printing press or tendered company. Upload the payment slip received after making this payment.
+                        <table class="table table-borderless mb-0">
+                          <thead>
+                            <tr class="border-bottom">
+                              <th class="text-dark">Payment Type</th>
+                              <th class="text-end text-dark">Rate per Hologram</th>
+                              <th class="text-end text-dark">Total Quantity</th>
+                              <th class="text-end text-dark">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>
+                                <strong class="text-dark">Wallet Payment</strong>
+                                <br>
+                                <small class="text-muted">(Online Payment - After Commissioner Approval)</small>
+                              </td>
+                              <td class="text-end"><strong class="text-success">₹0.15</strong></td>
+                              <td class="text-end"><strong>{{ getTotalHolograms(selectedHologram) | number:'1.0-0' }}</strong></td>
+                              <td class="text-end"><strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) | number:'1.2-2' }}</strong></td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        <!-- Payment Process Info -->
+                        <div class="alert alert-info mt-3 mb-0" style="background: rgba(255, 255, 255, 0.8); border: none;">
+                          <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            <strong>Payment Process:</strong>
+                            <ol class="mb-0 ps-3 mt-2" style="line-height: 1.8;">
+                              <li>IT Cell forwards application to Commissioner</li>
+                              <li>Commissioner reviews and approves the application</li>
+                              <li>Wallet payment (₹0.15/hologram) will be processed online after Commissioner approval</li>
+                            </ol>
+                          </small>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Wallet Payment Information -->
-                    <div class="card mb-3 border-success">
-                      <div class="card-header bg-success text-white">
-                        <h6 class="mb-0">
-                          <i class="bi bi-wallet2 me-2"></i>
-                          Wallet Payment (After Slip Upload) - ₹0.15 per hologram
+                    <!-- Edit History Section (if edited by Commissioner) -->
+                    <div class="card border-warning shadow-sm mb-4" *ngIf="selectedHologram.editedByCommissioner && selectedHologram.editHistory">
+                      <div class="card-header bg-warning">
+                        <h6 class="mb-0 fw-bold text-dark">
+                          <i class="bi bi-pencil-square me-2"></i>
+                          Quantity Edited by Commissioner
                         </h6>
                       </div>
                       <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm table-bordered mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Description</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-end">Rate per Hologram</th>
-                                <th class="text-end">Amount (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr class="table-success">
-                                <td><strong>Wallet Payment (Administrative Cost)</strong></td>
-                                <td class="text-end">{{ getHologramTotal(selectedPaymentHologram || {refNo: '', date: '', companyName: '', status: '', localQtyLakh: 0, exportQtyLakh: 0, defenceQtyLakh: 0}) | number:'1.0-0' }}</td>
-                                <td class="text-end"><strong>₹0.15</strong></td>
-                                <td class="text-end"><strong class="text-success">₹{{ selectedPaymentHologram ? (calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2') : '0.00' }}</strong></td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div class="alert alert-warning mt-3 mb-0">
+                        <div class="alert alert-warning mb-3">
                           <i class="bi bi-exclamation-triangle me-2"></i>
-                          <strong>Important:</strong> After uploading the payment slip, you will need to make an additional payment of <strong>₹{{ selectedPaymentHologram ? (calculatePaymentAmount(selectedPaymentHologram) | number:'1.2-2') : '0.00' }}</strong> from your Excise/Additional Wallet Balance. The "Make Payment" button will be activated after slip upload.
+                          <strong>Note:</strong> The quantities for this hologram request have been modified by the Commissioner.
                         </div>
-                      </div>
-                    </div>
-
-                    <!-- File Upload Section -->
-                    <div class="card">
-                      <div class="card-header bg-secondary text-white">
-                        <h6 class="mb-0">Upload Payment Slip</h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="mb-3">
-                          <label for="paymentSlipFile" class="form-label">Select Payment Slip (PDF, JPG, PNG)</label>
-                          <input 
-                            type="file" 
-                            class="form-control" 
-                            id="paymentSlipFile"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            (change)="onPaymentSlipFileSelected($event)">
-                          <small class="text-muted">Maximum file size: 5MB</small>
-                        </div>
-                        
-                        <div class="mb-3" *ngIf="selectedPaymentSlipFile">
-                          <div class="alert alert-success">
-                            <i class="bi bi-file-earmark-check me-2"></i>
-                            <strong>Selected File:</strong> {{ selectedPaymentSlipFile.name }} 
-                            ({{ (selectedPaymentSlipFile.size / 1024).toFixed(2) }} KB)
+                        <div class="row">
+                          <div class="col-md-6">
+                            <h6 class="text-danger mb-2">
+                              <i class="bi bi-arrow-left-circle me-1"></i>
+                              Original Quantities
+                            </h6>
+                            <table class="table table-sm table-bordered">
+                              <tbody>
+                                @if (selectedHologram.editHistory.originalQuantities.local > 0) {
+                                  <tr>
+                                    <td>Local:</td>
+                                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.export > 0) {
+                                  <tr>
+                                    <td>Export:</td>
+                                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.defence > 0) {
+                                  <tr>
+                                    <td>Defence:</td>
+                                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                <tr class="table-active">
+                                  <td><strong>Total:</strong></td>
+                                  <td class="text-end"><strong>{{ selectedHologram.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</strong></td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="col-md-6">
+                            <h6 class="text-success mb-2">
+                              <i class="bi bi-arrow-right-circle me-1"></i>
+                              Updated Quantities
+                            </h6>
+                            <table class="table table-sm table-bordered">
+                              <tbody>
+                                @if (selectedHologram.editHistory.originalQuantities.local > 0) {
+                                  <tr>
+                                    <td>Local:</td>
+                                    <td class="text-end fw-bold text-success">{{ selectedHologram.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.export > 0) {
+                                  <tr>
+                                    <td>Export:</td>
+                                    <td class="text-end fw-bold text-success">{{ selectedHologram.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.defence > 0) {
+                                  <tr>
+                                    <td>Defence:</td>
+                                    <td class="text-end fw-bold text-success">{{ selectedHologram.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
+                                  </tr>
+                                }
+                                <tr class="table-active">
+                                  <td><strong>Total:</strong></td>
+                                  <td class="text-end"><strong class="text-success">{{ selectedHologram.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</strong></td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </div>
                         </div>
 
-                        <div class="mb-3">
-                          <label for="paymentRemarks" class="form-label">Remarks (Optional)</label>
-                          <textarea 
-                            class="form-control" 
-                            id="paymentRemarks"
-                            rows="3"
-                            [(ngModel)]="paymentRemarks"
-                            placeholder="Enter any additional remarks about the payment..."></textarea>
+                        <!-- Amount Comparison -->
+                        <div class="row mt-4">
+                          <div class="col-md-6">
+                            <h6 class="text-danger mb-2">
+                              <i class="bi bi-currency-rupee me-1"></i>
+                              Original Amount
+                            </h6>
+                            <table class="table table-sm table-bordered">
+                              <tbody>
+                                @if (selectedHologram.editHistory.originalQuantities.local > 0) {
+                                  <tr>
+                                    <td>Local:</td>
+                                    <td class="text-end fw-bold">₹{{ (selectedHologram.editHistory.originalQuantities.local * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.export > 0) {
+                                  <tr>
+                                    <td>Export:</td>
+                                    <td class="text-end fw-bold">₹{{ (selectedHologram.editHistory.originalQuantities.export * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.defence > 0) {
+                                  <tr>
+                                    <td>Defence:</td>
+                                    <td class="text-end fw-bold">₹{{ (selectedHologram.editHistory.originalQuantities.defence * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                <tr class="table-active">
+                                  <td><strong>Total:</strong></td>
+                                  <td class="text-end"><strong>₹{{ (selectedHologram.editHistory.originalQuantities.total * 0.15) | number:'1.2-2' }}</strong></td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="col-md-6">
+                            <h6 class="text-success mb-2">
+                              <i class="bi bi-currency-rupee me-1"></i>
+                              Updated Amount
+                            </h6>
+                            <table class="table table-sm table-bordered">
+                              <tbody>
+                                @if (selectedHologram.editHistory.originalQuantities.local > 0) {
+                                  <tr>
+                                    <td>Local:</td>
+                                    <td class="text-end fw-bold text-success">₹{{ (selectedHologram.editHistory.updatedQuantities.local * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.export > 0) {
+                                  <tr>
+                                    <td>Export:</td>
+                                    <td class="text-end fw-bold text-success">₹{{ (selectedHologram.editHistory.updatedQuantities.export * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                @if (selectedHologram.editHistory.originalQuantities.defence > 0) {
+                                  <tr>
+                                    <td>Defence:</td>
+                                    <td class="text-end fw-bold text-success">₹{{ (selectedHologram.editHistory.updatedQuantities.defence * 0.15) | number:'1.2-2' }}</td>
+                                  </tr>
+                                }
+                                <tr class="table-active">
+                                  <td><strong>Total:</strong></td>
+                                  <td class="text-end"><strong class="text-success">₹{{ (selectedHologram.editHistory.updatedQuantities.total * 0.15) | number:'1.2-2' }}</strong></td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div class="mt-3 pt-3 border-top">
+                          <small class="text-muted">
+                            <i class="bi bi-person-badge me-1"></i>
+                            <strong>Edited by:</strong> {{ selectedHologram.editHistory.editedBy }} on {{ selectedHologram.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                          </small>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" (click)="closePaymentUploadModal()">
-                      <i class="bi bi-x-circle me-2"></i>
-                      Cancel
-                    </button>
-                    <button 
-                      type="button" 
-                      class="btn btn-success" 
-                      (click)="uploadPaymentSlip()"
-                      [disabled]="!selectedPaymentSlipFile">
-                      <i class="bi bi-upload me-2"></i>
-                      Upload Payment Slip
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- View Uploaded Payment Slip Modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.35)"
-              *ngIf="showViewUploadModal">
-              <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content shadow-lg border-0">
-                  <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title">
-                      <i class="bi bi-file-earmark-check me-2"></i>
-                      Payment Slip Details
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Close"
-                      (click)="closeViewUploadModal()"></button>
-                  </div>
-                  <div class="modal-body bg-light">
-                    <!-- Hologram Details -->
-                    <div class="card mb-3">
-                      <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">Hologram Procurement Details</h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="row">
-                          <div class="col-md-6">
-                            <p class="mb-2"><strong>Reference No:</strong> {{ selectedPaymentRecord?.hologramRefNo }}</p>
-                            <p class="mb-2"><strong>Company:</strong> {{ selectedPaymentRecord?.companyName }}</p>
-                            <p class="mb-2"><strong>Type:</strong> 
-                              <span class="badge text-white" 
-                                [ngClass]="{
-                                  'bg-success': selectedPaymentRecord?.procurementType === 'Local',
-                                  'bg-dark': selectedPaymentRecord?.procurementType === 'Export',
-                                  'bg-warning text-dark': selectedPaymentRecord?.procurementType === 'Defence'
-                                }">
-                                {{ selectedPaymentRecord?.procurementType }}
+                    <!-- Status Information -->
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                          <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0 fw-bold">
+                              <i class="bi bi-info-circle me-2"></i>
+                              Status Information
+                            </h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="mb-3">
+                              <small class="text-muted d-block mb-1">Current Status:</small>
+                              <span class="badge fs-6" [ngClass]="getPaymentStatusClass(selectedHologram)">
+                                {{ selectedHologram.status }}
                               </span>
-                            </p>
-                          </div>
-                          <div class="col-md-6">
-                            <p class="mb-2"><strong>Total Quantity:</strong> {{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }} pieces</p>
-                            <p class="mb-2"><strong>Offline Payment:</strong> 
-                              <span class="text-warning fw-bold">₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}</span>
-                            </p>
-                            <p class="mb-2"><strong>Wallet Payment Required:</strong> 
-                              <span class="text-success fw-bold">₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }}</span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Uploaded File Details -->
-                    <div class="card mb-3">
-                      <div class="card-header bg-success text-white">
-                        <h6 class="mb-0">
-                          <i class="bi bi-file-earmark-arrow-up me-2"></i>
-                          Uploaded File Information
-                        </h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="row">
-                          <div class="col-md-12 mb-3">
-                            <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded border">
-                              <div>
-                                <strong>Uploaded File:</strong><br>
-                                <span class="text-muted">{{ selectedPaymentRecord?.fileName }}</span>
-                              </div>
-                              <button class="btn btn-primary" (click)="viewUploadedFile()" title="View uploaded file">
-                                <i class="bi bi-eye me-2"></i>
-                                View File
-                              </button>
+                            </div>
+                            <div class="mb-3">
+                              <small class="text-muted d-block mb-1">Submitted Date:</small>
+                              <strong>{{ selectedHologram.date | date:'dd-MMM-yyyy' }}</strong>
+                            </div>
+                            <div class="mb-3" *ngIf="selectedHologram.editedByCommissioner">
+                              <small class="text-muted d-block mb-1">Modification Status:</small>
+                              <span class="badge bg-warning text-dark">
+                                <i class="bi bi-pencil-fill me-1"></i>
+                                Edited by Commissioner
+                              </span>
                             </div>
                           </div>
                         </div>
-                        
-                        <div class="row">
-                          <div class="col-md-4">
-                            <p class="mb-2">
-                              <strong>File Size:</strong> 
-                              <span class="badge bg-secondary">{{ (selectedPaymentRecord?.fileSize / 1024) | number:'1.2-2' }} KB</span>
-                            </p>
-                          </div>
-                          <div class="col-md-4">
-                            <p class="mb-2">
-                              <strong>File Type:</strong> 
-                              <span class="badge bg-info">{{ selectedPaymentRecord?.fileType }}</span>
-                            </p>
-                          </div>
-                          <div class="col-md-4">
-                            <p class="mb-2">
-                              <strong>Upload Date:</strong><br>
-                              <span class="text-muted">{{ selectedPaymentRecord?.uploadDate | date:'dd-MMM-yyyy, hh:mm a' }}</span>
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div class="mt-3" *ngIf="selectedPaymentRecord?.remarks">
-                          <strong>Remarks:</strong>
-                          <div class="alert alert-light mt-2 mb-0">
-                            <i class="bi bi-chat-left-text me-2"></i>
-                            {{ selectedPaymentRecord?.remarks }}
-                          </div>
-                        </div>
-                        
-                        <div class="mt-3" *ngIf="!selectedPaymentRecord?.remarks">
-                          <p class="text-muted mb-0">
-                            <i class="bi bi-info-circle me-2"></i>
-                            No remarks provided
-                          </p>
-                        </div>
                       </div>
-                    </div>
-
-                    <!-- Payment Summary -->
-                    <div class="card">
-                      <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0">
-                          <i class="bi bi-calculator me-2"></i>
-                          Payment Summary
-                        </h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="table-responsive">
-                          <table class="table table-sm table-bordered mb-3">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Payment Type</th>
-                                <th class="text-end">Quantity</th>
-                                <th class="text-end">Rate per Hologram</th>
-                                <th class="text-end">Amount (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td>Offline Payment (Hologram Making Cost)</td>
-                                <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
-                                <td class="text-end">₹0.72</td>
-                                <td class="text-end"><strong>₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}</strong></td>
-                              </tr>
-                              <tr class="table-success">
-                                <td><strong>Wallet Payment (Administrative Cost)</strong></td>
-                                <td class="text-end">{{ selectedPaymentRecord?.totalQuantity | number:'1.0-0' }}</td>
-                                <td class="text-end"><strong>₹0.15</strong></td>
-                                <td class="text-end"><strong class="text-success">₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }}</strong></td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div class="alert alert-info mb-0">
-                          <i class="bi bi-info-circle me-2"></i>
-                          <strong>Note:</strong> This slip confirms the offline payment of ₹{{ selectedPaymentRecord?.offlinePaymentAmount | number:'1.2-2' }}. An additional wallet payment of ₹{{ selectedPaymentRecord?.walletPaymentAmount | number:'1.2-2' }} is required from Excise/Additional Wallet Balance.
+                      <div class="col-md-6">
+                        <div class="card border-0 shadow-sm h-100">
+                          <div class="card-header bg-success text-white">
+                            <h6 class="mb-0 fw-bold">
+                              <i class="bi bi-check-circle me-2"></i>
+                              Additional Information
+                            </h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="mb-3">
+                              <small class="text-muted d-block mb-1">Payment Status:</small>
+                              <span class="badge" [class.bg-success]="selectedHologram.paymentCompleted" [class.bg-warning]="!selectedHologram.paymentCompleted">
+                                <i class="bi" [class.bi-check-circle]="selectedHologram.paymentCompleted" [class.bi-clock]="!selectedHologram.paymentCompleted"></i>
+                                {{ selectedHologram.paymentCompleted ? 'Completed' : 'Pending' }}
+                              </span>
+                            </div>
+                            <div class="mb-3">
+                              <small class="text-muted d-block mb-1">Total Amount:</small>
+                              <strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) | number:'1.2-2' }}</strong>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" (click)="closeViewUploadModal()">
-                      <i class="bi bi-check-circle me-2"></i>
+
+                  <!-- Modal Footer -->
+                  <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" (click)="closeHologramDetailsModal()">
+                      <i class="bi bi-x-circle me-2"></i>
                       Close
                     </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Multi-Type Payment Modal -->
-            <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5)"
-              *ngIf="showMultiTypePaymentModal">
-              <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content shadow-lg border-0">
-                  <div class="modal-header bg-warning text-dark">
-                    <div class="d-flex align-items-center">
-                      <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
-                      <h5 class="modal-title mb-0 fw-bold">Multiple Types Payment Required</h5>
-                    </div>
-                    <button type="button" class="btn-close" aria-label="Close" (click)="closeMultiTypePaymentModal()"></button>
-                  </div>
-                  <div class="modal-body">
-                    <div class="alert alert-warning border-warning">
-                      <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle-fill me-3 fs-4"></i>
-                        <div>
-                          <h6 class="fw-bold mb-2">Payment for All Types Required</h6>
-                          <p class="mb-0">
-                            Reference number <strong>{{ multiTypePaymentItems[0].refNo }}</strong> has multiple procurement types. 
-                            You must make payment for <strong>ALL types together</strong> in a single transaction. 
-                            This ensures a unified payment slip and easier tracking for the Commissioner.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="card border-primary mb-3">
-                      <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0">
-                          <i class="bi bi-list-check me-2"></i>
-                          Types to be Paid Together
-                        </h6>
-                      </div>
-                      <div class="card-body p-0">
-                        <div class="table-responsive">
-                          <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                              <tr>
-                                <th>Type</th>
-                                <th class="text-end">Local (Lakh)</th>
-                                <th class="text-end">Export (Lakh)</th>
-                                <th class="text-end">Defence (Lakh)</th>
-                                <th class="text-end">Total Qty</th>
-                                <th class="text-end">Amount (₹)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr *ngFor="let item of multiTypePaymentItems">
-                                <td>
-                                  <span class="badge bg-info">{{ getProcurementType(item) }}</span>
-                                </td>
-                                <td class="text-end">{{ item.localQtyLakh || 0 | number:'1.2-2' }}</td>
-                                <td class="text-end">{{ item.exportQtyLakh || 0 | number:'1.2-2' }}</td>
-                                <td class="text-end">{{ item.defenceQtyLakh || 0 | number:'1.2-2' }}</td>
-                                <td class="text-end fw-bold">{{ getHologramTotal(item) | number:'1.2-2' }}</td>
-                                <td class="text-end fw-bold text-success">₹{{ calculatePaymentAmount(item) | number:'1.2-2' }}</td>
-                              </tr>
-                            </tbody>
-                            <tfoot class="table-warning">
-                              <tr>
-                                <th colspan="4" class="text-end">Total Payment Required:</th>
-                                <th class="text-end">{{ getTotalQuantityForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }}</th>
-                                <th class="text-end text-danger fs-5">₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }}</th>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="alert alert-info mb-0">
-                      <i class="bi bi-lightbulb-fill me-2"></i>
-                      <strong>Important:</strong> 
-                      <ul class="mb-0 mt-2 ps-3">
-                        <li>All {{ multiTypePaymentItems.length }} types will be paid together in one transaction</li>
-                        <li>A single payment slip will be generated for all types</li>
-                        <li>This makes it easier for the Commissioner to review and approve</li>
-                        <li>You cannot make separate payments for individual types</li>
-                      </ul>
-                    </div>
-                  </div>
-                  <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" (click)="closeMultiTypePaymentModal()">
-                      <i class="bi bi-x-circle me-1"></i>
-                      Cancel
-                    </button>
-                    <button type="button" class="btn btn-success btn-lg" (click)="proceedToMultiTypePayment()">
-                      <i class="bi bi-wallet2 me-2"></i>
-                      Proceed to Pay All Types (₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].refNo || '') | number:'1.2-2' }})
+                    <button type="button" class="btn btn-primary" (click)="viewHologramApplication(selectedHologram)" *ngIf="selectedHologram">
+                      <i class="bi bi-file-earmark-text me-2"></i>
+                      View Full Application
                     </button>
                   </div>
                 </div>
               </div>
             </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-</div>

@@ -10,12 +10,28 @@ interface HologramFormData {
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
-  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Approved by IT Cell' | 'Approved by IT Cell - Awaiting Slip Upload' | 'Forwarded to Commissioner for Approval' | 'Approved by Commissioner - Ready for Payment' | 'Payment Completed' | 'Approved' | 'Rejected';
+  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Forwarded to Commissioner' | 'Approved by Commissioner - Ready for Payment' | 'Payment Completed' | 'Approved' | 'Rejected';
   submittedDate?: string;
   reviewedBy?: string;
   reviewedDate?: string;
   remarks?: string;
-
+  editedByCommissioner?: boolean;
+  editHistory?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+  };
 }
 
 
@@ -103,17 +119,13 @@ export class ITCELLComponent implements OnInit {
       else if (item.commissionerStatus === 'Approved' && item.paymentCompleted !== true) {
         displayStatus = 'Approved by Commissioner - Ready for Payment';
       }
-      // 3. If IT Cell approved and slip uploaded and Commissioner pending, show "Forwarded to Commissioner"
-      else if (item.itCellStatus === 'Approved' && item.paymentSlipUploaded === true && item.commissionerStatus === 'Pending') {
-        displayStatus = 'Forwarded to Commissioner for Approval';
+      // 3. If IT Cell forwarded to Commissioner and Commissioner pending, show "Forwarded to Commissioner"
+      else if (item.itCellStatus === 'Forwarded' && item.commissionerStatus === 'Pending') {
+        displayStatus = 'Forwarded to Commissioner';
       }
-      // 4. If IT Cell approved but slip not uploaded yet (check explicitly for false or undefined)
-      else if (item.itCellStatus === 'Approved' && (item.paymentSlipUploaded === false || item.paymentSlipUploaded === undefined || item.paymentSlipUploaded === null)) {
-        displayStatus = 'Approved by IT Cell - Awaiting Slip Upload';
-      }
-      // 5. If IT Cell approved (fallback for any other IT Cell approved state)
-      else if (item.itCellStatus === 'Approved') {
-        displayStatus = 'Approved by IT Cell';
+      // 4. If status is already set to Forwarded to Commissioner
+      else if (item.status === 'Forwarded to Commissioner') {
+        displayStatus = 'Forwarded to Commissioner';
       }
       
       return {
@@ -295,12 +307,12 @@ export class ITCELLComponent implements OnInit {
     console.log('Viewing application for:', hologram.refNo);
   }
 
-  approveByITCell(hologram: HologramFormData): void {
-    // IT Cell approval - enables upload slip, then requires Commissioner approval before payment
-    hologram.status = 'Approved by IT Cell';
+  forwardToCommissioner(hologram: HologramFormData): void {
+    // IT Cell forwards directly to Commissioner - no upload slip needed
+    hologram.status = 'Forwarded to Commissioner';
     hologram.reviewedBy = 'IT Cell';
     hologram.reviewedDate = new Date().toISOString().split('T')[0];
-    hologram.remarks = 'Verified and approved by IT Cell. Upload slip enabled for supply chain user.';
+    hologram.remarks = 'Verified by IT Cell and forwarded to Commissioner for approval.';
     
     // Update in storage
     if (this.isBrowser) {
@@ -311,10 +323,10 @@ export class ITCELLComponent implements OnInit {
         stored[index] = {
           ...stored[index],
           ...hologram,
-          itCellStatus: 'Approved',
-          uploadSlipEnabled: true, // Enable upload slip after IT Cell approval
+          itCellStatus: 'Forwarded',
+          uploadSlipEnabled: false, // No upload slip needed in new flow
           commissionerStatus: 'Pending', // Set Commissioner status to Pending
-          status: 'Approved by IT Cell'
+          status: 'Forwarded to Commissioner'
         };
         localStorage.setItem('hologramRequests', JSON.stringify(stored));
       }
@@ -324,9 +336,9 @@ export class ITCELLComponent implements OnInit {
       // Update all rows with the same refNo
       applications.forEach((app: any) => {
         if (app.refNo === hologram.refNo) {
-          app.status = 'Approved by IT Cell';
-          app.itCellStatus = 'Approved';
-          app.uploadSlipEnabled = true; // Enable upload slip
+          app.status = 'Forwarded to Commissioner';
+          app.itCellStatus = 'Forwarded';
+          app.uploadSlipEnabled = false; // No upload slip in new flow
           app.commissionerStatus = 'Pending'; // Set Commissioner status to Pending
         }
       });
@@ -337,25 +349,14 @@ export class ITCELLComponent implements OnInit {
     this.loadHologramData();
     this.applyFilters();
     
-    alert('Application approved by IT Cell. Upload slip is now enabled for supply chain user. After slip upload, it will be forwarded to Commissioner for final approval.');
+    alert('Application forwarded to Commissioner for approval. After Commissioner approval, supply chain user can proceed with payment.');
   }
 
   // Payment calculation methods
-  calculatePrintingCost(hologram: HologramFormData): number {
-    // Printing cost: ₹0.72 per hologram
-    const total = (hologram.localQtyLakh || 0) + (hologram.exportQtyLakh || 0) + (hologram.defenceQtyLakh || 0);
-    return total * 0.72;
-  }
-
   calculateWalletPayment(hologram: HologramFormData): number {
-    // Wallet payment: ₹0.15 per hologram
+    // Wallet payment: ₹0.15 per hologram (only payment required)
     const total = (hologram.localQtyLakh || 0) + (hologram.exportQtyLakh || 0) + (hologram.defenceQtyLakh || 0);
     return total * 0.15;
-  }
-
-  calculateTotalPayment(hologram: HologramFormData): number {
-    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram
-    return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
   }
 
   // Check if payment slip has been uploaded

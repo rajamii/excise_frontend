@@ -128,8 +128,15 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let hologram of filteredHologramData" class="border-bottom">
-              <td class="px-3 py-3 align-middle fw-semibold text-secondary">{{ hologram.refNo }}</td>
+            <tr *ngFor="let hologram of filteredHologramData" class="border-bottom" [class.bg-warning-subtle]="hologram.editedByCommissioner">
+              <td class="px-3 py-3 align-middle fw-semibold text-secondary">
+                <div class="d-flex align-items-center gap-2">
+                  {{ hologram.refNo }}
+                  <span *ngIf="hologram.editedByCommissioner" class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
+                    <i class="bi bi-pencil-fill me-1"></i>EDITED
+                  </span>
+                </div>
+              </td>
               <td class="px-3 py-3 align-middle">{{ hologram.date | date:'dd-MMM-yyyy' }}</td>
               <td class="px-3 py-3 align-middle">{{ hologram.companyName }}</td>
               <td class="px-3 py-3 align-middle" style="min-width: 180px;">
@@ -153,11 +160,11 @@
                           (click)="viewApplication(hologram)">
                     <i class="bi bi-eye me-1"></i>VIEW
                   </button>
-                  @if (hologram.status !== 'Approved by IT Cell' && hologram.status !== 'Approved by IT Cell - Awaiting Slip Upload' && hologram.status !== 'Forwarded to Commissioner for Approval' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && !isSlipUploaded(hologram)) {
-                    <button class="btn btn-success btn-sm"
+                  @if (hologram.status !== 'Forwarded to Commissioner' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && hologram.status !== 'Payment Completed') {
+                    <button class="btn btn-primary btn-sm"
                             style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
-                            (click)="approveByITCell(hologram)">
-                      <i class="bi bi-check-circle me-1"></i>APPROVE
+                            (click)="forwardToCommissioner(hologram)">
+                      <i class="bi bi-arrow-right-circle me-1"></i>FORWARD TO COMMISSIONER
                     </button>
                   }
                   @if (isPaymentCompleted(hologram)) {
@@ -325,25 +332,12 @@
                   <tbody>
                     <tr>
                       <td>
-                        <strong>Hologram Making Cost</strong>
-                        <br><small class="text-muted">(Offline Payment - Hologram Making Cost)</small>
-                      </td>
-                      <td class="text-end">₹0.72</td>
-                      <td class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</td>
-                      <td class="text-end fw-bold text-primary">₹{{ calculatePrintingCost(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <strong>Administrative Cost</strong>
-                        <br><small class="text-muted">(Online Payment - Administrative Cost)</small>
+                        <strong>Wallet Payment</strong>
+                        <br><small class="text-muted">(Online Payment - After Commissioner Approval)</small>
                       </td>
                       <td class="text-end">₹0.15</td>
                       <td class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</td>
                       <td class="text-end fw-bold text-success">₹{{ calculateWalletPayment(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</td>
-                    </tr>
-                    <tr class="table-warning">
-                      <th colspan="3" class="text-end">Total Payment Required:</th>
-                      <th class="text-end text-danger fs-6">₹{{ calculateTotalPayment(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</th>
                     </tr>
                   </tbody>
                 </table>
@@ -354,10 +348,167 @@
                   <i class="bi bi-info-circle me-1"></i>
                   <strong>Payment Process:</strong>
                   <ol class="mb-0 ps-3 mt-2">
-                    <li>Printing cost (₹0.72/hologram) must be paid offline to the printing press</li>
-                    <li>After payment, upload the payment slip for verification</li>
-                    <li>Wallet payment (₹0.15/hologram) will be processed online after slip verification</li>
+                    <li>IT Cell forwards application to Commissioner</li>
+                    <li>Commissioner reviews and approves the application</li>
+                    <li>Wallet payment (₹0.15/hologram) will be processed online after Commissioner approval</li>
                   </ol>
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit History Section (if edited by Commissioner) -->
+          <div class="card border-warning bg-warning-subtle mb-3" *ngIf="selectedHologram?.editedByCommissioner && selectedHologram?.editHistory">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0 fw-bold">
+                <i class="bi bi-pencil-square me-2"></i>
+                Quantity Edited by Commissioner
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-warning mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Note:</strong> The quantities for this hologram request have been modified by the Commissioner.
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <h6 class="text-danger mb-2">
+                    <i class="bi bi-arrow-left-circle me-1"></i>
+                    Original Quantities
+                  </h6>
+                  <table class="table table-sm table-bordered bg-white">
+                    <tbody>
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                        <tr>
+                          <td>Local:</td>
+                          <td class="text-end fw-bold">{{ selectedHologram?.editHistory?.originalQuantities?.local | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                        <tr>
+                          <td>Export:</td>
+                          <td class="text-end fw-bold">{{ selectedHologram?.editHistory?.originalQuantities?.export | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                        <tr>
+                          <td>Defence:</td>
+                          <td class="text-end fw-bold">{{ selectedHologram?.editHistory?.originalQuantities?.defence | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      <tr class="table-active">
+                        <td><strong>Total:</strong></td>
+                        <td class="text-end"><strong>{{ selectedHologram?.editHistory?.originalQuantities?.total | number:'1.0-0' }} pieces</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="col-md-6">
+                  <h6 class="text-success mb-2">
+                    <i class="bi bi-arrow-right-circle me-1"></i>
+                    Updated Quantities
+                  </h6>
+                  <table class="table table-sm table-bordered bg-white">
+                    <tbody>
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                        <tr>
+                          <td>Local:</td>
+                          <td class="text-end fw-bold text-success">{{ selectedHologram?.editHistory?.updatedQuantities?.local | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                        <tr>
+                          <td>Export:</td>
+                          <td class="text-end fw-bold text-success">{{ selectedHologram?.editHistory?.updatedQuantities?.export | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                        <tr>
+                          <td>Defence:</td>
+                          <td class="text-end fw-bold text-success">{{ selectedHologram?.editHistory?.updatedQuantities?.defence | number:'1.0-0' }} pieces</td>
+                        </tr>
+                      }
+                      <tr class="table-active">
+                        <td><strong>Total:</strong></td>
+                        <td class="text-end"><strong class="text-success">{{ selectedHologram?.editHistory?.updatedQuantities?.total | number:'1.0-0' }} pieces</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Amount Comparison -->
+              <div class="row mt-4">
+                <div class="col-md-6">
+                  <h6 class="text-danger mb-2">
+                    <i class="bi bi-currency-rupee me-1"></i>
+                    Original Amount
+                  </h6>
+                  <table class="table table-sm table-bordered bg-white">
+                    <tbody>
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                        <tr>
+                          <td>Local:</td>
+                          <td class="text-end fw-bold">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                        <tr>
+                          <td>Export:</td>
+                          <td class="text-end fw-bold">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                        <tr>
+                          <td>Defence:</td>
+                          <td class="text-end fw-bold">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      <tr class="table-active">
+                        <td><strong>Total:</strong></td>
+                        <td class="text-end"><strong>₹{{ ((selectedHologram?.editHistory?.originalQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="col-md-6">
+                  <h6 class="text-success mb-2">
+                    <i class="bi bi-currency-rupee me-1"></i>
+                    Updated Amount
+                  </h6>
+                  <table class="table table-sm table-bordered bg-white">
+                    <tbody>
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                        <tr>
+                          <td>Local:</td>
+                          <td class="text-end fw-bold text-success">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                        <tr>
+                          <td>Export:</td>
+                          <td class="text-end fw-bold text-success">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                        <tr>
+                          <td>Defence:</td>
+                          <td class="text-end fw-bold text-success">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                        </tr>
+                      }
+                      <tr class="table-active">
+                        <td><strong>Total:</strong></td>
+                        <td class="text-end"><strong class="text-success">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="mt-3 pt-3 border-top">
+                <small class="text-muted">
+                  <i class="bi bi-person-badge me-1"></i>
+                  <strong>Edited by:</strong> {{ selectedHologram?.editHistory?.editedBy }} on {{ selectedHologram?.editHistory?.editedDate | date:'dd-MMM-yyyy' }}
                 </small>
               </div>
             </div>
@@ -380,6 +531,12 @@
                   </p>
                   <p class="mb-0" *ngIf="selectedHologram?.reviewedDate">
                     <strong>Reviewed Date:</strong> {{ selectedHologram?.reviewedDate | date:'dd-MMM-yyyy' }}
+                  </p>
+                  <p class="mb-0 mt-2" *ngIf="selectedHologram?.editedByCommissioner">
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-pencil-fill me-1"></i>
+                      Edited by Commissioner
+                    </span>
                   </p>
                 </div>
               </div>

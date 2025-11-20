@@ -317,7 +317,7 @@
                   <tr>
                     <td>Local Series Holograms</td>
                     <td class="text-end">{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
-                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹0.15</td>
                     <td class="text-end">₹{{ calculateAmount(submittedData.localQtyLakh) | number:'1.2-2' }}</td>
                   </tr>
                   }
@@ -325,7 +325,7 @@
                   <tr>
                     <td>Export Series Holograms</td>
                     <td class="text-end">{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
-                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹0.15</td>
                     <td class="text-end">₹{{ calculateAmount(submittedData.exportQtyLakh) | number:'1.2-2' }}</td>
                   </tr>
                   }
@@ -333,7 +333,7 @@
                   <tr>
                     <td>Defence Series Holograms</td>
                     <td class="text-end">{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
-                    <td class="text-end">₹0.72</td>
+                    <td class="text-end">₹0.15</td>
                     <td class="text-end">₹{{ calculateAmount(submittedData.defenceQtyLakh) | number:'1.2-2' }}</td>
                   </tr>
                   }
@@ -359,8 +359,8 @@
                     <p class="mb-2"><strong>Total Holograms:</strong> {{ getTotalQuantityLakh() | number:'1.0-0' }} pieces</p>
                   </div>
                   <div class="col-md-6">
-                    <p class="mb-2"><strong>Rate per Hologram:</strong> ₹0.72</p>
-                    <p class="mb-2"><strong>Total Amount:</strong> <span class="text-success fw-bold fs-5">₹{{ calculateTotalAmount() | number:'1.2-2' }}</span></p>
+                    <p class="mb-2"><strong>Rate per Hologram:</strong> ₹0.15</p>
+                    <p class="mb-2"><strong>Total Wallet Payment:</strong> <span class="text-success fw-bold fs-5">₹{{ calculateTotalAmount() | number:'1.2-2' }}</span></p>
                   </div>
                 </div>
               </div>

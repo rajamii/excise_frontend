@@ -26,8 +26,9 @@ interface HologramRow {
   defenceQtyLakh?: number;
   procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
   status: string;
-  paymentSlipUploaded?: boolean;
   paymentCompleted?: boolean;
+  editedByCommissioner?: boolean;
+  editHistory?: any;
 }
 
 @Component({
@@ -52,12 +53,8 @@ export class SupplyChainComponent implements OnInit {
   filteredHologramData: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
-  showPaymentUploadModal = false;
-  showViewUploadModal = false;
   showMultiTypePaymentModal = false;
   selectedPaymentHologram: HologramRow | null = null;
-  selectedPaymentSlipFile: File | null = null;
-  selectedPaymentRecord: any = null;
   paymentRemarks: string = '';
   multiTypePaymentItems: HologramRow[] = [];
 
@@ -150,8 +147,9 @@ export class SupplyChainComponent implements OnInit {
         defenceQtyLakh: a.defenceQtyLakh,
         procurementType: a.procurementType, // Include procurement type
         status: displayStatus, // Use determined status
-        paymentSlipUploaded: a.paymentSlipUploaded || false,
         paymentCompleted: a.paymentCompleted || request?.paymentCompleted || false,
+        editedByCommissioner: a.editedByCommissioner || request?.editedByCommissioner || false,
+        editHistory: a.editHistory || request?.editHistory || null,
       };
     });
 
@@ -311,54 +309,7 @@ export class SupplyChainComponent implements OnInit {
     }
   }
 
-  // Check if upload slip button should be enabled
-  isUploadSlipEnabled(item: HologramRow): boolean {
-    if (!this.isBrowser) {
-      console.log('🔍 Upload slip check - not in browser');
-      return false;
-    }
 
-    // Get the hologram request from localStorage to check approval status
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const request = hologramRequests.find((req: any) => req.refNo === item.refNo);
-
-    console.log('🔍 Checking upload slip enabled for:', item.refNo);
-    console.log('  - Found in hologramRequests:', !!request);
-    
-    if (!request) {
-      console.log('  - ❌ Not found in hologramRequests - DISABLED');
-      // If not found in hologramRequests, disable upload
-      // This ensures new approval flow is enforced
-      return false;
-    }
-
-    // Check approval status - requires ONLY IT Cell approval (no Commissioner needed)
-    const itCellApproved = request.itCellStatus === 'Approved';
-    const uploadEnabled = request.uploadSlipEnabled === true;
-    const notUploaded = !item.paymentSlipUploaded;
-    const notCompleted = !item.paymentCompleted;
-
-    console.log('  - IT Cell Status:', request.itCellStatus, '(Approved:', itCellApproved, ')');
-    console.log('  - Upload Enabled Flag:', uploadEnabled);
-    console.log('  - Payment Slip Uploaded:', item.paymentSlipUploaded);
-    console.log('  - Payment Completed:', item.paymentCompleted);
-    console.log('  - Full request object:', request);
-
-    const result = itCellApproved && uploadEnabled && notUploaded && notCompleted;
-    console.log('  - Final Result:', result ? '✅ ENABLED' : '❌ DISABLED');
-
-    // Upload slip is only enabled if:
-    // 1. IT Cell has approved (itCellStatus === 'Approved')
-    // 2. uploadSlipEnabled flag is true (set by IT Cell approval)
-    // 3. Payment slip not already uploaded
-    // 4. Payment not completed
-    return result;
-  }
-
-  // Check if payment slip is already uploaded
-  isPaymentSlipUploaded(item: HologramRow): boolean {
-    return item.paymentSlipUploaded === true;
-  }
 
   // Check if payment button should be enabled (requires Commissioner approval)
   isPaymentEnabled(item: HologramRow): boolean {
@@ -374,15 +325,11 @@ export class SupplyChainComponent implements OnInit {
       return false;
     }
 
-    // Payment is enabled only if:
-    // 1. IT Cell has approved
-    // 2. Payment slip is uploaded
-    // 3. Commissioner has approved
-    const itCellApproved = request.itCellStatus === 'Approved';
-    const slipUploaded = item.paymentSlipUploaded === true;
+    // NEW FLOW: Payment is enabled only if Commissioner has approved
+    // No payment slip upload required before payment
     const commissionerApproved = request.commissionerStatus === 'Approved';
 
-    return itCellApproved && slipUploaded && commissionerApproved;
+    return commissionerApproved;
   }
 
   navigateTo(route: string): void {
@@ -870,235 +817,26 @@ End of Application
     );
   }
 
-  // Open payment upload modal
-  openPaymentUploadModal(hologram: HologramRow): void {
-    this.selectedPaymentHologram = hologram;
-    this.selectedPaymentSlipFile = null;
-    this.paymentRemarks = '';
-    this.showPaymentUploadModal = true;
-  }
 
-  closePaymentUploadModal(): void {
-    this.showPaymentUploadModal = false;
-    this.selectedPaymentHologram = null;
-    this.selectedPaymentSlipFile = null;
-    this.paymentRemarks = '';
-  }
 
-  onPaymentSlipFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        alert('File size exceeds 5MB. Please select a smaller file.');
-        event.target.value = '';
-        return;
-      }
 
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('Invalid file type. Please select a PDF, JPG, or PNG file.');
-        event.target.value = '';
-        return;
-      }
-
-      this.selectedPaymentSlipFile = file;
-    }
-  }
-
-  uploadPaymentSlip(): void {
-    if (!this.selectedPaymentSlipFile || !this.selectedPaymentHologram) {
-      alert('Please select a payment slip file to upload.');
-      return;
-    }
-
-    if (!this.isBrowser) {
-      return;
-    }
-
-    // Calculate offline payment amount (₹0.72 per hologram)
-    const totalQty = this.getHologramTotal(this.selectedPaymentHologram);
-    const offlinePaymentAmount = totalQty * 0.72;
-    const procurementType = this.getProcurementType(this.selectedPaymentHologram);
-
-    // Create payment record
-    const paymentRecord = {
-      hologramRefNo: this.selectedPaymentHologram.refNo,
-      hologramDate: this.selectedPaymentHologram.date,
-      companyName: this.selectedPaymentHologram.companyName,
-      procurementType: procurementType,
-      localQtyLakh: this.selectedPaymentHologram.localQtyLakh || 0,
-      exportQtyLakh: this.selectedPaymentHologram.exportQtyLakh || 0,
-      defenceQtyLakh: this.selectedPaymentHologram.defenceQtyLakh || 0,
-      totalQuantity: totalQty,
-      offlinePaymentAmount: offlinePaymentAmount,
-      walletPaymentAmount: this.calculatePaymentAmount(this.selectedPaymentHologram),
-      fileName: this.selectedPaymentSlipFile.name,
-      fileSize: this.selectedPaymentSlipFile.size,
-      fileType: this.selectedPaymentSlipFile.type,
-      remarks: this.paymentRemarks,
-      uploadDate: new Date().toISOString(),
-      status: 'Slip Uploaded - Pending Commissioner Approval'
-    };
-
-    // Store payment record in localStorage
-    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    existingPayments.push(paymentRecord);
-    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
-
-    // Update hologram application status to mark slip as uploaded
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const updatedApplications = applications.map((app: any) => {
-      if (app.refNo === this.selectedPaymentHologram!.refNo && 
-          app.procurementType === procurementType) {
-        return { 
-          ...app, 
-          paymentSlipUploaded: true,
-          paymentSlipUploadDate: new Date().toISOString(),
-          paymentSlipFileName: this.selectedPaymentSlipFile!.name,
-          status: 'Slip Uploaded - Pending Commissioner Approval'
-        };
-      }
-      return app;
-    });
-    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
-
-    // Update payment slip tracking
-    const slipTrackingKey = 'hologramPaymentSlipTracking';
-    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
-    
-    const refNo = this.selectedPaymentHologram.refNo;
-    
-    if (!slipTracking[refNo]) {
-      // Initialize tracking if it doesn't exist
-      const allApps = updatedApplications.filter((app: any) => app.refNo === refNo);
-      const requiredTypes = [...new Set(allApps.map((app: any) => app.procurementType))];
-      
-      slipTracking[refNo] = {
-        refNo: refNo,
-        companyName: this.selectedPaymentHologram.companyName,
-        date: this.selectedPaymentHologram.date,
-        totalTypes: requiredTypes.length,
-        requiredTypes: requiredTypes,
-        uploadedTypes: [],
-        allSlipsUploaded: false,
-        commissionerVisible: false,
-        slipDetails: {}
-      };
-    }
-
-    // Add this type to uploaded types if not already there
-    if (!slipTracking[refNo].uploadedTypes.includes(procurementType)) {
-      slipTracking[refNo].uploadedTypes.push(procurementType);
-    }
-
-    // Store slip details
-    slipTracking[refNo].slipDetails[procurementType] = {
-      fileName: this.selectedPaymentSlipFile.name,
-      fileSize: this.selectedPaymentSlipFile.size,
-      fileType: this.selectedPaymentSlipFile.type,
-      uploadDate: new Date().toISOString(),
-      uploadedBy: 'Current User'
-    };
-
-    // Check if all required slips are uploaded
-    const allUploaded = slipTracking[refNo].requiredTypes.every((type: string) => 
-      slipTracking[refNo].uploadedTypes.includes(type)
-    );
-
-    slipTracking[refNo].allSlipsUploaded = allUploaded;
-    slipTracking[refNo].commissionerVisible = allUploaded;
-
-    localStorage.setItem(slipTrackingKey, JSON.stringify(slipTracking));
-
-    // Update hologramRequests to mark slip as uploaded
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const updatedRequests = hologramRequests.map((req: any) => {
-      if (req.refNo === refNo) {
-        return {
-          ...req,
-          paymentSlipUploaded: allUploaded, // Only mark as uploaded when ALL slips are uploaded
-          status: allUploaded ? 'Slip Uploaded - Pending Commissioner Approval' : req.status
-        };
-      }
-      return req;
-    });
-    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
-
-    // Refresh the hologram list to show updated status
-    this.refreshHologramList();
-
-    // Show success message
-    const message = allUploaded 
-      ? `✅ Payment Slip Uploaded Successfully!\n\n` +
-        `Reference: ${paymentRecord.hologramRefNo}\n` +
-        `Type: ${paymentRecord.procurementType}\n\n` +
-        `ALL PAYMENT SLIPS UPLOADED!\n` +
-        `This application is now visible to the Commissioner for approval.\n\n` +
-        `File: ${paymentRecord.fileName}`
-      : `✅ Payment Slip Uploaded Successfully!\n\n` +
-        `Reference: ${paymentRecord.hologramRefNo}\n` +
-        `Type: ${paymentRecord.procurementType}\n\n` +
-        `Remaining types to upload: ${slipTracking[refNo].requiredTypes.filter((t: string) => !slipTracking[refNo].uploadedTypes.includes(t)).join(', ')}\n\n` +
-        `File: ${paymentRecord.fileName}\n\n` +
-        `Note: Application will be visible to Commissioner only after ALL slips are uploaded.`;
-    
-    alert(message);
-
-    // Close modal
-    this.closePaymentUploadModal();
-  }
-
-  viewUploadedSlip(hologram: HologramRow): void {
-    if (!this.isBrowser) return;
-    
-    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    const payment = payments.find((p: any) => 
-      p.hologramRefNo === hologram.refNo && 
-      p.procurementType === this.getProcurementType(hologram)
-    );
-
-    if (payment) {
-      this.selectedPaymentRecord = payment;
-      this.showViewUploadModal = true;
-    }
-  }
-
-  closeViewUploadModal(): void {
-    this.showViewUploadModal = false;
-    this.selectedPaymentRecord = null;
-  }
-
-  viewUploadedFile(): void {
-    if (this.selectedPaymentRecord) {
-      alert(`File: ${this.selectedPaymentRecord.fileName}\n\nIn a real application, this would open the uploaded file for viewing.`);
-    }
-  }
 
   // Navigate to payment confirmation page for hologram wallet payment (₹0.15 per hologram)
   navigateToPaymentPage(hologram: HologramRow): void {
     if (!this.isBrowser) return;
-
-    // Check if payment slip is uploaded
-    if (!this.isPaymentSlipUploaded(hologram)) {
-      alert('Please upload the payment slip first before making wallet payment.');
-      return;
-    }
 
     // Check if Commissioner has approved
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
     
     if (!request || request.commissionerStatus !== 'Approved') {
-      alert('Payment is pending Commissioner approval. Please wait for Commissioner to approve your application after reviewing the uploaded payment slip.');
+      alert('Payment is pending Commissioner approval. Please wait for Commissioner to approve your application.');
       return;
     }
 
     // Check if payment already completed for this reference number
     if (request.paymentCompleted === true) {
-      alert('Payment has already been completed for this reference number. You can view the payment slip from the "View Slip" button.');
+      alert('Payment has already been completed for this reference number.');
       return;
     }
 
@@ -1109,20 +847,20 @@ End of Application
       // Multiple types exist - check if all are ready for payment
       const allApproved = sameRefItems.every(item => {
         const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
-        return req && req.commissionerStatus === 'Approved' && this.isPaymentSlipUploaded(item);
+        return req && req.commissionerStatus === 'Approved';
       });
 
       if (!allApproved) {
         // Not all types are ready for payment
         const notReadyTypes = sameRefItems.filter(item => {
           const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
-          return !req || req.commissionerStatus !== 'Approved' || !this.isPaymentSlipUploaded(item);
+          return !req || req.commissionerStatus !== 'Approved';
         }).map(item => this.getProcurementType(item));
 
         alert(
           `Multiple types exist for reference number ${hologram.refNo}.\n\n` +
           `The following types are not yet ready for payment:\n${notReadyTypes.join(', ')}\n\n` +
-          `All types must be approved and have payment slips uploaded before making payment.`
+          `All types must be approved by Commissioner before making payment.`
         );
         return;
       }
@@ -1336,8 +1074,6 @@ End of Application
     
     if (status.includes('payment completed') || item.paymentCompleted) {
       return 'bg-success-subtle text-success';
-    } else if (status.includes('slip uploaded') || item.paymentSlipUploaded) {
-      return 'bg-info-subtle text-info';
     } else if (status.includes('approved')) {
       return 'bg-primary-subtle text-primary';
     } else if (status.includes('pending')) {
@@ -1360,4 +1096,16 @@ End of Application
     });
   }
 
+
+
+
+  // Close hologram details modal (alias for closeHologramDetails to match HTML)
+  closeHologramDetailsModal(): void {
+    this.closeHologramDetails();
+  }
+
+  // Get total holograms (alias for getHologramTotal to match HTML)
+  getTotalHolograms(hologram: HologramRow): number {
+    return this.getHologramTotal(hologram);
+  }
 }

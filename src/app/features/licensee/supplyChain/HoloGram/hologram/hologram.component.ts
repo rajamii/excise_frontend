@@ -655,8 +655,8 @@ export class HologramComponent {
 
   // Payment calculation methods
   calculateAmount(quantity: number): number {
-    // Rate is 0.72 rupees per hologram
-    return quantity * 0.72;
+    // Rate is 0.15 rupees per hologram (wallet payment only)
+    return quantity * 0.15;
   }
 
   calculateTotalAmount(): number {

@@ -36,6 +36,26 @@ interface CommissionerTableData {
   uploadedTypes?: string[];
   requiredTypes?: string[];
   slipDetails?: { [key: string]: any };
+  // Edit tracking fields
+  editedByCommissioner?: boolean;
+  editHistory?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+  };
+  // Commissioner status tracking
+  commissionerStatus?: string;
 }
 
 @Component({
@@ -90,6 +110,15 @@ export class CommissionerDashboardComponent implements OnInit {
   // Hologram details modal properties
   showHologramDetailsModal = false;
   selectedHologramApplication: CommissionerTableData | null = null;
+  
+  // Edit mode for hologram quantities
+  isEditingQuantity = false;
+  editedLocalQty: number = 0;
+  editedExportQty: number = 0;
+  editedDefenceQty: number = 0;
+  originalLocalQty: number = 0;
+  originalExportQty: number = 0;
+  originalDefenceQty: number = 0;
 
   // Payment slips modal properties (separate from hologram details)
   showPaymentSlipsModal = false;
@@ -521,39 +550,30 @@ export class CommissionerDashboardComponent implements OnInit {
     // Load hologram requests from IT Cell
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     
-    // Load payment slip tracking to check if all slips are uploaded
-    const slipTracking = JSON.parse(localStorage.getItem('hologramPaymentSlipTracking') || '{}');
-    
-    // Filter those that have:
-    // 1. Been approved by IT Cell
-    // 2. ALL payment slips uploaded (checked via slipTracking)
+    // Filter those that have been forwarded by IT Cell to Commissioner
+    // In the new flow: IT Cell forwards directly to Commissioner (no payment slip upload required)
     const applicationsForCommissioner = hologramRequests.filter((req: any) => {
-      const tracking = slipTracking[req.refNo];
-      
-      // Must be approved by IT Cell
-      if (req.itCellStatus !== 'Approved') {
-        return false;
+      // Must be forwarded by IT Cell to Commissioner
+      if (req.itCellStatus === 'Forwarded' && req.commissionerStatus === 'Pending') {
+        return true;
       }
       
-      // Must have all payment slips uploaded
-      if (!tracking || !tracking.allSlipsUploaded || !tracking.commissionerVisible) {
-        return false;
+      // Also include already approved/rejected by Commissioner
+      if (req.commissionerStatus === 'Approved' || req.commissionerStatus === 'Rejected') {
+        return true;
       }
       
-      return true;
+      return false;
     });
 
     console.log('📊 Loading hologram applications for Commissioner:', {
       total: hologramRequests.length,
       applicationsForCommissioner: applicationsForCommissioner.length,
-      slipTrackingEntries: Object.keys(slipTracking).length,
       filtered: applicationsForCommissioner
     });
 
     // Convert to commissioner table format
     const convertedData: CommissionerTableData[] = applicationsForCommissioner.map((req: any) => {
-      const tracking = slipTracking[req.refNo];
-      
       // Determine status based on payment and approval stages
       let displayStatus = 'PENDING';
       
@@ -579,25 +599,21 @@ export class CommissionerDashboardComponent implements OnInit {
         exportQtyLakh: req.exportQtyLakh || 0,
         defenceQtyLakh: req.defenceQtyLakh || 0,
         totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
-        hologramType: 'Security Hologram',
-        // Add slip upload info for display
-        uploadedTypes: tracking?.uploadedTypes || [],
-        requiredTypes: tracking?.requiredTypes || [],
-        slipDetails: tracking?.slipDetails || {}
+        hologramType: 'Security Hologram'
       };
     });
 
-    // Replace sample data with real data (show only applications with ALL slips uploaded)
+    // Replace sample data with real data (show applications forwarded by IT Cell)
     this.hologramData = convertedData;
     this.filteredHologramData = [...this.hologramData];
     
-    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications (all with complete slip uploads)');
+    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications forwarded by IT Cell');
   }
 
   calculateHologramAmount(req: any): number {
     const total = (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0);
-    // Rate is 0.72 rupees per hologram piece (data is already in pieces)
-    return total * 0.72;
+    // Rate is 0.15 rupees per hologram piece (wallet payment only)
+    return total * 0.15;
   }
 
   loadOverdueEntries(): void {
@@ -1083,16 +1099,33 @@ export class CommissionerDashboardComponent implements OnInit {
   approveHologram(item: CommissionerTableData): void {
     item.status = 'APPROVED';
     
-    // Update in hologramRequests storage to enable payment (slip already uploaded)
+    // Update in hologramRequests storage to enable payment (no slip upload needed in new flow)
     if (this.isBrowser) {
       const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const index = hologramRequests.findIndex((req: any) => req.refNo === item.referenceNo);
       if (index !== -1) {
         hologramRequests[index].commissionerStatus = 'Approved';
-        hologramRequests[index].uploadSlipEnabled = true; // Keep this true (slip already uploaded)
+        hologramRequests[index].paymentEnabled = true; // Enable payment after Commissioner approval
         hologramRequests[index].status = 'Approved by Commissioner - Ready for Payment';
         hologramRequests[index].approvedBy = 'Commissioner';
         hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
+        
+        // If there's a pending edit, now apply the quantities and make it visible
+        if (hologramRequests[index].hasUnapprovedEdit && hologramRequests[index].pendingEditHistory) {
+          // Apply the pending quantities
+          if (hologramRequests[index].pendingQuantities) {
+            hologramRequests[index].localQtyLakh = hologramRequests[index].pendingQuantities.local;
+            hologramRequests[index].exportQtyLakh = hologramRequests[index].pendingQuantities.export;
+            hologramRequests[index].defenceQtyLakh = hologramRequests[index].pendingQuantities.defence;
+            delete hologramRequests[index].pendingQuantities;
+          }
+          // Make edit history visible
+          hologramRequests[index].editedByCommissioner = true;
+          hologramRequests[index].editHistory = hologramRequests[index].pendingEditHistory;
+          delete hologramRequests[index].pendingEditHistory;
+          delete hologramRequests[index].hasUnapprovedEdit;
+        }
+        
         localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
       }
 
@@ -1103,21 +1136,28 @@ export class CommissionerDashboardComponent implements OnInit {
         if (app.refNo === item.referenceNo) {
           app.status = 'Approved by Commissioner - Ready for Payment';
           app.commissionerStatus = 'Approved';
-          app.uploadSlipEnabled = true; // Keep this true (slip already uploaded)
+          app.paymentEnabled = true; // Enable payment after Commissioner approval
           app.approvedBy = 'Commissioner';
           app.approvedDate = new Date().toISOString().split('T')[0];
+          
+          // If there's a pending edit, now apply the quantities and make it visible
+          if (app.hasUnapprovedEdit && app.pendingEditHistory) {
+            // Apply the pending quantities
+            if (app.pendingQuantities) {
+              app.localQtyLakh = app.pendingQuantities.local;
+              app.exportQtyLakh = app.pendingQuantities.export;
+              app.defenceQtyLakh = app.pendingQuantities.defence;
+              delete app.pendingQuantities;
+            }
+            // Make edit history visible
+            app.editedByCommissioner = true;
+            app.editHistory = app.pendingEditHistory;
+            delete app.pendingEditHistory;
+            delete app.hasUnapprovedEdit;
+          }
         }
       });
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
-
-      // Update payment record status
-      const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-      payments.forEach((payment: any) => {
-        if (payment.hologramRefNo === item.referenceNo) {
-          payment.status = 'Approved by Commissioner - Ready for Wallet Payment';
-        }
-      });
-      localStorage.setItem('hologramPayments', JSON.stringify(payments));
     }
     
     // Reload hologram data to reflect changes
@@ -1125,7 +1165,7 @@ export class CommissionerDashboardComponent implements OnInit {
     this.applyHologramFilters();
     
     console.log('Approved hologram application:', item.referenceNo);
-    alert('Hologram application approved by Commissioner. Supply chain user can now make the wallet payment.');
+    alert('Hologram application approved by Commissioner. Supply chain user can now proceed with payment.');
   }
 
   rejectHologram(item: CommissionerTableData): void {
@@ -1212,7 +1252,8 @@ export class CommissionerDashboardComponent implements OnInit {
           ...fullDetails,
           referenceNo: item.referenceNo,
           submissionDate: item.submissionDate,
-          distilleryName: item.distilleryName
+          distilleryName: item.distilleryName,
+          commissionerStatus: fullDetails.commissionerStatus
         };
       } else {
         this.selectedHologramApplication = item;
@@ -1221,14 +1262,126 @@ export class CommissionerDashboardComponent implements OnInit {
       this.selectedHologramApplication = item;
     }
     
+    // Reset edit mode
+    this.isEditingQuantity = false;
+    
     this.showHologramDetailsModal = true;
     console.log('Modal should be visible now:', this.showHologramDetailsModal);
     console.log('Selected hologram details:', this.selectedHologramApplication);
+    console.log('Commissioner Status:', this.selectedHologramApplication?.commissionerStatus);
   }
 
   closeHologramDetailsModal(): void {
     this.showHologramDetailsModal = false;
     this.selectedHologramApplication = null;
+    this.isEditingQuantity = false;
+  }
+  
+  // Enable edit mode for quantities
+  enableQuantityEdit(): void {
+    if (!this.selectedHologramApplication) return;
+    
+    this.isEditingQuantity = true;
+    
+    // Store original values
+    this.originalLocalQty = this.selectedHologramApplication.localQtyLakh || 0;
+    this.originalExportQty = this.selectedHologramApplication.exportQtyLakh || 0;
+    this.originalDefenceQty = this.selectedHologramApplication.defenceQtyLakh || 0;
+    
+    // Set editable values
+    this.editedLocalQty = this.originalLocalQty;
+    this.editedExportQty = this.originalExportQty;
+    this.editedDefenceQty = this.originalDefenceQty;
+  }
+  
+  // Cancel edit mode
+  cancelQuantityEdit(): void {
+    this.isEditingQuantity = false;
+  }
+  
+  // Save updated quantities
+  saveQuantityEdit(): void {
+    if (!this.selectedHologramApplication || !this.isBrowser) return;
+    
+    const refNo = this.selectedHologramApplication.referenceNo;
+    
+    // Check if any quantity changed
+    const hasChanges = 
+      this.editedLocalQty !== this.originalLocalQty ||
+      this.editedExportQty !== this.originalExportQty ||
+      this.editedDefenceQty !== this.originalDefenceQty;
+    
+    if (!hasChanges) {
+      alert('No changes detected.');
+      this.isEditingQuantity = false;
+      return;
+    }
+    
+    // Prepare edit history
+    const editHistory = {
+      editedBy: 'Commissioner',
+      editedDate: new Date().toISOString().split('T')[0],
+      originalQuantities: {
+        local: this.originalLocalQty,
+        export: this.originalExportQty,
+        defence: this.originalDefenceQty,
+        total: this.originalLocalQty + this.originalExportQty + this.originalDefenceQty
+      },
+      updatedQuantities: {
+        local: this.editedLocalQty,
+        export: this.editedExportQty,
+        defence: this.editedDefenceQty,
+        total: this.editedLocalQty + this.editedExportQty + this.editedDefenceQty
+      }
+    };
+    
+    // Update hologramRequests - DON'T update quantities yet, only store pending changes
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const reqIndex = hologramRequests.findIndex((req: any) => req.refNo === refNo);
+    if (reqIndex !== -1) {
+      // Store pending quantities (will be applied on approval)
+      hologramRequests[reqIndex].pendingQuantities = {
+        local: this.editedLocalQty,
+        export: this.editedExportQty,
+        defence: this.editedDefenceQty
+      };
+      // Store edit history but don't show it yet (will be shown after approval)
+      hologramRequests[reqIndex].pendingEditHistory = editHistory;
+      hologramRequests[reqIndex].hasUnapprovedEdit = true;
+      localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+    }
+    
+    // Update hologramApplications (used by supply chain dashboard) - DON'T update quantities yet
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    applications.forEach((app: any) => {
+      if (app.refNo === refNo) {
+        // Store pending quantities (will be applied on approval)
+        app.pendingQuantities = {
+          local: this.editedLocalQty,
+          export: this.editedExportQty,
+          defence: this.editedDefenceQty
+        };
+        // Store edit history but don't show it yet (will be shown after approval)
+        app.pendingEditHistory = editHistory;
+        app.hasUnapprovedEdit = true;
+      }
+    });
+    localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    
+    // Update current modal data (only for Commissioner to see)
+    this.selectedHologramApplication.localQtyLakh = this.editedLocalQty;
+    this.selectedHologramApplication.exportQtyLakh = this.editedExportQty;
+    this.selectedHologramApplication.defenceQtyLakh = this.editedDefenceQty;
+    this.selectedHologramApplication.totalQtyLakh = this.editedLocalQty + this.editedExportQty + this.editedDefenceQty;
+    
+    // Exit edit mode
+    this.isEditingQuantity = false;
+    
+    // Reload data
+    this.loadHologramApplicationsFromITCell();
+    this.applyHologramFilters();
+    
+    alert('Quantities updated successfully! The changes are now reflected in the supply chain view.');
   }
 
   // Payment calculation methods for hologram details
@@ -1237,23 +1390,11 @@ export class CommissionerDashboardComponent implements OnInit {
     return (hologram?.localQtyLakh || 0) + (hologram?.exportQtyLakh || 0) + (hologram?.defenceQtyLakh || 0);
   }
 
-  calculatePrintingCost(hologram: any): number {
-    // Printing cost: ₹0.72 per hologram piece
-    // Data is already in pieces, no conversion needed
-    const totalPieces = this.getTotalHolograms(hologram);
-    return totalPieces * 0.72;
-  }
-
   calculateWalletPayment(hologram: any): number {
-    // Wallet payment: ₹0.15 per hologram piece
+    // Wallet payment: ₹0.15 per hologram piece (only payment required)
     // Data is already in pieces, no conversion needed
     const totalPieces = this.getTotalHolograms(hologram);
     return totalPieces * 0.15;
-  }
-
-  calculateTotalPayment(hologram: any): number {
-    // Total: ₹0.72 + ₹0.15 = ₹0.87 per hologram piece
-    return this.calculatePrintingCost(hologram) + this.calculateWalletPayment(hologram);
   }
 
   // Pagination methods
