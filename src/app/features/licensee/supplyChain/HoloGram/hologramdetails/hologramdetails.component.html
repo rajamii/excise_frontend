@@ -281,158 +281,216 @@
 
 
 
-<! -- Update Arrival Details Modal -->
-    <div class="modal fade show" *ngIf="showUpdateModal" style="display: block; background-color: rgba(0,0,0,0.5);"
-        tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">
-                        <i class="bi bi-box-seam me-2"></i>
-                        Update Hologram Arrival Details
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" (click)="closeUpdateModal()"></button>
+<!-- Update Arrival Details Modal -->
+<div class="modal fade show" *ngIf="showUpdateModal" style="display: block; background-color: rgba(0,0,0,0.5);"
+    tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-seam me-2"></i>
+                    Update Hologram Arrival Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="closeUpdateModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Reference:</strong> {{ selectedRecordForUpdate?.ourRefNo }}
+                    <br>
+                    <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }} holograms
+                    <br>
+                    <strong>Status:</strong> Ready for physical arrival update
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Reference:</strong> {{ selectedRecordForUpdate?.ourRefNo }}
-                        <br>
-                        <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }}
-                        holograms
-                        <br>
-                        <strong>Status:</strong> Ready for physical arrival update
-                    </div>
 
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-box me-1"></i>
-                                    Carton Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" class="form-control form-control-lg" placeholder="e.g., CTN001"
-                                    [(ngModel)]="updateForm.cartoonNumber" required>
-                                <div class="form-text">Enter the carton/box number from physical delivery</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-calculator me-1"></i>
-                                    Calculated Holograms
-                                </label>
-                                <input type="number" class="form-control form-control-lg bg-light"
-                                    [(ngModel)]="updateForm.numberOfHolograms" readonly>
-                                <div class="form-text">Auto-calculated from serial number range</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mt-2">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-arrow-right me-1"></i>
-                                    From Serial Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                    class="form-control form-control-lg font-monospace"
-                                    [class.is-invalid]="serialRangeValidationError"
-                                    placeholder="e.g., 1" 
-                                    [(ngModel)]="updateForm.fromSerial"
-                                    (input)="calculateUpdateHologramCount()" 
-                                    required>
-                                <div class="form-text">Starting serial number from hologram roll</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label fw-bold">
-                                    <i class="bi bi-arrow-left me-1"></i>
-                                    To Serial Number <span class="text-danger">*</span>
-                                </label>
-                                <input type="text" 
-                                    class="form-control form-control-lg font-monospace"
-                                    [class.is-invalid]="serialRangeValidationError"
-                                    placeholder="e.g., 500" 
-                                    [(ngModel)]="updateForm.toSerial"
-                                    (input)="calculateUpdateHologramCount()" 
-                                    required>
-                                <div class="form-text">Ending serial number from hologram roll</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Validation Error Alert -->
-                    <div class="row mt-3" *ngIf="serialRangeValidationError">
-                        <div class="col-12">
-                            <div class="alert alert-danger d-flex align-items-center" role="alert">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                                <div>{{ serialRangeValidationError }}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Success Indicator -->
-                    <div class="row mt-3" *ngIf="!serialRangeValidationError && updateForm.fromSerial && updateForm.toSerial && updateForm.numberOfHolograms > 0 && selectedRecordForUpdate && updateForm.numberOfHolograms === selectedRecordForUpdate.numberOfHolograms">
-                        <div class="col-12">
-                            <div class="alert alert-success d-flex align-items-center" role="alert">
-                                <i class="bi bi-check-circle-fill me-2"></i>
-                                <div>✅ Perfect! Serial range matches the expected quantity of {{ selectedRecordForUpdate.numberOfHolograms | number }} holograms.</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <div class="card border-success">
-                            <div class="card-header bg-success text-white">
+                <div class="row">
+                    <!-- Left Side: Current Carton Entry Form -->
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
                                 <h6 class="mb-0">
-                                    <i class="bi bi-check-circle me-2"></i>
-                                    Arrival Summary
+                                    <i class="bi bi-box me-2"></i>
+                                    Enter Carton Details
                                 </h6>
                             </div>
                             <div class="card-body">
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-box me-1"></i>
+                                        Carton Number <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" placeholder="e.g., CTN001"
+                                        [(ngModel)]="currentCarton.cartoonNumber">
+                                    <div class="form-text">Enter the carton/box number from physical delivery</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-arrow-right me-1"></i>
+                                        From Serial Number <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                        class="form-control font-monospace"
+                                        placeholder="e.g., 1" 
+                                        [(ngModel)]="currentCarton.fromSerial"
+                                        (input)="calculateCurrentCartonCount()">
+                                    <div class="form-text">Starting serial number from hologram roll</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-arrow-left me-1"></i>
+                                        To Serial Number <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" 
+                                        class="form-control font-monospace"
+                                        placeholder="e.g., 5000" 
+                                        [(ngModel)]="currentCarton.toSerial"
+                                        (input)="calculateCurrentCartonCount()">
+                                    <div class="form-text">Ending serial number from hologram roll</div>
+                                </div>
+
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-calculator me-1"></i>
+                                        Calculated Holograms
+                                    </label>
+                                    <input type="number" class="form-control bg-light"
+                                        [value]="currentCarton.numberOfHolograms" readonly>
+                                    <div class="form-text">Auto-calculated from serial number range</div>
+                                </div>
+
+                                @if (currentCarton.numberOfHolograms > 0) {
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    This carton will contain <strong>{{ currentCarton.numberOfHolograms | number }}</strong> holograms
+                                </div>
+                                }
+
+                                <button type="button" class="btn btn-success w-100" 
+                                    (click)="saveCurrentCarton()"
+                                    [disabled]="!canSaveCurrentCarton()">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    Save Carton
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Saved Cartons List -->
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-boxes me-2"></i>
+                                    Saved Cartons ({{ savedCartons.length }})
+                                </h6>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                @if (savedCartons.length === 0) {
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                                    <p class="mt-2">No cartons saved yet</p>
+                                    <small>Fill the form on the left and click "Save Carton"</small>
+                                </div>
+                                }
+
+                                @for (carton of savedCartons; track $index; let i = $index) {
+                                <div class="card mb-2 border-secondary">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong class="text-primary">{{ carton.cartoonNumber }}</strong>
+                                                <div class="small text-muted">
+                                                    Serial: {{ carton.fromSerial }} to {{ carton.toSerial }}
+                                                </div>
+                                                <div class="small">
+                                                    <span class="badge bg-info">{{ carton.numberOfHolograms | number }} holograms</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                (click)="removeSavedCarton(i)"
+                                                title="Remove this carton">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Total Summary -->
+                        <div class="card border-info mt-3">
+                            <div class="card-body">
                                 <div class="row text-center">
-                                    <div class="col-md-4">
-                                        <div class="border-end">
-                                            <h4 class="text-primary">{{ selectedRecordForUpdate?.ourRefNo }}</h4>
-                                            <small class="text-muted">Reference Number</small>
-                                        </div>
+                                    <div class="col-4">
+                                        <h5 class="text-primary mb-0">{{ savedCartons.length }}</h5>
+                                        <small class="text-muted">Cartons</small>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="border-end">
-                                            <h4 class="text-success">{{ updateForm.cartoonNumber || '-' }}</h4>
-                                            <small class="text-muted">Carton Number</small>
-                                        </div>
+                                    <div class="col-4">
+                                        <h5 class="mb-0" 
+                                            [class.text-success]="selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms"
+                                            [class.text-warning]="selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms"
+                                            [class.text-danger]="selectedRecordForUpdate && totalCalculatedHolograms > selectedRecordForUpdate.numberOfHolograms">
+                                            {{ totalCalculatedHolograms | number }}
+                                        </h5>
+                                        <small class="text-muted">Current</small>
                                     </div>
-                                    <div class="col-md-4">
-                                        <h4 class="text-info">{{ updateForm.numberOfHolograms | number }}</h4>
-                                        <small class="text-muted">Total Holograms</small>
+                                    <div class="col-4">
+                                        <h5 class="text-info mb-0">{{ selectedRecordForUpdate?.numberOfHolograms | number }}</h5>
+                                        <small class="text-muted">Expected</small>
                                     </div>
                                 </div>
-                                <hr>
-                                <div class="text-center">
-                                    <strong>Serial Range:</strong>
-                                    <span class="font-monospace">
-                                        {{ updateForm.fromSerial || '---' }} to {{ updateForm.toSerial || '---' }}
-                                    </span>
+                                
+                                @if (selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
+                                <div class="mt-2 text-center">
+                                    <small class="text-warning">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Remaining: {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) | number }} holograms
+                                    </small>
                                 </div>
+                                }
+                                
+                                @if (selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms && totalCalculatedHolograms > 0) {
+                                <div class="mt-2 text-center">
+                                    <small class="text-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                        Complete! Ready to confirm arrival
+                                    </small>
+                                </div>
+                                }
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
-                        <i class="bi bi-x-lg me-2"></i>
-                        Cancel
-                    </button>
-                    <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
-                        [disabled]="!updateForm.cartoonNumber || !updateForm.fromSerial || !updateForm.toSerial || serialRangeValidationError">
-                        <i class="bi bi-check-circle me-2"></i>
-                        Confirm Arrival
-                    </button>
+
+                <!-- Final Validation Messages -->
+                @if (serialRangeValidationError) {
+                <div class="alert alert-danger d-flex align-items-center mt-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <div>{{ serialRangeValidationError }}</div>
                 </div>
+                }
+
+                @if (totalCalculatedHolograms === selectedRecordForUpdate?.numberOfHolograms && totalCalculatedHolograms > 0) {
+                <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{ totalCalculatedHolograms | number }} holograms matching the expected quantity.</div>
+                </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
+                    <i class="bi bi-x-lg me-2"></i>
+                    Cancel
+                </button>
+                <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
+                    [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Confirm Arrival ({{ savedCartons.length }} Carton{{ savedCartons.length > 1 ? 's' : '' }})
+                </button>
             </div>
         </div>
     </div>
+</div>
