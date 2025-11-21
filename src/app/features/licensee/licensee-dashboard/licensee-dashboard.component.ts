@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module'; 
 import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
-import { LicenseApplicationService } from '../../../core/services/license-application.service';
+import { LicenseApplicationService, UnifiedApplication } from '../../../core/services/license-application.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { LicenseApplication } from '../../../core/models/license-application.model';
@@ -33,13 +33,13 @@ export class LicenseeDashboardComponent implements OnInit{
   ) { }
 
   // Table Data Sources
-  appliedDataSource = new MatTableDataSource<LicenseApplication>();
-  pendingDataSource = new MatTableDataSource<LicenseApplication>();
-  approvedDataSource = new MatTableDataSource<LicenseApplication>();
-  rejectedDataSource = new MatTableDataSource<LicenseApplication>();
+  appliedDataSource = new MatTableDataSource<UnifiedApplication>();
+  pendingDataSource = new MatTableDataSource<UnifiedApplication>();
+  approvedDataSource = new MatTableDataSource<UnifiedApplication>();
+  rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
   
   // Columns to be displayed in the tables
-  displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
+  displayedColumns: string[] = ['slNo', 'id', 'applicationType', 'currentStage', 'remarks', 'performedBy', 'actions'];
 
   // Active table to display
   activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
@@ -56,8 +56,8 @@ export class LicenseeDashboardComponent implements OnInit{
 
   // Lifecycle hook to initialize data
   ngOnInit(): void {
-    // Fetch dashboard counts
-    this.licenseAppService.getDashboardCounts().subscribe({
+    // Fetch unified dashboard counts
+    this.licenseAppService.getUnifiedDashboardCounts().subscribe({
       next: (res) => {
         this.dashboardCounts = res; // Update dashboard counts
       },
@@ -66,8 +66,8 @@ export class LicenseeDashboardComponent implements OnInit{
       }
     });
 
-    // Fetch applications by stage
-    this.licenseAppService.getApplicationsByStatus().subscribe(res => {
+    // Fetch unified applications by stage
+    this.licenseAppService.getUnifiedApplicationsByStatus().subscribe(res => {
       this.appliedDataSource.data = res.applied;
       this.pendingDataSource.data = res.pending;
       this.approvedDataSource.data = res.approved;

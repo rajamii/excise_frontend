@@ -2,13 +2,18 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ApplicationStatus, DashboardCount } from '../models/dashboard.model';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, forkJoin } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { LicenseApplication } from '../models/license-application.model';
 import { LocationFee } from '../models/location-fee.model';
 import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
-import { 
-  NewLicenseApplication, 
-} from '../models/new-license-application.model';
+import { NewLicenseApplication } from '../models/new-license-application.model';
+
+
+export interface UnifiedApplication extends LicenseApplication {
+  applicationType: 'existing' | 'new';
+  displayId: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -17,23 +22,23 @@ import {
 export class LicenseApplicationService {
 
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
-  
+  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
+
   // Store for passport photo
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
-  
+
   // Store for site documents
   private siteDocuments: Map<string, File> = new Map();
 
   constructor(private http: HttpClient) { }
-    
+
   // ========================== OLD LICENSE APPLICATION ==========================
-  
+
   // Final application submission by the licensee (includes all sections + photo).
   submitLicenseApplication(data: any): Observable<any> {
     console.log(data);
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/apply/`, data);
-  } 
+  }
 
   // Updates a license application with the provided changes (e.g., status update, details change)
   updateApplication(id: number, changes: Partial<any>): Observable<LicenseApplication> {
@@ -114,7 +119,7 @@ export class LicenseApplicationService {
   }
 
   // Resolves previously raised objections for a given application.
-    resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
+  resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     const formData = new FormData();
 
@@ -143,7 +148,7 @@ export class LicenseApplicationService {
 
     return this.http.post(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
   }
-  
+
   // Submits the site enquiry report associated with the application.
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
@@ -190,18 +195,18 @@ export class LicenseApplicationService {
    */
   prepareNewLicenseFormData(): FormData {
     const formData = new FormData();
-    
+
     // Get all session data
     const sections = [
       'selectLicenseData',
-      'keyInfoData', 
+      'keyInfoData',
       'applicantDetailsData',
       'siteDetailsData',
       'unitDetailsData'
     ];
-    
+
     const allData: any = {};
-    
+
     sections.forEach(section => {
       const data = sessionStorage.getItem(section);
       if (data) {
@@ -213,14 +218,14 @@ export class LicenseApplicationService {
     const fieldMap: Record<string, string> = {
       // Step 1: Select License
       'licenseType': 'license_type',
-      
+
       // Step 2: Basic Info (Key Info)
       'licenseCategory': 'license_category',
       'licenseSubCategory': 'license_sub_category',
       'establishmentName': 'establishment_name',
       'locationDistrict': 'location_district',
       'siteType': 'site_type',
-      
+
       // Step 3: Applicant Details
       'status': 'status',
       'applicantName': 'applicant_name',
@@ -230,7 +235,7 @@ export class LicenseApplicationService {
       'pan': 'pan',
       'applicantMobileNumber': 'applicant_mobile_number',
       'applicantEmail': 'applicant_email',
-      
+
       // Step 4: Site Details
       'siteSubdivision': 'site_subdivision',
       'policeStation': 'police_station',
@@ -248,7 +253,7 @@ export class LicenseApplicationService {
       'siteOwned': 'site_owned',
       'nocObtained': 'noc_obtained',
       'tradeLicenseCovered': 'trade_license_covered',
-      
+
       // Step 5: Company Details (conditional - only if licenseType is 2 'Company')
       'companyName': 'company_name',
       'companyAddress': 'company_address',
@@ -263,7 +268,7 @@ export class LicenseApplicationService {
     Object.keys(allData).forEach(key => {
       const backendKey = fieldMap[key] || this.toSnakeCase(key);
       const value = allData[key];
-      
+
       // Skip empty values but allow 0 and false
       if (value !== null && value !== undefined && value !== '') {
         // Special handling for mobile numbers (convert to string without formatting)
@@ -287,7 +292,7 @@ export class LicenseApplicationService {
     // These are just stored for potential future use but not sent to backend
     // The backend only expects: photo, and the form fields above
     // Documents like aadhar_card, sikkim_certificate etc. are NOT in the Django model
-    
+
     return formData;
   }
 
@@ -340,7 +345,7 @@ export class LicenseApplicationService {
     objections?: { field: string; remarks: string }[]
   ): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    
+
     const body: any = {
       action,
       remarks: remarks || ''
@@ -401,10 +406,10 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/print/`, {});
   }
 
-  
-  
+
+
   // ========================== PASSPORT PHOTO MANAGEMENT ==========================
-  
+
   // Set the uploaded photo
   setPassPhoto(file: File | null): void {
     this.passPhotoSubject.next(file);
@@ -424,10 +429,10 @@ export class LicenseApplicationService {
     this.passPhotoSubject.next(null);
   }
 
-  
-  
+
+
   // ========================== SITE DOCUMENTS MANAGEMENT ==========================
-  
+
   setSiteDocument(documentName: string, file: File): void {
     this.siteDocuments.set(documentName, file);
   }
@@ -451,6 +456,62 @@ export class LicenseApplicationService {
   clearAllDocuments(): void {
     this.passPhotoSubject.next(null);
     this.siteDocuments.clear();
+  }
+
+  /** Get combined dashboard counts (Old + New) */
+  getUnifiedDashboardCounts(): Observable<DashboardCount> {
+    return forkJoin({
+      old: this.getDashboardCounts(),
+      new: this.getNewLicenseDashboardCounts()
+    }).pipe(
+      map(({ old, new: newCounts }) => ({
+        applied: (old?.applied || 0) + (newCounts?.applied || 0),
+        pending: (old?.pending || 0) + (newCounts?.pending || 0),
+        approved: (old?.approved || 0) + (newCounts?.approved || 0),
+        rejected: (old?.rejected || 0) + (newCounts?.rejected || 0),
+      }))
+    );
+  }
+
+  /** Get combined applications by status (correctly typed) */
+  getUnifiedApplicationsByStatus(): Observable<{
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+  }> {
+    return forkJoin({
+      old: this.getApplicationsByStatus(),
+      new: this.getNewLicenseApplicationsByStatus()
+    }).pipe(
+      map(({ old, new: newApps }) => {
+        const toUnified = (app: any, type: 'existing' | 'new'): UnifiedApplication => ({
+          ...app,
+          applicationType: type,
+          // Safely get ID — old uses `id`, new uses `applicationId` or `id`
+          displayId: (app.applicationId || app.id || 'N/A') as string,
+        });
+
+        return {
+          applied: [
+            ...(old.applied || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.applied || []).map(a => toUnified(a, 'new'))
+          ],
+          pending: [
+            ...(old.pending || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.pending || []).map(a => toUnified(a, 'new'))
+          ],
+          approved: [
+            ...(old.approved || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.approved || []).map(a => toUnified(a, 'new'))
+          ],
+          rejected: [
+            ...(old.rejected || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.rejected || []).map(a => toUnified(a, 'new'))
+          ]
+        };
+      })
+    );
   }
 
   // ========================== UTILITY METHODS ==========================
