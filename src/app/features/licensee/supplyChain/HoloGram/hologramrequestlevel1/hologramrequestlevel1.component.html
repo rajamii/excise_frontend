@@ -8,7 +8,7 @@
                         <i class="bi bi-qr-code me-3"></i>
                         Hologram Request Application
                     </h2>
-                    <p class="page-subtitle">Submit your hologram requirement for factory use</p>
+                    <p class="page-subtitle">Request hologram rolls/quantity - Officer In-Charge will record production details</p>
                 </div>
                 <div class="col-auto">
                     <button class="btn btn-outline-secondary" (click)="goBack()">
@@ -29,63 +29,12 @@
                         <i class="bi bi-clipboard-data me-2"></i>
                         Hologram Request Details
                     </h4>
-                    <p class="form-description">Please fill in all required information for your hologram request</p>
+                    <p class="form-description">Request hologram quantity only - Production details will be recorded by Officer In-Charge</p>
                 </div>
 
                 <div class="form-body">
                     <form #hologramForm="ngForm" (ngSubmit)="onSubmit()">
                         <div class="row g-4">
-                            <!-- Date to use hologram in factory -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label required">
-                                        <i class="bi bi-calendar-event me-2"></i>
-                                        Date to Use Hologram in Factory
-                                    </label>
-                                    <input type="date" class="form-control" [(ngModel)]="requestData.usageDate"
-                                        name="usageDate" required [min]="minDate" placeholder="Select usage date">
-                                    <small class="form-text">Select the date when holograms will be used in
-                                        production</small>
-                                </div>
-                            </div>
-
-                            <!-- Hologram to use for which Brand -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label required">
-                                        <i class="bi bi-tag me-2"></i>
-                                        Hologram to Use for Which Brand
-                                    </label>
-                                    <select class="form-select" [(ngModel)]="requestData.brandName" name="brandName"
-                                        required>
-                                        <option value="">Select Brand</option>
-                                        <option *ngFor="let brand of availableBrands" [value]="brand.value">
-                                            {{ brand.label }}
-                                        </option>
-                                    </select>
-                                    <small class="form-text">Choose the brand for which holograms will be used</small>
-                                </div>
-                            </div>
-
-                            <!-- Quantity (Bottle Size) -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label required">
-                                        <i class="bi bi-cup me-2"></i>
-                                        Bottle Size (Quantity)
-                                    </label>
-                                    <select class="form-select" [(ngModel)]="requestData.bottleSize" name="bottleSize"
-                                        required>
-                                        <option value="">Select Bottle Size</option>
-                                        <option value="180ml">180 ml</option>
-                                        <option value="375ml">375 ml</option>
-                                        <option value="750ml">750 ml</option>
-                                        <option value="1000ml">1000 ml (1 Liter)</option>
-                                    </select>
-                                    <small class="form-text">Select the bottle size for hologram application</small>
-                                </div>
-                            </div>
-
                             <!-- Hologram Type -->
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -108,12 +57,25 @@
                                 <div class="form-group">
                                     <label class="form-label required">
                                         <i class="bi bi-hash me-2"></i>
-                                        Total Number of Holograms
+                                        Total Number of Holograms (Rolls/Quantity)
                                     </label>
                                     <input type="number" class="form-control" [(ngModel)]="requestData.totalHolograms"
                                         name="totalHolograms" required min="1" max="100000"
                                         placeholder="Enter total number">
-                                    <small class="form-text">Enter the total number of holograms required</small>
+                                    <small class="form-text">Enter the total number of hologram rolls/quantity required</small>
+                                </div>
+                            </div>
+
+                            <!-- Remarks (Optional) -->
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        <i class="bi bi-chat-left-text me-2"></i>
+                                        Additional Remarks (Optional)
+                                    </label>
+                                    <textarea class="form-control" [(ngModel)]="requestData.remarks" name="remarks"
+                                        rows="3" placeholder="Enter any additional information or remarks"></textarea>
+                                    <small class="form-text">Provide any additional information about your request</small>
                                 </div>
                             </div>
 
@@ -173,11 +135,16 @@
                         <div class="request-summary">
                             <h6>Request Summary:</h6>
                             <ul class="summary-list">
-                                <li><strong>Usage Date:</strong> {{ requestData.usageDate | date:'dd MMM yyyy' }}</li>
-                                <li><strong>Brand:</strong> {{ requestData.brandName }}</li>
-                                <li><strong>Bottle Size:</strong> {{ requestData.bottleSize }}</li>
+                                <li><strong>Hologram Type:</strong> {{ requestData.hologramType }}</li>
                                 <li><strong>Total Holograms:</strong> {{ requestData.totalHolograms | number }}</li>
+                                <li *ngIf="requestData.remarks"><strong>Remarks:</strong> {{ requestData.remarks }}</li>
                             </ul>
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Note:</strong> After approval by Officer In-Charge, you will receive the allocated holograms. 
+                                The Officer In-Charge will manually record the production details (brand, quantity made, wastage) 
+                                in the Daily Hologram Manufacturing Register.
+                            </div>
                         </div>
                     </div>
                 </div>
