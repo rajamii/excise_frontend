@@ -50,6 +50,12 @@
           </button>
         </li>
         <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-daily-entry'"
+            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')" type="button">
+            <i class="bi bi-calendar-check me-2"></i> HOLOGRAM DAILY ENTRY
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'register'"
             [class.text-danger]="activeTab === 'register'" (click)="setActiveTab('register')" type="button">
             <i class="bi bi-journal-text me-2"></i> OFFICER REGISTER
@@ -487,6 +493,26 @@
         </div>
       </div>
       <app-hologram-manufacturing-register></app-hologram-manufacturing-register>
+    </div>
+
+    <!-- Hologram Daily Entry Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'" [class.active]="activeTab === 'hologram-daily-entry'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-primary mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-calendar-check me-2"></i>
+              Hologram Daily Entry Register - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Daily entry register for hologram usage tracking. 
+              Record daily hologram consumption, production details, and maintain accurate records 
+              of hologram utilization in the manufacturing process.
+            </p>
+          </div>
+        </div>
+      </div>
+      <app-hologram-dailyregisteroic></app-hologram-dailyregisteroic>
     </div>
   </div>
 </div>

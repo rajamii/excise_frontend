@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
+import { HologramDailyregisteroicComponent } from '../HoloGram/hologram-dailyregisteroic/hologram-dailyregisteroic.component';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -65,7 +66,7 @@ interface BrandRow {
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
-  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent],
+  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent, HologramDailyregisteroicComponent],
   templateUrl: './officer-in-charge.component.html',
   styleUrl: './officer-in-charge.component.scss'
 })
