@@ -34,7 +34,10 @@
               >
                 <option value="" disabled>-- Select Distributor --</option>
                 <option
-                  *ngFor="let distributor of distributors; trackBy: trackByDistributorId"
+                  *ngFor="
+                    let distributor of distributors;
+                    trackBy: trackByDistributorId
+                  "
                   [value]="distributor.distributorName"
                 >
                   {{ distributor.distributorName }}
@@ -76,7 +79,12 @@
                 [(ngModel)]="formData.depotAddress"
                 (change)="onDepotAddressChange()"
               >
-                <option value="" disabled>-- Select Depot Address ({{ availableDepotAddresses.length }} available) --</option>
+                <option value="" disabled>
+                  -- Select Depot Address ({{
+                    availableDepotAddresses.length
+                  }}
+                  available) --
+                </option>
                 <option
                   *ngFor="let address of availableDepotAddresses"
                   [value]="address"
@@ -93,8 +101,12 @@
                 placeholder="Depot address will be auto-filled"
               />
               <!-- Helper text for multiple addresses -->
-              <small *ngIf="availableDepotAddresses.length > 1" class="text-muted">
-                This distributor has multiple depot locations. Please select one.
+              <small
+                *ngIf="availableDepotAddresses.length > 1"
+                class="text-muted"
+              >
+                This distributor has multiple depot locations. Please select
+                one.
               </small>
             </div>
           </div>

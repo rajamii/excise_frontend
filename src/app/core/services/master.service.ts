@@ -52,7 +52,19 @@ export interface DistRow {
   distributorName: string;
   depoAddress: string;
 }
-
+export interface LiquorRates {
+  brand: string;
+  size: string;
+  exFactoryPrice: number;
+  educationCess: number;
+  exciseDuty: number;
+  additionalExcise: number;
+  additionalExcise12_5: number;
+  bottlingFee: number;
+  exportFee: number;
+  mrpPerBottle: number;
+  totalPricePerCase: number;
+}
 @Injectable({
   providedIn: 'root',
 })
@@ -185,6 +197,50 @@ export class MasterService {
         `${environment.apiBaseUrl}/transactional/supply_chain/liquor-data/brands/`
       )
       .pipe(map((response: any) => response.data || []));
+  }
+
+  public getLiquorRates(
+    brandName: string,
+    size: string
+  ): Observable<LiquorRates> {
+    return this.http
+      .get<{
+        success: boolean;
+        data: LiquorRates;
+      }>(
+        `${environment.apiBaseUrl}/transactional/supply_chain/liquor-data/rates/`,
+        {
+          params: {
+            brand_name: brandName,
+            pack_size_ml: size.replace('ml', ''),
+          },
+        }
+      )
+      .pipe(
+        map((response) => {
+          if (!response.success || !response.data) {
+            throw new Error('Failed to fetch liquor rates');
+          }
+          return response.data;
+        }),
+        catchError((error) => {
+          console.error('Error fetching liquor rates:', error);
+          // Return default values on error
+          return of({
+            brand: brandName,
+            size: `${size}ml`,
+            exFactoryPrice: 0,
+            educationCess: 0,
+            exciseDuty: 0,
+            additionalExcise: 0,
+            additionalExcise12_5: 0,
+            bottlingFee: 0,
+            exportFee: 0,
+            mrpPerBottle: 0,
+            totalPricePerCase: 0,
+          });
+        })
+      );
   }
 
   getDistributors(): Observable<DistRow[]> {

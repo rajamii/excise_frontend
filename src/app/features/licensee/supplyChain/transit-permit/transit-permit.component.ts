@@ -1,13 +1,21 @@
-import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Inject,
+  PLATFORM_ID,
+  ChangeDetectorRef,
+} from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
   Validators,
   FormsModule,
 } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MasterService } from '../../../../core/services/master.service';
+import { isPlatformBrowser } from '@angular/common';
+import { Observable, of, map, catchError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 interface BrandSizeData {
@@ -46,6 +54,20 @@ interface Product {
   additionalExcise: number;
 }
 
+interface LiquorRate {
+  brand: string;
+  size: string;
+  exFactoryPrice: number;
+  educationCess: number;
+  exciseDuty: number;
+  additionalExcise: number;
+  additionalExcise12_5: number;
+  bottlingFee: number;
+  exportFee: number;
+  mrpPerBottle: number;
+  totalPricePerCase: number;
+}
+
 @Component({
   selector: 'app-transit-permit',
   standalone: true,
@@ -66,7 +88,11 @@ export class TransitPermitComponent implements OnInit {
   };
 
   // Distributor data
-  distributors: Array<{ id: number; distributorName: string; depoAddress: string }> = [];
+  distributors: Array<{
+    id: number;
+    distributorName: string;
+    depoAddress: string;
+  }> = [];
   depotAddresses: string[] = [];
   availableDepotAddresses: string[] = []; // Available depot addresses for selected distributor
 
@@ -78,29 +104,23 @@ export class TransitPermitComponent implements OnInit {
   validationErrors: string[] = [];
   isLocked = false;
 
-  // Sample rates for calculation
-  private rates = {
-    'royal-stag': {
-      educationCess: 15.5,
-      exciseDuty: 125.0,
-      additionalExcise: 45.0,
-    },
-    'blenders-pride': {
-      educationCess: 18.0,
-      exciseDuty: 140.0,
-      additionalExcise: 50.0,
-    },
-    'officers-choice': {
-      educationCess: 12.0,
-      exciseDuty: 95.0,
-      additionalExcise: 35.0,
-    },
-    'imperial-blue': {
-      educationCess: 14.0,
-      exciseDuty: 110.0,
-      additionalExcise: 40.0,
-    },
-  };
+  // Rates will be populated from the API
+  private rates: {
+    [key: string]: {
+      educationCess: number;
+      exciseDuty: number;
+      additionalExcise: number;
+    };
+  } = {};
+
+  // Helper method to get rate key from display name
+  private getRateKey(displayName: string): string {
+    // Find the matching brand name in the rates object (case-insensitive)
+    const key = Object.keys(this.rates).find(
+      (key) => key.toLowerCase() === displayName.toLowerCase()
+    );
+    return key || displayName; // Return the original if not found
+  }
 
   vehicleNumbers: string[] = [
     'SK 01 AB 1234',
@@ -125,10 +145,14 @@ export class TransitPermitComponent implements OnInit {
   private fetchDistributors(): void {
     this.masterService.getDistributors().subscribe({
       next: (
-        data: Array<{ id: number; distributorName: string; depoAddress: string }>
+        data: Array<{
+          id: number;
+          distributorName: string;
+          depoAddress: string;
+        }>
       ) => {
         this.distributors = [...data]; // Create new array reference
-        
+
         // Force change detection
         this.cdr.detectChanges();
       },
@@ -152,7 +176,7 @@ export class TransitPermitComponent implements OnInit {
       this.availableDepotAddresses = [];
       return;
     }
-    
+
     // Find all distributors with the same name (multiple depot addresses)
     const matchingDistributors = this.distributors.filter(
       (d) => d.distributorName === this.formData.soleDistributor
@@ -160,8 +184,10 @@ export class TransitPermitComponent implements OnInit {
 
     if (matchingDistributors.length > 0) {
       // Get all unique depot addresses for this distributor
-      this.availableDepotAddresses = [...new Set(matchingDistributors.map(d => d.depoAddress))];
-      
+      this.availableDepotAddresses = [
+        ...new Set(matchingDistributors.map((d) => d.depoAddress)),
+      ];
+
       if (this.availableDepotAddresses.length === 1) {
         // Only one address, auto-fill it
         this.formData.depotAddress = this.availableDepotAddresses[0];
@@ -184,8 +210,7 @@ export class TransitPermitComponent implements OnInit {
   ngOnInit(): void {
     // Initialize distributors array
     this.distributors = [];
-    
-    this.initializeDefaultBrands();
+
     this.fetchBrands();
     this.fetchDistributors();
 
@@ -210,49 +235,34 @@ export class TransitPermitComponent implements OnInit {
   private fetchBrands(): void {
     this.masterService.getLiquorBrands().subscribe({
       next: (data: BrandSizeData[]) => {
-        // Process the brand and size data
         this.brands = {};
         this.brandOptions = [];
+        this.rates = {}; // Initialize rates object
+
+        // Process each brand WITHOUT making API calls
         data.forEach((item: BrandSizeData) => {
           if (item.brandName) {
             this.brands[item.brandName] = item.sizes || [];
+
+            // Initialize rates with default values - NO API CALLS
+            this.rates[item.brandName] = {
+              educationCess: 0,
+              exciseDuty: 0,
+              additionalExcise: 0,
+            };
           }
         });
 
-        // Update brand options
         this.brandOptions = Object.keys(this.brands).sort();
-
         console.log('Fetched brands and sizes:', this.brands);
       },
       error: (error: any) => {
         console.error('Error fetching brands:', error);
-        // Fallback to default data if API fails
-        this.initializeDefaultBrands();
+        // Initialize empty objects if API call fails
+        this.brands = {};
+        this.brandOptions = [];
       },
     });
-  }
-
-  private initializeDefaultBrands(): void {
-    // Initialize with default brands if needed
-    this.brands = {
-      'Royal Stag': [180, 375, 750, 1000],
-      'Blenders Pride': [180, 375, 750, 1000],
-      'Officers Choice': [180, 375, 750, 1000],
-      'Imperial Blue': [180, 375, 750, 1000],
-    };
-    this.brandOptions = Object.keys(this.brands);
-    this.brands = {
-      'Royal Stag': [180, 375, 750],
-      'Blenders Pride': [180, 375, 750],
-      'Officers Choice': [180, 375, 750],
-      'Imperial Blue': [180, 375, 750],
-    };
-    this.brandOptions = Object.keys(this.brands).sort();
-
-    // Sort sizes for each brand
-    for (const brand in this.brands) {
-      this.brands[brand].sort((a: number, b: number) => a - b);
-    }
   }
 
   onBrandChange(): void {
@@ -271,40 +281,53 @@ export class TransitPermitComponent implements OnInit {
   }
 
   addProduct(): void {
+    // Basic validation
+    if (!this.formData.brand || !this.formData.size || !this.formData.cases) {
+      this.validationErrors.push('Please fill in all required fields');
+      return;
+    }
+
+    // Clear previous errors
     this.validationErrors = [];
 
-    // Validate form
-    if (!this.validateForm()) {
-      return;
-    }
+    // Get the brand name without the display prefix if it exists
+    const brandName = this.getBrandValue(this.formData.brand);
+    const size = this.formData.size.replace('ml', ''); // Remove 'ml' suffix if present
 
-    // Get rates for the selected brand
-    const brandRates =
-      this.rates[this.formData.brand as keyof typeof this.rates];
-    if (!brandRates) {
-      this.validationErrors.push('Invalid brand selected');
-      return;
-    }
+    // Get or fetch rates for the selected brand and size
+    this.getLiquorRates(brandName, size).subscribe((rate) => {
+      if (!rate) {
+        console.error(
+          'Failed to fetch rates for brand:',
+          brandName,
+          'size:',
+          size
+        );
+        this.validationErrors.push(
+          'Failed to fetch rates for the selected product'
+        );
+        return;
+      }
 
-    // Create new product
-    const newProduct: Product = {
-      brand: this.getBrandDisplayName(this.formData.brand),
-      size: this.formData.size + 'ml',
-      cases: this.formData.cases,
-      educationCess: brandRates.educationCess,
-      exciseDuty: brandRates.exciseDuty,
-      additionalExcise: brandRates.additionalExcise,
-    };
+      // Create new product with display name
+      const newProduct: Product = {
+        brand: this.formData.brand, // Keep the display name for the UI
+        size: this.formData.size + 'ml',
+        cases: this.formData.cases,
+        educationCess: rate.educationCess,
+        exciseDuty: rate.exciseDuty,
+        additionalExcise: rate.additionalExcise,
+      };
 
-    // Add to products list
-    this.products.push(newProduct);
+      // Add to products list
+      this.products.push(newProduct);
 
-    // Reset form fields for next product
-    this.formData.brand = '';
-    this.formData.size = '';
-    this.formData.cases = 0;
-
-    console.log('Product added:', newProduct);
+      // Reset form fields for next product
+      this.formData.brand = '';
+      this.formData.size = '';
+      this.formData.cases = 0;
+      this.sizeOptions = [];
+    });
   }
 
   deleteProduct(index: number): void {
@@ -346,8 +369,33 @@ export class TransitPermitComponent implements OnInit {
   }
 
   getBrandValue(displayName: string): string {
-    // Convert from display format to URL-friendly format
-    return displayName.toLowerCase().replace(/\s+/g, '-');
+    return displayName.replace(/\(\d+ml\)/g, '').trim();
+  }
+
+  // Method to fetch liquor rates for a specific brand and size
+  getLiquorRates(
+    brandName: string,
+    size: string
+  ): Observable<LiquorRate | null> {
+    return this.masterService.getLiquorRates(brandName, size).pipe(
+      map((response: LiquorRate) => ({
+        brand: response.brand,
+        size: response.size,
+        exFactoryPrice: response.exFactoryPrice,
+        educationCess: response.educationCess,
+        exciseDuty: response.exciseDuty,
+        additionalExcise: response.additionalExcise,
+        additionalExcise12_5: response.additionalExcise12_5,
+        bottlingFee: response.bottlingFee,
+        exportFee: response.exportFee,
+        mrpPerBottle: response.mrpPerBottle,
+        totalPricePerCase: response.totalPricePerCase,
+      })),
+      catchError((error: any) => {
+        console.error('Error fetching liquor rates:', error);
+        return of(null);
+      })
+    );
   }
 
   getTotalEducationCess(): number {
