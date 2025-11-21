@@ -50,6 +50,34 @@ export class SupplyChainRequisitionViewComponent implements OnInit {
   }
 
   private loadRequisitionData(refNo: string): void {
+    // First check localStorage for import permit requests
+    if (this.isBrowser) {
+      const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+      const importPermitData = importPermitRequests.find((permit: any) => permit.refNo === refNo);
+      
+      if (importPermitData) {
+        // Convert import permit data to requisition format
+        this.requisitionData = {
+          id: importPermitData.refNo,
+          referenceNo: importPermitData.refNo,
+          submissionDate: new Date(importPermitData.date),
+          distilleryName: this.getDistilleryName(importPermitData.liftedFrom),
+          status: 'THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.',
+          brAmount: 8.00,
+          quantity: importPermitData.quantity,
+          numberOfPermits: importPermitData.numberOfPermits,
+          bulkSpiritType: importPermitData.bulkSpiritType,
+          strengthTo: importPermitData.strengthTo,
+          liftedFrom: importPermitData.liftedFrom,
+          viaRoute: importPermitData.viaRoute,
+          checkpostEntry: importPermitData.checkpostEntry,
+          purpose: importPermitData.purpose
+        };
+        return;
+      }
+    }
+
+    // Fallback to sample data if not found in localStorage
     const sampleData: RequisitionData[] = [
       {
         id: '1',

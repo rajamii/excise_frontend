@@ -1,0 +1,290 @@
+<!-- Transit Register Header -->
+<div class="transit-register-header">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="header-info">
+      <h4 class="register-title">
+        <i class="bi bi-truck me-2"></i>
+        Transit Register
+      </h4>
+      <p class="register-subtitle">Track and manage all transit permit applications</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-success me-2">
+        <i class="bi bi-plus-circle me-2"></i>
+        New Transit Permit
+      </button>
+      <button class="btn btn-danger" (click)="clearCache()" title="Clear all transit data">
+        <i class="bi bi-trash me-2"></i>
+        Clear Cache
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="summary-card total-requests">
+        <div class="card-icon">
+          <i class="bi bi-list-ul"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ filteredTransitData.length }}</h3>
+          <p class="card-label">Total Transit Permits</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card issued-requests">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getTransitStatusCount('ISSUED') }}</h3>
+          <p class="card-label">Issued</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card processing-requests">
+        <div class="card-icon">
+          <i class="bi bi-hourglass-split"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getTransitStatusCount('PROCESSING') }}</h3>
+          <p class="card-label">Processing</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card total-amount">
+        <div class="card-icon">
+          <i class="bi bi-currency-rupee"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</h3>
+          <p class="card-label">Total Amount</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compact Filter Section for Transit -->
+<div class="compact-filter-section mb-3">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="filter-label-text">
+      <i class="bi bi-funnel me-1"></i>
+      <small class="text-muted">Filters:</small>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="compact-filter">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="transitDateFilter"
+        (change)="onTransitDateFilterChange()" placeholder="Date" title="Filter by date">
+    </div>
+
+    <!-- Month Filter -->
+    <div class="compact-filter">
+      <input type="month" class="form-control form-control-sm" [(ngModel)]="transitMonthFilter"
+        (change)="onTransitMonthFilterChange()" placeholder="Month" title="Filter by month">
+    </div>
+
+    <!-- Year Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="transitYearFilter"
+        (change)="onTransitYearFilterChange()" title="Filter by year">
+        <option value="">All Years</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+      </select>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="transitStatusFilter"
+        (change)="onTransitStatusFilterChange()" title="Filter by status">
+        <option value="">All Status</option>
+        <option value="ISSUED">Issued</option>
+        <option value="PROCESSING">Processing</option>
+        <option value="PENDING">Pending</option>
+        <option value="APPROVED">Approved</option>
+      </select>
+    </div>
+
+    <!-- Clear Button - only show when filters are active -->
+    <button class="btn btn-outline-danger btn-sm" (click)="clearTransitFilters()"
+      *ngIf="transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter"
+      title="Clear all filters">
+      <i class="bi bi-x-circle"></i>
+      Clear
+    </button>
+  </div>
+
+  <!-- Filter Results Summary -->
+  <div class="filter-results-compact mt-2"
+    *ngIf="transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter">
+    <small class="text-info">
+      <i class="bi bi-info-circle me-1"></i>
+      Showing <strong>{{ filteredTransitData.length }}</strong> of <strong>{{ transitData.length }}</strong>
+      transit permits
+      <span *ngIf="transitDateFilter" class="filter-tag">Date: {{ transitDateFilter | date:'dd MMM yyyy'
+        }}</span>
+      <span *ngIf="transitMonthFilter" class="filter-tag">Month: {{ transitMonthFilter | date:'MMM yyyy'
+        }}</span>
+      <span *ngIf="transitYearFilter" class="filter-tag">Year: {{ transitYearFilter }}</span>
+      <span *ngIf="transitStatusFilter" class="filter-tag">Status: {{ transitStatusFilter }}</span>
+    </small>
+  </div>
+</div>
+
+<!-- Transit Register Table -->
+<div class="transit-register-table">
+  <div class="register-container">
+    <div class="register-header-bar">
+      <h5 class="register-table-title">
+        <i class="bi bi-table me-2"></i>
+        Transit Register Entries
+      </h5>
+      <div class="register-info">
+        <span class="entries-count">{{ filteredTransitData.length }} Entries</span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="filteredTransitData.length > 0">
+      <table class="table register-table">
+        <thead>
+          <tr>
+            <th class="sl-no">Sl. No.</th>
+            <th class="ref-number">Ref. No</th>
+            <th class="submission-date">App. Sub. Date</th>
+            <th class="distillery-name">Distillery Name</th>
+            <th class="status">Status</th>
+            <th class="actions">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (
+          item of getPaged(filteredTransitData);
+          track item.referenceNo;
+          let i = $index
+          ) {
+          <tr class="register-row">
+            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
+            <td class="ref-number">
+              <span class="ref-text">{{ item.referenceNo }}</span>
+            </td>
+            <td class="submission-date">
+              <span class="date-text">{{ item.submissionDate }}</span>
+            </td>
+            <td class="distillery-name">
+              <span class="company-name">{{ item.distilleryName }}</span>
+            </td>
+            <td class="status">
+              <span
+                class="status-badge status-{{ item.status.toLowerCase().includes('issued') ? 'issued' : 
+                                                      item.status.toLowerCase().includes('processing') ? 'processing' : 
+                                                      item.status.toLowerCase().includes('pending') ? 'pending' : 'default' }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="actions">
+              <div class="action-buttons">
+                <button type="button" class="btn btn-success btn-sm" (click)="applicationCheck(item)"
+                  title="Application Check">
+                  <i class="bi bi-search me-1"></i>
+                  Application Check
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredTransitData.length === 0">
+      <div class="empty-icon">
+        <i class="bi bi-journal-x"></i>
+      </div>
+      <h5 class="empty-title">
+        {{ (transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter) ? 'No
+        Matching Transit Permits Found' : 'No Transit Permits Found' }}
+      </h5>
+      <p class="empty-message">
+        {{ (transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter) ?
+        'No transit permits match your current filter criteria. Try adjusting your filters or clear them to
+        see all permits.' :
+        'You haven\'t submitted any transit permits yet. Start by creating your first transit permit.' }}
+      </p>
+      <button class="btn btn-primary"
+        *ngIf="filteredTransitData.length === 0 && !transitDateFilter && !transitMonthFilter && !transitYearFilter && !transitStatusFilter">
+        <i class="bi bi-plus-circle me-2"></i>
+        Create New Transit Permit
+      </button>
+    </div>
+
+    <!-- Register Summary Footer -->
+    <div class="register-footer" *ngIf="filteredTransitData.length > 0">
+      <div class="summary-row">
+        <div class="summary-item">
+          <span class="summary-label">Total Transit Permits:</span>
+          <span class="summary-value">{{ filteredTransitData.length }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Total Amount:</span>
+          <span class="summary-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="register-pagination" *ngIf="filteredTransitData.length > 0">
+  <div class="d-flex justify-content-between align-items-center">
+    <div class="pagination-info">
+      <span class="info-text">
+        Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }}-{{
+        Math.min(getCurrentPage() * getPageSize(),
+        filteredTransitData.length) }} of {{ filteredTransitData.length }} entries
+      </span>
+    </div>
+    <div class="pagination-controls">
+      <div class="d-flex align-items-center gap-3">
+        <div class="page-size-selector">
+          <label class="selector-label">Show:</label>
+          <select class="form-select form-select-sm" [ngModel]="getPageSize()"
+            (ngModelChange)="changePageSize($event)">
+            <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+          </select>
+        </div>
+        <div class="btn-group btn-group-sm pagination-buttons">
+          <button class="btn btn-outline-secondary" (click)="goToPage(1, filteredTransitData)"
+            [disabled]="getCurrentPage() === 1">
+            «
+          </button>
+          <button class="btn btn-outline-secondary"
+            (click)="goToPage(getCurrentPage() - 1, filteredTransitData)"
+            [disabled]="getCurrentPage() === 1">
+            ‹
+          </button>
+          <span class="btn btn-light disabled">
+            {{ getCurrentPage() }} / {{ getTotalPages(filteredTransitData) }}
+          </span>
+          <button class="btn btn-outline-secondary"
+            (click)="goToPage(getCurrentPage() + 1, filteredTransitData)"
+            [disabled]="getCurrentPage() === getTotalPages(filteredTransitData)">
+            ›
+          </button>
+          <button class="btn btn-outline-secondary"
+            (click)="goToPage(getTotalPages(filteredTransitData), filteredTransitData)"
+            [disabled]="getCurrentPage() === getTotalPages(filteredTransitData)">
+            »
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

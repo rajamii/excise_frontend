@@ -1,6 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 interface HologramFormData {
   refNo: string;
@@ -9,24 +10,31 @@ interface HologramFormData {
   localQtyLakh: number | null;
   exportQtyLakh: number | null;
   defenceQtyLakh: number | null;
-  status: 'Draft' | 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Draft' | 'Submitted' | 'Forwarded to IT Cell' | 'Under Review' | 'Forwarded to Commissioner' | 'Approved by Commissioner - Ready for Payment' | 'Payment Completed' | 'Approved' | 'Rejected';
   submittedDate?: string;
   reviewedBy?: string;
   reviewedDate?: string;
   remarks?: string;
-  uploadedFile?: File;
+  editedByCommissioner?: boolean;
+  editHistory?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+  };
 }
 
-interface UploadedDocument {
-  id: string;
-  fileName: string;
-  fileSize: number;
-  uploadDate: Date;
-  fileType: string;
-  status: 'Uploaded' | 'Processing' | 'Processed' | 'Error';
-  description?: string;
-  category: 'Hologram' | 'Permit' | 'License' | 'Other';
-}
+
 
 @Component({
   selector: 'app-itcell',
@@ -57,11 +65,7 @@ export class ITCELLComponent implements OnInit {
   statusFilter: string = '';
   companyFilter: string = '';
   
-  // Upload Documents
-  uploadedDocuments: UploadedDocument[] = [];
-  selectedFiles: File[] = [];
-  uploadProgress: number = 0;
-  isUploading: boolean = false;
+
   
   // Available options
   months = [
@@ -81,17 +85,16 @@ export class ITCELLComponent implements OnInit {
   
   years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
   statusOptions = ['All', 'Draft', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
-  documentCategories = ['Hologram', 'Permit', 'License', 'Other'];
+
   
   private isBrowser = false;
 
-  constructor(@Inject(PLATFORM_ID) platformId: Object) {
+  constructor(@Inject(PLATFORM_ID) platformId: Object, private router: Router) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
     this.loadHologramData();
-    this.loadUploadedDocuments();
     this.applyFilters();
   }
 
@@ -102,14 +105,38 @@ export class ITCELLComponent implements OnInit {
     }
     
     const stored = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    this.hologramData = stored.map((item: any) => ({
-      ...item,
-      status: item.status || 'Submitted',
-      submittedDate: item.submittedDate || item.date,
-      reviewedBy: item.reviewedBy || '',
-      reviewedDate: item.reviewedDate || '',
-      remarks: item.remarks || ''
-    }));
+    this.hologramData = stored.map((item: any) => {
+      // Determine the display status based on approval stages
+      let displayStatus = item.status || 'Submitted';
+      
+      // Check conditions in priority order (most specific first)
+      
+      // 1. If payment completed, show "Payment Completed"
+      if (item.paymentCompleted === true) {
+        displayStatus = 'Payment Completed';
+      }
+      // 2. If Commissioner approved (and payment not completed), show "Approved by Commissioner"
+      else if (item.commissionerStatus === 'Approved' && item.paymentCompleted !== true) {
+        displayStatus = 'Approved by Commissioner - Ready for Payment';
+      }
+      // 3. If IT Cell forwarded to Commissioner and Commissioner pending, show "Forwarded to Commissioner"
+      else if (item.itCellStatus === 'Forwarded' && item.commissionerStatus === 'Pending') {
+        displayStatus = 'Forwarded to Commissioner';
+      }
+      // 4. If status is already set to Forwarded to Commissioner
+      else if (item.status === 'Forwarded to Commissioner') {
+        displayStatus = 'Forwarded to Commissioner';
+      }
+      
+      return {
+        ...item,
+        status: displayStatus,
+        submittedDate: item.submittedDate || item.date,
+        reviewedBy: item.reviewedBy || '',
+        reviewedDate: item.reviewedDate || '',
+        remarks: item.remarks || ''
+      };
+    });
 
     // Add sample data if none exists
     if (this.hologramData.length === 0) {
@@ -157,44 +184,7 @@ export class ITCELLComponent implements OnInit {
     }
   }
 
-  private loadUploadedDocuments(): void {
-    if (!this.isBrowser) {
-      this.uploadedDocuments = [];
-      return;
-    }
-    
-    const stored = JSON.parse(localStorage.getItem('uploadedDocuments') || '[]');
-    this.uploadedDocuments = stored.map((item: any) => ({
-      ...item,
-      uploadDate: new Date(item.uploadDate)
-    }));
 
-    // Add sample data if none exists
-    if (this.uploadedDocuments.length === 0) {
-      this.uploadedDocuments = [
-        {
-          id: '1',
-          fileName: 'hologram_requisition_001.pdf',
-          fileSize: 245760,
-          uploadDate: new Date('2024-01-15'),
-          fileType: 'PDF',
-          status: 'Processed',
-          description: 'Hologram requisition form',
-          category: 'Hologram'
-        },
-        {
-          id: '2',
-          fileName: 'permit_application_002.pdf',
-          fileSize: 189440,
-          uploadDate: new Date('2024-01-20'),
-          fileType: 'PDF',
-          status: 'Processing',
-          description: 'Import permit application',
-          category: 'Permit'
-        }
-      ];
-    }
-  }
 
   applyFilters(): void {
     let filtered = [...this.hologramData];
@@ -239,25 +229,7 @@ export class ITCELLComponent implements OnInit {
     this.applyFilters();
   }
 
-  onFileSelected(event: any, hologram?: HologramFormData): void {
-    if (hologram) {
-      // File upload for specific hologram record
-      const file = event.target.files[0];
-      if (file) {
-        hologram.uploadedFile = file;
-        // Update the hologram data
-        this.updateHologramInStorage(hologram);
-      }
-    } else {
-      // General file selection (for bulk upload if needed)
-      this.selectedFiles = Array.from(event.target.files);
-    }
-  }
 
-  removeFile(hologram: HologramFormData): void {
-    hologram.uploadedFile = undefined;
-    this.updateHologramInStorage(hologram);
-  }
 
   private updateHologramInStorage(hologram: HologramFormData): void {
     if (!this.isBrowser) return;
@@ -270,58 +242,7 @@ export class ITCELLComponent implements OnInit {
     }
   }
 
-  uploadFiles(): void {
-    if (this.selectedFiles.length === 0) return;
 
-    this.isUploading = true;
-    this.uploadProgress = 0;
-
-    // Simulate file upload progress
-    const interval = setInterval(() => {
-      this.uploadProgress += 10;
-      if (this.uploadProgress >= 100) {
-        clearInterval(interval);
-        this.processUploadedFiles();
-      }
-    }, 200);
-  }
-
-  private processUploadedFiles(): void {
-    this.selectedFiles.forEach(file => {
-      const document: UploadedDocument = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        fileName: file.name,
-        fileSize: file.size,
-        uploadDate: new Date(),
-        fileType: file.type.split('/')[1].toUpperCase(),
-        status: 'Processed',
-        description: '',
-        category: 'Other'
-      };
-
-      this.uploadedDocuments.unshift(document);
-    });
-
-    if (this.isBrowser) {
-      localStorage.setItem('uploadedDocuments', JSON.stringify(this.uploadedDocuments));
-    }
-
-    this.selectedFiles = [];
-    this.isUploading = false;
-    this.uploadProgress = 0;
-  }
-
-  downloadDocument(document: UploadedDocument): void {
-    // Simulate file download
-    console.log('Downloading:', document.fileName);
-  }
-
-  deleteDocument(document: UploadedDocument): void {
-    this.uploadedDocuments = this.uploadedDocuments.filter(doc => doc.id !== document.id);
-    if (this.isBrowser) {
-      localStorage.setItem('uploadedDocuments', JSON.stringify(this.uploadedDocuments));
-    }
-  }
 
   updateHologramStatus(hologram: HologramFormData, status: string): void {
     hologram.status = status as any;
@@ -374,45 +295,101 @@ export class ITCELLComponent implements OnInit {
     this.selectedHologram = null;
   }
 
-  viewUploadedFile(hologram: HologramFormData): void {
-    if (!hologram.uploadedFile) {
-      alert('No file uploaded for this hologram request.');
-      return;
-    }
 
-    // Create a file URL for viewing
-    const fileUrl = URL.createObjectURL(hologram.uploadedFile);
+
+  viewApplication(hologram: HologramFormData): void {
+    // Navigate to unified supply chain hologram view page with IT Cell context
+    const applicationUrl = `/dev-supply-chain-hologram-view?ref=${encodeURIComponent(hologram.refNo)}&from=itcell`;
     
-    // Open file in new tab/window
-    const newWindow = window.open(fileUrl, '_blank');
+    // Open in new tab/window
+    window.open(applicationUrl, '_blank');
     
-    if (!newWindow) {
-      alert('Please allow popups to view the file.');
-    }
-    
-    // Clean up the URL after a delay
-    setTimeout(() => {
-      URL.revokeObjectURL(fileUrl);
-    }, 10000);
+    console.log('Viewing application for:', hologram.refNo);
   }
 
-  downloadUploadedFile(hologram: HologramFormData): void {
-    if (!hologram.uploadedFile) {
-      alert('No file uploaded for this hologram request.');
-      return;
-    }
+  forwardToCommissioner(hologram: HologramFormData): void {
+    // IT Cell forwards directly to Commissioner - no upload slip needed
+    hologram.status = 'Forwarded to Commissioner';
+    hologram.reviewedBy = 'IT Cell';
+    hologram.reviewedDate = new Date().toISOString().split('T')[0];
+    hologram.remarks = 'Verified by IT Cell and forwarded to Commissioner for approval.';
+    
+    // Update in storage
+    if (this.isBrowser) {
+      // Update hologramRequests
+      const stored = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const index = stored.findIndex((h: any) => h.refNo === hologram.refNo);
+      if (index !== -1) {
+        stored[index] = {
+          ...stored[index],
+          ...hologram,
+          itCellStatus: 'Forwarded',
+          uploadSlipEnabled: false, // No upload slip needed in new flow
+          commissionerStatus: 'Pending', // Set Commissioner status to Pending
+          status: 'Forwarded to Commissioner'
+        };
+        localStorage.setItem('hologramRequests', JSON.stringify(stored));
+      }
 
-    // Create download link
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(hologram.uploadedFile);
-    link.download = hologram.uploadedFile.name;
+      // Also update hologramApplications (used by supply chain dashboard)
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      // Update all rows with the same refNo
+      applications.forEach((app: any) => {
+        if (app.refNo === hologram.refNo) {
+          app.status = 'Forwarded to Commissioner';
+          app.itCellStatus = 'Forwarded';
+          app.uploadSlipEnabled = false; // No upload slip in new flow
+          app.commissionerStatus = 'Pending'; // Set Commissioner status to Pending
+        }
+      });
+      localStorage.setItem('hologramApplications', JSON.stringify(applications));
+    }
     
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Reload data to ensure UI updates
+    this.loadHologramData();
+    this.applyFilters();
     
-    // Clean up the URL
-    URL.revokeObjectURL(link.href);
+    alert('Application forwarded to Commissioner for approval. After Commissioner approval, supply chain user can proceed with payment.');
+  }
+
+  // Payment calculation methods
+  calculateWalletPayment(hologram: HologramFormData): number {
+    // Wallet payment: ₹0.15 per hologram (only payment required)
+    const total = (hologram.localQtyLakh || 0) + (hologram.exportQtyLakh || 0) + (hologram.defenceQtyLakh || 0);
+    return total * 0.15;
+  }
+
+  // Check if payment slip has been uploaded
+  isSlipUploaded(hologram: HologramFormData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
+    
+    return request?.paymentSlipUploaded === true;
+  }
+
+  // Check if payment is completed (ALL types with same ref must be paid)
+  isPaymentCompleted(hologram: HologramFormData): boolean {
+    if (!this.isBrowser) return false;
+    
+    // Check if ALL applications with the same reference number have payment completed
+    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    const sameRefApplications = applications.filter((app: any) => app.refNo === hologram.refNo);
+    
+    if (sameRefApplications.length === 0) return false;
+    
+    // All applications with this ref must have paymentCompleted = true
+    return sameRefApplications.every((app: any) => app.paymentCompleted === true);
+  }
+
+  // View payment slip
+  viewPaymentSlip(hologram: HologramFormData): void {
+    this.router.navigate(['/dev-payslip'], {
+      queryParams: {
+        ref: hologram.refNo,
+        type: 'HOLOGRAM'
+      }
+    });
   }
 }

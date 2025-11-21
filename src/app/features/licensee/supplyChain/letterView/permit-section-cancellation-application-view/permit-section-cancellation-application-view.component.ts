@@ -186,55 +186,418 @@ export class PermitSectionCancellationApplicationViewComponent implements OnInit
     }
   }
 
+  getStatusBadgeClass(status: string): string {
+    const statusLower = status?.toLowerCase() || '';
+    switch (statusLower) {
+      case 'approved':
+      case 'completed':
+      case 'cancellation approved':
+        return 'bg-success';
+      case 'pending':
+      case 'under review':
+        return 'bg-warning';
+      case 'rejected':
+      case 'cancelled':
+        return 'bg-danger';
+      case 'processing':
+        return 'bg-info';
+      default:
+        return 'bg-secondary';
+    }
+  }
+
   printLetter(): void {
-    if (!this.isBrowser) return;
-
-    const printable =
-      document.getElementById("permitSectionCancellationPrint")?.innerHTML || "";
-    const styles = Array.from(
-      document.querySelectorAll('link[rel="stylesheet"], style'),
-    )
-      .map((el) => (el as HTMLElement).outerHTML)
-      .join("");
-
-    const win = window.open("", "_blank", "width=900,height=1200");
-    if (!win) {
-      alert("Please allow popups to print the application");
+    if (!this.isBrowser) {
+      console.warn('Print functionality not available in server-side rendering');
       return;
     }
 
+    const printSection = document.getElementById('permitSectionCancellationPrint');
+    if (!printSection) {
+      console.error('Print section not found');
+      alert('Print section not found. Please try again.');
+      return;
+    }
+
+    const printable = printSection.innerHTML;
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+
+    const win = window.open('', '_blank', 'width=1200,height=1400,scrollbars=yes,resizable=yes');
+    if (!win) {
+      alert('Pop-up blocked. Please allow pop-ups for this site to enable printing.');
+      return;
+    }
+
+    const ref = this.data?.referenceNo || 'Unknown';
+    
     win.document.open();
-    const ref = this.data?.referenceNo || "";
     win.document.write(`<!doctype html>
       <html>
         <head>
-          <title>Cancellation Application - ${ref}</title>
+          <title>Permit Cancellation Application - ${ref}</title>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
           ${styles}
           <style>
-            @page { size: A4; margin: 15mm; }
-            body {
-              background: #fff;
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
+            @page { 
+              size: A4; 
+              margin: 12mm; 
             }
-            .no-print { display: none !important; }
-            .printable-content, .printable-content * { visibility: visible !important; }
-            .card { border: none !important; box-shadow: none !important; }
-            .card-header { display: none !important; }
-            .letter-content { margin: 0 !important; }
+            * {
+              box-sizing: border-box;
+            }
+            html, body { 
+              background: #fff !important; 
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+              line-height: 1.3;
+              color: #000 !important;
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: auto;
+              overflow-x: hidden;
+              font-size: 11px !important;
+            }
+            .no-print { 
+              display: none !important; 
+            }
+            .printable-content { 
+              width: 100% !important;
+              max-width: none !important;
+              padding: 0;
+              margin: 0;
+            }
+            
+            /* Override existing styles for print */
+            .card {
+              border: 1px solid #000 !important;
+              box-shadow: none !important;
+              margin: 0 !important;
+              width: 100% !important;
+            }
+            
+            .application-header {
+              background: white !important;
+              border-bottom: 2px solid #000 !important;
+              padding: 10px !important;
+              text-align: center;
+            }
+            
+            .application-header img {
+              height: 40px !important;
+              width: auto !important;
+            }
+            
+            .application-header span {
+              font-size: 12px !important;
+              font-weight: bold !important;
+              color: #000 !important;
+            }
+            
+            .application-header .fs-4 {
+              font-size: 14px !important;
+              font-weight: bold !important;
+              color: #000 !important;
+              margin-top: 5px !important;
+            }
+            
+            .text-danger {
+              color: #000 !important;
+              font-weight: bold !important;
+            }
+            
+            .application-content {
+              padding: 8px !important;
+            }
+            
+            .info-card {
+              background: #f5f5f5 !important;
+              color: #000 !important;
+              border-left: 3px solid #000 !important;
+              margin: 8px 0 !important;
+              padding: 10px !important;
+              page-break-inside: avoid;
+            }
+            
+            .info-card h6 {
+              color: #000 !important;
+              font-size: 11px !important;
+              font-weight: bold !important;
+              margin-bottom: 5px !important;
+            }
+            
+            .info-card p {
+              font-size: 10px !important;
+              margin-bottom: 3px !important;
+              color: #000 !important;
+            }
+            
+            .section-card {
+              border: 1px solid #000 !important;
+              box-shadow: none !important;
+              margin: 8px 0 !important;
+              padding: 10px !important;
+              page-break-inside: avoid;
+            }
+            
+            .section-title {
+              color: #000 !important;
+              border-bottom: 1px solid #000 !important;
+              font-weight: bold !important;
+              font-size: 12px !important;
+              margin-bottom: 8px !important;
+              padding-bottom: 3px !important;
+            }
+            
+            .table {
+              border-collapse: collapse !important;
+              width: 100% !important;
+              margin: 5px 0 !important;
+              font-size: 10px !important;
+            }
+            
+            .table td, .table th {
+              border: 1px solid #000 !important;
+              padding: 6px !important;
+              text-align: left !important;
+              line-height: 1.2 !important;
+            }
+            
+            .table th, .table .bg-light {
+              background: #f0f0f0 !important;
+              font-weight: bold !important;
+              color: #000 !important;
+            }
+            
+            .row {
+              display: flex !important;
+              flex-wrap: wrap !important;
+              margin: 0 !important;
+            }
+            
+            .col-md-6 {
+              flex: 1 !important;
+              padding: 3px !important;
+              min-width: 200px !important;
+            }
+            
+            .badge {
+              background: #f0f0f0 !important;
+              color: #000 !important;
+              border: 1px solid #000 !important;
+              padding: 2px 6px !important;
+              border-radius: 2px !important;
+              font-size: 9px !important;
+              font-weight: bold !important;
+            }
+            
+            .text-success, .text-primary {
+              color: #000 !important;
+              font-weight: bold !important;
+            }
+            
+            /* Compact spacing */
+            .mb-2, .mb-3, .mb-4 {
+              margin-bottom: 8px !important;
+            }
+            
+            .mt-2, .mt-3, .mt-4 {
+              margin-top: 8px !important;
+            }
+            
+            .p-4 {
+              padding: 8px !important;
+            }
+            
+            h1, h2, h3, h4, h5, h6 {
+              margin: 5px 0 3px 0 !important;
+              color: #000 !important;
+            }
+            
+            p {
+              margin: 2px 0 !important;
+              font-size: 10px !important;
+              color: #000 !important;
+            }
+            
+            strong {
+              font-weight: bold !important;
+              color: #000 !important;
+            }
+            
+            /* Ensure everything fits on one page */
+            .application-content > * {
+              page-break-inside: avoid;
+            }
+            
+            .section-card + .section-card {
+              margin-top: 5px !important;
+            }
           </style>
         </head>
         <body>
-          ${printable}
+          <div class="printable-content">
+            ${printable}
+          </div>
         </body>
       </html>`);
     win.document.close();
 
-    win.onload = () => {
+    // Wait for content to load before printing
+    setTimeout(() => {
       win.focus();
       win.print();
-      win.close();
-    };
+      // Don't auto-close to allow user to see the print preview
+    }, 1000);
+  }
+
+  private generateCompactPrintContent(): string {
+    if (!this.data) return '<p>No data available</p>';
+
+    return `
+      <div class="application-content">
+        <!-- Header -->
+        <div class="application-header">
+          <img src="assets/images/sikkim-seal.png" alt="Department Seal" style="float: left;">
+          <div class="header-text">
+            GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT<br>
+            <div class="title">PERMIT CANCELLATION APPLICATION</div>
+          </div>
+          <div style="clear: both;"></div>
+        </div>
+
+        <!-- Cancellation Details Section -->
+        <div class="section-group">
+          <div class="section-title">Cancellation Details</div>
+          <table class="info-table">
+            <tr>
+              <td class="label-col">Reference No:</td>
+              <td class="value-col">${this.data.referenceNo}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Submission Date:</td>
+              <td class="value-col">${this.data.submissionDate.toLocaleDateString('en-GB')}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Distillery:</td>
+              <td class="value-col">${this.data.distilleryName}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Cancellation Date:</td>
+              <td class="value-col">${this.data.submissionDate.toLocaleDateString('en-GB')}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Status & Financial Section -->
+        <div class="section-group">
+          <div class="section-title">Status & Financial</div>
+          <table class="info-table">
+            <tr>
+              <td class="label-col">Current Status:</td>
+              <td class="value-col">
+                ${this.data.status}
+              </td>
+            </tr>
+            <tr>
+              <td class="label-col">Cancellation Fee:</td>
+              <td class="value-col">₹${this.data.amount}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Refund Amount:</td>
+              <td class="value-col">₹${this.data.refundAmount || 0} ${this.data.refundStatus || 'PROCESSING'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Original Permit Information Section -->
+        <div class="section-group">
+          <div class="section-title">Original Permit Information</div>
+          <table class="info-table">
+            <tr>
+              <td class="label-col">Original Permit No:</td>
+              <td class="value-col">${this.data.originalPermitNo || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Original Issue Date:</td>
+              <td class="value-col">${this.data.originalPermitDate?.toLocaleDateString('en-GB') || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Original Amount Paid:</td>
+              <td class="value-col">₹${this.data.amount}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Distillery Name:</td>
+              <td class="value-col">${this.data.distilleryName}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Cancellation Request Information Section -->
+        <div class="section-group">
+          <div class="section-title">Cancellation Request Information</div>
+          <table class="info-table">
+            <tr>
+              <td class="label-col">Reason for Cancellation:</td>
+              <td class="value-col">${this.data.reason || 'Not specified'}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Cancellation Type:</td>
+              <td class="value-col">${this.getCancellationTypeName()}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Requested By:</td>
+              <td class="value-col">${this.data.distilleryName}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Cancellation Date:</td>
+              <td class="value-col">${this.data.submissionDate.toLocaleDateString('en-GB')}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Refund Amount:</td>
+              <td class="value-col">₹${this.data.refundAmount || 0}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Refund Status:</td>
+              <td class="value-col">${this.data.refundStatus || 'PROCESSING'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Original Application Specifications Section -->
+        <div class="section-group">
+          <div class="section-title">Original Application Specifications</div>
+          <table class="info-table">
+            <tr>
+              <td class="label-col">Bulk Spirit Type:</td>
+              <td class="value-col">${this.getBulkSpiritTypeName(this.data.bulkSpiritType || '')}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Strength Range:</td>
+              <td class="value-col">${this.data.strengthFrom || 'N/A'}% - ${this.data.strengthTo || 'N/A'}%</td>
+            </tr>
+            <tr>
+              <td class="label-col">Quantity per Permit:</td>
+              <td class="value-col">${this.data.quantity || 0} BL</td>
+            </tr>
+            <tr>
+              <td class="label-col">Number of Permits:</td>
+              <td class="value-col">${this.data.numberOfPermits || 0}</td>
+            </tr>
+            <tr>
+              <td class="label-col">Total Quantity:</td>
+              <td class="value-col">${this.getTotalQuantity()} BL</td>
+            </tr>
+            <tr>
+              <td class="label-col">Transport Route:</td>
+              <td class="value-col">${this.data.viaRoute || 'Not specified'}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    `;
   }
 
   downloadPDF(): void {

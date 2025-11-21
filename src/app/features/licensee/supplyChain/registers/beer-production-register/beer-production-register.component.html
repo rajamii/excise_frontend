@@ -94,9 +94,15 @@
   <div class="container-fluid">
     <div class="card">
       <div class="card-header bg-success text-white">
-        <h5 class="mb-0">
-          <i class="bi bi-table me-2"></i>Beer Production Register - {{ months[selectedMonth-1].name }} {{ selectedYear }}
-        </h5>
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-table me-2"></i>Beer Production Register - {{ months[selectedMonth-1].name }} {{ selectedYear }}
+          </h5>
+          <small class="text-light">
+            <i class="bi bi-info-circle me-1"></i>
+            <span class="badge bg-light text-success me-1">Green row</span> = Current date (editable)
+          </small>
+        </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
@@ -119,7 +125,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let record of records; let i = index" class="record-row" [class.sunday-row]="record.sundayClosed">
+              <tr *ngFor="let record of records; let i = index" class="record-row" 
+                  [class.sunday-row]="record.sundayClosed"
+                  [class.current-date-row]="isCurrentDate(record)"
+                  [class.disabled-row]="!isDateEditable(record) && !record.sundayClosed">
                 <!-- Sunday closed row: show single merged message row -->
                 <ng-container *ngIf="record.sundayClosed; else regularRow">
                   <td class="fw-semibold text-center">
@@ -142,14 +151,18 @@
                   <input type="number" class="form-control form-control-sm text-end"
                          [(ngModel)]="record.openingBalance"
                          (ngModelChange)="calculateTotals(record)"
-                         [readonly]="isFirstDay(record) || record.locked || record.sundayClosed"
+                         [readonly]="isFirstDay(record) || !isDateEditable(record)"
+                         [class.bg-light]="!isDateEditable(record)"
+                         [title]="!isDateEditable(record) ? 'Only current date entries can be edited' : ''"
                          placeholder="0" min="0" step="0.01">
                 </td>
                 <td class="text-end">
                   <input type="number" class="form-control form-control-sm text-end" 
                          [(ngModel)]="record.production" 
                          (ngModelChange)="calculateTotals(record)"
-                         [readonly]="record.locked || record.sundayClosed"
+                         [readonly]="!isDateEditable(record)"
+                         [class.bg-light]="!isDateEditable(record)"
+                         [title]="!isDateEditable(record) ? 'Only current date entries can be edited' : ''"
                          placeholder="0" min="0" step="0.01">
                 </td>
                 <td class="text-end fw-bold text-primary">
@@ -161,14 +174,18 @@
                   <input type="number" class="form-control form-control-sm text-end" 
                          [(ngModel)]="record.issue" 
                          (ngModelChange)="calculateTotals(record)"
-                         [readonly]="record.locked || record.sundayClosed"
+                         [readonly]="!isDateEditable(record)"
+                         [class.bg-light]="!isDateEditable(record)"
+                         [title]="!isDateEditable(record) ? 'Only current date entries can be edited' : ''"
                          placeholder="0" min="0" step="0.01">
                 </td>
                 <td class="text-end">
                   <input type="number" class="form-control form-control-sm text-end" 
                          [(ngModel)]="record.warehouseLoss" 
                          (ngModelChange)="calculateTotals(record)"
-                         [readonly]="record.locked || record.sundayClosed"
+                         [readonly]="!isDateEditable(record)"
+                         [class.bg-light]="!isDateEditable(record)"
+                         [title]="!isDateEditable(record) ? 'Only current date entries can be edited' : ''"
                          placeholder="0" min="0" step="0.01">
                 </td>
                 <td class="text-end fw-bold text-danger">
@@ -182,7 +199,7 @@
                 
                 <!-- Action -->
                 <td class="text-center">
-                  <button class="btn btn-secondary btn-sm" (click)="makeAsRead(record)" [disabled]="record.locked || record.sundayClosed" title="Make this row read-only">
+                  <button class="btn btn-secondary btn-sm" (click)="makeAsRead(record)" [disabled]="!isDateEditable(record)" title="Make this row read-only">
                     <i class="bi bi-check2-circle me-1"></i>Make as Read
                   </button>
                 </td>
@@ -249,6 +266,7 @@
           </div>
           <div class="card-body">
             <ul class="list-unstyled mb-0 small">
+              <li class="mb-1">• <strong class="text-success">Only current date entries are editable</strong></li>
               <li class="mb-1">• Enter production quantity in liters</li>
               <li class="mb-1">• Enter issue quantity in liters</li>
               <li class="mb-1">• Enter warehouse loss quantity in liters</li>

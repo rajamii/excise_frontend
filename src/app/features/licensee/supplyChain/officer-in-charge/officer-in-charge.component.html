@@ -40,7 +40,13 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'holograms'"
             [class.text-danger]="activeTab === 'holograms'" (click)="setActiveTab('holograms')" type="button">
-            <i class="bi bi-shield-check me-2"></i> HOLOGRAM DETAILS
+            <i class="bi bi-shield-check me-2"></i>Hologram Manufacturing Registers
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-register'"
+            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')" type="button">
+            <i class="bi bi-shield-plus me-2"></i> HOLOGRAM REGISTER
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -362,12 +368,10 @@
                       <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
                         <i class="bi bi-x-lg"></i>
                       </button>
-                      <button class="btn btn-outline-success" (click)="approveBrand(brand)"
-                        [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-check-circle"></i>
                       </button>
-                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)"
-                        [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-x-circle"></i>
                       </button>
                     </div>
@@ -376,6 +380,21 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hologram Register Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'" [class.active]="activeTab === 'hologram-register'">
+      <div class="bg-white">
+        <!-- Show Hologram Requests Component if activated -->
+        <div *ngIf="showHologramRequests">
+          <app-officerinchargehologramreq (backToRegister)="closeHologramRequests()"></app-officerinchargehologramreq>
+        </div>
+        
+        <!-- Show Hologram Details Component by default -->
+        <div *ngIf="!showHologramRequests">
+          <app-hologramdetails (hologramRequestsClicked)="openHologramRequests()"></app-hologramdetails>
         </div>
       </div>
     </div>
@@ -450,396 +469,9 @@
       </div>
     </div>
 
-    <!-- Hologram Details Tab -->
+    <!-- Hologram Manufacturing Register Tab -->
     <div class="tab-pane fade" [class.show]="activeTab === 'holograms'" [class.active]="activeTab === 'holograms'">
-      <!-- Search Section -->
-      <div class="bg-white border-bottom">
-        <div class="container-fluid py-3">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <!-- Left side filters -->
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-              <!-- Month Dropdown -->
-              <div>
-                <label class="form-label small mb-1">Month</label>
-                <select class="form-select form-select-sm" [(ngModel)]="selectedHologramMonth"
-                  (ngModelChange)="onHologramMonthYearChange()">
-                  <option value="jan">January</option>
-                  <option value="feb">February</option>
-                  <option value="mar">March</option>
-                  <option value="apr">April</option>
-                  <option value="may">May</option>
-                  <option value="jun">June</option>
-                  <option value="jul">July</option>
-                  <option value="aug">August</option>
-                  <option value="sep">September</option>
-                  <option value="oct">October</option>
-                  <option value="nov">November</option>
-                  <option value="dec">December</option>
-                </select>
-              </div>
-
-              <!-- Year Dropdown -->
-              <div>
-                <label class="form-label small mb-1">Year</label>
-                <select class="form-select form-select-sm" [(ngModel)]="selectedHologramYear"
-                  (ngModelChange)="onHologramMonthYearChange()">
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                </select>
-              </div>
-
-              <!-- Current Selection Display -->
-              <div>
-                <label class="form-label small mb-1">Current Register</label>
-                <div class="alert alert-info py-1 px-2 mb-0 small">
-                  {{ getHologramCurrentDisplay() }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Right side - Previous Month Balance Info -->
-            <div class="ms-auto">
-              <label class="form-label small mb-1">Previous Month Balance</label>
-              <div class="card border-success border-2 shadow-sm"
-                style="min-width: 320px; background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);">
-                <div class="card-body py-2 px-3">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                      <div class="small text-muted">{{ getHologramPreviousMonthDisplay() }} - {{ selectedHologramType }}
-                      </div>
-                      <div class="fw-bold text-success">Closing Balance: {{ getHologramPreviousMonthClosingBalance() |
-                        number }}</div>
-                    </div>
-                    <div class="text-success">
-                      <i class="bi bi-arrow-down-circle fs-4"></i>
-                    </div>
-                  </div>
-                  <div class="small text-info mt-1">
-                    <i class="bi bi-info-circle me-1"></i>
-                    This becomes current month's opening stock
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hologram Type Tabs -->
-      <div class="bg-white border-bottom">
-        <div class="container-fluid">
-          <ul class="nav nav-tabs border-0">
-            <li class="nav-item">
-              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
-                [class.active]="selectedHologramType === 'LOCAL'"
-                [class.text-primary]="selectedHologramType === 'LOCAL'"
-                [class.bg-light]="selectedHologramType !== 'LOCAL'"
-                [class.border-bottom]="selectedHologramType === 'LOCAL'"
-                [class.border-primary]="selectedHologramType === 'LOCAL'"
-                [class.border-3]="selectedHologramType === 'LOCAL'"
-                [class.fw-semibold]="selectedHologramType === 'LOCAL'" (click)="onHologramTypeChange('LOCAL')"
-                style="border-bottom-width: 3px !important;">
-                <i class="bi bi-house-door me-1 fs-6"></i>LOCAL
-              </button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
-                [class.active]="selectedHologramType === 'EXPORT'"
-                [class.text-primary]="selectedHologramType === 'EXPORT'"
-                [class.bg-light]="selectedHologramType !== 'EXPORT'"
-                [class.border-bottom]="selectedHologramType === 'EXPORT'"
-                [class.border-primary]="selectedHologramType === 'EXPORT'"
-                [class.border-3]="selectedHologramType === 'EXPORT'"
-                [class.fw-semibold]="selectedHologramType === 'EXPORT'" (click)="onHologramTypeChange('EXPORT')"
-                style="border-bottom-width: 3px !important;">
-                <i class="bi bi-globe me-1 fs-6"></i>EXPORT
-              </button>
-            </li>
-            <li class="nav-item">
-              <button class="nav-link border-0 rounded-0 text-muted fw-medium px-4 py-3 transition-all"
-                [class.active]="selectedHologramType === 'DEFENCE'"
-                [class.text-primary]="selectedHologramType === 'DEFENCE'"
-                [class.bg-light]="selectedHologramType !== 'DEFENCE'"
-                [class.border-bottom]="selectedHologramType === 'DEFENCE'"
-                [class.border-primary]="selectedHologramType === 'DEFENCE'"
-                [class.border-3]="selectedHologramType === 'DEFENCE'"
-                [class.fw-semibold]="selectedHologramType === 'DEFENCE'" (click)="onHologramTypeChange('DEFENCE')"
-                style="border-bottom-width: 3px !important;">
-                <i class="bi bi-shield-check me-1 fs-6"></i>DEFENCE
-              </button>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <!-- Data Table Section -->
-      <div class="bg-white">
-        <div class="container-fluid p-3">
-          <!-- Header with Summary Statistics -->
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-              <h5 class="fw-bold mb-1 text-dark">Monthly Statement of Hologram with Manufacturing Unit - {{
-                getHologramCurrentDisplay() }}</h5>
-              <p class="mb-0 small text-muted">Review and approve hologram register entries from {{
-                currentOfficer.distilleryName }}</p>
-            </div>
-            <div class="d-flex gap-3">
-              <span class="badge bg-warning text-dark">
-                <i class="bi bi-clock me-1"></i>Pending: {{ getHologramCount('PENDING') }}
-              </span>
-              <span class="badge bg-success">
-                <i class="bi bi-check-circle me-1"></i>Approved: {{ getHologramCount('APPROVED') }}
-              </span>
-              <span class="badge bg-danger">
-                <i class="bi bi-x-circle me-1"></i>Rejected: {{ getHologramCount('REJECTED') }}
-              </span>
-              <span class="badge bg-info">
-                <i class="bi bi-list-ul me-1"></i>Total: {{ getHologramCount() }}
-              </span>
-            </div>
-          </div>
-
-          <div class="table-responsive overflow-auto" style="max-width: 100vw;">
-            <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
-              <thead class="table-success">
-                <tr>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 120px; min-width: 120px; font-size: 0.875rem;">Entry Date</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Opening Stock</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Fresh Arrival</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total</th>
-                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Utilization</th>
-                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 90px; min-width: 90px; font-size: 0.875rem;">Total Wastage</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Closing Balance</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 100px; min-width: 100px; font-size: 0.875rem;">Status</th>
-                  <th rowspan="2" class="text-center align-middle fw-semibold p-2"
-                    style="width: 150px; min-width: 150px; font-size: 0.875rem;">Actions</th>
-                </tr>
-                <tr>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
-                    From Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
-                    To Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
-                  </th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
-                    From Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
-                    To Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let row of filteredHologramRows" [class.table-warning]="row.status === 'PENDING'"
-                  class="animate__animated animate__fadeIn">
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.entryDate | date:'dd/MM/yyyy' }}
-                    <div class="small text-muted">{{ row.submittedBy }}</div>
-                    <div class="small text-info" *ngIf="row.submissionDate">Submitted: {{ row.submissionDate |
-                      date:'dd/MM/yyyy' }}</div>
-                  </td>
-                  <td class="p-2 align-middle text-end" style="font-size: 0.875rem;">
-                    {{ row.openingStock | number }}
-                    <div class="small text-muted" *ngIf="row.isFirstRowOfMonth">From prev month</div>
-                  </td>
-                  <td class="p-2 align-middle text-end" style="font-size: 0.875rem;">{{ row.freshArrival | number }}
-                  </td>
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{ row.total |
-                    number }}</td>
-
-                  <!-- Utilization -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div *ngFor="let util of row.utilizations">
-                      <small class="d-block">{{ util.fromSerialNo }}</small>
-                    </div>
-                    <span *ngIf="row.utilizations.length === 0" class="text-muted">-</span>
-                  </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div *ngFor="let util of row.utilizations">
-                      <small class="d-block">{{ util.toSerialNo }}</small>
-                    </div>
-                    <span *ngIf="row.utilizations.length === 0" class="text-muted">-</span>
-                  </td>
-                  <td class="p-2 align-middle text-end" style="font-size: 0.875rem;">
-                    <div *ngFor="let util of row.utilizations">
-                      <small class="d-block">{{ util.quantity | number }}</small>
-                    </div>
-                    <div class="border-top pt-1 mt-1 small fw-bold text-center" *ngIf="row.utilizations.length > 1">
-                      {{ row.totalUtilized | number }}
-                    </div>
-                    <span *ngIf="row.utilizations.length === 0" class="text-muted">0</span>
-                  </td>
-
-                  <!-- Wastage -->
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div *ngFor="let waste of row.wastages">
-                      <small class="d-block">{{ waste.fromSerialNo }}</small>
-                    </div>
-                    <span *ngIf="row.wastages.length === 0" class="text-muted">-</span>
-                  </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div *ngFor="let waste of row.wastages">
-                      <small class="d-block">{{ waste.toSerialNo }}</small>
-                    </div>
-                    <span *ngIf="row.wastages.length === 0" class="text-muted">-</span>
-                  </td>
-                  <td class="p-2 align-middle text-end" style="font-size: 0.875rem;">
-                    <div *ngFor="let waste of row.wastages">
-                      <small class="d-block">{{ waste.quantity | number }}</small>
-                    </div>
-                    <span *ngIf="row.wastages.length === 0" class="text-muted">0</span>
-                  </td>
-
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
-                    row.totalWastage | number }}</td>
-                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">{{
-                    row.closingBalance | number }}</td>
-                  <td class="p-2 align-middle text-center" style="font-size: 0.875rem;">
-                    <span class="badge" [ngClass]="getHologramStatusClass(row.status)">
-                      {{ row.status }}
-                    </span>
-                    <div class="small text-muted mt-1" *ngIf="row.editedOnce">
-                      <i class="bi bi-pencil-square me-1"></i>Edited by Officer
-                    </div>
-                  </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <div class="btn-group-vertical btn-group-sm" role="group">
-                      <button class="btn btn-outline-primary btn-sm mb-1" (click)="editHologramRow(row)"
-                        [disabled]="row.editedOnce || row.status === 'APPROVED'"
-                        [title]="row.editedOnce ? 'Already edited once' : row.status === 'APPROVED' ? 'Cannot edit approved row' : 'Edit row'">
-                        <i class="bi bi-pencil"></i> Edit
-                      </button>
-                      <button *ngIf="row.status === 'PENDING'" class="btn btn-outline-success btn-sm mb-1"
-                        (click)="approveHologramRow(row)">
-                        <i class="bi bi-check"></i> Approve
-                      </button>
-                      <button *ngIf="row.status === 'PENDING'" class="btn btn-outline-danger btn-sm"
-                        (click)="rejectHologramRow(row)">
-                        <i class="bi bi-x"></i> Reject
-                      </button>
-                      <span *ngIf="row.status === 'APPROVED'" class="badge bg-success small">
-                        <i class="bi bi-check-circle me-1"></i>Approved
-                      </span>
-                      <span *ngIf="row.status === 'REJECTED'" class="badge bg-danger small">
-                        <i class="bi bi-x-circle me-1"></i>Rejected
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-
-                <!-- Empty state -->
-                <tr *ngIf="filteredHologramRows.length === 0">
-                  <td colspan="14" class="text-center py-5 text-muted">
-                    <i class="bi bi-shield-x display-4 text-muted d-block mb-2"></i>
-                    <h5 class="mt-3 text-muted">No Hologram Records Found</h5>
-                    <p class="text-muted">No {{ selectedHologramType.toLowerCase() }} hologram entries submitted for {{
-                      getHologramCurrentDisplay() }}</p>
-                  </td>
-                </tr>
-
-                <!-- Grand Total Row -->
-                <tr class="table-info fw-bold" *ngIf="filteredHologramRows.length > 0">
-                  <td class="text-center p-2">TOTAL</td>
-                  <td class="text-end p-2">{{ calculateHologramGrandTotals().totalOpening | number }}</td>
-                  <td class="text-end p-2">{{ calculateHologramGrandTotals().totalFreshArrival | number }}</td>
-                  <td class="text-end p-2">{{ calculateHologramGrandTotals().totalTotal | number }}</td>
-                  <td colspan="3" class="text-center p-2">{{ calculateHologramGrandTotals().totalUtilized | number }}
-                  </td>
-                  <td colspan="3" class="text-center p-2">{{ calculateHologramGrandTotals().totalWastage | number }}
-                  </td>
-                  <td class="text-end p-2">{{ calculateHologramGrandTotals().totalWastage | number }}</td>
-                  <td class="text-end p-2">{{ calculateHologramGrandTotals().totalClosing | number }}</td>
-                  <td class="text-center p-2">-</td>
-                  <td class="text-center p-2">-</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Summary Section -->
-          <div class="mt-4" *ngIf="filteredHologramRows.length > 0">
-            <h6 class="fw-bold mb-3">Hologram Summary - {{ selectedHologramType }}</h6>
-            <div class="row">
-              <div class="col-md-6">
-                <div class="card border-info">
-                  <div class="card-body">
-                    <h6 class="card-title">{{ selectedHologramType }} Summary</h6>
-                    <div class="d-flex justify-content-between">
-                      <span>Opening Stock:</span>
-                      <strong>{{ calculateHologramGrandTotals().totalOpening | number }}</strong>
-                    </div>
-                    <small class="text-info">
-                      <i class="bi bi-arrow-right me-1"></i>
-                      Carried from {{ getHologramPreviousMonthDisplay() }}: {{ getHologramPreviousMonthClosingBalance()
-                      | number }}
-                    </small>
-                    <div class="d-flex justify-content-between mt-2">
-                      <span>Fresh Arrival:</span>
-                      <strong>{{ calculateHologramGrandTotals().totalFreshArrival | number }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span>Total Utilized:</span>
-                      <strong>{{ calculateHologramGrandTotals().totalUtilized | number }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span>Total Wastage:</span>
-                      <strong>{{ calculateHologramGrandTotals().totalWastage | number }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
-                      <span>Closing Balance:</span>
-                      <strong class="text-primary">{{ calculateHologramGrandTotals().totalClosing | number }}</strong>
-                    </div>
-                    <small class="text-success">
-                      <i class="bi bi-arrow-right me-1"></i>
-                      Will carry to next month as opening stock
-                    </small>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="card border-warning">
-                  <div class="card-body">
-                    <h6 class="card-title">Officer Review Status</h6>
-                    <div class="d-flex justify-content-between">
-                      <span>Pending Review:</span>
-                      <strong class="text-warning">{{ getHologramCount('PENDING') }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span>Approved:</span>
-                      <strong class="text-success">{{ getHologramCount('APPROVED') }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <span>Rejected:</span>
-                      <strong class="text-danger">{{ getHologramCount('REJECTED') }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between border-top pt-2 mt-2">
-                      <span>Total Entries:</span>
-                      <strong>{{ getHologramCount() }}</strong>
-                    </div>
-                    <div class="mt-2">
-                      <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-success" [style.width.%]="getHologramApprovalPercentage()"
-                          title="Approval Progress">
-                        </div>
-                      </div>
-                      <small class="text-muted">{{ getHologramApprovalPercentage() }}% Approved</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <app-hologram-manufacturing-register></app-hologram-manufacturing-register>
     </div>
   </div>
 </div>

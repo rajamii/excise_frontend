@@ -1,41 +1,90 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
+import {
+  HologramArrivalRecord,
+  HologramDataService,
+  MonthlyStatementSummary,
+  MonthlyTotals
+} from '../../../supplyChain/services/hologram-data.service';
 
-interface HologramUtilization {
-  fromSerialNo: string;
-  toSerialNo: string;
-  quantity: number;
+type MonthlyReportRowType = 'SUMMARY' | 'ARRIVAL' | 'UTILIZATION' | 'WASTAGE';
+
+interface RollDisplayRange {
+  from: string;
+  to: string;
+  qty: number;
+  reason?: string;
 }
 
-interface HologramWastage {
-  fromSerialNo: string;
-  toSerialNo: string;
-  quantity: number;
+interface RollDisplayDetail {
+  rollName: string;
+  ranges: RollDisplayRange[];
 }
 
-interface HologramReportRow {
-  id: string;
-  month: string; // e.g., 'jul'
-  year: string; // e.g., '2025'
-  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Type of hologram
-  entryDate: string; // Date when this entry was made (ISO format)
+interface MonthlyReportRow {
+  rowType: MonthlyReportRowType;
+  label: string;
+  date?: string;
+  openingStock?: number | null;
+  freshArrival?: number | null;
+  total?: number | null;
+  leftOver?: number | null;
+  utilizationFrom?: string;
+  utilizationTo?: string;
+  utilizationQty?: number | null;
+  wastageFrom?: string;
+  wastageTo?: string;
+  wastageQty?: number | null;
+  closingBalance?: number | null;
+  meta?: {
+    cartoonNumber?: string;
+    referenceNo?: string;
+    damageReason?: string;
+    notes?: string;
+    serialRange?: string;
+  };
+  utilizationDetails?: RollDisplayDetail[];
+  wastageDetails?: RollDisplayDetail[];
+}
+
+interface StatementEvent {
+  rowType: 'ARRIVAL' | 'UTILIZATION' | 'WASTAGE';
+  date: string;
+  timestamp: number;
+  quantity: number;
+  fromSerial?: string;
+  toSerial?: string;
+  cartoonNumber?: string;
+  referenceNo?: string;
+  damageReason?: string;
+  rollDetails?: RollDetail[];
+  totalWastage?: number;
+}
+
+interface RollRangeDetail {
+  fromSerial?: string;
+  toSerial?: string;
+  quantity?: number;
+  damageReason?: string;
+}
+
+interface RollDetail {
+  rollName: string;
+  utilizationRanges: RollRangeDetail[];
+  wastageRanges: RollRangeDetail[];
+}
+
+interface MonthlyOverviewSummary {
   openingStock: number;
-  freshArrival: number;
-  total: number;
-  utilizations: HologramUtilization[];
-  wastages: HologramWastage[];
+  totalArrivals: number;
   totalUtilized: number;
   totalWastage: number;
   closingBalance: number;
-  isFixed: boolean;
-  isFirstRowOfMonth: boolean; // Indicates if this is the first row of the month
-  production: {
-    sikkim650ml: number;
-    wb: number;
-    total: number;
-  };
+  arrivalCount: number;
+  utilizationCount: number;
+  wastageCount: number;
 }
 
 @Component({
@@ -45,273 +94,115 @@ interface HologramReportRow {
   templateUrl: './hologram-monthly-report.component.html',
   styleUrls: ['./hologram-monthly-report.component.scss']
 })
-export class HologramMonthlyReportComponent {
-  Math = Math;
-  selectedMonth = 'jul'; // Default to July
-  selectedYear = '2025'; // Default to 2025
-  selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL'; // Default to LOCAL
+export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
+  selectedMonth = 'jul';
+  selectedYear = '2025';
+  selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
 
-  // Sample data organized by month, year, and hologram type
-  reportRows: HologramReportRow[] = [
-    // June 2025 data (previous month) - for carry forward logic
-    {
-      id: '0',
-      month: 'jun',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-06-30',
-      openingStock: 100000,
-      freshArrival: 200000,
-      total: 300000,
-      utilizations: [
-        { fromSerialNo: '200000', toSerialNo: '250000', quantity: 0 }
-      ],
-      wastages: [
-        { fromSerialNo: '250001', toSerialNo: '250100', quantity: 0 }
-      ],
-      totalUtilized: 50001,
-      totalWastage: 100,
-      closingBalance: 249899, // This will be July's opening stock
-      isFixed: true,
-      isFirstRowOfMonth: true,
-      production: {
-        sikkim650ml: 0,
-        wb: 0,
-        total: 0
-      }
-    },
-    // LOCAL data for July 2025
-    {
-      id: '1',
-      month: 'jul',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-07-01',
-      openingStock: 249899, // Carried from June closing balance
-      freshArrival: 2300000,
-      total: 2549899,
-      utilizations: [
-        { fromSerialNo: '275346495', toSerialNo: '275520000', quantity: 0 },
-        { fromSerialNo: '275520001', toSerialNo: '275600000', quantity: 0 }
-      ],
-      wastages: [
-        { fromSerialNo: '275455115', toSerialNo: '275459428', quantity: 0 }
-      ],
-      totalUtilized: 253506,
-      totalWastage: 4314,
-      closingBalance: 2292079,
-      isFixed: true,
-      isFirstRowOfMonth: true, // First row of July
-      production: {
-        sikkim650ml: 175263,
-        wb: 1750,
-        total: 177013
-      }
-    },
-    {
-      id: '2',
-      month: 'jul',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-07-15',
-      openingStock: 1000,
-      freshArrival: 5000,
-      total: 6000,
-      utilizations: [
-        { fromSerialNo: '1000', toSerialNo: '1010', quantity: 0 }
-      ],
-      wastages: [
-        { fromSerialNo: '2000', toSerialNo: '2005', quantity: 0 }
-      ],
-      totalUtilized: 0,
-      totalWastage: 0,
-      closingBalance: 0,
-      isFixed: false,
-      isFirstRowOfMonth: false,
-      production: {
-        sikkim650ml: 0,
-        wb: 0,
-        total: 0
-      }
-    },
-    // EXPORT data for July 2025
-    {
-      id: '3',
-      month: 'jul',
-      year: '2025',
-      hologramType: 'EXPORT',
-      entryDate: '2025-07-01',
-      openingStock: 50000,
-      freshArrival: 100000,
-      total: 150000,
-      utilizations: [
-        { fromSerialNo: 'EX1000', toSerialNo: 'EX1500', quantity: 0 }
-      ],
-      wastages: [],
-      totalUtilized: 0,
-      totalWastage: 0,
-      closingBalance: 0,
-      isFixed: false,
-      isFirstRowOfMonth: true, // First row of July EXPORT
-      production: {
-        sikkim650ml: 0,
-        wb: 0,
-        total: 0
-      }
-    },
-    // DEFENCE data for July 2025
-    {
-      id: '4',
-      month: 'jul',
-      year: '2025',
-      hologramType: 'DEFENCE',
-      entryDate: '2025-07-01',
-      openingStock: 25000,
-      freshArrival: 75000,
-      total: 100000,
-      utilizations: [
-        { fromSerialNo: 'DEF500', toSerialNo: 'DEF600', quantity: 0 }
-      ],
-      wastages: [],
-      totalUtilized: 0,
-      totalWastage: 0,
-      closingBalance: 0,
-      isFixed: false,
-      isFirstRowOfMonth: true, // First row of July DEFENCE
-      production: {
-        sikkim650ml: 0,
-        wb: 0,
-        total: 0
-      }
-    },
-    // August 2025 LOCAL data - to demonstrate carry forward
-    {
-      id: '5',
-      month: 'aug',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-08-01',
-      openingStock: 2292079, // This should be calculated from July's closing balance
-      freshArrival: 1000000,
-      total: 3292079,
-      utilizations: [],
-      wastages: [],
-      totalUtilized: 0,
-      totalWastage: 0,
-      closingBalance: 3292079,
-      isFixed: false,
-      isFirstRowOfMonth: true, // First row of August LOCAL
-      production: {
-        sikkim650ml: 0,
-        wb: 0,
-        total: 0
-      }
+  monthlyStatement: MonthlyStatementSummary | null = null;
+  monthlyTotals: MonthlyTotals = this.createEmptyTotals();
+  approvedEntriesCount = 0;
+  isLoading = true;
+  statementRows: MonthlyReportRow[] = [];
+  overviewSummary: MonthlyOverviewSummary | null = null;
+
+  private storageListener = (event: StorageEvent) => {
+    if (!event.key) {
+      return;
     }
-  ];
+    if (event.key === 'approvedHologramEntries' || event.key === 'hologramInitialOpeningStock' || event.key === 'hologramOverviewRolls') {
+      this.refreshMonthlyData();
+    }
+  };
 
-  filteredRows: HologramReportRow[] = [];
+  constructor(
+    private router: Router, 
+    private route: ActivatedRoute,
+    private cdr: ChangeDetectorRef,
+    public hologramDataService: HologramDataService
+  ) {}
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef) {
-    // Recalculate quantities for existing data
-    this.reportRows.forEach(row => {
-      row.utilizations.forEach(util => {
-        util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
-      });
-      row.wastages.forEach(waste => {
-        waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
-      });
-      this.onRowDataChange(row);
+  ngOnInit(): void {
+    this.initializeFiltersToCurrentMonth();
+
+    this.route.queryParams.subscribe(params => {
+      if (params['month']) this.selectedMonth = params['month'];
+      if (params['year']) this.selectedYear = params['year'];
+      if (params['type']) this.selectedHologramType = params['type'];
+      this.refreshMonthlyData();
     });
-    
-    // Load data for the selected month/year
-    this.loadMonthlyData();
+
+    window.addEventListener('storage', this.storageListener);
+    this.refreshMonthlyData();
   }
 
-  // Monthly data management
-  loadMonthlyData(): void {
-    // Filter data for the selected month, year, and hologram type
-    this.filteredRows = this.reportRows.filter(row => 
-      row.month === this.selectedMonth && 
-      row.year === this.selectedYear &&
-      row.hologramType === this.selectedHologramType
-    );
-    
-    // If no data exists for this month/year/type, create the first row with previous month's closing balance
-    if (this.filteredRows.length === 0) {
-      this.addNewRow();
-    } else {
-      // Ensure the first row has the correct opening stock from previous month
-      this.updateFirstRowOpeningStock();
-    }
-  }
-
-  // Get previous month's closing balance for carry forward
-  getPreviousMonthClosingBalance(): number {
-    const { prevMonth, prevYear } = this.getPreviousMonthYear();
-    
-    // Find the last row of the previous month for the same hologram type
-    const prevMonthRows = this.reportRows.filter(row => 
-      row.month === prevMonth && 
-      row.year === prevYear &&
-      row.hologramType === this.selectedHologramType
-    );
-    
-    if (prevMonthRows.length === 0) {
-      return 0; // No previous month data, start with 0
-    }
-    
-    // Return the sum of all closing balances from previous month (total closing balance)
-    return prevMonthRows.reduce((total, row) => total + row.closingBalance, 0);
-  }
-
-  // Get previous month and year
-  getPreviousMonthYear(): { prevMonth: string, prevYear: string } {
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    const currentMonthIndex = months.indexOf(this.selectedMonth);
-    
-    if (currentMonthIndex === 0) {
-      // January -> December of previous year
-      return {
-        prevMonth: 'dec',
-        prevYear: (parseInt(this.selectedYear) - 1).toString()
-      };
-    } else {
-      // Previous month of same year
-      return {
-        prevMonth: months[currentMonthIndex - 1],
-        prevYear: this.selectedYear
-      };
-    }
-  }
-
-  // Update the first row's opening stock with previous month's closing balance
-  updateFirstRowOpeningStock(): void {
-    if (this.filteredRows.length > 0) {
-      const firstRow = this.filteredRows.find(row => row.isFirstRowOfMonth);
-      if (firstRow) {
-        const prevClosingBalance = this.getPreviousMonthClosingBalance();
-        firstRow.openingStock = prevClosingBalance;
-        this.onRowDataChange(firstRow);
-      }
-    }
+  ngOnDestroy(): void {
+    window.removeEventListener('storage', this.storageListener);
   }
 
   onMonthYearChange(): void {
-    this.loadMonthlyData();
-    this.currentPage = 1; // Reset pagination
+    this.refreshMonthlyData();
   }
 
   onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): void {
     this.selectedHologramType = type;
-    this.loadMonthlyData();
-    this.currentPage = 1; // Reset pagination
+    this.refreshMonthlyData();
+  }
+
+  autoCalculateFromDaily(): void {
+    this.refreshMonthlyData();
+    const totals = this.monthlyTotals;
+    const freshArrival = this.getFreshArrival();
+    const message = [
+      'Monthly totals refreshed!',
+      '',
+      `Total Fresh Arrival: ${freshArrival}`,
+      `Total Issued (Utilized): ${totals.totalIssued}`,
+      `Total Wastage: ${totals.totalWastage}`
+    ].join('\n');
+    alert(message);
+  }
+
+  goToDailyRegister(): void {
+    this.router.navigate(['/dev-hologram-daily-register']);
+  }
+
+  goToMonthlyReport(): void {
+    this.router.navigate(['/dev/monthlyhologramstatement-oic'], {
+      queryParams: {
+        month: this.selectedMonth,
+        year: this.selectedYear,
+        type: this.selectedHologramType,
+        referrer: 'monthly-report'
+      }
+    });
+  }
+
+  goBack(): void {
+    this.router.navigate(['/dev-supply-chain']);
+  }
+
+  getMonthlyTotalsFromDailyRegister(): MonthlyTotals {
+    return this.monthlyTotals;
+  }
+
+  getPreviousMonthClosingBalance(): number {
+    return this.monthlyStatement?.openingStock ?? 0;
+  }
+
+  getMonthlyClosingBalance(): number {
+    return this.monthlyStatement?.closingBalance ?? 0;
+  }
+
+  getFreshArrival(): number {
+    return this.monthlyStatement?.freshArrival ?? 0;
   }
 
   getSelectedMonthYear(): string {
     const monthNames: { [key: string]: string } = {
-      'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
-      'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
-      'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+      jan: 'January', feb: 'February', mar: 'March', apr: 'April',
+      may: 'May', jun: 'June', jul: 'July', aug: 'August',
+      sep: 'September', oct: 'October', nov: 'November', dec: 'December'
     };
     return `${monthNames[this.selectedMonth]} ${this.selectedYear}`;
   }
@@ -323,281 +214,614 @@ export class HologramMonthlyReportComponent {
   getPreviousMonthDisplay(): string {
     const { prevMonth, prevYear } = this.getPreviousMonthYear();
     const monthNames: { [key: string]: string } = {
-      'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
-      'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
-      'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+      jan: 'January', feb: 'February', mar: 'March', apr: 'April',
+      may: 'May', jun: 'June', jul: 'July', aug: 'August',
+      sep: 'September', oct: 'October', nov: 'November', dec: 'December'
     };
     return `${monthNames[prevMonth]} ${prevYear}`;
   }
 
-  // Navigation methods
-  goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+  private refreshMonthlyData(): void {
+    this.isLoading = true;
+    const statement = this.hologramDataService.getMonthlyStatement(
+      this.selectedMonth,
+      this.selectedYear,
+      this.selectedHologramType
+    );
+
+    this.monthlyStatement = statement;
+    this.monthlyTotals = statement?.totals ?? this.createEmptyTotals();
+    this.approvedEntriesCount = statement?.entries?.length ?? 0;
+    this.buildStatementRows();
+    this.buildOverviewSummary();
+    this.isLoading = false;
+    this.cdr.detectChanges();
   }
 
-  // Data entry methods
-  addNewRow(): void {
-    const newId = (this.reportRows.length + 1).toString();
-    
-    // Check if this will be the first row for this month/year/type
-    const existingRows = this.reportRows.filter(row => 
-      row.month === this.selectedMonth && 
-      row.year === this.selectedYear &&
-      row.hologramType === this.selectedHologramType
-    );
-    
-    const isFirstRow = existingRows.length === 0;
-    const openingStock = isFirstRow ? this.getPreviousMonthClosingBalance() : 0;
-    
-    const newRow: HologramReportRow = {
-      id: newId,
-      month: this.selectedMonth,
-      year: this.selectedYear,
-      hologramType: this.selectedHologramType,
-      entryDate: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-      openingStock: openingStock,
-      freshArrival: 0,
-      total: openingStock,
-      utilizations: [],
-      wastages: [],
+  private getPreviousMonthYear(): { prevMonth: string; prevYear: string } {
+    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const currentMonthIndex = months.indexOf(this.selectedMonth);
+
+    if (currentMonthIndex <= 0) {
+      return {
+        prevMonth: 'dec',
+        prevYear: (parseInt(this.selectedYear, 10) - 1).toString()
+      };
+    }
+
+    return {
+      prevMonth: months[currentMonthIndex - 1],
+      prevYear: this.selectedYear
+    };
+  }
+
+  private createEmptyTotals(): MonthlyTotals {
+    return {
+      totalIssued: 0,
       totalUtilized: 0,
       totalWastage: 0,
-      closingBalance: openingStock,
-      isFixed: false,
-      isFirstRowOfMonth: isFirstRow,
-      production: { sikkim650ml: 0, wb: 0, total: 0 }
+      totalLeftOver: 0,
+      utilizationFromSerial: '',
+      utilizationToSerial: '',
+      wastageFromSerial: '',
+      wastageToSerial: ''
     };
-    
-    this.reportRows.push(newRow);
-    this.loadMonthlyData();
   }
 
-  onRowDataChange(row: HologramReportRow): void {
-    // Calculate totals whenever data changes
-    row.total = (row.openingStock || 0) + (row.freshArrival || 0);
-    row.totalUtilized = (row.utilizations || []).reduce((sum, util) => sum + (util.quantity || 0), 0);
-    row.totalWastage = (row.wastages || []).reduce((sum, waste) => sum + (waste.quantity || 0), 0);
-    row.closingBalance = row.total - (row.totalUtilized + row.totalWastage);
-    if (row.production) {
-      row.production.total = (row.production.sikkim650ml || 0) + (row.production.wb || 0);
-    }
-  }
-
-  onUtilizationSerialChange(row: HologramReportRow, index: number): void {
-    if (row.utilizations && row.utilizations[index]) {
-      const util = row.utilizations[index];
-      const oldQuantity = util.quantity;
-      util.quantity = this.calculateQuantityFromSerials(util.fromSerialNo, util.toSerialNo);
-
-      this.onRowDataChange(row);
-      this.cdr.detectChanges(); // Force change detection
-    }
-  }
-
-  onWastageSerialChange(row: HologramReportRow, index: number): void {
-    if (row.wastages && row.wastages[index]) {
-      const waste = row.wastages[index];
-      const oldQuantity = waste.quantity;
-      waste.quantity = this.calculateQuantityFromSerials(waste.fromSerialNo, waste.toSerialNo);
-
-      this.onRowDataChange(row);
-      this.cdr.detectChanges(); // Force change detection
-    }
-  }
-
-  private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
-    if (!fromSerial || !toSerial) {
-      return 0;
-    }
-
-    // Trim whitespace
-    fromSerial = fromSerial.trim();
-    toSerial = toSerial.trim();
-
-    // Extract numeric parts from serial numbers
-    const fromNum = this.extractNumericPart(fromSerial);
-    const toNum = this.extractNumericPart(toSerial);
-
-    if (fromNum === null || toNum === null || toNum < fromNum) {
-      return 0;
-    }
-
-    // Calculate quantity as (To - From) + 1
-    const quantity = (toNum - fromNum) + 1;
-    
-    // Log successful calculations for debugging
-    if (quantity > 0) {
-      console.log(`Calculated: ${fromSerial} to ${toSerial} = ${quantity}`);
-    }
-    
-    return quantity;
-  }
-
-  private extractNumericPart(serial: string): number | null {
-    if (!serial) return null;
-    
-    // Try to extract the numeric part - handle different formats
-    // First try: pure numeric string
-    if (/^\d+$/.test(serial)) {
-      return parseInt(serial, 10);
-    }
-    
-    // Second try: extract trailing numbers (most common format)
-    const trailingNumbers = serial.match(/\d+$/);
-    if (trailingNumbers) {
-      return parseInt(trailingNumbers[0], 10);
-    }
-    
-    // Third try: extract all numbers and take the largest sequence
-    const allNumbers = serial.match(/\d+/g);
-    if (allNumbers && allNumbers.length > 0) {
-      // Take the longest numeric sequence
-      const longestNum = allNumbers.reduce((a, b) => a.length > b.length ? a : b);
-      return parseInt(longestNum, 10);
-    }
-    
-    return null;
-  }
-
-  saveRow(row: HologramReportRow): void {
-    // Final calculation before saving
-    this.onRowDataChange(row);
-    row.isFixed = true;
-    this.loadMonthlyData();
-  }
-
-  addUtilizationToRow(row: HologramReportRow): void {
-    if (!row.utilizations) {
-      row.utilizations = [];
-    }
-    row.utilizations.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
-    // No need to call onRowDataChange here as quantity will be 0 until serial numbers are entered
-  }
-
-  removeUtilizationFromRow(row: HologramReportRow, index: number): void {
-    if (row.utilizations) {
-      row.utilizations.splice(index, 1);
-      this.onRowDataChange(row);
-    }
-  }
-
-  addWastageToRow(row: HologramReportRow): void {
-    if (!row.wastages) {
-      row.wastages = [];
-    }
-    row.wastages.push({ fromSerialNo: '', toSerialNo: '', quantity: 0 });
-    // No need to call onRowDataChange here as quantity will be 0 until serial numbers are entered
-  }
-
-  removeWastageFromRow(row: HologramReportRow, index: number): void {
-    if (row.wastages) {
-      row.wastages.splice(index, 1);
-      this.onRowDataChange(row);
-    }
-  }
-
-  deleteRow(row: HologramReportRow): void {
-    if (row.isFixed) {
-      alert('Cannot delete fixed rows');
+  private buildOverviewSummary(): void {
+    if (!this.monthlyStatement) {
+      this.overviewSummary = null;
       return;
     }
-    if (confirm('Are you sure you want to delete this row?')) {
-      this.reportRows = this.reportRows.filter(r => r.id !== row.id);
-      this.loadMonthlyData();
+
+    const opening = this.monthlyStatement.openingStock ?? 0;
+    const closing = this.monthlyStatement.closingBalance ?? 0;
+
+    const totalArrivals = this.getFreshArrival();
+    const totalUtilized = this.monthlyTotals.totalIssued;
+    const totalWastage = this.monthlyTotals.totalWastage;
+
+    const arrivalCount = (this.monthlyStatement.arrivals || []).length;
+    const utilizationCount = (this.monthlyStatement.entries || []).reduce((count, entry) => {
+      const issuedEntries = entry.issuedEntries && entry.issuedEntries.length > 0
+        ? entry.issuedEntries
+        : (entry.issuedFromSerial && entry.issuedToSerial && entry.issuedQuantity
+          ? [{ quantity: entry.issuedQuantity }]
+          : []);
+      return count + issuedEntries.filter(issued => (issued.quantity || 0) > 0).length;
+    }, 0);
+    const wastageCount = (this.monthlyStatement.entries || []).reduce((count, entry) => {
+      const wastageEntries = entry.wastageEntries && entry.wastageEntries.length > 0
+        ? entry.wastageEntries
+        : (entry.wastageFromSerial && entry.wastageToSerial && entry.wastageQuantity
+          ? [{ quantity: entry.wastageQuantity }]
+          : []);
+      return count + wastageEntries.filter(waste => (waste.quantity || 0) > 0).length;
+    }, 0);
+
+    this.overviewSummary = {
+      openingStock: opening,
+      totalArrivals,
+      totalUtilized,
+      totalWastage,
+      closingBalance: closing,
+      arrivalCount,
+      utilizationCount,
+      wastageCount
+    };
+  }
+
+  get hasDetailRows(): boolean {
+    return this.statementRows.some(row => row.rowType !== 'SUMMARY');
+  }
+
+  getRowClass(row: MonthlyReportRow): string {
+    switch (row.rowType) {
+      case 'SUMMARY':
+        return 'table-light';
+      case 'ARRIVAL':
+        return 'table-warning';
+      case 'UTILIZATION':
+        return 'table-info';
+      case 'WASTAGE':
+        return 'table-danger';
+      default:
+        return '';
     }
   }
 
-  getStatusClass(isFixed: boolean): string {
-    return isFixed ? 'badge bg-success' : 'badge bg-warning';
+  private buildStatementRows(): void {
+    const rows: MonthlyReportRow[] = [];
+
+    if (!this.monthlyStatement) {
+      this.statementRows = rows;
+      return;
+    }
+
+    const opening = this.monthlyStatement.openingStock ?? 0;
+    const freshArrival = this.getFreshArrival();
+    const totals = this.monthlyTotals;
+    const closing = this.getMonthlyClosingBalance();
+
+    rows.push({
+      rowType: 'SUMMARY',
+      label: this.getCurrentHologramTypeDisplay(),
+      openingStock: opening,
+      freshArrival,
+      total: opening + freshArrival,
+      leftOver: opening + freshArrival - totals.totalIssued - totals.totalWastage,
+      utilizationFrom: totals.utilizationFromSerial || '',
+      utilizationTo: totals.utilizationToSerial || '',
+      utilizationQty: totals.totalIssued,
+      wastageFrom: totals.wastageFromSerial || '',
+      wastageTo: totals.wastageToSerial || '',
+      wastageQty: totals.totalWastage,
+      closingBalance: closing
+    });
+
+    let runningBalance = opening;
+    const events = this.buildStatementEvents();
+
+    events.forEach(event => {
+      if (event.rowType === 'ARRIVAL') {
+        runningBalance += event.quantity;
+        rows.push({
+          rowType: 'ARRIVAL',
+          label: `Arrival - ${this.formatDate(event.date)}`,
+          date: event.date,
+          freshArrival: event.quantity,
+          closingBalance: runningBalance,
+          meta: {
+            cartoonNumber: event.cartoonNumber,
+            notes: this.buildArrivalNote(event)
+          }
+        });
+      } else if (event.rowType === 'UTILIZATION') {
+        runningBalance -= event.quantity;
+        runningBalance -= event.totalWastage || 0;
+        
+        // Get leftover from the entry
+        const entry = (event as any).entry;
+        const totalLeftOver = this.calculateLeftOverForDisplay(entry);
+        
+        // Create separate rows for each roll/range
+        const rollDetails = event.rollDetails;
+        if (rollDetails && rollDetails.length > 0) {
+          // Filter out invalid roll details (those with no utilization or wastage, or invalid serial ranges)
+          const validRollDetails = rollDetails.filter((rollDetail: any) => {
+            const hasUtilization = rollDetail.utilizationRanges && rollDetail.utilizationRanges.length > 0 && 
+                                   rollDetail.utilizationRanges.some((r: any) => r.quantity > 0);
+            const hasWastage = rollDetail.wastageRanges && rollDetail.wastageRanges.length > 0 && 
+                              rollDetail.wastageRanges.some((r: any) => r.quantity > 0);
+            
+            // Also check if the serial range is valid (fromSerial should be less than toSerial)
+            const serialRange = this.extractSerialRangeFromSingleRoll(rollDetail);
+            const hasValidRange = serialRange && !serialRange.includes('undefined') && !serialRange.includes('NaN');
+            
+            return (hasUtilization || hasWastage) && hasValidRange;
+          });
+          
+          validRollDetails.forEach((rollDetail: any, index: number) => {
+            const rollName = rollDetail.rollName;
+            
+            // Calculate quantities for this specific roll/range
+            const rollUtilizationQty = this.sumRanges(rollDetail.utilizationRanges);
+            const rollWastageQty = this.sumRanges(rollDetail.wastageRanges);
+            
+            // Get the serial range for this roll (from allocated range, not issued/wastage)
+            const serialRange = this.extractSerialRangeFromSingleRoll(rollDetail);
+            
+            // Calculate leftover for THIS specific range
+            // Leftover = Allocated - (Issued + Wastage)
+            const allocatedQty = (rollDetail as any).availableCount || (rollDetail as any).allocatedQuantity || 0;
+            const rollLeftOver = allocatedQty - (rollUtilizationQty + rollWastageQty);
+            
+            // Get damage reason for this specific range
+            const damageReason = (rollDetail as any).damageReason || '';
+            
+            // Only show label on first row, leave blank for subsequent rows
+            const label = (index === 0) ? `Utilization - ${this.formatDate(event.date)}` : '';
+            
+            rows.push({
+              rowType: 'UTILIZATION',
+              label: label,
+              date: event.date,
+              utilizationQty: rollUtilizationQty,
+              wastageQty: rollWastageQty,
+              closingBalance: runningBalance,  // Show closing balance on all rows
+              leftOver: rollLeftOver,  // Show leftover for each range
+              utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
+              wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
+              meta: {
+                referenceNo: event.referenceNo,
+                cartoonNumber: rollName,
+                serialRange: serialRange,
+                damageReason: damageReason  // Add damage reason to meta
+              }
+            });
+          });
+        } else {
+          // Fallback: single row if no roll details
+          const utilizationDetails = this.mapRollDisplayDetails(rollDetails, 'utilization');
+          const wastageDetails = this.mapRollDisplayDetails(rollDetails, 'wastage');
+          
+          rows.push({
+            rowType: 'UTILIZATION',
+            label: `Utilization - ${this.formatDate(event.date)}`,
+            date: event.date,
+            utilizationQty: event.quantity,
+            wastageQty: event.totalWastage || 0,
+            closingBalance: runningBalance,
+            leftOver: totalLeftOver,
+            utilizationDetails,
+            wastageDetails,
+            meta: {
+              referenceNo: event.referenceNo
+            }
+          });
+        }
+      }
+    });
+
+    // Add closing balance row at the end
+    rows.push({
+      rowType: 'SUMMARY',
+      label: 'Closing Balance',
+      openingStock: null,
+      freshArrival: null,
+      total: null,
+      leftOver: null,
+      utilizationQty: null,
+      wastageQty: null,
+      closingBalance: runningBalance,
+      meta: {
+        notes: `Opening (${opening}) + Fresh Arrival (${freshArrival}) - Utilized (${totals.totalIssued}) - Wastage (${totals.totalWastage}) = ${runningBalance}`
+      }
+    });
+
+    this.statementRows = rows;
   }
 
-  // Check if opening stock should be read-only (first row of month)
-  isOpeningStockReadonly(row: HologramReportRow): boolean {
-    return row.isFirstRowOfMonth || row.isFixed;
+  private calculateLeftOverForDisplay(entry: any): number {
+    // Get leftover directly from the entry
+    if (entry && typeof entry.leftOverQuantity === 'number') {
+      return entry.leftOverQuantity;
+    }
+    
+    // Fallback: calculate from entry data
+    if (entry) {
+      const utilizedQty = entry.utilizedQuantity || entry.issuedQuantity || 0;
+      const issuedQty = entry.issuedQuantity || 0;
+      const wastageQty = entry.wastageQuantity || 0;
+      return utilizedQty - issuedQty - wastageQty;
+    }
+    
+    return 0;
   }
 
-  // Get tooltip text for opening stock field
-  getOpeningStockTooltip(row: HologramReportRow): string {
-    if (row.isFirstRowOfMonth) {
-      const { prevMonth, prevYear } = this.getPreviousMonthYear();
-      const monthNames: { [key: string]: string } = {
-        'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April',
-        'may': 'May', 'jun': 'June', 'jul': 'July', 'aug': 'August',
-        'sep': 'September', 'oct': 'October', 'nov': 'November', 'dec': 'December'
+  private buildStatementEvents(): StatementEvent[] {
+    if (!this.monthlyStatement) {
+      return [];
+    }
+
+    const events: StatementEvent[] = [];
+    const utilizationEventMap = new Map<string, StatementEvent>();
+
+    const arrivals = this.monthlyStatement.arrivals || [];
+    arrivals.forEach((arrival: HologramArrivalRecord) => {
+      if (!arrival.receivedDate || !arrival.totalCount) {
+      return;
+    }
+      events.push({
+        rowType: 'ARRIVAL',
+        date: arrival.receivedDate,
+        timestamp: this.getTimestamp(arrival.receivedDate),
+        quantity: arrival.totalCount,
+        fromSerial: arrival.fromSerial || '',
+        toSerial: arrival.toSerial || '',
+        cartoonNumber: arrival.cartoonNumber || ''
+      });
+    });
+
+    const entries = this.monthlyStatement.entries || [];
+    entries.forEach(entry => {
+      const entryDate = entry.date || (entry as any).entryDate || '';
+      const timestamp = this.getTimestamp(entryDate);
+      const referenceNo = (entry as any).referenceNo || (entry as any).ourRefNo || entry.id;
+      const rollDetails = this.buildRollDetails(entry);
+      const totalUtilized = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.utilizationRanges), 0);
+      const totalWastage = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.wastageRanges), 0);
+
+      if (totalUtilized > 0 || totalWastage > 0) {
+        this.addOrUpdateUtilizationEvent(
+          events,
+          utilizationEventMap,
+          referenceNo,
+          entryDate,
+          timestamp,
+          totalUtilized,
+          totalWastage,
+          rollDetails,
+          entry  // Pass the entry for leftover calculation
+        );
+      }
+    });
+
+    events.sort((a, b) => a.timestamp - b.timestamp);
+
+    return events;
+  }
+
+  private addOrUpdateUtilizationEvent(
+    events: StatementEvent[],
+    eventMap: Map<string, StatementEvent>,
+    referenceNo: string,
+    entryDate: string,
+    timestamp: number,
+    totalUtilized: number,
+    totalWastage: number,
+    rollDetails: RollDetail[],
+    entry?: any  // Add entry parameter
+  ): void {
+    const key = referenceNo || `ref-${timestamp}`;
+    const existing = eventMap.get(key);
+
+    if (existing) {
+      existing.quantity += totalUtilized;
+      existing.totalWastage = (existing.totalWastage || 0) + totalWastage;
+      existing.rollDetails = [...(existing.rollDetails || []), ...rollDetails];
+      if (timestamp > existing.timestamp) {
+        existing.timestamp = timestamp;
+        existing.date = entryDate;
+      }
+      // Update entry if provided
+      if (entry) {
+        (existing as any).entry = entry;
+      }
+    } else {
+      const newEvent: StatementEvent = {
+        rowType: 'UTILIZATION',
+        date: entryDate,
+        timestamp,
+        quantity: totalUtilized,
+        totalWastage,
+        referenceNo,
+        rollDetails
       };
-      return `Carried forward from ${monthNames[prevMonth]} ${prevYear} closing balance`;
-    }
-    return '';
-  }
-
-  // Calculation helpers
-  calculateGrandTotals(): { totalOpening: number, totalFreshArrival: number, totalTotal: number, totalUtilized: number, totalWastage: number, totalClosing: number } {
-    return this.filteredRows.reduce((totals, row) => {
-      totals.totalOpening += row.openingStock;
-      totals.totalFreshArrival += row.freshArrival;
-      totals.totalTotal += row.total;
-      totals.totalUtilized += row.totalUtilized;
-      totals.totalWastage += row.totalWastage;
-      totals.totalClosing += row.closingBalance;
-      return totals;
-    }, { totalOpening: 0, totalFreshArrival: 0, totalTotal: 0, totalUtilized: 0, totalWastage: 0, totalClosing: 0 });
-  }
-
-  calculateProductionTotals(): { totalSikkim: number, totalWB: number, grandTotal: number } {
-    return this.filteredRows.reduce((totals, row) => {
-      totals.totalSikkim += row.production.sikkim650ml;
-      totals.totalWB += row.production.wb;
-      totals.grandTotal += row.production.total;
-      return totals;
-    }, { totalSikkim: 0, totalWB: 0, grandTotal: 0 });
-  }
-
-  // Pagination
-  pageSize = 10;
-  currentPage = 1;
-
-  getTotalPages(): number {
-    return Math.ceil(this.filteredRows.length / this.pageSize);
-  }
-
-  getPagedRows(): HologramReportRow[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredRows.slice(start, start + this.pageSize);
-  }
-
-  goToPage(page: number): void {
-    const totalPages = this.getTotalPages();
-    if (page >= 1 && page <= totalPages) {
-      this.currentPage = page;
+      // Store entry for leftover calculation
+      if (entry) {
+        (newEvent as any).entry = entry;
+      }
+      eventMap.set(key, newEvent);
+      events.push(newEvent);
     }
   }
 
-  changePageSize(size: number): void {
-    this.pageSize = size;
-    this.currentPage = 1;
+  private getTimestamp(date: string): number {
+    const parsed = Date.parse(date);
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
 
-  // Test method to verify calculation
-  testCalculation(): void {
-    console.log('=== Testing Calculations ===');
-    
-    // Test simple numbers
-    const test1 = this.calculateQuantityFromSerials('1000', '1010');
-    console.log('Test 1 (1000 to 1010):', test1, 'Expected: 11');
-    
-    // Test with serial numbers
-    const test2 = this.calculateQuantityFromSerials('275346495', '275346500');
-    console.log('Test 2 (275346495 to 275346500):', test2, 'Expected: 6');
-    
-    // Test with prefix
-    const test3 = this.calculateQuantityFromSerials('ABC123', 'ABC133');
-    console.log('Test 3 (ABC123 to ABC133):', test3, 'Expected: 11');
-    
-    // Test empty values
-    const test4 = this.calculateQuantityFromSerials('', '1000');
-    console.log('Test 4 (empty to 1000):', test4, 'Expected: 0');
-    
-    console.log('=== End Tests ===');
+  private formatDate(date: string): string {
+    if (!date) {
+      return 'N/A';
+    }
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) {
+      return date;
+    }
+    return parsed.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
+  private buildArrivalNote(event: StatementEvent): string | undefined {
+    if (!event.fromSerial && !event.toSerial) {
+      return undefined;
+    }
+    if (event.fromSerial && event.toSerial) {
+      return `Serial Range: ${event.fromSerial} - ${event.toSerial}`;
+    }
+    if (event.fromSerial) {
+      return `From Serial: ${event.fromSerial}`;
+    }
+    if (event.toSerial) {
+      return `To Serial: ${event.toSerial}`;
+    }
+    return undefined;
+  }
+
+  private buildRollDetails(entry: any): RollDetail[] {
+    const details: RollDetail[] = [];
+    const lockedRolls = entry.lockedRolls || [];
+
+    if (lockedRolls.length > 0) {
+      lockedRolls.forEach((roll: any) => {
+        const rollName = roll.cartoonNumber || entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
+        const rollDetail: any = {
+          rollName,
+          utilizationRanges: (roll.issuedRanges || []).map((range: any) => ({
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || range.qty || 0
+          })),
+          wastageRanges: (roll.wastageRanges || []).map((range: any) => ({
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || range.qty || 0,
+            damageReason: range.damageReason || roll.damageReason || entry.damageReason
+          }))
+        };
+        
+        // IMPORTANT: Preserve the allocated range info from the locked roll
+        if (roll.serialRange) {
+          rollDetail.serialRange = roll.serialRange;
+        }
+        if (roll.fromSerial) {
+          rollDetail.fromSerial = roll.fromSerial;
+        }
+        if (roll.toSerial) {
+          rollDetail.toSerial = roll.toSerial;
+        }
+        
+        // Preserve allocated quantity and damage reason for leftover calculation
+        if (roll.availableCount !== undefined) {
+          rollDetail.availableCount = roll.availableCount;
+        }
+        if (roll.allocatedQuantity !== undefined) {
+          rollDetail.allocatedQuantity = roll.allocatedQuantity;
+        }
+        if (roll.damageReason) {
+          rollDetail.damageReason = roll.damageReason;
+        }
+        
+        details.push(rollDetail);
+      });
+    }
+
+    if (details.length === 0) {
+      const rollName = entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
+      const issuedEntries = entry.issuedEntries && entry.issuedEntries.length > 0
+        ? entry.issuedEntries
+        : (entry.issuedFromSerial && entry.issuedToSerial
+          ? [{
+              fromSerial: entry.issuedFromSerial,
+              toSerial: entry.issuedToSerial,
+              quantity: entry.issuedQuantity || entry.utilizedQuantity || 0
+            }]
+          : []);
+      const wastageEntries = entry.wastageEntries && entry.wastageEntries.length > 0
+        ? entry.wastageEntries
+        : (entry.wastageFromSerial && entry.wastageToSerial
+          ? [{
+              fromSerial: entry.wastageFromSerial,
+              toSerial: entry.wastageToSerial,
+              quantity: entry.wastageQuantity || 0,
+              damageReason: entry.damageReason
+            }]
+          : []);
+
+      details.push({
+        rollName,
+        utilizationRanges: issuedEntries.map((range: any) => ({
+          fromSerial: range.fromSerial || '',
+          toSerial: range.toSerial || '',
+          quantity: range.quantity || 0
+        })),
+        wastageRanges: wastageEntries.map((range: any) => ({
+          fromSerial: range.fromSerial || '',
+          toSerial: range.toSerial || '',
+          quantity: range.quantity || 0,
+          damageReason: range.damageReason || entry.damageReason
+        }))
+      });
+    }
+
+    return details;
+  }
+
+  private sumRanges(ranges: RollRangeDetail[]): number {
+    return ranges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+  }
+
+  private mapRollDisplayDetails(details: RollDetail[] | undefined, type: 'utilization' | 'wastage'): RollDisplayDetail[] {
+    if (!details) {
+      return [];
+    }
+
+    return details
+      .map(detail => {
+        const rangesSource = type === 'utilization' ? detail.utilizationRanges : detail.wastageRanges;
+        const ranges = rangesSource
+          .filter(range =>
+            (range.fromSerial && range.fromSerial.trim().length > 0) ||
+            (range.toSerial && range.toSerial.trim().length > 0) ||
+            (range.quantity || 0) > 0)
+          .map(range => ({
+            from: range.fromSerial || '-',
+            to: range.toSerial || '-',
+            qty: range.quantity || 0,
+            reason: range.damageReason
+          }));
+
+        return {
+          rollName: detail.rollName,
+          ranges
+        };
+      })
+      .filter(detail => detail.ranges.length > 0);
+  }
+
+  private initializeFiltersToCurrentMonth(): void {
+    const now = new Date();
+    const monthIndex = now.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+    const year = now.getFullYear().toString();
+
+    this.selectedMonth = monthIndex;
+    this.selectedYear = year;
+  }
+
+  /**
+   * Extract serial range from roll details (allocated range, not issued/wastage ranges)
+   */
+  private extractSerialRangeFromRollDetails(rollDetails: RollDetail[] | undefined): string | undefined {
+    if (!rollDetails || rollDetails.length === 0) {
+      return undefined;
+    }
+
+    // Get the first roll's utilization ranges to determine the allocated range
+    const firstRoll = rollDetails[0];
+    return this.extractSerialRangeFromSingleRoll(firstRoll);
+  }
+
+  /**
+   * Extract serial range from a single roll detail
+   * IMPORTANT: This should return the ALLOCATED range, not the used range
+   */
+  private extractSerialRangeFromSingleRoll(rollDetail: any): string | undefined {
+    // PRIORITY 1: Use the stored serialRange from the locked roll (this is the allocated range)
+    if ((rollDetail as any).serialRange) {
+      return (rollDetail as any).serialRange;
+    }
+
+    // PRIORITY 2: Use fromSerial and toSerial from the locked roll (allocated range)
+    if ((rollDetail as any).fromSerial && (rollDetail as any).toSerial) {
+      return `${(rollDetail as any).fromSerial} - ${(rollDetail as any).toSerial}`;
+    }
+
+    // FALLBACK: Calculate from utilization/wastage ranges (not ideal, but better than nothing)
+    const allRanges = [...(rollDetail.utilizationRanges || []), ...(rollDetail.wastageRanges || [])];
+    
+    if (allRanges.length === 0) {
+      return undefined;
+    }
+
+    // Find the min and max serials across all ranges
+    const serials = allRanges
+      .filter(r => r.fromSerial && r.toSerial)
+      .flatMap(r => [r.fromSerial!, r.toSerial!]);
+    
+    if (serials.length === 0) {
+      return undefined;
+    }
+
+    // Extract numeric parts and find min/max
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const numbers = serials.map(extractNumber);
+    const minNum = Math.min(...numbers);
+    const maxNum = Math.max(...numbers);
+
+    // Format back to serial format (preserve prefix if any)
+    const prefix = serials[0].replace(/\d+$/, '');
+    const fromSerial = prefix + String(minNum).padStart(6, '0');
+    const toSerial = prefix + String(maxNum).padStart(6, '0');
+
+    return `${fromSerial} - ${toSerial}`;
+  }
 }

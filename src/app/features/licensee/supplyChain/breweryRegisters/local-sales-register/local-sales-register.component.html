@@ -14,14 +14,17 @@
         <div class="col-sm-4 brand-input-section">
           <label class="form-label small">Brand of Production</label>
           <div class="d-flex gap-2">
-            <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.newBrand" placeholder="Brand name" (keyup.enter)="addDraftBrand()">
-            <input type="number" min="0" class="form-control form-control-sm" style="width: 80px;" [(ngModel)]="draft.newBrandCases" placeholder="Cases" (keyup.enter)="addDraftBrand()">
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="draft.newBrand"
+              placeholder="Brand name" (keyup.enter)="addDraftBrand()">
+            <input type="number" min="0" class="form-control form-control-sm" style="width: 80px;"
+              [(ngModel)]="draft.newBrandCases" placeholder="Cases" (keyup.enter)="addDraftBrand()">
             <button type="button" class="btn btn-outline-primary btn-sm" (click)="addDraftBrand()">Add</button>
           </div>
           <div class="brands-summary-overlay" *ngIf="draft.brands.length">
             <small class="text-muted">
               {{ draft.brands.length }} brand(s) • {{ getTotalCases(draft.brands) }} total cases
-              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="openBrandsModal()" style="font-size: 0.7rem;">
+              <button type="button" class="btn btn-link btn-sm p-0 ms-1" (click)="openBrandsModal()"
+                style="font-size: 0.7rem;">
                 Manage
               </button>
             </small>
@@ -29,7 +32,8 @@
         </div>
         <div class="col-sm-2">
           <label class="form-label small">Total Production</label>
-          <input type="number" min="0" class="form-control form-control-sm text-end" [value]="getTotalCases(draft.brands)" readonly>
+          <input type="number" min="0" class="form-control form-control-sm text-end"
+            [value]="getTotalCases(draft.brands)" readonly>
         </div>
         <div class="col-sm-6">
           <label class="form-label small">Remarks</label>
@@ -55,7 +59,8 @@
       <div class="mb-3 text-center">
         <div class="company-name fw-bold">Yuksom Breweries</div>
         <div class="company-address">Melli, South Sikkim</div>
-        <div class="register-title">Daily production of beer for the month of {{ getHeadingMonthYear() || '_____' }}</div>
+        <div class="register-title">Daily production of beer for the month of {{ getHeadingMonthYear() || '_____' }}
+        </div>
       </div>
 
       <!-- Filters inside register box -->
@@ -66,11 +71,13 @@
         </div>
         <div class="filter-control">
           <label class="form-label small mb-1">Party</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.party" placeholder="Search party">
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.party"
+            placeholder="Search party">
         </div>
         <div class="filter-control">
           <label class="form-label small mb-1">Brand</label>
-          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.brand" placeholder="Search brand">
+          <input type="text" class="form-control form-control-sm" [(ngModel)]="filters.brand"
+            placeholder="Search brand">
         </div>
         <div class="filter-control">
           <label class="form-label small mb-1">Month</label>
@@ -113,7 +120,8 @@
                   View Details ({{ row.brands.length }} brands, {{ getTotalCases(row.brands) }} cases)
                 </button>
               </td>
-              <td class="text-end">{{ (row.totalProduction === '' || row.totalProduction == null) ? '-' : row.totalProduction }}</td>
+              <td class="text-end">{{ (row.totalProduction === '' || row.totalProduction == null) ? '-' :
+                row.totalProduction }}</td>
               <td>{{ row.remarks || '-' }}</td>
             </tr>
           </tbody>
@@ -123,7 +131,8 @@
   </div>
 
   <!-- Modal: per-row brand details -->
-  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="detailsIndex !== null" (click)="onBackdrop($event)">
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);"
+    *ngIf="detailsIndex !== null" (click)="onBackdrop($event)">
     <div class="modal-dialog modal-md view-details-dialog">
       <div class="modal-content view-details-modal">
         <div class="modal-header view-details-modal-header">
@@ -133,33 +142,33 @@
           </div>
           <button type="button" class="btn-close" aria-label="Close" (click)="closeDetails()"></button>
         </div>
-         <div class="modal-body view-details-modal-body">
-           <ng-container *ngIf="detailsIndex !== null">
-             <div *ngIf="rows[detailsIndex].brands.length; else noBrandsForRow">
-               <div class="brands-details-list">
-                 <div class="brand-detail-item" *ngFor="let brand of rows[detailsIndex].brands; let i = index">
-                   <div class="brand-detail-info">
-                     <div class="brand-detail-name">{{ brand.name }}</div>
-                     <div class="brand-detail-cases">{{ brand.cases }} cases</div>
-                   </div>
-                 </div>
-               </div>
-               <div class="total-summary">
-                 <div class="total-cases">
-                   <span class="total-label">Total Cases</span>
-                   <span class="total-value">{{ getTotalCases(rows[detailsIndex].brands) }}</span>
-                 </div>
-               </div>
-             </div>
-             <ng-template #noBrandsForRow>
-               <div class="empty-state">
-                 <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
-                 <p class="text-muted mb-0">No brands added for this row</p>
-                 <small class="text-muted">This row doesn't have any brands yet</small>
-               </div>
-             </ng-template>
-           </ng-container>
-         </div>
+        <div class="modal-body view-details-modal-body">
+          <ng-container *ngIf="detailsIndex !== null">
+            <div *ngIf="rows[detailsIndex].brands.length; else noBrandsForRow">
+              <div class="brands-details-list">
+                <div class="brand-detail-item" *ngFor="let brand of rows[detailsIndex].brands; let i = index">
+                  <div class="brand-detail-info">
+                    <div class="brand-detail-name">{{ brand.name }}</div>
+                    <div class="brand-detail-cases">{{ brand.cases }} cases</div>
+                  </div>
+                </div>
+              </div>
+              <div class="total-summary">
+                <div class="total-cases">
+                  <span class="total-label">Total Cases</span>
+                  <span class="total-value">{{ getTotalCases(rows[detailsIndex].brands) }}</span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noBrandsForRow>
+              <div class="empty-state">
+                <i class="bi bi-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+                <p class="text-muted mb-0">No brands added for this row</p>
+                <small class="text-muted">This row doesn't have any brands yet</small>
+              </div>
+            </ng-template>
+          </ng-container>
+        </div>
         <div class="modal-footer view-details-modal-footer">
           <button type="button" class="btn btn-primary" (click)="closeDetails()">
             <i class="bi bi-check-lg me-1"></i>Close
@@ -170,7 +179,8 @@
   </div>
 
   <!-- Brands Management Modal -->
-  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsModal" (click)="onBrandsModalBackdrop($event)">
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsModal"
+    (click)="onBrandsModalBackdrop($event)">
     <div class="modal-dialog modal-md brands-manage-dialog">
       <div class="modal-content brands-modal">
         <div class="modal-header brands-modal-header">
@@ -188,7 +198,8 @@
                   <div class="brand-name">{{ brand.name }}</div>
                   <div class="brand-cases">{{ brand.cases }} cases</div>
                 </div>
-                <button type="button" class="btn btn-outline-danger btn-sm brand-remove-btn" (click)="removeDraftBrand(i)" title="Remove brand">
+                <button type="button" class="btn btn-outline-danger btn-sm brand-remove-btn"
+                  (click)="removeDraftBrand(i)" title="Remove brand">
                   <i class="bi bi-x"></i>
                 </button>
               </div>
@@ -218,7 +229,8 @@
   </div>
 
   <!-- Brands Production Record Modal -->
-  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsSummary" (click)="onBrandsSummaryBackdrop($event)">
+  <div class="modal fade show" tabindex="-1" style="display:block; background:rgba(0,0,0,.5);" *ngIf="showBrandsSummary"
+    (click)="onBrandsSummaryBackdrop($event)">
     <div class="modal-dialog brands-summary-dialog">
       <div class="modal-content brands-summary-modal">
         <div class="modal-header brands-summary-modal-header">

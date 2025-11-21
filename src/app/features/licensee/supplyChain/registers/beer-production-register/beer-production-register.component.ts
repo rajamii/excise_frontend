@@ -75,6 +75,40 @@ export class BeerProductionRegisterComponent implements OnInit {
   ngOnInit(): void {
     this.loadRecords();
     this.generateDaysForMonth();
+    this.ensureCurrentDateAvailable();
+  }
+
+  private ensureCurrentDateAvailable(): void {
+    const today = new Date();
+    const currentMonth = today.getMonth() + 1;
+    const currentYear = today.getFullYear();
+    
+    // If we're viewing the current month, make sure current date record exists
+    if (this.selectedMonth === currentMonth && this.selectedYear === currentYear) {
+      const todayStr = today.toISOString().split('T')[0];
+      const existingRecord = this.records.find(r => r.date === todayStr);
+      
+      if (!existingRecord) {
+        const openingBalance = this.getOpeningBalanceForDate(todayStr);
+        const isSunday = today.getDay() === 0;
+        
+        this.records.push({
+          date: todayStr,
+          openingBalance: openingBalance,
+          production: 0,
+          totalPart1: openingBalance,
+          issue: 0,
+          warehouseLoss: 0,
+          totalPart2: 0,
+          closingBalance: openingBalance,
+          locked: false,
+          sundayClosed: isSunday
+        });
+        
+        this.records.sort((a, b) => a.date.localeCompare(b.date));
+        this.saveRecords();
+      }
+    }
   }
 
   loadRecords(): void {
@@ -180,6 +214,7 @@ export class BeerProductionRegisterComponent implements OnInit {
   onMonthYearChange(): void {
     this.loadRecords();
     this.generateDaysForMonth();
+    this.ensureCurrentDateAvailable();
   }
 
   onMonthInputChange(value: string): void {
@@ -216,6 +251,17 @@ export class BeerProductionRegisterComponent implements OnInit {
     
     this.saveRecords();
     this.updateSubsequentDays(record);
+  }
+
+  isCurrentDate(record: BeerProductionRecord): boolean {
+    const today = new Date();
+    const recordDate = new Date(record.date);
+    return today.toDateString() === recordDate.toDateString();
+  }
+
+  isDateEditable(record: BeerProductionRecord): boolean {
+    // Only current date is editable, unless it's locked or Sunday
+    return this.isCurrentDate(record) && !record.locked && !record.sundayClosed;
   }
 
   updateSubsequentDays(updatedRecord: BeerProductionRecord): void {

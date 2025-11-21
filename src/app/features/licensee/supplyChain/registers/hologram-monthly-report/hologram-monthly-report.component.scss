@@ -2,6 +2,24 @@
 
 // Only essential custom styles that can't be achieved with Bootstrap
 
+// Custom 5-column grid for summary cards (20% width each)
+.col-lg-2-4 {
+  @media (min-width: 992px) {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  
+  @media (max-width: 991px) {
+    flex: 0 0 auto;
+    width: 50%; // 2 columns on tablets
+  }
+  
+  @media (max-width: 576px) {
+    flex: 0 0 auto;
+    width: 100%; // 1 column on mobile
+  }
+}
+
 // Tab hover effects (Bootstrap doesn't have this specific behavior)
 .nav-link:hover {
   background-color: #f8f9fa !important;

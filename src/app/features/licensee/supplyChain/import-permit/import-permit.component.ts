@@ -31,6 +31,8 @@ export class ImportPermitComponent implements OnInit {
   currentYear = new Date().getFullYear();
   private isBrowser = false;
   viewModeRef?: string;
+  showApplicationTemplate = false;
+  submittedFormData?: FormData; // Store the submitted data separately for the template
 
   formData: FormData = {
     refNo: 'IBPS/01/EXCISE',
@@ -53,7 +55,7 @@ export class ImportPermitComponent implements OnInit {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-    
+
     // Generate reference number
     this.generateRefNumber();
 
@@ -73,11 +75,29 @@ export class ImportPermitComponent implements OnInit {
   }
 
   generateRefNumber(): void {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    this.formData.refNo = `IBPS/${month}${day}/${year}`;
+    if (!this.isBrowser) {
+      this.formData.refNo = 'IBPS/01/EXCISE';
+      return;
+    }
+
+    // Get existing requests to determine next sequence number
+    const existingRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+
+    // Find the highest sequence number
+    let maxSequence = 0;
+    existingRequests.forEach((request: any) => {
+      const match = request.refNo.match(/IBPS\/(\d+)\/EXCISE/);
+      if (match) {
+        const sequence = parseInt(match[1], 10);
+        if (sequence > maxSequence) {
+          maxSequence = sequence;
+        }
+      }
+    });
+
+    // Generate next sequence number
+    const nextSequence = maxSequence + 1;
+    this.formData.refNo = `IBPS/${String(nextSequence).padStart(2, '0')}/EXCISE`;
   }
 
   calculateTotal(): void {
@@ -183,15 +203,41 @@ export class ImportPermitComponent implements OnInit {
   submitForm(): void {
     if (this.validateForm()) {
       console.log('Submitting form:', this.formData);
+      
+      // Store a copy of the submitted data for the template BEFORE any changes
+      this.submittedFormData = { ...this.formData };
+      
       // Frontend submit logic only
       if (this.isBrowser) {
         const key = 'importPermitRequests';
         const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-        const idx = list.findIndex(r => r.refNo === this.formData.refNo);
-        if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
+
+        // Add timestamp for proper sorting
+        const submissionData = {
+          ...this.formData,
+          submittedAt: new Date().toISOString()
+        };
+
+        // Always add as new entry at the beginning (unshift adds to top)
+        list.unshift(submissionData);
         localStorage.setItem(key, JSON.stringify(list));
       }
-      alert('Form submitted successfully!');
+
+      // Show the application template
+      this.showApplicationTemplate = true;
+
+      // Scroll to the template
+      setTimeout(() => {
+        const templateElement = document.querySelector('.card.shadow-sm.border-0.mt-4');
+        if (templateElement) {
+          templateElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+
+      alert('Form submitted successfully! Application template is now displayed below.');
+
+      // Reset the form for next submission
+      this.resetForm();
     }
   }
 
@@ -228,9 +274,114 @@ export class ImportPermitComponent implements OnInit {
       this.errorMessage = 'Please select purpose';
       return false;
     }
-    
+
     this.errorMessage = '';
     return true;
+  }
+
+  getBulkSpiritDisplayName(value: string): string {
+    switch (value) {
+      case 'grain-ena':
+        return 'Grain ENA';
+      case 'molasses-ena':
+        return 'Molasses ENA';
+      case 'rectified-spirit':
+        return 'Rectified Spirit';
+      default:
+        return value;
+    }
+  }
+
+  getPurposeDisplayName(value: string): string {
+    switch (value) {
+      case 'manufacturing':
+        return 'Manufacturing';
+      case 'blending':
+        return 'Blending';
+      case 'bottling':
+        return 'Bottling';
+      default:
+        return value;
+    }
+  }
+
+  getCheckpostDisplayName(value: string): string {
+    switch (value) {
+      case 'rangpo':
+        return 'Rangpo Checkpost';
+      case 'melli':
+        return 'Melli Checkpost';
+      case 'nathu-la':
+        return 'Nathu La Checkpost';
+      default:
+        return value;
+    }
+  }
+
+  hideApplicationTemplate(): void {
+    this.showApplicationTemplate = false;
+  }
+
+  printApplication(): void {
+    const printable = document.getElementById('importPermitPrintSection')?.innerHTML || '';
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) return;
+    win.document.open();
+    const ref = this.submittedFormData?.refNo || '';
+    win.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>Import Permit Application - ${ref}</title>
+          ${styles}
+          <style>
+            @page { size: A4; margin: 12mm; }
+            body { background: #fff; }
+            .no-print { display:none !important; }
+            .printable-content, .printable-content * { visibility: visible !important; }
+          </style>
+        </head>
+        <body>
+          ${printable}
+        </body>
+      </html>`);
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+      win.close();
+    };
+  }
+
+  resetForm(): void {
+    // Get today's date
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+
+    // Reset form data to initial state
+    this.formData = {
+      refNo: '',
+      date: todayString,
+      quantity: 0,
+      numberOfPermits: 0,
+      bulkSpiritType: '',
+      strengthTo: '',
+      liftedFrom: '',
+      viaRoute: '',
+      checkpostEntry: '',
+      purpose: ''
+    };
+
+    // Reset calculated values
+    this.calculatedTotal = 0;
+    this.strengthFrom = '';
+    this.errorMessage = '';
+    this.refNoError = '';
+
+    // Generate new reference number
+    this.generateRefNumber();
   }
 
   goBack(): void {
