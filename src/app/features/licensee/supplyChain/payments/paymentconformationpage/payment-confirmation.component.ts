@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { ReceiptNumberService } from '../../services/receipt-number.service';
 
 interface PaymentItem {
   id: string;
@@ -207,7 +208,8 @@ export class PaymentConfirmationComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private receiptNumberService: ReceiptNumberService
   ) {}
 
   ngOnInit(): void {
@@ -225,15 +227,29 @@ export class PaymentConfirmationComponent implements OnInit {
         this.activeTab = params['tab'];
       }
       // Handle hologram payment navigation
-      if (params['refNo'] && params['type'] && params['action'] === 'makePayment') {
+      if (params['refNo'] && params['action'] === 'makePayment') {
         this.activeTab = 'hologram';
         // Optionally highlight or scroll to the specific hologram item
         setTimeout(() => {
-          const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.classList.add('highlight-row');
-            setTimeout(() => element.classList.remove('highlight-row'), 3000);
+          // If type is provided, scroll to specific type
+          if (params['type']) {
+            const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              element.classList.add('highlight-row');
+              setTimeout(() => element.classList.remove('highlight-row'), 3000);
+            }
+          } else {
+            // If no type, find first matching refNo and scroll to it
+            const matchingItem = this.hologramData.find(h => h.referenceNo === params['refNo']);
+            if (matchingItem) {
+              const element = document.getElementById(`hologram-${matchingItem.referenceNo}-${matchingItem.procurementType}`);
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('highlight-row');
+                setTimeout(() => element.classList.remove('highlight-row'), 3000);
+              }
+            }
           }
         }, 500);
       }
@@ -258,14 +274,26 @@ export class PaymentConfirmationComponent implements OnInit {
       // Load payment records to check which ones have slips uploaded
       const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
       
+      console.log('📦 Loading hologram data...');
+      console.log('Applications found:', applications.length);
+      console.log('Payment records found:', payments.length);
+      
       // Transform applications into hologram payment items
       this.hologramData = applications
         .filter((app: any) => {
-          // Only include items that have payment slips uploaded for this specific type
-          return payments.some((payment: any) => 
+          // Include items that:
+          // 1. Have payment slips uploaded for this specific type, OR
+          // 2. Are approved by commissioner and ready for payment (even without slip uploaded yet)
+          const hasPaymentSlip = payments.some((payment: any) => 
             payment.hologramRefNo === app.refNo && 
             payment.procurementType === app.procurementType
           );
+          
+          const isApprovedAndReady = app.status === 'Approved by Commissioner - Ready for Payment' || 
+                                     app.status === 'ApprovedByCommissioner' ||
+                                     app.paymentSlipUploaded === true;
+          
+          return hasPaymentSlip || isApprovedAndReady;
         })
         .map((app: any) => {
           // Find the corresponding payment record for this specific type
@@ -291,13 +319,14 @@ export class PaymentConfirmationComponent implements OnInit {
             exportQty: app.exportQtyLakh || 0,
             defenceQty: app.defenceQtyLakh || 0,
             paymentDate: app.paymentCompleted ? new Date(app.paymentDate) : null,
-            paymentSlipUploaded: true
+            paymentSlipUploaded: payment ? true : (app.paymentSlipUploaded || false)
           };
         });
 
-      console.log('Loaded hologram data for payment:', this.hologramData);
+      console.log('✅ Loaded hologram data for payment:', this.hologramData.length, 'items');
+      console.log('Hologram data:', this.hologramData);
     } catch (error) {
-      console.error('Error loading hologram data:', error);
+      console.error('❌ Error loading hologram data:', error);
       // Keep sample data if loading fails
     }
   }
@@ -754,9 +783,12 @@ export class PaymentConfirmationComponent implements OnInit {
         amount: item.hologramFee
       }));
 
+      // Get or generate receipt number using the service
+      const receiptNo = this.receiptNumberService.getReceiptNumber(refNo, 'HOLOGRAM');
+
       // Create unified transaction record
       const transaction = {
-        transactionId: `TXN-${refNo}-${Date.now()}`,
+        transactionId: receiptNo,
         hologramRefNo: refNo,
         hologramDate: items[0].paymentDate?.toISOString() || new Date().toISOString(),
         companyName: items[0].companyName,

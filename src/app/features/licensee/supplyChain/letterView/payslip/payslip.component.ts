@@ -1,6 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ReceiptNumberService } from '../../services/receipt-number.service';
 
 interface PaymentTransaction {
   id: string;
@@ -40,6 +41,7 @@ export class PayslipComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private receiptNumberService: ReceiptNumberService,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -118,6 +120,9 @@ export class PayslipComponent implements OnInit {
       // Build hologram types array based on quantities from the original request
       const hologramTypes = this.buildHologramTypesArray(request);
       
+      // Get or generate receipt number using the service
+      const receiptNo = this.receiptNumberService.getReceiptNumber(request.refNo, 'HOLOGRAM');
+      
       // Show payment slip if request exists (payment is assumed completed for approved requests)
       this.paymentData = {
         id: request.refNo,
@@ -128,7 +133,7 @@ export class PayslipComponent implements OnInit {
         amount: this.calculateHologramAmount(request),
         paymentDate: request.paymentDate || new Date().toISOString().split('T')[0],
         paymentMethod: 'Wallet Payment',
-        transactionId: request.transactionId || `TXN-${request.refNo.replace(/\//g, '-')}-${Date.now()}`,
+        transactionId: receiptNo,
         status: 'Completed',
         localQtyLakh: request.localQtyLakh || 0,
         exportQtyLakh: request.exportQtyLakh || 0,
@@ -163,6 +168,9 @@ export class PayslipComponent implements OnInit {
       // Build hologram types array
       const hologramTypes = this.buildHologramTypesArray(aggregatedData);
       
+      // Get or generate receipt number using the service
+      const receiptNo = this.receiptNumberService.getReceiptNumber(this.refNo, 'HOLOGRAM');
+      
       // Create payment data
       this.paymentData = {
         id: this.refNo,
@@ -173,7 +181,7 @@ export class PayslipComponent implements OnInit {
         amount: this.calculateHologramAmount(aggregatedData),
         paymentDate: new Date().toISOString().split('T')[0],
         paymentMethod: 'Wallet Payment',
-        transactionId: `TXN-${this.refNo.replace(/\//g, '-')}-${Date.now()}`,
+        transactionId: receiptNo,
         status: 'Completed',
         localQtyLakh: aggregatedData.localQtyLakh,
         exportQtyLakh: aggregatedData.exportQtyLakh,
