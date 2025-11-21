@@ -1,81 +1,112 @@
 <!-- Main container for side navigation and content -->
 @if (loaded) {
-  <mat-sidenav-container class="mat-elevation-z8" style="padding: 0; min-height: 800px">
-    <!-- Side Navigation Panel -->
-    <mat-sidenav #sidenav mode="side" [opened]="false">
-      <!-- Sidenav Header with Close Button -->
-      <div class="sidenav-header">
-        <button mat-icon-button (click)="snavToggle(sidenav)" color="primary">
-          <mat-icon style="font-size: 27px">close</mat-icon>
-        </button>
-      </div>
-      <!-- Sidebar content -->
-      <div class="sidebar-content">
-        <!-- User Profile Display -->
-        <div class="profile">
-          <div class="username">
-            {{userName}}
-          </div>
-          <!-- Button to view the user's profile -->
-          <button mat-mini-fab class="view-profile" (click)="viewProfile()" type="button">
-            <mat-icon>account_circle</mat-icon>
-          </button>
+<mat-sidenav-container
+  class="mat-elevation-z8"
+  style="padding: 0; min-height: 800px"
+>
+  <!-- Side Navigation Panel -->
+  <mat-sidenav #sidenav mode="side" [opened]="false">
+    <!-- Sidenav Header with Close Button -->
+    <div class="sidenav-header">
+      <button mat-icon-button (click)="snavToggle(sidenav)" color="primary">
+        <mat-icon style="font-size: 27px">close</mat-icon>
+      </button>
+    </div>
+    <!-- Sidebar content -->
+    <div class="sidebar-content">
+      <!-- User Profile Display -->
+      <div class="profile">
+        <div class="username">
+          {{ userName }}
         </div>
-        <!-- Divider below profile -->
-        <mat-divider class="profile-divider"></mat-divider>
-        <!-- Navigation Links -->
-        <mat-nav-list>
-          <!-- Static Navigation Links -->
-          @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5'])) {
-            <mat-list-item routerLink="dashboard" routerLinkActive="active-link">
-              <span class="nav-header-cus">Home</span>
-            </mat-list-item>
-          }
-          @if (accountService.hasAnyRole('site_admin')) {
-            <mat-list-item routerLink="users" routerLinkActive="active-link">
-              <span class="nav-header-cus">User</span>
-            </mat-list-item>
-            <mat-list-item routerLink="roles" routerLinkActive="active-link">
-              <span class="nav-header-cus">Role</span>
-            </mat-list-item>
-            <mat-list-item routerLink="districts" routerLinkActive="active-link">
-              <span class="nav-header-cus">District</span>
-            </mat-list-item>
-            <mat-list-item routerLink="subdivisions" routerLinkActive="active-link">
-              <span class="nav-header-cus">Sub Division</span>
-            </mat-list-item>
-            <mat-list-item routerLink="police-stations" routerLinkActive="active-link">
-              <span class="nav-header-cus">Police Station</span>
-            </mat-list-item>
-            <mat-list-item routerLink="license-types" routerLinkActive="active-link">
-              <span class="nav-header-cus">License Type</span>
-            </mat-list-item>
-            <mat-list-item routerLink="license-categories" routerLinkActive="active-link">
-              <span class="nav-header-cus">License Category</span>
-            </mat-list-item>
-            <mat-list-item routerLink="license-titles" routerLinkActive="active-link">
-              <span class="nav-header-cus">License Title</span>
-            </mat-list-item>
-            <mat-list-item routerLink="license-subcategories" routerLinkActive="active-link">
-              <span class="nav-header-cus">License Subcategory</span>
-            </mat-list-item>
-            <mat-list-item routerLink="roads" routerLinkActive="active-link">
-              <span class="nav-header-cus">Road</span>
-            </mat-list-item>
-          }
-        </mat-nav-list>
-      </div>
-    </mat-sidenav>
-    <!-- Main Content Area -->
-    <mat-sidenav-content>
-      <!-- Button to open sidenav -->
-      <div class="toggle-btn">
-        <button mat-icon-button [class.hidden]="isSidenavOpen" (click)="snavToggle(sidenav)" color="primary">
-          <mat-icon style="font-size: 27px">menu</mat-icon>
+        <!-- Button to view the user's profile -->
+        <button
+          mat-mini-fab
+          class="view-profile"
+          (click)="viewProfile()"
+          type="button"
+        >
+          <mat-icon>account_circle</mat-icon>
         </button>
       </div>
-      <!-- Outlet for routed components -->
-      <router-outlet></router-outlet>
-    </mat-sidenav-content>
-  </mat-sidenav-container>
+      <!-- Divider below profile -->
+      <mat-divider class="profile-divider"></mat-divider>
+      <!-- Navigation Links -->
+      <mat-nav-list>
+        <!-- Static Navigation Links -->
+        @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2',
+        'level_3', 'level_4', 'level_5'])) {
+        <mat-list-item routerLink="dashboard" routerLinkActive="active-link">
+          <span class="nav-header-cus">Home</span>
+        </mat-list-item>
+        } @if (accountService.hasAnyRole('site_admin')) {
+        <mat-list-item routerLink="users" routerLinkActive="active-link">
+          <span class="nav-header-cus">User</span>
+        </mat-list-item>
+        <mat-list-item routerLink="roles" routerLinkActive="active-link">
+          <span class="nav-header-cus">Role</span>
+        </mat-list-item>
+        <mat-list-item routerLink="districts" routerLinkActive="active-link">
+          <span class="nav-header-cus">District</span>
+        </mat-list-item>
+        <mat-list-item routerLink="subdivisions" routerLinkActive="active-link">
+          <span class="nav-header-cus">Sub Division</span>
+        </mat-list-item>
+        <mat-list-item
+          routerLink="police-stations"
+          routerLinkActive="active-link"
+        >
+          <span class="nav-header-cus">Police Station</span>
+        </mat-list-item>
+        <mat-list-item
+          routerLink="license-types"
+          routerLinkActive="active-link"
+        >
+          <span class="nav-header-cus">License Type</span>
+        </mat-list-item>
+        <mat-list-item
+          routerLink="license-categories"
+          routerLinkActive="active-link"
+        >
+          <span class="nav-header-cus">License Category</span>
+        </mat-list-item>
+        <mat-list-item
+          routerLink="license-titles"
+          routerLinkActive="active-link"
+        >
+          <span class="nav-header-cus">License Title</span>
+        </mat-list-item>
+        <mat-list-item
+          routerLink="license-subcategories"
+          routerLinkActive="active-link"
+        >
+          <span class="nav-header-cus">License Subcategory</span>
+        </mat-list-item>
+        <mat-list-item routerLink="roads" routerLinkActive="active-link">
+          <span class="nav-header-cus">Road</span>
+        </mat-list-item>
+        <mat-list-item routerLink="supplychain" routerLinkActive="active-link">
+          <span class="nav-header-cus">Apply Supply Chain</span>
+        </mat-list-item>
+        }
+      </mat-nav-list>
+    </div>
+  </mat-sidenav>
+  <!-- Main Content Area -->
+  <mat-sidenav-content>
+    <!-- Button to open sidenav -->
+    <div class="toggle-btn">
+      <button
+        mat-icon-button
+        [class.hidden]="isSidenavOpen"
+        (click)="snavToggle(sidenav)"
+        color="primary"
+      >
+        <mat-icon style="font-size: 27px">menu</mat-icon>
+      </button>
+    </div>
+    <!-- Outlet for routed components -->
+    <router-outlet></router-outlet>
+  </mat-sidenav-content>
+</mat-sidenav-container>
 }
