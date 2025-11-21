@@ -1,327 +1,243 @@
 <div class="bg-light min-vh-100">
-  <!-- Government Header -->
+    <br>
+    <div class="container mb-5">
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <!-- Main Form Card -->
+                <div class="card shadow-lg border-0 mb-4" style="max-width: 1150px; margin: 0 auto;">
+                    <div class="card-header bg-secondary text-white text-center py-3">
+                        <h4 class="mb-0 fw-bold">ENA Import Permit</h4>
+                    </div>
+                    <div class="card-body bg-white">
+                        <!-- Error Message -->
+                        @if (errorMessage) {
+                        <div class="alert alert-danger">
+                            {{ errorMessage }}
+                        </div>
+                        }
 
-  <br />
-  <div class="container mb-5">
-    <div class="row justify-content-center">
-      <div class="col-12">
-        <!-- Main Form Card -->
-        <div
-          class="card shadow-lg border-0 mb-4"
-          style="max-width: 1150px; margin: 0 auto"
-        >
-          <div class="card-header bg-secondary text-white text-center py-3">
-            <h4 class="mb-0 fw-bold">Requisition for ENA Import Permit</h4>
-          </div>
-          <div class="card-body bg-white">
-            <!-- Error Message -->
-            <div class="alert alert-danger" *ngIf="errorMessage">
-              {{ errorMessage }}
+                        <!-- Form Section -->
+                        <div class="form-section">
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Our Ref. No:</label>
+                                    <input type="text" class="form-control" [(ngModel)]="formData.refNo" readonly
+                                        placeholder="IBPS/01/EXCISE" title="Auto-generated">
+                                    @if (refNoError) {
+                                    <small class="text-danger">{{ refNoError }}</small>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Date:</label>
+                                    <input type="date" class="form-control" [(ngModel)]="formData.date" required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Quantity:</label>
+                                    <input type="number" class="form-control" [(ngModel)]="formData.quantity"
+                                        (ngModelChange)="calculateTotal()" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">No. of Permits:</label>
+                                    <input type="number" class="form-control" [(ngModel)]="formData.numberOfPermits"
+                                        (ngModelChange)="calculateTotal()" required>
+                                </div>
+                                <div
+                                    class="col-md-4 d-flex flex-column align-items-center justify-content-center text-center">
+                                    <label class="form-label w-100 text-center">Total BL:</label>
+                                    <div class="form-control-plaintext fw-bold w-100 text-center fs-5 text-primary">
+                                        {{ calculatedTotal }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Bulk Spirit Type:</label>
+                                    <select class="form-select" [(ngModel)]="formData.bulkSpiritType"
+                                        (change)="onBulkSpiritTypeChange()" required>
+                                        <option value="">Select Bulk Spirit Type</option>
+                                        <option value="grain-ena">Grain ENA</option>
+                                        <option value="molasses-ena">Molasses ENA</option>
+                                        <option value="rectified-spirit">Rectified Spirit</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Strength To:</label>
+                                    <input type="text" class="form-control" [(ngModel)]="formData.strengthTo" readonly>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Lifted From:</label>
+                                    <select class="form-select" [(ngModel)]="formData.liftedFrom"
+                                        (change)="onLiftedFromChange()" required>
+                                        <option value="">Select Distillery</option>
+                                        <option value="sikkim-distilleries">Sikkim Distilleries Ltd</option>
+                                        <option value="mountain-spirits">Mountain Spirits Pvt Ltd</option>
+                                        <option value="highland-breweries">Highland Breweries</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Via Route:</label>
+                                    <input type="text" class="form-control" [(ngModel)]="formData.viaRoute"
+                                        placeholder="Enter route details" required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Checkpost Entry:</label>
+                                    <select class="form-select" [(ngModel)]="formData.checkpostEntry" required>
+                                        <option value="">Select Checkpost</option>
+                                        <option value="rangpo">Rangpo Checkpost</option>
+                                        <option value="melli">Melli Checkpost</option>
+                                        <option value="nathu-la">Nathu La Checkpost</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Choose Purpose:</label>
+                                    <select class="form-select" [(ngModel)]="formData.purpose" required>
+                                        <option value="">Select Purpose</option>
+                                        <option value="manufacturing">Manufacturing</option>
+                                        <option value="blending">Blending</option>
+                                        <option value="bottling">Bottling</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-center mt-4 gap-2">
+                                <button class="btn btn-primary" (click)="saveForm()">
+                                    <i class="bi bi-save me-1"></i>Save
+                                </button>
+                                <button class="btn btn-success" (click)="submitForm()">
+                                    <i class="bi bi-check-circle me-1"></i>Submit
+                                </button>
+                                <button class="btn btn-outline-secondary" (click)="goBack()">
+                                    <i class="bi bi-arrow-left me-1"></i>Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Application Template (shown after submit) -->
+                @if (showApplicationTemplate) {
+                <div id="importPermitPrintSection" class="card shadow-sm border-0 mt-4 printable-content"
+                    style="max-width: 1150px; margin: 0 auto;">
+                    <div class="application-header text-center fw-bold mb-3 fs-5">
+                        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+                            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+                                style="height: 60px; width: auto" />
+                            <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+                        </div>
+                        <div class="text-primary fs-4 mt-2">ENA IMPORT PERMIT REQUISITION</div>
+                    </div>
+
+                    <div class="application-content p-4">
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="text-primary mb-2">Application Details</h6>
+                                    <p><strong>Reference No:</strong> {{ submittedFormData?.refNo }}</p>
+                                    <p><strong>Submission Date:</strong> {{ submittedFormData?.date | date: "dd-MM-yyyy" }}</p>
+                                    <p><strong>Distillery:</strong> {{ getDistilleryName(submittedFormData?.liftedFrom || '') }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h6 class="text-primary mb-2">Status Information</h6>
+                                    <p><strong>Current Status:</strong></p>
+                                    <span class="badge bg-success d-block mt-1">
+                                        THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.
+                                    </span>
+                                    <p class="mt-2"><strong>Amount Paid:</strong> ₹8</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Import Permit Specifications -->
+                        <div class="section-card mb-4">
+                            <h5 class="section-title">Import Permit Specifications</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                                            <td>{{ getBulkSpiritDisplayName(submittedFormData?.bulkSpiritType || '') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Quantity per Permit</td>
+                                            <td>{{ submittedFormData?.quantity }} BL</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Number of Permits</td>
+                                            <td>{{ submittedFormData?.numberOfPermits }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Total Quantity</td>
+                                            <td class="text-success fw-bold">{{ (submittedFormData?.quantity || 0) * (submittedFormData?.numberOfPermits || 0) }} BL</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Strength</td>
+                                            <td>{{ submittedFormData?.strengthTo }}°</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Purpose</td>
+                                            <td>{{ getPurposeDisplayName(submittedFormData?.purpose || '') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Amount Paid</td>
+                                            <td class="text-primary fw-bold">₹8</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Transport & Route Details -->
+                        <div class="section-card mb-4">
+                            <h5 class="section-title">Transport & Route Information</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
+                                            <td>{{ getDistilleryName(submittedFormData?.liftedFrom || '') }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Via Route</td>
+                                            <td>{{ submittedFormData?.viaRoute }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="fw-semibold bg-light">Checkpost Entry</td>
+                                            <td>{{ getCheckpostDisplayName(submittedFormData?.checkpostEntry || '') }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+
+
+                        <!-- Print Button -->
+                        <div class="no-print d-flex justify-content-center mt-4">
+                            <button class="btn btn-primary btn-lg" (click)="printApplication()">
+                                <i class="bi bi-printer me-2"></i>Print Requisition Application
+                            </button>
+                            <button class="btn btn-outline-secondary btn-lg ms-2" (click)="hideApplicationTemplate()">
+                                <i class="bi bi-x-circle me-2"></i>Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                }
             </div>
-
-            <!-- Form Section -->
-            <div class="form-section">
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Our Ref. No:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.refNo"
-                    readonly
-                    placeholder="IBPS/01/EXCISE"
-                    title="Auto-generated"
-                  />
-                  <small class="text-danger" *ngIf="refNoError">{{
-                    refNoError
-                  }}</small>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Date:</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    [(ngModel)]="formData.date"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="row mb-4">
-                <div class="col-md-4">
-                  <label class="form-label">Quantity:</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [(ngModel)]="formData.quantity"
-                    (ngModelChange)="calculateTotal()"
-                    required
-                  />
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label">No. of Permits:</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [(ngModel)]="formData.numberOfPermits"
-                    (ngModelChange)="calculateTotal()"
-                    required
-                  />
-                </div>
-                <div
-                  class="col-md-4 d-flex flex-column align-items-center justify-content-center text-center"
-                >
-                  <label class="form-label w-100 text-center">Total BL:</label>
-                  <div
-                    class="form-control-plaintext fw-bold w-100 text-center fs-5 text-primary"
-                  >
-                    {{ calculatedTotal }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Bulk Spirit Type:</label>
-                  <div class="position-relative">
-                    <select
-                      #spiritTypeSelect
-                      class="form-select"
-                      [(ngModel)]="formData.bulkSpiritType"
-                      (change)="onBulkSpiritTypeChange()"
-                      [disabled]="isLoading"
-                      required
-                    >
-                      <option value="">Select Bulk Spirit Type</option>
-                      <option
-                        *ngFor="let type of bulkSpiritTypes; let i = index"
-                        [value]="type.strengthFrom"
-                        [attr.data-index]="i"
-                      >
-                        {{ type.strengthFrom }} - {{ type.strengthTo }}
-                      </option>
-                    </select>
-                    <div
-                      *ngIf="isLoading"
-                      class="position-absolute top-0 end-0 me-2 mt-2"
-                    >
-                      <div
-                        class="spinner-border spinner-border-sm"
-                        role="status"
-                      >
-                        <span class="visually-hidden">Loading...</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    *ngIf="!isLoading && bulkSpiritTypes.length === 0"
-                    class="text-danger small mt-1"
-                  >
-                    No bulk spirit types available
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Strength To:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.strengthTo"
-                    readonly
-                  />
-                </div>
-              </div>
-
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Lifted From:</label>
-                  <div *ngIf="isLoading" class="d-flex align-items-center mb-2">
-                    <div
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                    >
-                      <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <span>Loading distilleries...</span>
-                  </div>
-
-                  <div *ngIf="!isLoading">
-                    <select
-                      class="form-select"
-                      [(ngModel)]="formData.liftedFrom"
-                      (ngModelChange)="onLiftedFromChange()"
-                      [disabled]="distilleries.length === 0"
-                      [class.is-invalid]="distilleries.length === 0"
-                      required
-                    >
-                      <option [ngValue]="''">Select Distillery</option>
-                      <option
-                        *ngFor="let distillery of distilleries"
-                        [value]="distillery.id.toString()"
-                      >
-                        {{
-                          distillery.distilleryName ||
-                            distillery.distillery_name
-                        }}
-                        ({{
-                          distillery.distilleryState ||
-                            distillery.distillery_state
-                        }})
-                      </option>
-                    </select>
-
-                    <div
-                      *ngIf="distilleries.length === 0"
-                      class="invalid-feedback"
-                    >
-                      <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                      No distilleries available. Please try again later.
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Via Route:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.viaRoute"
-                    placeholder="Enter route details"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="row mb-4">
-                <div class="col-md-6">
-                  <label class="form-label">Checkpost Entry:</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="formData.checkpostEntry"
-                    name="checkpostEntry"
-                    required
-                    [disabled]="isLoading"
-                  >
-                    <option [ngValue]="''">Select Checkpost</option>
-                    <option
-                      *ngFor="let checkpost of checkposts"
-                      [ngValue]="checkpost.checkpostName"
-                    >
-                      {{ checkpost.checkpostName }}
-                    </option>
-                  </select>
-                  <div *ngIf="isLoading" class="text-muted small">
-                    Loading checkposts...
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label">Choose Purpose:</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="formData.purpose"
-                    name="purpose"
-                    required
-                    [disabled]="isLoading"
-                  >
-                    <option [ngValue]="''">Select Purpose</option>
-                    <option
-                      *ngFor="let purpose of purposes"
-                      [ngValue]="purpose.purposeName"
-                    >
-                      {{ purpose.purposeName }}
-                    </option>
-                  </select>
-                  <div *ngIf="isLoading" class="text-muted small">
-                    Loading purposes...
-                  </div>
-                </div>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="d-flex justify-content-center mt-4 gap-2">
-                <button class="btn btn-primary" (click)="saveForm()">
-                  <i class="bi bi-save me-1"></i>Save
-                </button>
-                <button class="btn btn-secondary" (click)="printBill()">
-                  <i class="bi bi-printer me-1"></i>Print Bill
-                </button>
-                <button class="btn btn-success" (click)="submitForm()">
-                  <i class="bi bi-check-circle me-1"></i>Submit
-                </button>
-                <button class="btn btn-outline-secondary" (click)="goBack()">
-                  <i class="bi bi-arrow-left me-1"></i>Back
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <!-- Letter Preview Card -->
-        <div
-          id="importPermitPrintSection"
-          class="main card shadow-sm border-0 printable-content"
-          style="max-width: 1150px; margin: 0 auto"
-        >
-          <div class="letter-header text-center fw-bold mb-3 fs-5">
-            <div
-              class="d-flex align-items-center justify-content-center gap-3 mb-2"
-            >
-              <img
-                src="assets/images/header/Seal_of_Sikkim_greyscale.png"
-                alt="Department Seal"
-                style="height: 60px; width: auto"
-              />
-              <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
-            </div>
-          </div>
-          <div class="letter-content">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <div>
-                <strong>Ref No:</strong>
-                <span class="fw-bold">{{ formData.refNo }}</span>
-              </div>
-              <div>
-                <strong>Date:</strong>
-                <span class="fw-bold">{{
-                  formData.date | date : "dd-MM-yyyy"
-                }}</span>
-              </div>
-            </div>
-
-            <p>
-              <strong>Sub:</strong>
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> import
-              permits of <strong>Grain ENA</strong> for
-              <span class="fw-bold">{{ formData.quantity }}</span> x
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> =
-              <span class="fw-bold">{{ calculatedTotal }}</span> BL.
-            </p>
-
-            <p>
-              We request the issuance of
-              <span class="fw-bold">{{ formData.numberOfPermits }}</span> import
-              permits for <span class="fw-bold">{{ calculatedTotal }}</span> BL
-              Grain ENA, having strength of
-              <span class="fw-bold">{{ strengthFrom }}</span
-              >° to <span class="fw-bold">{{ formData.strengthTo }}</span
-              >°, to be lifted from
-              <span class="fw-bold">{{
-                getDistilleryName(formData.liftedFrom)
-              }}</span>
-            </p>
-
-            <p>
-              Grain ENA shall be conveyed in destination via route:
-              <span class="fw-bold">{{ formData.viaRoute }}</span>
-            </p>
-
-            <p>Thanking You</p>
-
-            <div class="signature-section">
-              <p>&nbsp;</p>
-              <p>&nbsp;</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
-</div>

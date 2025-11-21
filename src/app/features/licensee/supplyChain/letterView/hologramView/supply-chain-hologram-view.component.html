@@ -4,7 +4,7 @@
     <div class="header-content">
       <div class="left-section">
         <button class="btn btn-outline-secondary" (click)="goBack()">
-          <i class="bi bi-arrow-left me-1"></i>Back to Supply Chain Dashboard
+          <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
         </button>
       </div>
       <div class="right-section">
@@ -82,61 +82,215 @@
 
           <!-- Hologram Quantity Details -->
           <div class="mb-4">
-            <h5 class="fw-bold mb-3">Requested Hologram Quantities</h5>
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped">
-                <thead class="table-success">
-                  <tr class="text-center">
-                    <th style="width: 100px">Sl. No.</th>
+            <h5 class="fw-bold mb-3">Requested Hologram Quantity</h5>
+            <div class="simple-table">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th style="width: 100px;">Sl. No.</th>
                     <th>Hologram Series</th>
-                    <th style="width: 200px">Quantity (In Lakh)</th>
-                    <th style="width: 150px">Status</th>
+                    <th style="width: 200px;">Quantity</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="text-center">
-                    <td class="fw-semibold">1</td>
-                    <td class="text-start fw-semibold">Local Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.localQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  @if (submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
+                  <tr>
+                    <td>1</td>
+                    <td>Local Series</td>
+                    <td class="fw-bold fs-5 text-success">{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
                   </tr>
-                  <tr class="text-center">
-                    <td class="fw-semibold">2</td>
-                    <td class="text-start fw-semibold">Export Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.exportQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  }
+                  @if (submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
+                  <tr>
+                    <td>1</td>
+                    <td>Export Series</td>
+                    <td class="fw-bold fs-5 text-primary">{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
                   </tr>
-                  <tr class="text-center">
-                    <td class="fw-semibold">3</td>
-                    <td class="text-start fw-semibold">Defence Series</td>
-                    <td class="fs-5 fw-bold">
-                      {{ submittedData.defenceQtyLakh || 0 }}
-                    </td>
-                    <td>
-                      <span class="badge bg-success text-white">Approved</span>
-                    </td>
+                  }
+                  @if (submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
+                  <tr>
+                    <td>1</td>
+                    <td>Defence Series</td>
+                    <td class="fw-bold fs-5 text-warning">{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
                   </tr>
-                  <tr class="table-warning text-center fw-bold">
-                    <th colspan="2" class="text-end">
-                      TOTAL HOLOGRAMS REQUESTED:
-                    </th>
-                    <th class="fs-4 text-primary">{{ getTotalQuantity() }}</th>
-                    <th>
-                      <span class="badge bg-primary text-white">APPROVED</span>
-                    </th>
-                  </tr>
+                  }
                 </tbody>
               </table>
             </div>
           </div>
+
+          <!-- Edit History Section (if edited by Commissioner) -->
+          @if (submittedData.editedByCommissioner && submittedData.editHistory) {
+            <div class="mb-4">
+              <div class="alert alert-warning border-warning">
+                <h5 class="fw-bold mb-3">
+                  <i class="bi bi-pencil-square me-2"></i>
+                  Quantity Modified by Commissioner
+                </h5>
+                <p class="mb-3">
+                  <i class="bi bi-info-circle me-1"></i>
+                  The quantities for this hologram request have been reviewed and modified by the Commissioner.
+                </p>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="card border-danger">
+                      <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-arrow-left-circle me-1"></i>
+                          Original Requested Quantity
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold">{{ submittedData.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="card border-danger mt-3">
+                      <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-currency-rupee me-1"></i>
+                          Original Amount
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold">₹{{ ((submittedData.editHistory.originalQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card border-success">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-arrow-right-circle me-1"></i>
+                          Approved Quantity (Modified)
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold text-success">{{ submittedData.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="card border-success mt-3">
+                      <div class="card-header bg-success text-white">
+                        <h6 class="mb-0 fw-bold">
+                          <i class="bi bi-currency-rupee me-1"></i>
+                          Updated Amount
+                        </h6>
+                      </div>
+                      <div class="card-body">
+                        <table class="table table-sm table-bordered mb-0">
+                          <tbody>
+                            @if ((submittedData.editHistory.originalQuantities.local || 0) > 0) {
+                              <tr>
+                                <td><strong>Local:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.export || 0) > 0) {
+                              <tr>
+                                <td><strong>Export:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            @if ((submittedData.editHistory.originalQuantities.defence || 0) > 0) {
+                              <tr>
+                                <td><strong>Defence:</strong></td>
+                                <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                              </tr>
+                            }
+                            <tr class="table-active">
+                              <td><strong>Total:</strong></td>
+                              <td class="text-end fw-bold text-success">₹{{ ((submittedData.editHistory.updatedQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                  <p class="mb-0">
+                    <i class="bi bi-person-badge me-1"></i>
+                    <strong>Modified by:</strong> {{ submittedData.editHistory.editedBy }} on {{ submittedData.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
 
           <!-- Application Summary -->
           <div class="row mb-4">
@@ -147,10 +301,18 @@
                 </div>
                 <div class="card-body">
                   <div class="row g-2">
-                    <div class="col-6"><strong>Total Quantity:</strong></div>
-                    <div class="col-6">{{ getTotalQuantity() }} Lakh</div>
-                    <div class="col-6"><strong>Series Count:</strong></div>
-                    <div class="col-6">3 Series</div>
+                    <div class="col-6"><strong>Procurement Type:</strong></div>
+                    <div class="col-6">
+                      <span class="badge" 
+                        [class.bg-success]="submittedData.procurementType === 'Local'"
+                        [class.bg-dark]="submittedData.procurementType === 'Export'"
+                        [class.bg-warning]="submittedData.procurementType === 'Defence'"
+                        [class.text-dark]="submittedData.procurementType === 'Defence'">
+                        {{ submittedData.procurementType || 'Local' }} Series
+                      </span>
+                    </div>
+                    <div class="col-6"><strong>Quantity:</strong></div>
+                    <div class="col-6 fw-bold fs-5 text-primary">{{ getTotalQuantity() | number:'1.0-0' }}</div>
                     <div class="col-6"><strong>Status:</strong></div>
                     <div class="col-6">
                       <span class="badge bg-success">Approved</span>
@@ -184,10 +346,10 @@
           <div class="border p-3 bg-light mb-4">
             <h6 class="fw-bold mb-2">Official Remarks:</h6>
             <p class="mb-1">
-              The hologram requisition application has been reviewed and
-              approved by the Excise Department. The requested quantities for
-              all series (Local, Export, Defence) are within the permitted
-              limits and comply with the regulatory requirements.
+              The hologram requisition application for <strong>{{ submittedData.procurementType || 'Local' }} Series</strong> 
+              has been reviewed and approved by the Excise Department. The requested quantity of 
+              <strong>{{ getTotalQuantity() | number:'1.0-0' }}</strong> holograms is within the permitted limits and complies 
+              with the regulatory requirements.
             </p>
             <p class="mb-0">
               <strong>Approval Status:</strong>
@@ -231,13 +393,45 @@
 
           <!-- Action Buttons -->
           <div class="no-print d-flex justify-content-center gap-3 mt-4">
+            <!-- IT Cell and Commissioner Approval Buttons -->
+            @if (canApprove()) {
+              <button class="btn btn-success btn-lg" (click)="approveApplication()">
+                <i class="bi bi-check-circle me-2"></i>
+                @if (from === 'itcell') {
+                  Approve & Forward to Commissioner
+                } @else {
+                  Approve Application
+                }
+              </button>
+              <button class="btn btn-danger btn-lg" (click)="rejectApplication()">
+                <i class="bi bi-x-circle me-2"></i>Reject Application
+              </button>
+            }
+
+            <!-- Supply Chain Upload Slip Button -->
+            @if (canUploadSlip()) {
+              <button class="btn btn-warning btn-lg">
+                <i class="bi bi-upload me-2"></i>Upload Payment Slip
+              </button>
+            }
+
+            <!-- Common Buttons -->
             <button class="btn btn-primary btn-lg" (click)="printLetter()">
               <i class="bi bi-printer me-2"></i>Print Application
             </button>
             <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
-              <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+              <i class="bi bi-arrow-left me-2"></i>{{ getBackButtonText() }}
             </button>
           </div>
+
+          <!-- Status Message for Supply Chain Users -->
+          @if (from === 'supplychain' && !uploadSlipEnabled) {
+            <div class="alert alert-info mt-4 text-center">
+              <i class="bi bi-info-circle me-2"></i>
+              <strong>Awaiting Approval:</strong> This application is pending approval from IT Cell and Commissioner. 
+              Upload slip button will be enabled after approval.
+            </div>
+          }
         </div>
       </div>
     } @else {
@@ -245,7 +439,7 @@
         <h4><i class="bi bi-exclamation-triangle me-2"></i>No Data Found</h4>
         <p>The requested hologram application could not be found or loaded.</p>
         <button class="btn btn-primary" (click)="goBack()">
-          <i class="bi bi-arrow-left me-2"></i>Return to Supply Chain Dashboard
+          <i class="bi bi-arrow-left me-2"></i>Return to {{ getBackButtonText().replace('Back to ', '') }}
         </button>
       </div>
     }

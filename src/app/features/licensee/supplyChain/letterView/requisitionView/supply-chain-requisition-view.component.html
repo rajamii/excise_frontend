@@ -110,43 +110,10 @@
             </div>
           </div>
 
-          <!-- Application Summary -->
-          <div class="summary-card">
-            <h6 class="text-center mb-3">Application Summary</h6>
-            <div class="row text-center">
-              <div class="col-md-3">
-                <div class="summary-item">
-                  <div class="summary-value">{{ requisitionData.referenceNo }}</div>
-                  <div class="summary-label">Reference Number</div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="summary-item">
-                  <div class="summary-value text-success">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }} BL</div>
-                  <div class="summary-label">Total Quantity</div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="summary-item">
-                  <div class="summary-value text-info">{{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}</div>
-                  <div class="summary-label">Spirit Type</div>
-                </div>
-              </div>
-              <div class="col-md-3">
-                <div class="summary-item">
-                  <div class="summary-value text-warning">₹{{ requisitionData.brAmount }}</div>
-                  <div class="summary-label">Amount Paid</div>
-                </div>
-              </div>
-            </div>
-          </div>
+     
 
           <!-- Footer -->
-          <div class="mt-4 text-center">
-            <p class="mb-1"><em>This is a system generated requisition application view</em></p>
-            <p class="mb-0"><small class="text-muted">Generated on {{ requisitionData.submissionDate | date: 'dd-MM-yyyy' }} for {{ requisitionData.distilleryName }}</small></p>
-          </div>
-
+       
           <!-- Print Button -->
           <div class="no-print d-flex justify-content-center mt-4">
             <button class="btn btn-primary btn-lg" (click)="printApplication()">

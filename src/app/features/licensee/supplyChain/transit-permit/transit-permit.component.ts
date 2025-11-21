@@ -1,38 +1,7 @@
-import {
-  Component,
-  OnInit,
-  Inject,
-  PLATFORM_ID,
-  ChangeDetectorRef,
-} from '@angular/core';
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  FormsModule,
-} from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MasterService } from '../../../../core/services/master.service';
-import { isPlatformBrowser } from '@angular/common';
-import { Observable, of, map, catchError } from 'rxjs';
-import { environment } from '../../../../../environments/environment';
-
-interface BrandSizeData {
-  brandName: string;
-  sizes: number[];
-}
-
-interface Brand {
-  id: number;
-  name: string;
-  sizes: number[];
-}
-
-interface LiquorData {
-  brand_name: string;
-  pack_size_ml: number;
-}
 
 interface FormData {
   billNo: string;
@@ -54,280 +23,109 @@ interface Product {
   additionalExcise: number;
 }
 
-interface LiquorRate {
-  brand: string;
-  size: string;
-  exFactoryPrice: number;
-  educationCess: number;
-  exciseDuty: number;
-  additionalExcise: number;
-  additionalExcise12_5: number;
-  bottlingFee: number;
-  exportFee: number;
-  mrpPerBottle: number;
-  totalPricePerCase: number;
-}
-
 @Component({
   selector: 'app-transit-permit',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transit-permit.component.html',
-  styleUrls: ['./transit-permit.component.scss'],
+  styleUrls: ['./transit-permit.component.scss']
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
     billNo: 'TRP/2/EXCISE',
-    soleDistributor: '',
+    soleDistributor: 'M/s Karma Chopel Bhutia',
     date: '',
     depotAddress: '',
     brand: '',
     size: '',
     cases: 0,
-    vehicleNumber: '',
+    vehicleNumber: ''
   };
-
-  // Distributor data
-  distributors: Array<{
-    id: number;
-    distributorName: string;
-    depoAddress: string;
-  }> = [];
-  depotAddresses: string[] = [];
-  availableDepotAddresses: string[] = []; // Available depot addresses for selected distributor
-
-  brands: { [key: string]: number[] } = {}; // Store brands and their sizes
-  brandOptions: string[] = [];
-  sizeOptions: number[] = [];
 
   products: Product[] = [];
   validationErrors: string[] = [];
   isLocked = false;
+  isSubmitted = false;
 
-  // Rates will be populated from the API
-  private rates: {
-    [key: string]: {
-      educationCess: number;
-      exciseDuty: number;
-      additionalExcise: number;
-    };
-  } = {};
-
-  // Helper method to get rate key from display name
-  private getRateKey(displayName: string): string {
-    // Find the matching brand name in the rates object (case-insensitive)
-    const key = Object.keys(this.rates).find(
-      (key) => key.toLowerCase() === displayName.toLowerCase()
-    );
-    return key || displayName; // Return the original if not found
-  }
+  // Sample rates for calculation
+  private rates = {
+    'royal-stag': { educationCess: 15.50, exciseDuty: 125.00, additionalExcise: 45.00 },
+    'blenders-pride': { educationCess: 18.00, exciseDuty: 140.00, additionalExcise: 50.00 },
+    'officers-choice': { educationCess: 12.00, exciseDuty: 95.00, additionalExcise: 35.00 },
+    'imperial-blue': { educationCess: 14.00, exciseDuty: 110.00, additionalExcise: 40.00 }
+  };
 
   vehicleNumbers: string[] = [
     'SK 01 AB 1234',
     'SK 02 CD 5678',
-    'SK 03 EF 9012',
+    'SK 03 EF 9012'
   ];
 
-  private apiUrl = environment.apiBaseUrl;
   private isBrowser = false;
-
-  constructor(
-    private masterService: MasterService,
-    private router: Router,
-    private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef,
-    @Inject(PLATFORM_ID) platformId: Object
-  ) {
+  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
-  // Method to fetch distributors from the API
-  private fetchDistributors(): void {
-    this.masterService.getDistributors().subscribe({
-      next: (
-        data: Array<{
-          id: number;
-          distributorName: string;
-          depoAddress: string;
-        }>
-      ) => {
-        this.distributors = [...data]; // Create new array reference
-
-        // Force change detection
-        this.cdr.detectChanges();
-      },
-      error: (error: Error) => {
-        console.error('Error fetching distributors:', error);
-        this.distributors = []; // Ensure array is initialized even on error
-        this.cdr.detectChanges();
-      },
-    });
-  }
-
-  // Update depot address when distributor changes
-  onDistributorChange(): void {
-    this.updateDepotAddress();
-  }
-
-  // Helper method to update depot address based on selected distributor
-  private updateDepotAddress(): void {
-    if (!this.formData.soleDistributor) {
-      this.formData.depotAddress = '';
-      this.availableDepotAddresses = [];
-      return;
-    }
-
-    // Find all distributors with the same name (multiple depot addresses)
-    const matchingDistributors = this.distributors.filter(
-      (d) => d.distributorName === this.formData.soleDistributor
-    );
-
-    if (matchingDistributors.length > 0) {
-      // Get all unique depot addresses for this distributor
-      this.availableDepotAddresses = [
-        ...new Set(matchingDistributors.map((d) => d.depoAddress)),
-      ];
-
-      if (this.availableDepotAddresses.length === 1) {
-        // Only one address, auto-fill it
-        this.formData.depotAddress = this.availableDepotAddresses[0];
-      } else {
-        // Multiple addresses, clear the field and let user choose
-        this.formData.depotAddress = '';
-      }
-    } else {
-      this.formData.depotAddress = 'Address not available';
-      this.availableDepotAddresses = [];
-    }
-  }
-
-  // Method to handle depot address selection
-  onDepotAddressChange(): void {
-    // This method can be used for additional logic when depot address changes
-    // Currently no additional logic needed
-  }
-
   ngOnInit(): void {
-    // Initialize distributors array
-    this.distributors = [];
-
-    this.fetchBrands();
-    this.fetchDistributors();
-
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-
+    
     // Load by ref if provided
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
-      const list: any[] = JSON.parse(
-        localStorage.getItem('transitPermitRequests') || '[]'
-      );
-      const found = list.find((r) => r.billNo === ref);
+      const list: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+      const found = list.find(r => r.billNo === ref);
       if (found) {
         this.formData = { ...this.formData, ...found };
         this.products = found.products || [];
+        return; // Don't generate new bill number if loading existing
       }
     }
-  }
-
-  private fetchBrands(): void {
-    this.masterService.getLiquorBrands().subscribe({
-      next: (data: BrandSizeData[]) => {
-        this.brands = {};
-        this.brandOptions = [];
-        this.rates = {}; // Initialize rates object
-
-        // Process each brand WITHOUT making API calls
-        data.forEach((item: BrandSizeData) => {
-          if (item.brandName) {
-            this.brands[item.brandName] = item.sizes || [];
-
-            // Initialize rates with default values - NO API CALLS
-            this.rates[item.brandName] = {
-              educationCess: 0,
-              exciseDuty: 0,
-              additionalExcise: 0,
-            };
-          }
-        });
-
-        this.brandOptions = Object.keys(this.brands).sort();
-        console.log('Fetched brands and sizes:', this.brands);
-      },
-      error: (error: any) => {
-        console.error('Error fetching brands:', error);
-        // Initialize empty objects if API call fails
-        this.brands = {};
-        this.brandOptions = [];
-      },
-    });
+    
+    // Generate next sequential bill number
+    this.generateNextBillNumber();
   }
 
   onBrandChange(): void {
     // Reset size when brand changes
-    if (this.formData) {
-      this.formData.size = '';
-
-      // Update available sizes based on selected brand
-      const brandName = this.formData.brand;
-      if (brandName && this.brands[brandName]) {
-        this.sizeOptions = [...this.brands[brandName]];
-      } else {
-        this.sizeOptions = [];
-      }
-    }
+    this.formData.size = '';
   }
 
   addProduct(): void {
-    // Basic validation
-    if (!this.formData.brand || !this.formData.size || !this.formData.cases) {
-      this.validationErrors.push('Please fill in all required fields');
+    this.validationErrors = [];
+
+    // Validate form
+    if (!this.validateForm()) {
       return;
     }
 
-    // Clear previous errors
-    this.validationErrors = [];
+    // Get rates for the selected brand
+    const brandRates = this.rates[this.formData.brand as keyof typeof this.rates];
+    if (!brandRates) {
+      this.validationErrors.push('Invalid brand selected');
+      return;
+    }
 
-    // Get the brand name without the display prefix if it exists
-    const brandName = this.getBrandValue(this.formData.brand);
-    const size = this.formData.size.replace('ml', ''); // Remove 'ml' suffix if present
+    // Create new product
+    const newProduct: Product = {
+      brand: this.getBrandDisplayName(this.formData.brand),
+      size: this.formData.size + 'ml',
+      cases: this.formData.cases,
+      educationCess: brandRates.educationCess,
+      exciseDuty: brandRates.exciseDuty,
+      additionalExcise: brandRates.additionalExcise
+    };
 
-    // Get or fetch rates for the selected brand and size
-    this.getLiquorRates(brandName, size).subscribe((rate) => {
-      if (!rate) {
-        console.error(
-          'Failed to fetch rates for brand:',
-          brandName,
-          'size:',
-          size
-        );
-        this.validationErrors.push(
-          'Failed to fetch rates for the selected product'
-        );
-        return;
-      }
+    // Add to products list
+    this.products.push(newProduct);
 
-      // Create new product with display name
-      const newProduct: Product = {
-        brand: this.formData.brand, // Keep the display name for the UI
-        size: this.formData.size + 'ml',
-        cases: this.formData.cases,
-        educationCess: rate.educationCess,
-        exciseDuty: rate.exciseDuty,
-        additionalExcise: rate.additionalExcise,
-      };
+    // Reset form fields for next product
+    this.formData.brand = '';
+    this.formData.size = '';
+    this.formData.cases = 0;
 
-      // Add to products list
-      this.products.push(newProduct);
-
-      // Reset form fields for next product
-      this.formData.brand = '';
-      this.formData.size = '';
-      this.formData.cases = 0;
-      this.sizeOptions = [];
-    });
+    console.log('Product added:', newProduct);
   }
 
   deleteProduct(index: number): void {
@@ -361,146 +159,162 @@ export class TransitPermitComponent implements OnInit {
   }
 
   getBrandDisplayName(brandValue: string): string {
-    // Convert from URL-friendly format to display format
-    return brandValue
-      .split('-')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  }
-
-  getBrandValue(displayName: string): string {
-    return displayName.replace(/\(\d+ml\)/g, '').trim();
-  }
-
-  // Method to fetch liquor rates for a specific brand and size
-  getLiquorRates(
-    brandName: string,
-    size: string
-  ): Observable<LiquorRate | null> {
-    return this.masterService.getLiquorRates(brandName, size).pipe(
-      map((response: LiquorRate) => ({
-        brand: response.brand,
-        size: response.size,
-        exFactoryPrice: response.exFactoryPrice,
-        educationCess: response.educationCess,
-        exciseDuty: response.exciseDuty,
-        additionalExcise: response.additionalExcise,
-        additionalExcise12_5: response.additionalExcise12_5,
-        bottlingFee: response.bottlingFee,
-        exportFee: response.exportFee,
-        mrpPerBottle: response.mrpPerBottle,
-        totalPricePerCase: response.totalPricePerCase,
-      })),
-      catchError((error: any) => {
-        console.error('Error fetching liquor rates:', error);
-        return of(null);
-      })
-    );
+    const brandNames: { [key: string]: string } = {
+      'royal-stag': 'Royal Stag',
+      'blenders-pride': 'Blenders Pride',
+      'officers-choice': 'Officers Choice',
+      'imperial-blue': 'Imperial Blue'
+    };
+    return brandNames[brandValue] || brandValue;
   }
 
   getTotalEducationCess(): number {
-    return this.products.reduce(
-      (total, product) => total + product.educationCess * product.cases,
-      0
-    );
+    return this.products.reduce((total, product) => 
+      total + (product.educationCess * product.cases), 0);
   }
 
   getTotalExciseDuty(): number {
-    return this.products.reduce(
-      (total, product) => total + product.exciseDuty * product.cases,
-      0
-    );
+    return this.products.reduce((total, product) => 
+      total + (product.exciseDuty * product.cases), 0);
   }
 
   getTotalAdditionalExcise(): number {
-    return this.products.reduce(
-      (total, product) => total + product.additionalExcise * product.cases,
-      0
-    );
+    return this.products.reduce((total, product) => 
+      total + (product.additionalExcise * product.cases), 0);
   }
 
-  showDeclarationModal(): void {
+  submitApplication(): void {
     if (this.products.length === 0) {
-      this.validationErrors = ['Please add at least one product before saving'];
+      this.validationErrors = ['Please add at least one product before submitting'];
       return;
     }
 
-    // Show Bootstrap modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
+    // Validate all required fields
+    if (!this.formData.date || !this.formData.depotAddress || !this.formData.vehicleNumber) {
+      this.validationErrors = ['Please fill all required fields: Date, Depot Address, and Vehicle Number'];
+      return;
     }
-  }
 
-  cancelDeclaration(): void {
-    // Hide modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      if (modal) {
-        modal.hide();
-      }
-    }
-    console.log('Declaration cancelled');
-  }
-
-  acceptDeclaration(): void {
-    // Lock the bill
+    // Clear validation errors
+    this.validationErrors = [];
+    
+    // Mark as submitted and locked
+    this.isSubmitted = true;
     this.isLocked = true;
 
-    // Hide modal
-    const modalElement = document.getElementById('declarationModal');
-    if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      if (modal) {
-        modal.hide();
-      }
+    // Save to localStorage for supply chain dashboard
+    this.saveToSupplyChainDashboard();
+
+    // Show success message
+    alert('Transit Permit Application submitted successfully!');
+  }
+
+  private generateNextBillNumber(): void {
+    if (!this.isBrowser) {
+      return;
     }
 
-    console.log('Bill locked successfully');
-    alert(
-      'Bill has been locked successfully and is ready for payment processing.'
-    );
-    // Save to local storage for later viewing
+    // Get all existing transit permit requests to find the highest bill number
+    const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+    const importList: any[] = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    
+    // Combine both lists and filter for transit permits
+    const allTransitPermits = [
+      ...transitList,
+      ...importList.filter((item: any) => item.type === 'transit-permit')
+    ];
+
+    // Extract bill numbers and find the highest sequence number
+    let maxSequence = 1; // Start from 1 if no existing bills
+    
+    allTransitPermits.forEach((permit: any) => {
+      const billNo = permit.billNo || permit.refNo;
+      if (billNo && billNo.startsWith('TRP/')) {
+        // Extract number from format like "TRP/2/EXCISE"
+        const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
+        if (match) {
+          const sequence = parseInt(match[1], 10);
+          if (sequence >= maxSequence) {
+            maxSequence = sequence + 1;
+          }
+        }
+      }
+    });
+
+    // Generate the next bill number
+    this.formData.billNo = `TRP/${maxSequence}/EXCISE`;
+  }
+
+  private saveToSupplyChainDashboard(): void {
     if (this.isBrowser) {
-      const key = 'transitPermitRequests';
-      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const entry = { ...this.formData, products: this.products };
-      const idx = list.findIndex((r) => r.billNo === this.formData.billNo);
-      if (idx >= 0) list[idx] = entry;
-      else list.unshift(entry);
-      localStorage.setItem(key, JSON.stringify(list));
+      // Save to transitPermitRequests for transit permit dashboard
+      const transitKey = 'transitPermitRequests';
+      const transitList: any[] = JSON.parse(localStorage.getItem(transitKey) || '[]');
+      const transitEntry = { 
+        ...this.formData, 
+        products: this.products,
+        submissionDate: new Date().toISOString(),
+        status: 'TRANSIT PERMIT ISSUED',
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+      };
+      const transitIdx = transitList.findIndex(r => r.billNo === this.formData.billNo);
+      if (transitIdx >= 0) transitList[transitIdx] = transitEntry; else transitList.unshift(transitEntry);
+      localStorage.setItem(transitKey, JSON.stringify(transitList));
+
+      // Also save to supply chain dashboard (importPermitRequests for compatibility)
+      const supplyChainKey = 'importPermitRequests';
+      const supplyChainList: any[] = JSON.parse(localStorage.getItem(supplyChainKey) || '[]');
+      const supplyChainEntry = {
+        refNo: this.formData.billNo,
+        date: this.formData.date,
+        distilleryName: this.formData.soleDistributor,
+        status: 'TRANSIT PERMIT ISSUED',
+        brAmount: this.getTotalEducationCess(),
+        type: 'transit-permit',
+        depotAddress: this.formData.depotAddress,
+        vehicleNumber: this.formData.vehicleNumber,
+        products: this.products,
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+      };
+      const supplyChainIdx = supplyChainList.findIndex(r => r.refNo === this.formData.billNo);
+      if (supplyChainIdx >= 0) supplyChainList[supplyChainIdx] = supplyChainEntry; else supplyChainList.unshift(supplyChainEntry);
+      localStorage.setItem(supplyChainKey, JSON.stringify(supplyChainList));
+
+      // DON'T generate next bill number here - keep the current bill number for the generated document
+      // Bill number will only change when clearing form or starting new application
     }
   }
+
+
 
   payAllItems(): void {
     // Navigate to payment confirmation page
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: {
+      queryParams: { 
         tab: 'transit',
         billNo: this.formData.billNo,
-        totalAmount:
-          this.getTotalEducationCess() +
-          this.getTotalExciseDuty() +
-          this.getTotalAdditionalExcise(),
-      },
+        totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
+      }
     });
   }
 
   clearForm(): void {
-    // Reset form data (keep bill no and distributor)
+    // Reset form data
     this.formData.date = new Date().toISOString().split('T')[0];
     this.formData.depotAddress = '';
     this.formData.brand = '';
     this.formData.size = '';
     this.formData.cases = 0;
     this.formData.vehicleNumber = '';
-
+    
     // Clear products and errors
     this.products = [];
     this.validationErrors = [];
     this.isLocked = false;
+    this.isSubmitted = false;
+
+    // Generate new bill number for next application
+    this.generateNextBillNumber();
 
     console.log('Form cleared');
   }
@@ -509,8 +323,54 @@ export class TransitPermitComponent implements OnInit {
     this.router.navigate(['/dev-supply-chain']);
   }
 
-  // TrackBy function for better performance with ngFor
-  trackByDistributorId(index: number, distributor: any): number {
-    return distributor.id;
+  getDepotDisplayName(depotValue: string): string {
+    const depotNames: { [key: string]: string } = {
+      'gangtok': 'Gangtok, Sikkim',
+      'namchi': 'Namchi, Sikkim',
+      'gyalshing': 'Gyalshing, Sikkim',
+      'mangan': 'Mangan, Sikkim'
+    };
+    return depotNames[depotValue] || depotValue;
+  }
+
+  printApplication(): void {
+    const printable = document.getElementById('transitPermitPrintSection')?.innerHTML || '';
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => (el as HTMLElement).outerHTML)
+      .join('');
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) return;
+    win.document.open();
+    const ref = this.formData.billNo || 'TRN/BF801';
+    win.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>Transit Permit Application - ${ref}</title>
+          ${styles}
+          <style>
+            @page { size: A4; margin: 12mm; }
+            body { background: #fff; color: #000; }
+            .no-print { display:none !important; }
+            .container { max-width: 100%; padding: 20px; }
+            .government-header .text-success { color: #000 !important; }
+            .details-card h6 { color: #000 !important; }
+            .route-section h5 { color: #000 !important; }
+            .form-section h5 { color: #000 !important; }
+            .products-section h5 { color: #000 !important; }
+            .table { border: 1px solid #000; }
+            .table td, .table th { border-color: #000; }
+            .bg-light { background-color: #f0f0f0 !important; }
+          </style>
+        </head>
+        <body>
+          ${printable}
+        </body>
+      </html>`);
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+      win.close();
+    };
   }
 }

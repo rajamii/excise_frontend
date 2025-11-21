@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
+import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
+import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -36,41 +39,6 @@ interface OfficerActivity {
   comments: string;
 }
 
-// Hologram interfaces - mirroring hologram monthly report
-interface HologramUtilization {
-  fromSerialNo: string;
-  toSerialNo: string;
-  quantity: number;
-}
-
-interface HologramWastage {
-  fromSerialNo: string;
-  toSerialNo: string;
-  quantity: number;
-}
-
-interface HologramReportRow {
-  id: string;
-  month: string;
-  year: string;
-  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  entryDate: string;
-  openingStock: number;
-  freshArrival: number;
-  total: number;
-  utilizations: HologramUtilization[];
-  wastages: HologramWastage[];
-  totalUtilized: number;
-  totalWastage: number;
-  closingBalance: number;
-  isFixed: boolean;
-  isFirstRowOfMonth: boolean;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  editedOnce?: boolean;
-  submittedBy: string;
-  submissionDate: string;
-}
-
 // Mirror distillery brands register structure
 type BrandStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -97,7 +65,7 @@ interface BrandRow {
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent],
   templateUrl: './officer-in-charge.component.html',
   styleUrl: './officer-in-charge.component.scss'
 })
@@ -105,7 +73,8 @@ export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
   activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
-  
+  showHologramRequests = false;
+
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
     name: 'Rajesh Kumar',
@@ -237,7 +206,7 @@ export class OfficerInChargeComponent implements OnInit {
   };
 
   private originalBrandById: Record<string, BrandRow> = {};
-  
+
   // Sample data for development - only applications for current officer's distillery
   allData: TransitPermitRecord[] = [
     {
@@ -324,7 +293,7 @@ export class OfficerInChargeComponent implements OnInit {
 
   filteredData: TransitPermitRecord[] = [];
   paginatedData: TransitPermitRecord[] = [];
-  
+
   filters: FilterOptions = {
     referenceNumber: '',
     status: '',
@@ -342,174 +311,12 @@ export class OfficerInChargeComponent implements OnInit {
   approvalComments = '';
   terminationReason = '';
 
-  // Hologram data
-  selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
-  selectedHologramMonth = 'jan';
-  selectedHologramYear = '2025';
-  hologramRows: HologramReportRow[] = [
-    {
-      id: 'HOL-001',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-01-15',
-      openingStock: 1000,
-      freshArrival: 500,
-      total: 1500,
-      utilizations: [
-        { fromSerialNo: 'L001', toSerialNo: 'L100', quantity: 100 },
-        { fromSerialNo: 'L101', toSerialNo: 'L200', quantity: 100 }
-      ],
-      wastages: [{ fromSerialNo: 'L201', toSerialNo: 'L210', quantity: 10 }],
-      totalUtilized: 200,
-      totalWastage: 10,
-      closingBalance: 1290,
-      isFixed: false,
-      isFirstRowOfMonth: true,
-      status: 'PENDING',
-      editedOnce: false,
-      submittedBy: 'Supply Chain User',
-      submissionDate: '2025-01-15'
-    },
-    {
-      id: 'HOL-002',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-01-16',
-      openingStock: 1290,
-      freshArrival: 300,
-      total: 1590,
-      utilizations: [{ fromSerialNo: 'L300', toSerialNo: 'L400', quantity: 150 }],
-      wastages: [{ fromSerialNo: 'L401', toSerialNo: 'L405', quantity: 5 }],
-      totalUtilized: 150,
-      totalWastage: 5,
-      closingBalance: 1435,
-      isFixed: false,
-      isFirstRowOfMonth: false,
-      status: 'APPROVED',
-      editedOnce: true,
-      submittedBy: 'Supply Chain User',
-      submissionDate: '2025-01-16'
-    },
-    {
-      id: 'HOL-003',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'LOCAL',
-      entryDate: '2025-01-17',
-      openingStock: 1435,
-      freshArrival: 250,
-      total: 1685,
-      utilizations: [
-        { fromSerialNo: 'L500', toSerialNo: 'L600', quantity: 100 },
-        { fromSerialNo: 'L601', toSerialNo: 'L650', quantity: 50 }
-      ],
-      wastages: [{ fromSerialNo: 'L651', toSerialNo: 'L655', quantity: 5 }],
-      totalUtilized: 150,
-      totalWastage: 5,
-      closingBalance: 1530,
-      isFixed: false,
-      isFirstRowOfMonth: false,
-      status: 'PENDING',
-      editedOnce: false,
-      submittedBy: 'Supply Chain Manager',
-      submissionDate: '2025-01-17'
-    },
-    {
-      id: 'HOL-004',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'EXPORT',
-      entryDate: '2025-01-15',
-      openingStock: 800,
-      freshArrival: 400,
-      total: 1200,
-      utilizations: [{ fromSerialNo: 'E001', toSerialNo: 'E050', quantity: 50 }],
-      wastages: [],
-      totalUtilized: 50,
-      totalWastage: 0,
-      closingBalance: 1150,
-      isFixed: false,
-      isFirstRowOfMonth: true,
-      status: 'PENDING',
-      editedOnce: false,
-      submittedBy: 'Supply Chain User',
-      submissionDate: '2025-01-15'
-    },
-    {
-      id: 'HOL-005',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'EXPORT',
-      entryDate: '2025-01-16',
-      openingStock: 1150,
-      freshArrival: 200,
-      total: 1350,
-      utilizations: [{ fromSerialNo: 'E051', toSerialNo: 'E100', quantity: 50 }],
-      wastages: [{ fromSerialNo: 'E101', toSerialNo: 'E103', quantity: 3 }],
-      totalUtilized: 50,
-      totalWastage: 3,
-      closingBalance: 1297,
-      isFixed: false,
-      isFirstRowOfMonth: false,
-      status: 'APPROVED',
-      editedOnce: false,
-      submittedBy: 'Export Manager',
-      submissionDate: '2025-01-16'
-    },
-    {
-      id: 'HOL-006',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'DEFENCE',
-      entryDate: '2025-01-15',
-      openingStock: 600,
-      freshArrival: 200,
-      total: 800,
-      utilizations: [{ fromSerialNo: 'D001', toSerialNo: 'D025', quantity: 25 }],
-      wastages: [{ fromSerialNo: 'D026', toSerialNo: 'D028', quantity: 3 }],
-      totalUtilized: 25,
-      totalWastage: 3,
-      closingBalance: 772,
-      isFixed: false,
-      isFirstRowOfMonth: true,
-      status: 'REJECTED',
-      editedOnce: false,
-      submittedBy: 'Supply Chain User',
-      submissionDate: '2025-01-15'
-    },
-    {
-      id: 'HOL-007',
-      month: 'jan',
-      year: '2025',
-      hologramType: 'DEFENCE',
-      entryDate: '2025-01-18',
-      openingStock: 772,
-      freshArrival: 100,
-      total: 872,
-      utilizations: [{ fromSerialNo: 'D100', toSerialNo: 'D120', quantity: 21 }],
-      wastages: [{ fromSerialNo: 'D121', toSerialNo: 'D122', quantity: 2 }],
-      totalUtilized: 21,
-      totalWastage: 2,
-      closingBalance: 849,
-      isFixed: false,
-      isFirstRowOfMonth: false,
-      status: 'PENDING',
-      editedOnce: false,
-      submittedBy: 'Defence Coordinator',
-      submissionDate: '2025-01-18'
-    }
-  ];
-
-  filteredHologramRows: HologramReportRow[] = [];
-  selectedHologramRow: HologramReportRow | null = null;
+  // Hologram data - removed, will be added later
 
   ngOnInit() {
     this.filteredData = [...this.allData];
     this.updatePagination();
     this.applyBrandFilters();
-    this.filterHologramRows();
   }
 
   getCurrentDateTime(): string {
@@ -518,6 +325,18 @@ export class OfficerInChargeComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+    // Reset hologram requests view when switching tabs
+    if (tab !== 'hologram-register') {
+      this.showHologramRequests = false;
+    }
+  }
+
+  openHologramRequests() {
+    this.showHologramRequests = true;
+  }
+
+  closeHologramRequests() {
+    this.showHologramRequests = false;
   }
 
   // Brands helpers
@@ -621,11 +440,11 @@ export class OfficerInChargeComponent implements OnInit {
     const changed = orig ? (orig as any)[field] !== value : true;
     (brand.changes as any)[field] = changed;
     // recalc closings for qty changes
-    if (['qtyInHandLocal','qtyProducedLocal','qtyIssuedLocal'].includes(field as string)) {
-      brand.closingLocal = (Number(brand.qtyInHandLocal)||0) + (Number(brand.qtyProducedLocal)||0) - (Number(brand.qtyIssuedLocal)||0);
+    if (['qtyInHandLocal', 'qtyProducedLocal', 'qtyIssuedLocal'].includes(field as string)) {
+      brand.closingLocal = (Number(brand.qtyInHandLocal) || 0) + (Number(brand.qtyProducedLocal) || 0) - (Number(brand.qtyIssuedLocal) || 0);
     }
-    if (['qtyInHandExport','qtyProducedExport','qtyIssuedExport'].includes(field as string)) {
-      brand.closingExport = (Number(brand.qtyInHandExport)||0) + (Number(brand.qtyProducedExport)||0) - (Number(brand.qtyIssuedExport)||0);
+    if (['qtyInHandExport', 'qtyProducedExport', 'qtyIssuedExport'].includes(field as string)) {
+      brand.closingExport = (Number(brand.qtyInHandExport) || 0) + (Number(brand.qtyProducedExport) || 0) - (Number(brand.qtyIssuedExport) || 0);
     }
   }
 
@@ -665,22 +484,22 @@ export class OfficerInChargeComponent implements OnInit {
 
   applyFilters() {
     this.filteredData = this.allData.filter(record => {
-      const matchesReference = !this.filters.referenceNumber || 
+      const matchesReference = !this.filters.referenceNumber ||
         record.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
-      
-      const matchesStatus = !this.filters.status || 
+
+      const matchesStatus = !this.filters.status ||
         record.status === this.filters.status;
-      
-      const matchesDateFrom = !this.filters.dateFrom || 
+
+      const matchesDateFrom = !this.filters.dateFrom ||
         new Date(record.submissionDate) >= new Date(this.filters.dateFrom);
-      
-      const matchesDateTo = !this.filters.dateTo || 
+
+      const matchesDateTo = !this.filters.dateTo ||
         new Date(record.submissionDate) <= new Date(this.filters.dateTo);
 
-      return matchesReference && matchesStatus && 
-             matchesDateFrom && matchesDateTo;
+      return matchesReference && matchesStatus &&
+        matchesDateFrom && matchesDateTo;
     });
-    
+
     this.currentPage = 1;
     this.updatePagination();
   }
@@ -722,15 +541,15 @@ export class OfficerInChargeComponent implements OnInit {
     const maxPagesToShow = 5;
     let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
     let endPage = Math.min(this.totalPages, startPage + maxPagesToShow - 1);
-    
+
     if (endPage - startPage + 1 < maxPagesToShow) {
       startPage = Math.max(1, endPage - maxPagesToShow + 1);
     }
-    
+
     for (let i = startPage; i <= endPage; i++) {
       pages.push(i);
     }
-    
+
     return pages;
   }
 
@@ -788,7 +607,8 @@ export class OfficerInChargeComponent implements OnInit {
 
   viewDetails(record: TransitPermitRecord) {
     console.log('Viewing details for:', record);
-    alert(`Viewing details for ${record.referenceNo}. This will open a detailed view modal.`);
+    // Navigate to transit view level 2 component
+    window.open(`/dev-supply-chain-transit-view-level2?ref=${record.referenceNo}`, '_blank');
   }
 
   approveApplication(record: TransitPermitRecord) {
@@ -823,7 +643,7 @@ export class OfficerInChargeComponent implements OnInit {
         this.allData[recordIndex].status = 'APPROVED';
         this.applyFilters();
       }
-      
+
       // Add activity to register
       const newActivity: OfficerActivity = {
         dateTime: new Date().toLocaleString(),
@@ -834,11 +654,11 @@ export class OfficerInChargeComponent implements OnInit {
         comments: this.approvalComments || 'Application approved'
       };
       this.officerActivities.unshift(newActivity);
-      
+
       console.log('Application approved:', this.selectedRecord.referenceNo);
       console.log('Comments:', this.approvalComments);
       alert(`Application ${this.selectedRecord.referenceNo} has been approved!`);
-      
+
       this.selectedRecord = null;
       this.approvalComments = '';
     }
@@ -852,7 +672,7 @@ export class OfficerInChargeComponent implements OnInit {
         this.allData[recordIndex].status = 'TERMINATED';
         this.applyFilters();
       }
-      
+
       // Add activity to register
       const newActivity: OfficerActivity = {
         dateTime: new Date().toLocaleString(),
@@ -863,273 +683,16 @@ export class OfficerInChargeComponent implements OnInit {
         comments: this.terminationReason
       };
       this.officerActivities.unshift(newActivity);
-      
+
       console.log('Application terminated:', this.selectedRecord.referenceNo);
       console.log('Reason:', this.terminationReason);
       console.log('Amount to be refunded:', this.selectedRecord.amount);
       alert(`Application ${this.selectedRecord.referenceNo} has been terminated. Amount ₹${this.selectedRecord.amount} will be credited to distillery wallet.`);
-      
+
       this.selectedRecord = null;
       this.terminationReason = '';
     }
   }
 
-  // Hologram management methods
-  onHologramTypeChange(type: 'LOCAL' | 'EXPORT' | 'DEFENCE') {
-    this.selectedHologramType = type;
-    this.filterHologramRows();
-  }
-
-  onHologramMonthYearChange() {
-    this.filterHologramRows();
-  }
-
-  getHologramCurrentDisplay(): string {
-    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
-    const monthMap: { [key: string]: number } = {
-      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-    };
-    const monthIndex = monthMap[this.selectedHologramMonth] || 1;
-    return `${monthNames[monthIndex]} ${this.selectedHologramYear} - ${this.selectedHologramType}`;
-  }
-
-  getHologramPreviousMonthDisplay(): string {
-    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
-                       'July', 'August', 'September', 'October', 'November', 'December'];
-    const monthMap: { [key: string]: number } = {
-      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-    };
-    let monthIndex = monthMap[this.selectedHologramMonth] || 1;
-    let year = parseInt(this.selectedHologramYear);
-    
-    monthIndex--;
-    if (monthIndex === 0) {
-      monthIndex = 12;
-      year--;
-    }
-    
-    return `${monthNames[monthIndex]} ${year}`;
-  }
-
-  getHologramPreviousMonthClosingBalance(): number {
-    // In real app, this would fetch from database
-    // For demo, return a sample value based on hologram type
-    const balances = { 'LOCAL': 1000, 'EXPORT': 800, 'DEFENCE': 600 };
-    return balances[this.selectedHologramType] || 0;
-  }
-
-  getHologramCount(status?: 'PENDING' | 'APPROVED' | 'REJECTED'): number {
-    if (status) {
-      return this.filteredHologramRows.filter(row => row.status === status).length;
-    }
-    return this.filteredHologramRows.length;
-  }
-
-  getHologramApprovalPercentage(): number {
-    const total = this.getHologramCount();
-    if (total === 0) return 0;
-    const approved = this.getHologramCount('APPROVED');
-    return Math.round((approved / total) * 100);
-  }
-
-  filterHologramRows() {
-    this.filteredHologramRows = this.hologramRows.filter(row => 
-      row.hologramType === this.selectedHologramType &&
-      row.month === this.selectedHologramMonth &&
-      row.year === this.selectedHologramYear
-    );
-  }
-
-  getHologramStatusClass(status: 'PENDING' | 'APPROVED' | 'REJECTED'): string {
-    switch (status) {
-      case 'PENDING': return 'bg-warning text-dark';
-      case 'APPROVED': return 'bg-success';
-      case 'REJECTED': return 'bg-danger';
-      default: return 'bg-secondary';
-    }
-  }
-
-  editHologramRow(row: HologramReportRow) {
-    if (row.editedOnce) {
-      alert('This row has already been edited once and cannot be edited again.');
-      return;
-    }
-    if (row.status === 'APPROVED') {
-      alert('Cannot edit an approved row.');
-      return;
-    }
-    this.selectedHologramRow = {
-      ...row,
-      utilizations: row.utilizations.map(u => ({ ...u })),
-      wastages: row.wastages.map(w => ({ ...w }))
-    };
-  }
-
-  approveHologramRow(row: HologramReportRow) {
-    if (row.status !== 'PENDING') return;
-    row.status = 'APPROVED';
-
-    // Log activity
-    this.officerActivities.unshift({
-      dateTime: new Date().toLocaleString(),
-      action: 'APPROVED',
-      referenceNo: row.id,
-      amount: '0.00',
-      status: 'APPROVED',
-      comments: `Hologram row approved: ${row.hologramType} - ${row.entryDate}`
-    });
-
-    alert(`Hologram entry ${row.id} has been approved successfully!`);
-  }
-
-  rejectHologramRow(row: HologramReportRow) {
-    if (row.status !== 'PENDING') return;
-    const reason = prompt('Enter rejection reason:');
-    if (reason === null || !reason.trim()) return;
-
-    row.status = 'REJECTED';
-
-    // Log activity
-    this.officerActivities.unshift({
-      dateTime: new Date().toLocaleString(),
-      action: 'TERMINATED',
-      referenceNo: row.id,
-      amount: '0.00',
-      status: 'TERMINATED',
-      comments: `Hologram row rejected: ${row.hologramType} - ${row.entryDate}. Reason: ${reason}`
-    });
-
-    alert(`Hologram entry ${row.id} has been rejected.`);
-  }
-
-  saveHologramEdit() {
-    if (!this.selectedHologramRow) return;
-
-    const originalRow = this.hologramRows.find(r => r.id === this.selectedHologramRow!.id);
-    if (originalRow) {
-      // Update the row with edited data
-      Object.assign(originalRow, {
-        ...this.selectedHologramRow,
-        editedOnce: true,
-        utilizations: this.selectedHologramRow.utilizations.map(u => ({ ...u })),
-        wastages: this.selectedHologramRow.wastages.map(w => ({ ...w }))
-      });
-
-      // Log activity
-      this.officerActivities.unshift({
-        dateTime: new Date().toLocaleString(),
-        action: 'APPROVED',
-        referenceNo: originalRow.id,
-        amount: '0.00',
-        status: 'APPROVED',
-        comments: `Hologram row edited by officer: ${originalRow.hologramType} - ${originalRow.entryDate}`
-      });
-
-      alert(`Hologram row ${originalRow.id} has been updated successfully!`);
-    }
-
-    this.selectedHologramRow = null;
-    this.filterHologramRows();
-  }
-
-  cancelHologramEdit() {
-    this.selectedHologramRow = null;
-  }
-
-  onHologramFieldChange(field: keyof HologramReportRow, value: any) {
-    if (!this.selectedHologramRow) return;
-
-    (this.selectedHologramRow as any)[field] = value;
-
-    // Recalculate totals when relevant fields change
-    if (field === 'openingStock' || field === 'freshArrival') {
-      this.selectedHologramRow.total = 
-        (this.selectedHologramRow.openingStock || 0) + 
-        (this.selectedHologramRow.freshArrival || 0);
-    }
-
-    // Recalculate closing balance
-    this.selectedHologramRow.closingBalance = 
-      this.selectedHologramRow.total - 
-      this.selectedHologramRow.totalUtilized - 
-      this.selectedHologramRow.totalWastage;
-  }
-
-  addUtilizationToHologramRow(row: HologramReportRow) {
-    row.utilizations.push({
-      fromSerialNo: '',
-      toSerialNo: '',
-      quantity: 0
-    });
-  }
-
-  removeUtilizationFromHologramRow(row: HologramReportRow, index: number) {
-    row.utilizations.splice(index, 1);
-    this.recalculateHologramTotals(row);
-  }
-
-  addWastageToHologramRow(row: HologramReportRow) {
-    row.wastages.push({
-      fromSerialNo: '',
-      toSerialNo: '',
-      quantity: 0
-    });
-  }
-
-  removeWastageFromHologramRow(row: HologramReportRow, index: number) {
-    row.wastages.splice(index, 1);
-    this.recalculateHologramTotals(row);
-  }
-
-  recalculateHologramTotals(row: HologramReportRow) {
-    row.totalUtilized = row.utilizations.reduce((sum, util) => sum + (util.quantity || 0), 0);
-    row.totalWastage = row.wastages.reduce((sum, waste) => sum + (waste.quantity || 0), 0);
-    row.closingBalance = row.total - row.totalUtilized - row.totalWastage;
-  }
-
-  onHologramSerialChange(row: HologramReportRow, type: 'utilization' | 'wastage', index: number) {
-    if (type === 'utilization') {
-      const util = row.utilizations[index];
-      if (util.fromSerialNo && util.toSerialNo) {
-        // Calculate quantity based on serial numbers (simplified logic)
-        const fromNum = parseInt(util.fromSerialNo.replace(/\D/g, '')) || 0;
-        const toNum = parseInt(util.toSerialNo.replace(/\D/g, '')) || 0;
-        util.quantity = Math.max(0, toNum - fromNum + 1);
-      }
-    } else {
-      const waste = row.wastages[index];
-      if (waste.fromSerialNo && waste.toSerialNo) {
-        // Calculate quantity based on serial numbers (simplified logic)
-        const fromNum = parseInt(waste.fromSerialNo.replace(/\D/g, '')) || 0;
-        const toNum = parseInt(waste.toSerialNo.replace(/\D/g, '')) || 0;
-        waste.quantity = Math.max(0, toNum - fromNum + 1);
-      }
-    }
-    this.recalculateHologramTotals(row);
-  }
-
-  calculateHologramGrandTotals() {
-    const totals = {
-      totalOpening: 0,
-      totalFreshArrival: 0,
-      totalTotal: 0,
-      totalUtilized: 0,
-      totalWastage: 0,
-      totalClosing: 0
-    };
-
-    this.filteredHologramRows.forEach(row => {
-      totals.totalOpening += row.openingStock || 0;
-      totals.totalFreshArrival += row.freshArrival || 0;
-      totals.totalTotal += row.total || 0;
-      totals.totalUtilized += row.totalUtilized || 0;
-      totals.totalWastage += row.totalWastage || 0;
-      totals.totalClosing += row.closingBalance || 0;
-    });
-
-    return totals;
-  }
+  // Hologram management methods - removed, will be added later
 }

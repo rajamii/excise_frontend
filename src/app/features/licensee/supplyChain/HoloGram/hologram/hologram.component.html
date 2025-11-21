@@ -6,7 +6,7 @@
         <!-- Form Card -->
         <div class="card shadow-lg border-0 mb-4" style="max-width: 1150px; margin: 0 auto;">
           <div class="card-header bg-secondary text-white text-center py-3">
-            <h4 class="mb-0 fw-bold">Requisition for Security Holograms</h4>
+            <h4 class="mb-0 fw-bold">Procurement for Security Holograms</h4>
           </div>
           <div class="card-body bg-white">
 
@@ -35,7 +35,7 @@
                     <tr>
                       <th style="width: 120px;">Sl. No.</th>
                       <th>Series</th>
-                      <th style="width: 260px;">Quantity (In Lakh)</th>
+                      <th style="width: 260px;">Quantity</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -43,27 +43,30 @@
                       <td>1</td>
                       <td>Local</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0" step="0.01" placeholder="e.g. 15">
+                        <input type="number" class="form-control" [(ngModel)]="formData.localQtyLakh" min="0"
+                          step="1" placeholder="e.g. 1500">
                       </td>
                     </tr>
                     <tr>
                       <td>2</td>
                       <td>Export</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0" step="0.01">
+                        <input type="number" class="form-control" [(ngModel)]="formData.exportQtyLakh" min="0"
+                          step="1">
                       </td>
                     </tr>
                     <tr>
                       <td>3</td>
                       <td>Defence</td>
                       <td>
-                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0" step="0.01">
+                        <input type="number" class="form-control" [(ngModel)]="formData.defenceQtyLakh" min="0"
+                          step="1">
                       </td>
                     </tr>
                     <tr>
                       <th colspan="2" class="text-end">Total No. of Holograms</th>
                       <th>
-                        <div class="form-control-plaintext fw-bold">{{ totalQtyLakh || 0 }} Lakh</div>
+                        <div class="form-control-plaintext fw-bold">{{ totalQtyLakh || 0 }}</div>
                       </th>
                     </tr>
                   </tbody>
@@ -88,78 +91,337 @@
           </div>
         </div>
 
-        <!-- Letter Preview -->
-        <div id="hologramPrintSection" class="card shadow-sm border-0 printable-content" *ngIf="showPreview" style="max-width: 1150px; margin: 0 auto;">
-          <div class="letter-header text-center fw-bold mb-3 fs-5">
-            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
-              <span>Yuksom Breweries Ltd.</span>
+        <!-- Government Form Preview - Only shows after submit -->
+        @if (isSubmitted && showPreview) {
+        <div id="hologramPrintSection" class="government-form-container">
+          <!-- Government Header -->
+          <div class="gov-header">
+            <div class="gov-seal">
+              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal" class="seal-image">
+            </div>
+            <div class="gov-title">
+              <h2 class="gov-main-title">GOVERNMENT OF SIKKIM</h2>
+              <h3 class="gov-dept-title">EXCISE DEPARTMENT</h3>
+              <p class="gov-location">GANGTOK, SIKKIM</p>
             </div>
           </div>
-          <div class="letter-content p-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <div><strong>Our Ref:</strong> <span class="fw-bold">{{ submittedData?.refNo || formData.refNo }}</span></div>
-              <div><strong>Date:</strong> <span class="fw-bold">{{ (submittedData?.date || formData.date) | date:'dd-MM-yyyy' }}</span></div>
+
+          <hr class="gov-divider">
+
+          <!-- Form Title -->
+          <div class="form-title-section">
+            <h3 class="form-title">HOLOGRAM REQUISITION APPLICATION</h3>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Application Details -->
+          <div class="application-details">
+            <div class="detail-row">
+              <div class="detail-box">
+                <label class="detail-label">Application Ref. No:</label>
+                <div class="detail-value ref-value">{{ submittedData?.refNo }}</div>
+              </div>
+              <div class="detail-box">
+                <label class="detail-label">Application Date:</label>
+                <div class="detail-value">{{ submittedData?.date | date:'dd-MM-yyyy' }}</div>
+              </div>
             </div>
+          </div>
 
-            
-            <p class="mb-1"><strong>To,</strong><br>
-              The Commissioner<br>
-              Excise (Abk) Department<br>
-              Government of Sikkim, Gangtok
-            </p>
+          <!-- Applicant Details -->
+          <div class="applicant-section">
+            <div class="section-header">Applicant Details</div>
+            <div class="applicant-info">
+              <div class="info-row">
+                <label class="info-label">Company Name:</label>
+                <div class="info-value company-name">{{ submittedData?.companyName }}</div>
+              </div>
+            </div>
+          </div>
 
-            <p class="mb-2"><strong>Sub:</strong> Requisition for Security Holograms</p>
-
-            <p class="mb-3">Dear Madam, Kindly issue us the following quantities of Security Hologram:</p>
-
-            <div class="table-responsive mb-3">
-              <table class="table table-bordered">
-                <thead class="table-light">
+          <!-- Requested Quantities -->
+          <div class="quantities-section">
+            <h4 class="section-title">Requested Hologram Quantities</h4>
+            <div class="quantities-table">
+              <table class="gov-table">
+                <thead>
                   <tr>
-                    <th style="width: 120px;">Sl. No.</th>
-                    <th>Series</th>
-                    <th style="width: 260px;">Quantity (In Lakh)</th>
+                    <th>Sl. No.</th>
+                    <th>Hologram Series</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
+                  @if (submittedData && submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
                   <tr>
-                    <td>1</td>
-                    <td>Local</td>
-                    <td>{{ submittedData?.localQtyLakh ?? '-' }}</td>
+                    <td>{{ getSeriesRowNumber('local') }}</td>
+                    <td>Local Series</td>
+                    <td>{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
+                  @if (submittedData && submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
                   <tr>
-                    <td>2</td>
-                    <td>Export</td>
-                    <td>{{ submittedData?.exportQtyLakh ?? '-' }}</td>
+                    <td>{{ getSeriesRowNumber('export') }}</td>
+                    <td>Export Series</td>
+                    <td>{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
+                  @if (submittedData && submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
                   <tr>
-                    <td>3</td>
-                    <td>Defence</td>
-                    <td>{{ submittedData?.defenceQtyLakh ?? '-' }}</td>
+                    <td>{{ getSeriesRowNumber('defence') }}</td>
+                    <td>Defence Series</td>
+                    <td>{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
+                    <td><span class="status-approved">Approved</span></td>
                   </tr>
+                  }
+                  <tr class="total-row">
+                    <td colspan="2"><strong>TOTAL HOLOGRAMS REQUESTED:</strong></td>
+                    <td><strong>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) +
+                        (submittedData?.defenceQtyLakh || 0)) | number:'1.0-0' }}</strong></td>
+                    <td><span class="status-total">APPROVED</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Summary Cards -->
+          <div class="summary-section">
+            <div class="summary-card application-summary">
+              <div class="card-header">APPLICATION SUMMARY</div>
+              <div class="card-content">
+                <div class="summary-row">
+                  <span class="summary-label">Total Quantity:</span>
+                  <span class="summary-value">{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh ||
+                    0) + (submittedData?.defenceQtyLakh || 0)) | number:'1.0-0' }} pieces</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Series Count:</span>
+                  <span class="summary-value">3 Series</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Status:</span>
+                  <span class="summary-value"><span class="badge-approved">APPROVED</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="summary-card processing-info">
+              <div class="card-header">PROCESSING INFORMATION</div>
+              <div class="card-content">
+                <div class="summary-row">
+                  <span class="summary-label">Processed Date:</span>
+                  <span class="summary-value">{{ submittedData?.date | date:'dd-MM-yyyy' }}</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Processing Time:</span>
+                  <span class="summary-value">Same Day</span>
+                </div>
+                <div class="summary-row">
+                  <span class="summary-label">Officer:</span>
+                  <span class="summary-value">Excise Officer</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Official Remarks -->
+          <div class="remarks-section">
+            <div class="remarks-header">Official Remarks:</div>
+            <div class="remarks-content">
+              <p>The hologram requisition application has been reviewed and approved by the Excise Department. The
+                requested quantities for all series (Local, Export, Defence) are within the permitted limits and comply
+                with the regulatory requirements.</p>
+              <p class="approval-status">
+                <strong>Approval Status: </strong>
+                <span class="status-approved-text">APPROVED</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Print Actions -->
+          <div class="print-actions no-print">
+            <div class="alert alert-success mb-4 text-center">
+              <h5 class="alert-heading">
+                <i class="bi bi-check-circle-fill me-2"></i>Application Submitted Successfully!
+              </h5>
+              <p class="mb-2">
+                Your hologram procurement application has been forwarded to <strong>IT Cell</strong> for verification and approval.
+              </p>
+              <div class="alert alert-info mt-3 mb-0">
+                <p class="mb-2 fw-bold">
+                  <i class="bi bi-diagram-3 me-1"></i>Approval Workflow:
+                </p>
+                <ol class="mb-0 text-start" style="padding-left: 1.5rem;">
+                  <li><strong>IT Cell Review:</strong> Application is currently with IT Cell for verification</li>
+                  <li><strong>Payment Upload:</strong> After IT Cell approval, you can upload the payment slip</li>
+                </ol>
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-lg" (click)="openPrintPreview()">
+              <i class="bi bi-printer me-2"></i>Print Application
+            </button>
+            <button class="btn btn-info btn-lg" (click)="viewApplicationDetails()">
+              <i class="bi bi-eye me-2"></i>View Application Details
+            </button>
+            <button class="btn btn-success btn-lg" (click)="viewInDashboard()">
+              <i class="bi bi-list-ul me-2"></i>View in IT Cell Dashboard
+            </button>
+            <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
+              <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+            </button>
+          </div>
+        </div>
+        }
+
+        <!-- Payment Section - Shows after submission -->
+        @if (isSubmitted) {
+        <div class="card shadow-lg border-0 mt-4">
+          <div class="card-header bg-warning text-dark text-center py-3">
+            <h4 class="mb-0 fw-bold">
+              <i class="bi bi-currency-rupee me-2"></i>
+              Payment Information
+            </h4>
+          </div>
+          <div class="card-body bg-white">
+            <!-- Payment Calculation -->
+            <div class="alert alert-info mb-4">
+              <h5 class="alert-heading">
+                <i class="bi bi-info-circle me-2"></i>
+                Offline Payment Required
+              </h5>
+              <p class="mb-0">
+                Payment must be made offline to the printing press or tendered company. 
+                After making the payment, please upload the payment slip received from them.
+              </p>
+            </div>
+
+            <!-- Payment Calculation Table -->
+            <div class="table-responsive mb-4">
+              <table class="table table-bordered">
+                <thead class="table-primary">
                   <tr>
-                    <th colspan="2" class="text-end">Total No. of Holograms</th>
-                    <th>{{ ((submittedData?.localQtyLakh || 0) + (submittedData?.exportQtyLakh || 0) + (submittedData?.defenceQtyLakh || 0)) || 0 }} Lakh</th>
+                    <th>Description</th>
+                    <th class="text-end">Quantity</th>
+                    <th class="text-end">Rate per Hologram</th>
+                    <th class="text-end">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @if (submittedData && submittedData.localQtyLakh && submittedData.localQtyLakh > 0) {
+                  <tr>
+                    <td>Local Series Holograms</td>
+                    <td class="text-end">{{ submittedData.localQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.15</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.localQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  @if (submittedData && submittedData.exportQtyLakh && submittedData.exportQtyLakh > 0) {
+                  <tr>
+                    <td>Export Series Holograms</td>
+                    <td class="text-end">{{ submittedData.exportQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.15</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.exportQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  @if (submittedData && submittedData.defenceQtyLakh && submittedData.defenceQtyLakh > 0) {
+                  <tr>
+                    <td>Defence Series Holograms</td>
+                    <td class="text-end">{{ submittedData.defenceQtyLakh | number:'1.0-0' }}</td>
+                    <td class="text-end">₹0.15</td>
+                    <td class="text-end">₹{{ calculateAmount(submittedData.defenceQtyLakh) | number:'1.2-2' }}</td>
+                  </tr>
+                  }
+                  <tr class="table-success fw-bold">
+                    <td colspan="3" class="text-end">Total Payment Amount:</td>
+                    <td class="text-end">₹{{ calculateTotalAmount() | number:'1.2-2' }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div class="mt-4">
-              <p>Thanking You,</p>
-              <p class="mb-0">For {{ submittedData?.companyName || formData.companyName }}</p>
-              <div style="height: 50px"></div>
-              <p class="mb-0">(Jr. Sales Officer)</p>
+            <!-- Payment Details Card -->
+            <div class="card border-primary mb-4">
+              <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-calculator me-2"></i>
+                  Payment Breakdown
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Total Holograms:</strong> {{ getTotalQuantityLakh() | number:'1.0-0' }} pieces</p>
+                  </div>
+                  <div class="col-md-6">
+                    <p class="mb-2"><strong>Rate per Hologram:</strong> ₹0.15</p>
+                    <p class="mb-2"><strong>Total Wallet Payment:</strong> <span class="text-success fw-bold fs-5">₹{{ calculateTotalAmount() | number:'1.2-2' }}</span></p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="no-print d-flex justify-content-center mt-4">
-              <button class="btn btn-secondary" (click)="openPrintPreview()">
-                <i class="bi bi-printer me-1"></i>Print Letter
-              </button>
+            <!-- Upload Payment Slip Section -->
+            <div class="card border-success">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-upload me-2"></i>
+                  Upload Payment Slip
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <label for="paymentSlipFile" class="form-label">
+                    Select Payment Slip (PDF, JPG, PNG)
+                    <span class="text-danger">*</span>
+                  </label>
+                  <input 
+                    type="file" 
+                    class="form-control" 
+                    id="paymentSlipFile"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    (change)="onPaymentSlipFileSelected($event)">
+                  <small class="text-muted">Maximum file size: 5MB</small>
+                </div>
+                
+                @if (selectedPaymentSlipFile) {
+                <div class="alert alert-success mb-3">
+                  <i class="bi bi-file-earmark-check me-2"></i>
+                  <strong>Selected File:</strong> {{ selectedPaymentSlipFile.name }} 
+                  ({{ (selectedPaymentSlipFile.size / 1024).toFixed(2) }} KB)
+                </div>
+                }
+
+                <div class="mb-3">
+                  <label for="paymentRemarks" class="form-label">Remarks (Optional)</label>
+                  <textarea 
+                    class="form-control" 
+                    id="paymentRemarks"
+                    rows="3"
+                    [(ngModel)]="paymentRemarks"
+                    placeholder="Enter any additional remarks about the payment..."></textarea>
+                </div>
+
+                <div class="d-grid gap-2">
+                  <button 
+                    type="button" 
+                    class="btn btn-success btn-lg" 
+                    (click)="uploadPaymentSlip()"
+                    [disabled]="!selectedPaymentSlipFile">
+                    <i class="bi bi-upload me-2"></i>
+                    Upload Payment Slip
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        }
 
       </div>
     </div>

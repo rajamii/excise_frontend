@@ -336,14 +336,24 @@
 
       <!-- Hologram Tab -->
       @if (activeTab === 'hologram') {
+        <!-- Info Alert -->
+        <div class="alert alert-info mb-3">
+          <h5><i class="bi bi-info-circle me-2"></i>Hologram Payment Information</h5>
+          <p class="mb-0">
+            This section shows hologram requisitions where payment slips have been uploaded. 
+            The payment amount shown (₹0.15 per hologram) is the additional wallet payment required from your Excise/Additional Wallet Balance.
+          </p>
+        </div>
+
         <div class="table-responsive">
           <table class="table table-hover table-bordered">
             <thead class="table-success">
               <tr>
                 <th>Reference Number</th>
                 <th>Company Name</th>
-                <th>Total Quantity (Lakh)</th>
-                <th>Hologram Fee</th>
+                <th>Type</th>
+                <th>Total Quantity</th>
+                <th>Hologram Fee (₹0.15/unit)</th>
                 <th>HOA</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -351,10 +361,20 @@
             </thead>
             <tbody>
               @for (item of hologramData; track item.id) {
-                <tr>
+                <tr [id]="'hologram-' + item.referenceNo + '-' + item.procurementType">
                   <td>{{ item.referenceNo }}</td>
                   <td>{{ item.companyName }}</td>
-                  <td class="text-end">{{ item.totalQuantity | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="badge text-white" 
+                      [ngClass]="{
+                        'bg-success': item.procurementType === 'Local',
+                        'bg-dark': item.procurementType === 'Export',
+                        'bg-warning text-dark': item.procurementType === 'Defence'
+                      }">
+                      {{ item.procurementType || 'Local' }}
+                    </span>
+                  </td>
+                  <td class="text-end">{{ item.totalQuantity | number:'1.0-0' }} pieces</td>
                   <td class="text-end">₹{{ item.hologramFee | number:'1.2-2' }}</td>
                   <td>{{ item.hoa }}</td>
                   <td>
@@ -367,6 +387,19 @@
                       (click)="payHologramItem(item)">
                       <i class="bi bi-credit-card me-1"></i>Pay
                     </button>
+                    <span 
+                      class="badge bg-success" 
+                      *ngIf="item.status === 'Payment Successful'">
+                      <i class="bi bi-check-circle me-1"></i>Paid
+                    </span>
+                  </td>
+                </tr>
+              }
+              @if (hologramData.length === 0) {
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">
+                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                    <p class="mb-0">No hologram payments pending. Upload payment slips from the Supply Chain dashboard to make payments here.</p>
                   </td>
                 </tr>
               }
@@ -631,6 +664,110 @@
         </button>
         <button type="button" class="btn btn-success" (click)="confirmPayment()">
           <i class="bi bi-check me-1"></i>Confirm Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Multi-Type Payment Modal -->
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5)"
+  *ngIf="showMultiTypePaymentModal">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-warning text-dark">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+          <h5 class="modal-title mb-0 fw-bold">Multiple Types Payment Required</h5>
+        </div>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeMultiTypePaymentModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning border-warning">
+          <div class="d-flex align-items-start">
+            <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+            <div>
+              <h6 class="fw-bold mb-2">Payment for All Types Required</h6>
+              <p class="mb-0">
+                Reference number <strong>{{ multiTypePaymentItems[0].referenceNo }}</strong> has multiple procurement types. 
+                You must make payment for <strong>ALL types together</strong> in a single transaction. 
+                This ensures a unified payment slip and easier tracking for the Commissioner.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-primary mb-3">
+          <div class="card-header bg-primary text-white">
+            <h6 class="mb-0">
+              <i class="bi bi-list-check me-2"></i>
+              Types to be Paid Together
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Type</th>
+                    <th class="text-end">Local (Lakh)</th>
+                    <th class="text-end">Export (Lakh)</th>
+                    <th class="text-end">Defence (Lakh)</th>
+                    <th class="text-end">Total Qty</th>
+                    <th class="text-end">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of multiTypePaymentItems">
+                    <td>
+                      <span class="badge text-white" 
+                        [ngClass]="{
+                          'bg-success': item.procurementType === 'Local',
+                          'bg-dark': item.procurementType === 'Export',
+                          'bg-warning text-dark': item.procurementType === 'Defence'
+                        }">
+                        {{ item.procurementType || 'Local' }}
+                      </span>
+                    </td>
+                    <td class="text-end">{{ item.localQty || 0 | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.exportQty || 0 | number:'1.2-2' }}</td>
+                    <td class="text-end">{{ item.defenceQty || 0 | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold">{{ item.totalQuantity | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold text-success">₹{{ item.hologramFee | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-warning">
+                  <tr>
+                    <th colspan="4" class="text-end">Total Payment Required:</th>
+                    <th class="text-end">{{ getTotalQuantityForRef(multiTypePaymentItems[0].referenceNo || '') | number:'1.2-2' }}</th>
+                    <th class="text-end text-danger fs-5">₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].referenceNo || '') | number:'1.2-2' }}</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info mb-0">
+          <i class="bi bi-lightbulb-fill me-2"></i>
+          <strong>Important:</strong> 
+          <ul class="mb-0 mt-2 ps-3">
+            <li>All {{ multiTypePaymentItems.length }} types will be paid together in one transaction</li>
+            <li>A single payment slip will be generated for all types</li>
+            <li>This makes it easier for the Commissioner to review and approve</li>
+            <li>You cannot make separate payments for individual types</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeMultiTypePaymentModal()">
+          <i class="bi bi-x-circle me-1"></i>
+          Cancel
+        </button>
+        <button type="button" class="btn btn-success btn-lg" (click)="proceedToMultiTypePayment()">
+          <i class="bi bi-wallet2 me-2"></i>
+          Proceed to Pay All Types (₹{{ getTotalPaymentForRef(multiTypePaymentItems[0].referenceNo || '') | number:'1.2-2' }})
         </button>
       </div>
     </div>

@@ -8,146 +8,147 @@
         </button>
       </div>
       <div class="right-section">
-        <h1 class="page-title">Revalidation Application View</h1>
+        <h1 class="page-title">Revalidation Application Details</h1>
       </div>
     </div>
   </div>
 
-  <!-- Letter Content -->
-  <div class="letter-container">
+  <!-- Application Content -->
+  <div class="application-container">
     @if (revalidationData) {
-    <div id="revalidationPrintSection" class="card shadow-sm border-0 printable-content">
-      <div class="letter-header text-center fw-bold mb-3 fs-5">
-        <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-          <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto;"/>
-          <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
-        </div>
-      </div>
-      <div class="letter-content p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div><strong>Ref No:</strong> <span class="fw-bold">{{ revalidationData.referenceNo }}</span></div>
-          <div><strong>Date:</strong> <span class="fw-bold">{{ revalidationData.submissionDate | date:'dd-MM-yyyy' }}</span></div>
+      <div id="revalidationPrintSection" class="card shadow-sm border-0 printable-content">
+        <div class="application-header text-center fw-bold mb-3 fs-5">
+          <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto" />
+            <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+          </div>
+          <div class="text-primary fs-4 mt-2">PERMIT REVALIDATION APPLICATION</div>
         </div>
 
-        <p class="mb-1"><strong>To,</strong><br>
-          The Commissioner<br>
-          Excise (Abk) Department<br>
-          Government of Sikkim, Gangtok
-        </p>
+        <div class="application-content p-4">
+          <!-- Basic Information -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="info-card">
+                <h6 class="text-primary mb-2">Application Details</h6>
+                <p><strong>Reference No:</strong> {{ revalidationData.referenceNo }}</p>
+                <p><strong>Submission Date:</strong> {{ revalidationData.submissionDate | date: "dd-MM-yyyy" }}</p>
+                <p><strong>Distillery:</strong> {{ revalidationData.distilleryName }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-card">
+                <h6 class="text-primary mb-2">Status Information</h6>
+                <p><strong>Current Status:</strong></p>
+                <span [ngClass]="getStatusBadgeClass(revalidationData.status)" class="d-block mt-1">
+                  {{ revalidationData.status }}
+                </span>
+                <p class="mt-2"><strong>Revalidation Fee:</strong> ₹{{ revalidationData.revalidationAmount }}</p>
+              </div>
+            </div>
+          </div>
 
-        <p class="mb-2"><strong>Sub:</strong> Application for Revalidation of Import Permit</p>
+          <!-- Original Permit Details -->
+          <div class="section-card mb-4">
+            <h5 class="section-title">Original Permit Information</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
+                    <td>{{ revalidationData.originalPermitNo }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Original Issue Date</td>
+                    <td>{{ revalidationData.originalPermitDate | date: 'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Current Expiry Date</td>
+                    <td class="text-danger fw-bold">{{ revalidationData.expiryDate | date: 'dd-MM-yyyy' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Original Amount</td>
+                    <td>₹{{ revalidationData.brAmount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <div class="revalidation-details mb-3">
-          <p class="mb-2">
-            <strong>Subject:</strong> Request for revalidation of Import Permit 
-            <span class="fw-bold">{{ revalidationData.originalPermitNo }}</span> dated 
-            <span class="fw-bold">{{ revalidationData.originalPermitDate | date:'dd-MM-yyyy' }}</span>
-          </p>
+          <!-- Revalidation Request Details -->
+          <div class="section-card mb-4">
+            <h5 class="section-title">Revalidation Request Details</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold bg-light" style="width: 30%;">Reason for Revalidation</td>
+                    <td>{{ revalidationData.reasonForRevalidation }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Requested New Quantity</td>
+                    <td>{{ revalidationData.newQuantity }} BL</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">New Purpose</td>
+                    <td>{{ revalidationData.newPurpose }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Revalidation Fee</td>
+                    <td class="text-success fw-bold">₹{{ revalidationData.revalidationAmount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-          <p class="mb-2">
-            We respectfully request the revalidation of our import permit 
-            <span class="fw-bold">{{ revalidationData.originalPermitNo }}</span> 
-            for the following reasons:
-          </p>
+          <!-- Summary Section -->
+          <div class="summary-card">
+            <h6 class="text-center mb-3">Application Summary</h6>
+            <div class="row text-center">
+              <div class="col-md-4">
+                <div class="summary-item">
+                  <div class="summary-value">{{ revalidationData.referenceNo }}</div>
+                  <div class="summary-label">Reference Number</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="summary-item">
+                  <div class="summary-value text-primary">{{ revalidationData.newQuantity }} BL</div>
+                  <div class="summary-label">New Requested Quantity</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="summary-item">
+                  <div class="summary-value text-success">₹{{ revalidationData.revalidationAmount }}</div>
+                  <div class="summary-label">Revalidation Fee</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          <div class="reason-box mb-3">
-            <p class="mb-1"><strong>Reason for Revalidation:</strong></p>
-            <p class="mb-0 ps-3">{{ revalidationData.reasonForRevalidation }}</p>
+          <!-- Footer -->
+          <div class="mt-4 text-center">
+            <p class="mb-1"><em>This is a system generated revalidation application view</em></p>
+            <p class="mb-0"><small class="text-muted">Generated on {{ revalidationData.submissionDate | date: 'dd-MM-yyyy' }} for {{ revalidationData.distilleryName }}</small></p>
+          </div>
+
+          <!-- Print Button -->
+          <div class="no-print d-flex justify-content-center mt-4">
+            <button class="btn btn-primary btn-lg" (click)="printApplication()">
+              <i class="bi bi-printer me-2"></i>Print Revalidation Application
+            </button>
           </div>
         </div>
-
-        <div class="table-responsive mb-3">
-          <table class="table table-bordered">
-            <thead class="table-light">
-              <tr>
-                <th colspan="2" class="text-center">REVALIDATION DETAILS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Revalidation Reference</strong></td>
-                <td>{{ revalidationData.referenceNo }}</td>
-              </tr>
-              <tr>
-                <td><strong>Distillery Name</strong></td>
-                <td>{{ revalidationData.distilleryName }}</td>
-              </tr>
-              <tr>
-                <td><strong>Original Permit No</strong></td>
-                <td>{{ revalidationData.originalPermitNo }}</td>
-              </tr>
-              <tr>
-                <td><strong>Original Permit Date</strong></td>
-                <td>{{ revalidationData.originalPermitDate | date:'dd-MM-yyyy' }}</td>
-              </tr>
-              <tr>
-                <td><strong>Current Expiry Date</strong></td>
-                <td>{{ revalidationData.expiryDate | date:'dd-MM-yyyy' }}</td>
-              </tr>
-              <tr>
-                <td><strong>Reason for Revalidation</strong></td>
-                <td>{{ revalidationData.reasonForRevalidation }}</td>
-              </tr>
-              @if (revalidationData.newQuantity) {
-              <tr>
-                <td><strong>New Quantity Requested</strong></td>
-                <td>{{ revalidationData.newQuantity }} BL</td>
-              </tr>
-              }
-              @if (revalidationData.newPurpose) {
-              <tr>
-                <td><strong>New Purpose</strong></td>
-                <td>{{ revalidationData.newPurpose }}</td>
-              </tr>
-              }
-              <tr>
-                <td><strong>Revalidation Fee</strong></td>
-                <td><strong>₹{{ revalidationData.revalidationAmount | number:'1.2-2' }}</strong></td>
-              </tr>
-              <tr>
-                <td><strong>Status</strong></td>
-                <td>
-                  <span [class]="getStatusBadgeClass(revalidationData.status)">
-                    {{ revalidationData.status }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="declaration-section mb-3">
-          <h6 class="fw-bold mb-2">DECLARATION:</h6>
-          <p class="mb-1">We hereby declare that:</p>
-          <ul class="mb-0">
-            <li>The information provided above is true and correct to the best of our knowledge</li>
-            <li>We understand that any false information may lead to cancellation of the permit</li>
-            <li>We agree to comply with all terms and conditions of the revalidated permit</li>
-            <li>We will pay the required revalidation fee as per department norms</li>
-          </ul>
-        </div>
-
-        <div class="mt-4">
-          <p>We request your kind consideration and approval for the revalidation of our import permit.</p>
-          <div style="height: 50px"></div>
-          <p class="mb-0">For {{ revalidationData.distilleryName }}</p>
-          <div style="height: 30px"></div>
-          <p class="mb-0">(Authorized Signatory)</p>
-        </div>
-
-        <div class="no-print d-flex justify-content-center mt-4">
-          <button class="btn btn-primary" (click)="printLetter()">
-            <i class="bi bi-printer me-1"></i>Print Application
-          </button>
-        </div>
       </div>
-    </div>
     } @else {
-    <div class="alert alert-warning text-center">
-      <h4>No Data Found</h4>
-      <p>The requested revalidation application could not be found.</p>
-      <button class="btn btn-primary" (click)="goBack()">Return to Dashboard</button>
-    </div>
+      <div class="alert alert-warning text-center">
+        <h4>No Data Found</h4>
+        <p>The requested revalidation application could not be found.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          Return to Commissioner Dashboard
+        </button>
+      </div>
     }
   </div>
 </div>

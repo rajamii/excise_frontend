@@ -169,11 +169,6 @@ export class PermitSectionTransitViewComponent implements OnInit {
 
     const printable =
       document.getElementById("permitSectionTransitPrint")?.innerHTML || "";
-    const styles = Array.from(
-      document.querySelectorAll('link[rel="stylesheet"], style'),
-    )
-      .map((el) => (el as HTMLElement).outerHTML)
-      .join("");
 
     const win = window.open("", "_blank", "width=900,height=1200");
     if (!win) {
@@ -187,31 +182,231 @@ export class PermitSectionTransitViewComponent implements OnInit {
       <html>
         <head>
           <title>Transit Permit Application - ${ref}</title>
-          ${styles}
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
           <style>
-            @page { size: A4; margin: 15mm; }
-            body {
-              background: #fff;
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
+            @page { 
+              size: A4; 
+              margin: 15mm 10mm; 
             }
-            .no-print { display: none !important; }
-            .printable-content, .printable-content * { visibility: visible !important; }
-            .card { border: none !important; box-shadow: none !important; }
-            .card-header { display: none !important; }
-            .letter-content { margin: 0 !important; }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              background: #fff !important;
+              font-family: Arial, sans-serif !important;
+              line-height: 1.3 !important;
+              font-size: 10pt !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .no-print { 
+              display: none !important; 
+            }
+            .printable-content { 
+              visibility: visible !important;
+              background: white !important;
+              box-shadow: none !important;
+              border: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .card { 
+              border: none !important; 
+              box-shadow: none !important; 
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            
+            /* Application Header */
+            .application-header {
+              text-align: center !important;
+              margin-bottom: 15pt !important;
+              padding: 10pt 0 !important;
+              background: white !important;
+              border-bottom: 1pt solid #000 !important;
+              page-break-inside: avoid !important;
+            }
+            .application-header .d-flex {
+              justify-content: center !important;
+              align-items: center !important;
+              gap: 10pt !important;
+              margin-bottom: 8pt !important;
+            }
+            .application-header img {
+              max-height: 40pt !important;
+              width: auto !important;
+            }
+            .application-header .header-text {
+              font-size: 11pt !important;
+              font-weight: bold !important;
+              color: #000 !important;
+            }
+            .application-header .text-success {
+              color: #000 !important;
+              font-size: 12pt !important;
+              font-weight: bold !important;
+              margin-top: 5pt !important;
+            }
+            
+            /* Application Content */
+            .application-content {
+              padding: 0 !important;
+              font-size: 9pt !important;
+              line-height: 1.2 !important;
+            }
+            
+            /* Row and Columns */
+            .row.mb-4 {
+              margin-bottom: 10pt !important;
+            }
+            .row.mb-4::after {
+              content: "";
+              display: table;
+              clear: both;
+            }
+            .col-md-6 {
+              width: 50% !important;
+              float: left !important;
+              padding: 0 5pt !important;
+            }
+            
+            /* Border Cards */
+            .border.border-success.rounded.p-3 {
+              border: 1pt solid #000 !important;
+              border-radius: 0 !important;
+              padding: 8pt !important;
+              margin-bottom: 8pt !important;
+              background: #f8f8f8 !important;
+            }
+            
+            /* Section Titles */
+            .text-success.fw-bold {
+              font-size: 9pt !important;
+              font-weight: bold !important;
+              color: #000 !important;
+              margin-bottom: 6pt !important;
+              border-bottom: 1pt solid #000 !important;
+              padding-bottom: 3pt !important;
+            }
+            
+            /* Info Paragraphs */
+            .transit-info p,
+            .status-info p {
+              margin-bottom: 3pt !important;
+              font-size: 8pt !important;
+              line-height: 1.1 !important;
+            }
+            .transit-info span.text-muted,
+            .status-info span.text-muted {
+              font-weight: bold !important;
+              color: #000 !important;
+              width: auto !important;
+            }
+            
+            /* Badges */
+            .badge {
+              background: #e0e0e0 !important;
+              color: #000 !important;
+              font-size: 7pt !important;
+              padding: 2pt 4pt !important;
+              border: 1pt solid #999 !important;
+              border-radius: 0 !important;
+            }
+            
+            /* Section Headers */
+            .mb-4 h5 {
+              font-size: 9pt !important;
+              font-weight: bold !important;
+              color: #000 !important;
+              margin-bottom: 6pt !important;
+              border-bottom: 1pt solid #000 !important;
+              padding-bottom: 3pt !important;
+            }
+            
+            /* Tables */
+            .table-responsive {
+              overflow: visible !important;
+            }
+            .table {
+              margin-bottom: 8pt !important;
+              font-size: 8pt !important;
+              width: 100% !important;
+              border-collapse: collapse !important;
+            }
+            .table td,
+            .table th {
+              padding: 4pt 6pt !important;
+              vertical-align: top !important;
+              border: 1pt solid #000 !important;
+              line-height: 1.1 !important;
+            }
+            .table thead th {
+              background: #f0f0f0 !important;
+              color: #000 !important;
+              font-weight: bold !important;
+            }
+            .table tbody td {
+              background: white !important;
+            }
+            .table tfoot td {
+              background: #f8f8f8 !important;
+              font-weight: bold !important;
+            }
+            .fw-semibold.bg-light {
+              font-weight: bold !important;
+              color: #000 !important;
+              background: #f8f8f8 !important;
+            }
+            .fw-normal {
+              font-weight: normal !important;
+              color: #000 !important;
+            }
+            .fw-bold {
+              font-weight: bold !important;
+              color: #000 !important;
+            }
+            .text-center {
+              text-align: center !important;
+            }
+            
+            /* HR */
+            hr {
+              border: 1pt solid #000 !important;
+              margin: 5pt 0 !important;
+            }
+            
+            /* Bootstrap utility classes */
+            .d-flex { display: flex !important; }
+            .align-items-center { align-items: center !important; }
+            .justify-content-center { justify-content: center !important; }
+            .text-center { text-align: center !important; }
+            .fw-bold { font-weight: bold !important; }
+            .mb-2 { margin-bottom: 0.5rem !important; }
+            .mb-3 { margin-bottom: 1rem !important; }
+            .gap-3 { gap: 1rem !important; }
+            .fs-3 { font-size: 1.75rem !important; }
+            .fs-5 { font-size: 1.25rem !important; }
           </style>
         </head>
         <body>
-          ${printable}
+          <div class="transitviewlevel1-container">
+            <div class="application-container">
+              ${printable}
+            </div>
+          </div>
         </body>
       </html>`);
     win.document.close();
 
     win.onload = () => {
       win.focus();
-      win.print();
-      win.close();
+      setTimeout(() => {
+        win.print();
+        win.close();
+      }, 1000);
     };
   }
 

@@ -1,0 +1,842 @@
+// Base container styles
+.hologram-application-container {
+  max-width: 1000px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  background: #f8f9fa;
+  min-height: 100vh;
+}
+
+// Form input styles
+.card {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: none;
+
+  .card-header {
+    background: linear-gradient(135deg, #6c757d, #495057);
+    color: white;
+    border-radius: 8px 8px 0 0;
+
+    h4 {
+      margin: 0;
+      font-weight: 600;
+    }
+  }
+
+  .card-body {
+    padding: 2rem;
+    background: white;
+
+    .form-label {
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      padding: 0.75rem;
+      transition: border-color 0.3s ease;
+
+      &:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+
+      &[readonly] {
+        background-color: #f8f9fa;
+        color: #6c757d;
+      }
+    }
+
+    .table {
+      margin-bottom: 0;
+
+      th,
+      td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        border: 1px solid #dee2e6;
+        text-align: center;
+      }
+
+      th:nth-child(2),
+      td:nth-child(2) {
+        text-align: left;
+      }
+
+      thead th {
+        background-color: #28a745;
+        color: white;
+        font-weight: 600;
+        border-bottom: 2px solid #1e7e34;
+      }
+
+      .form-control {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 0.5rem;
+        text-align: center;
+      }
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      i {
+        margin-right: 0.5rem;
+      }
+    }
+  }
+}
+
+// Government Form Styles - This is the main design from your image
+.government-form-container {
+  max-width: auto;
+  margin: 1.5rem auto;
+  background: white;
+  padding: 2rem;
+  border: 2px solid #ddd;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  font-family: Arial, sans-serif;
+  border-radius: 8px;
+
+  // Government Header - matches your image exactly
+  .gov-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+
+    .gov-seal {
+      .seal-image {
+        height: 80px;
+        width: auto;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      }
+    }
+
+    .gov-title {
+      text-align: center;
+
+      .gov-main-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin: 0;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+      }
+
+      .gov-dept-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #28a745;
+        margin: 0.25rem 0;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+      }
+
+      .gov-location {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 0;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+    }
+  }
+
+  // Main divider line
+  .gov-divider {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, #2c3e50 0%, #28a745 50%, #2c3e50 100%);
+    margin: 1.5rem 0;
+  }
+
+  // Section divider
+  .section-divider {
+    border: none;
+    height: 1px;
+    background: #28a745;
+    margin: 1rem 0;
+  }
+
+  // Form Title - "HOLOGRAM REQUISITION APPLICATION"
+  .form-title-section {
+    text-align: center;
+    margin-bottom: 1.5rem;
+
+    .form-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #28a745;
+      text-decoration: underline;
+      margin: 0;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 0.75rem 0;
+    }
+  }
+
+  // Application Details Section
+  .application-details {
+    margin-bottom: 1.5rem;
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+
+      .detail-box {
+        border: 2px solid #007bff;
+        padding: 1rem;
+        border-radius: 6px;
+        background: #f8f9fa;
+        position: relative;
+
+        .detail-label {
+          font-weight: 600;
+          color: #495057;
+          font-size: 0.9rem;
+          display: block;
+          margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+          font-size: 1.1rem;
+          font-weight: bold;
+          color: #2c3e50;
+
+          &.ref-value {
+            color: #007bff;
+            font-size: 1.2rem;
+            font-weight: 800;
+          }
+        }
+      }
+    }
+  }
+
+  // Applicant Details Section
+  .applicant-section {
+    margin-bottom: 1.5rem;
+
+    .section-header {
+      background: #e9ecef;
+      padding: 0.75rem 1rem;
+      font-weight: bold;
+      color: #495057;
+      border: 2px solid #28a745;
+      border-radius: 6px 6px 0 0;
+      margin-bottom: 0;
+      font-size: 1rem;
+    }
+
+    .applicant-info {
+      border: 2px solid #28a745;
+      border-top: none;
+      padding: 1rem;
+      border-radius: 0 0 6px 6px;
+      background: #f8f9fa;
+
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+
+        .info-label {
+          font-weight: 600;
+          color: #495057;
+          min-width: 120px;
+          font-size: 0.9rem;
+        }
+
+        .info-value {
+          font-weight: bold;
+          color: #28a745;
+          font-size: 1.1rem;
+
+          &.company-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+          }
+        }
+      }
+    }
+  }
+
+  // Quantities Section - Main table
+  .quantities-section {
+    margin-bottom: 1.5rem;
+
+    .section-title {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+
+    .quantities-table {
+      .gov-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 2px solid #2c3e50;
+        background: white;
+
+        th,
+        td {
+          border: 1px solid #2c3e50;
+          padding: 0.75rem;
+          text-align: center;
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+          text-align: left;
+        }
+
+        thead th {
+          background-color: #f8f9fa;
+          font-weight: bold;
+          color: #2c3e50;
+          font-size: 1rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        tbody tr:nth-child(odd) {
+          background-color: #f9f9f9;
+        }
+
+        tbody tr:nth-child(even) {
+          background-color: white;
+        }
+
+        .total-row {
+          background-color: #e9ecef !important;
+          font-weight: bold;
+          border-top: 3px solid #2c3e50;
+          font-size: 1.1rem;
+
+          td,
+          th {
+            font-weight: bold;
+            color: #2c3e50;
+          }
+        }
+
+        .status-approved {
+          background-color: #d4edda;
+          color: #155724;
+          padding: 0.4rem 0.8rem;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .status-total {
+          background-color: #cce5ff;
+          color: #004085;
+          padding: 0.4rem 0.8rem;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
+  // Summary Cards Section
+  .summary-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    .summary-card {
+      border: 2px solid #dee2e6;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+      &.application-summary {
+        border-color: #17a2b8;
+
+        .card-header {
+          background: linear-gradient(135deg, #17a2b8, #20c997);
+          color: white;
+        }
+      }
+
+      &.processing-info {
+        border-color: #ffc107;
+
+        .card-header {
+          background: linear-gradient(135deg, #ffc107, #fd7e14);
+          color: #212529;
+        }
+      }
+
+      .card-header {
+        padding: 0.75rem 1rem;
+        font-weight: bold;
+        font-size: 0.9rem;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+      }
+
+      .card-content {
+        padding: 1rem;
+
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+          font-size: 0.9rem;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .summary-label {
+            color: #6c757d;
+            font-weight: 500;
+          }
+
+          .summary-value {
+            font-weight: 600;
+            color: #2c3e50;
+          }
+        }
+
+        .badge-approved {
+          background-color: #28a745;
+          color: white;
+          padding: 0.4rem 0.8rem;
+          border-radius: 6px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
+  // Official Remarks Section
+  .remarks-section {
+    border: 2px solid #28a745;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    background: #f8f9fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+    .remarks-header {
+      background: #e9ecef;
+      padding: 0.75rem 1rem;
+      font-weight: bold;
+      color: #495057;
+      border-bottom: 1px solid #28a745;
+      font-size: 1rem;
+    }
+
+    .remarks-content {
+      padding: 1rem;
+
+      p {
+        margin-bottom: 0.75rem;
+        line-height: 1.5;
+        color: #2c3e50;
+        font-size: 0.9rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        &.approval-status {
+          margin-top: 1.5rem;
+          padding-top: 1rem;
+          border-top: 1px solid #dee2e6;
+          font-size: 1.1rem;
+        }
+      }
+
+      .status-approved-text {
+        color: #28a745;
+        font-weight: bold;
+        font-size: 1.3rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+    }
+  }
+
+  // Print Actions
+  .print-actions {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 3px solid #e9ecef;
+
+    .btn {
+      margin: 0 1rem;
+      padding: 1rem 2.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+
+      &:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      i {
+        margin-right: 0.75rem;
+        font-size: 1.1rem;
+      }
+    }
+  }
+}
+
+// Print styles - Clean layout matching your image
+@media print {
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+
+  // Hide everything except the government form
+  body * {
+    visibility: hidden;
+  }
+
+  .government-form-container,
+  .government-form-container * {
+    visibility: visible;
+  }
+
+  .government-form-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    border: none;
+    background: white;
+    font-family: Arial, sans-serif;
+
+    // Hide print buttons and complex sections
+    .no-print,
+    .print-actions,
+    .summary-section,
+    .remarks-section {
+      display: none !important;
+    }
+
+    // Header with seal and title - centered layout
+    .gov-header {
+      text-align: center;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+
+      .gov-seal {
+        text-align: center;
+        margin-bottom: 0.5rem;
+
+        .seal-image {
+          height: 150px;
+          width: auto;
+        }
+      }
+
+      .gov-title {
+        text-align: center;
+
+        .gov-main-title {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #000;
+          margin: 0.3rem 0;
+          letter-spacing: 1px;
+        }
+
+        .gov-dept-title {
+          font-size: 1.1rem;
+          font-weight: bold;
+          color: #000;
+          margin: 0.3rem 0;
+          letter-spacing: 0.5px;
+        }
+
+        .gov-location {
+          font-size: 1rem;
+          color: #000;
+          margin: 0.3rem 0;
+        }
+      }
+    }
+
+    // Main divider
+    .gov-divider {
+      border: none;
+      height: 2px;
+      background: #000;
+      margin: 1rem 0;
+    }
+
+    // Form title
+    .form-title-section {
+      text-align: center;
+      margin-bottom: 1.5rem;
+
+      .form-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #000;
+        text-decoration: underline;
+        margin: 0;
+        letter-spacing: 1px;
+      }
+    }
+
+    .section-divider {
+      border: none;
+      height: 1px;
+      background: #000;
+      margin: 0.75rem 0;
+    }
+
+    // Application details - simple text layout
+    .application-details {
+      margin-bottom: 1.5rem;
+
+      .detail-row {
+        display: block;
+
+        .detail-box {
+          border: none;
+          padding: 0;
+          background: none;
+          margin-bottom: 0.75rem;
+          text-align: left;
+
+          .detail-label {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+            margin-right: 0.5rem;
+          }
+
+          .detail-value {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #000;
+            display: inline;
+
+            &.ref-value {
+              color: #000;
+              font-size: 1rem;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+
+    // Applicant section - simple text
+    .applicant-section {
+      margin-bottom: 1.5rem;
+
+      .section-header {
+        background: none;
+        padding: 0;
+        font-weight: normal;
+        color: #000;
+        border: none;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        text-align: left;
+      }
+
+      .applicant-info {
+        border: none;
+        padding: 0;
+        background: none;
+
+        .info-row {
+          display: block;
+          text-align: left;
+
+          .info-label {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+            margin-right: 0.5rem;
+          }
+
+          .info-value {
+            font-weight: normal;
+            color: #000;
+            font-size: 1rem;
+            display: inline;
+
+            &.company-name {
+              font-size: 1rem;
+              font-weight: normal;
+            }
+          }
+        }
+      }
+    }
+
+    // Show only basic table if needed
+    .quantities-section {
+      margin-bottom: 1.5rem;
+
+      .section-title {
+        font-size: 1rem;
+        font-weight: normal;
+        color: #000;
+        margin-bottom: 0.75rem;
+      }
+
+      .quantities-table .gov-table {
+        border: 1px solid #000;
+        width: 100%;
+
+        th,
+        td {
+          padding: 0.5rem;
+          font-size: 0.9rem;
+          border: 1px solid #000;
+          color: #000;
+        }
+
+        thead th {
+          font-size: 0.9rem;
+          font-weight: normal;
+          background: none;
+        }
+
+        .total-row {
+          border-top: 2px solid #000;
+          font-size: 0.9rem;
+          font-weight: normal;
+          background: none;
+        }
+
+        .status-approved,
+        .status-total {
+          background: none;
+          color: #000;
+          font-size: 0.8rem;
+          padding: 0.2rem;
+          border-radius: 0;
+        }
+      }
+    }
+  }
+}
+
+// Responsive styles for government form
+@media (max-width: 768px) {
+  .government-form-container {
+    margin: 1rem;
+    padding: 1.5rem;
+
+    .gov-header {
+      flex-direction: column;
+      gap: 1.5rem;
+
+      .gov-seal .seal-image {
+        height: 80px;
+      }
+
+      .gov-title {
+        .gov-main-title {
+          font-size: 1.4rem;
+        }
+
+        .gov-dept-title {
+          font-size: 1.1rem;
+        }
+      }
+    }
+
+    .application-details .detail-row {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .summary-section {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .applicant-section .applicant-info .info-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+
+      .info-label {
+        min-width: auto;
+      }
+    }
+
+    .quantities-table .gov-table {
+      font-size: 0.9rem;
+
+      th,
+      td {
+        padding: 0.5rem;
+      }
+    }
+  }
+}
+
+// Alert styles
+.alert {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+
+  &.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+  }
+}
+
+// No print class
+.no-print {
+  @media print {
+    display: none !important;
+  }
+}

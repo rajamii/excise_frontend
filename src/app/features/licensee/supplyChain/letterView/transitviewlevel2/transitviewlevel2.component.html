@@ -1,0 +1,231 @@
+<div class="transitviewlevel2-container">
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="left-section">
+                <button class="btn btn-outline-secondary" (click)="goBack()">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Officer Dashboard
+                </button>
+            </div>
+            <div class="right-section">
+                <h1 class="page-title">Transit Permit Application - Officer Review</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Content -->
+    <div class="application-container">
+        @if (transitData) {
+        <div id="transitPrintSection" class="card shadow-sm border-0 printable-content">
+            <!-- Header with Government Seal -->
+            <div class="application-header text-center mb-4">
+                <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+                    <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+                        style="height: 60px; width: auto" />
+                    <div class="header-text">
+                        <div class="fw-bold fs-5 text-dark">GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</div>
+                    </div>
+                </div>
+                <div class="text-success fs-3 fw-bold">TRANSIT PERMIT APPLICATION</div>
+                <hr class="border-success border-2 mx-auto" style="width: 100%;">
+            </div>
+
+            <div class="application-content p-4">
+                <!-- Transit Details and Status Section -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="border border-success rounded p-3 h-100">
+                            <h5 class="text-success fw-bold mb-3 border-bottom border-success pb-2">TRANSIT DETAILS</h5>
+                            <div class="transit-info">
+                                <p class="mb-2"><span class="text-muted">Reference No:</span><strong>{{
+                                        transitData.referenceNo }}</strong></p>
+                                <p class="mb-2"><span class="text-muted">Submission Date:</span><strong>{{
+                                        transitData.submissionDate }}</strong></p>
+                                <p class="mb-2"><span class="text-muted">Distillery:</span><strong>{{
+                                        transitData.distilleryName }}</strong></p>
+                                <p class="mb-0"><span class="text-muted">Permit Type:</span><strong>{{
+                                        transitData.permitType }}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border border-success rounded p-3 h-100">
+                            <h5 class="text-success fw-bold mb-3 border-bottom border-success pb-2">STATUS & VALIDITY
+                            </h5>
+                            <div class="status-info">
+                                <p class="mb-2"><span class="text-muted">Current Status:</span></p>
+                                <span class="badge bg-success fs-6 mb-3">{{ transitData.status }}</span>
+                                <p class="mb-2"><span class="text-muted">Permit Fee:</span><strong>₹{{
+                                        transitData.permitFee }}</strong></p>
+                                <p class="mb-0">
+                                    <span class="text-muted">Validity Status:</span>
+                                    <span class="badge bg-success ms-2">{{ transitData.validityStatus }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route & Transport Information -->
+                <div class="mb-4">
+                    <h5 class="text-success fw-bold mb-3">ROUTE & TRANSPORT INFORMATION</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered border-success">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark" style="width: 25%">From Location</td>
+                                    <td class="fw-normal">{{ transitData.fromLocation }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark">To Location</td>
+                                    <td class="fw-normal">{{ transitData.toLocation }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark">Route Details</td>
+                                    <td class="fw-normal">{{ transitData.routeDetails }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark">Entry Checkpost</td>
+                                    <td class="fw-normal">{{ transitData.entryCheckpost }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark">Exit Checkpost</td>
+                                    <td class="fw-normal">{{ transitData.exitCheckpost }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light text-dark">Vehicle Number</td>
+                                    <td class="fw-normal">{{ transitData.vehicleNumber }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="mb-4">
+                    <h5 class="text-primary fw-bold mb-3">PRODUCT DETAILS</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered border-primary">
+                            <thead class="table-info">
+                                <tr>
+                                    <th class="fw-bold text-center">BRAND</th>
+                                    <th class="fw-bold text-center">SIZE</th>
+                                    <th class="fw-bold text-center">CASES</th>
+                                    <th class="fw-bold text-center bg-info text-white">EDU. CESS (₹/CASE)</th>
+                                    <th class="fw-bold text-center bg-info text-white">EXCISE DUTY (₹/CASE)</th>
+                                    <th class="fw-bold text-center bg-info text-white">ADD. EXCISE (₹/CASE)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (transitData.products && transitData.products.length > 0) {
+                                @for (product of transitData.products; track product.brand) {
+                                <tr>
+                                    <td class="fw-normal">{{ product.brand }}</td>
+                                    <td class="fw-normal text-center">{{ product.size }}</td>
+                                    <td class="fw-normal text-center">{{ product.cases }}</td>
+                                    <td class="fw-normal text-center">₹{{ product.educationCess }}</td>
+                                    <td class="fw-normal text-center">₹{{ product.exciseDuty }}</td>
+                                    <td class="fw-normal text-center">₹{{ product.additionalExcise }}</td>
+                                </tr>
+                                }
+                                } @else {
+                                <tr>
+                                    <td class="fw-normal">{{ transitData.defaultProduct?.brand || 'Royal Stag' }}</td>
+                                    <td class="fw-normal text-center">{{ transitData.defaultProduct?.size || '180ml' }}
+                                    </td>
+                                    <td class="fw-normal text-center">{{ transitData.defaultProduct?.cases || '1' }}
+                                    </td>
+                                    <td class="fw-normal text-center">₹{{ transitData.defaultProduct?.educationCess ||
+                                        '15.5' }}</td>
+                                    <td class="fw-normal text-center">₹{{ transitData.defaultProduct?.exciseDuty ||
+                                        '125' }}</td>
+                                    <td class="fw-normal text-center">₹{{ transitData.defaultProduct?.additionalExcise
+                                        || '45' }}</td>
+                                </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="fw-bold">Education Cess Total:</td>
+                                    <td class="fw-bold text-center">₹{{ transitData.totals?.educationCessTotal ||
+                                        '15.50' }}</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="fw-bold">Excise Duty Total:</td>
+                                    <td colspan="2" class="fw-bold text-center">₹{{ transitData.totals?.exciseDutyTotal
+                                        || '125.00' }}</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="fw-bold">Additional Excise Total:</td>
+                                    <td colspan="3" class="fw-bold text-center">₹{{
+                                        transitData.totals?.additionalExciseTotal || '45.00' }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Application Status for Print -->
+                <div class="print-only mb-4">
+                    <div class="text-center">
+                        <h5 class="fw-bold mb-3">APPLICATION STATUS</h5>
+                        @if (transitData.status === 'APPROVED') {
+                        <div class="status-stamp approved">
+                            <div class="stamp-text">APPROVED</div>
+                            @if (transitData.reviewedBy) {
+                            <div class="reviewer-info">Reviewed By: {{ transitData.reviewedBy }}</div>
+                            }
+                            @if (transitData.reviewDate) {
+                            <div class="review-date">Date: {{ transitData.reviewDate }}</div>
+                            }
+                        </div>
+                        } @else if (transitData.status === 'TERMINATED' || transitData.status === 'REJECTED') {
+                        <div class="status-stamp rejected">
+                            <div class="stamp-text">REJECTED</div>
+                            @if (transitData.reviewedBy) {
+                            <div class="reviewer-info">Reviewed By: {{ transitData.reviewedBy }}</div>
+                            }
+                            @if (transitData.reviewDate) {
+                            <div class="review-date">Date: {{ transitData.reviewDate }}</div>
+                            }
+                        </div>
+                        } @else {
+                        <div class="status-stamp pending">
+                            <div class="stamp-text">PENDING APPROVAL</div>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+
+
+            </div>
+        </div>
+
+        <!-- Action Buttons - Outside Print Section -->
+        <div class="no-print d-flex justify-content-center gap-3 mt-4">
+            <button type="button" class="btn btn-success btn-lg px-4 py-2" (click)="approveApplication()"
+                [disabled]="transitData.status === 'APPROVED'">
+                <i class="bi bi-check-circle me-2"></i>Approve Application
+            </button>
+            <button type="button" class="btn btn-danger btn-lg px-4 py-2" (click)="rejectApplication()"
+                [disabled]="transitData.status === 'TERMINATED'">
+                <i class="bi bi-x-circle me-2"></i>Reject Application
+            </button>
+            <button type="button" class="btn btn-info btn-lg px-4 py-2" (click)="printApplication()">
+                <i class="bi bi-printer me-2"></i>Print Application
+            </button>
+        </div>
+        } @else {
+        <div class="alert alert-warning text-center">
+            <h4>No Data Found</h4>
+            <p>The requested transit permit application could not be found.</p>
+            <button type="button" class="btn btn-primary" (click)="goBack()">
+                Return to Officer Dashboard
+            </button>
+        </div>
+        }
+    </div>
+</div>
