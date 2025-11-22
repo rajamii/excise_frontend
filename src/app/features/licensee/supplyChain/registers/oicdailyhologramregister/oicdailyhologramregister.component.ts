@@ -1085,14 +1085,124 @@ export class OicdailyhologramregisterComponent implements OnInit {
     entry.total = totalIssued + totalWastage + totalLeftOver;
   }
 
-  getRollColor(index: number): string {
+  getRollColor(indexOrCartoonNumber: number | string): string {
     const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
-    return colors[index % colors.length];
+    
+    if (typeof indexOrCartoonNumber === 'string') {
+      // Get consistent color index for cartoon number
+      return colors[this.getRollColorIndex(indexOrCartoonNumber) % colors.length];
+    }
+    
+    return colors[indexOrCartoonNumber % colors.length];
   }
 
-  getRollBackgroundColor(index: number): string {
+  getRollBackgroundColor(indexOrCartoonNumber: number | string): string {
     const bgColors = ['#e7f3ff', '#e7f5e7', '#fff8e1', '#ffe7e7', '#e0f7fa', '#f3e5f5', '#fff3e0', '#e0f2f1'];
-    return bgColors[index % bgColors.length];
+    
+    if (typeof indexOrCartoonNumber === 'string') {
+      // Get consistent color index for cartoon number
+      return bgColors[this.getRollColorIndex(indexOrCartoonNumber) % bgColors.length];
+    }
+    
+    return bgColors[indexOrCartoonNumber % bgColors.length];
+  }
+
+  // Map to store consistent color indices for cartoon numbers
+  private rollColorMap: Map<string, number> = new Map();
+  private nextColorIndex = 0;
+
+  /**
+   * Get consistent color index for a cartoon number
+   */
+  getRollColorIndex(cartoonNumber: string): number {
+    if (!this.rollColorMap.has(cartoonNumber)) {
+      this.rollColorMap.set(cartoonNumber, this.nextColorIndex);
+      this.nextColorIndex++;
+    }
+    return this.rollColorMap.get(cartoonNumber)!;
+  }
+
+  /**
+   * Get current roll index for color coding
+   */
+  getCurrentRollIndex(entry: RegisterEntry): number {
+    const currentRoll = this.getCurrentSelectedRoll(entry);
+    if (!currentRoll) return 0;
+    
+    // Extract cartoon number from rangeId if needed
+    const cartoonNumber = currentRoll.includes('_RANGE_') 
+      ? currentRoll.split('_RANGE_')[0] 
+      : currentRoll;
+    
+    return this.getRollColorIndex(cartoonNumber);
+  }
+
+  /**
+   * Check if entry has locked rolls
+   */
+  hasLockedRolls(entry: RegisterEntry): boolean {
+    return (entry.lockedRolls && entry.lockedRolls.length > 0) || false;
+  }
+
+  /**
+   * Get subtotal for a group of entries
+   */
+  getGroupSubtotal(entries: any[]): number {
+    return entries.reduce((sum, e) => sum + (e.quantity || 0), 0);
+  }
+
+  /**
+   * Group issued entries by roll for display
+   */
+  groupIssuedEntriesByRoll(entry: RegisterEntry): Array<{ rollIndex: number; rollName: string; entries: any[] }> {
+    const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    
+    lockedRolls.forEach((roll) => {
+      const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
+      const entries = (roll.issuedRanges || []).map(range => ({
+        fromSerial: range.fromSerial,
+        toSerial: range.toSerial,
+        quantity: range.quantity
+      }));
+      
+      if (entries.length > 0) {
+        groups.push({
+          rollIndex,
+          rollName: roll.displayName || roll.cartoonNumber,
+          entries
+        });
+      }
+    });
+    
+    return groups;
+  }
+
+  /**
+   * Group wastage entries by roll for display
+   */
+  groupWastageEntriesByRoll(entry: RegisterEntry): Array<{ rollIndex: number; rollName: string; entries: any[] }> {
+    const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    
+    lockedRolls.forEach((roll) => {
+      const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
+      const entries = (roll.wastageRanges || []).map(range => ({
+        fromSerial: range.fromSerial,
+        toSerial: range.toSerial,
+        quantity: range.quantity
+      }));
+      
+      if (entries.length > 0) {
+        groups.push({
+          rollIndex,
+          rollName: roll.displayName || roll.cartoonNumber,
+          entries
+        });
+      }
+    });
+    
+    return groups;
   }
 
   // Calculate total: Issued + Wastage + Left Over
