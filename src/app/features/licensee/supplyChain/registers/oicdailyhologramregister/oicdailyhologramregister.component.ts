@@ -1032,6 +1032,13 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const lockedRolls = entry.lockedRolls || [];
     entry.rollsAssigned = lockedRolls.map(r => r.cartoonNumber);
     
+    // CRITICAL: Update Hologram Overview data (Rolls, Available, Serial Numbers, Issued Hologram)
+    // This is similar to what Manufacturing Register does when approving
+    this.updateHologramOverviewAfterSave(entry);
+    
+    // CRITICAL: Add leftover ranges back to available ranges for each roll
+    this.addLeftoverRangesToAvailable(entry);
+    
     // Save to localStorage
     this.saveEntryToLocalStorage(entry);
     
@@ -1039,7 +1046,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     this.cdr.detectChanges();
     
     // Simple success message
-    alert('✅ Entry saved successfully!');
+    alert('✅ Entry saved successfully! Hologram overview data updated.');
   }
 
   // Save entry to localStorage
@@ -1060,6 +1067,455 @@ export class OicdailyhologramregisterComponent implements OnInit {
       console.log('Entry saved to localStorage:', entry.id);
     } catch (error) {
       console.error('Error saving entry to localStorage:', error);
+    }
+  }
+
+  /**
+   * Update Hologram Overview data after saving entry
+   * Updates: Rolls, Available Hologram Data, Serial Numbers Data, Issued Hologram
+   */
+  private updateHologramOverviewAfterSave(entry: RegisterEntry): void {
+    try {
+      console.log('🔄 Updating Hologram Overview after save...');
+      
+      const lockedRolls = entry.lockedRolls || [];
+      if (lockedRolls.length === 0) {
+        console.log('⚠️ No locked rolls found');
+        return;
+      }
+      
+      // Process each locked roll separately
+      lockedRolls.forEach((roll: any) => {
+        const cartoonNumber = roll.cartoonNumber;
+        console.log(`📦 Processing roll ${cartoonNumber}...`);
+        
+        // Create a roll-specific entry object
+        const rollEntry = {
+          ...entry,
+          cartoonNumber: cartoonNumber,
+          issuedQuantity: roll.issuedQty || 0,
+          wastageQuantity: roll.wastageQty || 0,
+          leftOverQuantity: roll.leftOver || 0,
+          issuedFromSerial: roll.issuedRanges?.[0]?.fromSerial || '',
+          issuedToSerial: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
+          wastageFromSerial: roll.wastageRanges?.[0]?.fromSerial || '',
+          wastageToSerial: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
+          issuedEntries: roll.issuedRanges?.map((r: any) => ({
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            quantity: r.quantity || 0
+          })) || [],
+          wastageEntries: roll.wastageRanges?.map((r: any) => ({
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            quantity: r.quantity || 0,
+            damageReason: roll.damageReason || r.damageReason || ''
+          })) || [],
+          damageReason: roll.damageReason || ''
+        };
+        
+        // Update all tabs for this specific roll
+        this.updateRollsData(rollEntry, cartoonNumber);
+        this.updateAvailableHologramData(rollEntry, cartoonNumber);
+        this.updateSerialNumbersData(rollEntry, cartoonNumber);
+        this.updateIssuedHologramData(rollEntry, cartoonNumber);
+      });
+      
+      console.log('✅ Hologram Overview updated successfully');
+      
+    } catch (error) {
+      console.error('❌ Error updating Hologram Overview:', error);
+    }
+  }
+
+  /**
+   * Update Rolls Tab Data
+   */
+  private updateRollsData(entry: any, cartoonNumber: string): void {
+    try {
+      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      
+      const rollIndex = rollsData.findIndex((roll: any) => 
+        roll.cartoonNumber === cartoonNumber && 
+        roll.type === entry.hologramType
+      );
+      
+      if (rollIndex === -1) {
+        console.warn(`Roll not found for cartoon number: ${cartoonNumber}`);
+        return;
+      }
+      
+      const roll = rollsData[rollIndex];
+      
+      // Update counts
+      const totalIssuedQty = entry.issuedEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.issuedQuantity || 0;
+      const totalWastageQty = entry.wastageEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.wastageQuantity || 0;
+      
+      roll.usedCount = (roll.usedCount || 0) + totalIssuedQty;
+      roll.damagedCount = (roll.damagedCount || 0) + totalWastageQty;
+      
+      // Recalculate availableCount
+      const totalCount = roll.totalCount || 0;
+      const totalUsed = (roll.usedCount || 0) + (roll.damagedCount || 0);
+      roll.availableCount = Math.max(0, totalCount - totalUsed);
+      
+      // Update status
+      if (roll.availableCount === 0) {
+        roll.status = 'COMPLETED';
+      } else {
+        roll.status = 'AVAILABLE';
+      }
+      
+      // Add usage history
+      if (!roll.usageHistory) {
+        roll.usageHistory = [];
+      }
+      
+      // Add issued ranges to history
+      const issuedEntries = entry.issuedEntries || [];
+      issuedEntries.forEach((issuedEntry: any) => {
+        roll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'ISSUED',
+          issuedFromSerial: issuedEntry.fromSerial || '',
+          issuedToSerial: issuedEntry.toSerial || '',
+          issuedQuantity: issuedEntry.quantity || 0,
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString()
+        });
+      });
+      
+      // Add wastage ranges to history
+      const wastageEntries = entry.wastageEntries || [];
+      wastageEntries.forEach((wastageEntry: any) => {
+        roll.usageHistory.push({
+          date: entry.date,
+          referenceNo: entry.referenceNo || 'N/A',
+          brandName: entry.brandDetails?.brandName || 'N/A',
+          type: 'WASTAGE',
+          wastageFromSerial: wastageEntry.fromSerial || '',
+          wastageToSerial: wastageEntry.toSerial || '',
+          wastageQuantity: wastageEntry.quantity || 0,
+          damageReason: wastageEntry.damageReason || entry.damageReason || '',
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString()
+        });
+      });
+      
+      rollsData[rollIndex] = roll;
+      localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
+      
+      console.log('✅ Rolls data updated for', cartoonNumber);
+    } catch (error) {
+      console.error('❌ Error updating rolls data:', error);
+    }
+  }
+
+  /**
+   * Update Available Hologram Data Tab
+   */
+  private updateAvailableHologramData(entry: any, cartoonNumber: string): void {
+    try {
+      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+      
+      const availableIndex = availableData.findIndex((item: any) => 
+        item.cartoonNumber === cartoonNumber && 
+        item.type === entry.hologramType
+      );
+      
+      if (availableIndex !== -1) {
+        const available = availableData[availableIndex];
+        
+        // Subtract used and damaged from available
+        const totalIssuedQty = entry.issuedEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.issuedQuantity || 0;
+        const totalWastageQty = entry.wastageEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.wastageQuantity || 0;
+        
+        available.availableCount = Math.max(0, (available.availableCount || 0) - totalIssuedQty - totalWastageQty);
+        
+        // Get the original total count from rolls data
+        const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        const correspondingRoll = rollsData.find((roll: any) => 
+          roll.cartoonNumber === cartoonNumber && 
+          roll.type === entry.hologramType
+        );
+        
+        if (correspondingRoll && correspondingRoll.totalCount > 0) {
+          available.percentage = Math.round((available.availableCount / correspondingRoll.totalCount) * 100);
+        }
+        
+        // Update status
+        if (available.availableCount === 0) {
+          available.status = 'COMPLETED';
+        } else {
+          available.status = 'AVAILABLE';
+        }
+        
+        availableData[availableIndex] = available;
+        localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+        
+        console.log('✅ Available hologram data updated for', cartoonNumber);
+      }
+    } catch (error) {
+      console.error('❌ Error updating available hologram data:', error);
+    }
+  }
+
+  /**
+   * Update Serial Numbers Data Tab
+   */
+  private updateSerialNumbersData(entry: any, cartoonNumber: string): void {
+    try {
+      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+      
+      const serialIndex = serialData.findIndex((roll: any) => 
+        roll.rollNumber === cartoonNumber && 
+        roll.hologramType === entry.hologramType
+      );
+      
+      if (serialIndex === -1) {
+        console.warn(`Serial roll not found for cartoon number: ${cartoonNumber}`);
+        return;
+      }
+      
+      const serialRoll = serialData[serialIndex];
+      
+      // Initialize usage history if needed
+      if (!serialRoll.usageHistory) {
+        serialRoll.usageHistory = [];
+      }
+      
+      // Add issued ranges to usage history
+      const issuedEntries = entry.issuedEntries || [];
+      issuedEntries.forEach((issuedEntry: any) => {
+        if (issuedEntry.fromSerial && issuedEntry.toSerial && issuedEntry.quantity > 0) {
+          serialRoll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'ISSUED',
+            issuedFromSerial: issuedEntry.fromSerial,
+            issuedToSerial: issuedEntry.toSerial,
+            issuedQuantity: issuedEntry.quantity || 0,
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString(),
+            cartoonNumber: cartoonNumber
+          });
+          
+          serialRoll.usedCount = (serialRoll.usedCount || 0) + (issuedEntry.quantity || 0);
+        }
+      });
+      
+      // Add wastage ranges to usage history
+      const wastageEntries = entry.wastageEntries || [];
+      wastageEntries.forEach((wastageEntry: any) => {
+        if (wastageEntry.fromSerial && wastageEntry.toSerial && wastageEntry.quantity > 0) {
+          serialRoll.usageHistory.push({
+            date: entry.date,
+            referenceNo: entry.referenceNo || 'N/A',
+            brandName: entry.brandDetails?.brandName || 'N/A',
+            type: 'WASTAGE',
+            wastageFromSerial: wastageEntry.fromSerial,
+            wastageToSerial: wastageEntry.toSerial,
+            wastageQuantity: wastageEntry.quantity || 0,
+            damageReason: wastageEntry.damageReason || entry.damageReason || '',
+            approvedBy: 'Officer In Charge',
+            approvedAt: new Date().toISOString(),
+            cartoonNumber: cartoonNumber
+          });
+          
+          serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (wastageEntry.quantity || 0);
+        }
+      });
+      
+      // Update available count and status
+      const totalUsed = (serialRoll.usedCount || 0) + (serialRoll.damagedCount || 0);
+      const totalCount = serialRoll.totalCount || 0;
+      serialRoll.availableCount = Math.max(0, totalCount - totalUsed);
+      
+      if (serialRoll.availableCount === 0) {
+        serialRoll.status = 'COMPLETED';
+      } else {
+        serialRoll.status = 'AVAILABLE';
+      }
+      
+      serialData[serialIndex] = serialRoll;
+      localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+      
+      console.log('✅ Serial numbers data updated for', cartoonNumber);
+    } catch (error) {
+      console.error('❌ Error updating serial numbers data:', error);
+    }
+  }
+
+  /**
+   * Update Issued Hologram Tab
+   */
+  private updateIssuedHologramData(entry: any, cartoonNumber: string): void {
+    try {
+      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+      
+      // Find the issued hologram entry for this cartoon number and reference
+      const issuedIndex = issuedData.findIndex((issued: any) => 
+        issued.cartoonNumber === cartoonNumber && 
+        issued.requestReference === entry.referenceNo &&
+        issued.status === 'IN_PROGRESS'
+      );
+      
+      if (issuedIndex !== -1) {
+        // Move to history
+        const issuedEntry = issuedData[issuedIndex];
+        issuedEntry.status = 'COMPLETED';
+        issuedEntry.completionDate = new Date().toISOString().split('T')[0];
+        issuedEntry.completedBy = 'Officer In Charge';
+        issuedEntry.completedAt = new Date().toISOString();
+        
+        // Remove from issued
+        issuedData.splice(issuedIndex, 1);
+        localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedData));
+        
+        // Add to history
+        const historyData = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+        historyData.push(issuedEntry);
+        localStorage.setItem('hologramOverviewHistory', JSON.stringify(historyData));
+        
+        console.log('✅ Issued hologram moved to history for', cartoonNumber);
+      }
+    } catch (error) {
+      console.error('❌ Error updating issued hologram data:', error);
+    }
+  }
+
+  /**
+   * Add leftover ranges back to available ranges in Serial Numbers Data
+   * This is called when "Save Entry" is clicked
+   */
+  private addLeftoverRangesToAvailable(entry: RegisterEntry): void {
+    try {
+      console.log('🔄 Adding leftover ranges back to available...');
+      
+      const lockedRolls = entry.lockedRolls || [];
+      if (lockedRolls.length === 0) {
+        console.log('⚠️ No locked rolls found');
+        return;
+      }
+      
+      // Load serial numbers data
+      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
+      
+      lockedRolls.forEach((roll: any) => {
+        const cartoonNumber = roll.cartoonNumber;
+        const leftOver = roll.leftOver || 0;
+        
+        if (leftOver <= 0) {
+          console.log(`⏭️ Skipping roll ${cartoonNumber} - no leftover (${leftOver})`);
+          return;
+        }
+        
+        console.log(`📦 Processing roll ${cartoonNumber} with leftover: ${leftOver}`);
+        
+        // Find the serial roll for this cartoon number
+        const serialIndex = serialData.findIndex((r: any) => 
+          r.rollNumber === cartoonNumber && 
+          r.hologramType === entry.hologramType
+        );
+        
+        if (serialIndex === -1) {
+          console.warn(`⚠️ Serial roll not found for cartoon ${cartoonNumber}`);
+          return;
+        }
+        
+        const serialRoll = serialData[serialIndex];
+        
+        // Calculate leftover range
+        const allocatedRanges = roll.allocatedRanges || [];
+        const issuedRanges = roll.issuedRanges || [];
+        const wastageRanges = roll.wastageRanges || [];
+        
+        if (allocatedRanges.length === 0) {
+          console.warn(`⚠️ No allocated ranges found for roll ${cartoonNumber}`);
+          return;
+        }
+        
+        // Get the full allocated range for this roll
+        const firstAllocated = allocatedRanges[0];
+        const lastAllocated = allocatedRanges[allocatedRanges.length - 1];
+        
+        // Extract prefix and numeric parts
+        const fromMatch = firstAllocated.fromSerial.match(/^([A-Z]+)(\d+)$/);
+        const toMatch = lastAllocated.toSerial.match(/^([A-Z]+)(\d+)$/);
+        
+        if (!fromMatch || !toMatch) {
+          console.warn(`⚠️ Invalid serial format for roll ${cartoonNumber}`);
+          return;
+        }
+        
+        const prefix = fromMatch[1];
+        const allocatedFrom = parseInt(fromMatch[2], 10);
+        const allocatedTo = parseInt(toMatch[2], 10);
+        
+        // Find the highest used serial number (from issued and wastage)
+        let highestUsed = allocatedFrom - 1;
+        
+        [...issuedRanges, ...wastageRanges].forEach((range: any) => {
+          const rangeToMatch = range.toSerial.match(/^([A-Z]+)(\d+)$/);
+          if (rangeToMatch) {
+            const rangeToNum = parseInt(rangeToMatch[2], 10);
+            if (rangeToNum > highestUsed) {
+              highestUsed = rangeToNum;
+            }
+          }
+        });
+        
+        // Leftover range starts from highestUsed + 1 to allocatedTo
+        const leftoverFrom = highestUsed + 1;
+        const leftoverTo = allocatedTo;
+        
+        if (leftoverFrom > leftoverTo) {
+          console.warn(`⚠️ Invalid leftover range for roll ${cartoonNumber}: ${leftoverFrom} > ${leftoverTo}`);
+          return;
+        }
+        
+        const leftoverFromSerial = `${prefix}${leftoverFrom}`;
+        const leftoverToSerial = `${prefix}${leftoverTo}`;
+        
+        console.log(`✅ Calculated leftover range for ${cartoonNumber}: ${leftoverFromSerial} - ${leftoverToSerial} (${leftOver} units)`);
+        
+        // Add leftover range to available ranges
+        if (!serialRoll.availableRanges) {
+          serialRoll.availableRanges = [];
+        }
+        
+        // Check if this range already exists in available ranges
+        const rangeExists = serialRoll.availableRanges.some((r: any) => 
+          r.fromSerial === leftoverFromSerial && r.toSerial === leftoverToSerial
+        );
+        
+        if (!rangeExists) {
+          serialRoll.availableRanges.push({
+            fromSerial: leftoverFromSerial,
+            toSerial: leftoverToSerial,
+            quantity: leftOver,
+            addedAt: new Date().toISOString(),
+            addedBy: 'OIC Daily Register - Save Entry'
+          });
+          
+          console.log(`✅ Added leftover range to available for ${cartoonNumber}`);
+        } else {
+          console.log(`⏭️ Leftover range already exists in available for ${cartoonNumber}`);
+        }
+        
+        // Update the serial roll in the array
+        serialData[serialIndex] = serialRoll;
+      });
+      
+      // Save updated serial data
+      localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
+      console.log('✅ Leftover ranges added to available successfully');
+      
+    } catch (error) {
+      console.error('❌ Error adding leftover ranges to available:', error);
     }
   }
 
