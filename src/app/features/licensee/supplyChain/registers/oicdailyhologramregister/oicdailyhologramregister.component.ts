@@ -91,6 +91,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
     this.loadApprovedEntries();
     this.loadFilteredData();
     
+    // CRITICAL FIX: Recalculate Available Hologram Data from Rolls data
+    // This fixes any existing data that was calculated with the old (wrong) logic
+    this.recalculateAvailableHologramDataFromRolls();
+    
     // Listen for storage changes to auto-refresh
     window.addEventListener('storage', (e) => {
       if (e.key === 'approvedHologramEntries') {
@@ -102,41 +106,127 @@ export class OicdailyhologramregisterComponent implements OnInit {
     });
   }
 
+  /**
+   * Recalculate Available Hologram Data from Rolls data
+   * This ensures consistency between Rolls tab and Available Hologram Data tab
+   * Fixes any data that was calculated with old (incorrect) logic
+   */
+  private recalculateAvailableHologramDataFromRolls(): void {
+    try {
+      console.log('🔄 Recalculating Available Hologram Data from Rolls...');
+      
+      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+      
+      if (rollsData.length === 0 || availableData.length === 0) {
+        console.log('⚠️ No data to recalculate');
+        return;
+      }
+      
+      // Update each available entry from corresponding roll data
+      availableData.forEach((available: any) => {
+        const correspondingRoll = rollsData.find((roll: any) => 
+          roll.cartoonNumber === available.cartoonNumber && 
+          roll.type === available.type
+        );
+        
+        if (correspondingRoll) {
+          // Copy counts from roll data (source of truth)
+          available.usedCount = correspondingRoll.usedCount || 0;
+          available.damagedCount = correspondingRoll.damagedCount || 0;
+          available.availableCount = correspondingRoll.availableCount || 0;
+          
+          // Recalculate percentage
+          const totalCount = correspondingRoll.totalCount || 0;
+          if (totalCount > 0) {
+            available.percentage = Math.round((available.availableCount / totalCount) * 100);
+          } else {
+            available.percentage = 0;
+          }
+          
+          // Update status
+          if (available.availableCount === 0) {
+            available.status = 'COMPLETED';
+          } else {
+            available.status = 'AVAILABLE';
+          }
+          
+          console.log(`✅ Recalculated ${available.cartoonNumber}:`, {
+            totalCount: totalCount,
+            usedCount: available.usedCount,
+            damagedCount: available.damagedCount,
+            availableCount: available.availableCount,
+            percentage: available.percentage
+          });
+        }
+      });
+      
+      // Save updated data
+      localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+      console.log('✅ Available Hologram Data recalculated successfully');
+      
+    } catch (error) {
+      console.error('❌ Error recalculating Available Hologram Data:', error);
+    }
+  }
+
   loadApprovedEntries(): void {
-    // Load entries from localStorage (saved by OIC after approval)
-    // IMPORTANT: Load from 'approvedHologramEntries' which is where OIC saves approved requests
-    const savedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-    console.log('Loading entries from approvedHologramEntries:', savedEntries.length);
+    // CRITICAL FIX: Load from BOTH sources:
+    // 1. 'approvedHologramEntries' - New entries approved by OIC (not yet saved)
+    // 2. 'oicDailyRegisterEntries' - Saved entries (historical data)
     
-    this.entries = savedEntries.map((entry: any) => ({
+    const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
+    
+    console.log('Loading entries:', {
+      approved: approvedEntries.length,
+      saved: savedEntries.length
+    });
+    
+    // Merge both sources, avoiding duplicates by ID
+    const allEntries = [...approvedEntries];
+    
+    // Add saved entries that are not already in approved entries
+    savedEntries.forEach((savedEntry: any) => {
+      const existsInApproved = approvedEntries.some((e: any) => e.id === savedEntry.id);
+      if (!existsInApproved) {
+        allEntries.push(savedEntry);
+      }
+    });
+    
+    console.log('Total entries after merge:', allEntries.length);
+    
+    this.entries = allEntries.map((entry: any) => ({
       id: entry.id,
       referenceNo: entry.referenceNo || 'N/A',
       rollRange: entry.rollRange || '',
       dates: {
-        submission: entry.submissionDate || entry.date,
-        usage: entry.date
+        submission: entry.submissionDate || entry.dates?.submission || entry.date,
+        usage: entry.dates?.usage || entry.date
       },
-      brandDetails: entry.brandDetails?.brandName || 'N/A',
+      brandDetails: entry.brandDetails?.brandName || entry.brandDetails || 'N/A',
       bottleSize: entry.bottleSize || '750ml',
       rollsAssigned: entry.rollsAssigned || [],
-      hologramQty: entry.utilizedQuantity || entry.hologramQty || 0,
+      hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
       hologramType: entry.hologramType || 'LOCAL',
-      issuedFrom: entry.issuedFromSerial || '',
-      issuedTo: entry.issuedToSerial || '',
-      issuedQty: entry.issuedQuantity || 0,
-      wastageFrom: entry.wastageFromSerial || '',
-      wastageTo: entry.wastageToSerial || '',
-      wastageQty: entry.wastageQuantity || 0,
-      leftOver: entry.leftOverQuantity || entry.hologramQty || 0,
-      total: entry.utilizedQuantity || entry.hologramQty || 0,
+      issuedFrom: entry.issuedFromSerial || entry.issuedFrom || '',
+      issuedTo: entry.issuedToSerial || entry.issuedTo || '',
+      issuedQty: entry.issuedQty || entry.issuedQuantity || 0,
+      wastageFrom: entry.wastageFromSerial || entry.wastageFrom || '',
+      wastageTo: entry.wastageToSerial || entry.wastageTo || '',
+      wastageQty: entry.wastageQty || entry.wastageQuantity || 0,
+      leftOver: entry.leftOver || entry.leftOverQuantity || 0,
+      total: entry.total || entry.utilizedQuantity || entry.hologramQty || 0,
       damageReason: entry.damageReason || '',
       isFixed: entry.isFixed || false,
       cartoonNumber: entry.cartoonNumber,
       utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
-      originalHologramQty: entry.utilizedQuantity || entry.hologramQty || 0,
+      originalHologramQty: entry.originalHologramQty || entry.utilizedQuantity || entry.hologramQty || 0,
       currentRollSelection: entry.currentRollSelection,
       lockedRolls: entry.lockedRolls || []
     }));
+    
+    console.log('✅ Loaded entries:', this.entries.length);
   }
 
   loadFilteredData(): void {
@@ -1262,11 +1352,13 @@ export class OicdailyhologramregisterComponent implements OnInit {
       if (availableIndex !== -1) {
         const available = availableData[availableIndex];
         
-        // Subtract used and damaged from available
+        // CRITICAL FIX: Add to used and damaged counts (don't subtract from available)
         const totalIssuedQty = entry.issuedEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.issuedQuantity || 0;
         const totalWastageQty = entry.wastageEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.wastageQuantity || 0;
         
-        available.availableCount = Math.max(0, (available.availableCount || 0) - totalIssuedQty - totalWastageQty);
+        // Update used and damaged counts
+        available.usedCount = (available.usedCount || 0) + totalIssuedQty;
+        available.damagedCount = (available.damagedCount || 0) + totalWastageQty;
         
         // Get the original total count from rolls data
         const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
@@ -1275,8 +1367,20 @@ export class OicdailyhologramregisterComponent implements OnInit {
           roll.type === entry.hologramType
         );
         
-        if (correspondingRoll && correspondingRoll.totalCount > 0) {
-          available.percentage = Math.round((available.availableCount / correspondingRoll.totalCount) * 100);
+        // CRITICAL FIX: Recalculate available count from total - (used + damaged)
+        // This ensures consistency with Rolls tab
+        if (correspondingRoll) {
+          const totalCount = correspondingRoll.totalCount || 0;
+          const totalUsed = (available.usedCount || 0) + (available.damagedCount || 0);
+          available.availableCount = Math.max(0, totalCount - totalUsed);
+          
+          // CRITICAL FIX: Calculate percentage correctly
+          // Percentage = (Available / Total) * 100
+          if (totalCount > 0) {
+            available.percentage = Math.round((available.availableCount / totalCount) * 100);
+          } else {
+            available.percentage = 0;
+          }
         }
         
         // Update status
@@ -1289,7 +1393,13 @@ export class OicdailyhologramregisterComponent implements OnInit {
         availableData[availableIndex] = available;
         localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
         
-        console.log('✅ Available hologram data updated for', cartoonNumber);
+        console.log('✅ Available hologram data updated for', cartoonNumber, {
+          totalCount: correspondingRoll?.totalCount,
+          usedCount: available.usedCount,
+          damagedCount: available.damagedCount,
+          availableCount: available.availableCount,
+          percentage: available.percentage
+        });
       }
     } catch (error) {
       console.error('❌ Error updating available hologram data:', error);
