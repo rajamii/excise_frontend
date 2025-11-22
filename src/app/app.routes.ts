@@ -323,8 +323,8 @@ export const routes: Routes = [
     path: "dev/monthlyhologramstatement-oic",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/HoloGram/monthlyhologramstatement-oic/monthlyhologramstatement-oic.component"
-      ).then((m) => m.MonthlyhologramstatementOICComponent),
+        "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
+      ).then((m) => m.HologramMonthlyReportComponent),
   },
 
   // Role Protected modules
