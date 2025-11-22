@@ -15,6 +15,7 @@ interface RollInput {
   cartoonNumber: string;
   rangeId?: string;
   displayName?: string;
+  rangeIndex?: number;
   availableCount: number;
   serialRange: string;
   fromSerial: string;
@@ -246,7 +247,62 @@ export class OicdailyhologramregisterComponent implements OnInit {
   }
 
   // Roll selection methods
+  // CRITICAL: Create SEPARATE dropdown entries for each allocated range
+  // Example: If roll "test1" has 2 ranges, create:
+  //   - "test1 - Range 1 (1-30): 30 units"
+  //   - "test1 - Range 2 (010001-010003): 3 units"
   getAvailableRollsForEntry(entry: RegisterEntry): any[] {
+    console.log('🎯 Getting available rolls for entry:', entry.id);
+    
+    // PRIORITY 1: Try to get from hologram allocation data (source of truth)
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    
+    if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
+      console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
+      
+      // CRITICAL FIX: Create SEPARATE dropdown entries for each range
+      // Instead of grouping multiple ranges into one roll, each range gets its own entry
+      const separateRangeEntries: any[] = [];
+      const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
+      
+      allocationData.allocatedCartoons.forEach((cartoon: any) => {
+        const cartoonNumber = cartoon.cartoonNumber;
+        const quantity = cartoon.quantity || 0;
+        const fromSerial = cartoon.fromSerial || '';
+        const toSerial = cartoon.toSerial || '';
+        const serialRange = cartoon.serialRange || `${fromSerial} - ${toSerial}`;
+        
+        // Increment range count for this roll
+        const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
+        rangeCountPerRoll.set(cartoonNumber, currentRangeCount + 1);
+        const rangeIndex = currentRangeCount + 1;
+        
+        // Create a unique identifier for this specific range
+        const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
+        
+        // Create separate entry for this range
+        separateRangeEntries.push({
+          cartoonNumber: cartoonNumber, // Original cartoon number (for grouping if needed)
+          rangeId: rangeId, // Unique ID for this specific range
+          rangeIndex: rangeIndex, // Which range number (1, 2, 3, etc.)
+          displayName: `${cartoonNumber} - ${serialRange}`, // Show range in dropdown
+          allocatedQuantity: quantity,
+          availableCount: quantity,
+          serialRange: serialRange,
+          fromSerial: fromSerial,
+          toSerial: toSerial,
+          isSingleRange: true, // Mark as single range entry
+          originalCartoonNumber: cartoonNumber // Store original cartoon number for reference
+        });
+      });
+      
+      console.log('✅ Separate range entries (each range is independent):', separateRangeEntries);
+      console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
+      return separateRangeEntries;
+    }
+    
+    // Fallback: Load from hologramOverviewRolls
+    console.log('⚠️ No allocation data found, using fallback logic');
     const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
     const hologramType = entry.hologramType;
     
@@ -277,27 +333,37 @@ export class OicdailyhologramregisterComponent implements OnInit {
     return entry.lockedRolls || [];
   }
 
-  selectRollForEntry(entry: RegisterEntry, cartoonNumber: string): void {
-    if (!cartoonNumber) return;
+  selectRollForEntry(entry: RegisterEntry, cartoonNumberOrRangeId: string): void {
+    if (!cartoonNumberOrRangeId) return;
 
-    const roll = this.getAvailableRollsForEntry(entry).find(r => r.cartoonNumber === cartoonNumber);
+    // Find the roll details (could be a rangeId like "test1_RANGE_1" or just cartoon number)
+    const roll = this.getAvailableRollsForEntry(entry).find(r => 
+      r.rangeId === cartoonNumberOrRangeId || r.cartoonNumber === cartoonNumberOrRangeId
+    );
     if (!roll) return;
 
+    // Check if this specific range is already locked
     const lockedRolls = this.getLockedRollsForEntry(entry);
-    if (lockedRolls.some((lr: any) => lr.cartoonNumber === cartoonNumber)) {
-      alert('This roll is already locked.');
+    const rangeIdToCheck = roll.rangeId || roll.cartoonNumber;
+    if (lockedRolls.some((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck)) {
+      alert('This range is already locked.');
       return;
     }
 
+    // Store the rangeId (or cartoonNumber if no rangeId) as the selectedRoll
+    const selectedRollId = roll.rangeId || roll.cartoonNumber;
+    
     entry.currentRollSelection = {
-      selectedRoll: cartoonNumber,
+      selectedRoll: selectedRollId, // Use rangeId for specific range tracking
       rollInput: {
-        cartoonNumber: roll.cartoonNumber,
-        displayName: roll.displayName,
+        cartoonNumber: roll.originalCartoonNumber || roll.cartoonNumber, // Store original cartoon number
+        rangeId: roll.rangeId, // Store range ID for tracking
+        displayName: roll.displayName || roll.cartoonNumber, // Store display name for UI
+        rangeIndex: roll.rangeIndex, // Store which range this is (1, 2, 3, etc.)
         availableCount: roll.availableCount,
         serialRange: roll.serialRange,
-        fromSerial: roll.fromSerial,
-        toSerial: roll.toSerial,
+        fromSerial: roll.fromSerial, // Store the specific range's from serial
+        toSerial: roll.toSerial, // Store the specific range's to serial
         issuedRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
         wastageRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
         issuedQty: 0,
@@ -309,7 +375,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
     };
 
     this.cdr.detectChanges();
+    
+    console.log(`🎯 Selected range ${roll.displayName} (${selectedRollId}), serial range: ${roll.serialRange}`);
   }
+
+
 
   onRollInputChange(entry: RegisterEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
@@ -465,6 +535,203 @@ export class OicdailyhologramregisterComponent implements OnInit {
   getRollBackgroundColor(index: number): string {
     const bgColors = ['#e7f3ff', '#e7f5e7', '#fff8e1', '#ffe7e7', '#e0f7fa', '#f3e5f5', '#fff3e0', '#e0f2f1'];
     return bgColors[index % bgColors.length];
+  }
+
+  // Get allocated ranges for a specific roll from entry's allocation data
+  // IMPORTANT: This should return ONLY the specific range that was selected, not all ranges for the roll
+  getAllocatedRangesForRoll(entry: RegisterEntry, cartoonNumberOrRangeId: string): Array<{ fromSerial: string; toSerial: string; quantity: number }> {
+    console.log('🔍 Getting allocated ranges for:', cartoonNumberOrRangeId);
+    
+    // Check if this is a rangeId (e.g., "test1_RANGE_1") - if so, return ONLY that specific range
+    if (cartoonNumberOrRangeId.includes('_RANGE_')) {
+      console.log('📌 This is a specific range selection, returning only that range');
+      
+      // Get the current roll input which has the specific range data
+      const rollInput = this.getCurrentRollInput(entry);
+      if (rollInput && rollInput.rangeId === cartoonNumberOrRangeId) {
+        // Return ONLY the specific range that was selected
+        return [{
+          fromSerial: rollInput.fromSerial,
+          toSerial: rollInput.toSerial,
+          quantity: rollInput.availableCount
+        }];
+      }
+      
+      // If not in current roll input, check locked rolls
+      const lockedRolls = this.getLockedRollsForEntry(entry);
+      const lockedRoll = lockedRolls.find((r: any) => r.rangeId === cartoonNumberOrRangeId);
+      if (lockedRoll) {
+        return [{
+          fromSerial: lockedRoll.fromSerial,
+          toSerial: lockedRoll.toSerial,
+          quantity: lockedRoll.availableCount
+        }];
+      }
+    }
+    
+    // For backward compatibility: if no rangeId, try to get from allocation data
+    // But this should ideally not be used anymore since we want specific range selection
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    
+    if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
+      console.log('✅ Found allocation data:', allocationData);
+      
+      // Filter cartoons that match the cartoon number
+      const matchingCartoons = allocationData.allocatedCartoons.filter((cartoon: any) => {
+        return cartoon.cartoonNumber === cartoonNumberOrRangeId;
+      });
+      
+      console.log('📦 Matching cartoons:', matchingCartoons);
+      
+      // Convert to range format
+      const ranges = matchingCartoons.map((cartoon: any) => ({
+        fromSerial: cartoon.fromSerial || '',
+        toSerial: cartoon.toSerial || '',
+        quantity: cartoon.quantity || 0
+      }));
+      
+      console.log('✅ Allocated ranges:', ranges);
+      return ranges;
+    }
+    
+    // PRIORITY 2: Check if entry has allocatedRanges stored directly
+    const allocatedRanges = (entry as any).allocatedRanges || [];
+    
+    if (allocatedRanges.length > 0) {
+      console.log('📋 Using stored allocatedRanges:', allocatedRanges);
+      
+      // Filter ranges for this specific cartoon number
+      const rollRanges = allocatedRanges.filter((range: any) => 
+        range.cartoonNumber === cartoonNumberOrRangeId
+      );
+      
+      return rollRanges.map((range: any) => ({
+        fromSerial: range.fromSerial,
+        toSerial: range.toSerial,
+        quantity: range.quantity
+      }));
+    }
+    
+    console.log('⚠️ No allocated ranges found');
+    return [];
+  }
+
+  // Get hologram allocation data for an entry
+  getHologramAllocationForEntry(entry: RegisterEntry): any {
+    try {
+      const referenceNo = entry.referenceNo;
+      
+      console.log('🔍 Looking for allocation data for reference:', referenceNo);
+      
+      if (!referenceNo) {
+        console.warn('⚠️ No reference number found in entry');
+        return null;
+      }
+      
+      // Try multiple localStorage keys where allocation data might be stored
+      const possibleKeys = [
+        'hologramAllocations',
+        'hologramRequests', 
+        'hologramApplications',
+        'approvedHologramEntries'
+      ];
+      
+      for (const key of possibleKeys) {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        console.log(`📦 Checking ${key}:`, data.length, 'items');
+        
+        // Find matching allocations
+        const matchingAllocations = data.filter((a: any) => 
+          a.referenceNo === referenceNo || 
+          a.ourRefNo === referenceNo ||
+          a.id === referenceNo ||
+          a.refNumber === referenceNo
+        );
+        
+        if (matchingAllocations.length > 0) {
+          console.log('✅ Found allocations in', key, ':', matchingAllocations);
+          
+          // Check if the request has an 'allocations' array directly (from Officer approval)
+          const requestWithAllocations = matchingAllocations.find((a: any) => 
+            a.allocations && Array.isArray(a.allocations) && a.allocations.length > 0
+          );
+          
+          if (requestWithAllocations) {
+            console.log('✅ Found request with allocations array:', requestWithAllocations.allocations);
+            const cartoons = requestWithAllocations.allocations.map((a: any) => ({
+              cartoonNumber: a.cartoonNumber || '',
+              quantity: a.quantity || 0,
+              fromSerial: a.fromSerial || '',
+              toSerial: a.toSerial || '',
+              serialRange: `${a.fromSerial} - ${a.toSerial}`,
+              remainingInCartoon: a.remainingInCartoon || 0
+            }));
+            
+            const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
+            
+            return {
+              referenceNo: referenceNo,
+              totalAllocated: totalQty,
+              allocatedCartoons: cartoons
+            };
+          }
+          
+          // Otherwise, normalize the allocation data
+          const allocation = matchingAllocations[0];
+          let allocatedCartoons = allocation.allocatedCartoons || allocation.cartoons || allocation.cartoonsUsed || [];
+          
+          if (Array.isArray(allocatedCartoons) && allocatedCartoons.length > 0) {
+            allocatedCartoons = allocatedCartoons.map((c: any) => {
+              let fromSerial = c.fromSerial || c.serialFrom || '';
+              let toSerial = c.toSerial || c.serialTo || '';
+              
+              // If serialRange exists but fromSerial/toSerial don't, try to parse it
+              if ((!fromSerial || !toSerial) && c.serialRange) {
+                const rangeMatch = c.serialRange.match(/(\d+)\s*-\s*(\d+)/);
+                if (rangeMatch) {
+                  fromSerial = rangeMatch[1].padStart(6, '0');
+                  toSerial = rangeMatch[2].padStart(6, '0');
+                }
+              }
+              
+              return {
+                ...c,
+                cartoonNumber: c.cartoonNumber || c.number || c.id || '',
+                quantity: c.quantity || c.allocatedQuantity || 0,
+                fromSerial: fromSerial,
+                toSerial: toSerial,
+                serialRange: c.serialRange || `${fromSerial} - ${toSerial}`
+              };
+            });
+          }
+          
+          return {
+            referenceNo: referenceNo,
+            totalAllocated: allocation.totalAllocated || allocation.requestedQuantity || 0,
+            allocatedCartoons: allocatedCartoons
+          };
+        }
+      }
+      
+      console.warn('❌ No allocation found for:', referenceNo);
+      return null;
+    } catch (error) {
+      console.error('Error loading hologram allocation:', error);
+      return null;
+    }
+  }
+
+  // Get the serial range string for a roll
+  getSerialRangeForRoll(entry: RegisterEntry, cartoonNumber: string): string {
+    const ranges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
+    if (ranges.length === 0) return '-';
+    
+    // If multiple ranges, show first one with indicator
+    if (ranges.length > 1) {
+      return `${ranges[0].fromSerial} - ${ranges[0].toSerial} (+${ranges.length - 1} more)`;
+    }
+    
+    return `${ranges[0].fromSerial} - ${ranges[0].toSerial}`;
   }
 
   // Test methods

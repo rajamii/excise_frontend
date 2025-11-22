@@ -211,23 +211,25 @@
               <!-- Roll & Range Info -->
               <td class="roll-range locked-field">
                 @if (!entry.isFixed) {
+                  <!-- Show current selected roll with its allocated range -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                     <div class="roll-range-display">
                       <div class="roll-name-text">
-                        <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                        <strong>{{ rollInput.cartoonNumber.split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ rollInput.serialRange }}
+                        {{ getSerialRangeForRoll(entry, rollInput.cartoonNumber) }}
                       </div>
                     </div>
                   }
+                  <!-- Show locked rolls with their allocated ranges -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                     <div class="roll-range-display">
                       <div class="roll-name-text">
                         <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ lockedRoll.serialRange }}
+                        {{ getSerialRangeForRoll(entry, lockedRoll.cartoonNumber) }}
                       </div>
                     </div>
                   }
@@ -235,13 +237,14 @@
                     <span class="text-muted">-</span>
                   }
                 } @else {
+                  <!-- For saved entries, show all locked rolls with their ranges -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                     <div class="roll-range-display">
                       <div class="roll-name-text">
                         <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ lockedRoll.serialRange }}
+                        {{ getSerialRangeForRoll(entry, lockedRoll.cartoonNumber) }}
                       </div>
                     </div>
                   }
@@ -276,14 +279,14 @@
                           [value]="getCurrentSelectedRoll(entry) || ''"
                           (change)="selectRollForEntry(entry, $any($event.target).value)">
                     <option value="">Select Roll...</option>
-                    @for (roll of getAvailableRollsForEntry(entry); track roll.cartoonNumber) {
-                      <option [value]="roll.cartoonNumber">
-                        {{ roll.displayName || roll.cartoonNumber }} - {{ roll.serialRange }} ({{ roll.availableCount }} units)
+                    @for (roll of getAvailableRollsForEntry(entry); track roll.rangeId || roll.cartoonNumber) {
+                      <option [value]="roll.rangeId || roll.cartoonNumber">
+                        {{ roll.displayName || roll.cartoonNumber }} ({{ roll.availableCount }} units)
                       </option>
                     }
                   </select>
 
-                  <!-- Current Selected Roll Info -->
+                  <!-- Current Selected Roll Info - Show Allocated Ranges -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                     <div class="selected-range-info">
                       <div class="range-info-label">
@@ -295,6 +298,22 @@
                         <span class="range-qty-badge">{{ rollInput.availableCount }} units</span>
                       </div>
                     </div>
+                    
+                    <!-- Show ALL allocated ranges for this roll in blue boxes -->
+                    @if (getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 0) {
+                      <div class="allocated-ranges-display mt-2">
+                        <div class="allocated-ranges-label">
+                          <i class="bi bi-box-seam me-1"></i>
+                          <small>Allocated Ranges:</small>
+                        </div>
+                        @for (range of getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!); track range.fromSerial) {
+                          <div class="allocated-range-box">
+                            <span class="range-serials">{{ range.fromSerial }} - {{ range.toSerial }}</span>
+                            <span class="range-qty-small">({{ range.quantity }} units)</span>
+                          </div>
+                        }
+                      </div>
+                    }
                   }
 
                   <!-- Locked Rolls Display -->
@@ -308,6 +327,22 @@
                                 [style.border-color]="getRollColor(i)">
                             {{ lockedRoll.cartoonNumber.split('_')[0] }}
                           </span>
+                          <!-- Show allocated ranges for locked roll -->
+                          @if (getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 0) {
+                            <div class="allocated-range-info">
+                              <div class="allocated-range-label">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <span>Allocated:</span>
+                              </div>
+                              <div class="allocated-range-value">
+                                @for (range of getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber); track range.fromSerial) {
+                                  <div class="range-item">
+                                    {{ range.fromSerial }} - {{ range.toSerial }}
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
                         </div>
                         <button class="btn-unlock" 
                                 (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"

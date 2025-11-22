@@ -526,3 +526,198 @@
     }
   }
 }
+
+/* Allocated Ranges Display - Blue Boxes */
+.allocated-ranges-display {
+  margin-top: 0.5rem;
+  
+  .allocated-ranges-label {
+    font-size: 0.7rem;
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+  
+  .allocated-range-box {
+    background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.15);
+    
+    .range-serials {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #0056b3;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .range-qty-small {
+      font-size: 0.7rem;
+      color: #495057;
+      font-weight: 500;
+    }
+  }
+}
+
+/* Roll Range Display in ROLL/RANGE column */
+.roll-range-display {
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 0.25rem;
+  border-left: 3px solid #007bff;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  .roll-name-text {
+    font-size: 0.75rem;
+    color: #0056b3;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+  }
+  
+  .range-text {
+    font-size: 0.7rem;
+    color: #495057;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+  }
+}
+
+/* Selected Range Info */
+.selected-range-info {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border: 1px solid #ffc107;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  
+  .range-info-label {
+    font-size: 0.7rem;
+    color: #856404;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #ffc107;
+    }
+  }
+  
+  .range-info-value {
+    font-size: 0.75rem;
+    color: #495057;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .range-qty-badge {
+      background: #ffc107;
+      color: #000;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+  }
+}
+
+/* Allocated Range Info inside Locked Rolls */
+.allocated-range-info {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 0.25rem;
+  
+  .allocated-range-label {
+    font-size: 0.65rem;
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+  
+  .allocated-range-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    .range-item {
+      font-size: 0.7rem;
+      color: #0056b3;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+      border: 1px solid #007bff;
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+}
+
+/* Locked Roll Badge Wrapper */
+.locked-roll-badge-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+  
+  .locked-roll-badge {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    border: 2px solid;
+    
+    .roll-name-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+      border: 2px solid;
+    }
+  }
+  
+  .btn-unlock {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #dc3545;
+    color: white;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    
+    &:hover {
+      background: #c82333;
+      transform: scale(1.1);
+    }
+  }
+}
