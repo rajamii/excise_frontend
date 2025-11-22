@@ -10,6 +10,14 @@
           </h4>
         </div>
         <div class="header-actions">
+          <button class="btn btn-outline-success me-2" (click)="createTestApproval()" title="Create a test approved entry for testing">
+            <i class="bi bi-plus-circle me-2"></i>
+            Create Test Approval
+          </button>
+          <button class="btn btn-outline-danger me-2" (click)="clearTestData()" title="Clear all test data">
+            <i class="bi bi-trash me-2"></i>
+            Clear Test Data
+          </button>
           <button class="btn btn-outline-secondary" (click)="goBack()">
             <i class="bi bi-arrow-left me-2"></i>
             Back
