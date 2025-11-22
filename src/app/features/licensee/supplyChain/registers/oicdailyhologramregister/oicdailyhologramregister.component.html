@@ -383,9 +383,15 @@
                         <div class="input-wrapper">
                           <input type="text" 
                                  class="form-control form-control-sm" 
+                                 [class.is-invalid]="range.isValid === false"
                                  [(ngModel)]="range.fromSerial"
                                  (ngModelChange)="onRollInputChange(entry)"
                                  placeholder="From">
+                          @if (range.isValid === false && range.errorMessage) {
+                            <div class="invalid-feedback d-block">
+                              <small>{{ range.errorMessage }}</small>
+                            </div>
+                          }
                         </div>
                         @if (rollInput.issuedRanges.length > 1) {
                           <button class="btn-remove" (click)="removeIssuedRange(entry, i)">
@@ -410,6 +416,7 @@
                       <div class="range-input-row">
                         <input type="text" 
                                class="form-control form-control-sm" 
+                               [class.is-invalid]="range.isValid === false"
                                [(ngModel)]="range.toSerial"
                                (ngModelChange)="onRollInputChange(entry)"
                                placeholder="To">
@@ -442,9 +449,15 @@
                         <div class="input-wrapper">
                           <input type="text" 
                                  class="form-control form-control-sm" 
+                                 [class.is-invalid]="range.isValid === false"
                                  [(ngModel)]="range.fromSerial"
                                  (ngModelChange)="onRollInputChange(entry)"
                                  placeholder="From">
+                          @if (range.isValid === false && range.errorMessage) {
+                            <div class="invalid-feedback d-block">
+                              <small>{{ range.errorMessage }}</small>
+                            </div>
+                          }
                         </div>
                         @if (rollInput.wastageRanges.length > 1) {
                           <button class="btn-remove" (click)="removeWastageRange(entry, i)">
@@ -469,6 +482,7 @@
                       <div class="range-input-row">
                         <input type="text" 
                                class="form-control form-control-sm" 
+                               [class.is-invalid]="range.isValid === false"
                                [(ngModel)]="range.toSerial"
                                (ngModelChange)="onRollInputChange(entry)"
                                placeholder="To">
@@ -499,10 +513,40 @@
                 </div>
               </td>
 
-              <!-- Total -->
-              <td class="total-calc">
-                <div class="auto-calculated">
-                  <span class="qty-number">{{ entry.total | number }}</span>
+              <!-- Total (Issued + Wastage + Left Over) -->
+              <td class="total-calc auto-calculated"
+                  [class.total-match]="getTotalCalculation(entry) === entry.hologramQty"
+                  [class.total-mismatch]="getTotalCalculation(entry) !== entry.hologramQty">
+                <div class="total-display">
+                  <span class="qty-number fw-bold"
+                        [class.text-success]="getTotalCalculation(entry) === entry.hologramQty"
+                        [class.text-danger]="getTotalCalculation(entry) > entry.hologramQty"
+                        [class.text-warning]="getTotalCalculation(entry) < entry.hologramQty">
+                    {{ getTotalCalculation(entry) | number }}
+                  </span>
+                  <div class="total-formula">
+                    <small class="text-muted">
+                      {{ entry.issuedQty | number }} + {{ entry.wastageQty | number }} + {{ entry.leftOver | number }}
+                    </small>
+                  </div>
+                  @if (getTotalCalculation(entry) === entry.hologramQty) {
+                    <div class="validation-success">
+                      <i class="bi bi-check-circle text-success"></i>
+                      <small class="text-success">Match!</small>
+                    </div>
+                  }
+                  @if (getTotalCalculation(entry) > entry.hologramQty) {
+                    <div class="validation-error">
+                      <i class="bi bi-exclamation-triangle text-danger"></i>
+                      <small class="text-danger">Exceeds!</small>
+                    </div>
+                  }
+                  @if (getTotalCalculation(entry) < entry.hologramQty) {
+                    <div class="validation-warning">
+                      <i class="bi bi-exclamation-circle text-warning"></i>
+                      <small class="text-warning">Under!</small>
+                    </div>
+                  }
                 </div>
               </td>
 
@@ -530,7 +574,10 @@
                       </button>
                     }
                     @if (getLockedRollsForEntry(entry).length > 0) {
-                      <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry">
+                      <button class="btn-action save" 
+                              (click)="saveEntry(entry)" 
+                              [disabled]="!canSaveEntry(entry)"
+                              [title]="canSaveEntry(entry) ? 'Save Entry' : 'Lock all ranges before saving'">
                         <i class="bi bi-check-circle"></i>
                       </button>
                     }

@@ -206,14 +206,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  saveEntry(entry: RegisterEntry): void {
-    if (!entry.issuedFrom || !entry.issuedTo) {
-      alert('Please enter Issued From and Issued To serials');
-      return;
-    }
-    entry.isFixed = true;
-    alert('Entry saved successfully!');
-  }
+
 
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
@@ -381,19 +374,392 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
 
 
+  /**
+   * Validate if a serial range is within ANY of the allocated ranges for a roll
+   * CRITICAL FIX: Ensures the ENTIRE range (from-to) is within a SINGLE allocated range
+   * This prevents users from entering ranges that span across multiple non-contiguous slots
+   */
+  validateSerialRangeInAllocatedRanges(
+    fromSerial: string,
+    toSerial: string,
+    allocatedRanges: Array<{ fromSerial: string; toSerial: string }>
+  ): { isValid: boolean; errorMessage: string } {
+    if (!fromSerial || !toSerial) {
+      return { isValid: true, errorMessage: '' }; // Empty is valid (not required yet)
+    }
+
+    if (!allocatedRanges || allocatedRanges.length === 0) {
+      return { isValid: false, errorMessage: 'Allocated ranges not found for this roll' };
+    }
+
+    // Extract numeric parts
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const fromNum = extractNumber(fromSerial);
+    const toNum = extractNumber(toSerial);
+
+    // Check if range is valid (from <= to)
+    if (fromNum > toNum) {
+      return { isValid: false, errorMessage: 'From serial must be less than or equal to To serial' };
+    }
+
+    // CRITICAL FIX: Check if the ENTIRE range (both from AND to) is within a SINGLE allocated range
+    // This prevents spanning across multiple non-contiguous ranges
+    for (const allocatedRange of allocatedRanges) {
+      const allocatedFromNum = extractNumber(allocatedRange.fromSerial);
+      const allocatedToNum = extractNumber(allocatedRange.toSerial);
+
+      // Both fromNum AND toNum must be within the SAME allocated range
+      if (fromNum >= allocatedFromNum && toNum <= allocatedToNum) {
+        return { isValid: true, errorMessage: '' };
+      }
+    }
+
+    // Range is not within any single allocated range
+    const rangesStr = allocatedRanges.map(r => `${r.fromSerial}-${r.toSerial}`).join(', ');
+    return {
+      isValid: false,
+      errorMessage: `Serial range must be entirely within ONE of the allocated ranges: ${rangesStr}` 
+    };
+  }
+
+  /**
+   * Check if two serial ranges overlap
+   */
+  private checkRangeOverlap(
+    range1From: string,
+    range1To: string,
+    range2From: string,
+    range2To: string
+  ): boolean {
+    if (!range1From || !range1To || !range2From || !range2To) {
+      return false; // Empty ranges don't overlap
+    }
+
+    const extractNumber = (s: string): number => {
+      const match = s.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const r1From = extractNumber(range1From);
+    const r1To = extractNumber(range1To);
+    const r2From = extractNumber(range2From);
+    const r2To = extractNumber(range2To);
+
+    // Check if ranges overlap: range1 overlaps range2 if:
+    // - range1 starts within range2, OR
+    // - range1 ends within range2, OR
+    // - range1 completely contains range2
+    return (
+      (r1From >= r2From && r1From <= r2To) || // range1 starts within range2
+      (r1To >= r2From && r1To <= r2To) ||     // range1 ends within range2
+      (r1From <= r2From && r1To >= r2To)      // range1 contains range2
+    );
+  }
+
+  /**
+   * Validate that ranges within the same category don't overlap
+   */
+  private validateNoOverlapWithinCategory(ranges: RollRange[]): { isValid: boolean; overlappingRanges: string[] } {
+    const overlappingRanges: string[] = [];
+
+    for (let i = 0; i < ranges.length; i++) {
+      const range1 = ranges[i];
+      if (!range1.fromSerial || !range1.toSerial) continue;
+
+      for (let j = i + 1; j < ranges.length; j++) {
+        const range2 = ranges[j];
+        if (!range2.fromSerial || !range2.toSerial) continue;
+
+        if (this.checkRangeOverlap(
+          range1.fromSerial,
+          range1.toSerial,
+          range2.fromSerial,
+          range2.toSerial
+        )) {
+          overlappingRanges.push(
+            `Range ${i + 1} (${range1.fromSerial}-${range1.toSerial}) overlaps with Range ${j + 1} (${range2.fromSerial}-${range2.toSerial})`
+          );
+        }
+      }
+    }
+
+    return {
+      isValid: overlappingRanges.length === 0,
+      overlappingRanges
+    };
+  }
+
+  /**
+   * Validate that issued and wastage ranges don't overlap
+   */
+  private validateNoOverlapBetweenIssuedAndWastage(
+    issuedRanges: RollRange[],
+    wastageRanges: RollRange[]
+  ): { isValid: boolean; overlappingRanges: string[] } {
+    const overlappingRanges: string[] = [];
+
+    // Check each issued range against all wastage ranges
+    for (let i = 0; i < issuedRanges.length; i++) {
+      const issued = issuedRanges[i];
+      if (!issued.fromSerial || !issued.toSerial) continue;
+
+      for (let j = 0; j < wastageRanges.length; j++) {
+        const wastage = wastageRanges[j];
+        if (!wastage.fromSerial || !wastage.toSerial) continue;
+
+        if (this.checkRangeOverlap(
+          issued.fromSerial,
+          issued.toSerial,
+          wastage.fromSerial,
+          wastage.toSerial
+        )) {
+          overlappingRanges.push(
+            `Issued (${issued.fromSerial}-${issued.toSerial}) overlaps with Wastage (${wastage.fromSerial}-${wastage.toSerial})`
+          );
+        }
+      }
+    }
+
+    return {
+      isValid: overlappingRanges.length === 0,
+      overlappingRanges
+    };
+  }
+
+  /**
+   * Get all used ranges from locked rolls (for cross-roll validation)
+   */
+  private getAllUsedRangesFromLockedRolls(entry: RegisterEntry): Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const usedRanges: Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> = [];
+
+    lockedRolls.forEach((roll) => {
+      // Collect issued ranges from locked roll
+      if (roll.issuedRanges && Array.isArray(roll.issuedRanges)) {
+        roll.issuedRanges.forEach((range) => {
+          if (range.fromSerial && range.toSerial) {
+            usedRanges.push({
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              rollName: roll.displayName || roll.cartoonNumber,
+              type: 'issued'
+            });
+          }
+        });
+      }
+
+      // Collect wastage ranges from locked roll
+      if (roll.wastageRanges && Array.isArray(roll.wastageRanges)) {
+        roll.wastageRanges.forEach((range) => {
+          if (range.fromSerial && range.toSerial) {
+            usedRanges.push({
+              fromSerial: range.fromSerial,
+              toSerial: range.toSerial,
+              rollName: roll.displayName || roll.cartoonNumber,
+              type: 'wastage'
+            });
+          }
+        });
+      }
+    });
+
+    return usedRanges;
+  }
+
+  /**
+   * Validate that current roll ranges don't overlap with locked rolls
+   */
+  private validateNoOverlapWithLockedRolls(
+    currentRanges: RollRange[],
+    lockedRanges: Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }>
+  ): { isValid: boolean; conflicts: Array<{ currentRange: RollRange; lockedRange: any }> } {
+    const conflicts: Array<{ currentRange: RollRange; lockedRange: any }> = [];
+
+    currentRanges.forEach((currentRange) => {
+      if (!currentRange.fromSerial || !currentRange.toSerial) return;
+
+      lockedRanges.forEach((lockedRange) => {
+        if (this.checkRangeOverlap(
+          currentRange.fromSerial,
+          currentRange.toSerial,
+          lockedRange.fromSerial,
+          lockedRange.toSerial
+        )) {
+          conflicts.push({
+            currentRange,
+            lockedRange
+          });
+        }
+      });
+    });
+
+    return {
+      isValid: conflicts.length === 0,
+      conflicts
+    };
+  }
+
   onRollInputChange(entry: RegisterEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
 
+    const cartoonNumber = rollInput.cartoonNumber;
+    
+    // CRITICAL FIX: If a specific range was selected (rangeId exists), validate against ONLY that range
+    // Otherwise, validate against all ranges for backward compatibility
+    let allocatedRanges: Array<{ fromSerial: string; toSerial: string }>;
+    
+    if (rollInput.fromSerial && rollInput.toSerial) {
+      // Use the SPECIFIC range that was selected (stored in rollInput)
+      allocatedRanges = [{
+        fromSerial: rollInput.fromSerial,
+        toSerial: rollInput.toSerial
+      }];
+      console.log(`🎯 Validating against SELECTED range only: ${rollInput.fromSerial}-${rollInput.toSerial}`);
+    } else {
+      // Fallback: get all ranges for this roll (for backward compatibility)
+      allocatedRanges = this.getAllocatedRangesForRoll(entry, cartoonNumber).map(r => ({
+        fromSerial: r.fromSerial,
+        toSerial: r.toSerial
+      }));
+      console.log(`⚠️ Validating against ALL ranges for ${cartoonNumber}:`, allocatedRanges);
+    }
+
+    // Validate and calculate issued ranges
     rollInput.issuedQty = rollInput.issuedRanges.reduce((sum, range) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      
+      // Validate range against the allocated range(s)
+      if (allocatedRanges.length > 0) {
+        const validation = this.validateSerialRangeInAllocatedRanges(
+          range.fromSerial,
+          range.toSerial,
+          allocatedRanges
+        );
+        range.isValid = validation.isValid;
+        range.errorMessage = validation.errorMessage;
+      } else {
+        range.isValid = true; // No allocated ranges found, skip validation
+        range.errorMessage = '';
+      }
+      
       return sum + range.quantity;
     }, 0);
 
+    // Validate and calculate wastage ranges
     rollInput.wastageQty = rollInput.wastageRanges.reduce((sum, range) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      
+      // Validate range against the allocated range(s)
+      if (allocatedRanges.length > 0) {
+        const validation = this.validateSerialRangeInAllocatedRanges(
+          range.fromSerial,
+          range.toSerial,
+          allocatedRanges
+        );
+        range.isValid = validation.isValid;
+        range.errorMessage = validation.errorMessage;
+      } else {
+        range.isValid = true; // No allocated ranges found, skip validation
+        range.errorMessage = '';
+      }
+      
       return sum + range.quantity;
     }, 0);
+
+    // NEW: Validate that issued ranges don't overlap with each other (within current roll)
+    const issuedOverlapCheck = this.validateNoOverlapWithinCategory(rollInput.issuedRanges);
+    if (!issuedOverlapCheck.isValid) {
+      // Mark all issued ranges as invalid if there's overlap
+      rollInput.issuedRanges.forEach((range, index) => {
+        if (range.fromSerial && range.toSerial) {
+          range.isValid = false;
+          range.errorMessage = `Issued ranges overlap within this roll: ${issuedOverlapCheck.overlappingRanges[0]}`;
+        }
+      });
+    }
+
+    // NEW: Validate that wastage ranges don't overlap with each other (within current roll)
+    const wastageOverlapCheck = this.validateNoOverlapWithinCategory(rollInput.wastageRanges);
+    if (!wastageOverlapCheck.isValid) {
+      // Mark all wastage ranges as invalid if there's overlap
+      rollInput.wastageRanges.forEach((range, index) => {
+        if (range.fromSerial && range.toSerial) {
+          range.isValid = false;
+          range.errorMessage = `Wastage ranges overlap within this roll: ${wastageOverlapCheck.overlappingRanges[0]}`;
+        }
+      });
+    }
+
+    // NEW: Validate that issued and wastage ranges don't overlap (within current roll)
+    const crossOverlapCheck = this.validateNoOverlapBetweenIssuedAndWastage(
+      rollInput.issuedRanges,
+      rollInput.wastageRanges
+    );
+    
+    if (!crossOverlapCheck.isValid) {
+      // Mark overlapping ranges as invalid
+      rollInput.issuedRanges.forEach((issued) => {
+        if (!issued.fromSerial || !issued.toSerial) return;
+        
+        rollInput.wastageRanges.forEach((wastage) => {
+          if (!wastage.fromSerial || !wastage.toSerial) return;
+          
+          if (this.checkRangeOverlap(
+            issued.fromSerial,
+            issued.toSerial,
+            wastage.fromSerial,
+            wastage.toSerial
+          )) {
+            issued.isValid = false;
+            issued.errorMessage = `Overlaps with wastage range (${wastage.fromSerial}-${wastage.toSerial}) in this roll`;
+            wastage.isValid = false;
+            wastage.errorMessage = `Overlaps with issued range (${issued.fromSerial}-${issued.toSerial}) in this roll`;
+          }
+        });
+      });
+    }
+
+    // NEW: CROSS-ROLL VALIDATION - Check against locked rolls
+    const lockedRanges = this.getAllUsedRangesFromLockedRolls(entry);
+    
+    if (lockedRanges.length > 0) {
+      // Validate issued ranges against locked rolls
+      const issuedCrossRollCheck = this.validateNoOverlapWithLockedRolls(
+        rollInput.issuedRanges,
+        lockedRanges
+      );
+      
+      if (!issuedCrossRollCheck.isValid) {
+        issuedCrossRollCheck.conflicts.forEach(conflict => {
+          conflict.currentRange.isValid = false;
+          conflict.currentRange.errorMessage = 
+            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
+            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
+            `from locked roll "${conflict.lockedRange.rollName}"`;
+        });
+      }
+
+      // Validate wastage ranges against locked rolls
+      const wastageCrossRollCheck = this.validateNoOverlapWithLockedRolls(
+        rollInput.wastageRanges,
+        lockedRanges
+      );
+      
+      if (!wastageCrossRollCheck.isValid) {
+        wastageCrossRollCheck.conflicts.forEach(conflict => {
+          conflict.currentRange.isValid = false;
+          conflict.currentRange.errorMessage = 
+            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
+            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
+            `from locked roll "${conflict.lockedRange.rollName}"`;
+        });
+      }
+    }
 
     rollInput.leftOver = rollInput.availableCount - (rollInput.issuedQty + rollInput.wastageQty);
 
@@ -437,11 +803,69 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
-    const hasValidIssuedRange = rollInput.issuedRanges.some(r => 
-      r.fromSerial && r.toSerial && r.quantity > 0
-    );
-    
-    if (!hasValidIssuedRange) return false;
+    // Check ISSUED ranges: Both FROM and TO must be filled for any range that has started
+    if (rollInput.issuedRanges && rollInput.issuedRanges.length > 0) {
+      // Check if any issued range has only one field filled (incomplete)
+      const hasIncompleteIssuedRange = rollInput.issuedRanges.some((range) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If either FROM or TO is filled, both must be filled
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      if (hasIncompleteIssuedRange) return false;
+
+      // Must have at least one complete issued range with valid serials
+      const hasValidIssuedRange = rollInput.issuedRanges.some((range) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        return hasFrom && hasTo && range.quantity > 0;
+      });
+      
+      if (!hasValidIssuedRange) return false;
+
+      // Check if all complete issued ranges are valid (within allocated range)
+      const allIssuedRangesValid = rollInput.issuedRanges.every((range) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If range is incomplete, skip validation (already checked above)
+        if (!hasFrom || !hasTo) return true;
+        // If range is complete, check if it's valid
+        return range.isValid !== false;
+      });
+      
+      if (!allIssuedRangesValid) return false;
+    } else {
+      // No issued ranges at all
+      return false;
+    }
+
+    // Check WASTAGE ranges: Both FROM and TO must be filled for any range that has started
+    if (rollInput.wastageRanges && rollInput.wastageRanges.length > 0) {
+      // Check if any wastage range has only one field filled (incomplete)
+      const hasIncompleteWastageRange = rollInput.wastageRanges.some((range) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If either FROM or TO is filled, both must be filled
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      if (hasIncompleteWastageRange) return false;
+
+      // Check if all complete wastage ranges are valid (within allocated range)
+      const allWastageRangesValid = rollInput.wastageRanges.every((range) => {
+        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+        // If range is incomplete, skip validation (already checked above)
+        if (!hasFrom || !hasTo) return true;
+        // If range is complete, check if it's valid
+        return range.isValid !== false;
+      });
+      
+      if (!allWastageRangesValid) return false;
+    }
+
+    // Left over must not be negative
     if (rollInput.leftOver < 0) return false;
 
     return true;
@@ -455,7 +879,66 @@ export class OicdailyhologramregisterComponent implements OnInit {
     }
 
     if (!this.canLockRoll(entry)) {
-      alert('Cannot lock roll. Please ensure at least one issued range is complete and left over is not negative.');
+      // Check for validation errors
+      const invalidIssuedRanges = rollInput.issuedRanges?.filter((r) => r.isValid === false && r.errorMessage);
+      const invalidWastageRanges = rollInput.wastageRanges?.filter((r) => r.isValid === false && r.errorMessage);
+      
+      // Check for incomplete ranges
+      const incompleteIssuedRanges = rollInput.issuedRanges?.filter((r) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      const incompleteWastageRanges = rollInput.wastageRanges?.filter((r) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+      });
+      
+      let errorMessage = 'Cannot lock roll. Please fix the following errors:\n\n';
+      
+      if (incompleteIssuedRanges && incompleteIssuedRanges.length > 0) {
+        errorMessage += 'Issued Ranges - Incomplete:\n';
+        errorMessage += 'Both "ISSUED FROM" and "ISSUED TO" must be filled for each range.\n';
+        errorMessage += 'Please complete all started ranges or remove them.\n\n';
+      }
+      
+      if (incompleteWastageRanges && incompleteWastageRanges.length > 0) {
+        errorMessage += 'Wastage Ranges - Incomplete:\n';
+        errorMessage += 'Both "WASTAGE FROM" and "WASTAGE TO" must be filled for each range.\n';
+        errorMessage += 'Please complete all started ranges or remove them.\n\n';
+      }
+      
+      if (invalidIssuedRanges && invalidIssuedRanges.length > 0) {
+        errorMessage += 'Issued Ranges - Validation Errors:\n';
+        invalidIssuedRanges.forEach((r, i) => {
+          errorMessage += `${i + 1}. ${r.errorMessage}\n`;
+        });
+        errorMessage += '\n';
+      }
+      
+      if (invalidWastageRanges && invalidWastageRanges.length > 0) {
+        errorMessage += 'Wastage Ranges - Validation Errors:\n';
+        invalidWastageRanges.forEach((r, i) => {
+          errorMessage += `${i + 1}. ${r.errorMessage}\n`;
+        });
+        errorMessage += '\n';
+      }
+      
+      if (rollInput.leftOver < 0) {
+        errorMessage += `Left Over is negative: ${rollInput.leftOver}. Please adjust quantities.\n`;
+      }
+      
+      if (!rollInput.issuedRanges || !rollInput.issuedRanges.some((r) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return hasFrom && hasTo && r.quantity > 0;
+      })) {
+        errorMessage += 'Please enter at least one complete issued range (both FROM and TO).\n';
+      }
+      
+      alert(errorMessage);
       return;
     }
 
@@ -505,6 +988,81 @@ export class OicdailyhologramregisterComponent implements OnInit {
     entry.total = totalIssued + totalWastage + totalLeftOver;
   }
 
+  // Check if all ranges are locked and entry can be saved
+  canSaveEntry(entry: RegisterEntry): boolean {
+    if (entry.isFixed) return false; // Already saved
+    
+    // Must have at least one locked roll
+    const lockedRolls = entry.lockedRolls || [];
+    if (lockedRolls.length === 0) return false;
+    
+    // Cannot have a current roll selection (all must be locked)
+    if (entry.currentRollSelection) return false;
+    
+    // Check if all allocated ranges are locked
+    const allocationData = this.getHologramAllocationForEntry(entry);
+    if (allocationData && allocationData.allocatedCartoons) {
+      const totalAllocatedRanges = allocationData.allocatedCartoons.length;
+      const lockedRangesCount = lockedRolls.length;
+      
+      // All ranges must be locked
+      if (lockedRangesCount < totalAllocatedRanges) {
+        return false;
+      }
+    }
+    
+    // Validate quantities
+    if (entry.leftOver < 0) return false;
+    
+    return true;
+  }
+
+  // Save the entry
+  saveEntry(entry: RegisterEntry): void {
+    // Button is already disabled if canSaveEntry returns false
+    // No need for alert - just return silently
+    if (!this.canSaveEntry(entry)) {
+      return;
+    }
+
+    // Mark as fixed (saved)
+    entry.isFixed = true;
+    
+    // Update rollsAssigned array for display
+    const lockedRolls = entry.lockedRolls || [];
+    entry.rollsAssigned = lockedRolls.map(r => r.cartoonNumber);
+    
+    // Save to localStorage
+    this.saveEntryToLocalStorage(entry);
+    
+    // Refresh display
+    this.cdr.detectChanges();
+    
+    // Simple success message
+    alert('✅ Entry saved successfully!');
+  }
+
+  // Save entry to localStorage
+  private saveEntryToLocalStorage(entry: RegisterEntry): void {
+    try {
+      const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
+      
+      // Check if entry already exists
+      const existingIndex = savedEntries.findIndex((e: any) => e.id === entry.id);
+      
+      if (existingIndex !== -1) {
+        savedEntries[existingIndex] = entry;
+      } else {
+        savedEntries.push(entry);
+      }
+      
+      localStorage.setItem('oicDailyRegisterEntries', JSON.stringify(savedEntries));
+      console.log('Entry saved to localStorage:', entry.id);
+    } catch (error) {
+      console.error('Error saving entry to localStorage:', error);
+    }
+  }
+
   updateEntryQuantitiesFromAllRolls(entry: RegisterEntry): void {
     if (entry.isFixed) return;
 
@@ -535,6 +1093,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
   getRollBackgroundColor(index: number): string {
     const bgColors = ['#e7f3ff', '#e7f5e7', '#fff8e1', '#ffe7e7', '#e0f7fa', '#f3e5f5', '#fff3e0', '#e0f2f1'];
     return bgColors[index % bgColors.length];
+  }
+
+  // Calculate total: Issued + Wastage + Left Over
+  getTotalCalculation(entry: RegisterEntry): number {
+    return (entry.issuedQty || 0) + (entry.wastageQty || 0) + (entry.leftOver || 0);
   }
 
   // Get allocated ranges for a specific roll from entry's allocation data
