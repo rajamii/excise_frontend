@@ -3,6 +3,30 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
+interface RollRange {
+  fromSerial: string;
+  toSerial: string;
+  quantity: number;
+  isValid?: boolean;
+  errorMessage?: string;
+}
+
+interface RollInput {
+  cartoonNumber: string;
+  rangeId?: string;
+  displayName?: string;
+  availableCount: number;
+  serialRange: string;
+  fromSerial: string;
+  toSerial: string;
+  issuedRanges: RollRange[];
+  wastageRanges: RollRange[];
+  issuedQty: number;
+  wastageQty: number;
+  leftOver: number;
+  damageReason: string;
+}
+
 interface RegisterEntry {
   id: string;
   referenceNo: string;
@@ -15,6 +39,7 @@ interface RegisterEntry {
   bottleSize: string;
   rollsAssigned: string[];
   hologramQty: number;
+  hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
   issuedFrom: string;
   issuedTo: string;
   issuedQty: number;
@@ -25,6 +50,15 @@ interface RegisterEntry {
   total: number;
   damageReason: string;
   isFixed: boolean;
+  currentRollSelection?: {
+    selectedRoll: string;
+    rollInput: RollInput;
+    isLocked: boolean;
+  };
+  lockedRolls?: RollInput[];
+  cartoonNumber?: string;
+  utilizedQuantity?: number;
+  originalHologramQty?: number;
 }
 
 @Component({
@@ -53,59 +87,55 @@ export class OicdailyhologramregisterComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadSampleData();
+    this.loadApprovedEntries();
     this.loadFilteredData();
+    
+    // Listen for storage changes to auto-refresh
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'approvedHologramEntries') {
+        console.log('✅ New approved entries detected, refreshing...');
+        this.loadApprovedEntries();
+        this.loadFilteredData();
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  loadSampleData(): void {
-    this.entries = [
-      {
-        id: '1',
-        referenceNo: 'HRQ/2025/001',
-        rollRange: 'CTN001 - 275346495-275520000',
-        dates: {
-          submission: '2025-11-20',
-          usage: '2025-11-21'
-        },
-        brandDetails: 'Sikkim Supreme Whisky',
-        bottleSize: '750ml',
-        rollsAssigned: ['CTN001', 'CTN002'],
-        hologramQty: 173506,
-        issuedFrom: '275346495',
-        issuedTo: '275520000',
-        issuedQty: 173506,
-        wastageFrom: '275455115',
-        wastageTo: '275459428',
-        wastageQty: 4314,
-        leftOver: 0,
-        total: 177820,
-        damageReason: 'Machine malfunction',
-        isFixed: true
+  loadApprovedEntries(): void {
+    // Load entries from localStorage (saved by OIC after approval)
+    // IMPORTANT: Load from 'approvedHologramEntries' which is where OIC saves approved requests
+    const savedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+    console.log('Loading entries from approvedHologramEntries:', savedEntries.length);
+    
+    this.entries = savedEntries.map((entry: any) => ({
+      id: entry.id,
+      referenceNo: entry.referenceNo || 'N/A',
+      rollRange: entry.rollRange || '',
+      dates: {
+        submission: entry.submissionDate || entry.date,
+        usage: entry.date
       },
-      {
-        id: '2',
-        referenceNo: 'HRQ/2025/002',
-        rollRange: 'CTN003 - 275520001-275520500',
-        dates: {
-          submission: '2025-11-21',
-          usage: '2025-11-22'
-        },
-        brandDetails: 'Himalayan Gold Rum',
-        bottleSize: '750ml',
-        rollsAssigned: ['CTN003'],
-        hologramQty: 500,
-        issuedFrom: '',
-        issuedTo: '',
-        issuedQty: 0,
-        wastageFrom: '',
-        wastageTo: '',
-        wastageQty: 0,
-        leftOver: 500,
-        total: 500,
-        damageReason: '',
-        isFixed: false
-      }
-    ];
+      brandDetails: entry.brandDetails?.brandName || 'N/A',
+      bottleSize: entry.bottleSize || '750ml',
+      rollsAssigned: entry.rollsAssigned || [],
+      hologramQty: entry.utilizedQuantity || entry.hologramQty || 0,
+      hologramType: entry.hologramType || 'LOCAL',
+      issuedFrom: entry.issuedFromSerial || '',
+      issuedTo: entry.issuedToSerial || '',
+      issuedQty: entry.issuedQuantity || 0,
+      wastageFrom: entry.wastageFromSerial || '',
+      wastageTo: entry.wastageToSerial || '',
+      wastageQty: entry.wastageQuantity || 0,
+      leftOver: entry.leftOverQuantity || entry.hologramQty || 0,
+      total: entry.utilizedQuantity || entry.hologramQty || 0,
+      damageReason: entry.damageReason || '',
+      isFixed: entry.isFixed || false,
+      cartoonNumber: entry.cartoonNumber,
+      utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
+      originalHologramQty: entry.utilizedQuantity || entry.hologramQty || 0,
+      currentRollSelection: entry.currentRollSelection,
+      lockedRolls: entry.lockedRolls || []
+    }));
   }
 
   loadFilteredData(): void {
@@ -213,5 +243,227 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
   getTotalWastageQty(): number {
     return this.filteredEntries.reduce((sum, e) => sum + e.wastageQty, 0);
+  }
+
+  // Roll selection methods
+  getAvailableRollsForEntry(entry: RegisterEntry): any[] {
+    const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+    const hologramType = entry.hologramType;
+    
+    const availableRolls = allOverviewRolls.filter((r: any) => {
+      return r.type === hologramType && r.availableCount > 0;
+    });
+    
+    return availableRolls.map((r: any) => ({
+      cartoonNumber: r.cartoonNumber,
+      allocatedQuantity: r.availableCount,
+      availableCount: r.availableCount,
+      serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+      fromSerial: r.fromSerial,
+      toSerial: r.toSerial,
+      displayName: r.cartoonNumber
+    }));
+  }
+
+  getCurrentSelectedRoll(entry: RegisterEntry): string | null {
+    return entry.currentRollSelection?.selectedRoll || null;
+  }
+
+  getCurrentRollInput(entry: RegisterEntry): RollInput | null {
+    return entry.currentRollSelection?.rollInput || null;
+  }
+
+  getLockedRollsForEntry(entry: RegisterEntry): RollInput[] {
+    return entry.lockedRolls || [];
+  }
+
+  selectRollForEntry(entry: RegisterEntry, cartoonNumber: string): void {
+    if (!cartoonNumber) return;
+
+    const roll = this.getAvailableRollsForEntry(entry).find(r => r.cartoonNumber === cartoonNumber);
+    if (!roll) return;
+
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.some((lr: any) => lr.cartoonNumber === cartoonNumber)) {
+      alert('This roll is already locked.');
+      return;
+    }
+
+    entry.currentRollSelection = {
+      selectedRoll: cartoonNumber,
+      rollInput: {
+        cartoonNumber: roll.cartoonNumber,
+        displayName: roll.displayName,
+        availableCount: roll.availableCount,
+        serialRange: roll.serialRange,
+        fromSerial: roll.fromSerial,
+        toSerial: roll.toSerial,
+        issuedRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
+        wastageRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
+        issuedQty: 0,
+        wastageQty: 0,
+        leftOver: roll.availableCount,
+        damageReason: ''
+      },
+      isLocked: false
+    };
+
+    this.cdr.detectChanges();
+  }
+
+  onRollInputChange(entry: RegisterEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+
+    rollInput.issuedQty = rollInput.issuedRanges.reduce((sum, range) => {
+      range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      return sum + range.quantity;
+    }, 0);
+
+    rollInput.wastageQty = rollInput.wastageRanges.reduce((sum, range) => {
+      range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+      return sum + range.quantity;
+    }, 0);
+
+    rollInput.leftOver = rollInput.availableCount - (rollInput.issuedQty + rollInput.wastageQty);
+
+    this.updateEntryQuantitiesFromAllRolls(entry);
+    this.cdr.detectChanges();
+  }
+
+  addIssuedRange(entry: RegisterEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+    
+    rollInput.issuedRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
+    this.cdr.detectChanges();
+  }
+
+  removeIssuedRange(entry: RegisterEntry, index: number): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput || rollInput.issuedRanges.length <= 1) return;
+    
+    rollInput.issuedRanges.splice(index, 1);
+    this.onRollInputChange(entry);
+  }
+
+  addWastageRange(entry: RegisterEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return;
+    
+    rollInput.wastageRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
+    this.cdr.detectChanges();
+  }
+
+  removeWastageRange(entry: RegisterEntry, index: number): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput || rollInput.wastageRanges.length <= 1) return;
+    
+    rollInput.wastageRanges.splice(index, 1);
+    this.onRollInputChange(entry);
+  }
+
+  canLockRoll(entry: RegisterEntry): boolean {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) return false;
+
+    const hasValidIssuedRange = rollInput.issuedRanges.some(r => 
+      r.fromSerial && r.toSerial && r.quantity > 0
+    );
+    
+    if (!hasValidIssuedRange) return false;
+    if (rollInput.leftOver < 0) return false;
+
+    return true;
+  }
+
+  lockRollForEntry(entry: RegisterEntry): void {
+    const rollInput = this.getCurrentRollInput(entry);
+    if (!rollInput) {
+      alert('Please select a roll first.');
+      return;
+    }
+
+    if (!this.canLockRoll(entry)) {
+      alert('Cannot lock roll. Please ensure at least one issued range is complete and left over is not negative.');
+      return;
+    }
+
+    if (!entry.lockedRolls) {
+      entry.lockedRolls = [];
+    }
+
+    entry.lockedRolls.push({ ...rollInput });
+    entry.currentRollSelection = undefined;
+
+    this.recalculateEntryFromLockedRolls(entry);
+    this.cdr.detectChanges();
+
+    alert(`Roll ${rollInput.cartoonNumber} locked successfully!`);
+  }
+
+  unlockRollForEntry(entry: RegisterEntry, cartoonNumber: string): void {
+    const lockedRolls = entry.lockedRolls || [];
+    const index = lockedRolls.findIndex(r => r.cartoonNumber === cartoonNumber);
+
+    if (index !== -1) {
+      lockedRolls.splice(index, 1);
+      this.recalculateEntryFromLockedRolls(entry);
+      this.cdr.detectChanges();
+    }
+  }
+
+  recalculateEntryFromLockedRolls(entry: RegisterEntry): void {
+    const lockedRolls = entry.lockedRolls || [];
+
+    let totalIssued = 0;
+    let totalWastage = 0;
+    let totalLeftOver = 0;
+    let totalAvailable = 0;
+
+    lockedRolls.forEach(roll => {
+      totalIssued += roll.issuedQty || 0;
+      totalWastage += roll.wastageQty || 0;
+      totalLeftOver += roll.leftOver || 0;
+      totalAvailable += roll.availableCount || 0;
+    });
+
+    entry.issuedQty = totalIssued;
+    entry.wastageQty = totalWastage;
+    entry.leftOver = totalLeftOver;
+    entry.hologramQty = totalAvailable;
+    entry.total = totalIssued + totalWastage + totalLeftOver;
+  }
+
+  updateEntryQuantitiesFromAllRolls(entry: RegisterEntry): void {
+    if (entry.isFixed) return;
+
+    const lockedRolls = entry.lockedRolls || [];
+    const currentRoll = this.getCurrentRollInput(entry);
+
+    let totalIssued = lockedRolls.reduce((sum, roll) => sum + (roll.issuedQty || 0), 0);
+    let totalWastage = lockedRolls.reduce((sum, roll) => sum + (roll.wastageQty || 0), 0);
+    let totalLeftOver = lockedRolls.reduce((sum, roll) => sum + (roll.leftOver || 0), 0);
+
+    if (currentRoll) {
+      totalIssued += currentRoll.issuedQty || 0;
+      totalWastage += currentRoll.wastageQty || 0;
+      totalLeftOver += currentRoll.leftOver || 0;
+    }
+
+    entry.issuedQty = totalIssued;
+    entry.wastageQty = totalWastage;
+    entry.leftOver = totalLeftOver;
+    entry.total = totalIssued + totalWastage + totalLeftOver;
+  }
+
+  getRollColor(index: number): string {
+    const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
+    return colors[index % colors.length];
+  }
+
+  getRollBackgroundColor(index: number): string {
+    const bgColors = ['#e7f3ff', '#e7f5e7', '#fff8e1', '#ffe7e7', '#e0f7fa', '#f3e5f5', '#fff3e0', '#e0f2f1'];
+    return bgColors[index % bgColors.length];
   }
 }

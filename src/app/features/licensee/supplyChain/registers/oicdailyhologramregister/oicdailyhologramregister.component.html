@@ -164,40 +164,84 @@
         <table class="table register-table">
           <thead>
             <tr>
-              <th class="sl-no">SL. NO.</th>
-              <th class="ref-number">REFERENCE NO.</th>
-              <th class="roll-range">ROLL / RANGE</th>
-              <th class="dates-column">DATES</th>
-              <th class="brand-details">BRAND DETAILS</th>
-              <th class="bottle-size">BOTTLE SIZE</th>
-              <th class="rolls-assigned">ROLLS ASSIGNED</th>
-              <th class="hologram-qty">HOLOGRAM QTY</th>
+              <th rowspan="2" class="sl-no">SL. NO.</th>
+              <th rowspan="2" class="ref-number">REFERENCE NO.</th>
+              <th rowspan="2" class="roll-range">ROLL / RANGE</th>
+              <th rowspan="2" class="dates-column">DATES</th>
+              <th rowspan="2" class="brand-details">BRAND DETAILS</th>
+              <th rowspan="2" class="bottle-size">BOTTLE SIZE</th>
+              <th rowspan="2" class="rolls-assigned">ROLLS ASSIGNED</th>
+              <th rowspan="2" class="hologram-qty">HOLOGRAM QTY</th>
+              <th colspan="3" class="hologram-header">HOLOGRAM</th>
+              <th colspan="3" class="wastage-header">WASTAGE</th>
+              <th rowspan="2" class="left-over">LEFT OVER</th>
+              <th rowspan="2" class="total-calc">TOTAL</th>
+              <th rowspan="2" class="damage-reason">DAMAGE REASON</th>
+              <th rowspan="2" class="actions">ACTIONS</th>
+            </tr>
+            <tr>
               <th class="issued-from">ISSUED FROM</th>
               <th class="issued-to">ISSUED TO</th>
               <th class="issued-qty">ISSUED QTY</th>
               <th class="wastage-from">WASTAGE FROM</th>
               <th class="wastage-to">WASTAGE TO</th>
               <th class="wastage-qty">WASTAGE QTY</th>
-              <th class="left-over">LEFT OVER</th>
-              <th class="total-calc">TOTAL</th>
-              <th class="damage-reason">DAMAGE REASON</th>
-              <th class="actions">ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             @for (entry of getPagedEntries(); track entry.id; let i = $index) {
-            <tr class="register-row" [class.saved-row]="entry.isFixed">
+            <tr class="register-row" 
+                [class.auto-generated-row]="!entry.isFixed"
+                [class.saved-row]="entry.isFixed">
+              
               <!-- SL NO -->
               <td class="sl-no">{{ i + 1 }}</td>
 
               <!-- Reference No -->
-              <td class="ref-number">{{ entry.referenceNo }}</td>
+              <td class="ref-number locked-field">{{ entry.referenceNo }}</td>
 
-              <!-- Roll & Range -->
-              <td class="roll-range">{{ entry.rollRange }}</td>
+              <!-- Roll & Range Info -->
+              <td class="roll-range locked-field">
+                @if (!entry.isFixed) {
+                  @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
+                    <div class="roll-range-display">
+                      <div class="roll-name-text">
+                        <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                      </div>
+                      <div class="range-text">
+                        {{ rollInput.serialRange }}
+                      </div>
+                    </div>
+                  }
+                  @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                    <div class="roll-range-display">
+                      <div class="roll-name-text">
+                        <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
+                      </div>
+                      <div class="range-text">
+                        {{ lockedRoll.serialRange }}
+                      </div>
+                    </div>
+                  }
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0) {
+                    <span class="text-muted">-</span>
+                  }
+                } @else {
+                  @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
+                    <div class="roll-range-display">
+                      <div class="roll-name-text">
+                        <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
+                      </div>
+                      <div class="range-text">
+                        {{ lockedRoll.serialRange }}
+                      </div>
+                    </div>
+                  }
+                }
+              </td>
 
               <!-- Dates -->
-              <td class="dates-column">
+              <td class="dates-column locked-field">
                 <div class="dates-container">
                   <div class="date-row">
                     <span class="date-label">Submission:</span>
@@ -211,71 +255,198 @@
               </td>
 
               <!-- Brand Details -->
-              <td class="brand-details">{{ entry.brandDetails }}</td>
+              <td class="brand-details locked-field">{{ entry.brandDetails }}</td>
 
               <!-- Bottle Size -->
-              <td class="bottle-size">{{ entry.bottleSize }}</td>
+              <td class="bottle-size locked-field">{{ entry.bottleSize }}</td>
 
-              <!-- Rolls Assigned -->
+              <!-- ROLLS ASSIGNED - Dropdown + Locked Rolls -->
               <td class="rolls-assigned">
-                <div class="rolls-list">
-                  @for (roll of entry.rollsAssigned; track roll) {
-                    <span class="badge bg-primary me-1">{{ roll }}</span>
+                @if (!entry.isFixed) {
+                  <!-- Roll Selection Dropdown -->
+                  <select class="form-select form-select-sm mb-2" 
+                          [value]="getCurrentSelectedRoll(entry) || ''"
+                          (change)="selectRollForEntry(entry, $any($event.target).value)">
+                    <option value="">Select Roll...</option>
+                    @for (roll of getAvailableRollsForEntry(entry); track roll.cartoonNumber) {
+                      <option [value]="roll.cartoonNumber">
+                        {{ roll.displayName || roll.cartoonNumber }} - {{ roll.serialRange }} ({{ roll.availableCount }} units)
+                      </option>
+                    }
+                  </select>
+
+                  <!-- Current Selected Roll Info -->
+                  @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
+                    <div class="selected-range-info">
+                      <div class="range-info-label">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Available:
+                      </div>
+                      <div class="range-info-value">
+                        {{ rollInput.serialRange }}
+                        <span class="range-qty-badge">{{ rollInput.availableCount }} units</span>
+                      </div>
+                    </div>
                   }
-                </div>
+
+                  <!-- Locked Rolls Display -->
+                  <div class="locked-rolls-display">
+                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
+                      <div class="locked-roll-badge-wrapper">
+                        <div class="locked-roll-badge" 
+                             [style.background-color]="getRollBackgroundColor(i)">
+                          <span class="roll-name-badge" 
+                                [style.background-color]="getRollColor(i)"
+                                [style.border-color]="getRollColor(i)">
+                            {{ lockedRoll.cartoonNumber.split('_')[0] }}
+                          </span>
+                        </div>
+                        <button class="btn-unlock" 
+                                (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"
+                                title="Unlock this roll">
+                          <i class="bi bi-x"></i>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <!-- Show locked rolls for saved entries -->
+                  <div class="rolls-list">
+                    @for (roll of entry.rollsAssigned; track roll; let i = $index) {
+                      <span class="badge me-1 mb-1" 
+                            [style.background-color]="getRollColor(i)"
+                            [style.border-color]="getRollColor(i)"
+                            [style.color]="'#fff'">
+                        {{ roll.split('_')[0] }}
+                      </span>
+                    }
+                  </div>
+                }
               </td>
 
               <!-- Hologram Qty -->
-              <td class="hologram-qty">{{ entry.hologramQty | number }}</td>
+              <td class="hologram-qty locked-field">
+                <div class="hologram-qty-simple">
+                  <span class="qty-number">{{ entry.hologramQty | number }}</span>
+                </div>
+              </td>
 
-              <!-- Issued From -->
+              <!-- Issued From/To/Qty - Per Roll -->
               <td class="issued-from">
-                <input type="text" class="form-control form-control-sm serial-input"
-                       [(ngModel)]="entry.issuedFrom"
-                       (ngModelChange)="onSerialChange(entry)"
-                       [readonly]="entry.isFixed"
-                       [class.editable]="!entry.isFixed">
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="range-input-container">
+                    @for (range of rollInput.issuedRanges; track $index; let i = $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" 
+                                 class="form-control form-control-sm" 
+                                 [(ngModel)]="range.fromSerial"
+                                 (ngModelChange)="onRollInputChange(entry)"
+                                 placeholder="From">
+                        </div>
+                        @if (rollInput.issuedRanges.length > 1) {
+                          <button class="btn-remove" (click)="removeIssuedRange(entry, i)">
+                            <i class="bi bi-x"></i>
+                          </button>
+                        }
+                      </div>
+                    }
+                    <button class="btn-add" (click)="addIssuedRange(entry)">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
+                  </div>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
               </td>
 
-              <!-- Issued To -->
               <td class="issued-to">
-                <input type="text" class="form-control form-control-sm serial-input"
-                       [(ngModel)]="entry.issuedTo"
-                       (ngModelChange)="onSerialChange(entry)"
-                       [readonly]="entry.isFixed"
-                       [class.editable]="!entry.isFixed">
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="range-input-container">
+                    @for (range of rollInput.issuedRanges; track $index) {
+                      <div class="range-input-row">
+                        <input type="text" 
+                               class="form-control form-control-sm" 
+                               [(ngModel)]="range.toSerial"
+                               (ngModelChange)="onRollInputChange(entry)"
+                               placeholder="To">
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
               </td>
 
-              <!-- Issued Qty -->
               <td class="issued-qty">
-                <div class="auto-calculated">
-                  <span class="qty-number">{{ entry.issuedQty | number }}</span>
-                </div>
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="auto-calculated">
+                    <span class="qty-number">{{ rollInput.issuedQty | number }}</span>
+                  </div>
+                } @else {
+                  <div class="auto-calculated">
+                    <span class="qty-number">{{ entry.issuedQty | number }}</span>
+                  </div>
+                }
               </td>
 
-              <!-- Wastage From -->
+              <!-- Wastage From/To/Qty - Per Roll -->
               <td class="wastage-from">
-                <input type="text" class="form-control form-control-sm serial-input"
-                       [(ngModel)]="entry.wastageFrom"
-                       (ngModelChange)="onSerialChange(entry)"
-                       [readonly]="entry.isFixed"
-                       [class.editable]="!entry.isFixed">
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="range-input-container">
+                    @for (range of rollInput.wastageRanges; track $index; let i = $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" 
+                                 class="form-control form-control-sm" 
+                                 [(ngModel)]="range.fromSerial"
+                                 (ngModelChange)="onRollInputChange(entry)"
+                                 placeholder="From">
+                        </div>
+                        @if (rollInput.wastageRanges.length > 1) {
+                          <button class="btn-remove" (click)="removeWastageRange(entry, i)">
+                            <i class="bi bi-x"></i>
+                          </button>
+                        }
+                      </div>
+                    }
+                    <button class="btn-add" (click)="addWastageRange(entry)">
+                      <i class="bi bi-plus"></i> Add Range
+                    </button>
+                  </div>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
               </td>
 
-              <!-- Wastage To -->
               <td class="wastage-to">
-                <input type="text" class="form-control form-control-sm serial-input"
-                       [(ngModel)]="entry.wastageTo"
-                       (ngModelChange)="onSerialChange(entry)"
-                       [readonly]="entry.isFixed"
-                       [class.editable]="!entry.isFixed">
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="range-input-container">
+                    @for (range of rollInput.wastageRanges; track $index) {
+                      <div class="range-input-row">
+                        <input type="text" 
+                               class="form-control form-control-sm" 
+                               [(ngModel)]="range.toSerial"
+                               (ngModelChange)="onRollInputChange(entry)"
+                               placeholder="To">
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-muted">-</span>
+                }
               </td>
 
-              <!-- Wastage Qty -->
               <td class="wastage-qty">
-                <div class="auto-calculated">
-                  <span class="qty-number">{{ entry.wastageQty | number }}</span>
-                </div>
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <div class="auto-calculated">
+                    <span class="qty-number">{{ rollInput.wastageQty | number }}</span>
+                  </div>
+                } @else {
+                  <div class="auto-calculated">
+                    <span class="qty-number">{{ entry.wastageQty | number }}</span>
+                  </div>
+                }
               </td>
 
               <!-- Left Over -->
@@ -294,20 +465,32 @@
 
               <!-- Damage Reason -->
               <td class="damage-reason">
-                <textarea class="form-control form-control-sm reason-input"
-                          [(ngModel)]="entry.damageReason"
-                          [readonly]="entry.isFixed"
-                          [class.editable]="!entry.isFixed"
-                          rows="2"></textarea>
+                @if (!entry.isFixed && getCurrentRollInput(entry); as rollInput) {
+                  <textarea class="form-control form-control-sm reason-input"
+                            [(ngModel)]="rollInput.damageReason"
+                            rows="2"></textarea>
+                } @else {
+                  <span class="text-muted">{{ entry.damageReason || '-' }}</span>
+                }
               </td>
 
               <!-- Actions -->
               <td class="actions">
                 <div class="action-buttons">
                   @if (!entry.isFixed) {
-                    <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry">
-                      <i class="bi bi-check-circle"></i>
-                    </button>
+                    @if (getCurrentSelectedRoll(entry)) {
+                      <button class="btn-action lock" 
+                              (click)="lockRollForEntry(entry)" 
+                              [disabled]="!canLockRoll(entry)"
+                              title="Lock Roll">
+                        <i class="bi bi-lock"></i>
+                      </button>
+                    }
+                    @if (getLockedRollsForEntry(entry).length > 0) {
+                      <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry">
+                        <i class="bi bi-check-circle"></i>
+                      </button>
+                    }
                   } @else {
                     <span class="status-badge saved">
                       <i class="bi bi-check-circle-fill me-1"></i>
