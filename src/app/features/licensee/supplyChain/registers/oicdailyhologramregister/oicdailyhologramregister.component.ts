@@ -532,12 +532,21 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
   /**
    * Get all used ranges from locked rolls (for cross-roll validation)
+   * CRITICAL FIX: Only get ranges from OTHER rolls, not the current roll being edited
+   * Each roll should only validate against its own allocated ranges, not other rolls' ranges
    */
-  private getAllUsedRangesFromLockedRolls(entry: RegisterEntry): Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> {
+  private getAllUsedRangesFromLockedRolls(entry: RegisterEntry, currentRollCartoonNumber?: string): Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> {
     const lockedRolls = this.getLockedRollsForEntry(entry);
     const usedRanges: Array<{ fromSerial: string; toSerial: string; rollName: string; type: 'issued' | 'wastage' }> = [];
 
     lockedRolls.forEach((roll) => {
+      // CRITICAL FIX: Skip the current roll being edited
+      // Each roll has its own allocated ranges and should not interfere with other rolls
+      if (currentRollCartoonNumber && roll.cartoonNumber === currentRollCartoonNumber) {
+        console.log(`⏭️ Skipping current roll ${currentRollCartoonNumber} from cross-roll validation`);
+        return; // Skip this roll
+      }
+      
       // Collect issued ranges from locked roll
       if (roll.issuedRanges && Array.isArray(roll.issuedRanges)) {
         roll.issuedRanges.forEach((range) => {
@@ -724,46 +733,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
       });
     }
 
-    // NEW: CROSS-ROLL VALIDATION - Check against locked rolls
-    const lockedRanges = this.getAllUsedRangesFromLockedRolls(entry);
-    
-    if (lockedRanges.length > 0) {
-      // Validate issued ranges against locked rolls
-      const issuedCrossRollCheck = this.validateNoOverlapWithLockedRolls(
-        rollInput.issuedRanges,
-        lockedRanges
-      );
-      
-      if (!issuedCrossRollCheck.isValid) {
-        issuedCrossRollCheck.conflicts.forEach(conflict => {
-          conflict.currentRange.isValid = false;
-          conflict.currentRange.errorMessage = 
-            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
-            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
-            `from locked roll "${conflict.lockedRange.rollName}"`;
-        });
-      }
-
-      // Validate wastage ranges against locked rolls
-      const wastageCrossRollCheck = this.validateNoOverlapWithLockedRolls(
-        rollInput.wastageRanges,
-        lockedRanges
-      );
-      
-      if (!wastageCrossRollCheck.isValid) {
-        wastageCrossRollCheck.conflicts.forEach(conflict => {
-          conflict.currentRange.isValid = false;
-          conflict.currentRange.errorMessage = 
-            `Range (${conflict.currentRange.fromSerial}-${conflict.currentRange.toSerial}) overlaps with ` +
-            `${conflict.lockedRange.type} range (${conflict.lockedRange.fromSerial}-${conflict.lockedRange.toSerial}) ` +
-            `from locked roll "${conflict.lockedRange.rollName}"`;
-        });
-      }
-    }
+    // CRITICAL FIX: REMOVED CROSS-ROLL VALIDATION
+    // Each roll has its own independent allocated ranges
+    // Ranges from "test1" should NOT affect ranges from "test2" or any other roll
+    // Only validate within the current roll's own allocated ranges (already done above)
+    // 
+    // Example:
+    // - Roll "test1" has ranges: 000001-100000
+    // - Roll "test2" has ranges: 000001-050000
+    // - These are INDEPENDENT and should NOT validate against each other
+    // - Each roll only validates against its OWN allocated ranges
+    console.log(`✅ Skipping cross-roll validation - each roll is independent with its own allocated ranges`);
 
     rollInput.leftOver = rollInput.availableCount - (rollInput.issuedQty + rollInput.wastageQty);
 
-    this.updateEntryQuantitiesFromAllRolls(entry);
+    // Recalculate entry totals from all rolls (locked + current)
+    this.recalculateEntryFromLockedRolls(entry);
     this.cdr.detectChanges();
   }
 
@@ -803,6 +788,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
+    // CRITICAL: Check if ANY data is entered (issued OR wastage)
+    // It's valid to have ONLY wastage (no issued) or ONLY issued (no wastage)
+    let hasValidIssuedRange = false;
+    let hasValidWastageRange = false;
+
     // Check ISSUED ranges: Both FROM and TO must be filled for any range that has started
     if (rollInput.issuedRanges && rollInput.issuedRanges.length > 0) {
       // Check if any issued range has only one field filled (incomplete)
@@ -815,29 +805,26 @@ export class OicdailyhologramregisterComponent implements OnInit {
       
       if (hasIncompleteIssuedRange) return false;
 
-      // Must have at least one complete issued range with valid serials
-      const hasValidIssuedRange = rollInput.issuedRanges.some((range) => {
+      // Check if there's at least one complete issued range with valid serials
+      hasValidIssuedRange = rollInput.issuedRanges.some((range) => {
         const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
         const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
         return hasFrom && hasTo && range.quantity > 0;
       });
-      
-      if (!hasValidIssuedRange) return false;
 
-      // Check if all complete issued ranges are valid (within allocated range)
-      const allIssuedRangesValid = rollInput.issuedRanges.every((range) => {
-        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
-        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        // If range is incomplete, skip validation (already checked above)
-        if (!hasFrom || !hasTo) return true;
-        // If range is complete, check if it's valid
-        return range.isValid !== false;
-      });
-      
-      if (!allIssuedRangesValid) return false;
-    } else {
-      // No issued ranges at all
-      return false;
+      // If there are issued ranges, check if all complete ones are valid (within allocated range)
+      if (hasValidIssuedRange) {
+        const allIssuedRangesValid = rollInput.issuedRanges.every((range) => {
+          const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+          const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+          // If range is incomplete (empty), skip validation
+          if (!hasFrom && !hasTo) return true;
+          // If range is complete, check if it's valid
+          return range.isValid !== false;
+        });
+        
+        if (!allIssuedRangesValid) return false;
+      }
     }
 
     // Check WASTAGE ranges: Both FROM and TO must be filled for any range that has started
@@ -852,17 +839,32 @@ export class OicdailyhologramregisterComponent implements OnInit {
       
       if (hasIncompleteWastageRange) return false;
 
-      // Check if all complete wastage ranges are valid (within allocated range)
-      const allWastageRangesValid = rollInput.wastageRanges.every((range) => {
+      // Check if there's at least one complete wastage range with valid serials
+      hasValidWastageRange = rollInput.wastageRanges.some((range) => {
         const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
         const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        // If range is incomplete, skip validation (already checked above)
-        if (!hasFrom || !hasTo) return true;
-        // If range is complete, check if it's valid
-        return range.isValid !== false;
+        return hasFrom && hasTo && range.quantity > 0;
       });
-      
-      if (!allWastageRangesValid) return false;
+
+      // If there are wastage ranges, check if all complete ones are valid (within allocated range)
+      if (hasValidWastageRange) {
+        const allWastageRangesValid = rollInput.wastageRanges.every((range) => {
+          const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+          const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+          // If range is incomplete (empty), skip validation
+          if (!hasFrom && !hasTo) return true;
+          // If range is complete, check if it's valid
+          return range.isValid !== false;
+        });
+        
+        if (!allWastageRangesValid) return false;
+      }
+    }
+
+    // CRITICAL FIX: Must have at least ONE valid range (either issued OR wastage)
+    // This allows locking with ONLY wastage (no issued) or ONLY issued (no wastage)
+    if (!hasValidIssuedRange && !hasValidWastageRange) {
+      return false;
     }
 
     // Left over must not be negative
@@ -930,12 +932,24 @@ export class OicdailyhologramregisterComponent implements OnInit {
         errorMessage += `Left Over is negative: ${rollInput.leftOver}. Please adjust quantities.\n`;
       }
       
-      if (!rollInput.issuedRanges || !rollInput.issuedRanges.some((r) => {
+      // Check if at least one range (issued OR wastage) is filled
+      const hasValidIssuedRange = rollInput.issuedRanges?.some((r) => {
         const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
         const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
         return hasFrom && hasTo && r.quantity > 0;
-      })) {
-        errorMessage += 'Please enter at least one complete issued range (both FROM and TO).\n';
+      });
+      
+      const hasValidWastageRange = rollInput.wastageRanges?.some((r) => {
+        const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
+        const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
+        return hasFrom && hasTo && r.quantity > 0;
+      });
+      
+      if (!hasValidIssuedRange && !hasValidWastageRange) {
+        errorMessage += 'Please enter at least one complete range:\n';
+        errorMessage += '- Either ISSUED (FROM and TO), OR\n';
+        errorMessage += '- WASTAGE (FROM and TO), OR\n';
+        errorMessage += '- Both ISSUED and WASTAGE\n';
       }
       
       alert(errorMessage);
@@ -972,20 +986,40 @@ export class OicdailyhologramregisterComponent implements OnInit {
     let totalIssued = 0;
     let totalWastage = 0;
     let totalLeftOver = 0;
-    let totalAvailable = 0;
+    let totalAllocated = 0;
 
     lockedRolls.forEach(roll => {
       totalIssued += roll.issuedQty || 0;
       totalWastage += roll.wastageQty || 0;
       totalLeftOver += roll.leftOver || 0;
-      totalAvailable += roll.availableCount || 0;
+      // CRITICAL FIX: Use availableCount (which is the allocated quantity for this roll)
+      // This represents the total allocated quantity from all locked rolls
+      totalAllocated += roll.availableCount || 0;
     });
+
+    // Also add current roll's allocated quantity if it exists
+    const currentRoll = this.getCurrentRollInput(entry);
+    if (currentRoll) {
+      totalIssued += currentRoll.issuedQty || 0;
+      totalWastage += currentRoll.wastageQty || 0;
+      totalLeftOver += currentRoll.leftOver || 0;
+      totalAllocated += currentRoll.availableCount || 0;
+    }
 
     entry.issuedQty = totalIssued;
     entry.wastageQty = totalWastage;
     entry.leftOver = totalLeftOver;
-    entry.hologramQty = totalAvailable;
+    // CRITICAL FIX: hologramQty should be the TOTAL ALLOCATED quantity from all rolls
+    // This is the sum of all allocated quantities from locked rolls + current roll
+    entry.hologramQty = totalAllocated;
     entry.total = totalIssued + totalWastage + totalLeftOver;
+  }
+
+  /**
+   * Calculate total (Issued + Wastage + Left Over) for validation
+   */
+  getTotalCalculation(entry: RegisterEntry): number {
+    return (entry.issuedQty || 0) + (entry.wastageQty || 0) + (entry.leftOver || 0);
   }
 
   // Check if all ranges are locked and entry can be saved
@@ -1659,11 +1693,6 @@ export class OicdailyhologramregisterComponent implements OnInit {
     });
     
     return groups;
-  }
-
-  // Calculate total: Issued + Wastage + Left Over
-  getTotalCalculation(entry: RegisterEntry): number {
-    return (entry.issuedQty || 0) + (entry.wastageQty || 0) + (entry.leftOver || 0);
   }
 
   // Get allocated ranges for a specific roll from entry's allocation data

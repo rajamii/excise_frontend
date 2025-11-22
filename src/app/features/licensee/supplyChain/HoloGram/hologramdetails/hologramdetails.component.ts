@@ -1194,7 +1194,7 @@ export class HologramdetailsComponent implements OnInit {
       refNo: 'YB/TEST/2025',
       date: new Date().toISOString().split('T')[0],
       companyName: 'Test Distillery Ltd',
-      localQtyLakh: 100000, // 10000 pieces (easy for testing)
+      localQtyLakh: 1000, // 10000 pieces (easy for testing)
       exportQtyLakh: 0,
       defenceQtyLakh: 0,
       procurementType: 'Local',
