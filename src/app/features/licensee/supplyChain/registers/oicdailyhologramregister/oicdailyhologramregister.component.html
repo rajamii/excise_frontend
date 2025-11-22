@@ -1,1 +1,363 @@
-<p>oicdailyhologramregister works!</p>
+<div class="bg-white">
+  <div class="container-fluid p-3">
+    <!-- Header -->
+    <div class="daily-register-header">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="header-info">
+          <h4 class="register-title">
+            <i class="bi bi-calendar-check me-2"></i>
+            Daily Hologram Register
+          </h4>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-outline-secondary" (click)="goBack()">
+            <i class="bi bi-arrow-left me-2"></i>
+            Back
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="summary-card total-entries">
+            <div class="card-icon">
+              <i class="bi bi-list-ul"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ filteredEntries.length }}</h3>
+              <p class="card-label">Total Entries</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card pending-entries">
+            <div class="card-icon">
+              <i class="bi bi-clock"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ getPendingEntriesCount() }}</h3>
+              <p class="card-label">Pending</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card total-holograms">
+            <div class="card-icon">
+              <i class="bi bi-qr-code"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ getTotalIssuedQty() | number }}</h3>
+              <p class="card-label">Total Issued</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="summary-card auto-generated">
+            <div class="card-icon">
+              <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="card-content">
+              <h3 class="card-value">{{ getTotalWastageQty() | number }}</h3>
+              <p class="card-label">Total Wastage</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="compact-filter-section mb-3">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="filter-label-text">
+          <i class="bi bi-funnel me-1"></i>
+          <small class="text-muted">Filters:</small>
+        </div>
+
+        <div class="compact-filter">
+          <label class="form-label small mb-1">Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="selectedDate" 
+                 (ngModelChange)="onDateFilterChange()">
+        </div>
+
+        <div class="compact-filter">
+          <label class="form-label small mb-1">Month</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (ngModelChange)="onMonthYearChange()">
+            <option value="jan">January</option>
+            <option value="feb">February</option>
+            <option value="mar">March</option>
+            <option value="apr">April</option>
+            <option value="may">May</option>
+            <option value="jun">June</option>
+            <option value="jul">July</option>
+            <option value="aug">August</option>
+            <option value="sep">September</option>
+            <option value="oct">October</option>
+            <option value="nov">November</option>
+            <option value="dec">December</option>
+          </select>
+        </div>
+
+        <div class="compact-filter">
+          <label class="form-label small mb-1">Year</label>
+          <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (ngModelChange)="onMonthYearChange()">
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+          </select>
+        </div>
+
+        <div class="compact-filter" *ngIf="hasActiveFilters()">
+          <button class="btn btn-outline-danger btn-sm" (click)="clearAllFilters()">
+            <i class="bi bi-x-circle me-1"></i>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hologram Type Tabs -->
+    <div class="hologram-type-tabs mb-3">
+      <ul class="nav nav-pills nav-fill">
+        <li class="nav-item">
+          <button class="nav-link" 
+            [class.active]="selectedHologramType === 'LOCAL'"
+            (click)="onHologramTypeChange('LOCAL')">
+            <i class="bi bi-house-door me-2"></i>
+            LOCAL
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link"
+            [class.active]="selectedHologramType === 'EXPORT'"
+            (click)="onHologramTypeChange('EXPORT')">
+            <i class="bi bi-globe me-2"></i>
+            EXPORT
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link"
+            [class.active]="selectedHologramType === 'DEFENCE'"
+            (click)="onHologramTypeChange('DEFENCE')">
+            <i class="bi bi-shield-check me-2"></i>
+            DEFENCE
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Register Table -->
+    <div class="register-container">
+      <div class="register-header-bar">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-table me-2 text-white"></i>
+          <h5 class="register-table-title text-white mb-0">
+            Daily Register Entries
+          </h5>
+        </div>
+        <div class="register-info">
+          <span class="entries-count">{{ filteredEntries.length }} Entries</span>
+        </div>
+      </div>
+
+      <div class="table-responsive" *ngIf="filteredEntries.length > 0">
+        <table class="table register-table">
+          <thead>
+            <tr>
+              <th class="sl-no">SL. NO.</th>
+              <th class="ref-number">REFERENCE NO.</th>
+              <th class="roll-range">ROLL / RANGE</th>
+              <th class="dates-column">DATES</th>
+              <th class="brand-details">BRAND DETAILS</th>
+              <th class="bottle-size">BOTTLE SIZE</th>
+              <th class="rolls-assigned">ROLLS ASSIGNED</th>
+              <th class="hologram-qty">HOLOGRAM QTY</th>
+              <th class="issued-from">ISSUED FROM</th>
+              <th class="issued-to">ISSUED TO</th>
+              <th class="issued-qty">ISSUED QTY</th>
+              <th class="wastage-from">WASTAGE FROM</th>
+              <th class="wastage-to">WASTAGE TO</th>
+              <th class="wastage-qty">WASTAGE QTY</th>
+              <th class="left-over">LEFT OVER</th>
+              <th class="total-calc">TOTAL</th>
+              <th class="damage-reason">DAMAGE REASON</th>
+              <th class="actions">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of getPagedEntries(); track entry.id; let i = $index) {
+            <tr class="register-row" [class.saved-row]="entry.isFixed">
+              <!-- SL NO -->
+              <td class="sl-no">{{ i + 1 }}</td>
+
+              <!-- Reference No -->
+              <td class="ref-number">{{ entry.referenceNo }}</td>
+
+              <!-- Roll & Range -->
+              <td class="roll-range">{{ entry.rollRange }}</td>
+
+              <!-- Dates -->
+              <td class="dates-column">
+                <div class="dates-container">
+                  <div class="date-row">
+                    <span class="date-label">Submission:</span>
+                    <span class="date-value">{{ entry.dates.submission | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                  <div class="date-row">
+                    <span class="date-label">Usage:</span>
+                    <span class="date-value">{{ entry.dates.usage | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Brand Details -->
+              <td class="brand-details">{{ entry.brandDetails }}</td>
+
+              <!-- Bottle Size -->
+              <td class="bottle-size">{{ entry.bottleSize }}</td>
+
+              <!-- Rolls Assigned -->
+              <td class="rolls-assigned">
+                <div class="rolls-list">
+                  @for (roll of entry.rollsAssigned; track roll) {
+                    <span class="badge bg-primary me-1">{{ roll }}</span>
+                  }
+                </div>
+              </td>
+
+              <!-- Hologram Qty -->
+              <td class="hologram-qty">{{ entry.hologramQty | number }}</td>
+
+              <!-- Issued From -->
+              <td class="issued-from">
+                <input type="text" class="form-control form-control-sm serial-input"
+                       [(ngModel)]="entry.issuedFrom"
+                       (ngModelChange)="onSerialChange(entry)"
+                       [readonly]="entry.isFixed"
+                       [class.editable]="!entry.isFixed">
+              </td>
+
+              <!-- Issued To -->
+              <td class="issued-to">
+                <input type="text" class="form-control form-control-sm serial-input"
+                       [(ngModel)]="entry.issuedTo"
+                       (ngModelChange)="onSerialChange(entry)"
+                       [readonly]="entry.isFixed"
+                       [class.editable]="!entry.isFixed">
+              </td>
+
+              <!-- Issued Qty -->
+              <td class="issued-qty">
+                <div class="auto-calculated">
+                  <span class="qty-number">{{ entry.issuedQty | number }}</span>
+                </div>
+              </td>
+
+              <!-- Wastage From -->
+              <td class="wastage-from">
+                <input type="text" class="form-control form-control-sm serial-input"
+                       [(ngModel)]="entry.wastageFrom"
+                       (ngModelChange)="onSerialChange(entry)"
+                       [readonly]="entry.isFixed"
+                       [class.editable]="!entry.isFixed">
+              </td>
+
+              <!-- Wastage To -->
+              <td class="wastage-to">
+                <input type="text" class="form-control form-control-sm serial-input"
+                       [(ngModel)]="entry.wastageTo"
+                       (ngModelChange)="onSerialChange(entry)"
+                       [readonly]="entry.isFixed"
+                       [class.editable]="!entry.isFixed">
+              </td>
+
+              <!-- Wastage Qty -->
+              <td class="wastage-qty">
+                <div class="auto-calculated">
+                  <span class="qty-number">{{ entry.wastageQty | number }}</span>
+                </div>
+              </td>
+
+              <!-- Left Over -->
+              <td class="left-over">
+                <div class="auto-calculated">
+                  <span class="qty-number">{{ entry.leftOver | number }}</span>
+                </div>
+              </td>
+
+              <!-- Total -->
+              <td class="total-calc">
+                <div class="auto-calculated">
+                  <span class="qty-number">{{ entry.total | number }}</span>
+                </div>
+              </td>
+
+              <!-- Damage Reason -->
+              <td class="damage-reason">
+                <textarea class="form-control form-control-sm reason-input"
+                          [(ngModel)]="entry.damageReason"
+                          [readonly]="entry.isFixed"
+                          [class.editable]="!entry.isFixed"
+                          rows="2"></textarea>
+              </td>
+
+              <!-- Actions -->
+              <td class="actions">
+                <div class="action-buttons">
+                  @if (!entry.isFixed) {
+                    <button class="btn-action save" (click)="saveEntry(entry)" title="Save Entry">
+                      <i class="bi bi-check-circle"></i>
+                    </button>
+                  } @else {
+                    <span class="status-badge saved">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      Saved
+                    </span>
+                  }
+                </div>
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredEntries.length === 0">
+        <div class="empty-icon">
+          <i class="bi bi-inbox"></i>
+        </div>
+        <h5 class="empty-title">No Entries Found</h5>
+        <p class="empty-message">
+          No register entries found for the selected filters.
+        </p>
+      </div>
+
+      <!-- Pagination -->
+      <div class="register-pagination" *ngIf="filteredEntries.length > 0">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="pagination-info">
+            <span class="info-text">
+              Showing {{ (currentPage - 1) * pageSize + 1 }} to 
+              {{ Math.min(currentPage * pageSize, filteredEntries.length) }} of 
+              {{ filteredEntries.length }} entries
+            </span>
+          </div>
+          <div class="pagination-controls d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-secondary" 
+                    (click)="goToPage(currentPage - 1)"
+                    [disabled]="currentPage === 1">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="page-info">Page {{ currentPage }} of {{ getTotalPages() }}</span>
+            <button class="btn btn-sm btn-outline-secondary" 
+                    (click)="goToPage(currentPage + 1)"
+                    [disabled]="currentPage === getTotalPages()">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
