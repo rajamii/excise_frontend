@@ -2597,6 +2597,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     
     const confirmed = confirm(confirmMessage);
     
+    
     if (!confirmed) {
       console.log('Clear test data cancelled');
       return;
