@@ -185,20 +185,47 @@
                   <i class="bi bi-box-seam me-2"></i>
                   Select Roll
                 </h6>
-                <select class="form-select" 
-                        [value]="getCurrentSelectedRoll(selectedEntryForRollsView) || ''"
-                        (change)="selectRollForEntry(selectedEntryForRollsView, $any($event.target).value)">
-                  <option value="">Select Roll...</option>
-                  @for (roll of getAvailableRollsForEntry(selectedEntryForRollsView); track roll.rangeId || roll.cartoonNumber) {
-                    <option [value]="roll.rangeId || roll.cartoonNumber">
-                      {{ roll.displayName || roll.cartoonNumber }} ({{ roll.availableCount }} units)
-                    </option>
-                  }
-                </select>
-                <small class="text-muted mt-2 d-block">
-                  <i class="bi bi-info-circle me-1"></i>
-                  Select a roll to start entering data
-                </small>
+                
+                <!-- Show dropdown if not using a leftover range -->
+                @if (!getCurrentSelectedRoll(selectedEntryForRollsView)?.includes('_LEFTOVER_')) {
+                  <select class="form-select" 
+                          [value]="getCurrentSelectedRoll(selectedEntryForRollsView) || ''"
+                          (change)="selectRollForEntry(selectedEntryForRollsView, $any($event.target).value)">
+                    <option value="">Select Roll...</option>
+                    @for (roll of getAvailableRollsForEntry(selectedEntryForRollsView); track roll.rangeId || roll.cartoonNumber) {
+                      <option [value]="roll.rangeId || roll.cartoonNumber">
+                        {{ roll.displayName || roll.cartoonNumber }} ({{ roll.availableCount }} units)
+                      </option>
+                    }
+                  </select>
+                  <small class="text-muted mt-2 d-block">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Select a roll to start entering data
+                  </small>
+                } @else {
+                  <!-- Show custom display when using leftover range -->
+                  <div class="leftover-range-selected-display">
+                    <div class="alert alert-info mb-0">
+                      <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                          <i class="bi bi-recycle me-2"></i>
+                          <strong>Using Leftover Range</strong>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" 
+                                (click)="clearCurrentRollSelection(selectedEntryForRollsView)">
+                          <i class="bi bi-x-circle me-1"></i>
+                          Cancel
+                        </button>
+                      </div>
+                      <div class="mt-2">
+                        <small class="text-muted">
+                          You are reusing a leftover range from a previously locked roll.
+                          Enter brand details and usage below, then lock to save.
+                        </small>
+                      </div>
+                    </div>
+                  </div>
+                }
               </div>
             }
 
@@ -370,8 +397,48 @@
                             <strong>Leftover Hologram</strong>
                           </div>
                           
-                          @if (rollInput.leftOver > 0) {
+                          @if (rollInput.leftOver > 0 || hasLeftoverUsageHistory(rollInput)) {
                             <div class="leftover-details">
+                              <!-- Show usage history if leftover ranges have been used -->
+                              @if (hasLeftoverUsageHistory(rollInput)) {
+                                <div class="leftover-usage-history mb-3">
+                                  <div class="usage-history-header">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    <strong>Usage History:</strong>
+                                  </div>
+                                  @for (usage of getLeftoverUsageHistory(rollInput); track $index) {
+                                    <div class="usage-history-item">
+                                      <div class="usage-item-header">
+                                        <span class="usage-brand">{{ usage.brandDetails || 'N/A' }}</span>
+                                        <span class="usage-bottle-size">{{ usage.bottleSize || 'N/A' }}</span>
+                                      </div>
+                                      <div class="usage-item-details">
+                                        <div class="usage-detail-row">
+                                          <span class="detail-label">Original Range:</span>
+                                          <span class="detail-value">{{ usage.originalRange }}</span>
+                                        </div>
+                                        <div class="usage-detail-row">
+                                          <span class="detail-label">Used:</span>
+                                          <span class="detail-value text-success">{{ usage.usedRange }} ({{ usage.usedQty }} units)</span>
+                                        </div>
+                                        @if (usage.damagedRange) {
+                                          <div class="usage-detail-row">
+                                            <span class="detail-label">Damaged:</span>
+                                            <span class="detail-value text-danger">{{ usage.damagedRange }} ({{ usage.damagedQty }} units)</span>
+                                          </div>
+                                        }
+                                        @if (usage.remainingRange) {
+                                          <div class="usage-detail-row">
+                                            <span class="detail-label">Remaining:</span>
+                                            <span class="detail-value text-primary">{{ usage.remainingRange }} ({{ usage.remainingQty }} units)</span>
+                                          </div>
+                                        }
+                                      </div>
+                                    </div>
+                                  }
+                                </div>
+                              }
+                              
                               <!-- Calculate and show ALL leftover ranges -->
                               @if (getLeftoverRanges(selectedEntryForRollsView, rollInput); as leftoverRanges) {
                                 @if (leftoverRanges.length > 0) {
@@ -388,6 +455,12 @@
                                         <div class="range-qty-badge">
                                           {{ range.quantity }} units
                                         </div>
+                                        <button class="btn btn-sm btn-primary btn-use-leftover" 
+                                                (click)="useLeftoverRange(selectedEntryForRollsView, rollInput, range)"
+                                                title="Use this leftover range for a new brand">
+                                          <i class="bi bi-arrow-right-circle me-1"></i>
+                                          Use
+                                        </button>
                                       </div>
                                     }
                                   </div>
