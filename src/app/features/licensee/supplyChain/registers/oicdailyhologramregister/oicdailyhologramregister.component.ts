@@ -1284,16 +1284,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
           issuedToSerial: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
           wastageFromSerial: roll.wastageRanges?.[0]?.fromSerial || '',
           wastageToSerial: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
+          brandDetails: roll.brandDetails || '',
+          bottleSize: roll.bottleSize || '',
           issuedEntries: roll.issuedRanges?.map((r: any) => ({
             fromSerial: r.fromSerial,
             toSerial: r.toSerial,
-            quantity: r.quantity || 0
+            quantity: r.quantity || 0,
+            brandDetails: roll.brandDetails || '',
+            bottleSize: roll.bottleSize || ''
           })) || [],
           wastageEntries: roll.wastageRanges?.map((r: any) => ({
             fromSerial: r.fromSerial,
             toSerial: r.toSerial,
             quantity: r.quantity || 0,
-            damageReason: roll.damageReason || r.damageReason || ''
+            damageReason: roll.damageReason || r.damageReason || '',
+            brandDetails: roll.brandDetails || '',
+            bottleSize: roll.bottleSize || ''
           })) || [],
           damageReason: roll.damageReason || ''
         };
@@ -1361,7 +1367,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
         roll.usageHistory.push({
           date: entry.date,
           referenceNo: entry.referenceNo || 'N/A',
-          brandName: entry.brandDetails?.brandName || 'N/A',
+          brandName: entry.brandDetails?.brandName || entry.brandDetails || issuedEntry.brandDetails || 'N/A',
+          brandDetails: issuedEntry.brandDetails || entry.brandDetails || '',
+          bottleSize: issuedEntry.bottleSize || entry.bottleSize || '',
           type: 'ISSUED',
           issuedFromSerial: issuedEntry.fromSerial || '',
           issuedToSerial: issuedEntry.toSerial || '',
@@ -1377,7 +1385,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
         roll.usageHistory.push({
           date: entry.date,
           referenceNo: entry.referenceNo || 'N/A',
-          brandName: entry.brandDetails?.brandName || 'N/A',
+          brandName: entry.brandDetails?.brandName || entry.brandDetails || wastageEntry.brandDetails || 'N/A',
+          brandDetails: wastageEntry.brandDetails || entry.brandDetails || '',
+          bottleSize: wastageEntry.bottleSize || entry.bottleSize || '',
           type: 'WASTAGE',
           wastageFromSerial: wastageEntry.fromSerial || '',
           wastageToSerial: wastageEntry.toSerial || '',
@@ -1497,7 +1507,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
           serialRoll.usageHistory.push({
             date: entry.date,
             referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || 'N/A',
+            brandName: entry.brandDetails?.brandName || entry.brandDetails || issuedEntry.brandDetails || 'N/A',
+            brandDetails: issuedEntry.brandDetails || entry.brandDetails || '',
+            bottleSize: issuedEntry.bottleSize || entry.bottleSize || '',
             type: 'ISSUED',
             issuedFromSerial: issuedEntry.fromSerial,
             issuedToSerial: issuedEntry.toSerial,
@@ -1518,7 +1530,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
           serialRoll.usageHistory.push({
             date: entry.date,
             referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || 'N/A',
+            brandName: entry.brandDetails?.brandName || entry.brandDetails || wastageEntry.brandDetails || 'N/A',
+            brandDetails: wastageEntry.brandDetails || entry.brandDetails || '',
+            bottleSize: wastageEntry.bottleSize || entry.bottleSize || '',
             type: 'WASTAGE',
             wastageFromSerial: wastageEntry.fromSerial,
             wastageToSerial: wastageEntry.toSerial,

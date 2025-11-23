@@ -40,6 +40,8 @@ interface SerialRange {
   productionLine?: string;
   damageReason?: string;
   reportedBy?: string;
+  brandDetails?: string;
+  bottleSize?: string;
 }
 
 interface UsageEvent {
@@ -1429,9 +1431,11 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 description: `Production batch - Used on ${new Date(historyEntry.date || historyEntry.approvedAt).toLocaleDateString()}`,
                 usedDate: historyEntry.date || historyEntry.approvedAt,
                 referenceNo: historyEntry.referenceNo || 'N/A',
-                productionLine: historyEntry.brandName || 'N/A'
+                productionLine: historyEntry.brandName || 'N/A',
+                brandDetails: historyEntry.brandDetails || '',
+                bottleSize: historyEntry.bottleSize || ''
               });
-              console.log('Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+              console.log('Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'brand:', historyEntry.brandDetails, 'bottle:', historyEntry.bottleSize);
             } else {
               // Try to get damage reason from daily register entry if not in history
               let damageReason = historyEntry.damageReason;
@@ -1476,9 +1480,11 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 damageReason: damageReason || 'Not specified',
                 reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System',
                 referenceNo: historyEntry.referenceNo || 'N/A', // Add reference number for damaged entries
-                productionLine: historyEntry.brandName || 'N/A' // Add brand name for damaged entries
+                productionLine: historyEntry.brandName || 'N/A', // Add brand name for damaged entries
+                brandDetails: historyEntry.brandDetails || '',
+                bottleSize: historyEntry.bottleSize || ''
               });
-              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'damageReason:', damageReason || 'Not specified', 'refNo:', historyEntry.referenceNo);
+              console.log('Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'damageReason:', damageReason || 'Not specified', 'refNo:', historyEntry.referenceNo, 'brand:', historyEntry.brandDetails, 'bottle:', historyEntry.bottleSize);
             }
           }
         } else {

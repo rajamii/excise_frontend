@@ -1258,6 +1258,18 @@
                                 <small>Request Ref: {{ range.referenceNo }}</small>
                               </div>
                               }
+                              @if (range.brandDetails) {
+                              <div class="detail-item">
+                                <i class="bi bi-tag text-success me-1"></i>
+                                <small>Brand: {{ range.brandDetails }}</small>
+                              </div>
+                              }
+                              @if (range.bottleSize) {
+                              <div class="detail-item">
+                                <i class="bi bi-cup text-primary me-1"></i>
+                                <small>Bottle Size: {{ range.bottleSize }}</small>
+                              </div>
+                              }
                               @if (range.productionLine) {
                               <div class="detail-item">
                                 <i class="bi bi-gear text-secondary me-1"></i>
