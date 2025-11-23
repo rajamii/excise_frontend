@@ -194,107 +194,89 @@ export class LicenseApplicationService {
    * Handles field name mapping from camelCase to snake_case
    */
   prepareNewLicenseFormData(): FormData {
-    const formData = new FormData();
+  const formData = new FormData();
+  const get = (key: string) => JSON.parse(sessionStorage.getItem(key) || '{}');
 
-    // Get all session data
-    const sections = [
-      'selectLicenseData',
-      'keyInfoData',
-      'applicantDetailsData',
-      'siteDetailsData',
-      'unitDetailsData'
-    ];
+  const select = get('selectLicenseData');
+  const keyInfo = get('keyInfoData');
+  const applicant = get('applicantDetailsData');
+  const site = get('siteDetailsData');
+  const company = get('unitDetailsData');
 
-    const allData: any = {};
+  const append = (camel: string, value: any) => {
+    if (value === null || value === undefined || value === '' || value === false) return;
+    const snake = this.toSnakeCase(camel);
+    formData.append(String(snake), value instanceof Blob ? value : String(value));
+  };
 
-    sections.forEach(section => {
-      const data = sessionStorage.getItem(section);
-      if (data) {
-        Object.assign(allData, JSON.parse(data));
-      }
-    });
+  // === MUST HAVE ===
+  append('licenseType', select.licenseType);
+  append('licenseCategory', keyInfo.licenseCategory);
+  append('licenseSubCategory', keyInfo.licenseSubCategory);
+  append('establishmentName', keyInfo.establishmentName);
+  append('siteType', keyInfo.siteType);
 
-    // Field mapping: frontend camelCase -> backend snake_case
-    const fieldMap: Record<string, string> = {
-      // Step 1: Select License
-      'licenseType': 'license_type',
+  const fullName = [applicant.firstName, applicant.middleName, applicant.lastName].filter(Boolean).join(' ');
+  append('applicantName', fullName);
+  append('fatherHusbandName', applicant.fatherHusbandName);
+  append('dob', this.formatDate(applicant.dob));
+  append('gender', applicant.gender);
+  append('nationality', applicant.nationality);
+  append('residentialStatus', applicant.residentialStatus);
+  append('presentAddress', applicant.presentAddress);
+  append('permanentAddress', applicant.permanentAddress || applicant.presentAddress);
+  append('pan', (applicant.pan || '').toUpperCase());
+  append('email', applicant.email);
+  append('mobileNumber', applicant.mobileNumber);
+  append('modeOfOperation', applicant.modeOfOperation);
 
-      // Step 2: Basic Info (Key Info)
-      'licenseCategory': 'license_category',
-      'licenseSubCategory': 'license_sub_category',
-      'establishmentName': 'establishment_name',
-      'locationDistrict': 'location_district',
-      'siteType': 'site_type',
+  append('hasSikkimCertificate', applicant.hasSikkimCertificate ? 'Yes' : 'No');
+  append('hasExciseLicense', applicant.hasExciseLicense ? 'Yes' : 'No');
+  append('familyExciseLicense', applicant.familyExciseLicense ? 'Yes' : 'No');
+  append('criminalConviction', applicant.criminalConviction ? 'Yes' : 'No');
 
-      // Step 3: Applicant Details
-      'status': 'status',
-      'applicantName': 'applicant_name',
-      'fatherHusbandName': 'father_husband_name',
-      'nationality': 'nationality',
-      'gender': 'gender',
-      'pan': 'pan',
-      'applicantMobileNumber': 'applicant_mobile_number',
-      'applicantEmail': 'applicant_email',
+  // === SITE - CODES! ===
+  append('site_district', site.siteDistrict);
+  append('site_subdivision', site.siteSubdivision);
+  append('police_station', site.policeStation);
+  append('locationCategory', site.locationCategory);
+  append('locationName', site.locationName);
+  append('wardName', site.wardName);
+  append('businessAddress', site.businessAddress);
+  append('road_name', site.roadNameCode || site.roadName);
+  append('pinCode', site.pinCode);
+  append('constructionType', site.constructionType);
+  append('length', site.length);
+  append('breadth', site.breadth);
+  append('siteOwned', site.siteOwned || 'Yes');
+  if (site.siteOwned === 'No') append('nocObtained', site.nocObtained || 'No');
 
-      // Step 4: Site Details
-      'siteSubdivision': 'site_subdivision',
-      'policeStation': 'police_station',
-      'locationCategory': 'location_category',
-      'locationName': 'location_name',
-      'wardName': 'ward_name',
-      'businessAddress': 'business_address',
-      'roadName': 'road_name',
-      'pinCode': 'pin_code',
-      'latitude': 'latitude',
-      'longitude': 'longitude',
-      'constructionType': 'construction_type',
-      'length': 'length',
-      'breadth': 'breadth',
-      'siteOwned': 'site_owned',
-      'nocObtained': 'noc_obtained',
-      'tradeLicenseCovered': 'trade_license_covered',
-
-      // Step 5: Company Details (conditional - only if licenseType is 2 'Company')
-      'companyName': 'company_name',
-      'companyAddress': 'company_address',
-      'companyPan': 'company_pan',
-      'companyCin': 'company_cin',
-      'incorporationDate': 'incorporation_date',
-      'companyPhoneNumber': 'company_phone_number',
-      'companyEmail': 'company_email'
-    };
-
-    // Append mapped fields to FormData (skip null/undefined/empty values)
-    Object.keys(allData).forEach(key => {
-      const backendKey = fieldMap[key] || this.toSnakeCase(key);
-      const value = allData[key];
-
-      // Skip empty values but allow 0 and false
-      if (value !== null && value !== undefined && value !== '') {
-        // Special handling for mobile numbers (convert to string without formatting)
-        if (key === 'applicantMobileNumber' || key === 'companyPhoneNumber') {
-          formData.append(backendKey, String(value).replace(/\D/g, ''));
-        } else {
-          formData.append(backendKey, value.toString());
-        }
-      }
-    });
-
-    // Append passport photo (REQUIRED field)
-    const photo = this.getPassPhoto();
-    if (photo) {
-      formData.append('photo', photo, photo.name);
-    } else {
-      console.error('❌ Passport photo is missing! This is a required field.');
-    }
-
-    // Append site documents - NOT mapped to backend fields
-    // These are just stored for potential future use but not sent to backend
-    // The backend only expects: photo, and the form fields above
-    // Documents like aadhar_card, sikkim_certificate etc. are NOT in the Django model
-
-    return formData;
+  // === COMPANY ===
+  if (select.licenseType == 2) {
+    append('companyName', company.companyName);
+    append('companyAddress', company.companyAddress);
+    append('companyPan', (company.companyPan || '').toUpperCase());
+    append('companyCin', company.companyCin?.toUpperCase());
+    append('incorporationDate', this.formatDate(company.incorporationDate));
+    append('companyPhoneNumber', company.companyPhoneNumber);
+    append('companyEmail', company.companyEmail);
   }
+
+  // === FILES ===
+  if (this.getPassPhoto()) append('pass_photo', this.getPassPhoto()!);
+  ['panCard', 'sikkimCertificate', 'dobProof'].forEach(key => {
+    const file = this.siteDocuments.get(key);
+    if (file) append(key, file);
+  });
+  if (site.siteOwned === 'No' && this.siteDocuments.get('nocLandlord')) {
+    append('nocLandlord', this.siteDocuments.get('nocLandlord')!);
+  }
+
+  append('workflow', '1');
+
+  this.logFormData(formData);
+  return formData;
+}
 
   /**
    * Get list of all new license applications
@@ -532,6 +514,11 @@ export class LicenseApplicationService {
     }
     return date.toISOString().split('T')[0];
   }
+  // private formatDate(date: string | Date | null): string {
+  //   if (!date) return '';
+  //   const d = new Date(date);
+  //   return d.toISOString().split('T')[0]; // YYYY-MM-DD
+  // }
 
   /**
    * Log FormData contents for debugging

@@ -226,8 +226,8 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       const formData = this.licenseAppService.prepareNewLicenseFormData();
 
       // DEBUG: Log FormData contents (remove in production)
-      console.log('=== Submitting New License Application ===');
-      this.licenseAppService.logFormData(formData, 'New License FormData');
+      // console.log('=== Submitting New License Application ===');
+      // this.licenseAppService.logFormData(formData, 'New License FormData');
 
       // Submit to backend
       this.licenseAppService.submitNewLicenseApplication(formData).subscribe({
