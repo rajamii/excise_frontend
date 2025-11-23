@@ -81,6 +81,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
   
   pageSize = 10;
   currentPage = 1;
+  
+  // For rolls view section above table
+  selectedEntryForRollsView: RegisterEntry | null = null;
 
   constructor(
     private router: Router,
@@ -279,6 +282,44 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const currentMonth = new Date().toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
     const currentYear = new Date().getFullYear().toString();
     return this.selectedDate !== today || this.selectedMonth !== currentMonth || this.selectedYear !== currentYear;
+  }
+
+  /**
+   * View rolls for a specific entry
+   */
+  viewRollsForEntry(entry: RegisterEntry): void {
+    console.log('📦 Viewing rolls for entry:', entry);
+    console.log('📦 Locked rolls:', this.getLockedRollsForEntry(entry));
+    console.log('📦 Current selected roll:', this.getCurrentSelectedRoll(entry));
+    console.log('📦 Available rolls:', this.getAvailableRollsForEntry(entry));
+    
+    this.selectedEntryForRollsView = entry;
+    this.cdr.detectChanges();
+    
+    // Scroll to the rolls section
+    setTimeout(() => {
+      const rollsSection = document.querySelector('.rolls-assigned-section');
+      if (rollsSection) {
+        rollsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  }
+  
+  /**
+   * Update rolls view when roll selection changes
+   */
+  updateRollsView(entry: RegisterEntry): void {
+    if (this.selectedEntryForRollsView?.id === entry.id) {
+      this.selectedEntryForRollsView = entry;
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Clear the rolls view
+   */
+  clearRollsView(): void {
+    this.selectedEntryForRollsView = null;
   }
 
   calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {

@@ -1327,3 +1327,421 @@
     font-family: 'Courier New', monospace;
   }
 }
+
+/* Rolls Assigned Section - Above Table */
+.rolls-assigned-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #007bff;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rolls-assigned-header {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  padding: 1.25rem 1.5rem;
+  
+  h5 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    
+    i {
+      font-size: 1.5rem;
+      vertical-align: middle;
+    }
+  }
+  
+  .btn-outline-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+.rolls-assigned-body {
+  padding: 1.5rem;
+}
+
+.roll-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-left-width: 4px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+  
+  &.roll-card-current {
+    border-style: dashed;
+    border-width: 2px;
+    border-left-width: 4px;
+  }
+}
+
+.roll-card-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.roll-name-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.roll-stats {
+  .badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+  }
+}
+
+.roll-card-body {
+  padding: 1.25rem;
+}
+
+.allocated-ranges-section {
+  .section-label {
+    font-size: 0.875rem;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.ranges-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.range-box {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #007bff;
+    background: linear-gradient(135deg, #e7f3ff 0%, #f8f9fa 100%);
+    transform: translateX(4px);
+  }
+}
+
+.range-serials {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  
+  i {
+    color: #007bff;
+    margin-right: 0.5rem;
+  }
+}
+
+.range-quantity {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.available-section {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  border: 1px solid #b3d9ff;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  
+  .section-label {
+    font-size: 0.875rem;
+    color: #495057;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.available-badge {
+  background: #007bff;
+  color: white;
+  padding: 0.375rem 1rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.empty-rolls-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  
+  i {
+    opacity: 0.3;
+  }
+  
+  p {
+    font-size: 1rem;
+  }
+}
+
+/* Button to view rolls in table */
+.btn-view-rolls {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+  }
+}
+
+/* Entry Rolls Section */
+.entry-rolls-section {
+  border-bottom: 2px dashed #dee2e6;
+  padding-bottom: 1.5rem;
+  
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.entry-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid #007bff;
+  
+  h6 {
+    font-size: 1rem;
+    color: #2c3e50;
+    
+    i {
+      color: #007bff;
+    }
+    
+    .text-primary {
+      color: #007bff !important;
+      font-weight: 700;
+    }
+  }
+}
+
+/* Reference Number with Use Button */
+.ref-number-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ref-number-text {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.btn-use-rolls {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  }
+  
+  i {
+    font-size: 0.875rem;
+  }
+}
+
+/* Available and Assigned Rolls Sections */
+.available-rolls-section,
+.assigned-rolls-section {
+  .section-title {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.available-roll-card {
+  border-left-color: #28a745 !important;
+  
+  .roll-card-header {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+  }
+  
+  .roll-name-badge {
+    background-color: #28a745 !important;
+  }
+}
+
+/* Roll Selection Dropdown */
+.roll-selection-container {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #007bff;
+  border-radius: 0.5rem;
+  text-align: center;
+  
+  .form-select {
+    max-width: 300px;
+    margin: 0 auto;
+    font-weight: 600;
+    border-color: #007bff;
+    
+    &:focus {
+      border-color: #0056b3;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+  
+  small {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+}
+
+/* Two-column layout for rolls */
+.assigned-rolls-panel {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border: 2px solid #28a745;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  min-height: 400px;
+  
+  .section-title {
+    color: #155724;
+    border-bottom-color: #28a745;
+  }
+}
+
+.rolls-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #28a745;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #218838;
+    }
+  }
+}
+
+.selected-roll-panel {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  min-height: 400px;
+  
+  .section-title {
+    color: #856404;
+    border-bottom-color: #ffc107;
+  }
+  
+  .roll-card-selected {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    border-width: 3px;
+  }
+}
+
+.empty-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0.5rem;
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  min-height: 300px;
+  
+  i {
+    opacity: 0.3;
+  }
+  
+  p {
+    font-size: 0.95rem;
+  }
+}

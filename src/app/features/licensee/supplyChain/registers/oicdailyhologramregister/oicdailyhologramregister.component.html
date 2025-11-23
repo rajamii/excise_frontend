@@ -154,6 +154,131 @@
       </ul>
     </div>
 
+    <!-- Rolls Assigned Section - Above Table -->
+    <div class="rolls-assigned-section mb-4" *ngIf="selectedEntryForRollsView">
+      <div class="rolls-assigned-header">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h5 class="mb-1">
+              <i class="bi bi-box-seam me-2"></i>
+              Rolls Assigned
+            </h5>
+            <p class="text-muted mb-0 small">
+              Reference No: <strong>{{ selectedEntryForRollsView.referenceNo }}</strong>
+            </p>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearRollsView()">
+            <i class="bi bi-x-circle me-1"></i>
+            Close
+          </button>
+        </div>
+      </div>
+      
+      <div class="rolls-assigned-body">
+        <div class="row g-4">
+          <!-- Roll Selection and Details -->
+          <div class="col-12">
+            <!-- Roll Selection Dropdown - Always visible -->
+            @if (selectedEntryForRollsView) {
+              <div class="roll-selection-panel mb-4">
+                <h6 class="section-title mb-3">
+                  <i class="bi bi-box-seam me-2"></i>
+                  Select Roll
+                </h6>
+                <select class="form-select" 
+                        [value]="getCurrentSelectedRoll(selectedEntryForRollsView) || ''"
+                        (change)="selectRollForEntry(selectedEntryForRollsView, $any($event.target).value)">
+                  <option value="">Select Roll...</option>
+                  @for (roll of getAvailableRollsForEntry(selectedEntryForRollsView); track roll.rangeId || roll.cartoonNumber) {
+                    <option [value]="roll.rangeId || roll.cartoonNumber">
+                      {{ roll.displayName || roll.cartoonNumber }} ({{ roll.availableCount }} units)
+                    </option>
+                  }
+                </select>
+                <small class="text-muted mt-2 d-block">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Select a roll to start entering data
+                </small>
+              </div>
+            }
+
+            <!-- Currently Selected Roll Details -->
+            @if (getCurrentSelectedRoll(selectedEntryForRollsView) && getCurrentRollInput(selectedEntryForRollsView); as rollInput) {
+              <div class="selected-roll-panel">
+                <h6 class="section-title mb-3">
+                  <i class="bi bi-box-seam me-2"></i>
+                  Currently Selected Roll
+                </h6>
+                
+                <div class="roll-card roll-card-selected" [style.border-left-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                <div class="roll-card-header" [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                  <div class="roll-name-badge" [style.background-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                    <i class="bi bi-box-seam me-2"></i>
+                    {{ (getCurrentSelectedRoll(selectedEntryForRollsView) || '').split('_')[0] }}
+                  </div>
+                  <div class="roll-stats">
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-clock me-1"></i>
+                      In Progress
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="roll-card-body">
+                  <!-- Allocated Ranges -->
+                  <div class="allocated-ranges-section">
+                    <div class="section-label">
+                      <i class="bi bi-list-ol me-2"></i>
+                      <strong>Allocated Ranges:</strong>
+                    </div>
+                    @if (getAllocatedRangesForRoll(selectedEntryForRollsView, getCurrentSelectedRoll(selectedEntryForRollsView)!).length > 0) {
+                      <div class="ranges-grid">
+                        @for (range of getAllocatedRangesForRoll(selectedEntryForRollsView, getCurrentSelectedRoll(selectedEntryForRollsView)!); track range.fromSerial) {
+                          <div class="range-box" [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                            <div class="range-serials">
+                              <i class="bi bi-arrow-right-circle me-1"></i>
+                              {{ range.fromSerial }} - {{ range.toSerial }}
+                            </div>
+                            <div class="range-quantity" [style.background-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              {{ range.quantity }} units
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        No allocated ranges
+                      </div>
+                    }
+                  </div>
+                  
+                  <!-- Available Count -->
+                  <div class="available-section mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <span class="section-label">
+                        <i class="bi bi-box me-2"></i>
+                        Available:
+                      </span>
+                      <span class="available-badge" [style.background-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                        {{ rollInput.availableCount || 0 }} units
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+            } @else {
+              <div class="empty-state-box">
+                <i class="bi bi-box-seam display-4 text-muted"></i>
+                <p class="text-muted mt-2 mb-0">Select a roll from the dropdown to see details</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Register Table -->
     <div class="register-container">
       <div class="register-header-bar">
@@ -178,7 +303,6 @@
               <th rowspan="2" class="dates-column">DATES</th>
               <th rowspan="2" class="brand-details">BRAND DETAILS</th>
               <th rowspan="2" class="bottle-size">BOTTLE SIZE</th>
-              <th rowspan="2" class="rolls-assigned">ROLLS ASSIGNED</th>
               <th rowspan="2" class="hologram-qty">HOLOGRAM QTY</th>
               <th colspan="3" class="hologram-header">HOLOGRAM</th>
               <th colspan="3" class="wastage-header">WASTAGE</th>
@@ -206,7 +330,17 @@
               <td class="sl-no">{{ i + 1 }}</td>
 
               <!-- Reference No -->
-              <td class="ref-number locked-field">{{ entry.referenceNo }}</td>
+              <td class="ref-number locked-field">
+                <div class="ref-number-container">
+                  <div class="ref-number-text">{{ entry.referenceNo }}</div>
+                  <button class="btn btn-sm btn-primary btn-use-rolls" 
+                          (click)="viewRollsForEntry(entry)"
+                          title="View rolls for this entry">
+                    <i class="bi bi-box-seam me-1"></i>
+                    Use
+                  </button>
+                </div>
+              </td>
 
               <!-- Roll & Range Info -->
               <td class="roll-range locked-field">
@@ -215,10 +349,10 @@
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                     <div class="roll-range-display">
                       <div class="roll-name-text">
-                        <strong>{{ rollInput.cartoonNumber.split('_')[0] }}</strong>
+                        <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ getSerialRangeForRoll(entry, rollInput.cartoonNumber) }}
+                        {{ rollInput.serialRange }}
                       </div>
                     </div>
                   }
@@ -229,7 +363,7 @@
                         <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ getSerialRangeForRoll(entry, lockedRoll.cartoonNumber) }}
+                        {{ lockedRoll.serialRange }}
                       </div>
                     </div>
                   }
@@ -244,7 +378,7 @@
                         <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
                       </div>
                       <div class="range-text">
-                        {{ getSerialRangeForRoll(entry, lockedRoll.cartoonNumber) }}
+                        {{ lockedRoll.serialRange }}
                       </div>
                     </div>
                   }
@@ -270,102 +404,6 @@
 
               <!-- Bottle Size -->
               <td class="bottle-size locked-field">{{ entry.bottleSize }}</td>
-
-              <!-- ROLLS ASSIGNED - Dropdown + Locked Rolls -->
-              <td class="rolls-assigned">
-                @if (!entry.isFixed) {
-                  <!-- Roll Selection Dropdown -->
-                  <select class="form-select form-select-sm mb-2" 
-                          [value]="getCurrentSelectedRoll(entry) || ''"
-                          (change)="selectRollForEntry(entry, $any($event.target).value)">
-                    <option value="">Select Roll...</option>
-                    @for (roll of getAvailableRollsForEntry(entry); track roll.rangeId || roll.cartoonNumber) {
-                      <option [value]="roll.rangeId || roll.cartoonNumber">
-                        {{ roll.displayName || roll.cartoonNumber }} ({{ roll.availableCount }} units)
-                      </option>
-                    }
-                  </select>
-
-                  <!-- Current Selected Roll Info - Show Allocated Ranges -->
-                  @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                    <div class="selected-range-info">
-                      <div class="range-info-label">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Available:
-                      </div>
-                      <div class="range-info-value">
-                        {{ rollInput.serialRange }}
-                        <span class="range-qty-badge">{{ rollInput.availableCount }} units</span>
-                      </div>
-                    </div>
-                    
-                    <!-- Show ALL allocated ranges for this roll in blue boxes -->
-                    @if (getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!).length > 0) {
-                      <div class="allocated-ranges-display mt-2">
-                        <div class="allocated-ranges-label">
-                          <i class="bi bi-box-seam me-1"></i>
-                          <small>Allocated Ranges:</small>
-                        </div>
-                        @for (range of getAllocatedRangesForRoll(entry, getCurrentSelectedRoll(entry)!); track range.fromSerial) {
-                          <div class="allocated-range-box">
-                            <span class="range-serials">{{ range.fromSerial }} - {{ range.toSerial }}</span>
-                            <span class="range-qty-small">({{ range.quantity }} units)</span>
-                          </div>
-                        }
-                      </div>
-                    }
-                  }
-
-                  <!-- Locked Rolls Display -->
-                  <div class="locked-rolls-display">
-                    @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
-                      <div class="locked-roll-badge-wrapper">
-                        <div class="locked-roll-badge" 
-                             [style.background-color]="getRollBackgroundColor(i)">
-                          <span class="roll-name-badge" 
-                                [style.background-color]="getRollColor(i)"
-                                [style.border-color]="getRollColor(i)">
-                            {{ lockedRoll.cartoonNumber.split('_')[0] }}
-                          </span>
-                          <!-- Show allocated ranges for locked roll -->
-                          @if (getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber).length > 0) {
-                            <div class="allocated-range-info">
-                              <div class="allocated-range-label">
-                                <i class="bi bi-info-circle me-1"></i>
-                                <span>Allocated:</span>
-                              </div>
-                              <div class="allocated-range-value">
-                                @for (range of getAllocatedRangesForRoll(entry, lockedRoll.cartoonNumber); track range.fromSerial) {
-                                  <div class="range-item">
-                                    {{ range.fromSerial }} - {{ range.toSerial }}
-                                  </div>
-                                }
-                              </div>
-                            </div>
-                          }
-                        </div>
-                        <button class="btn-unlock" 
-                                (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"
-                                title="Unlock this roll">
-                          <i class="bi bi-x"></i>
-                        </button>
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <!-- Show locked rolls for saved entries -->
-                  <div class="rolls-list">
-                    @for (roll of entry.rollsAssigned; track roll; let i = $index) {
-                      <span class="badge me-1 mb-1" 
-                            [style.background-color]="getRollColor(i)"
-                            [style.border-color]="getRollColor(i)"
-                            [style.color]="'#fff'">
-                        {{ roll.split('_')[0] }}
-                      </span>
-                    }
-                  </div>
-                }
-              </td>
 
               <!-- Hologram Qty -->
               <td class="hologram-qty locked-field">

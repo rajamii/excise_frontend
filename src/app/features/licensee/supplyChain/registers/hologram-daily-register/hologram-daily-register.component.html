@@ -480,34 +480,35 @@
                   {{ getEntryMetadata(entry).bottleSize }}
                 </td>
 
-                <!-- ROLLS ASSIGNED - NEW COLUMN WITH DROPDOWN -->
+                <!-- ROLLS ASSIGNED - Shows dropdown after Use button is clicked -->
                 <td class="rolls-assigned">
                   @if (!entry.isFixed) {
-                    <!-- Roll Selection Dropdown -->
-                    <select class="form-select form-select-sm mb-2" 
-                            [value]="getCurrentSelectedRoll(entry) || ''"
-                            (change)="selectRollForEntry(entry, $any($event.target).value)"
-                            [disabled]="isRollInputLocked(entry)">
-                      <option value="">Select Roll...</option>
-                      @for (roll of getAvailableRollsForEntry(entry); track roll.rangeId || roll.cartoonNumber) {
-                        <option [value]="roll.rangeId || roll.cartoonNumber">
-                          {{ roll.displayName || roll.cartoonNumber }} - {{ roll.serialRange }} ({{ roll.allocatedQuantity ?? roll.availableCount }} units)
-                        </option>
-                      }
-                    </select>
+                    <!-- Roll Selection Dropdown - Shows when Use button is clicked -->
+                    @if (!isRollInputLocked(entry)) {
+                      <select class="form-select form-select-sm mb-2" 
+                              [value]="getCurrentSelectedRoll(entry) || ''"
+                              (change)="selectRollForEntry(entry, $any($event.target).value)">
+                        <option value="">Select Roll...</option>
+                        @for (roll of getAvailableRollsForEntry(entry); track roll.rangeId || roll.cartoonNumber) {
+                          <option [value]="roll.rangeId || roll.cartoonNumber">
+                            {{ roll.displayName || roll.cartoonNumber }} - {{ roll.serialRange }} ({{ roll.allocatedQuantity ?? roll.availableCount }} units)
+                          </option>
+                        }
+                      </select>
 
-                    <!-- Show allocated range info ONLY when a roll is selected -->
-                    @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry)) {
-                      <div class="selected-range-info">
-                        <div class="range-info-label">
-                          <i class="bi bi-info-circle me-1"></i>
-                          Available:
+                      <!-- Show allocated range info ONLY when a roll is selected -->
+                      @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry)) {
+                        <div class="selected-range-info mb-2">
+                          <div class="range-info-label">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Available:
+                          </div>
+                          <div class="range-info-value">
+                            {{ getCurrentRollInput(entry).serialRange }}
+                            <span class="range-qty-badge">{{ getCurrentRollInput(entry).availableCount }} units</span>
+                          </div>
                         </div>
-                        <div class="range-info-value">
-                          {{ getCurrentRollInput(entry).serialRange }}
-                          <span class="range-qty-badge">{{ getCurrentRollInput(entry).availableCount }} units</span>
-                        </div>
-                      </div>
+                      }
                     }
 
                     <!-- Current Selected Roll - Show Roll Name and Allocated Ranges -->
@@ -571,6 +572,14 @@
                         </div>
                       }
                     </div>
+
+                    <!-- Show message when no rolls assigned yet -->
+                    @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0) {
+                      <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Click "Use" to select rolls
+                      </div>
+                    }
                   } @else {
                     <!-- Show locked rolls for saved entries with color coding matching issued/wastage fields -->
                     <div class="rolls-list">
