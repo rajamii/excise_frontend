@@ -202,13 +202,16 @@
               </div>
             }
 
-            <!-- Currently Selected Roll Details -->
+            <!-- Currently Selected Roll Details and Usage Box Side by Side -->
             @if (getCurrentSelectedRoll(selectedEntryForRollsView) && getCurrentRollInput(selectedEntryForRollsView); as rollInput) {
-              <div class="selected-roll-panel">
-                <h6 class="section-title mb-3">
-                  <i class="bi bi-box-seam me-2"></i>
-                  Currently Selected Roll
-                </h6>
+              <div class="row g-3">
+                <!-- Currently Selected Roll Details (Left Side) -->
+                <div class="col-md-6">
+                  <div class="selected-roll-panel">
+                    <h6 class="section-title mb-3">
+                      <i class="bi bi-box-seam me-2"></i>
+                      Currently Selected Roll
+                    </h6>
                 
                 <div class="roll-card roll-card-selected" [style.border-left-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
                 <div class="roll-card-header" [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(selectedEntryForRollsView))">
@@ -217,10 +220,17 @@
                     {{ (getCurrentSelectedRoll(selectedEntryForRollsView) || '').split('_')[0] }}
                   </div>
                   <div class="roll-stats">
-                    <span class="badge bg-warning text-dark">
-                      <i class="bi bi-clock me-1"></i>
-                      In Progress
-                    </span>
+                    @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                      <span class="badge bg-success">
+                        <i class="bi bi-lock-fill me-1"></i>
+                        Locked (Read-Only)
+                      </span>
+                    } @else {
+                      <span class="badge bg-warning text-dark">
+                        <i class="bi bi-clock me-1"></i>
+                        In Progress
+                      </span>
+                    }
                   </div>
                 </div>
                 
@@ -236,9 +246,16 @@
                         <input type="text" 
                                class="form-control form-control-sm" 
                                [(ngModel)]="rollInput.brandDetails"
+                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                                placeholder="Enter brand details"
                                [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
-                        <small class="text-muted">Enter brand name for this roll</small>
+                        <small class="text-muted">
+                          @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <i class="bi bi-lock me-1"></i>Read-only (locked)
+                          } @else {
+                            Enter brand name for this roll
+                          }
+                        </small>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label small">
@@ -248,9 +265,16 @@
                         <input type="text" 
                                class="form-control form-control-sm" 
                                [(ngModel)]="rollInput.bottleSize"
+                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                                placeholder="e.g., 750ml"
                                [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
-                        <small class="text-muted">Enter bottle size for this roll</small>
+                        <small class="text-muted">
+                          @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <i class="bi bi-lock me-1"></i>Read-only (locked)
+                          } @else {
+                            Enter bottle size for this roll
+                          }
+                        </small>
                       </div>
                     </div>
                   </div>
@@ -297,6 +321,97 @@
                   </div>
                 </div>
               </div>
+                  </div>
+                </div>
+
+                <!-- Usage Box (Right Side) -->
+                <div class="col-md-6">
+                  <div class="usage-panel" [class.usage-panel-locked]="isCurrentRollLocked(selectedEntryForRollsView)">
+                    <h6 class="section-title mb-3">
+                      <i class="bi bi-graph-up me-2"></i>
+                      Usage
+                      @if (isCurrentRollLocked(selectedEntryForRollsView)) {
+                        <span class="badge bg-success ms-2">
+                          <i class="bi bi-lock-fill me-1"></i>
+                          Locked
+                        </span>
+                      }
+                    </h6>
+                    
+                    <div class="usage-card">
+                      <div class="usage-card-body">
+                        <!-- Usage Stats -->
+                        <div class="usage-stats mb-3">
+                          <div class="usage-stat-item">
+                            <div class="stat-icon issued">
+                              <i class="bi bi-check-circle-fill"></i>
+                            </div>
+                            <div class="stat-content">
+                              <div class="stat-label">Usage</div>
+                              <div class="stat-value">{{ rollInput.issuedQty || 0 | number }}</div>
+                            </div>
+                          </div>
+                          
+                          <div class="usage-stat-item">
+                            <div class="stat-icon damaged">
+                              <i class="bi bi-x-circle-fill"></i>
+                            </div>
+                            <div class="stat-content">
+                              <div class="stat-label">Damaged</div>
+                              <div class="stat-value">{{ rollInput.wastageQty || 0 | number }}</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Leftover Hologram Section -->
+                        <div class="leftover-section">
+                          <div class="leftover-header">
+                            <i class="bi bi-box me-2"></i>
+                            <strong>Leftover Hologram</strong>
+                          </div>
+                          
+                          @if (rollInput.leftOver > 0) {
+                            <div class="leftover-details">
+                              <!-- Calculate and show ALL leftover ranges -->
+                              @if (getLeftoverRanges(selectedEntryForRollsView, rollInput); as leftoverRanges) {
+                                @if (leftoverRanges.length > 0) {
+                                  <div class="leftover-ranges-list">
+                                    <div class="range-label mb-2">
+                                      <i class="bi bi-arrow-right-circle me-1"></i>
+                                      <strong>Available Ranges:</strong>
+                                    </div>
+                                    @for (range of leftoverRanges; track range.fromSerial) {
+                                      <div class="leftover-range">
+                                        <div class="range-value">
+                                          {{ range.fromSerial }} - {{ range.toSerial }}
+                                        </div>
+                                        <div class="range-qty-badge">
+                                          {{ range.quantity }} units
+                                        </div>
+                                      </div>
+                                    }
+                                  </div>
+                                }
+                              }
+                              
+                              <div class="leftover-total">
+                                <div class="total-label">Total Available:</div>
+                                <div class="total-value">
+                                  <span class="badge bg-success">{{ rollInput.leftOver | number }} units</span>
+                                </div>
+                              </div>
+                            </div>
+                          } @else {
+                            <div class="leftover-empty">
+                              <i class="bi bi-info-circle me-1"></i>
+                              <span class="text-muted">No leftover holograms</span>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             } @else {
               <div class="empty-state-box">
@@ -434,19 +549,21 @@
               <td class="brand-details">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section" 
-                           [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
-                           [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                        <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <i class="bi bi-box-seam"></i>
-                          <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section" 
+                             [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
+                             [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
+                          <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <i class="bi bi-box-seam"></i>
+                            <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
+                          </div>
+                          <div class="brand-value">
+                            {{ rollInput.brandDetails || '-' }}
+                          </div>
                         </div>
-                        <div class="brand-value">
-                          {{ rollInput.brandDetails || '-' }}
-                        </div>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -486,19 +603,21 @@
               <td class="bottle-size">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section" 
-                           [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
-                           [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                        <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <i class="bi bi-box-seam"></i>
-                          <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section" 
+                             [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
+                             [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
+                          <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <i class="bi bi-box-seam"></i>
+                            <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
+                          </div>
+                          <div class="bottle-value">
+                            {{ rollInput.bottleSize || '-' }}
+                          </div>
                         </div>
-                        <div class="bottle-value">
-                          {{ rollInput.bottleSize || '-' }}
-                        </div>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -545,17 +664,18 @@
               <td class="issued-from">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section" 
-                           [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
-                           [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                        <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <i class="bi bi-box-seam"></i>
-                          <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
-                        </div>
-                        <div class="ranges-list">
-                          @for (range of rollInput.issuedRanges; track $index; let i = $index) {
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section" 
+                             [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
+                             [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
+                          <div class="roll-label" [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <i class="bi bi-box-seam"></i>
+                            <span>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</span>
+                          </div>
+                          <div class="ranges-list">
+                            @for (range of rollInput.issuedRanges; track $index; let i = $index) {
                             <div class="range-input-row">
                               <div class="input-wrapper">
                                 <input type="text" 
@@ -580,7 +700,8 @@
                             </div>
                           }
                         </div>
-                      </div>
+                        </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -629,31 +750,33 @@
               <td class="issued-to">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section">
-                        <div class="ranges-list">
-                          @for (range of rollInput.issuedRanges; track $index) {
-                            <div class="range-input-row">
-                              <div class="input-wrapper">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [class.is-invalid]="range.isValid === false"
-                                       [(ngModel)]="range.toSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="To"
-                                       [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
-                              </div>
-                              @if (range.isValid === false && range.errorMessage) {
-                                <div class="invalid-feedback d-block">
-                                  <i class="bi bi-exclamation-triangle me-1"></i>
-                                  <small>{{ range.errorMessage }}</small>
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section">
+                          <div class="ranges-list">
+                            @for (range of rollInput.issuedRanges; track $index) {
+                              <div class="range-input-row">
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.toSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="To"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
                                 </div>
-                              }
-                            </div>
-                          }
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <small>{{ range.errorMessage }}</small>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
                         </div>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -694,33 +817,35 @@
               <td class="issued-qty">
                 @if (!entry.isFixed) {
                   <div class="quantity-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section">
-                        <div class="ranges-list">
-                          @for (range of rollInput.issuedRanges; track $index) {
-                            <div class="qty-row">
-                              <span class="qty-badge" 
-                                    [style.background-color]="getRollColor(getCurrentRollIndex(entry))">
-                                {{ range.quantity | number }}
-                              </span>
-                            </div>
-                          }
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section">
+                          <div class="ranges-list">
+                            @for (range of rollInput.issuedRanges; track $index) {
+                              <div class="qty-row">
+                                <span class="qty-badge" 
+                                      [style.background-color]="getRollColor(getCurrentRollIndex(entry))">
+                                  {{ range.quantity | number }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                          <div class="roll-subtotal" 
+                               [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <strong>{{ rollInput.issuedQty | number }}</strong>
+                          </div>
+                          
+                          <!-- Add Range Button -->
+                          <button class="btn-add-range-icon" 
+                                  (click)="addIssuedRange(entry)"
+                                  title="Add issued range"
+                                  [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
+                                  [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <i class="bi bi-plus-circle-fill"></i>
+                          </button>
                         </div>
-                        <div class="roll-subtotal" 
-                             [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <strong>{{ rollInput.issuedQty | number }}</strong>
-                        </div>
-                        
-                        <!-- Add Range Button -->
-                        <button class="btn-add-range-icon" 
-                                (click)="addIssuedRange(entry)"
-                                title="Add issued range"
-                                [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
-                                [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <i class="bi bi-plus-circle-fill"></i>
-                        </button>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -734,7 +859,7 @@
                     }
                     
                     <!-- Grand Total -->
-                    @if (hasLockedRolls(entry) || getCurrentSelectedRoll(entry)) {
+                    @if (hasLockedRolls(entry) || (getCurrentSelectedRoll(entry) && !isCurrentRollLocked(entry))) {
                       <div class="grand-total">
                         <strong>Total: {{ entry.issuedQty | number }}</strong>
                       </div>
@@ -770,38 +895,40 @@
               <td class="wastage-from">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section" 
-                           [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
-                           [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
-                        <div class="ranges-list">
-                          @for (range of rollInput.wastageRanges; track $index; let i = $index) {
-                            <div class="range-input-row">
-                              <div class="input-wrapper">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [class.is-invalid]="range.isValid === false"
-                                       [(ngModel)]="range.fromSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="From"
-                                       [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
-                                @if (rollInput.wastageRanges.length > 1) {
-                                  <button class="btn-remove" (click)="removeWastageRange(entry, i)">
-                                    <i class="bi bi-x"></i>
-                                  </button>
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section" 
+                             [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
+                             [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
+                          <div class="ranges-list">
+                            @for (range of rollInput.wastageRanges; track $index; let i = $index) {
+                              <div class="range-input-row">
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.fromSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="From"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                                  @if (rollInput.wastageRanges.length > 1) {
+                                    <button class="btn-remove" (click)="removeWastageRange(entry, i)">
+                                      <i class="bi bi-x"></i>
+                                    </button>
+                                  }
+                                </div>
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <small>{{ range.errorMessage }}</small>
+                                  </div>
                                 }
                               </div>
-                              @if (range.isValid === false && range.errorMessage) {
-                                <div class="invalid-feedback d-block">
-                                  <i class="bi bi-exclamation-triangle me-1"></i>
-                                  <small>{{ range.errorMessage }}</small>
-                                </div>
-                              }
-                            </div>
-                          }
+                            }
+                          </div>
                         </div>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -847,31 +974,33 @@
               <td class="wastage-to">
                 @if (!entry.isFixed) {
                   <div class="range-input-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section">
-                        <div class="ranges-list">
-                          @for (range of rollInput.wastageRanges; track $index) {
-                            <div class="range-input-row">
-                              <div class="input-wrapper">
-                                <input type="text" 
-                                       class="form-control form-control-sm" 
-                                       [class.is-invalid]="range.isValid === false"
-                                       [(ngModel)]="range.toSerial"
-                                       (ngModelChange)="onRollInputChange(entry)"
-                                       placeholder="To"
-                                       [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
-                              </div>
-                              @if (range.isValid === false && range.errorMessage) {
-                                <div class="invalid-feedback d-block">
-                                  <i class="bi bi-exclamation-triangle me-1"></i>
-                                  <small>{{ range.errorMessage }}</small>
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section">
+                          <div class="ranges-list">
+                            @for (range of rollInput.wastageRanges; track $index) {
+                              <div class="range-input-row">
+                                <div class="input-wrapper">
+                                  <input type="text" 
+                                         class="form-control form-control-sm" 
+                                         [class.is-invalid]="range.isValid === false"
+                                         [(ngModel)]="range.toSerial"
+                                         (ngModelChange)="onRollInputChange(entry)"
+                                         placeholder="To"
+                                         [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
                                 </div>
-                              }
-                            </div>
-                          }
+                                @if (range.isValid === false && range.errorMessage) {
+                                  <div class="invalid-feedback d-block">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    <small>{{ range.errorMessage }}</small>
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
                         </div>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -912,33 +1041,35 @@
               <td class="wastage-qty">
                 @if (!entry.isFixed) {
                   <div class="quantity-container">
-                    <!-- Current Roll Input -->
+                    <!-- Current Roll Input (only show if NOT locked/read-only) -->
                     @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                      <div class="current-roll-section">
-                        <div class="ranges-list">
-                          @for (range of rollInput.wastageRanges; track $index) {
-                            <div class="qty-row">
-                              <span class="qty-badge" 
-                                    [style.background-color]="getRollColor(getCurrentRollIndex(entry))">
-                                {{ range.quantity | number }}
-                              </span>
-                            </div>
-                          }
+                      @if (!isCurrentRollLocked(entry)) {
+                        <div class="current-roll-section">
+                          <div class="ranges-list">
+                            @for (range of rollInput.wastageRanges; track $index) {
+                              <div class="qty-row">
+                                <span class="qty-badge" 
+                                      [style.background-color]="getRollColor(getCurrentRollIndex(entry))">
+                                  {{ range.quantity | number }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                          <div class="roll-subtotal" 
+                               [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <strong>{{ rollInput.wastageQty | number }}</strong>
+                          </div>
+                          
+                          <!-- Add Range Button -->
+                          <button class="btn-add-range-icon" 
+                                  (click)="addWastageRange(entry)"
+                                  title="Add wastage range"
+                                  [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
+                                  [style.color]="getRollColor(getCurrentRollIndex(entry))">
+                            <i class="bi bi-plus-circle-fill"></i>
+                          </button>
                         </div>
-                        <div class="roll-subtotal" 
-                             [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <strong>{{ rollInput.wastageQty | number }}</strong>
-                        </div>
-                        
-                        <!-- Add Range Button -->
-                        <button class="btn-add-range-icon" 
-                                (click)="addWastageRange(entry)"
-                                title="Add wastage range"
-                                [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
-                                [style.color]="getRollColor(getCurrentRollIndex(entry))">
-                          <i class="bi bi-plus-circle-fill"></i>
-                        </button>
-                      </div>
+                      }
                     }
                     
                     <!-- Locked Rolls Display -->
@@ -952,7 +1083,7 @@
                     }
                     
                     <!-- Grand Total -->
-                    @if (hasLockedRolls(entry) || getCurrentSelectedRoll(entry)) {
+                    @if (hasLockedRolls(entry) || (getCurrentSelectedRoll(entry) && !isCurrentRollLocked(entry))) {
                       <div class="grand-total">
                         <strong>Total: {{ entry.wastageQty | number }}</strong>
                       </div>

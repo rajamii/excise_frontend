@@ -471,8 +471,19 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // Check if this specific range is already locked
     const lockedRolls = this.getLockedRollsForEntry(entry);
     const rangeIdToCheck = roll.rangeId || roll.cartoonNumber;
-    if (lockedRolls.some((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck)) {
-      alert('This range is already locked.');
+    const lockedRoll = lockedRolls.find((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck);
+    
+    if (lockedRoll) {
+      // Instead of showing alert, display the locked roll in read-only mode
+      console.log('📌 Viewing locked roll in read-only mode:', lockedRoll);
+      
+      entry.currentRollSelection = {
+        selectedRoll: rangeIdToCheck,
+        rollInput: { ...lockedRoll }, // Copy the locked roll data
+        isLocked: true // Mark as locked (read-only)
+      };
+      
+      this.cdr.detectChanges();
       return;
     }
 
@@ -1110,13 +1121,30 @@ export class OicdailyhologramregisterComponent implements OnInit {
       entry.lockedRolls = [];
     }
 
+    // Store the roll input with all its data
     entry.lockedRolls.push({ ...rollInput });
+    
+    // Clear current selection to allow selecting next roll
     entry.currentRollSelection = undefined;
 
+    // Recalculate totals from all locked rolls
     this.recalculateEntryFromLockedRolls(entry);
+    
+    // Update the rolls view if this entry is currently being viewed
+    this.updateRollsView(entry);
+    
+    // Force change detection to update the UI (including usage box)
     this.cdr.detectChanges();
 
-    alert(`Roll ${rollInput.cartoonNumber} locked successfully!`);
+    console.log('✅ Roll locked successfully:', {
+      cartoonNumber: rollInput.cartoonNumber,
+      issuedQty: rollInput.issuedQty,
+      wastageQty: rollInput.wastageQty,
+      leftOver: rollInput.leftOver,
+      totalLockedRolls: entry.lockedRolls.length
+    });
+
+    alert(`Roll ${rollInput.displayName || rollInput.cartoonNumber} locked successfully!\n\nUsage: ${rollInput.issuedQty}\nDamaged: ${rollInput.wastageQty}\nLeftover: ${rollInput.leftOver}`);
   }
 
   unlockRollForEntry(entry: RegisterEntry, cartoonNumber: string): void {
@@ -1809,6 +1837,122 @@ export class OicdailyhologramregisterComponent implements OnInit {
       : currentRoll;
     
     return this.getRollColorIndex(cartoonNumber);
+  }
+
+  /**
+   * Check if the current roll is locked (read-only mode)
+   */
+  isCurrentRollLocked(entry: RegisterEntry): boolean {
+    return entry.currentRollSelection?.isLocked || false;
+  }
+
+  /**
+   * Calculate ALL leftover ranges for the current roll
+   * This shows what serial numbers are left after usage and damage
+   * Returns an array of ranges to handle gaps
+   */
+  getLeftoverRanges(entry: RegisterEntry, rollInput: RollInput): Array<{ fromSerial: string; toSerial: string; quantity: number }> {
+    if (!rollInput || rollInput.leftOver <= 0) {
+      return [];
+    }
+
+    try {
+      // Get the allocated range for this roll
+      const allocatedFromSerial = rollInput.fromSerial;
+      const allocatedToSerial = rollInput.toSerial;
+
+      if (!allocatedFromSerial || !allocatedToSerial) {
+        console.warn('No allocated range found for roll');
+        return [];
+      }
+
+      // Extract prefix and numeric parts
+      const fromMatch = allocatedFromSerial.match(/^([A-Z]*)(\d+)$/);
+      const toMatch = allocatedToSerial.match(/^([A-Z]*)(\d+)$/);
+
+      if (!fromMatch || !toMatch) {
+        console.warn('Invalid serial format');
+        return [];
+      }
+
+      const prefix = fromMatch[1];
+      const allocatedFrom = parseInt(fromMatch[2], 10);
+      const allocatedTo = parseInt(toMatch[2], 10);
+
+      // Create a Set of all used serial numbers
+      const usedSerials = new Set<number>();
+
+      // Add issued serials to used set
+      if (rollInput.issuedRanges && Array.isArray(rollInput.issuedRanges)) {
+        rollInput.issuedRanges.forEach((range: RollRange) => {
+          if (range.fromSerial && range.toSerial) {
+            const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+            const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+            if (fromMatch && toMatch) {
+              const from = parseInt(fromMatch[2], 10);
+              const to = parseInt(toMatch[2], 10);
+              for (let i = from; i <= to; i++) {
+                usedSerials.add(i);
+              }
+            }
+          }
+        });
+      }
+
+      // Add wastage serials to used set
+      if (rollInput.wastageRanges && Array.isArray(rollInput.wastageRanges)) {
+        rollInput.wastageRanges.forEach((range: RollRange) => {
+          if (range.fromSerial && range.toSerial) {
+            const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+            const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+            if (fromMatch && toMatch) {
+              const from = parseInt(fromMatch[2], 10);
+              const to = parseInt(toMatch[2], 10);
+              for (let i = from; i <= to; i++) {
+                usedSerials.add(i);
+              }
+            }
+          }
+        });
+      }
+
+      // Find all leftover ranges (gaps and final range)
+      const leftoverRanges: Array<{ fromSerial: string; toSerial: string; quantity: number }> = [];
+      let rangeStart: number | null = null;
+
+      for (let i = allocatedFrom; i <= allocatedTo; i++) {
+        if (!usedSerials.has(i)) {
+          // This serial is available (leftover)
+          if (rangeStart === null) {
+            rangeStart = i; // Start a new range
+          }
+        } else {
+          // This serial is used
+          if (rangeStart !== null) {
+            // End the current range
+            const fromSerial = `${prefix}${String(rangeStart).padStart(fromMatch[2].length, '0')}`;
+            const toSerial = `${prefix}${String(i - 1).padStart(toMatch[2].length, '0')}`;
+            const quantity = (i - 1) - rangeStart + 1;
+            leftoverRanges.push({ fromSerial, toSerial, quantity });
+            rangeStart = null;
+          }
+        }
+      }
+
+      // Handle the final range if it extends to the end
+      if (rangeStart !== null) {
+        const fromSerial = `${prefix}${String(rangeStart).padStart(fromMatch[2].length, '0')}`;
+        const toSerial = `${prefix}${String(allocatedTo).padStart(toMatch[2].length, '0')}`;
+        const quantity = allocatedTo - rangeStart + 1;
+        leftoverRanges.push({ fromSerial, toSerial, quantity });
+      }
+
+      console.log('✅ Calculated leftover ranges:', leftoverRanges);
+      return leftoverRanges;
+    } catch (error) {
+      console.error('Error calculating leftover ranges:', error);
+      return [];
+    }
   }
 
   /**
