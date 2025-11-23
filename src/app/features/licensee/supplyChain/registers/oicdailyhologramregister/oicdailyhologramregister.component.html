@@ -334,6 +334,7 @@
                 <div class="ref-number-container">
                   <div class="ref-number-text">{{ entry.referenceNo }}</div>
                   <button class="btn btn-sm btn-primary btn-use-rolls" 
+                          *ngIf="!entry.isFixed"
                           (click)="viewRollsForEntry(entry)"
                           title="View rolls for this entry">
                     <i class="bi bi-box-seam me-1"></i>
