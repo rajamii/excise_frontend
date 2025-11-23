@@ -26,6 +26,8 @@ interface RollInput {
   wastageQty: number;
   leftOver: number;
   damageReason: string;
+  brandDetails: string;
+  bottleSize: string;
 }
 
 interface RegisterEntry {
@@ -493,7 +495,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
         issuedQty: 0,
         wastageQty: 0,
         leftOver: roll.availableCount,
-        damageReason: ''
+        damageReason: '',
+        brandDetails: '',
+        bottleSize: ''
       },
       isLocked: false
     };
@@ -919,6 +923,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
+    // Check if brand details and bottle size are filled
+    if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') return false;
+    if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') return false;
+
     // CRITICAL: Check if ANY data is entered (issued OR wastage)
     // It's valid to have ONLY wastage (no issued) or ONLY issued (no wastage)
     let hasValidIssuedRange = false;
@@ -1030,6 +1038,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
       });
       
       let errorMessage = 'Cannot lock roll. Please fix the following errors:\n\n';
+      
+      // Check for brand details and bottle size
+      if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') {
+        errorMessage += 'Brand Details - Required:\n';
+        errorMessage += 'Please enter brand details for this roll.\n\n';
+      }
+      
+      if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') {
+        errorMessage += 'Bottle Size - Required:\n';
+        errorMessage += 'Please enter bottle size for this roll (e.g., 750ml).\n\n';
+      }
       
       if (incompleteIssuedRanges && incompleteIssuedRanges.length > 0) {
         errorMessage += 'Issued Ranges - Incomplete:\n';
