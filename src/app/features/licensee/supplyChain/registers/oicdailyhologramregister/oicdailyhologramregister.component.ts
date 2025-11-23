@@ -934,6 +934,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return false;
 
+    // CRITICAL: If the roll is already locked (read-only mode), cannot lock again
+    if (this.isCurrentRollLocked(entry)) {
+      return false;
+    }
+
     // Check if brand details and bottle size are filled
     if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') return false;
     if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') return false;
@@ -1027,6 +1032,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) {
       alert('Please select a roll first.');
+      return;
+    }
+
+    // CRITICAL: Prevent locking if this is a read-only (already locked) roll
+    if (this.isCurrentRollLocked(entry)) {
+      alert('This roll is already locked and cannot be locked again.\n\nYou are viewing it in read-only mode.');
+      return;
+    }
+
+    // CRITICAL: Check if this roll is already in the locked rolls list
+    const lockedRolls = entry.lockedRolls || [];
+    const rangeIdToCheck = rollInput.rangeId || rollInput.cartoonNumber;
+    const alreadyLocked = lockedRolls.some((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck);
+    
+    if (alreadyLocked) {
+      alert('This roll has already been locked.\n\nPlease select a different roll.');
       return;
     }
 
