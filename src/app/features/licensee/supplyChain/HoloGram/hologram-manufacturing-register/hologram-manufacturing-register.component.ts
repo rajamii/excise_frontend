@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-// Removed: import { MonthlyhologramstatementOICComponent } from '../monthlyhologramstatement-oic/monthlyhologramstatement-oic.component';
+import { HologramMonthlyReportComponent } from '../../registers/hologram-monthly-report/hologram-monthly-report.component';
 
 interface RollBreakdown {
   rollName: string;
@@ -50,7 +50,7 @@ interface PendingEntry {
 @Component({
   selector: 'app-hologram-manufacturing-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HologramMonthlyReportComponent],
   templateUrl: './hologram-manufacturing-register.component.html',
   styleUrl: './hologram-manufacturing-register.component.scss'
 })

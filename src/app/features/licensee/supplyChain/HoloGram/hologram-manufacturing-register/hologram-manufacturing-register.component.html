@@ -630,15 +630,10 @@
       }
 
       <!-- Monthly Statement Tab Content -->
-      @if (activeTab === 'monthly-statement') {
-        <div class="container-fluid p-4">
-          <div class="text-center text-muted">
-            <i class="bi bi-graph-up" style="font-size: 3rem;"></i>
-            <h5 class="mt-3">Monthly Hologram Statement</h5>
-            <p>This section is under development.</p>
-          </div>
-        </div>
-      }
+        @if (activeTab === 'monthly-statement') {
+          <app-hologram-monthly-report></app-hologram-monthly-report>
+        }
     </div>
   </div>
 </div>
+
