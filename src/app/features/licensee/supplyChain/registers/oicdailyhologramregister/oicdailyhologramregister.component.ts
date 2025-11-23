@@ -204,17 +204,25 @@ export class OicdailyhologramregisterComponent implements OnInit {
       saved: savedEntries.length
     });
     
-    // Merge both sources, avoiding duplicates by ID
-    const allEntries = [...approvedEntries];
+    // CRITICAL FIX: Merge both sources, avoiding duplicates by ID
+    // Prefer saved entries (from oicDailyRegisterEntries) over approved entries
+    const uniqueEntries = new Map<string, any>();
     
-    // Add saved entries that are not already in approved entries
-    savedEntries.forEach((savedEntry: any) => {
-      const existsInApproved = approvedEntries.some((e: any) => e.id === savedEntry.id);
-      if (!existsInApproved) {
-        allEntries.push(savedEntry);
+    // First, add all approved entries
+    approvedEntries.forEach((entry: any) => {
+      if (entry.id) {
+        uniqueEntries.set(entry.id, entry);
       }
     });
     
+    // Then, override with saved entries (they have priority)
+    savedEntries.forEach((savedEntry: any) => {
+      if (savedEntry.id) {
+        uniqueEntries.set(savedEntry.id, savedEntry);
+      }
+    });
+    
+    const allEntries = Array.from(uniqueEntries.values());
     console.log('Total entries after merge:', allEntries.length);
     
     this.entries = allEntries.map((entry: any) => ({
