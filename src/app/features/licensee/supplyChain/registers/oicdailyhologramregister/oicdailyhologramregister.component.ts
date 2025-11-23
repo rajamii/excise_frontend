@@ -1333,13 +1333,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // Refresh display
     this.cdr.detectChanges();
     
-    // Simple success message
-    alert('✅ Entry saved successfully! Hologram overview data updated.');
+    // Success message with monthly statement confirmation
+    alert('✅ Entry saved successfully!\n\n' +
+          '• Hologram overview data updated\n' +
+          '• Entry added to Monthly Hologram Statement\n\n' +
+          'You can view the monthly statement in the "Monthly Hologram Statement" tab.');
   }
 
   // Save entry to localStorage
   private saveEntryToLocalStorage(entry: RegisterEntry): void {
     try {
+      // Save to oicDailyRegisterEntries (for OIC dashboard)
       const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
       
       // Check if entry already exists
@@ -1352,9 +1356,123 @@ export class OicdailyhologramregisterComponent implements OnInit {
       }
       
       localStorage.setItem('oicDailyRegisterEntries', JSON.stringify(savedEntries));
-      console.log('Entry saved to localStorage:', entry.id);
+      console.log('Entry saved to oicDailyRegisterEntries:', entry.id);
+      
+      // CRITICAL: Also save to approvedHologramEntries for Monthly Statement
+      this.saveToMonthlyStatement(entry);
+      
     } catch (error) {
       console.error('Error saving entry to localStorage:', error);
+    }
+  }
+
+  /**
+   * Save entry to Monthly Statement (approvedHologramEntries)
+   * This ensures the entry appears in the Monthly Hologram Statement report
+   */
+  private saveToMonthlyStatement(entry: RegisterEntry): void {
+    try {
+      console.log('💾 Saving entry to Monthly Statement...');
+      
+      // Load existing approved entries
+      const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+      
+      // Convert RegisterEntry to HologramDailyEntry format for monthly statement
+      const lockedRolls = entry.lockedRolls || [];
+      
+      // Create separate entries for each locked roll (for detailed monthly report)
+      lockedRolls.forEach((roll: any, index: number) => {
+        const monthlyEntry = {
+          id: `${entry.id}_roll_${index}`, // Unique ID for each roll
+          date: entry.dates.usage,
+          hologramType: entry.hologramType,
+          referenceNo: entry.referenceNo,
+          cartoonNumber: roll.cartoonNumber,
+          
+          // Issued entries (multiple ranges)
+          issuedEntries: (roll.issuedRanges || []).map((range: any) => ({
+            id: `${entry.id}_issued_${index}_${Math.random()}`,
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || 0,
+            brandDetails: roll.brandDetails || entry.brandDetails || '',
+            bottleSize: roll.bottleSize || entry.bottleSize || ''
+          })),
+          
+          // Wastage entries (multiple ranges)
+          wastageEntries: (roll.wastageRanges || []).map((range: any) => ({
+            id: `${entry.id}_wastage_${index}_${Math.random()}`,
+            fromSerial: range.fromSerial || '',
+            toSerial: range.toSerial || '',
+            quantity: range.quantity || 0,
+            damageReason: roll.damageReason || range.damageReason || '',
+            brandDetails: roll.brandDetails || entry.brandDetails || '',
+            bottleSize: roll.bottleSize || entry.bottleSize || ''
+          })),
+          
+          // Totals for this roll
+          issuedQuantity: roll.issuedQty || 0,
+          wastageQuantity: roll.wastageQty || 0,
+          utilizedQuantity: (roll.issuedQty || 0) + (roll.wastageQty || 0) + (roll.leftOver || 0),
+          leftOverQuantity: roll.leftOver || 0,
+          
+          // Legacy fields for backward compatibility
+          issuedFromSerial: roll.issuedRanges?.[0]?.fromSerial || '',
+          issuedToSerial: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
+          wastageFromSerial: roll.wastageRanges?.[0]?.fromSerial || '',
+          wastageToSerial: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
+          damageReason: roll.damageReason || '',
+          
+          // Metadata
+          brandDetails: roll.brandDetails || entry.brandDetails || '',
+          bottleSize: roll.bottleSize || entry.bottleSize || '',
+          submissionDate: entry.dates.submission,
+          usageDate: entry.dates.usage,
+          
+          // Mark as fixed and approved
+          isFixed: true,
+          approvalStatus: 'APPROVED',
+          approvedBy: 'Officer In Charge',
+          approvedAt: new Date().toISOString(),
+          
+          // Store locked rolls for monthly report display
+          lockedRolls: [roll],
+          
+          // Store serial range info for monthly report
+          serialRange: roll.serialRange || `${roll.fromSerial} - ${roll.toSerial}`,
+          fromSerial: roll.fromSerial,
+          toSerial: roll.toSerial,
+          availableCount: roll.availableCount,
+          allocatedQuantity: roll.allocatedQuantity
+        };
+        
+        // Check if this roll entry already exists in approved entries
+        const existingIndex = approvedEntries.findIndex((e: any) => e.id === monthlyEntry.id);
+        
+        if (existingIndex !== -1) {
+          // Update existing entry
+          approvedEntries[existingIndex] = monthlyEntry;
+          console.log(`✅ Updated existing monthly entry for roll ${roll.cartoonNumber}`);
+        } else {
+          // Add new entry
+          approvedEntries.push(monthlyEntry);
+          console.log(`✅ Added new monthly entry for roll ${roll.cartoonNumber}`);
+        }
+      });
+      
+      // Save back to localStorage
+      localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
+      console.log('✅ Entry saved to Monthly Statement successfully');
+      
+      // Trigger storage event for other components to refresh
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'approvedHologramEntries',
+        newValue: JSON.stringify(approvedEntries),
+        storageArea: localStorage
+      }));
+      
+    } catch (error) {
+      console.error('❌ Error saving to Monthly Statement:', error);
     }
   }
 
@@ -2597,7 +2715,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     
     const confirmed = confirm(confirmMessage);
     
-    
+
     if (!confirmed) {
       console.log('Clear test data cancelled');
       return;
