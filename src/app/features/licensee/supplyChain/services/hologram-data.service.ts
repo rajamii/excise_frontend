@@ -394,13 +394,6 @@ export class HologramDataService {
           return;
         }
 
-        // CRITICAL FIX: Skip entries that are pending usage (not yet filled by user)
-        // These are entries created by officer approval but not yet used
-        if ((entry as any).isPendingUsage === true) {
-          console.log('⏭️ Data Service: Skipping pending usage entry:', entry.id);
-          return;
-        }
-
         uniqueEntries.set(normalized.id, normalized);
       });
 

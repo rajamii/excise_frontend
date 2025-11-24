@@ -135,63 +135,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     });
 
     window.addEventListener('storage', this.storageListener);
-    
-    // CRITICAL FIX: Migrate old entries to mark them as pending if they have no actual usage
-    this.migrateOldEntriesToPending();
-    
     this.refreshMonthlyData();
-  }
-  
-  /**
-   * Migration function to mark old entries as pending if they have no actual usage data
-   * This handles entries created before the isPendingUsage flag was introduced
-   */
-  private migrateOldEntriesToPending(): void {
-    try {
-      const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-      let migrationCount = 0;
-      
-      approvedEntries.forEach((entry: any) => {
-        // Skip if already has isPendingUsage flag (already migrated)
-        if (entry.isPendingUsage !== undefined) {
-          return;
-        }
-        
-        // CRITICAL: Check if this entry has ACTUAL usage data (lockedRolls with issuedRanges/wastageRanges)
-        // An entry is considered "used" only if it has lockedRolls with actual issued/wastage ranges
-        const hasLockedRollsWithUsage = entry.lockedRolls && entry.lockedRolls.length > 0 &&
-          entry.lockedRolls.some((roll: any) => 
-            (roll.issuedRanges && roll.issuedRanges.length > 0 && roll.issuedRanges.some((r: any) => r.quantity > 0)) ||
-            (roll.wastageRanges && roll.wastageRanges.length > 0 && roll.wastageRanges.some((r: any) => r.quantity > 0))
-          );
-        
-        // If entry has no locked rolls with actual usage, mark as pending
-        // This includes entries that only have allocated ranges but no actual usage
-        if (!hasLockedRollsWithUsage) {
-          entry.isPendingUsage = true;
-          migrationCount++;
-          console.log(`🔄 Migrated entry ${entry.id || entry.referenceNo} to pending usage (no actual usage data)`);
-        } else {
-          // Entry has actual usage data, mark as not pending
-          entry.isPendingUsage = false;
-          console.log(`✅ Entry ${entry.id || entry.referenceNo} has actual usage data, marked as not pending`);
-        }
-      });
-      
-      if (migrationCount > 0) {
-        localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
-        console.log(`✅ Migrated ${migrationCount} entries to pending usage status`);
-        
-        // Trigger storage event to refresh other components
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'approvedHologramEntries',
-          newValue: JSON.stringify(approvedEntries),
-          storageArea: localStorage
-        }));
-      }
-    } catch (error) {
-      console.error('❌ Error migrating old entries:', error);
-    }
   }
 
   ngOnDestroy(): void {
