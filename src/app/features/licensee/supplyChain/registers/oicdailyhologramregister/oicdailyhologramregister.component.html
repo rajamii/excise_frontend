@@ -641,22 +641,15 @@
                     
                     <!-- Locked Rolls Display -->
                     @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
-                      <div class="locked-roll-badge-wrapper">
-                        <div class="locked-roll-item" 
-                             [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                             [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                          <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
-                            {{ lockedRoll.cartoonNumber.split('_')[0] }}
-                          </div>
-                          <div class="brand-value">
-                            {{ lockedRoll.brandDetails || '-' }}
-                          </div>
+                      <div class="locked-roll-item" 
+                           [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
+                           [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
+                        <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                          {{ lockedRoll.cartoonNumber.split('_')[0] }}
                         </div>
-                        <button class="btn-unlock" 
-                                (click)="unlockRollForEntry(entry, lockedRoll.cartoonNumber)"
-                                title="Unlock this roll">
-                          <i class="bi bi-x"></i>
-                        </button>
+                        <div class="brand-value">
+                          {{ lockedRoll.brandDetails || '-' }}
+                        </div>
                       </div>
                     }
                   </div>

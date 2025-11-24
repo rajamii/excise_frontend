@@ -1249,71 +1249,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const index = lockedRolls.findIndex(r => r.cartoonNumber === cartoonNumber);
 
     if (index !== -1) {
-      const unlockedRoll = lockedRolls[index];
-      
-      // Log the unlock action with detailed info
-      console.log('🔓 Unlocking roll:', {
-        cartoonNumber: unlockedRoll.cartoonNumber,
-        issuedQty: unlockedRoll.issuedQty,
-        wastageQty: unlockedRoll.wastageQty,
-        leftOver: unlockedRoll.leftOver,
-        brandDetails: unlockedRoll.brandDetails,
-        bottleSize: unlockedRoll.bottleSize,
-        totalLockedRollsBefore: lockedRolls.length
-      });
-      
-      // Check if this roll is currently being viewed in the Usage panel
-      let isViewingUnlockedRoll = false;
-      if (this.selectedEntryForRollsView?.id === entry.id) {
-        const currentSelectedRoll = this.getCurrentSelectedRoll(entry);
-        
-        // Check if the roll being unlocked is the one currently displayed
-        if (currentSelectedRoll === cartoonNumber || 
-            (entry.currentRollSelection?.rollInput?.cartoonNumber === cartoonNumber)) {
-          console.log('⚠️ Unlocking the currently viewed roll');
-          isViewingUnlockedRoll = true;
-        }
-      }
-      
-      // STEP 1: Remove the roll from locked rolls array
       lockedRolls.splice(index, 1);
-      console.log(`📊 Removed roll. Remaining locked rolls: ${lockedRolls.length}`);
-      
-      // STEP 2: Recalculate all totals (issued, wastage, leftover) from remaining locked rolls
       this.recalculateEntryFromLockedRolls(entry);
-      
-      // STEP 3: Update the Usage panel if needed
-      if (isViewingUnlockedRoll && this.selectedEntryForRollsView?.id === entry.id) {
-        if (lockedRolls.length > 0) {
-          // Auto-select the first remaining locked roll for viewing
-          console.log('📌 Auto-selecting first remaining locked roll for viewing');
-          const firstLockedRoll = lockedRolls[0];
-          entry.currentRollSelection = {
-            selectedRoll: firstLockedRoll.cartoonNumber,
-            rollInput: firstLockedRoll,
-            isLocked: true // Mark as locked (read-only)
-          };
-        } else {
-          // No more locked rolls, clear the selection
-          console.log('⚠️ No more locked rolls - clearing selection');
-          entry.currentRollSelection = undefined;
-        }
-      }
-      
-      // STEP 4: Force UI update
       this.cdr.detectChanges();
-      
-      // Log the final state
-      console.log('✅ Roll unlocked successfully. Updated totals:', {
-        issuedQty: entry.issuedQty,
-        wastageQty: entry.wastageQty,
-        leftOver: entry.leftOver,
-        hologramQty: entry.hologramQty,
-        total: entry.total,
-        remainingLockedRolls: lockedRolls.length,
-        rollsViewOpen: !!this.selectedEntryForRollsView,
-        currentlyViewingRoll: entry.currentRollSelection?.rollInput?.cartoonNumber || 'none'
-      });
     }
   }
 
@@ -1325,63 +1263,31 @@ export class OicdailyhologramregisterComponent implements OnInit {
     let totalLeftOver = 0;
     let totalAllocated = 0;
 
-    console.log('🔄 Starting recalculation for entry:', entry.referenceNo);
-    console.log(`   Locked rolls count: ${lockedRolls.length}`);
-
-    // Calculate totals from all REMAINING locked rolls
-    lockedRolls.forEach((roll, index) => {
-      const rollIssued = roll.issuedQty || 0;
-      const rollWastage = roll.wastageQty || 0;
-      const rollLeftOver = roll.leftOver || 0;
-      const rollAllocated = roll.availableCount || 0;
-      
-      console.log(`   Roll ${index + 1} (${roll.cartoonNumber}):`, {
-        issued: rollIssued,
-        wastage: rollWastage,
-        leftOver: rollLeftOver,
-        allocated: rollAllocated
-      });
-      
-      totalIssued += rollIssued;
-      totalWastage += rollWastage;
-      totalLeftOver += rollLeftOver;
-      totalAllocated += rollAllocated;
+    lockedRolls.forEach(roll => {
+      totalIssued += roll.issuedQty || 0;
+      totalWastage += roll.wastageQty || 0;
+      totalLeftOver += roll.leftOver || 0;
+      // CRITICAL FIX: Use availableCount (which is the allocated quantity for this roll)
+      // This represents the total allocated quantity from all locked rolls
+      totalAllocated += roll.availableCount || 0;
     });
 
-    // Also add current roll's quantities if it exists (roll being edited)
+    // Also add current roll's allocated quantity if it exists
     const currentRoll = this.getCurrentRollInput(entry);
-    if (currentRoll && !entry.currentRollSelection?.isLocked) {
-      console.log('   Current roll (being edited):', {
-        cartoonNumber: currentRoll.cartoonNumber,
-        issued: currentRoll.issuedQty || 0,
-        wastage: currentRoll.wastageQty || 0,
-        leftOver: currentRoll.leftOver || 0,
-        allocated: currentRoll.availableCount || 0
-      });
-      
+    if (currentRoll) {
       totalIssued += currentRoll.issuedQty || 0;
       totalWastage += currentRoll.wastageQty || 0;
       totalLeftOver += currentRoll.leftOver || 0;
       totalAllocated += currentRoll.availableCount || 0;
     }
 
-    // Update entry with recalculated values
     entry.issuedQty = totalIssued;
     entry.wastageQty = totalWastage;
-    entry.leftOver = totalLeftOver; // CRITICAL: Leftover is updated here
+    entry.leftOver = totalLeftOver;
+    // CRITICAL FIX: hologramQty should be the TOTAL ALLOCATED quantity from all rolls
+    // This is the sum of all allocated quantities from locked rolls + current roll
     entry.hologramQty = totalAllocated;
     entry.total = totalIssued + totalWastage + totalLeftOver;
-    entry.originalHologramQty = totalAllocated;
-    
-    console.log('✅ Recalculation complete:', {
-      lockedRollsCount: lockedRolls.length,
-      hasCurrentRoll: !!currentRoll,
-      totalIssued,
-      totalWastage,
-      totalLeftOver,
-      totalAllocated,
-      total: entry.total
-    });
   }
 
   /**
