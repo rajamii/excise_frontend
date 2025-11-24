@@ -665,12 +665,28 @@ export class HologramdetailsComponent implements OnInit {
 
   // Calculate hologram count for current carton being entered
   calculateCurrentCartonCount() {
+    this.serialRangeValidationError = '';
+    
     if (this.currentCarton.fromSerial && this.currentCarton.toSerial) {
       const fromNum = this.extractSerialNumber(this.currentCarton.fromSerial);
       const toNum = this.extractSerialNumber(this.currentCarton.toSerial);
 
       if (fromNum && toNum && toNum >= fromNum) {
         this.currentCarton.numberOfHolograms = toNum - fromNum + 1;
+        
+        // Real-time validation: Check if this would exceed the expected quantity
+        if (this.selectedRecordForUpdate) {
+          const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
+          const newTotal = this.totalCalculatedHolograms + this.currentCarton.numberOfHolograms;
+          
+          if (newTotal > expectedQuantity) {
+            const remaining = expectedQuantity - this.totalCalculatedHolograms;
+            this.serialRangeValidationError = `❌ This carton has ${this.currentCarton.numberOfHolograms.toLocaleString()} holograms, but only ${remaining.toLocaleString()} remaining! Total would be ${newTotal.toLocaleString()} which exceeds expected ${expectedQuantity.toLocaleString()}.`;
+          }
+        }
+      } else if (fromNum && toNum && toNum < fromNum) {
+        this.currentCarton.numberOfHolograms = 0;
+        this.serialRangeValidationError = '❌ Invalid range! "To Serial Number" must be greater than or equal to "From Serial Number".';
       } else {
         this.currentCarton.numberOfHolograms = 0;
       }
@@ -751,19 +767,9 @@ export class HologramdetailsComponent implements OnInit {
 
   // Update validation for final confirmation
   updateFinalValidation() {
+    // Don't show validation errors while user is still entering cartons
+    // Validation will only happen when they click "Confirm Arrival"
     this.serialRangeValidationError = '';
-    
-    if (this.selectedRecordForUpdate) {
-      const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
-      
-      if (this.totalCalculatedHolograms !== expectedQuantity && this.totalCalculatedHolograms > 0) {
-        if (this.totalCalculatedHolograms > expectedQuantity) {
-          this.serialRangeValidationError = `❌ Total exceeded! Expected: ${expectedQuantity.toLocaleString()} holograms, but total from all cartons is: ${this.totalCalculatedHolograms.toLocaleString()}.`;
-        } else {
-          this.serialRangeValidationError = `⚠️ Total incomplete! Expected: ${expectedQuantity.toLocaleString()} holograms, but total from all cartons is: ${this.totalCalculatedHolograms.toLocaleString()}. Please add more cartons.`;
-        }
-      }
-    }
   }
 
   // Check if can save current carton
@@ -771,7 +777,8 @@ export class HologramdetailsComponent implements OnInit {
     return this.currentCarton.cartoonNumber.trim() !== '' &&
            this.currentCarton.fromSerial.trim() !== '' &&
            this.currentCarton.toSerial.trim() !== '' &&
-           this.currentCarton.numberOfHolograms > 0;
+           this.currentCarton.numberOfHolograms > 0 &&
+           this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -1172,57 +1179,22 @@ export class HologramdetailsComponent implements OnInit {
     window.open('/dev-hologram-overview', '_blank');
   }
 
-  // Add test data for arrival testing
+  // Add test data for arrival testing - Simple 30 holograms for easy testing
   addTestDataForArrivalTesting(): void {
-    // Check if test data already exists and update it
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const testIndex = applications.findIndex((app: any) => app.refNo === 'YB/TEST/2025');
+    const testExists = applications.some((app: any) => app.refNo === 'YB/TEST/2025');
     
-    if (testIndex !== -1) {
-      // Update existing test record
-      applications[testIndex] = {
-        ...applications[testIndex],
-        localQtyLakh: 0.01, // 1000 pieces
-        status: 'Payment Completed',
-        paymentCompleted: true,
-        paymentDate: new Date().toISOString().split('T')[0]
-      };
-      localStorage.setItem('hologramApplications', JSON.stringify(applications));
-      
-      // Update in hologramRequests
-      const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const reqIndex = requests.findIndex((req: any) => req.refNo === 'YB/TEST/2025');
-      if (reqIndex !== -1) {
-        requests[reqIndex] = {
-          ...requests[reqIndex],
-          localQtyLakh: 10000,
-          status: 'Payment Completed',
-          paymentCompleted: true,
-          paymentDate: new Date().toISOString().split('T')[0]
-        };
-        localStorage.setItem('hologramRequests', JSON.stringify(requests));
-      }
-      
-      // Update payment record
-      const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-      const payIndex = payments.findIndex((p: any) => p.hologramRefNo === 'YB/TEST/2025');
-      if (payIndex !== -1) {
-        payments[payIndex].status = 'Payment Completed';
-        payments[payIndex].paymentCompletedDate = new Date().toISOString();
-        localStorage.setItem('hologramPayments', JSON.stringify(payments));
-      }
-      
-      console.log('✅ Test record updated: YB/TEST/2025 (1000 pieces, Payment Completed)');
+    // Only create if doesn't exist
+    if (testExists) {
       return;
     }
     
-    // Create a test hologram procurement record with payment completed
-    // 1000 holograms = 0.01 Lakh (since 1 Lakh = 100,000 pieces)
+    // Create ONE simple test record with 30 holograms for easy testing
     const testRecord = {
       refNo: 'YB/TEST/2025',
       date: new Date().toISOString().split('T')[0],
       companyName: 'Test Distillery Ltd',
-      localQtyLakh: 0.01, // 1000 pieces = 0.01 Lakh
+      localQtyLakh: 30, // 30 pieces (easy for testing)
       exportQtyLakh: 0,
       defenceQtyLakh: 0,
       procurementType: 'Local',
@@ -1234,119 +1206,12 @@ export class HologramdetailsComponent implements OnInit {
       paymentDate: new Date().toISOString().split('T')[0]
     };
     
-    // Add to hologramApplications
     applications.push(testRecord);
     localStorage.setItem('hologramApplications', JSON.stringify(applications));
     
-    // Also add to hologramRequests for consistency
-    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const testRequest = {
-      ...testRecord,
-      referenceNo: testRecord.refNo
-    };
-    requests.push(testRequest);
-    localStorage.setItem('hologramRequests', JSON.stringify(requests));
-    
-    // Create a payment record showing payment is completed
-    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    const testPayment = {
-      id: Date.now(),
-      hologramRefNo: 'YB/TEST/2025',
-      procurementType: 'Local',
-      paymentSlipUrl: 'test-slip.pdf',
-      uploadedDate: new Date().toISOString(),
-      status: 'Payment Completed',
-      paymentCompletedDate: new Date().toISOString(),
-      uploadedBy: 'Supply Chain Officer'
-    };
-    payments.push(testPayment);
-    localStorage.setItem('hologramPayments', JSON.stringify(payments));
-    
-    // Create a payment transaction record for the receipt
-    const transactions = JSON.parse(localStorage.getItem('hologramPaymentTransactions') || '[]');
-    const testTransaction = {
-      transactionId: `TXN-YB-TEST-2025-${Date.now()}`,
-      hologramRefNo: 'YB/TEST/2025',
-      hologramDate: new Date().toISOString(),
-      companyName: 'Test Distillery Ltd',
-      localQtyLakh: 10000,
-      exportQtyLakh: 0,
-      defenceQtyLakh: 0,
-      totalQuantity: 0.01,
-      walletPaymentAmount: 0.0015, // 1000 pieces × ₹0.15 per piece = ₹150 = ₹0.0015 per lakh
-      paymentDate: new Date().toISOString(),
-      paymentMethod: 'Wallet Payment',
-      status: 'Completed',
-      hologramTypes: [
-        {
-          type: 'Local Series',
-          quantity: 0.01,
-          amount: 0.0015
-        }
-      ]
-    };
-    transactions.push(testTransaction);
-    localStorage.setItem('hologramPaymentTransactions', JSON.stringify(transactions));
-    
-    console.log('✅ Test record created: YB/TEST/2025 (1000 pieces, Payment Completed)');
+    console.log('✅ Test record created: YB/TEST/2025 (30 holograms, Payment Completed)');
   }
-  
-  // Update test record to payment completed with 1000 pieces
-  updateTestRecordToCompleted(): void {
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const testIndex = applications.findIndex((app: any) => app.refNo === 'YB/TEST/2025');
-    
-    if (testIndex !== -1) {
-      applications[testIndex].localQtyLakh = 0.01; // 1000 pieces
-      applications[testIndex].status = 'Payment Completed';
-      applications[testIndex].paymentCompleted = true;
-      applications[testIndex].paymentDate = new Date().toISOString().split('T')[0];
-      localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    }
-    
-    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const reqIndex = requests.findIndex((req: any) => req.refNo === 'YB/TEST/2025');
-    if (reqIndex !== -1) {
-      requests[reqIndex].localQtyLakh = 0.01;
-      requests[reqIndex].status = 'Payment Completed';
-      requests[reqIndex].paymentCompleted = true;
-      requests[reqIndex].paymentDate = new Date().toISOString().split('T')[0];
-      localStorage.setItem('hologramRequests', JSON.stringify(requests));
-    }
-    
-    const payments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    const payIndex = payments.findIndex((p: any) => p.hologramRefNo === 'YB/TEST/2025');
-    if (payIndex !== -1) {
-      payments[payIndex].status = 'Payment Completed';
-      payments[payIndex].paymentCompletedDate = new Date().toISOString();
-      localStorage.setItem('hologramPayments', JSON.stringify(payments));
-    }
-    
-    // Create transaction record if it doesn't exist
-    const transactions = JSON.parse(localStorage.getItem('hologramPaymentTransactions') || '[]');
-    const transExists = transactions.some((t: any) => t.hologramRefNo === 'YB/TEST/2025');
-    if (!transExists) {
-      transactions.push({
-        transactionId: `TXN-YB-TEST-2025-${Date.now()}`,
-        hologramRefNo: 'YB/TEST/2025',
-        hologramDate: new Date().toISOString(),
-        companyName: 'Test Distillery Ltd',
-        localQtyLakh: 0.01,
-        exportQtyLakh: 0,
-        defenceQtyLakh: 0,
-        totalQuantity: 0.01,
-        walletPaymentAmount: 1.5, // 1000 pieces × ₹0.15 = ₹150
-        paymentDate: new Date().toISOString(),
-        paymentMethod: 'Wallet Payment',
-        status: 'Completed',
-        hologramTypes: [{ type: 'Local Series', quantity: 0.01, amount: 1.5 }]
-      });
-      localStorage.setItem('hologramPaymentTransactions', JSON.stringify(transactions));
-    }
-    
-    this.loadHologramRecords();
-    alert('✅ Test record updated to Payment Completed with 1000 pieces!');
-  }
+
 
   // Helper method for supply chain to mark payment as completed
   // This should be called from the supply chain interface after actual payment is made

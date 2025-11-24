@@ -360,10 +360,19 @@
                                     <div class="form-text">Auto-calculated from serial number range</div>
                                 </div>
 
-                                @if (currentCarton.numberOfHolograms > 0) {
-                                <div class="alert alert-info">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    This carton will contain <strong>{{ currentCarton.numberOfHolograms | number }}</strong> holograms
+                                <!-- Real-time validation error -->
+                                @if (serialRangeValidationError) {
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    {{ serialRangeValidationError }}
+                                </div>
+                                }
+
+                                <!-- Success message when valid -->
+                                @if (currentCarton.numberOfHolograms > 0 && !serialRangeValidationError) {
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle-fill me-2"></i>
+                                    ✅ This carton will contain <strong>{{ currentCarton.numberOfHolograms | number }}</strong> holograms. Click "Save Carton" to add it.
                                 </div>
                                 }
 
@@ -445,9 +454,9 @@
                                 
                                 @if (selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
                                 <div class="mt-2 text-center">
-                                    <small class="text-warning">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>
-                                        Remaining: {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) | number }} holograms
+                                    <small class="text-info">
+                                        <i class="bi bi-arrow-right-circle me-1"></i>
+                                        Need {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) | number }} more holograms
                                     </small>
                                 </div>
                                 }
@@ -465,18 +474,18 @@
                     </div>
                 </div>
 
-                <!-- Final Validation Messages -->
-                @if (serialRangeValidationError) {
-                <div class="alert alert-danger d-flex align-items-center mt-3" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    <div>{{ serialRangeValidationError }}</div>
-                </div>
-                }
-
-                @if (totalCalculatedHolograms === selectedRecordForUpdate?.numberOfHolograms && totalCalculatedHolograms > 0) {
+                <!-- Progress Messages -->
+                @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms) {
                 <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
                     <i class="bi bi-check-circle-fill me-2"></i>
-                    <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{ totalCalculatedHolograms | number }} holograms matching the expected quantity.</div>
+                    <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{ totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm the arrival.</div>
+                </div>
+                }
+                
+                @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
+                <div class="alert alert-info d-flex align-items-center mt-3" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    <div>📦 You have entered {{ savedCartons.length }} carton(s) with {{ totalCalculatedHolograms | number }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number }} holograms.</div>
                 </div>
                 }
             </div>
