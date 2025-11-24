@@ -218,8 +218,17 @@ export class ImportPermitComponent implements OnInit {
           submittedAt: new Date().toISOString()
         };
 
-        // Always add as new entry at the beginning (unshift adds to top)
-        list.unshift(submissionData);
+        // Check if entry with same refNo already exists
+        const existingIndex = list.findIndex(r => r.refNo === this.formData.refNo);
+        
+        if (existingIndex >= 0) {
+          // Update existing entry
+          list[existingIndex] = submissionData;
+        } else {
+          // Add as new entry at the beginning (unshift adds to top)
+          list.unshift(submissionData);
+        }
+        
         localStorage.setItem(key, JSON.stringify(list));
       }
 
