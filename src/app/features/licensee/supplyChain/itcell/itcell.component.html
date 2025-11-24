@@ -1,321 +1,191 @@
 <div class="bg-light">
   <!-- Header Section -->
-  <div class="header-section text-black">
-    <div class="container-fluid">
-      <div class="row align-items-center py-3">
-        <div class="col">
-          <h1 class="h3 mb-1 fw-bold">IT Cell Dashboard</h1>
-          <p class="mb-0 small opacity-75">
-            IT Cell: Hologram Management System
-          </p>
+  <div class="bg-white border-bottom shadow-sm">
+    <div class="container-fluid px-4 py-3">
+      <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+          <h1 class="h4 mb-0 fw-semibold text-dark">IT Cell Dashboard</h1>
         </div>
-        <div class="col-auto">
-          <button class="btn btn-success btn-sm px-3 py-2">
-            <i class="bi bi-laptop me-1"></i> IT Cell
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-success btn-sm px-3 py-2">IT Cell</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="bg-white border-bottom">
+    <div class="container-fluid px-4 py-3">
+      <div class="d-flex align-items-end gap-3 flex-wrap">
+        <div class="d-flex flex-column" style="min-width: 120px;">
+          <label class="form-label small fw-medium text-secondary mb-1">Select Date</label>
+          <input type="date" class="form-control form-control-sm border-1"
+                 style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                 [(ngModel)]="selectedDate" (ngModelChange)="applyFilters()">
+        </div>
+
+        <div class="d-flex flex-column" style="min-width: 120px;">
+          <label class="form-label small fw-medium text-secondary mb-1">Month</label>
+          <select class="form-select form-select-sm border-1"
+                  style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                  [(ngModel)]="selectedMonth" (ngModelChange)="applyFilters()">
+            <option value="">All Months</option>
+            <option *ngFor="let month of months" [value]="month.value">{{ month.label }}</option>
+          </select>
+        </div>
+
+        <div class="d-flex flex-column" style="min-width: 120px;">
+          <label class="form-label small fw-medium text-secondary mb-1">Year</label>
+          <select class="form-select form-select-sm border-1"
+                  style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                  [(ngModel)]="selectedYear" (ngModelChange)="applyFilters()">
+            <option value="">All Years</option>
+            <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+          </select>
+        </div>
+
+        <div class="d-flex flex-column" style="min-width: 120px;">
+          <label class="form-label small fw-medium text-secondary mb-1">Status</label>
+          <select class="form-select form-select-sm border-1"
+                  style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                  [(ngModel)]="statusFilter" (ngModelChange)="applyFilters()">
+            <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
+          </select>
+        </div>
+
+        <div class="d-flex flex-column" style="min-width: 120px;">
+          <label class="form-label small fw-medium text-secondary mb-1">Company</label>
+          <input type="text" class="form-control form-control-sm border-1"
+                 style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                 [(ngModel)]="companyFilter" (ngModelChange)="applyFilters()" placeholder="Search company...">
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-primary btn-sm d-flex align-items-center justify-content-center"
+                  style="width: 40px; height: 40px; padding: 0;"
+                  title="Search" (click)="applyFilters()">
+            <i class="bi bi-search"></i>
+          </button>
+          <button class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+                  style="width: 40px; height: 40px; padding: 0;"
+                  title="Clear" (click)="clearFilters()">
+            <i class="bi bi-arrow-clockwise"></i>
           </button>
         </div>
       </div>
     </div>
   </div>
 
-
-
   <!-- Tabs Section -->
   <div class="bg-white border-bottom">
-    <div class="container-fluid">
-      <ul class="nav nav-tabs border-0">
-        <li class="nav-item">
-          <button class="nav-link" [class.active]="selectedTabIndex === 0"
-                  (click)="selectedTabIndex = 0">
-            <i class="bi bi-table me-2"></i> HOLOGRAM MANAGEMENT
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" [class.active]="selectedTabIndex === 1"
-                  (click)="selectedTabIndex = 1">
-            <i class="bi bi-diagram-3 me-2"></i> PROCESS FLOW
-          </button>
-        </li>
-      </ul>
+    <div class="container-fluid px-4">
+      <div class="d-flex">
+        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase"
+                [class.text-danger]="selectedTabIndex === 0"
+                [class.text-muted]="selectedTabIndex !== 0"
+                [class.border-bottom]="selectedTabIndex === 0"
+                [class.border-danger]="selectedTabIndex === 0"
+                [class.border-3]="selectedTabIndex === 0"
+                [class.bg-light]="selectedTabIndex === 0"
+                style="border-bottom-width: 3px !important; font-size: 0.875rem; transition: all 0.15s ease-in-out;"
+                (click)="selectedTabIndex = 0">
+          <i class="bi bi-table me-2"></i>HOLOGRAM MANAGEMENT
+        </button>
+        <button class="btn btn-link text-decoration-none border-0 rounded-0 px-4 py-3 fw-medium text-uppercase"
+                [class.text-danger]="selectedTabIndex === 1"
+                [class.text-muted]="selectedTabIndex !== 1"
+                [class.border-bottom]="selectedTabIndex === 1"
+                [class.border-danger]="selectedTabIndex === 1"
+                [class.border-3]="selectedTabIndex === 1"
+                [class.bg-light]="selectedTabIndex === 1"
+                style="border-bottom-width: 3px !important; font-size: 0.875rem; transition: all 0.15s ease-in-out;"
+                (click)="selectedTabIndex = 1">
+          <i class="bi bi-diagram-3 me-2"></i>PROCESS FLOW
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Main Content Area -->
-  <div class="container-fluid p-0">
+  <div class="bg-light min-vh-100">
     <!-- Hologram Management Tab -->
-    @if (selectedTabIndex === 0) {
-      <!-- Hologram Register Header -->
-      <div class="hologram-register-header">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <div class="header-info">
-            <h4 class="register-title">
-              <i class="bi bi-qr-code me-2"></i>
-              Hologram Management Register
-            </h4>
-            <p class="register-subtitle">Track and manage all hologram applications</p>
-          </div>
-        </div>
-
-        <!-- Summary Cards -->
-        <div class="row g-3 mb-4">
-          <div class="col-md-3">
-            <div class="summary-card total-requests">
-              <div class="card-icon">
-                <i class="bi bi-list-ul"></i>
-              </div>
-              <div class="card-content">
-                <h3 class="card-value">{{ filteredHologramData.length }}</h3>
-                <p class="card-label">Total Applications</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="summary-card pending-requests">
-              <div class="card-icon">
-                <i class="bi bi-clock-history"></i>
-              </div>
-              <div class="card-content">
-                <h3 class="card-value">{{ getStatusCount('Under Review') }}</h3>
-                <p class="card-label">Under Review</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="summary-card approved-requests">
-              <div class="card-icon">
-                <i class="bi bi-check-circle"></i>
-              </div>
-              <div class="card-content">
-                <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
-                <p class="card-label">Forwarded</p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-3">
-            <div class="summary-card total-quantity">
-              <div class="card-icon">
-                <i class="bi bi-boxes"></i>
-              </div>
-              <div class="card-content">
-                <h3 class="card-value">{{ getTotalQuantity() | number:'1.0-0' }}</h3>
-                <p class="card-label">Total Quantity (Lakh)</p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div *ngIf="selectedTabIndex === 0" class="bg-white mx-4 my-4 rounded shadow-sm overflow-hidden">
+      <div class="bg-light border-bottom px-4 py-3">
+        <span class="small text-muted fw-medium">{{ filteredHologramData.length }} records found</span>
       </div>
 
-      <!-- Compact Filter Section -->
-      <div class="compact-filter-section mb-3 mx-4">
-        <div class="d-flex align-items-center gap-3 flex-wrap">
-          <div class="filter-label-text">
-            <i class="bi bi-funnel me-1"></i>
-            <small class="text-muted">Filters:</small>
-          </div>
-          
-          <!-- Date Filter -->
-          <div class="compact-filter">
-            <input 
-              type="date" 
-              class="form-control form-control-sm" 
-              [(ngModel)]="selectedDate"
-              (change)="applyFilters()"
-              placeholder="Date"
-              title="Filter by date">
-          </div>
-          
-          <!-- Month Filter -->
-          <div class="compact-filter">
-            <select 
-              class="form-select form-select-sm" 
-              [(ngModel)]="selectedMonth"
-              (change)="applyFilters()"
-              title="Filter by month">
-              <option value="">All Months</option>
-              @for (month of months; track month.value) {
-                <option [value]="month.value">{{ month.label }}</option>
-              }
-            </select>
-          </div>
-          
-          <!-- Year Filter -->
-          <div class="compact-filter">
-            <select 
-              class="form-select form-select-sm" 
-              [(ngModel)]="selectedYear"
-              (change)="applyFilters()"
-              title="Filter by year">
-              <option value="">All Years</option>
-              @for (year of years; track year) {
-                <option [value]="year">{{ year }}</option>
-              }
-            </select>
-          </div>
-          
-          <!-- Status Filter -->
-          <div class="compact-filter">
-            <select 
-              class="form-select form-select-sm" 
-              [(ngModel)]="statusFilter"
-              (change)="applyFilters()"
-              title="Filter by status">
-              @for (status of statusOptions; track status) {
-                <option [value]="status">{{ status }}</option>
-              }
-            </select>
-          </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" style="font-size: 0.875rem; color: black;">
+          <thead class="fw-bold" style="background: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);">
+            <tr>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Ref. No</th>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Date</th>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Company</th>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Total Qty (Lakh)</th>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Status</th>
 
-          <!-- Company Filter -->
-          <div class="compact-filter">
-            <input 
-              type="text" 
-              class="form-control form-control-sm" 
-              [(ngModel)]="companyFilter"
-              (input)="applyFilters()"
-              placeholder="Search company..."
-              title="Filter by company">
-          </div>
-          
-          <!-- Clear Button -->
-          @if (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) {
-            <button 
-              class="btn btn-outline-danger btn-sm" 
-              (click)="clearFilters()"
-              title="Clear all filters">
-              <i class="bi bi-x-circle"></i>
-              Clear
-            </button>
-          }
-        </div>
-        
-        <!-- Filter Results Summary -->
-        @if (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) {
-          <div class="filter-results-compact mt-2">
-            <small class="text-info">
-              <i class="bi bi-info-circle me-1"></i>
-              Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramData.length }}</strong> applications
-            </small>
-          </div>
-        }
-      </div>
+              <th class="px-3 py-3 text-start fw-semibold" style="color: #2c3e50; border-bottom: 2px solid #7fcdcd; white-space: nowrap;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hologram of filteredHologramData" class="border-bottom" [class.bg-warning-subtle]="hologram.editedByCommissioner">
+              <td class="px-3 py-3 align-middle fw-semibold text-secondary">
+                <div class="d-flex align-items-center gap-2">
+                  {{ hologram.refNo }}
+                  <span *ngIf="hologram.editedByCommissioner" class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
+                    <i class="bi bi-pencil-fill me-1"></i>EDITED
+                  </span>
+                </div>
+              </td>
+              <td class="px-3 py-3 align-middle">{{ hologram.date | date:'dd-MMM-yyyy' }}</td>
+              <td class="px-3 py-3 align-middle">{{ hologram.companyName }}</td>
+              <td class="px-3 py-3 align-middle" style="min-width: 180px;">
+                <div class="d-flex align-items-center justify-content-between">
+                  <span class="fs-6 fw-bold text-primary bg-light px-2 py-1 rounded text-center d-inline-block"
+                        style="min-width: 50px; background: #e3f2fd !important;">{{ getTotalHolograms(hologram) }}</span>
+                  <button class="btn btn-outline-primary btn-sm ms-2" (click)="viewHologramDetails(hologram)">
+                    <i class="bi bi-eye me-1"></i>View Details
+                  </button>
+                </div>
+              </td>
+              <td class="px-3 py-3 align-middle">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"
+                      style="font-size: 0.75rem; font-weight: 500; line-height: 1.2; max-width: 300px; word-wrap: break-word;">{{ hologram.status }}</span>
+              </td>
 
-      <!-- Hologram Register Table -->
-      <div class="hologram-register-table mx-4 mb-4">
-        <div class="register-container">
-          <div class="register-header-bar">
-            <h5 class="register-table-title">
-              <i class="bi bi-table me-2"></i>
-              Hologram Register Entries
-            </h5>
-            <div class="register-info">
-              <span class="entries-count">{{ filteredHologramData.length }} Entries</span>
-            </div>
-          </div>
-
-          @if (filteredHologramData.length > 0) {
-            <div class="table-responsive">
-              <table class="table register-table">
-                <thead>
-                  <tr>
-                    <th class="sl-no">Sl. No.</th>
-                    <th class="ref-number">Ref. No</th>
-                    <th class="date">Date</th>
-                    <th class="company">Company</th>
-                    <th class="total-qty">Total Qty (Lakh)</th>
-                    <th class="status">Status</th>
-                    <th class="actions">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (hologram of filteredHologramData; track hologram.refNo; let i = $index) {
-                    <tr class="register-row" [class.edited-row]="hologram.editedByCommissioner">
-                      <td class="sl-no">{{ i + 1 }}</td>
-                      <td class="ref-number">
-                        <div class="d-flex align-items-center gap-2">
-                          <span class="ref-text">{{ hologram.refNo }}</span>
-                          @if (hologram.editedByCommissioner) {
-                            <span class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
-                              <i class="bi bi-pencil-fill me-1"></i>EDITED
-                            </span>
-                          }
-                        </div>
-                      </td>
-                      <td class="date">
-                        <span class="date-text">{{ hologram.date | date: "dd-MMM-yyyy" }}</span>
-                      </td>
-                      <td class="company">
-                        <span class="company-name">{{ hologram.companyName }}</span>
-                      </td>
-                      <td class="total-qty">
-                        <div class="qty-display">
-                          <span class="qty-number">{{ getTotalHolograms(hologram) | number:'1.0-0' }}</span>
-                          <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="viewHologramDetails(hologram)" title="View Details">
-                            <i class="bi bi-eye me-1"></i>
-                            <span class="d-none d-lg-inline">Details</span>
-                          </button>
-                        </div>
-                      </td>
-                      <td class="status">
-                        <span class="status-badge" [ngClass]="getStatusClass(hologram.status)">
-                          {{ hologram.status }}
-                        </span>
-                      </td>
-                      <td class="actions">
-                        <div class="action-buttons d-flex gap-1 flex-wrap">
-                          <button class="btn btn-primary btn-sm" (click)="viewApplication(hologram)" title="View Application">
-                            <i class="bi bi-eye me-1"></i>
-                            <span class="d-none d-md-inline">View</span>
-                          </button>
-                          @if (hologram.status !== 'Forwarded to Commissioner' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && hologram.status !== 'Payment Completed') {
-                            <button class="btn btn-success btn-sm" (click)="forwardToCommissioner(hologram)" title="Forward to Commissioner">
-                              <i class="bi bi-arrow-right-circle me-1"></i>
-                              <span class="d-none d-md-inline">Forward</span>
-                            </button>
-                          }
-                          @if (isPaymentCompleted(hologram)) {
-                            <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(hologram)" title="View Payment Slip">
-                              <i class="bi bi-receipt me-1"></i>
-                              <span class="d-none d-md-inline">Slip</span>
-                            </button>
-                          }
-                        </div>
-                      </td>
-                    </tr>
+              <td class="px-3 py-3 align-middle" style="white-space: nowrap;">
+                <div class="d-flex flex-wrap gap-1">
+                  <button class="btn btn-info btn-sm"
+                          style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                          (click)="viewApplication(hologram)">
+                    <i class="bi bi-eye me-1"></i>VIEW
+                  </button>
+                  @if (hologram.status !== 'Forwarded to Commissioner' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && hologram.status !== 'Payment Completed') {
+                    <button class="btn btn-primary btn-sm"
+                            style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                            (click)="forwardToCommissioner(hologram)">
+                      <i class="bi bi-arrow-right-circle me-1"></i>FORWARD TO COMMISSIONER
+                    </button>
                   }
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Register Summary Footer -->
-            <div class="register-footer">
-              <div class="summary-row">
-                <div class="summary-item">
-                  <span class="summary-label">Total Applications:</span>
-                  <span class="summary-value">{{ filteredHologramData.length }}</span>
+                  @if (isPaymentCompleted(hologram)) {
+                    <button class="btn btn-primary btn-sm"
+                            style="padding: 0.375rem 0.75rem; font-size: 0.875rem;"
+                            (click)="viewPaymentSlip(hologram)">
+                      <i class="bi bi-receipt me-1"></i>PAYMENT SLIP
+                    </button>
+                  }
                 </div>
-                <div class="summary-item">
-                  <span class="summary-label">Total Quantity:</span>
-                  <span class="summary-value">{{ getTotalQuantity() | number:'1.0-0' }}</span>
-                </div>
-              </div>
-            </div>
-          } @else {
-            <!-- Empty State -->
-            <div class="empty-state">
-              <div class="empty-icon">
-                <i class="bi bi-journal-x"></i>
-              </div>
-              <h5 class="empty-title">No Applications Found</h5>
-              <p class="empty-message">
-                {{ (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) ? 
-                   'No applications match your current filter criteria. Try adjusting your filters or clear them to see all applications.' : 
-                   'No hologram applications have been submitted yet.' }}
-              </p>
-            </div>
-          }
-        </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredHologramData.length === 0">
+              <td colspan="6" class="text-center py-5 text-muted">
+                <p class="mb-0 fs-5">No records found for the selected criteria</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    }
+    </div>
 
     <!-- Process Flow Tab -->
     <div *ngIf="selectedTabIndex === 1" class="bg-white mx-4 my-4 rounded shadow-sm overflow-hidden">
