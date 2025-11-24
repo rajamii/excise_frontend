@@ -204,25 +204,38 @@ export class OicdailyhologramregisterComponent implements OnInit {
       saved: savedEntries.length
     });
     
-    // CRITICAL FIX: Merge both sources, avoiding duplicates by ID
+    // CRITICAL FIX: Merge both sources, avoiding duplicates
     // Prefer saved entries (from oicDailyRegisterEntries) over approved entries
-    const uniqueEntries = new Map<string, any>();
     
-    // First, add all approved entries
-    approvedEntries.forEach((entry: any) => {
-      if (entry.id) {
-        uniqueEntries.set(entry.id, entry);
+    // First, collect all reference numbers from saved entries
+    const savedReferenceNos = new Set<string>();
+    savedEntries.forEach((entry: any) => {
+      if (entry.referenceNo) {
+        savedReferenceNos.add(entry.referenceNo);
       }
     });
     
-    // Then, override with saved entries (they have priority)
-    savedEntries.forEach((savedEntry: any) => {
-      if (savedEntry.id) {
-        uniqueEntries.set(savedEntry.id, savedEntry);
+    console.log('Saved reference numbers:', Array.from(savedReferenceNos));
+    
+    // Filter approved entries: exclude those that have been saved
+    // NOTE: We DO NOT filter out isPendingUsage entries here because they need to be shown
+    // in the Daily Register for users to fill in. The isPendingUsage flag is only used
+    // to filter entries from the Monthly Statement.
+    const filteredApprovedEntries = approvedEntries.filter((entry: any) => {
+      // Skip if this reference number already exists in saved entries
+      // (meaning the user has already filled it in and saved it)
+      if (entry.referenceNo && savedReferenceNos.has(entry.referenceNo)) {
+        console.log(`⏭️ Skipping approved entry (already saved): ${entry.referenceNo}`);
+        return false;
       }
+      
+      return true;
     });
     
-    const allEntries = Array.from(uniqueEntries.values());
+    console.log('Filtered approved entries:', filteredApprovedEntries.length);
+    
+    // Merge: saved entries + filtered approved entries
+    const allEntries = [...savedEntries, ...filteredApprovedEntries];
     console.log('Total entries after merge:', allEntries.length);
     
     this.entries = allEntries.map((entry: any) => ({
