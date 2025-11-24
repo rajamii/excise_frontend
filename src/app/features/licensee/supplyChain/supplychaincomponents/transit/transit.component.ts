@@ -49,7 +49,10 @@ export class TransitComponent implements OnInit {
     // Initialize filtered data
     this.filteredTransitData = [...this.transitData];
   }
+navigateTo(route:string) {
+  this.router.navigate(["/dev-transit-permit"]);
 
+}
   private loadTransitData(): void {
     if (!this.isBrowser) {
       return;

@@ -9,7 +9,8 @@
       <p class="register-subtitle">Track and manage all transit permit applications</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-success me-2">
+      <button class="btn btn-success me-2"
+      (click)="navigateTo('transit-permit')" style="cursor: pointer">
         <i class="bi bi-plus-circle me-2"></i>
         New Transit Permit
       </button>
@@ -219,7 +220,8 @@
         'You haven\'t submitted any transit permits yet. Start by creating your first transit permit.' }}
       </p>
       <button class="btn btn-primary"
-        *ngIf="filteredTransitData.length === 0 && !transitDateFilter && !transitMonthFilter && !transitYearFilter && !transitStatusFilter">
+        *ngIf="filteredTransitData.length === 0 && !transitDateFilter && !transitMonthFilter && !transitYearFilter && !transitStatusFilter"
+        (click)="navigateTo('transit-permit')" style="cursor: pointer">
         <i class="bi bi-plus-circle me-2"></i>
         Create New Transit Permit
       </button>

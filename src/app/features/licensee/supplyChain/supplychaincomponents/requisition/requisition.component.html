@@ -13,7 +13,7 @@
         <i class="bi bi-trash me-2"></i>
         Clear All Data
       </button>
-      <button class="btn btn-success">
+      <button class="btn btn-success" (click)="navigateTo('import-permit')" style="cursor: pointer">
         <i class="bi bi-plus-circle me-2"></i>
         New Requisition
       </button>
@@ -217,7 +217,8 @@
            'You haven\'t submitted any requisitions yet. Start by creating your first requisition.' }}
       </p>
       <button class="btn btn-primary"
-        *ngIf="filteredRequisitionData.length === 0 && !requisitionDateFilter && !requisitionMonthFilter && !requisitionYearFilter && !requisitionStatusFilter">
+        *ngIf="filteredRequisitionData.length === 0 && !requisitionDateFilter && !requisitionMonthFilter && !requisitionYearFilter && !requisitionStatusFilter"
+        (click)="navigateTo('import-permit')" style="cursor: pointer">
         <i class="bi bi-plus-circle me-2"></i>
         Create New Requisition
       </button>

@@ -49,6 +49,11 @@ export class RequisitionComponent implements OnInit {
     this.filteredRequisitionData = [...this.requisitionData];
   }
 
+  navigateTo(route: string){
+        this.router.navigate(["/dev-import-permit"]);
+        
+    }
+  
   private loadRequisitionData(): void {
     if (!this.isBrowser) {
       return;
