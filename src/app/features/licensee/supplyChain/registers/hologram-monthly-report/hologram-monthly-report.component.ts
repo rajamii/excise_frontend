@@ -27,6 +27,8 @@ interface MonthlyReportRow {
   rowType: MonthlyReportRowType;
   label: string;
   date?: string;
+  brandDetails?: string;
+  bottleSize?: string;
   openingStock?: number | null;
   freshArrival?: number | null;
   total?: number | null;
@@ -482,6 +484,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
               rowType: 'UTILIZATION',
               label: label,
               date: event.date,
+              brandDetails: (rollDetail as any).brandDetails || '',
+              bottleSize: (rollDetail as any).bottleSize || '',
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
               closingBalance: runningBalance,  // Show closing balance on all rows
@@ -501,10 +505,17 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           const utilizationDetails = this.mapRollDisplayDetails(rollDetails, 'utilization');
           const wastageDetails = this.mapRollDisplayDetails(rollDetails, 'wastage');
           
+          // Extract brand and bottle size from entry
+          const entryData = (event as any).entry;
+          const brandDetails = entryData?.brandDetails || '';
+          const bottleSize = entryData?.bottleSize || '';
+          
           rows.push({
             rowType: 'UTILIZATION',
             label: `Utilization - ${this.formatDate(event.date)}`,
             date: event.date,
+            brandDetails: brandDetails,
+            bottleSize: bottleSize,
             utilizationQty: event.quantity,
             wastageQty: event.totalWastage || 0,
             closingBalance: runningBalance,
@@ -725,6 +736,19 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         // Preserve allocated quantity and damage reason for leftover calculation
         if (roll.availableCount !== undefined) {
           rollDetail.availableCount = roll.availableCount;
+        }
+        
+        // Preserve brand details and bottle size for display in monthly statement
+        if (roll.brandDetails) {
+          rollDetail.brandDetails = roll.brandDetails;
+        } else if (entry.brandDetails) {
+          rollDetail.brandDetails = entry.brandDetails;
+        }
+        
+        if (roll.bottleSize) {
+          rollDetail.bottleSize = roll.bottleSize;
+        } else if (entry.bottleSize) {
+          rollDetail.bottleSize = entry.bottleSize;
         }
         if (roll.allocatedQuantity !== undefined) {
           rollDetail.allocatedQuantity = roll.allocatedQuantity;
