@@ -47,6 +47,11 @@ interface MonthlyReportRow {
     notes?: string;
     serialRange?: string;
     isLastInGroup?: boolean;
+    openingBalanceForGroup?: number;
+    freshArrivalForGroup?: number;
+    totalUtilizedForGroup?: number;
+    totalWastageForGroup?: number;
+    closingBalanceForGroup?: number;
   };
   utilizationDetails?: RollDisplayDetail[];
   wastageDetails?: RollDisplayDetail[];
@@ -423,6 +428,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
     events.forEach(event => {
       if (event.rowType === 'ARRIVAL') {
+        const openingBeforeArrival = runningBalance;
         runningBalance += event.quantity;
         rows.push({
           rowType: 'ARRIVAL',
@@ -432,7 +438,13 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           closingBalance: runningBalance,
           meta: {
             cartoonNumber: event.cartoonNumber,
-            notes: this.buildArrivalNote(event)
+            notes: this.buildArrivalNote(event),
+            openingBalanceForGroup: openingBeforeArrival,
+            freshArrivalForGroup: event.quantity,
+            totalUtilizedForGroup: 0,
+            totalWastageForGroup: 0,
+            closingBalanceForGroup: runningBalance,
+            isLastInGroup: true  // Arrivals are always single rows
           }
         });
       } else if (event.rowType === 'UTILIZATION') {
@@ -459,6 +471,11 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             
             return (hasUtilization || hasWastage) && hasValidRange;
           });
+          
+          // Calculate totals for this reference group
+          const totalUtilizationForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.utilizationRanges), 0);
+          const totalWastageForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.wastageRanges), 0);
+          const openingBalanceForRef = runningBalance + totalUtilizationForRef + totalWastageForRef;
           
           validRollDetails.forEach((rollDetail: any, index: number) => {
             const rollName = rollDetail.rollName;
@@ -501,7 +518,13 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
                 cartoonNumber: rollName,
                 serialRange: serialRange,
                 damageReason: damageReason,  // Add damage reason to meta
-                isLastInGroup: isLastRoll  // Flag to indicate this is the last roll in the group
+                isLastInGroup: isLastRoll,  // Flag to indicate this is the last roll in the group
+                // Add calculation details for the last row
+                openingBalanceForGroup: isLastRoll ? openingBalanceForRef : undefined,
+                freshArrivalForGroup: isLastRoll ? 0 : undefined,  // No fresh arrival in utilization
+                totalUtilizedForGroup: isLastRoll ? totalUtilizationForRef : undefined,
+                totalWastageForGroup: isLastRoll ? totalWastageForRef : undefined,
+                closingBalanceForGroup: isLastRoll ? runningBalance : undefined
               }
             });
           });
