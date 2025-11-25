@@ -28,7 +28,7 @@ interface ApplicationTypeOption {
 })
 export class DashboardComponent extends BaseComponent {
   // Dashboard counts for pending, approved, and rejected applications
-  dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  dashboardCounts: DashboardCount = { pending: 0, approved: 0, rejected: 0 };
 
   // Arrays to store applications 
   appliedApplications: ApplicationStatus[] = [];
@@ -109,7 +109,6 @@ export class DashboardComponent extends BaseComponent {
     .subscribe({
       next: (result) => {
         this.dashboardCounts = {
-          applied: result.counts.applied || 0,
           pending: result.counts.pending || 0,
           approved: result.counts.approved || 0,
           rejected: result.counts.rejected || 0
@@ -120,7 +119,7 @@ export class DashboardComponent extends BaseComponent {
       error: (error) => {
         console.error('Error loading dashboard data:', error);
         // Reset to default values on error
-        this.dashboardCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+        this.dashboardCounts = { pending: 0, approved: 0, rejected: 0 };
         this.clearDataSources();
       }
     });
@@ -133,7 +132,7 @@ export class DashboardComponent extends BaseComponent {
         return this.licenseAppService.getDashboardCounts().pipe(
           catchError(err => {
             console.error('Failed to fetch license application counts:', err);
-            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+            return of({ pending: 0, approved: 0, rejected: 0 });
           })
         );
       
@@ -141,7 +140,7 @@ export class DashboardComponent extends BaseComponent {
         return this.licenseAppService.getNewLicenseDashboardCounts().pipe(
           catchError(err => {
             console.error('Failed to fetch new license application counts:', err);
-            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+            return of({ pending: 0, approved: 0, rejected: 0 });
           })
         );
       
@@ -149,12 +148,12 @@ export class DashboardComponent extends BaseComponent {
         return this.salesmanBarmanService.getDashboardCounts().pipe(
           catchError(err => {
             console.error('Failed to fetch salesman/barman application counts:', err);
-            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+            return of({ pending: 0, approved: 0, rejected: 0 });
           })
         );
       
       default:
-        return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+        return of({ pending: 0, approved: 0, rejected: 0 });
     }
   }
 
