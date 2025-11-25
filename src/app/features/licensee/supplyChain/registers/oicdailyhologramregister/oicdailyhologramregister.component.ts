@@ -1371,14 +1371,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const lockedRolls = entry.lockedRolls || [];
     if (lockedRolls.length === 0) return false;
     
-    // Cannot have a current roll selection (all must be locked)
-    if (entry.currentRollSelection) return false;
+    // CRITICAL FIX: Cannot have an ACTIVE (unlocked) current roll selection
+    // If the current roll selection is locked (read-only mode), it's OK to save
+    // This allows saving when user is just viewing a locked roll without editing
+    if (entry.currentRollSelection && !entry.currentRollSelection.isLocked) {
+      return false; // There's an active roll being edited, can't save yet
+    }
     
     // Check if all allocated ranges are locked
     const allocationData = this.getHologramAllocationForEntry(entry);
     if (allocationData && allocationData.allocatedCartoons) {
       const totalAllocatedRanges = allocationData.allocatedCartoons.length;
-      const lockedRangesCount = lockedRolls.length;
+      
+      // CRITICAL FIX: Count only NON-leftover-reuse locked rolls
+      // Leftover reuses don't count toward the total allocated ranges
+      const nonLeftoverLockedRolls = lockedRolls.filter((roll: RollInput) => !roll.isLeftoverReuse);
+      const lockedRangesCount = nonLeftoverLockedRolls.length;
       
       // All ranges must be locked
       if (lockedRangesCount < totalAllocatedRanges) {
