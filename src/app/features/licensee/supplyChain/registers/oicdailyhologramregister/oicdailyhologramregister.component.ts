@@ -2549,7 +2549,63 @@ export class OicdailyhologramregisterComponent implements OnInit {
       // Get the current roll input which has the specific range data
       const rollInput = this.getCurrentRollInput(entry);
       if (rollInput && rollInput.rangeId === cartoonNumberOrRangeId) {
-        // Return ONLY the specific range that was selected
+        // CRITICAL FIX: Check multiple sources for the allocated range
+        // 1. Try fromSerial/toSerial first
+        if (rollInput.fromSerial && rollInput.toSerial) {
+          return [{
+            fromSerial: rollInput.fromSerial,
+            toSerial: rollInput.toSerial,
+            quantity: rollInput.availableCount
+          }];
+        }
+        
+        // 2. Try parsing serialRange
+        if (rollInput.serialRange) {
+          const parts = rollInput.serialRange.split('-').map(s => s.trim());
+          if (parts.length === 2) {
+            return [{
+              fromSerial: parts[0],
+              toSerial: parts[1],
+              quantity: rollInput.availableCount
+            }];
+          }
+        }
+      }
+      
+      // If not in current roll input, check locked rolls
+      const lockedRolls = this.getLockedRollsForEntry(entry);
+      const lockedRoll = lockedRolls.find((r: any) => r.rangeId === cartoonNumberOrRangeId);
+      if (lockedRoll) {
+        // Check multiple sources
+        if (lockedRoll.fromSerial && lockedRoll.toSerial) {
+          return [{
+            fromSerial: lockedRoll.fromSerial,
+            toSerial: lockedRoll.toSerial,
+            quantity: lockedRoll.availableCount
+          }];
+        }
+        
+        if (lockedRoll.serialRange) {
+          const parts = lockedRoll.serialRange.split('-').map(s => s.trim());
+          if (parts.length === 2) {
+            return [{
+              fromSerial: parts[0],
+              toSerial: parts[1],
+              quantity: lockedRoll.availableCount
+            }];
+          }
+        }
+      }
+    }
+    
+    // CRITICAL FIX: Also check current roll input even if it doesn't have _RANGE_ in the ID
+    const rollInput = this.getCurrentRollInput(entry);
+    if (rollInput && (rollInput.cartoonNumber === cartoonNumberOrRangeId || rollInput.rangeId === cartoonNumberOrRangeId)) {
+      console.log('📦 Found current roll input:', rollInput);
+      
+      // Try fromSerial/toSerial
+      if (rollInput.fromSerial && rollInput.toSerial) {
+        console.log('✅ Using fromSerial/toSerial from rollInput');
         return [{
           fromSerial: rollInput.fromSerial,
           toSerial: rollInput.toSerial,
@@ -2557,15 +2613,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
         }];
       }
       
-      // If not in current roll input, check locked rolls
-      const lockedRolls = this.getLockedRollsForEntry(entry);
-      const lockedRoll = lockedRolls.find((r: any) => r.rangeId === cartoonNumberOrRangeId);
-      if (lockedRoll) {
-        return [{
-          fromSerial: lockedRoll.fromSerial,
-          toSerial: lockedRoll.toSerial,
-          quantity: lockedRoll.availableCount
-        }];
+      // Try serialRange
+      if (rollInput.serialRange) {
+        console.log('✅ Parsing serialRange from rollInput:', rollInput.serialRange);
+        const parts = rollInput.serialRange.split('-').map(s => s.trim());
+        if (parts.length === 2) {
+          return [{
+            fromSerial: parts[0],
+            toSerial: parts[1],
+            quantity: rollInput.availableCount
+          }];
+        }
       }
     }
     

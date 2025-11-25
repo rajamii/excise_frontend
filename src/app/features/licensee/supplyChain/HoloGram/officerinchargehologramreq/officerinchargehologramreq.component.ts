@@ -732,8 +732,25 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const cartoonNumber = item.cartoonNumber || item.rollNumber || 'UNKNOWN';
       const hologramType = item.type || item.hologramType || 'LOCAL';
       
-      // Calculate ALL actual available ranges (excluding IN_PROGRESS issued holograms)
-      const actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+      // CRITICAL FIX: Use serialRanges from Serial Numbers Details if available
+      // This ensures we use the ACTUAL available ranges shown in the modal
+      let actualAvailableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
+      
+      if (item.serialRanges && Array.isArray(item.serialRanges)) {
+        // Filter for AVAILABLE ranges only
+        actualAvailableRanges = item.serialRanges
+          .filter((range: any) => range.status === 'AVAILABLE')
+          .map((range: any) => ({
+            fromSerial: range.fromSerial,
+            toSerial: range.toSerial,
+            count: range.count
+          }));
+        console.log(`  Using serialRanges from ${cartoonNumber}:`, actualAvailableRanges);
+      } else {
+        // Fallback: Calculate from usage history
+        actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+        console.log(`  Calculated ranges for ${cartoonNumber}:`, actualAvailableRanges);
+      }
       
       // Calculate total available count from ALL ranges
       const totalAvailableFromRanges = actualAvailableRanges.reduce((sum, range) => sum + range.count, 0);
@@ -810,12 +827,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     fromSerial: string,
     toSerial: string
   ): Array<{ fromSerial: string; toSerial: string; count: number }> {
+    console.log(`🔍 calculateActualAvailableRanges for ${cartoonNumber}:`, { fromSerial, toSerial });
+    
     if (!fromSerial || !toSerial) return [];
 
     // Extract serial numbers
     const prefix = fromSerial.replace(/\d+$/, '');
     const rollStart = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
     const rollEnd = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+
+    console.log(`  Roll range: ${rollStart} to ${rollEnd} (${rollEnd - rollStart + 1} total)`);
 
     // Get IN_PROGRESS issued holograms for this cartoon
     const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
@@ -825,12 +846,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       (issued.hologramType === hologramType || !issued.hologramType)
     );
 
+    console.log(`  Found ${inProgressIssued.length} IN_PROGRESS issued entries`);
+
     // Create a Set of all IN_PROGRESS serial numbers
     const inProgressSerials = new Set<number>();
     inProgressIssued.forEach((issued: any) => {
       if (issued.fromSerial && issued.toSerial) {
         const start = parseInt(issued.fromSerial.match(/\d+$/)?.[0] || '0');
         const end = parseInt(issued.toSerial.match(/\d+$/)?.[0] || '0');
+        console.log(`    IN_PROGRESS: ${start}-${end} (${end - start + 1} units)`);
         for (let i = start; i <= end; i++) {
           inProgressSerials.add(i);
         }
@@ -840,12 +864,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Get USED and DAMAGED ranges from usage history
     const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
     const serialRoll = serialData.find((roll: any) => 
-      roll.rollNumber === cartoonNumber && 
+      (roll.rollNumber === cartoonNumber || roll.cartoonNumber === cartoonNumber) && 
       roll.hologramType === hologramType
     );
 
+    console.log(`  Found serialRoll:`, serialRoll ? 'YES' : 'NO');
+
     const usedSerials = new Set<number>();
     if (serialRoll && serialRoll.usageHistory) {
+      console.log(`  Processing ${serialRoll.usageHistory.length} usage history entries`);
       serialRoll.usageHistory.forEach((historyEntry: any) => {
         if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) return;
         
@@ -863,12 +890,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         if (fromSerial && toSerial) {
           const start = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
           const end = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+          console.log(`    ${historyEntry.type}: ${start}-${end} (${end - start + 1} units)`);
           for (let i = start; i <= end; i++) {
             usedSerials.add(i);
           }
         }
       });
     }
+
+    console.log(`  Total IN_PROGRESS serials: ${inProgressSerials.size}`);
+    console.log(`  Total USED serials: ${usedSerials.size}`);
 
     // Find ALL available ranges (handles non-contiguous ranges)
     const availableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
@@ -906,6 +937,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         count: currentRangeEnd - currentRangeStart + 1
       });
     }
+
+    console.log(`  ✅ Available ranges:`, availableRanges.map(r => `${r.fromSerial}-${r.toSerial} (${r.count})`).join(', '));
 
     return availableRanges;
   }
@@ -1045,11 +1078,23 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         // Allocate from this range
         const quantityFromRange = Math.min(remainingQuantity, availableInRange);
         
-        // Calculate start serial (offset by what's already been used from this range)
-        const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
-        const prefix = range.fromSerial.replace(/\d+$/, '');
-        const startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
-        const endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+        // CRITICAL FIX: Use the ACTUAL range from Serial Numbers Details
+        // If we're taking the entire range, use the original fromSerial and toSerial
+        // Only calculate new serials if we're taking a partial range
+        let startSerial: string;
+        let endSerial: string;
+        
+        if (usedFromRange === 0 && quantityFromRange === range.count) {
+          // Taking the entire range - use original range boundaries
+          startSerial = range.fromSerial;
+          endSerial = range.toSerial;
+        } else {
+          // Taking a partial range - calculate the specific portion
+          const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
+          const prefix = range.fromSerial.replace(/\d+$/, '');
+          startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
+          endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+        }
 
         allocations.push({
           cartoonNumber: item.cartoonNumber,
