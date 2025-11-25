@@ -546,10 +546,60 @@ export class OicdailyhologramregisterComponent implements OnInit {
       console.log('📌 Viewing locked roll in read-only mode:', lockedRoll);
       console.log('📝 Usage history:', lockedRoll.leftoverUsageHistory);
       
-      // CRITICAL: Use the actual locked roll data (not a copy) so we see the latest usage history
+      // CRITICAL FIX: Create a COPY of the locked roll to avoid modifying the original
+      // This ensures each entry shows only its own usage without affecting other entries
+      const rollCopy = { ...lockedRoll };
+      
+      // CRITICAL FIX: Recalculate leftOver from actual leftover ranges
+      // This ensures the displayed leftOver matches the sum of available ranges
+      const leftoverRanges = this.getLeftoverRanges(entry, rollCopy);
+      const calculatedLeftOver = leftoverRanges.reduce((sum, r) => sum + r.quantity, 0);
+      
+      console.log('🔄 Recalculating leftOver for locked roll:');
+      console.log('  - Old leftOver:', rollCopy.leftOver);
+      console.log('  - Calculated from ranges:', calculatedLeftOver);
+      console.log('  - Leftover ranges:', leftoverRanges);
+      
+      // Update the copy's leftOver to match the calculated value
+      rollCopy.leftOver = calculatedLeftOver;
+      
+      // CRITICAL FIX: Recalculate issuedQty and wastageQty to include leftover reuses
+      // The original issuedQty/wastageQty only includes the first lock, not subsequent leftover uses
+      let totalIssuedQty = 0;
+      let totalWastageQty = 0;
+      
+      // Add original issued and wastage quantities
+      if (rollCopy.issuedRanges && Array.isArray(rollCopy.issuedRanges)) {
+        totalIssuedQty += rollCopy.issuedRanges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+      }
+      
+      if (rollCopy.wastageRanges && Array.isArray(rollCopy.wastageRanges)) {
+        totalWastageQty += rollCopy.wastageRanges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+      }
+      
+      // Add quantities from leftover usage history
+      if (rollCopy.leftoverUsageHistory && rollCopy.leftoverUsageHistory.length > 0) {
+        rollCopy.leftoverUsageHistory.forEach((history: LeftoverUsageHistory) => {
+          totalIssuedQty += history.usedQty || 0;
+          totalWastageQty += history.damagedQty || 0;
+        });
+      }
+      
+      console.log('🔄 Recalculating usage quantities for locked roll:');
+      console.log('  - Old issuedQty:', rollCopy.issuedQty);
+      console.log('  - New issuedQty (including leftover reuses):', totalIssuedQty);
+      console.log('  - Old wastageQty:', rollCopy.wastageQty);
+      console.log('  - New wastageQty (including leftover reuses):', totalWastageQty);
+      
+      // Update the copy's quantities (NOT the original locked roll)
+      rollCopy.issuedQty = totalIssuedQty;
+      rollCopy.wastageQty = totalWastageQty;
+      
+      // CRITICAL: Use the COPY so we don't modify the original locked roll
+      // This ensures each entry shows only its own usage
       entry.currentRollSelection = {
         selectedRoll: rangeIdToCheck,
-        rollInput: lockedRoll, // Use the actual locked roll (not a copy) to see live updates
+        rollInput: rollCopy, // Use the copy with recalculated values
         isLocked: true // Mark as locked (read-only)
       };
       
@@ -961,7 +1011,16 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // - Each roll only validates against its OWN allocated ranges
     console.log(`✅ Skipping cross-roll validation - each roll is independent with its own allocated ranges`);
 
+    // CRITICAL FIX: Calculate leftOver correctly
+    // For leftover reuse ranges, availableCount represents the leftover quantity being reused
+    // For original ranges, availableCount represents the full allocated quantity
+    // The formula should always be: leftOver = availableCount - (issuedQty + wastageQty)
     rollInput.leftOver = rollInput.availableCount - (rollInput.issuedQty + rollInput.wastageQty);
+    
+    // Ensure leftOver is never negative
+    if (rollInput.leftOver < 0) {
+      rollInput.leftOver = 0;
+    }
 
     // Recalculate entry totals from all rolls (locked + current)
     this.recalculateEntryFromLockedRolls(entry);
@@ -1267,9 +1326,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
       totalIssued += roll.issuedQty || 0;
       totalWastage += roll.wastageQty || 0;
       totalLeftOver += roll.leftOver || 0;
-      // CRITICAL FIX: Use availableCount (which is the allocated quantity for this roll)
-      // This represents the total allocated quantity from all locked rolls
-      totalAllocated += roll.availableCount || 0;
+      
+      // CRITICAL FIX: Only add availableCount to totalAllocated if this is NOT a leftover reuse
+      // Leftover reuses are already counted in their parent roll's allocation
+      if (!roll.isLeftoverReuse) {
+        totalAllocated += roll.availableCount || 0;
+      }
     });
 
     // Also add current roll's allocated quantity if it exists
@@ -1278,14 +1340,18 @@ export class OicdailyhologramregisterComponent implements OnInit {
       totalIssued += currentRoll.issuedQty || 0;
       totalWastage += currentRoll.wastageQty || 0;
       totalLeftOver += currentRoll.leftOver || 0;
-      totalAllocated += currentRoll.availableCount || 0;
+      
+      // CRITICAL FIX: Only add availableCount if this is NOT a leftover reuse
+      if (!currentRoll.isLeftoverReuse) {
+        totalAllocated += currentRoll.availableCount || 0;
+      }
     }
 
     entry.issuedQty = totalIssued;
     entry.wastageQty = totalWastage;
     entry.leftOver = totalLeftOver;
-    // CRITICAL FIX: hologramQty should be the TOTAL ALLOCATED quantity from all rolls
-    // This is the sum of all allocated quantities from locked rolls + current roll
+    // CRITICAL FIX: hologramQty should be the TOTAL ALLOCATED quantity from ORIGINAL rolls only
+    // Leftover reuses are NOT counted here because they're already part of the original allocation
     entry.hologramQty = totalAllocated;
     entry.total = totalIssued + totalWastage + totalLeftOver;
   }

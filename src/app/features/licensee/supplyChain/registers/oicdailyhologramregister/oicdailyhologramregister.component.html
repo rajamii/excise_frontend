@@ -524,8 +524,6 @@
               <th rowspan="2" class="hologram-qty">HOLOGRAM QTY</th>
               <th colspan="3" class="hologram-header">HOLOGRAM</th>
               <th colspan="3" class="wastage-header">WASTAGE</th>
-              <th rowspan="2" class="left-over">LEFT OVER</th>
-              <th rowspan="2" class="total-calc">TOTAL</th>
               <th rowspan="2" class="damage-reason">DAMAGE REASON</th>
               <th rowspan="2" class="actions">ACTIONS</th>
             </tr>
@@ -1186,50 +1184,6 @@
                     </div>
                   </div>
                 }
-              </td>
-
-              <!-- Left Over -->
-              <td class="left-over">
-                <div class="auto-calculated">
-                  <span class="qty-number">{{ entry.leftOver | number }}</span>
-                </div>
-              </td>
-
-              <!-- Total (Issued + Wastage + Left Over) -->
-              <td class="total-calc auto-calculated"
-                  [class.total-match]="getTotalCalculation(entry) === entry.hologramQty"
-                  [class.total-mismatch]="getTotalCalculation(entry) !== entry.hologramQty">
-                <div class="total-display">
-                  <span class="qty-number fw-bold"
-                        [class.text-success]="getTotalCalculation(entry) === entry.hologramQty"
-                        [class.text-danger]="getTotalCalculation(entry) > entry.hologramQty"
-                        [class.text-warning]="getTotalCalculation(entry) < entry.hologramQty">
-                    {{ getTotalCalculation(entry) | number }}
-                  </span>
-                  <div class="total-formula">
-                    <small class="text-muted">
-                      {{ entry.issuedQty | number }} + {{ entry.wastageQty | number }} + {{ entry.leftOver | number }}
-                    </small>
-                  </div>
-                  @if (getTotalCalculation(entry) === entry.hologramQty) {
-                    <div class="validation-success">
-                      <i class="bi bi-check-circle text-success"></i>
-                      <small class="text-success">Match!</small>
-                    </div>
-                  }
-                  @if (getTotalCalculation(entry) > entry.hologramQty) {
-                    <div class="validation-error">
-                      <i class="bi bi-exclamation-triangle text-danger"></i>
-                      <small class="text-danger">Exceeds!</small>
-                    </div>
-                  }
-                  @if (getTotalCalculation(entry) < entry.hologramQty) {
-                    <div class="validation-warning">
-                      <i class="bi bi-exclamation-circle text-warning"></i>
-                      <small class="text-warning">Under!</small>
-                    </div>
-                  }
-                </div>
               </td>
 
               <!-- Damage Reason -->
