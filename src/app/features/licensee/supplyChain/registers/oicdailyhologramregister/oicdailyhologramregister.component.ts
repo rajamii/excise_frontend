@@ -280,10 +280,16 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const datePrefix = `${this.selectedYear}-${monthNumber}`;
     
     this.filteredEntries = this.entries.filter(entry => {
+      // Filter by date
       const dateMatch = this.selectedDate 
         ? entry.dates.usage === this.selectedDate
         : entry.dates.usage.startsWith(datePrefix);
-      return dateMatch;
+      
+      // CRITICAL: Filter by hologram type (LOCAL, EXPORT, DEFENCE)
+      // Only show entries that match the selected hologram type tab
+      const typeMatch = entry.hologramType === this.selectedHologramType;
+      
+      return dateMatch && typeMatch;
     });
     
     // CRITICAL: Sort entries so new entries (not fixed) appear at the top
@@ -299,6 +305,8 @@ export class OicdailyhologramregisterComponent implements OnInit {
       const dateB = new Date(b.dates.usage).getTime();
       return dateB - dateA; // Descending order (newest first)
     });
+    
+    console.log(`✅ Filtered entries for ${this.selectedHologramType}:`, this.filteredEntries.length);
   }
 
   getMonthNumber(month: string): string {
