@@ -45,7 +45,7 @@ export const routes: Routes = [
   {
     path: "dev-supply-chain",
     loadComponent: () =>
-      import("./features/licensee/supplyChain/supply-chain.component").then(
+      import("./features/licensee/supplyChain/supplychaincomponents/supply-chain.component").then(
         (m) => m.SupplyChainComponent,
       ),
   },

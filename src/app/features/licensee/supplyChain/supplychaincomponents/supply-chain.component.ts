@@ -2,12 +2,12 @@ import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
-import { RequisitionComponent } from "./supplychaincomponents/requisition/requisition.component";
-import { RevalidationComponent } from "./supplychaincomponents/revalidation/revalidation.component";
-import { CancellationComponent } from "./supplychaincomponents/cancellation/cancellation.component";
-import { TransitComponent } from "./supplychaincomponents/transit/transit.component";
-import { HologramrequestComponent } from "./supplychaincomponents/hologramrequest/hologramrequest.component";
-import { HologramprocurementComponent } from "./supplychaincomponents/hologramprocurement/hologramprocurement.component";
+import { RequisitionComponent } from "./requisition/requisition.component";
+import { RevalidationComponent } from "./revalidation/revalidation.component";
+import { CancellationComponent } from "./cancellation/cancellation.component";
+import { TransitComponent } from "./transit/transit.component";
+import { HologramrequestComponent } from "./hologramrequest/hologramrequest.component";
+import { HologramprocurementComponent } from "./hologramprocurement/hologramprocurement.component";
 
 interface TableData {
   referenceNo: string;

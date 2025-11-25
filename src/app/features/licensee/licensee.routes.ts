@@ -91,7 +91,7 @@ export const licenseeRoutes: Routes = [
         children: [
           {
             path: '',
-            loadComponent: () => import('./supplyChain/supply-chain.component').then(m => m.SupplyChainComponent),
+            loadComponent: () => import('./supplyChain/supplychaincomponents/supply-chain.component').then(m => m.SupplyChainComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           },
