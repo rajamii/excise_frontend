@@ -330,10 +330,10 @@
                 </tr>
                 } @else {
                 <!-- Utilization/Wastage Rows -->
-                <tr [ngClass]="getRowClass(row)">
+                <tr [ngClass]="getRowClass(row)" [class.border-bottom-0]="!row.meta?.isLastInGroup">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
-                    @if (row.meta?.referenceNo) {
+                    @if (row.meta?.referenceNo && row.label) {
                     <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
                       Ref: {{ row.meta?.referenceNo }}
                     </small>
@@ -430,8 +430,17 @@
                   <td class="text-center fw-bold p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.leftOver !== null && row.leftOver !== undefined ? (row.leftOver | number) : '-' }}
                   </td>
-                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.closingBalance !== null && row.closingBalance !== undefined ? (row.closingBalance | number) : '-' }}
+                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;" [attr.rowspan]="row.meta?.isLastInGroup ? null : 1">
+                    @if (row.closingBalance !== null && row.closingBalance !== undefined) {
+                      <div class="d-flex flex-column align-items-end">
+                        <span class="fs-5">{{ row.closingBalance | number }}</span>
+                        @if (row.meta?.referenceNo) {
+                          <small class="text-muted" style="font-size: 0.65rem;">Ref: {{ row.meta?.referenceNo }}</small>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-muted">-</span>
+                    }
                   </td>
                 </tr>
                 }

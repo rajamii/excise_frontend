@@ -46,6 +46,7 @@ interface MonthlyReportRow {
     damageReason?: string;
     notes?: string;
     serialRange?: string;
+    isLastInGroup?: boolean;
   };
   utilizationDetails?: RollDisplayDetail[];
   wastageDetails?: RollDisplayDetail[];
@@ -480,6 +481,9 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             // Only show label on first row, leave blank for subsequent rows
             const label = (index === 0) ? `Utilization - ${this.formatDate(event.date)}` : '';
             
+            // CRITICAL FIX: Only show closing balance on the LAST roll of this utilization group
+            const isLastRoll = (index === validRollDetails.length - 1);
+            
             rows.push({
               rowType: 'UTILIZATION',
               label: label,
@@ -488,7 +492,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
               bottleSize: (rollDetail as any).bottleSize || '',
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
-              closingBalance: runningBalance,  // Show closing balance on all rows
+              closingBalance: isLastRoll ? runningBalance : null,  // Only show on last roll
               leftOver: rollLeftOver,  // Show leftover for each range
               utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
               wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
@@ -496,7 +500,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
                 referenceNo: event.referenceNo,
                 cartoonNumber: rollName,
                 serialRange: serialRange,
-                damageReason: damageReason  // Add damage reason to meta
+                damageReason: damageReason,  // Add damage reason to meta
+                isLastInGroup: isLastRoll  // Flag to indicate this is the last roll in the group
               }
             });
           });

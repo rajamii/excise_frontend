@@ -110,3 +110,13 @@ input[readonly].bg-light {
     padding: 0.1rem !important;
   }
 }
+
+// Grouped rows styling - remove bottom border for grouped items
+.table tbody tr.border-bottom-0 td {
+  border-bottom: 1px dashed #dee2e6 !important;
+}
+
+// Last row in group has solid border
+.table tbody tr:not(.border-bottom-0) td {
+  border-bottom: 2px solid #dee2e6 !important;
+}
