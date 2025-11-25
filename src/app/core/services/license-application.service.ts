@@ -2,13 +2,18 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { ApplicationStatus, DashboardCount } from '../models/dashboard.model';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, forkJoin } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { LicenseApplication } from '../models/license-application.model';
 import { LocationFee } from '../models/location-fee.model';
 import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
-import { 
-  NewLicenseApplication, 
-} from '../models/new-license-application.model';
+import { NewLicenseApplication } from '../models/new-license-application.model';
+
+
+export interface UnifiedApplication extends LicenseApplication {
+  applicationType: 'existing' | 'new';
+  displayId: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -18,22 +23,21 @@ export class LicenseApplicationService {
 
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
   private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
-  
   // Store for passport photo
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
-  
+
   // Store for site documents
   private siteDocuments: Map<string, File> = new Map();
 
   constructor(private http: HttpClient) { }
-    
+
   // ========================== OLD LICENSE APPLICATION ==========================
-  
+
   // Final application submission by the licensee (includes all sections + photo).
   submitLicenseApplication(data: any): Observable<any> {
     console.log(data);
     return this.http.post<LicenseApplication[]>(`${this.baseUrl}/apply/`, data);
-  } 
+  }
 
   // Updates a license application with the provided changes (e.g., status update, details change)
   updateApplication(id: number, changes: Partial<any>): Observable<LicenseApplication> {
@@ -114,7 +118,7 @@ export class LicenseApplicationService {
   }
 
   // Resolves previously raised objections for a given application.
-    resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
+  resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     const formData = new FormData();
 
@@ -143,7 +147,7 @@ export class LicenseApplicationService {
 
     return this.http.post(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
   }
-  
+
   // Submits the site enquiry report associated with the application.
   submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
@@ -189,107 +193,89 @@ export class LicenseApplicationService {
    * Handles field name mapping from camelCase to snake_case
    */
   prepareNewLicenseFormData(): FormData {
-    const formData = new FormData();
-    
-    // Get all session data
-    const sections = [
-      'selectLicenseData',
-      'keyInfoData', 
-      'applicantDetailsData',
-      'siteDetailsData',
-      'unitDetailsData'
-    ];
-    
-    const allData: any = {};
-    
-    sections.forEach(section => {
-      const data = sessionStorage.getItem(section);
-      if (data) {
-        Object.assign(allData, JSON.parse(data));
-      }
-    });
+  const formData = new FormData();
+  const get = (key: string) => JSON.parse(sessionStorage.getItem(key) || '{}');
 
-    // Field mapping: frontend camelCase -> backend snake_case
-    const fieldMap: Record<string, string> = {
-      // Step 1: Select License
-      'licenseType': 'license_type',
-      
-      // Step 2: Basic Info (Key Info)
-      'licenseCategory': 'license_category',
-      'licenseSubCategory': 'license_sub_category',
-      'establishmentName': 'establishment_name',
-      'locationDistrict': 'location_district',
-      'siteType': 'site_type',
-      
-      // Step 3: Applicant Details
-      'status': 'status',
-      'applicantName': 'applicant_name',
-      'fatherHusbandName': 'father_husband_name',
-      'nationality': 'nationality',
-      'gender': 'gender',
-      'pan': 'pan',
-      'applicantMobileNumber': 'applicant_mobile_number',
-      'applicantEmail': 'applicant_email',
-      
-      // Step 4: Site Details
-      'siteSubdivision': 'site_subdivision',
-      'policeStation': 'police_station',
-      'locationCategory': 'location_category',
-      'locationName': 'location_name',
-      'wardName': 'ward_name',
-      'businessAddress': 'business_address',
-      'roadName': 'road_name',
-      'pinCode': 'pin_code',
-      'latitude': 'latitude',
-      'longitude': 'longitude',
-      'constructionType': 'construction_type',
-      'length': 'length',
-      'breadth': 'breadth',
-      'siteOwned': 'site_owned',
-      'nocObtained': 'noc_obtained',
-      'tradeLicenseCovered': 'trade_license_covered',
-      
-      // Step 5: Company Details (conditional - only if licenseType is 2 'Company')
-      'companyName': 'company_name',
-      'companyAddress': 'company_address',
-      'companyPan': 'company_pan',
-      'companyCin': 'company_cin',
-      'incorporationDate': 'incorporation_date',
-      'companyPhoneNumber': 'company_phone_number',
-      'companyEmail': 'company_email'
-    };
+  const select = get('selectLicenseData');
+  const keyInfo = get('keyInfoData');
+  const applicant = get('applicantDetailsData');
+  const site = get('siteDetailsData');
+  const company = get('unitDetailsData');
 
-    // Append mapped fields to FormData (skip null/undefined/empty values)
-    Object.keys(allData).forEach(key => {
-      const backendKey = fieldMap[key] || this.toSnakeCase(key);
-      const value = allData[key];
-      
-      // Skip empty values but allow 0 and false
-      if (value !== null && value !== undefined && value !== '') {
-        // Special handling for mobile numbers (convert to string without formatting)
-        if (key === 'applicantMobileNumber' || key === 'companyPhoneNumber') {
-          formData.append(backendKey, String(value).replace(/\D/g, ''));
-        } else {
-          formData.append(backendKey, value.toString());
-        }
-      }
-    });
+  const append = (camel: string, value: any) => {
+    if (value === null || value === undefined || value === '' || value === false) return;
+    const snake = this.toSnakeCase(camel);
+    formData.append(String(snake), value instanceof Blob ? value : String(value));
+  };
 
-    // Append passport photo (REQUIRED field)
-    const photo = this.getPassPhoto();
-    if (photo) {
-      formData.append('photo', photo, photo.name);
-    } else {
-      console.error('❌ Passport photo is missing! This is a required field.');
-    }
+  // === MUST HAVE ===
+  append('licenseType', select.licenseType);
+  append('licenseCategory', keyInfo.licenseCategory);
+  append('licenseSubCategory', keyInfo.licenseSubCategory);
+  append('establishmentName', keyInfo.establishmentName);
+  append('siteType', keyInfo.siteType);
 
-    // Append site documents - NOT mapped to backend fields
-    // These are just stored for potential future use but not sent to backend
-    // The backend only expects: photo, and the form fields above
-    // Documents like aadhar_card, sikkim_certificate etc. are NOT in the Django model
-    
-    return formData;
+  const fullName = [applicant.firstName, applicant.middleName, applicant.lastName].filter(Boolean).join(' ');
+  append('applicantName', fullName);
+  append('fatherHusbandName', applicant.fatherHusbandName);
+  append('dob', this.formatDate(applicant.dob));
+  append('gender', applicant.gender);
+  append('nationality', applicant.nationality);
+  append('residentialStatus', applicant.residentialStatus);
+  append('presentAddress', applicant.presentAddress);
+  append('permanentAddress', applicant.permanentAddress || applicant.presentAddress);
+  append('pan', (applicant.pan || '').toUpperCase());
+  append('email', applicant.email);
+  append('mobileNumber', applicant.mobileNumber);
+  append('modeOfOperation', applicant.modeOfOperation);
+
+  append('hasSikkimCertificate', applicant.hasSikkimCertificate ? 'Yes' : 'No');
+  append('hasExciseLicense', applicant.hasExciseLicense ? 'Yes' : 'No');
+  append('familyExciseLicense', applicant.familyExciseLicense ? 'Yes' : 'No');
+  append('criminalConviction', applicant.criminalConviction ? 'Yes' : 'No');
+
+  // === SITE - CODES! ===
+  append('site_district', site.siteDistrict);
+  append('site_subdivision', site.siteSubdivision);
+  append('police_station', site.policeStation);
+  append('locationCategory', site.locationCategory);
+  append('locationName', site.locationName);
+  append('wardName', site.wardName);
+  append('businessAddress', site.businessAddress);
+  append('road_name', site.roadNameCode || site.roadName);
+  append('pinCode', site.pinCode);
+  append('constructionType', site.constructionType);
+  append('length', site.length);
+  append('breadth', site.breadth);
+  append('siteOwned', site.siteOwned || 'Yes');
+  if (site.siteOwned === 'No') append('nocObtained', site.nocObtained || 'No');
+
+  // === COMPANY ===
+  if (select.licenseType == 2) {
+    append('companyName', company.companyName);
+    append('companyAddress', company.companyAddress);
+    append('companyPan', (company.companyPan || '').toUpperCase());
+    append('companyCin', company.companyCin?.toUpperCase());
+    append('incorporationDate', this.formatDate(company.incorporationDate));
+    append('companyPhoneNumber', company.companyPhoneNumber);
+    append('companyEmail', company.companyEmail);
   }
+
+  // === FILES ===
+  if (this.getPassPhoto()) append('pass_photo', this.getPassPhoto()!);
+  ['panCard', 'sikkimCertificate', 'dobProof'].forEach(key => {
+    const file = this.siteDocuments.get(key);
+    if (file) append(key, file);
+  });
+  if (site.siteOwned === 'No' && this.siteDocuments.get('nocLandlord')) {
+    append('nocLandlord', this.siteDocuments.get('nocLandlord')!);
+  }
+
+  append('workflow', '1');
+
+  this.logFormData(formData);
+  return formData;
+}
 
   /**
    * Get list of all new license applications
@@ -340,7 +326,7 @@ export class LicenseApplicationService {
     objections?: { field: string; remarks: string }[]
   ): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    
+
     const body: any = {
       action,
       remarks: remarks || ''
@@ -401,10 +387,10 @@ export class LicenseApplicationService {
     return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/print/`, {});
   }
 
-  
-  
+
+
   // ========================== PASSPORT PHOTO MANAGEMENT ==========================
-  
+
   // Set the uploaded photo
   setPassPhoto(file: File | null): void {
     this.passPhotoSubject.next(file);
@@ -424,10 +410,10 @@ export class LicenseApplicationService {
     this.passPhotoSubject.next(null);
   }
 
-  
-  
+
+
   // ========================== SITE DOCUMENTS MANAGEMENT ==========================
-  
+
   setSiteDocument(documentName: string, file: File): void {
     this.siteDocuments.set(documentName, file);
   }
@@ -453,6 +439,62 @@ export class LicenseApplicationService {
     this.siteDocuments.clear();
   }
 
+  /** Get combined dashboard counts (Old + New) */
+  getUnifiedDashboardCounts(): Observable<DashboardCount> {
+    return forkJoin({
+      old: this.getDashboardCounts(),
+      new: this.getNewLicenseDashboardCounts()
+    }).pipe(
+      map(({ old, new: newCounts }) => ({
+        applied: (old?.applied || 0) + (newCounts?.applied || 0),
+        pending: (old?.pending || 0) + (newCounts?.pending || 0),
+        approved: (old?.approved || 0) + (newCounts?.approved || 0),
+        rejected: (old?.rejected || 0) + (newCounts?.rejected || 0),
+      }))
+    );
+  }
+
+  /** Get combined applications by status (correctly typed) */
+  getUnifiedApplicationsByStatus(): Observable<{
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+  }> {
+    return forkJoin({
+      old: this.getApplicationsByStatus(),
+      new: this.getNewLicenseApplicationsByStatus()
+    }).pipe(
+      map(({ old, new: newApps }) => {
+        const toUnified = (app: any, type: 'existing' | 'new'): UnifiedApplication => ({
+          ...app,
+          applicationType: type,
+          // Safely get ID — old uses `id`, new uses `applicationId` or `id`
+          displayId: (app.applicationId || app.id || 'N/A') as string,
+        });
+
+        return {
+          applied: [
+            ...(old.applied || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.applied || []).map(a => toUnified(a, 'new'))
+          ],
+          pending: [
+            ...(old.pending || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.pending || []).map(a => toUnified(a, 'new'))
+          ],
+          approved: [
+            ...(old.approved || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.approved || []).map(a => toUnified(a, 'new'))
+          ],
+          rejected: [
+            ...(old.rejected || []).map(a => toUnified(a, 'existing')),
+            ...(newApps.rejected || []).map(a => toUnified(a, 'new'))
+          ]
+        };
+      })
+    );
+  }
+
   // ========================== UTILITY METHODS ==========================
 
   /**
@@ -471,6 +513,11 @@ export class LicenseApplicationService {
     }
     return date.toISOString().split('T')[0];
   }
+  // private formatDate(date: string | Date | null): string {
+  //   if (!date) return '';
+  //   const d = new Date(date);
+  //   return d.toISOString().split('T')[0]; // YYYY-MM-DD
+  // }
 
   /**
    * Log FormData contents for debugging

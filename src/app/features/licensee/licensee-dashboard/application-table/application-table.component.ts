@@ -14,11 +14,11 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-export class ApplicationTableComponent implements OnChanges{
+export class ApplicationTableComponent implements OnChanges {
   // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
-  @Input() dataSource!: MatTableDataSource<LicenseApplication>;
+  @Input() dataSource!: MatTableDataSource<any>;
   @Input() tableType!: string;  // For conditional rendering of action buttons
 
   objections: Objection[] = [];
@@ -50,7 +50,7 @@ export class ApplicationTableComponent implements OnChanges{
     level_3_objection: 'Objection Raised by Level 3',
     level_4_objection: 'Objection Raised by Level 4',
     level_5_objection: 'Objection Raised by Level 5',
-    
+
     rejected_by_level_1: 'Rejected by Level 1',
     rejected_by_level_2: 'Rejected by Level 2',
     rejected_by_level_3: 'Rejected by Level 3',
@@ -76,10 +76,20 @@ export class ApplicationTableComponent implements OnChanges{
     this.unresolvedObjectionAppIds.clear();
 
     this.dataSource?.data?.forEach(app => {
-      this.licenseAppService.getObjections(app.applicationId).subscribe((objections) => {
+      // Safely get applicationId from both old and new applications
+      const appId = app.applicationId || app.id;
+
+      if (!appId) return;
+
+      // Choose correct service based on applicationType
+      const serviceCall = app.applicationType === 'new'
+        ? this.licenseAppService.getNewLicenseObjections(appId)
+        : this.licenseAppService.getObjections(appId);
+
+      serviceCall.subscribe((objections: any[]) => {
         const hasUnresolved = objections?.some(obj => obj.isResolved === false);
         if (hasUnresolved) {
-          this.unresolvedObjectionAppIds.add(app.applicationId);
+          this.unresolvedObjectionAppIds.add(appId);
         }
       });
     });
@@ -87,32 +97,38 @@ export class ApplicationTableComponent implements OnChanges{
 
   // Print the selected application
   onPrint(application: any) {
+    const appId = application.applicationId || application.id;
+
     this.dialog.open(PrintApplicationComponent, {
       width: '450px',
-      data: { application }
+      data: { application, applicationId: appId }
     });
   }
-  
+
   // Method to view application details
   onView(application: any) {
+    const appId = application.applicationId || application.id;
+
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
-      data: { application, tableType: this.tableType }
+      data: {
+        application,
+        tableType: this.tableType,
+        applicationId: appId  // ← ensure detail page gets correct ID
+      }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
-        // Refresh table or show success notification
         location.reload();
       }
     });
   }
-  
   // Opens a dialog to show the movement history of the selected application
-  viewMovement(application: any): void {
+  viewMovement(application: any) {
     this.dialog.open(ApplicationMovementComponent, {
-      width: '70vw',        
+      width: '70vw',
       maxWidth: '100%',
       height: 'auto',
       data: {

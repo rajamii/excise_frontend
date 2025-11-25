@@ -17,7 +17,7 @@
           <mat-label>District <span class="required"></span></mat-label>
           <mat-select formControlName="siteDistrict" required (selectionChange)="onDistrictChange($event.value)">
             @for (district of districts; track district.id) {
-            <mat-option [value]="district.id">
+            <mat-option [value]="district.districtCode">
               {{ district.district }}
             </mat-option>
             }
@@ -39,7 +39,7 @@
             <mat-option disabled>Please select district first</mat-option>
             }
             @for (subdivision of siteSubdivisions; track subdivision.id) {
-            <mat-option [value]="subdivision.id">
+            <mat-option [value]="subdivision.subdivisionCode">
               {{ subdivision.subdivision }}
             </mat-option>
             }
@@ -62,7 +62,7 @@
             <mat-option disabled>Please select subdivision first</mat-option>
             }
             @for (policeStation of sitePoliceStations; track policeStation.id) {
-            <mat-option [value]="policeStation.id">
+            <mat-option [value]="policeStation.policeStationCode">
               {{ policeStation.policeStation }}
             </mat-option>
             }
