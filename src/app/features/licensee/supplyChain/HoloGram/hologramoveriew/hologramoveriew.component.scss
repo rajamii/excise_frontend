@@ -1246,6 +1246,137 @@ rial Numbers Details Modal Styles
   }
 }
 
+// Autocomplete dropdown styling
+.position-relative {
+  position: relative;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: -1px;
+  
+  .autocomplete-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.875rem;
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    &:hover {
+      background: #f0f9ff;
+      color: #0284c7;
+      transform: translateX(2px);
+    }
+    
+    i {
+      font-size: 0.875rem;
+    }
+  }
+  
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+}
+
+// Filter card styling in serial details modal
+.modal-body {
+  .card.border-info {
+    border-width: 2px !important;
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
+    
+    .card-body {
+      background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%);
+    }
+    
+    .form-label {
+      color: #0284c7;
+      font-weight: 600;
+      
+      i {
+        font-size: 0.9rem;
+      }
+    }
+    
+    .form-control {
+      border: 1px solid #cbd5e1;
+      transition: all 0.3s ease;
+      
+      &:focus {
+        border-color: #0284c7;
+        box-shadow: 0 0 0 0.2rem rgba(6, 182, 212, 0.25);
+      }
+    }
+    
+    .btn-info {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      border: none;
+      
+      &:hover {
+        background: linear-gradient(135deg, #0369a1, #075985);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+      }
+    }
+    
+    .badge.bg-info {
+      background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+      padding: 0.35rem 0.65rem;
+      font-weight: 600;
+    }
+  }
+}
+
+// Responsive adjustments for filters
+@media (max-width: 768px) {
+  .modal-body {
+    .card.border-info {
+      .row.g-3 {
+        .col-md-5, .col-md-3, .col-md-4 {
+          margin-bottom: 0.75rem;
+        }
+      }
+      
+      .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+}
+
 // Enhanced status descriptions
 .range-status {
   .status-description {
