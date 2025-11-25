@@ -10,9 +10,7 @@ import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } 
 })
 export class SupplyChainService {
      constructor(private http: HttpClient) {}
-/**
-   * Fetches all active bulk spirit types by Ishwar
-   */
+
   getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
     return this.http
       .get<{ success: boolean; data: BulkSpiritType[] }>(
@@ -20,9 +18,7 @@ export class SupplyChainService {
       )
       .pipe(map((response) => response.data || []));
   }
-  /**
-     * Fetches all distilleries by Ishwar 
-     */
+
     getDistilleries(): Observable<Distillery[]> {
       return this.http
         .get<{ success?: boolean; data?: Distillery[] }>(
@@ -30,9 +26,7 @@ export class SupplyChainService {
         )
         .pipe(map((response: any) => response.data || []));
     }
-    /**
-       * Fetches all checkposts by Ishwar
-       */
+
       getCheckposts(): Observable<Checkpost[]> {
         return this.http
           .get<{ status?: string; data?: Checkpost[] }>(
@@ -51,10 +45,7 @@ export class SupplyChainService {
             })
           );
       }
-    
-      /**
-       * Fetches all purposes by Ishwar
-       */
+
       getPurposes(): Observable<Purpose[]> {
         return this.http
           .get<{ success?: boolean; data?: Purpose[] }>(
@@ -63,9 +54,6 @@ export class SupplyChainService {
           .pipe(map((response: any) => response.data || []));
       }
 
-      /**
-   * Fetches all liquor brands with their sizes by Ishwar
-   */
   getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
     return this.http
       .get<{
@@ -77,9 +65,6 @@ export class SupplyChainService {
       .pipe(map((response: any) => response.data || []));
   }
 
-  /**
-   * Fetches liquor rates for a specific brand and size by Ishwar
-   */
   public getLiquorRates(
     brandName: string,
     size: string
