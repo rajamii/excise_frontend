@@ -1,7 +1,8 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface TableData {
   referenceNo: string;
@@ -22,6 +23,10 @@ export class RequisitionComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
 
+  // Services
+  public accountService = inject(AccountService);
+  private router = inject(Router);
+
   // Data
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
@@ -38,7 +43,6 @@ export class RequisitionComponent implements OnInit {
   currentPage: number = 1;
 
   constructor(
-    private router: Router,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -64,16 +68,64 @@ export class RequisitionComponent implements OnInit {
       return dateB - dateA;
     });
 
+    // Filter based on user role
+    let filteredRequests = importPermitRequests.filter((permit: any) => permit.type !== 'transit-permit');
+    
+    // Commissioner should only see requisitions that have been explicitly forwarded to them
+    // Requisitions must go through a workflow before reaching commissioner
+    if (this.isCommissioner()) {
+      console.log('🔍 Commissioner filter - Before filtering:', filteredRequests.length, 'requisitions');
+      console.log('📋 All requisitions:', filteredRequests.map((p: any) => ({
+        refNo: p.refNo,
+        commissionerStatus: p.commissionerStatus,
+        forwardedToCommissioner: p.forwardedToCommissioner
+      })));
+      
+      filteredRequests = filteredRequests.filter((permit: any) => {
+        // STRICT: Only show if explicitly marked for commissioner review
+        // This ensures new requisitions don't appear immediately
+        const hasCommissionerStatus = permit.commissionerStatus && 
+                                      (permit.commissionerStatus === 'Pending' ||
+                                       permit.commissionerStatus === 'Approved' ||
+                                       permit.commissionerStatus === 'Rejected');
+        
+        const isForwardedToCommissioner = permit.forwardedToCommissioner === true;
+        
+        const shouldShow = hasCommissionerStatus || isForwardedToCommissioner;
+        
+        console.log(`  ${permit.refNo}: commissionerStatus=${permit.commissionerStatus}, forwarded=${permit.forwardedToCommissioner}, show=${shouldShow}`);
+        
+        // Must have at least one of these flags set
+        return shouldShow;
+      });
+      
+      console.log('✅ Commissioner view - After filtering:', filteredRequests.length, 'requisitions');
+    }
+
     // Convert import permit data to requisition format
-    const importPermitData: TableData[] = importPermitRequests
-      .filter((permit: any) => permit.type !== 'transit-permit')
-      .map((permit: any) => ({
+    const importPermitData: TableData[] = filteredRequests.map((permit: any) => {
+      // Determine status based on workflow
+      let displayStatus = permit.commissionerStatus || "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.";
+      
+      // If forwarded to commissioner but not yet approved/rejected, show "Forwarded to Commissioner"
+      if (permit.forwardedToCommissioner && permit.commissionerStatus === 'PENDING') {
+        displayStatus = 'Forwarded to Commissioner';
+      }
+      
+      // If approved by commissioner, show "Approved by Commissioner"
+      // Check if it was forwarded and approved (approvedBy field may or may not exist)
+      if (permit.commissionerStatus === 'APPROVED' && permit.forwardedToCommissioner) {
+        displayStatus = 'Approved by Commissioner';
+      }
+      
+      return {
         referenceNo: permit.refNo,
         submissionDate: new Date(permit.date).toLocaleDateString('en-GB'),
         distilleryName: this.getDistilleryDisplayName(permit.liftedFrom),
-        status: "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
+        status: displayStatus,
         amount: "8.00"
-      }));
+      };
+    });
 
     // Only use real data from localStorage
     this.requisitionData = [...importPermitData];
@@ -98,9 +150,29 @@ export class RequisitionComponent implements OnInit {
   }
 
   getRequisitionStatusCount(status: string): number {
+    if (status === 'PENDING' || status === 'REJECTED') {
+      // For commissioner view, match exact status
+      return this.filteredRequisitionData.filter(item =>
+        item.status.toUpperCase() === status
+      ).length;
+    }
+    // For other statuses, use includes for backward compatibility
     return this.filteredRequisitionData.filter(item =>
       item.status.toLowerCase().includes(status.toLowerCase())
     ).length;
+  }
+
+  getPriority(item: TableData): string {
+    // Determine priority based on status and submission date
+    const submissionDate = new Date(item.submissionDate.split('-').reverse().join('-'));
+    const daysSinceSubmission = Math.floor((new Date().getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (item.status === 'PENDING' && daysSinceSubmission > 7) {
+      return 'urgent';
+    } else if (item.status === 'PENDING' && daysSinceSubmission > 3) {
+      return 'high';
+    }
+    return 'normal';
   }
 
   // Filter methods
@@ -232,6 +304,139 @@ export class RequisitionComponent implements OnInit {
       this.filteredRequisitionData = [];
       
       alert('All requisition data has been cleared successfully.');
+    }
+  }
+
+  // Role detection methods
+  isCommissioner(): boolean {
+    // Check if user has commissioner role
+    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    
+    // Also check if we're in the commissioner dashboard (for testing/demo purposes)
+    const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
+    
+    const result = hasRole || isCommissionerRoute;
+    console.log('isCommissioner check:', { hasRole, isCommissionerRoute, result, path: window.location.pathname });
+    
+    return result;
+  }
+
+  isPermitSection(): boolean {
+    // Check if we're in the permit section dashboard
+    // Check for both 'permit-section' and 'app-permit-section' in the URL
+    const result = this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+    console.log('isPermitSection check:', { result, path: this.isBrowser ? window.location.pathname : 'SSR', href: this.isBrowser ? window.location.href : 'SSR' });
+    return result;
+  }
+
+  getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
+  }
+
+  approveRequisition(item: TableData): void {
+    if (confirm(`Are you sure you want to approve requisition ${item.referenceNo}?`)) {
+      console.log('Approving requisition:', item.referenceNo);
+      
+      if (!this.isBrowser) return;
+      
+      // Update in localStorage
+      const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+      const index = importPermitRequests.findIndex((r: any) => r.refNo === item.referenceNo);
+      
+      if (index !== -1) {
+        importPermitRequests[index].commissionerStatus = 'APPROVED';
+        importPermitRequests[index].approvedDate = new Date().toISOString();
+        importPermitRequests[index].approvedBy = 'Commissioner';
+        localStorage.setItem('importPermitRequests', JSON.stringify(importPermitRequests));
+        
+        alert(`Requisition ${item.referenceNo} has been approved successfully. Licensee can now proceed with payment.`);
+        this.loadRequisitionData();
+        this.filteredRequisitionData = [...this.requisitionData];
+      }
+    }
+  }
+
+  rejectRequisition(item: TableData): void {
+    const reason = prompt(`Please provide a reason for rejecting requisition ${item.referenceNo}:`);
+    if (reason !== null && reason.trim() !== '') {
+      console.log('Rejecting requisition:', item.referenceNo, 'Reason:', reason);
+      
+      if (!this.isBrowser) return;
+      
+      // Update in localStorage
+      const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+      const index = importPermitRequests.findIndex((r: any) => r.refNo === item.referenceNo);
+      
+      if (index !== -1) {
+        importPermitRequests[index].commissionerStatus = 'REJECTED';
+        importPermitRequests[index].rejectionReason = reason;
+        localStorage.setItem('importPermitRequests', JSON.stringify(importPermitRequests));
+        
+        alert(`Requisition ${item.referenceNo} has been rejected.`);
+        this.loadRequisitionData();
+        this.filteredRequisitionData = [...this.requisitionData];
+      }
+    }
+  }
+
+  // Permit Section: Forward to Commissioner
+  forwardToCommissioner(item: TableData): void {
+    if (confirm(`Forward requisition ${item.referenceNo} to Commissioner for approval?`)) {
+      console.log('Forwarding to commissioner:', item.referenceNo);
+      
+      if (!this.isBrowser) return;
+      
+      // Update in localStorage
+      const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+      const index = importPermitRequests.findIndex((r: any) => r.refNo === item.referenceNo);
+      
+      if (index !== -1) {
+        importPermitRequests[index].forwardedToCommissioner = true;
+        importPermitRequests[index].commissionerStatus = 'PENDING';
+        importPermitRequests[index].forwardedDate = new Date().toISOString();
+        localStorage.setItem('importPermitRequests', JSON.stringify(importPermitRequests));
+        
+        alert(`Requisition ${item.referenceNo} has been forwarded to Commissioner for approval.`);
+        this.loadRequisitionData();
+        this.filteredRequisitionData = [...this.requisitionData];
+      }
+    }
+  }
+
+  isForwardedToCommissioner(item: TableData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    const permit = importPermitRequests.find((r: any) => r.refNo === item.referenceNo);
+    
+    const isForwarded = permit?.forwardedToCommissioner === true || permit?.commissionerStatus === 'PENDING';
+    console.log(`isForwardedToCommissioner(${item.referenceNo}):`, { isForwarded, forwardedFlag: permit?.forwardedToCommissioner, status: permit?.commissionerStatus });
+    
+    return isForwarded;
+  }
+
+  // Check if requisition is pending commissioner approval
+  isPendingCommissionerApproval(item: TableData): boolean {
+    if (!this.isBrowser) return false;
+    
+    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
+    const permit = importPermitRequests.find((r: any) => r.refNo === item.referenceNo);
+    
+    return permit?.commissionerStatus === 'PENDING' && permit?.forwardedToCommissioner === true;
+  }
+
+  // Supply Chain: Make Payment
+  payForRequisition(item: TableData): void {
+    if (confirm(`Proceed to payment for requisition ${item.referenceNo}? Amount: ₹${item.amount}`)) {
+      console.log('Processing payment for:', item.referenceNo);
+      
+      // TODO: Implement payment gateway integration
+      alert(`Payment processing for requisition ${item.referenceNo}. Amount: ₹${item.amount}`);
+      
+      // Navigate to payment page or open payment modal
+      // this.router.navigate(['/payment'], { queryParams: { ref: item.referenceNo, amount: item.amount } });
     }
   }
 }

@@ -4,19 +4,48 @@
     <div class="header-info">
       <h4 class="register-title">
         <i class="bi bi-file-text me-2"></i>
-        Requisition Register
+        @if (isCommissioner()) {
+          Requisition Applications Review
+        } @else if (isPermitSection()) {
+          Requisition Register
+        } @else {
+          Requisition Register
+        }
       </h4>
-      <p class="register-subtitle">Track and manage all requisition applications</p>
+      <p class="register-subtitle">
+        @if (isCommissioner()) {
+          Review and approve requisition applications from licensees
+        } @else if (isPermitSection()) {
+          Track and manage all requisition applications
+        } @else {
+          Track and manage all requisition applications
+        }
+      </p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-danger me-2" (click)="clearAllRequisitionData()" *ngIf="requisitionData.length > 0">
-        <i class="bi bi-trash me-2"></i>
-        Clear All Data
+      <!-- Commissioner-only Export button -->
+      <button *ngIf="isCommissioner()" class="btn btn-success">
+        <i class="bi bi-download me-2"></i>
+        Export Report
       </button>
-      <button class="btn btn-success">
-        <i class="bi bi-plus-circle me-2"></i>
-        New Requisition
-      </button>
+      <!-- Permit Section buttons -->
+      <ng-container *ngIf="isPermitSection()">
+        <button class="btn btn-success">
+          <i class="bi bi-plus-circle me-2"></i>
+          New Requisition
+        </button>
+      </ng-container>
+      <!-- Licensee-only buttons (Supply Chain) -->
+      <ng-container *ngIf="!isCommissioner() && !isPermitSection()">
+        <button class="btn btn-danger me-2" (click)="clearAllRequisitionData()" *ngIf="requisitionData.length > 0">
+          <i class="bi bi-trash me-2"></i>
+          Clear All Data
+        </button>
+        <button class="btn btn-success">
+          <i class="bi bi-plus-circle me-2"></i>
+          New Requisition
+        </button>
+      </ng-container>
     </div>
   </div>
 
@@ -29,7 +58,18 @@
         </div>
         <div class="card-content">
           <h3 class="card-value">{{ filteredRequisitionData.length }}</h3>
-          <p class="card-label">Total Requisitions</p>
+          <p class="card-label">{{ isCommissioner() ? 'Total Applications' : 'Total Requisitions' }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3" *ngIf="isCommissioner()">
+      <div class="summary-card pending-requests">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending Review</p>
         </div>
       </div>
     </div>
@@ -44,7 +84,18 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-3" *ngIf="isCommissioner()">
+      <div class="summary-card rejected-requests">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getRequisitionStatusCount('REJECTED') }}</h3>
+          <p class="card-label">Rejected</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3" *ngIf="!isCommissioner()">
       <div class="summary-card pending-requests">
         <div class="card-icon">
           <i class="bi bi-clock"></i>
@@ -55,7 +106,7 @@
         </div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-3" *ngIf="!isCommissioner()">
       <div class="summary-card total-amount">
         <div class="card-icon">
           <i class="bi bi-currency-rupee"></i>
@@ -152,13 +203,14 @@
       <table class="table register-table">
         <thead>
           <tr>
-            <th class="sl-no">Sl. Nos.</th>
+            <th class="sl-no">Sl. No{{ isCommissioner() ? '.' : 's.' }}</th>
             <th class="ref-number">Ref. No</th>
-            <th class="submission-date">App. Sub. Date</th>
-            <th class="distillery-name">Distillery Name</th>
+            <th class="submission-date">{{ isCommissioner() ? 'Submission Date' : 'App. Sub. Date' }}</th>
+            <th class="distillery-name">{{ isCommissioner() ? 'Licensee Name' : 'Distillery Name' }}</th>
             <th class="status">Status</th>
-            <th class="amount">Imp. Pass Fee Amt.</th>
-            <th class="actions">Action</th>
+            <th class="amount">{{ isCommissioner() ? 'Amount' : 'Imp. Pass Fee Amt.' }}</th>
+            <th class="priority" *ngIf="isCommissioner()">Priority</th>
+            <th class="actions">Action{{ isCommissioner() ? 's' : '' }}</th>
           </tr>
         </thead>
         <tbody>
@@ -177,6 +229,9 @@
             <td class="status">
               <span
                 class="status-badge status-{{ item.status.toLowerCase().includes('approved') ? 'approved' : 
+                                              item.status.toLowerCase().includes('pending') ? 'pending' :
+                                              item.status.toLowerCase().includes('rejected') ? 'rejected' :
+                                              item.status.toLowerCase().includes('forwarded') ? 'forwarded' :
                                               item.status.toLowerCase().includes('review') ? 'pending' : 
                                               item.status.toLowerCase().includes('processing') ? 'processing' : 'default' }}">
                 {{ item.status }}
@@ -184,6 +239,11 @@
             </td>
             <td class="amount">
               <span class="amount-value">₹{{ item.amount }}</span>
+            </td>
+            <td class="priority" *ngIf="isCommissioner()">
+              <span class="priority-badge priority-{{ getPriority(item) }}">
+                {{ getPriority(item) | uppercase }}
+              </span>
             </td>
             <td class="actions">
               <div class="action-buttons">
@@ -194,6 +254,40 @@
                 <button class="btn btn-outline-warning btn-sm" (click)="viewSlip(item)" title="Permit Slip">
                   <i class="bi bi-file-earmark-text"></i>
                 </button>
+                
+                <!-- Permit Section: Forward to Commissioner button (only show if not forwarded) -->
+                @if (isPermitSection() && !isForwardedToCommissioner(item)) {
+                  <button class="btn btn-outline-info btn-sm" 
+                    (click)="forwardToCommissioner(item)" 
+                    title="Forward to Commissioner">
+                    <i class="bi bi-arrow-right-circle"></i>
+                    Forward
+                  </button>
+                }
+                
+                <!-- Commissioner: Approve/Reject buttons (only for forwarded requisitions pending approval) -->
+                @if (isCommissioner() && isPendingCommissionerApproval(item)) {
+                  <button class="btn btn-outline-success btn-sm" 
+                    (click)="approveRequisition(item)" 
+                    title="Approve Requisition">
+                    <i class="bi bi-check-circle"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm" 
+                    (click)="rejectRequisition(item)" 
+                    title="Reject Requisition">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+                }
+                
+                <!-- Supply Chain: Pay button (only when approved by commissioner) -->
+                @if (!isCommissioner() && !isPermitSection() && (item.status === 'APPROVED' || item.status === 'Approved by Commissioner')) {
+                  <button class="btn btn-outline-success btn-sm" 
+                    (click)="payForRequisition(item)" 
+                    title="Make Payment">
+                    <i class="bi bi-credit-card"></i>
+                    Pay
+                  </button>
+                }
               </div>
             </td>
           </tr>

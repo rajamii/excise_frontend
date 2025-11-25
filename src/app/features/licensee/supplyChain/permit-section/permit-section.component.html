@@ -64,6 +64,13 @@
     <div class="bg-white">
       <div class="container-fluid p-3">
 
+          <!-- Use shared Requisition Component for requisition tab -->
+          @if (activeTab === 'requisition') {
+            <app-requisition></app-requisition>
+          }
+
+          <!-- Original permit section code for other tabs -->
+          @if (activeTab !== 'requisition') {
           <!-- Permit Register Header -->
           <div class="permit-register-header">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -72,7 +79,7 @@
                   <i class="bi bi-file-earmark-text me-2"></i>
                   {{ getActiveTabTitle() }} Register
                 </h4>
-                <p class="register-subtitle">Track and manage all {{ getActiveTabTitle().toLowerCase() }} applications</p>
+                <p class="register-subtitle">Track and manages all {{ getActiveTabTitle().toLowerCase() }} applications</p>
               </div>
               <div class="header-actions">
                 <button class="btn btn-success">
@@ -301,6 +308,7 @@
               </div>
             </div>
           </div>
+          } <!-- End of @if (activeTab !== 'requisition') -->
 
       </div>
     </div>
