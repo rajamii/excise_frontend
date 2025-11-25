@@ -66,16 +66,16 @@
                                 </div>
                             </div>
 
-                            <!-- Remarks (Optional) -->
-                            <div class="col-12">
+                            <!-- Usage Date -->
+                            <div class="col-md-6">
                                 <div class="form-group">
-                                    <label class="form-label">
-                                        <i class="bi bi-chat-left-text me-2"></i>
-                                        Additional Remarks (Optional)
+                                    <label class="form-label required">
+                                        <i class="bi bi-calendar-event me-2"></i>
+                                        Date to Use Hologram in Factory
                                     </label>
-                                    <textarea class="form-control" [(ngModel)]="requestData.remarks" name="remarks"
-                                        rows="3" placeholder="Enter any additional information or remarks"></textarea>
-                                    <small class="form-text">Provide any additional information about your request</small>
+                                    <input type="date" class="form-control" [(ngModel)]="requestData.usageDate"
+                                        name="usageDate" required>
+                                    <small class="form-text">Select the date when hologram will be used in factory</small>
                                 </div>
                             </div>
 
@@ -137,7 +137,7 @@
                             <ul class="summary-list">
                                 <li><strong>Hologram Type:</strong> {{ requestData.hologramType }}</li>
                                 <li><strong>Total Holograms:</strong> {{ requestData.totalHolograms | number }}</li>
-                                <li *ngIf="requestData.remarks"><strong>Remarks:</strong> {{ requestData.remarks }}</li>
+                                <li><strong>Usage Date:</strong> {{ requestData.usageDate | date:'dd MMM yyyy' }}</li>
                             </ul>
                             <div class="alert alert-info mt-3">
                                 <i class="bi bi-info-circle me-2"></i>

@@ -199,138 +199,14 @@ main.flex-grow-1 {
   }
 }
 
-//Hologram Request Register Styles
-.hologram-request-register-header {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  padding: 2rem;
-  border-radius: 16px 16px 0 0;
-  border-bottom: 2px solid #e2e8f0;
+// Hologram request styles moved to hologramrequest.component.scss
 
-  .header-info {
-    .register-title {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #1f2937;
-      margin-bottom: 0.5rem;
-    }
-
-    .register-subtitle {
-      color: #6b7280;
-      font-size: 1.1rem;
-      margin: 0;
-    }
-  }
-
-  .header-actions {
-    .btn {
-      background: linear-gradient(135deg, #10b981, #059669);
-      border: none;
-      color: white;
-      font-weight: 600;
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
-      }
-    }
-  }
-
-  // Summary Cards
-  .summary-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-
-    &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
-    }
-
-    .card-icon {
-      width: 50px;
-      height: 50px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.25rem;
-      color: white;
-    }
-
-    .card-content {
-      flex: 1;
-
-      .card-value {
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin: 0;
-        line-height: 1;
-      }
-
-      .card-label {
-        font-size: 0.9rem;
-        color: #6b7280;
-        margin: 0.25rem 0 0 0;
-        font-weight: 500;
-      }
-    }
-
-    &.total-requests {
-      .card-icon {
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-      }
-
-      .card-value {
-        color: #3b82f6;
-      }
-    }
-
-    &.pending-requests {
-      .card-icon {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-      }
-
-      .card-value {
-        color: #f59e0b;
-      }
-    }
-
-    &.approved-requests {
-      .card-icon {
-        background: linear-gradient(135deg, #10b981, #059669);
-      }
-
-      .card-value {
-        color: #10b981;
-      }
-    }
-
-    &.total-holograms {
-      .card-icon {
-        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-      }
-
-      .card-value {
-        color: #8b5cf6;
-      }
-    }
-  }
-}
-
-.hologram-request-register-table {
-  .register-container {
-    background: white;
-    border-radius: 0 0 16px 16px;
-    overflow: hidden;
+// Compact Filter Section Styles
+.compact-filter-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
 
     .register-header-bar {
       background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
@@ -794,59 +670,14 @@ main.flex-grow-1 {
       }
     }
   }
-}
 
-// Responsive Design for Register
-@media (max-width: 768px) {
-  .hologram-request-register-header {
-    padding: 1.5rem;
 
-    .header-info .register-title {
-      font-size: 1.5rem;
-    }
+// Hologram request styles have been moved to hologramrequest.component.scss
 
-    .summary-card {
-      .card-content .card-value {
-        font-size: 1.5rem;
-      }
-    }
-  }
+// Hologram Register Styles (for hologram procurement, not hologram request)
+// These styles are for the hologram procurement tab, not the hologram request tab
 
-  .hologram-request-register-table {
-    .register-container {
-      .register-table {
-        min-width: 800px;
-        font-size: 0.8rem;
-
-        thead th {
-          padding: 0.75rem 0.5rem;
-          font-size: 0.7rem;
-        }
-
-        tbody td {
-          padding: 0.75rem 0.5rem;
-        }
-      }
-
-      .register-footer {
-        .summary-row {
-          flex-direction: column;
-          gap: 0.75rem;
-
-          .summary-item .summary-value {
-            font-size: 1.1rem;
-
-            &.highlight {
-              font-size: 1.25rem;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-// Hologram Request Details Modal Styles 
+// Modal Styles
 .modal-content {
   border-radius: 20px;
   border: none;

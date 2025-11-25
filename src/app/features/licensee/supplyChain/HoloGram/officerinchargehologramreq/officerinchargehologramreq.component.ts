@@ -6,6 +6,7 @@ interface HologramRequest {
   id: string;
   referenceNo: string;
   submissionDate: string;
+  usageDate: string; // Date when holograms will be used in factory
   submittedBy: string;
   requestType: 'NEW_ALLOCATION' | 'ADDITIONAL_STOCK' | 'REPLACEMENT';
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
@@ -207,6 +208,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: `HR${String(Date.now() + index).slice(-6)}`,
         referenceNo: request.refNumber || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
         submissionDate: request.submissionDate ? new Date(request.submissionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        usageDate: request.usageDate ? new Date(request.usageDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Map usageDate from request
         submittedBy: 'Supply Chain User - Sikkim Distilleries Ltd',
         requestType: 'NEW_ALLOCATION' as const,
         hologramType: hologramType,
@@ -241,6 +243,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: `HA${String(Date.now() + index + 1000).slice(-6)}`,
         referenceNo: app.refNo || `HRQ/${new Date().getFullYear()}/${String(index + 100).padStart(3, '0')}`,
         submissionDate: app.date || new Date().toISOString().split('T')[0],
+        usageDate: app.usageDate || app.date || new Date().toISOString().split('T')[0], // Map usageDate from application
         submittedBy: `${app.companyName || 'Supply Chain User'} - Hologram Application`,
         requestType: 'NEW_ALLOCATION' as const,
         hologramType: hologramType,
@@ -266,9 +269,28 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Combine all requests
     this.hologramRequests = [...convertedRequests, ...convertedApplications];
 
+    // Sort by submission date and reference number - newest first (descending order)
+    this.hologramRequests.sort((a, b) => {
+      // First, try to sort by submission date with time
+      const dateA = new Date(a.submissionDate).getTime();
+      const dateB = new Date(b.submissionDate).getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Descending order (newest first)
+      }
+      
+      // If dates are the same, sort by reference number (descending - higher numbers first)
+      // Extract the numeric part from reference numbers like "HRQ/251125/012"
+      const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
+      const refNumB = parseInt(b.referenceNo.split('/').pop() || '0');
+      return refNumB - refNumA; // Descending order (higher ref numbers first)
+    });
+
     console.log('Total converted requests:', convertedRequests.length);
     console.log('Total converted applications:', convertedApplications.length);
     console.log('Combined hologram requests:', this.hologramRequests.length);
+    console.log('Sorted by submission date and reference number (newest first)');
+    console.log('First 3 requests:', this.hologramRequests.slice(0, 3).map(r => ({ ref: r.referenceNo, date: r.submissionDate })));
 
     // No sample data - only show real requests
     if (this.hologramRequests.length === 0) {
@@ -347,6 +369,23 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
       return matchesReference && matchesStatus && matchesRequestType && 
              matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+    });
+
+    // Sort filtered results by submission date and reference number - newest first (descending order)
+    this.filteredRequests.sort((a, b) => {
+      // First, try to sort by submission date with time
+      const dateA = new Date(a.submissionDate).getTime();
+      const dateB = new Date(b.submissionDate).getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Descending order (newest first)
+      }
+      
+      // If dates are the same, sort by reference number (descending - higher numbers first)
+      // Extract the numeric part from reference numbers like "HRQ/251125/012"
+      const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
+      const refNumB = parseInt(b.referenceNo.split('/').pop() || '0');
+      return refNumB - refNumA; // Descending order (higher ref numbers first)
     });
 
     this.currentPage = 1;

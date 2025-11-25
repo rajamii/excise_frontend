@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 interface HologramRequest {
   totalHolograms: number;
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  remarks: string;
+  usageDate: string;
 }
 
 @Component({
@@ -20,7 +20,7 @@ export class Hologramrequestlevel1Component implements OnInit {
   requestData: HologramRequest = {
     totalHolograms: 0,
     hologramType: 'LOCAL',
-    remarks: ''
+    usageDate: ''
   };
 
   isSubmitting: boolean = false;
@@ -54,7 +54,8 @@ export class Hologramrequestlevel1Component implements OnInit {
   private isValidForm(): boolean {
     return !!(
       this.requestData.totalHolograms > 0 &&
-      this.requestData.hologramType
+      this.requestData.hologramType &&
+      this.requestData.usageDate
     );
   }
 
@@ -109,8 +110,7 @@ REQUEST DETAILS:
 ----------------
 Hologram Type: ${this.requestData.hologramType}
 Total Number of Holograms Required: ${this.requestData.totalHolograms.toLocaleString('en-IN')}
-
-${this.requestData.remarks ? `Additional Information:\n${this.requestData.remarks}\n` : ''}
+Date to Use Hologram in Factory: ${new Date(this.requestData.usageDate).toLocaleDateString('en-IN')}
 
 DECLARATION:
 ------------
@@ -171,7 +171,7 @@ End of Application
     this.requestData = {
       totalHolograms: 0,
       hologramType: 'LOCAL',
-      remarks: ''
+      usageDate: ''
     };
   }
 

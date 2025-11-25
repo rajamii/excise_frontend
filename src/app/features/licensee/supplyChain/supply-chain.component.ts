@@ -6,6 +6,7 @@ import { RequisitionComponent } from "./supplychaincomponents/requisition/requis
 import { RevalidationComponent } from "./supplychaincomponents/revalidation/revalidation.component";
 import { CancellationComponent } from "./supplychaincomponents/cancellation/cancellation.component";
 import { TransitComponent } from "./supplychaincomponents/transit/transit.component";
+import { HologramrequestComponent } from "./supplychaincomponents/hologramrequest/hologramrequest.component";
 
 interface TableData {
   referenceNo: string;
@@ -34,7 +35,7 @@ interface HologramRow {
 @Component({
   selector: "app-supply-chain",
   standalone: true,
-  imports: [CommonModule, FormsModule, RequisitionComponent, RevalidationComponent, CancellationComponent, TransitComponent],
+  imports: [CommonModule, FormsModule, RequisitionComponent, RevalidationComponent, CancellationComponent, TransitComponent, HologramrequestComponent],
   templateUrl: "./supply-chain.component.html",
   styleUrls: ["./supply-chain.component.scss"],
 })
@@ -48,8 +49,6 @@ export class SupplyChainComponent implements OnInit {
   activeTab = "requisition";
   sidebarHidden = true;
   hologramList: HologramRow[] = [];
-  hologramRequestList: any[] = [];
-  filteredHologramRequestList: any[] = [];
   filteredHologramData: any[] = [];
   private isBrowser = false;
   showHologramModal = false;
@@ -57,11 +56,6 @@ export class SupplyChainComponent implements OnInit {
   selectedPaymentHologram: HologramRow | null = null;
   paymentRemarks: string = '';
   multiTypePaymentItems: HologramRow[] = [];
-
-  // Filter properties for hologram requests
-  dateFilter: string = '';
-  monthFilter: string = '';
-  statusFilter: string = '';
   
   // Filter properties for hologram
   hologramDateFilter: string = '';
@@ -69,8 +63,6 @@ export class SupplyChainComponent implements OnInit {
   hologramYearFilter: string = '';
   hologramStatusFilter: string = '';
   selectedHologram: HologramRow | null = null;
-  showRequestModal = false;
-  selectedRequest: any = null;
 
   constructor(
     private router: Router,
@@ -200,10 +192,6 @@ export class SupplyChainComponent implements OnInit {
     if (tab === "hologram") {
       // refresh list on each visit
       this.refreshHologramList();
-    } else if (tab === "hologram-request") {
-      console.log('Loading hologram requests for tab');
-      // refresh hologram requests on each visit
-      this.loadHologramRequests();
     }
   }
 
@@ -425,298 +413,11 @@ export class SupplyChainComponent implements OnInit {
     this.currentPageByTab[tab] = 1;
   }
 
-  // Debug method - can be called from browser console
-  testDateFilter(dateString: string): void {
-    console.log('Testing date filter with:', dateString);
-    this.dateFilter = dateString;
-    this.applyFilters();
-  }
-
   changePageSize(tab: string, size: string | number): void {
     const s = typeof size === "string" ? parseInt(size, 10) : size;
     if (!s) return;
     this.pageSizeByTab[tab] = s;
     this.currentPageByTab[tab] = 1;
-  }
-
-  // Hologram Request Methods
-  loadHologramRequests(): void {
-    console.log('loadHologramRequests called, isBrowser:', this.isBrowser);
-
-    if (!this.isBrowser) {
-      this.hologramRequestList = [];
-      return;
-    }
-
-    // Load hologram requests from localStorage
-    let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    console.log('Stored requests:', storedRequests);
-
-    // Sort by submission date (newest first)
-    this.hologramRequestList = storedRequests.sort((a: any, b: any) => {
-      const dateA = new Date(a.submissionDate).getTime();
-      const dateB = new Date(b.submissionDate).getTime();
-      return dateB - dateA; // Newest first
-    });
-
-    // Initialize filtered list
-    this.filteredHologramRequestList = [...this.hologramRequestList];
-
-    console.log('Final hologramRequestList:', this.hologramRequestList);
-
-    // Debug: Log all submission dates for testing
-    this.hologramRequestList.forEach(request => {
-      const date = new Date(request.submissionDate);
-      const dateString = date.getUTCFullYear() + '-' +
-        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
-        String(date.getUTCDate()).padStart(2, '0');
-      console.log('Request:', request.refNumber, 'Date:', request.submissionDate, 'Formatted:', dateString);
-    });
-  }
-
-  navigateToHologramRequest(): void {
-    this.router.navigate(['/dev-hologramrequestlevel1']);
-  }
-
-  getBrandLabel(brandValue: string): string {
-    const brandMap: { [key: string]: string } = {
-      'sikkim-supreme': 'Sikkim Supreme Whisky',
-      'himalayan-gold': 'Himalayan Gold Rum',
-      'royal-sikkim': 'Royal Sikkim Brandy',
-      'mountain-dew': 'Mountain Dew Vodka',
-      'gangtok-special': 'Gangtok Special Whisky',
-      'teesta-valley': 'Teesta Valley Rum',
-      'khangchendzonga': 'Khangchendzonga Premium',
-      'yuksom-heritage': 'Yuksom Heritage Whisky'
-    };
-    return brandMap[brandValue] || brandValue;
-  }
-
-  getRequestStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'bg-warning-subtle text-warning';
-      case 'APPROVED':
-        return 'bg-success-subtle text-success';
-      case 'REJECTED':
-        return 'bg-danger-subtle text-danger';
-      case 'PROCESSING':
-        return 'bg-info-subtle text-info';
-      default:
-        return 'bg-secondary-subtle text-secondary';
-    }
-  }
-
-  viewHologramRequestApplication(request: any): void {
-    this.selectedRequest = request;
-    this.showRequestModal = true;
-  }
-
-  closeRequestModal(): void {
-    this.showRequestModal = false;
-    this.selectedRequest = null;
-  }
-
-  downloadRequestApplication(request: any): void {
-    const applicationContent = this.generateRequestApplicationTemplate(request);
-    const filename = `Hologram_Request_${request.refNumber.replace(/\//g, '_')}.txt`;
-    this.downloadFile(applicationContent, filename);
-  }
-
-  private generateRequestApplicationTemplate(request: any): string {
-    const submissionDate = new Date(request.submissionDate).toLocaleDateString('en-IN');
-    const usageDate = new Date(request.usageDate).toLocaleDateString('en-IN');
-    const brandLabel = this.getBrandLabel(request.brandName);
-
-    return `
-HOLOGRAM REQUEST APPLICATION
-============================
-
-Reference Number: ${request.refNumber}
-Application Date: ${submissionDate}
-
-APPLICANT DETAILS:
-------------------
-Company Name: Sikkim Distilleries Ltd
-License Number: SDL/2024/001
-Address: Industrial Area, Rangpo, East Sikkim - 737132
-Contact: +91-3592-252001
-Email: info@sikkimdistilleries.com
-
-REQUEST DETAILS:
-----------------
-Date to Use Hologram in Factory: ${usageDate}
-Brand Name: ${brandLabel}
-Bottle Size: ${request.bottleSize}
-Total Number of Holograms Required: ${request.totalHolograms.toLocaleString('en-IN')}
-
-${request.remarks ? `Additional Information:\n${request.remarks}\n` : ''}
-
-DECLARATION:
-------------
-I hereby declare that the information provided above is true and correct to the best of my knowledge. 
-I understand that any false information may lead to rejection of this application and/or legal action.
-
-The holograms requested will be used solely for the production of the specified brand and bottle size 
-mentioned in this application. Any misuse or unauthorized use of holograms will be reported immediately 
-to the concerned authorities.
-
-I agree to comply with all rules and regulations set forth by the Excise Department, Government of Sikkim, 
-regarding the use and handling of security holograms.
-
-
-Signature: _____________________
-Name: [Authorized Signatory]
-Designation: [Managing Director/Authorized Representative]
-Date: ${submissionDate}
-
-
-FOR OFFICE USE ONLY:
---------------------
-Application Received Date: ___________
-Received By: ___________
-Processing Fee: ₹___________
-Approval Status: ${request.status}
-Approved By: ___________
-Date of Approval: ___________
-Hologram Dispatch Date: ___________
-
-Remarks: ________________________________
-________________________________________
-________________________________________
-
-Signature of Approving Authority: ___________
-Name: ___________
-Designation: ___________
-Date: ___________
-
-============================
-End of Application
-============================
-`;
-  }
-
-  private downloadFile(content: string, filename: string): void {
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  }
-
-  // Additional methods for register view
-  getRequestStatusCount(status: string): number {
-    return this.hologramRequestList.filter(request => request.status === status).length;
-  }
-
-  getFilteredRequestStatusCount(status: string): number {
-    return this.filteredHologramRequestList.filter(request => request.status === status).length;
-  }
-
-  getTotalRequestedHolograms(): number {
-    return this.hologramRequestList.reduce((total, request) => total + (request.totalHolograms || 0), 0);
-  }
-
-  // Filter methods
-  applyFilters(): void {
-    console.log('Applying filters:', { dateFilter: this.dateFilter, monthFilter: this.monthFilter, statusFilter: this.statusFilter });
-
-    this.filteredHologramRequestList = this.hologramRequestList.filter(request => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesStatus = true;
-
-      // Date filter (exact date match)
-      if (this.dateFilter) {
-        const requestDate = new Date(request.submissionDate);
-        // Handle timezone by using UTC date
-        const requestDateString = requestDate.getUTCFullYear() + '-' +
-          String(requestDate.getUTCMonth() + 1).padStart(2, '0') + '-' +
-          String(requestDate.getUTCDate()).padStart(2, '0');
-        matchesDate = requestDateString === this.dateFilter;
-        console.log('Date comparison:', {
-          originalDate: request.submissionDate,
-          requestDateString,
-          dateFilter: this.dateFilter,
-          matches: matchesDate
-        });
-      }
-
-      // Month filter (month and year match)
-      if (this.monthFilter) {
-        const requestDate = new Date(request.submissionDate);
-        const filterDate = new Date(this.monthFilter + '-01');
-        matchesMonth = requestDate.getFullYear() === filterDate.getFullYear() &&
-          requestDate.getMonth() === filterDate.getMonth();
-        console.log('Month comparison:', {
-          requestYear: requestDate.getFullYear(),
-          requestMonth: requestDate.getMonth(),
-          filterYear: filterDate.getFullYear(),
-          filterMonth: filterDate.getMonth(),
-          matches: matchesMonth
-        });
-      }
-
-      // Status filter
-      if (this.statusFilter) {
-        matchesStatus = request.status === this.statusFilter;
-        console.log('Status comparison:', { requestStatus: request.status, statusFilter: this.statusFilter, matches: matchesStatus });
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesStatus;
-      console.log('Final match for request:', request.refNumber, finalMatch);
-
-      return finalMatch;
-    });
-
-    console.log('Filtered results:', this.filteredHologramRequestList.length, 'out of', this.hologramRequestList.length);
-
-    // Reset pagination to first page when filters are applied
-    this.resetPagination('hologram-request');
-  }
-
-  clearFilters(): void {
-    this.dateFilter = '';
-    this.monthFilter = '';
-    this.statusFilter = '';
-    this.filteredHologramRequestList = [...this.hologramRequestList];
-    this.resetPagination('hologram-request');
-  }
-
-  onDateFilterChange(): void {
-    console.log('Date filter changed to:', this.dateFilter);
-    this.applyFilters();
-  }
-
-  onMonthFilterChange(): void {
-    console.log('Month filter changed to:', this.monthFilter);
-    this.applyFilters();
-  }
-
-  onStatusFilterChange(): void {
-    console.log('Status filter changed to:', this.statusFilter);
-    this.applyFilters();
-  }
-
-
-
-  getStatusIcon(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'bi bi-clock';
-      case 'APPROVED':
-        return 'bi bi-check-circle';
-      case 'REJECTED':
-        return 'bi bi-x-circle';
-      case 'PROCESSING':
-        return 'bi bi-hourglass-split';
-      default:
-        return 'bi bi-question-circle';
-    }
   }
 
   // Hologram filter methods
