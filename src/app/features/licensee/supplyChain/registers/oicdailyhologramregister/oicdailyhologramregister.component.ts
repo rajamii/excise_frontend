@@ -102,6 +102,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
   
   // For rolls view section above table
   selectedEntryForRollsView: RegisterEntry | null = null;
+  
+  // For usage details modal
+  selectedEntryForDetails: RegisterEntry | null = null;
+  selectedRollTabIndex: number = 0;
 
   constructor(
     private router: Router,
@@ -280,6 +284,20 @@ export class OicdailyhologramregisterComponent implements OnInit {
         ? entry.dates.usage === this.selectedDate
         : entry.dates.usage.startsWith(datePrefix);
       return dateMatch;
+    });
+    
+    // CRITICAL: Sort entries so new entries (not fixed) appear at the top
+    // This ensures pending entries are always visible first
+    this.filteredEntries.sort((a, b) => {
+      // First, sort by isFixed status (false/pending first, true/saved last)
+      if (a.isFixed !== b.isFixed) {
+        return a.isFixed ? 1 : -1; // Not fixed (false) comes first
+      }
+      
+      // If both have same fixed status, sort by date (newest first)
+      const dateA = new Date(a.dates.usage).getTime();
+      const dateB = new Date(b.dates.usage).getTime();
+      return dateB - dateA; // Descending order (newest first)
     });
   }
 
@@ -2918,5 +2936,32 @@ export class OicdailyhologramregisterComponent implements OnInit {
         `Please check the console for details.`
       );
     }
+  }
+
+  /**
+   * View usage details for a saved entry
+   */
+  viewEntryDetails(entry: RegisterEntry): void {
+    console.log('📋 Viewing details for entry:', entry);
+    this.selectedEntryForDetails = entry;
+    this.selectedRollTabIndex = 0; // Reset to first tab
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Close the usage details modal
+   */
+  closeDetailsModal(): void {
+    this.selectedEntryForDetails = null;
+    this.selectedRollTabIndex = 0;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Select a roll tab in the details modal
+   */
+  selectRollTab(index: number): void {
+    this.selectedRollTabIndex = index;
+    this.cdr.detectChanges();
   }
 }
