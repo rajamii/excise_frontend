@@ -1202,6 +1202,97 @@
                     </button>
                   </div>
                 </div>
+                
+                <!-- Filter Section -->
+                <div class="card mb-3 border-info">
+                  <div class="card-body p-3">
+                    <div class="row g-3 align-items-end">
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold mb-1">
+                          <i class="bi bi-file-text me-1"></i>Brand Reference No
+                        </label>
+                        <div class="position-relative">
+                          <input 
+                            type="text" 
+                            class="form-control form-control-sm" 
+                            [(ngModel)]="serialFilters.brandReferenceNo"
+                            (input)="onBrandReferenceNoInput()"
+                            placeholder="Type reference no..."
+                            autocomplete="off">
+                          @if (brandReferenceNoSuggestions.length > 0 && serialFilters.brandReferenceNo) {
+                          <div class="autocomplete-dropdown">
+                            @for (suggestion of brandReferenceNoSuggestions; track suggestion) {
+                            <div class="autocomplete-item" (click)="selectBrandReferenceNo(suggestion)">
+                              <i class="bi bi-file-text me-2 text-info"></i>{{ suggestion }}
+                            </div>
+                            }
+                          </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label small fw-bold mb-1">
+                          <i class="bi bi-tag me-1"></i>Brand Name
+                        </label>
+                        <div class="position-relative">
+                          <input 
+                            type="text" 
+                            class="form-control form-control-sm" 
+                            [(ngModel)]="serialFilters.brandName"
+                            (input)="onBrandNameInput()"
+                            placeholder="Type brand name..."
+                            autocomplete="off">
+                          @if (brandNameSuggestions.length > 0 && serialFilters.brandName) {
+                          <div class="autocomplete-dropdown">
+                            @for (suggestion of brandNameSuggestions; track suggestion) {
+                            <div class="autocomplete-item" (click)="selectBrandName(suggestion)">
+                              <i class="bi bi-tag me-2 text-success"></i>{{ suggestion }}
+                            </div>
+                            }
+                          </div>
+                          }
+                        </div>
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small fw-bold mb-1">
+                          <i class="bi bi-123 me-1"></i>Quantity
+                        </label>
+                        <input 
+                          type="number" 
+                          class="form-control form-control-sm" 
+                          [(ngModel)]="serialFilters.qty"
+                          (input)="applySerialFilters()"
+                          placeholder="Enter qty..."
+                          min="1">
+                      </div>
+                      <div class="col-md-4">
+                        <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearSerialFilters(); applySerialFilters()">
+                          <i class="bi bi-x-circle me-1"></i>Clear Filters
+                        </button>
+                        <button class="btn btn-info btn-sm" (click)="applySerialFilters()">
+                          <i class="bi bi-search me-1"></i>Apply
+                        </button>
+                      </div>
+                    </div>
+                    @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty) {
+                    <div class="mt-2 p-2 bg-light rounded">
+                      <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Active Filters: 
+                        @if (serialFilters.brandReferenceNo) {
+                        <span class="badge bg-info ms-1">Ref: {{ serialFilters.brandReferenceNo }}</span>
+                        }
+                        @if (serialFilters.brandName) {
+                        <span class="badge bg-success ms-1">Brand: {{ serialFilters.brandName }}</span>
+                        }
+                        @if (serialFilters.qty) {
+                        <span class="badge bg-primary ms-1">Qty: {{ serialFilters.qty }}</span>
+                        }
+                      </small>
+                    </div>
+                    }
+                  </div>
+                </div>
 
                 <!-- Serial Ranges Display -->
                 <div class="serial-ranges-container" style="max-height: 400px; overflow-y: auto;">
@@ -1256,6 +1347,18 @@
                               <div class="detail-item">
                                 <i class="bi bi-file-text text-info me-1"></i>
                                 <small>Request Ref: {{ range.referenceNo }}</small>
+                              </div>
+                              }
+                              @if (range.brandDetails) {
+                              <div class="detail-item">
+                                <i class="bi bi-tag text-success me-1"></i>
+                                <small>Brand: {{ range.brandDetails }}</small>
+                              </div>
+                              }
+                              @if (range.bottleSize) {
+                              <div class="detail-item">
+                                <i class="bi bi-cup text-primary me-1"></i>
+                                <small>Bottle Size: {{ range.bottleSize }}</small>
                               </div>
                               }
                               @if (range.productionLine) {

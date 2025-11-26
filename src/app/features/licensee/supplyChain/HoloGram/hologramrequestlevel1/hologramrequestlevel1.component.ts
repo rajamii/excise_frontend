@@ -4,17 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 
 interface HologramRequest {
-  usageDate: string;
-  brandName: string;
-  bottleSize: string;
   totalHolograms: number;
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  remarks: string;
-}
-
-interface Brand {
-  value: string;
-  label: string;
+  usageDate: string;
 }
 
 @Component({
@@ -26,26 +18,11 @@ interface Brand {
 export class Hologramrequestlevel1Component implements OnInit {
   
   requestData: HologramRequest = {
-    usageDate: '',
-    brandName: '',
-    bottleSize: '',
     totalHolograms: 0,
     hologramType: 'LOCAL',
-    remarks: ''
+    usageDate: ''
   };
 
-  availableBrands: Brand[] = [
-    { value: 'sikkim-supreme', label: 'Sikkim Supreme Whisky' },
-    { value: 'himalayan-gold', label: 'Himalayan Gold Rum' },
-    { value: 'royal-sikkim', label: 'Royal Sikkim Brandy' },
-    { value: 'mountain-dew', label: 'Mountain Dew Vodka' },
-    { value: 'gangtok-special', label: 'Gangtok Special Whisky' },
-    { value: 'teesta-valley', label: 'Teesta Valley Rum' },
-    { value: 'khangchendzonga', label: 'Khangchendzonga Premium' },
-    { value: 'yuksom-heritage', label: 'Yuksom Heritage Whisky' }
-  ];
-
-  minDate: string = '';
   isSubmitting: boolean = false;
   showSuccessModal: boolean = false;
   generatedRefNumber: string = '';
@@ -53,14 +30,7 @@ export class Hologramrequestlevel1Component implements OnInit {
   constructor(private router: Router) {}
 
   ngOnInit(): void {
-    // Set minimum date to today
-    const today = new Date();
-    this.minDate = today.toISOString().split('T')[0];
-    
-    // Set default usage date to tomorrow
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    this.requestData.usageDate = tomorrow.toISOString().split('T')[0];
+    // No initialization needed for simplified form
   }
 
 
@@ -83,11 +53,9 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private isValidForm(): boolean {
     return !!(
-      this.requestData.usageDate &&
-      this.requestData.brandName &&
-      this.requestData.bottleSize &&
       this.requestData.totalHolograms > 0 &&
-      this.requestData.hologramType
+      this.requestData.hologramType &&
+      this.requestData.usageDate
     );
   }
 
@@ -122,7 +90,6 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private generateApplicationTemplate(): string {
     const currentDate = new Date().toLocaleDateString('en-IN');
-    const brandLabel = this.availableBrands.find(b => b.value === this.requestData.brandName)?.label || this.requestData.brandName;
     
     return `
 HOLOGRAM REQUEST APPLICATION
@@ -141,21 +108,17 @@ Email: info@sikkimdistilleries.com
 
 REQUEST DETAILS:
 ----------------
-Date to Use Hologram in Factory: ${new Date(this.requestData.usageDate).toLocaleDateString('en-IN')}
-Brand Name: ${brandLabel}
-Bottle Size: ${this.requestData.bottleSize}
+Hologram Type: ${this.requestData.hologramType}
 Total Number of Holograms Required: ${this.requestData.totalHolograms.toLocaleString('en-IN')}
-
-${this.requestData.remarks ? `Additional Information:\n${this.requestData.remarks}\n` : ''}
+Date to Use Hologram in Factory: ${new Date(this.requestData.usageDate).toLocaleDateString('en-IN')}
 
 DECLARATION:
 ------------
 I hereby declare that the information provided above is true and correct to the best of my knowledge. 
 I understand that any false information may lead to rejection of this application and/or legal action.
 
-The holograms requested will be used solely for the production of the specified brand and bottle size 
-mentioned in this application. Any misuse or unauthorized use of holograms will be reported immediately 
-to the concerned authorities.
+The holograms requested will be used for production purposes as per the requirements of the distillery.
+Any misuse or unauthorized use of holograms will be reported immediately to the concerned authorities.
 
 I agree to comply with all rules and regulations set forth by the Excise Department, Government of Sikkim, 
 regarding the use and handling of security holograms.
@@ -206,18 +169,10 @@ End of Application
 
   resetForm(): void {
     this.requestData = {
-      usageDate: '',
-      brandName: '',
-      bottleSize: '',
       totalHolograms: 0,
       hologramType: 'LOCAL',
-      remarks: ''
+      usageDate: ''
     };
-    
-    // Reset to tomorrow's date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    this.requestData.usageDate = tomorrow.toISOString().split('T')[0];
   }
 
   closeModal(): void {

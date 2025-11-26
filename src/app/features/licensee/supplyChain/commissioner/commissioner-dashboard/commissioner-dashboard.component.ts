@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
+import { RequisitionComponent } from "../../supplychaincomponents/requisition/requisition.component";
 
 interface CommissionerTableData {
   referenceNo: string;
@@ -61,7 +62,7 @@ interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
@@ -71,11 +72,6 @@ export class CommissionerDashboardComponent implements OnInit {
   sidebarHidden = true;
   private isBrowser = false;
 
-  // Filter properties for requisition
-  requisitionDateFilter: string = '';
-  requisitionStatusFilter: string = '';
-  requisitionLicenseeFilter: string = '';
-  
   // Filter properties for revalidation
   revalidationDateFilter: string = '';
   revalidationStatusFilter: string = '';
@@ -97,7 +93,6 @@ export class CommissionerDashboardComponent implements OnInit {
   hologramTypeFilter: string = '';
 
   // Filtered data arrays
-  filteredRequisitionData: CommissionerTableData[] = [];
   filteredRevalidationData: CommissionerTableData[] = [];
   filteredCancellationData: CommissionerTableData[] = [];
   filteredTransitData: CommissionerTableData[] = [];
@@ -127,50 +122,6 @@ export class CommissionerDashboardComponent implements OnInit {
   // Overdue hologram entries
   overdueHologramEntries: any[] = [];
   showOverdueAlert = false;
-
-  // Sample data for requisition applications (from commissioner's perspective)
-  requisitionData: CommissionerTableData[] = [
-    {
-      referenceNo: "BF502/EXCISE",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "8.00",
-      priority: "normal"
-    },
-    {
-      referenceNo: "BF503/EXCISE",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "PENDING",
-      amount: "12.50",
-      priority: "high"
-    },
-    {
-      referenceNo: "BF504/EXCISE",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "APPROVED",
-      amount: "15.75",
-      priority: "normal"
-    },
-    {
-      referenceNo: "BF505/EXCISE",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PROCESSING",
-      amount: "9.25",
-      priority: "normal"
-    },
-    {
-      referenceNo: "BF506/EXCISE",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PENDING",
-      amount: "11.00",
-      priority: "urgent"
-    }
-  ];
 
   // Sample data for revalidation applications (from commissioner's perspective)
   revalidationData: CommissionerTableData[] = [
@@ -489,7 +440,6 @@ export class CommissionerDashboardComponent implements OnInit {
     this.loadHologramApplicationsFromITCell();
 
     // Initialize filtered data
-    this.filteredRequisitionData = [...this.requisitionData];
     this.filteredRevalidationData = [...this.revalidationData];
     this.filteredCancellationData = [...this.cancellationData];
     this.filteredTransitData = [...this.transitData];
@@ -694,11 +644,7 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   // Status count methods
-  getRequisitionStatusCount(status: string): number {
-    return this.filteredRequisitionData.filter(item => item.status === status).length;
-  }
-
-  getRevalidationStatusCount(status: string): number {
+  getRevalidationStatusCount(status: string): number{
     return this.filteredRevalidationData.filter(item => item.status === status).length;
   }
 
@@ -766,49 +712,6 @@ export class CommissionerDashboardComponent implements OnInit {
       default:
         return 'default';
     }
-  }
-
-  // Filter methods for requisition
-  onRequisitionDateFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionStatusFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionLicenseeFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  clearRequisitionFilters(): void {
-    this.requisitionDateFilter = '';
-    this.requisitionStatusFilter = '';
-    this.requisitionLicenseeFilter = '';
-    this.applyRequisitionFilters();
-  }
-
-  private applyRequisitionFilters(): void {
-    let filtered = [...this.requisitionData];
-
-    if (this.requisitionDateFilter) {
-      filtered = filtered.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        const filterDate = new Date(this.requisitionDateFilter);
-        return itemDate.toDateString() === filterDate.toDateString();
-      });
-    }
-
-    if (this.requisitionStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.requisitionStatusFilter);
-    }
-
-    if (this.requisitionLicenseeFilter) {
-      filtered = filtered.filter(item => item.distilleryName === this.requisitionLicenseeFilter);
-    }
-
-    this.filteredRequisitionData = filtered;
-    this.resetPagination('requisition');
   }
 
   // Filter methods for revalidation
@@ -993,21 +896,7 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   // Action methods
-  reviewApplication(item: CommissionerTableData): void {
-    // Navigate to requisition letter view with reference number
-    this.router.navigate(['/dev-requisition-letter-view'], {
-      queryParams: { ref: item.referenceNo }
-    });
-  }
-
-  viewPermitSlip(item: CommissionerTableData): void {
-    // Navigate to final requisition letters (permit slip) with reference number
-    this.router.navigate(['/dev-final-requisition-letters'], {
-      queryParams: { ref: item.referenceNo }
-    });
-  }
-
-  reviewRevalidation(item: CommissionerTableData): void {
+  reviewRevalidation(item: CommissionerTableData): void{
     // Navigate to revalidation letter view with reference number
     this.router.navigate(['/dev-revalidation-letter-view'], {
       queryParams: { ref: item.referenceNo }
@@ -1036,16 +925,6 @@ export class CommissionerDashboardComponent implements OnInit {
         from: 'commissioner'
       }
     });
-  }
-
-  approveApplication(item: CommissionerTableData): void {
-    item.status = 'APPROVED';
-    console.log('Approved application:', item.referenceNo);
-  }
-
-  rejectApplication(item: CommissionerTableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected application:', item.referenceNo);
   }
 
   approveRevalidation(item: CommissionerTableData): void {
@@ -1194,9 +1073,8 @@ export class CommissionerDashboardComponent implements OnInit {
         this.approveTransit(this.selectedApplication);
       } else if (this.activeTab === 'hologram') {
         this.approveHologram(this.selectedApplication);
-      } else {
-        this.approveApplication(this.selectedApplication);
       }
+      // Note: Requisition approval is now handled in the RequisitionComponent
       this.closeReviewModal();
     }
   }
@@ -1211,9 +1089,8 @@ export class CommissionerDashboardComponent implements OnInit {
         this.rejectTransit(this.selectedApplication);
       } else if (this.activeTab === 'hologram') {
         this.rejectHologram(this.selectedApplication);
-      } else {
-        this.rejectApplication(this.selectedApplication);
       }
+      // Note: Requisition rejection is now handled in the RequisitionComponent
       this.closeReviewModal();
     }
   }

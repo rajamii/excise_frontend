@@ -4,7 +4,7 @@
     <div class="header-content">
       <div class="left-section">
         <button class="btn btn-outline-secondary" (click)="goBack()">
-          <i class="bi bi-arrow-left me-1"></i>Back to Supply Chain
+          <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
         </button>
       </div>
       <div class="right-section">
@@ -174,7 +174,7 @@
 
           <!-- Footer -->
           <div class="mt-4 text-center">
-            <p class="mb-1"><em>This is a system generated revalidation application view</em></p>
+            <p class="mb-1"><em>This is a system generated revalidation application views</em></p>
             <p class="mb-0"><small class="text-muted">Generated on {{ revalidationData.submissionDate | date: 'dd-MM-yyyy' }} for {{ revalidationData.distilleryName }}</small></p>
           </div>
 

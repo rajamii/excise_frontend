@@ -40,13 +40,19 @@
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'holograms'"
             [class.text-danger]="activeTab === 'holograms'" (click)="setActiveTab('holograms')" type="button">
-            <i class="bi bi-shield-check me-2"></i>Hologram Manufacturing Registers
+            <i class="bi bi-shield-check me-2"></i>Daily Hologram Manufacturing Register
           </button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-register'"
             [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')" type="button">
             <i class="bi bi-shield-plus me-2"></i> HOLOGRAM REGISTER
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-daily-entry'"
+            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')" type="button">
+            <i class="bi bi-calendar-check me-2"></i> HOLOGRAM DAILY ENTRY
           </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -469,9 +475,44 @@
       </div>
     </div>
 
-    <!-- Hologram Manufacturing Register Tab -->
+    <!-- Daily Hologram Manufacturing Register Tab -->
     <div class="tab-pane fade" [class.show]="activeTab === 'holograms'" [class.active]="activeTab === 'holograms'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-info mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-info-circle me-2"></i>
+              Daily Hologram Manufacturing Register - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Manually enter production details for approved hologram requests. 
+              Record which brands were manufactured, quantities produced, and any wastage/damage.
+              This register tracks the actual usage of allocated holograms in production.
+            </p>
+          </div>
+        </div>
+      </div>
       <app-hologram-manufacturing-register></app-hologram-manufacturing-register>
+    </div>
+
+    <!-- Hologram Daily Entry Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'" [class.active]="activeTab === 'hologram-daily-entry'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-primary mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-calendar-check me-2"></i>
+              Hologram Daily Entry Register - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Daily entry register for hologram usage tracking. 
+              Record daily hologram consumption, production details, and maintain accurate records 
+              of hologram utilization in the manufacturing process.
+            </p>
+          </div>
+        </div>
+      </div>
+      <app-oicdailyhologramregister></app-oicdailyhologramregister>
     </div>
   </div>
 </div>

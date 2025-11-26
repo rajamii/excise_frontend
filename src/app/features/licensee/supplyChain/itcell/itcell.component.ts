@@ -285,6 +285,28 @@ export class ITCELLComponent implements OnInit {
     }
   }
 
+  getStatusClass(status: string): string {
+    if (status === 'Payment Completed' || status === 'Approved') {
+      return 'bg-success-subtle text-success';
+    } else if (status === 'Forwarded to Commissioner' || status === 'Approved by Commissioner - Ready for Payment') {
+      return 'bg-info-subtle text-info';
+    } else if (status === 'Under Review') {
+      return 'bg-warning-subtle text-warning';
+    } else if (status === 'Draft') {
+      return 'bg-secondary-subtle text-secondary';
+    } else {
+      return 'bg-primary-subtle text-primary';
+    }
+  }
+
+  getStatusCount(status: string): number {
+    return this.filteredHologramData.filter(h => h.status === status).length;
+  }
+
+  getTotalQuantity(): number {
+    return this.filteredHologramData.reduce((sum, h) => sum + this.getTotalHolograms(h), 0);
+  }
+
   viewHologramDetails(hologram: HologramFormData): void {
     this.selectedHologram = hologram;
     this.showHologramModal = true;

@@ -4,6 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { Subscription } from "rxjs";
 import { filter } from "rxjs/operators";
+import { RequisitionComponent } from "../supplychaincomponents/requisition/requisition.component";
 
 interface PermitData {
   referenceNo: string;
@@ -17,7 +18,7 @@ interface PermitData {
 @Component({
   selector: "app-permit-section",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet],
+  imports: [CommonModule, FormsModule, RouterOutlet, RequisitionComponent],
   templateUrl: "./permit-section.component.html",
   styleUrls: ["./permit-section.component.scss"],
 })
@@ -33,34 +34,9 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
   private routerSubscription?: Subscription;
 
   // Sample data matching the .NET dashboard image
+  // Requisition data is now handled by the shared RequisitionComponent
+  // This array only contains data for other permit types (revalidation, cancellation, transit)
   allPermits: PermitData[] = [
-    {
-      referenceNo: "IBPS/02/EXCISE",
-      submissionDate: new Date("2025-09-22"),
-      distilleryName: "Sikkim Distilleries Ltd",
-      status:
-        "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-      amount: 8.0,
-      type: "requisition",
-    },
-    {
-      referenceNo: "IBPS/02/EXCISE",
-      submissionDate: new Date("2025-09-15"),
-      distilleryName: "Mount Distilleries Ltd",
-      status:
-        "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-      amount: 120.0,
-      type: "requisition",
-    },
-    {
-      referenceNo: "IBPS/03/EXCISE",
-      submissionDate: new Date("2025-09-05"),
-      distilleryName: "Darjeeling Artisan Pvt Ltd",
-      status:
-        "THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.",
-      amount: 8.0,
-      type: "requisition",
-    },
     {
       referenceNo: "REV/001/2025",
       submissionDate: new Date("2025-09-10"),

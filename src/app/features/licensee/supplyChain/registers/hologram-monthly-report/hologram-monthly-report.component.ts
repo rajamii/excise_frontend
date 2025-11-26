@@ -27,6 +27,8 @@ interface MonthlyReportRow {
   rowType: MonthlyReportRowType;
   label: string;
   date?: string;
+  brandDetails?: string;
+  bottleSize?: string;
   openingStock?: number | null;
   freshArrival?: number | null;
   total?: number | null;
@@ -44,6 +46,12 @@ interface MonthlyReportRow {
     damageReason?: string;
     notes?: string;
     serialRange?: string;
+    isLastInGroup?: boolean;
+    openingBalanceForGroup?: number;
+    freshArrivalForGroup?: number;
+    totalUtilizedForGroup?: number;
+    totalWastageForGroup?: number;
+    closingBalanceForGroup?: number;
   };
   utilizationDetails?: RollDisplayDetail[];
   wastageDetails?: RollDisplayDetail[];
@@ -133,7 +141,63 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     });
 
     window.addEventListener('storage', this.storageListener);
+    
+    // CRITICAL FIX: Migrate old entries to mark them as pending if they have no actual usage
+    this.migrateOldEntriesToPending();
+    
     this.refreshMonthlyData();
+  }
+  
+  /**
+   * Migration function to mark old entries as pending if they have no actual usage data
+   * This handles entries created before the isPendingUsage flag was introduced
+   */
+  private migrateOldEntriesToPending(): void {
+    try {
+      const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+      let migrationCount = 0;
+      
+      approvedEntries.forEach((entry: any) => {
+        // Skip if already has isPendingUsage flag (already migrated)
+        if (entry.isPendingUsage !== undefined) {
+          return;
+        }
+        
+        // CRITICAL: Check if this entry has ACTUAL usage data (lockedRolls with issuedRanges/wastageRanges)
+        // An entry is considered "used" only if it has lockedRolls with actual issued/wastage ranges
+        const hasLockedRollsWithUsage = entry.lockedRolls && entry.lockedRolls.length > 0 &&
+          entry.lockedRolls.some((roll: any) => 
+            (roll.issuedRanges && roll.issuedRanges.length > 0 && roll.issuedRanges.some((r: any) => r.quantity > 0)) ||
+            (roll.wastageRanges && roll.wastageRanges.length > 0 && roll.wastageRanges.some((r: any) => r.quantity > 0))
+          );
+        
+        // If entry has no locked rolls with actual usage, mark as pending
+        // This includes entries that only have allocated ranges but no actual usage
+        if (!hasLockedRollsWithUsage) {
+          entry.isPendingUsage = true;
+          migrationCount++;
+          console.log(`🔄 Migrated entry ${entry.id || entry.referenceNo} to pending usage (no actual usage data)`);
+        } else {
+          // Entry has actual usage data, mark as not pending
+          entry.isPendingUsage = false;
+          console.log(`✅ Entry ${entry.id || entry.referenceNo} has actual usage data, marked as not pending`);
+        }
+      });
+      
+      if (migrationCount > 0) {
+        localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
+        console.log(`✅ Migrated ${migrationCount} entries to pending usage status`);
+        
+        // Trigger storage event to refresh other components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'approvedHologramEntries',
+          newValue: JSON.stringify(approvedEntries),
+          storageArea: localStorage
+        }));
+      }
+    } catch (error) {
+      console.error('❌ Error migrating old entries:', error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -364,6 +428,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
     events.forEach(event => {
       if (event.rowType === 'ARRIVAL') {
+        const openingBeforeArrival = runningBalance;
         runningBalance += event.quantity;
         rows.push({
           rowType: 'ARRIVAL',
@@ -373,7 +438,13 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           closingBalance: runningBalance,
           meta: {
             cartoonNumber: event.cartoonNumber,
-            notes: this.buildArrivalNote(event)
+            notes: this.buildArrivalNote(event),
+            openingBalanceForGroup: openingBeforeArrival,
+            freshArrivalForGroup: event.quantity,
+            totalUtilizedForGroup: 0,
+            totalWastageForGroup: 0,
+            closingBalanceForGroup: runningBalance,
+            isLastInGroup: true  // Arrivals are always single rows
           }
         });
       } else if (event.rowType === 'UTILIZATION') {
@@ -401,6 +472,11 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             return (hasUtilization || hasWastage) && hasValidRange;
           });
           
+          // Calculate totals for this reference group
+          const totalUtilizationForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.utilizationRanges), 0);
+          const totalWastageForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.wastageRanges), 0);
+          const openingBalanceForRef = runningBalance + totalUtilizationForRef + totalWastageForRef;
+          
           validRollDetails.forEach((rollDetail: any, index: number) => {
             const rollName = rollDetail.rollName;
             
@@ -422,13 +498,18 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
             // Only show label on first row, leave blank for subsequent rows
             const label = (index === 0) ? `Utilization - ${this.formatDate(event.date)}` : '';
             
+            // CRITICAL FIX: Only show closing balance on the LAST roll of this utilization group
+            const isLastRoll = (index === validRollDetails.length - 1);
+            
             rows.push({
               rowType: 'UTILIZATION',
               label: label,
               date: event.date,
+              brandDetails: (rollDetail as any).brandDetails || '',
+              bottleSize: (rollDetail as any).bottleSize || '',
               utilizationQty: rollUtilizationQty,
               wastageQty: rollWastageQty,
-              closingBalance: runningBalance,  // Show closing balance on all rows
+              closingBalance: isLastRoll ? runningBalance : null,  // Only show on last roll
               leftOver: rollLeftOver,  // Show leftover for each range
               utilizationDetails: this.mapRollDisplayDetails([rollDetail], 'utilization'),
               wastageDetails: this.mapRollDisplayDetails([rollDetail], 'wastage'),
@@ -436,7 +517,14 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
                 referenceNo: event.referenceNo,
                 cartoonNumber: rollName,
                 serialRange: serialRange,
-                damageReason: damageReason  // Add damage reason to meta
+                damageReason: damageReason,  // Add damage reason to meta
+                isLastInGroup: isLastRoll,  // Flag to indicate this is the last roll in the group
+                // Add calculation details for the last row
+                openingBalanceForGroup: isLastRoll ? openingBalanceForRef : undefined,
+                freshArrivalForGroup: isLastRoll ? 0 : undefined,  // No fresh arrival in utilization
+                totalUtilizedForGroup: isLastRoll ? totalUtilizationForRef : undefined,
+                totalWastageForGroup: isLastRoll ? totalWastageForRef : undefined,
+                closingBalanceForGroup: isLastRoll ? runningBalance : undefined
               }
             });
           });
@@ -445,10 +533,17 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           const utilizationDetails = this.mapRollDisplayDetails(rollDetails, 'utilization');
           const wastageDetails = this.mapRollDisplayDetails(rollDetails, 'wastage');
           
+          // Extract brand and bottle size from entry
+          const entryData = (event as any).entry;
+          const brandDetails = entryData?.brandDetails || '';
+          const bottleSize = entryData?.bottleSize || '';
+          
           rows.push({
             rowType: 'UTILIZATION',
             label: `Utilization - ${this.formatDate(event.date)}`,
             date: event.date,
+            brandDetails: brandDetails,
+            bottleSize: bottleSize,
             utilizationQty: event.quantity,
             wastageQty: event.totalWastage || 0,
             closingBalance: runningBalance,
@@ -669,6 +764,19 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         // Preserve allocated quantity and damage reason for leftover calculation
         if (roll.availableCount !== undefined) {
           rollDetail.availableCount = roll.availableCount;
+        }
+        
+        // Preserve brand details and bottle size for display in monthly statement
+        if (roll.brandDetails) {
+          rollDetail.brandDetails = roll.brandDetails;
+        } else if (entry.brandDetails) {
+          rollDetail.brandDetails = entry.brandDetails;
+        }
+        
+        if (roll.bottleSize) {
+          rollDetail.bottleSize = roll.bottleSize;
+        } else if (entry.bottleSize) {
+          rollDetail.bottleSize = entry.bottleSize;
         }
         if (roll.allocatedQuantity !== undefined) {
           rollDetail.allocatedQuantity = roll.allocatedQuantity;

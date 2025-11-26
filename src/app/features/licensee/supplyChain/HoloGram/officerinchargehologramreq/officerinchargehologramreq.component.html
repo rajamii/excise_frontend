@@ -211,9 +211,7 @@
                                 <th class="ref-number">REFERENCE NO.</th>
                                 <th class="submission-date">SUBMISSION DATE</th>
                                 <th class="usage-date">USAGE DATE</th>
-                                <th class="brand-details">BRAND DETAILS</th>
                                 <th class="type">TYPE</th>
-                                <th class="bottle-size">BOTTLE SIZE</th>
                                 <th class="hologram-qty">HOLOGRAM QTY</th>
                                 <th class="status">STATUS</th>
                                 <th class="actions">ACTIONS</th>
@@ -236,15 +234,8 @@
                                 </td>
                                 <td class="usage-date">
                                     <div class="date-display">
-                                        <span class="date-main">{{ request.submissionDate | date:'dd/MM/yyyy' }}</span>
-                                        <span class="date-day">{{ request.submissionDate | date:'EEE' }}</span>
-                                    </div>
-                                </td>
-                                <td class="brand-details">
-                                    <div class="brand-info">
-                                        <span class="brand-name">{{ request.brandDetails.brandName }}</span>
-                                        <span class="brand-code">{{ request.brandDetails.liquorType }} - {{
-                                            request.brandDetails.alcoholPercent }}</span>
+                                        <span class="date-main">{{ request.usageDate | date:'dd/MM/yyyy' }}</span>
+                                        <span class="date-day">{{ request.usageDate | date:'EEE' }}</span>
                                     </div>
                                 </td>
                                 <td class="type">
@@ -256,9 +247,6 @@
                                         [class.text-dark]="request.hologramType === 'DEFENCE'">
                                         {{ request.hologramType }}
                                     </span>
-                                </td>
-                                <td class="bottle-size">
-                                    <span class="size-badge">{{ request.brandDetails.sizeMl }}ml</span>
                                 </td>
                                 <td class="hologram-qty">
                                     <div class="qty-display">

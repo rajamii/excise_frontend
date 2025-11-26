@@ -6,6 +6,7 @@ interface HologramRequest {
   id: string;
   referenceNo: string;
   submissionDate: string;
+  usageDate: string; // Date when holograms will be used in factory
   submittedBy: string;
   requestType: 'NEW_ALLOCATION' | 'ADDITIONAL_STOCK' | 'REPLACEMENT';
   hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE';
@@ -207,6 +208,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: `HR${String(Date.now() + index).slice(-6)}`,
         referenceNo: request.refNumber || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
         submissionDate: request.submissionDate ? new Date(request.submissionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        usageDate: request.usageDate ? new Date(request.usageDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Map usageDate from request
         submittedBy: 'Supply Chain User - Sikkim Distilleries Ltd',
         requestType: 'NEW_ALLOCATION' as const,
         hologramType: hologramType,
@@ -241,6 +243,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: `HA${String(Date.now() + index + 1000).slice(-6)}`,
         referenceNo: app.refNo || `HRQ/${new Date().getFullYear()}/${String(index + 100).padStart(3, '0')}`,
         submissionDate: app.date || new Date().toISOString().split('T')[0],
+        usageDate: app.usageDate || app.date || new Date().toISOString().split('T')[0], // Map usageDate from application
         submittedBy: `${app.companyName || 'Supply Chain User'} - Hologram Application`,
         requestType: 'NEW_ALLOCATION' as const,
         hologramType: hologramType,
@@ -266,9 +269,28 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Combine all requests
     this.hologramRequests = [...convertedRequests, ...convertedApplications];
 
+    // Sort by submission date and reference number - newest first (descending order)
+    this.hologramRequests.sort((a, b) => {
+      // First, try to sort by submission date with time
+      const dateA = new Date(a.submissionDate).getTime();
+      const dateB = new Date(b.submissionDate).getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Descending order (newest first)
+      }
+      
+      // If dates are the same, sort by reference number (descending - higher numbers first)
+      // Extract the numeric part from reference numbers like "HRQ/251125/012"
+      const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
+      const refNumB = parseInt(b.referenceNo.split('/').pop() || '0');
+      return refNumB - refNumA; // Descending order (higher ref numbers first)
+    });
+
     console.log('Total converted requests:', convertedRequests.length);
     console.log('Total converted applications:', convertedApplications.length);
     console.log('Combined hologram requests:', this.hologramRequests.length);
+    console.log('Sorted by submission date and reference number (newest first)');
+    console.log('First 3 requests:', this.hologramRequests.slice(0, 3).map(r => ({ ref: r.referenceNo, date: r.submissionDate })));
 
     // No sample data - only show real requests
     if (this.hologramRequests.length === 0) {
@@ -347,6 +369,23 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
       return matchesReference && matchesStatus && matchesRequestType && 
              matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+    });
+
+    // Sort filtered results by submission date and reference number - newest first (descending order)
+    this.filteredRequests.sort((a, b) => {
+      // First, try to sort by submission date with time
+      const dateA = new Date(a.submissionDate).getTime();
+      const dateB = new Date(b.submissionDate).getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Descending order (newest first)
+      }
+      
+      // If dates are the same, sort by reference number (descending - higher numbers first)
+      // Extract the numeric part from reference numbers like "HRQ/251125/012"
+      const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
+      const refNumB = parseInt(b.referenceNo.split('/').pop() || '0');
+      return refNumB - refNumA; // Descending order (higher ref numbers first)
     });
 
     this.currentPage = 1;
@@ -732,8 +771,25 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const cartoonNumber = item.cartoonNumber || item.rollNumber || 'UNKNOWN';
       const hologramType = item.type || item.hologramType || 'LOCAL';
       
-      // Calculate ALL actual available ranges (excluding IN_PROGRESS issued holograms)
-      const actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+      // CRITICAL FIX: Use serialRanges from Serial Numbers Details if available
+      // This ensures we use the ACTUAL available ranges shown in the modal
+      let actualAvailableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
+      
+      if (item.serialRanges && Array.isArray(item.serialRanges)) {
+        // Filter for AVAILABLE ranges only
+        actualAvailableRanges = item.serialRanges
+          .filter((range: any) => range.status === 'AVAILABLE')
+          .map((range: any) => ({
+            fromSerial: range.fromSerial,
+            toSerial: range.toSerial,
+            count: range.count
+          }));
+        console.log(`  Using serialRanges from ${cartoonNumber}:`, actualAvailableRanges);
+      } else {
+        // Fallback: Calculate from usage history
+        actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
+        console.log(`  Calculated ranges for ${cartoonNumber}:`, actualAvailableRanges);
+      }
       
       // Calculate total available count from ALL ranges
       const totalAvailableFromRanges = actualAvailableRanges.reduce((sum, range) => sum + range.count, 0);
@@ -810,12 +866,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     fromSerial: string,
     toSerial: string
   ): Array<{ fromSerial: string; toSerial: string; count: number }> {
+    console.log(`🔍 calculateActualAvailableRanges for ${cartoonNumber}:`, { fromSerial, toSerial });
+    
     if (!fromSerial || !toSerial) return [];
 
     // Extract serial numbers
     const prefix = fromSerial.replace(/\d+$/, '');
     const rollStart = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
     const rollEnd = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+
+    console.log(`  Roll range: ${rollStart} to ${rollEnd} (${rollEnd - rollStart + 1} total)`);
 
     // Get IN_PROGRESS issued holograms for this cartoon
     const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
@@ -825,12 +885,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       (issued.hologramType === hologramType || !issued.hologramType)
     );
 
+    console.log(`  Found ${inProgressIssued.length} IN_PROGRESS issued entries`);
+
     // Create a Set of all IN_PROGRESS serial numbers
     const inProgressSerials = new Set<number>();
     inProgressIssued.forEach((issued: any) => {
       if (issued.fromSerial && issued.toSerial) {
         const start = parseInt(issued.fromSerial.match(/\d+$/)?.[0] || '0');
         const end = parseInt(issued.toSerial.match(/\d+$/)?.[0] || '0');
+        console.log(`    IN_PROGRESS: ${start}-${end} (${end - start + 1} units)`);
         for (let i = start; i <= end; i++) {
           inProgressSerials.add(i);
         }
@@ -840,12 +903,15 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Get USED and DAMAGED ranges from usage history
     const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
     const serialRoll = serialData.find((roll: any) => 
-      roll.rollNumber === cartoonNumber && 
+      (roll.rollNumber === cartoonNumber || roll.cartoonNumber === cartoonNumber) && 
       roll.hologramType === hologramType
     );
 
+    console.log(`  Found serialRoll:`, serialRoll ? 'YES' : 'NO');
+
     const usedSerials = new Set<number>();
     if (serialRoll && serialRoll.usageHistory) {
+      console.log(`  Processing ${serialRoll.usageHistory.length} usage history entries`);
       serialRoll.usageHistory.forEach((historyEntry: any) => {
         if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) return;
         
@@ -863,12 +929,16 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         if (fromSerial && toSerial) {
           const start = parseInt(fromSerial.match(/\d+$/)?.[0] || '0');
           const end = parseInt(toSerial.match(/\d+$/)?.[0] || '0');
+          console.log(`    ${historyEntry.type}: ${start}-${end} (${end - start + 1} units)`);
           for (let i = start; i <= end; i++) {
             usedSerials.add(i);
           }
         }
       });
     }
+
+    console.log(`  Total IN_PROGRESS serials: ${inProgressSerials.size}`);
+    console.log(`  Total USED serials: ${usedSerials.size}`);
 
     // Find ALL available ranges (handles non-contiguous ranges)
     const availableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
@@ -906,6 +976,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         count: currentRangeEnd - currentRangeStart + 1
       });
     }
+
+    console.log(`  ✅ Available ranges:`, availableRanges.map(r => `${r.fromSerial}-${r.toSerial} (${r.count})`).join(', '));
 
     return availableRanges;
   }
@@ -1045,11 +1117,23 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         // Allocate from this range
         const quantityFromRange = Math.min(remainingQuantity, availableInRange);
         
-        // Calculate start serial (offset by what's already been used from this range)
-        const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
-        const prefix = range.fromSerial.replace(/\d+$/, '');
-        const startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
-        const endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+        // CRITICAL FIX: Use the ACTUAL range from Serial Numbers Details
+        // If we're taking the entire range, use the original fromSerial and toSerial
+        // Only calculate new serials if we're taking a partial range
+        let startSerial: string;
+        let endSerial: string;
+        
+        if (usedFromRange === 0 && quantityFromRange === range.count) {
+          // Taking the entire range - use original range boundaries
+          startSerial = range.fromSerial;
+          endSerial = range.toSerial;
+        } else {
+          // Taking a partial range - calculate the specific portion
+          const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
+          const prefix = range.fromSerial.replace(/\d+$/, '');
+          startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
+          endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+        }
 
         allocations.push({
           cartoonNumber: item.cartoonNumber,

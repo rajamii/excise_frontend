@@ -7,7 +7,7 @@
         <div class="container-fluid">
           <div class="row align-items-center py-3">
             <div class="col">
-              <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturing Units - {{
+              <h1 class="h3 mb-1 fw-bold text-dark">Monthly Statement of Hologram with Manufacturings Units - {{
                 getCurrentHologramTypeDisplay() }}</h1>
               <p class="mb-0 small text-muted">M/s Yuksom Breweries Ltd. | Melli South Sikkim</p>
             </div>
@@ -266,34 +266,40 @@
 
           <div class="table-responsive overflow-auto" style="max-width: 100vw;">
             <table class="table table-bordered table-hover mb-0" style="font-size: 0.75rem;">
-              <thead class="table-success">
+              <thead style="background-color: #000000;">
                 <tr>
-                  <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 220px; min-width: 220px; font-size: 0.875rem;">Reference / Date</th>
-                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Utilization</th>
-                  <th colspan="3" class="text-center fw-semibold p-2" style="font-size: 0.875rem;">Wastage</th>
-                  <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 110px; min-width: 110px; font-size: 0.875rem;">Left Over</th>
-                  <th class="text-center align-middle fw-semibold p-2"
-                    style="width: 110px; min-width: 110px; font-size: 0.875rem;">Total</th>
+                  <th class="text-center align-middle fw-semibold p-2 text-white"
+                    style="width: 220px; min-width: 220px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Reference / Date</th>
+                  <th class="text-center align-middle fw-semibold p-2 text-white"
+                    style="width: 150px; min-width: 150px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Brand Made</th>
+                  <th class="text-center align-middle fw-semibold p-2 text-white"
+                    style="width: 100px; min-width: 100px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Bottle Size</th>
+                  <th colspan="3" class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;">Utilization</th>
+                  <th colspan="3" class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;">Wastage</th>
+                  <th class="text-center align-middle fw-semibold p-2 text-white"
+                    style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Left Over</th>
+                  <th class="text-center align-middle fw-semibold p-2 text-white"
+                    style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Total</th>
                 </tr>
                 <tr>
-                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                  <th class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;"></th>
+                  <th class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;"></th>
+                  <th class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;"></th>
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">
                     From Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">
                     To Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 80px; min-width: 80px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Qty
                   </th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">
                     From Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 110px; min-width: 110px; font-size: 0.875rem;">
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 110px; min-width: 110px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">
                     To Serial</th>
-                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 80px; min-width: 80px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Qty
                   </th>
-                  <th class="text-center fw-semibold p-2" style="width: 80px; min-width: 80px; font-size: 0.875rem;">Qty
+                  <th class="text-center fw-semibold p-2 text-white" style="width: 80px; min-width: 80px; font-size: 0.875rem; background-color: #000000; border-color: #333333;">Qty
                   </th>
-                  <th class="text-center fw-semibold p-2" style="font-size: 0.875rem;"></th>
+                  <th class="text-center fw-semibold p-2 text-white" style="font-size: 0.875rem; background-color: #000000; border-color: #333333;"></th>
                 </tr>
               </thead>
               <tbody>
@@ -315,19 +321,49 @@
                     </small>
                     }
                   </td>
-                  <td colspan="7" class="text-center text-muted p-2 align-middle" style="font-size: 0.875rem;">
+                  <td colspan="9" class="text-center text-muted p-2 align-middle" style="font-size: 0.875rem;">
                     <i class="bi bi-box-seam me-1"></i>Fresh Arrival: <strong class="text-success">{{ row.freshArrival | number }}</strong>
                   </td>
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.closingBalance !== null && row.closingBalance !== undefined ? (row.closingBalance | number) : '-' }}
+                    @if (row.closingBalance !== null && row.closingBalance !== undefined) {
+                      <div class="d-flex flex-column w-100">
+                        <div class="text-end">
+                          <span class="fs-5 text-success fw-bold">{{ row.closingBalance | number }}</span>
+                        </div>
+                        @if (row.meta && row.meta.isLastInGroup && row.meta.openingBalanceForGroup !== undefined) {
+                          <div class="mt-2 p-2 bg-white border border-success rounded shadow-sm w-100" style="font-size: 0.7rem; text-align: left;">
+                            <div class="text-muted mb-1 fw-bold" style="font-size: 0.72rem;">
+                              <i class="bi bi-calculator me-1"></i>Calculation:
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center" style="line-height: 1.4;">
+                              <span class="text-muted">Opening:</span>
+                              <span class="text-dark fw-bold" style="font-size: 0.75rem;">{{ row.meta.openingBalanceForGroup | number }}</span>
+                            </div>
+                            @if (row.meta.freshArrivalForGroup !== undefined && row.meta.freshArrivalForGroup > 0) {
+                              <div class="d-flex justify-content-between align-items-center" style="line-height: 1.4;">
+                                <span class="text-success fw-semibold">+ Fresh Arrival:</span>
+                                <span class="text-success fw-bold" style="font-size: 0.75rem;">{{ row.meta.freshArrivalForGroup | number }}</span>
+                              </div>
+                            }
+                            <hr class="my-1 border-success" style="opacity: 0.3;">
+                            <div class="d-flex justify-content-between align-items-center bg-success bg-opacity-10 p-1 rounded">
+                              <span class="text-success fw-bold" style="font-size: 0.75rem;">= Balance:</span>
+                              <span class="text-success fw-bold" style="font-size: 0.85rem;">{{ row.meta.closingBalanceForGroup !== undefined ? (row.meta.closingBalanceForGroup | number) : '-' }}</span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <span>{{ row.closingBalance !== null && row.closingBalance !== undefined ? (row.closingBalance | number) : '-' }}</span>
+                    }
                   </td>
                 </tr>
                 } @else {
                 <!-- Utilization/Wastage Rows -->
-                <tr [ngClass]="getRowClass(row)">
+                <tr [ngClass]="getRowClass(row)" [class.border-bottom-0]="!row.meta?.isLastInGroup">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
-                    @if (row.meta?.referenceNo) {
+                    @if (row.meta?.referenceNo && row.label) {
                     <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
                       Ref: {{ row.meta?.referenceNo }}
                     </small>
@@ -341,6 +377,18 @@
                     <small class="d-block text-muted" style="font-size: 0.7rem; font-family: 'Courier New', monospace;">
                       Range: {{ row.meta?.serialRange }}
                     </small>
+                    }
+                  </td>
+                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
+                    <span class="text-dark fw-semibold">{{ row.brandDetails || '-' }}</span>
+                  </td>
+                  <td class="p-2 align-middle text-center" style="font-size: 0.875rem;">
+                    @if (row.bottleSize && row.bottleSize !== '-') {
+                      <span class="badge bg-info text-white">
+                        {{ row.bottleSize }}{{ row.bottleSize.toLowerCase().includes('ml') || row.bottleSize.toLowerCase().includes('l') ? '' : ' ml' }}
+                      </span>
+                    } @else {
+                      <span class="badge bg-secondary text-white">-</span>
                     }
                   </td>
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
@@ -412,8 +460,53 @@
                   <td class="text-center fw-bold p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.leftOver !== null && row.leftOver !== undefined ? (row.leftOver | number) : '-' }}
                   </td>
-                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.closingBalance !== null && row.closingBalance !== undefined ? (row.closingBalance | number) : '-' }}
+                  <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;" [attr.rowspan]="row.meta?.isLastInGroup ? null : 1">
+                    @if (row.closingBalance !== null && row.closingBalance !== undefined) {
+                      <div class="d-flex flex-column w-100">
+                        <div class="text-end">
+                          <span class="fs-5 text-success fw-bold">{{ row.closingBalance | number }}</span>
+                          @if (row.meta?.referenceNo) {
+                            <small class="text-info fw-semibold d-block mt-1" style="font-size: 0.65rem;">Ref: {{ row.meta?.referenceNo }}</small>
+                          }
+                        </div>
+                        @if (row.meta && row.meta.isLastInGroup && row.meta.openingBalanceForGroup !== undefined) {
+                          <div class="mt-2 p-3 bg-white border border-success border-2 rounded shadow-sm w-100" style="font-size: 0.75rem; text-align: left;">
+                            <div class="text-muted mb-2 fw-bold" style="font-size: 0.8rem;">
+                              <i class="bi bi-calculator me-1"></i>Calculation:
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                              <span class="text-muted">Opening:</span>
+                              <span class="text-dark fw-bold" style="font-size: 0.85rem;">{{ row.meta.openingBalanceForGroup | number }}</span>
+                            </div>
+                            @if (row.meta.freshArrivalForGroup !== undefined && row.meta.freshArrivalForGroup > 0) {
+                              <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-success fw-semibold">+ Fresh Arrival:</span>
+                                <span class="text-success fw-bold" style="font-size: 0.85rem;">{{ row.meta.freshArrivalForGroup | number }}</span>
+                              </div>
+                            }
+                            @if (row.meta.totalUtilizedForGroup !== undefined && row.meta.totalUtilizedForGroup > 0) {
+                              <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-primary fw-semibold">- Utilized:</span>
+                                <span class="text-primary fw-bold" style="font-size: 0.85rem;">{{ row.meta.totalUtilizedForGroup | number }}</span>
+                              </div>
+                            }
+                            @if (row.meta.totalWastageForGroup !== undefined && row.meta.totalWastageForGroup > 0) {
+                              <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-danger fw-semibold">- Wastage:</span>
+                                <span class="text-danger fw-bold" style="font-size: 0.85rem;">{{ row.meta.totalWastageForGroup | number }}</span>
+                              </div>
+                            }
+                            <hr class="my-2 border-success">
+                            <div class="d-flex justify-content-between align-items-center bg-success bg-opacity-10 p-2 rounded">
+                              <span class="text-success fw-bold" style="font-size: 0.85rem;">= Balance:</span>
+                              <span class="text-success fw-bold" style="font-size: 1rem;">{{ row.meta.closingBalanceForGroup !== undefined ? (row.meta.closingBalanceForGroup | number) : '-' }}</span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <span class="text-muted">-</span>
+                    }
                   </td>
                 </tr>
                 }
@@ -422,7 +515,7 @@
                 <!-- Closing Balance Row at the bottom -->
                 @if (overviewSummary) {
                 <tr class="table-success">
-                  <td colspan="9" class="p-3 align-middle fw-bold bg-success bg-opacity-10 border-success border-2" style="font-size: 1.1rem;">
+                  <td colspan="11" class="p-3 align-middle fw-bold bg-success bg-opacity-10 border-success border-2" style="font-size: 1.1rem;">
                     <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
                       <i class="bi bi-calculator-fill text-success me-2 fs-3"></i>
                       <span class="text-success fw-bold">Closing Balance:</span>
@@ -440,7 +533,7 @@
 
                 @if (!isLoading && !hasDetailRows) {
                 <tr>
-                  <td colspan="9" class="text-center text-muted py-4">
+                  <td colspan="11" class="text-center text-muted py-4">
                     <i class="bi bi-exclamation-triangle fs-1 d-block mb-2 text-warning"></i>
                     <h6 class="mb-2">No Daily Register Data Found</h6>
                     <p class="mb-0">No daily hologram entries found for {{ getCurrentHologramTypeDisplay() }}.</p>
