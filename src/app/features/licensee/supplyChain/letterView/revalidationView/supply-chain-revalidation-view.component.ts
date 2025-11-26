@@ -47,11 +47,16 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isBrowser) {
-      const ref = this.route.snapshot.queryParamMap.get('ref');
+      // Check if ref is from route params (permit section) or query params (supply chain)
+      let ref = this.route.snapshot.paramMap.get('ref');
+      if (!ref) {
+        ref = this.route.snapshot.queryParamMap.get('ref');
+      }
+      
       if (ref) {
         this.loadRevalidationData(ref);
       } else {
-        this.router.navigate(['/dev-supply-chain']);
+        this.goBack();
       }
     }
   }
@@ -149,6 +154,100 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
         viaRoute: 'Singtam - Rangpo Road',
         checkpostEntry: 'rangpo',
         purpose: 'blending'
+      },
+      // Permit Section Data
+      {
+        id: '5',
+        referenceNo: 'REV/001/2025',
+        submissionDate: new Date('2025-09-10'),
+        distilleryName: 'Sikkim Distilleries Ltd',
+        status: 'REVALIDATION APPROVED BY COMMISSIONER',
+        brAmount: 0.00,
+        revalidationAmount: 50.00,
+        originalPermitNo: 'IBPS/001/2025',
+        originalPermitDate: new Date('2025-06-15'),
+        expiryDate: new Date('2025-09-15'),
+        reasonForRevalidation: 'Delay in transportation due to road conditions',
+        newQuantity: 1000,
+        newPurpose: 'Manufacturing - Extended Period',
+        quantity: 1000,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Siliguri Highway via NH-10',
+        checkpostEntry: 'rangpo',
+        purpose: 'manufacturing'
+      },
+      // Commissioner Dashboard Data
+      {
+        id: '6',
+        referenceNo: 'REV/BF601',
+        submissionDate: new Date('2025-09-18'),
+        distilleryName: 'Himalayan Distilleries Pvt Ltd',
+        status: 'PENDING REVIEW',
+        brAmount: 50.0,
+        revalidationAmount: 5.0,
+        originalPermitNo: 'BF501/EXCISE',
+        originalPermitDate: new Date('2025-08-18'),
+        expiryDate: new Date('2025-09-25'),
+        reasonForRevalidation: 'Extension of validity period due to urgent requirements',
+        newQuantity: 1500,
+        newPurpose: 'Extended manufacturing for export orders',
+        quantity: 1500,
+        numberOfPermits: 1,
+        bulkSpiritType: 'molasses-ena',
+        strengthTo: '95.0',
+        liftedFrom: 'mountain-spirits',
+        viaRoute: 'NH 31A via Sevoke',
+        checkpostEntry: 'melli',
+        purpose: 'manufacturing'
+      },
+      {
+        id: '7',
+        referenceNo: 'REV/BF604',
+        submissionDate: new Date('2025-09-15'),
+        distilleryName: 'Sikkim Distilleries Ltd',
+        status: 'PENDING REVIEW',
+        brAmount: 55.0,
+        revalidationAmount: 8.0,
+        originalPermitNo: 'BF504/EXCISE',
+        originalPermitDate: new Date('2025-08-15'),
+        expiryDate: new Date('2025-09-28'),
+        reasonForRevalidation: 'Change in production requirements',
+        newQuantity: 2200,
+        newPurpose: 'Modified blending process for premium products',
+        quantity: 2200,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Rangpo Highway',
+        checkpostEntry: 'rangpo',
+        purpose: 'blending'
+      },
+      {
+        id: '8',
+        referenceNo: 'REV/002/2025',
+        submissionDate: new Date('2025-09-12'),
+        distilleryName: 'Mount Distilleries Ltd',
+        status: 'ApprovedRevalidationByCommissioner',
+        brAmount: 60.0,
+        revalidationAmount: 30.0,
+        originalPermitNo: 'IBPS/06/EXCISE',
+        originalPermitDate: new Date('2025-08-20'),
+        expiryDate: new Date('2025-11-20'),
+        reasonForRevalidation: 'Change in quantity requirements',
+        newQuantity: 18000,
+        newPurpose: 'Modified blending',
+        quantity: 18000,
+        numberOfPermits: 1,
+        bulkSpiritType: 'rectified-spirit',
+        strengthTo: '95.5',
+        liftedFrom: 'highland-breweries',
+        viaRoute: 'Singtam - Rangpo Road',
+        checkpostEntry: 'rangpo',
+        purpose: 'blending'
       }
     ];
 
@@ -156,12 +255,35 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
     if (found) {
       this.revalidationData = found;
     } else {
-      this.router.navigate(['/dev-supply-chain']);
+      this.goBack();
     }
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Check if we came from permit section, commissioner dashboard, or supply chain
+    const currentUrl = this.router.url;
+    console.log('Going back from URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      this.router.navigate(['/app-permit-section']);
+    } else if (currentUrl.includes('dev-revalidation-letter-view')) {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+    } else {
+      this.router.navigate(['/dev-supply-chain']);
+    }
+  }
+
+  getBackButtonText(): string {
+    const currentUrl = this.router.url;
+    console.log('Current URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      return 'Back to Permit Section';
+    } else if (currentUrl.includes('dev-revalidation-letter-view')) {
+      return 'Back to Commissioner Dashboard';
+    } else {
+      return 'Back to Supply Chain';
+    }
   }
 
   printApplication(): void {

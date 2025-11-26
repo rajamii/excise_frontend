@@ -116,16 +116,10 @@ export const routes: Routes = [
     path: "dev-supply-chain-transit-view-level2",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/letterView/transitviewlevel2/transitviewlevel2.component"
-      ).then((m) => m.Transitviewlevel2Component),
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
   },
-  {
-    path: "dev-supply-chain-transit-view-level3",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/transitviewlevel3/transitviewlevel3.component"
-      ).then((m) => m.Transitviewlevel3Component),
-  },
+
   {
     path: "dev-supply-chain-hologram-view",
     loadComponent: () =>
@@ -201,29 +195,29 @@ export const routes: Routes = [
         path: "requisition/:ref",
         loadComponent: () =>
           import(
-            "./features/licensee/supplyChain/letterView/permitSectionRequisitionView/permit-section-requisition-view.component"
-          ).then((m) => m.PermitSectionRequisitionViewComponent),
+            "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
+          ).then((m) => m.SupplyChainRequisitionViewComponent),
       },
       {
         path: "revalidation/:ref",
         loadComponent: () =>
           import(
-            "./features/licensee/supplyChain/letterView/permit-section-revalidation-application-view/permit-section-revalidation-application-view.component"
-          ).then((m) => m.PermitSectionRevalidationApplicationViewComponent),
+            "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
+          ).then((m) => m.SupplyChainRevalidationViewComponent),
       },
       {
         path: "cancellation/:ref",
         loadComponent: () =>
           import(
-            "./features/licensee/supplyChain/letterView/permit-section-cancellation-application-view/permit-section-cancellation-application-view.component"
-          ).then((m) => m.PermitSectionCancellationApplicationViewComponent),
+            "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
+          ).then((m) => m.SupplyChainCancellationViewComponent),
       },
       {
         path: "transit/:ref",
         loadComponent: () =>
           import(
-            "./features/licensee/supplyChain/letterView/permit-section-transit-view/permit-section-transit-view.component"
-          ).then((m) => m.PermitSectionTransitViewComponent),
+            "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+          ).then((m) => m.Transitviewlevel1Component),
       },
     ],
   },
@@ -239,29 +233,29 @@ export const routes: Routes = [
     path: "dev-requisition-letter-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/letterView/commissionerletterview/requisition-letter-view.component"
-      ).then((m) => m.RequisitionLetterViewComponent),
+        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
+      ).then((m) => m.SupplyChainRequisitionViewComponent),
   },
   {
     path: "dev-revalidation-letter-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/letterView/Commiosnerrevalidationview/revalidation-letter-view.component"
-      ).then((m) => m.RevalidationLetterViewComponent),
+        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
+      ).then((m) => m.SupplyChainRevalidationViewComponent),
   },
   {
     path: "dev-cancellation-letter-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/letterView/commissionercancellationview/cancellation-letter-view.component"
-      ).then((m) => m.CancellationLetterViewComponent),
+        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
+      ).then((m) => m.SupplyChainCancellationViewComponent),
   },
   {
     path: "dev-transit-permit-letter-view",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/letterView/commissionerTransitView/transit-permit-letter-view.component"
-      ).then((m) => m.TransitPermitLetterViewComponent),
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
   },
   {
     path: "dev-final-requisition-letters",

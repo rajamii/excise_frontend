@@ -49,11 +49,16 @@ export class SupplyChainCancellationViewComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isBrowser) {
-      const ref = this.route.snapshot.queryParamMap.get('ref');
+      // Check if ref is from route params (permit section) or query params (supply chain/commissioner)
+      let ref = this.route.snapshot.paramMap.get('ref');
+      if (!ref) {
+        ref = this.route.snapshot.queryParamMap.get('ref');
+      }
+      
       if (ref) {
         this.loadCancellationData(ref);
       } else {
-        this.router.navigate(['/dev-supply-chain']);
+        this.goBack();
       }
     }
   }
@@ -109,6 +114,83 @@ export class SupplyChainCancellationViewComponent implements OnInit {
         purpose: 'manufacturing',
         refundAmount: 9.00,
         refundStatus: 'Pending'
+      },
+      // Permit Section Data
+      {
+        id: '3',
+        referenceNo: 'CAN/001/2025',
+        submissionDate: new Date('2025-09-08'),
+        distilleryName: 'Mount Distilleries Ltd',
+        status: 'CANCELLATION PENDING APPROVAL',
+        brAmount: 25.0,
+        cancellationAmount: 0.00,
+        originalPermitNo: 'IBPS/003/2025',
+        originalPermitDate: new Date('2025-08-08'),
+        reasonForCancellation: 'Business plan changed - permit no longer needed',
+        requestedBy: 'Mr. Suresh Thapa, Operations Head',
+        authorizedBy: 'Mrs. Anjali Rai, CEO',
+        cancellationDate: new Date('2025-09-08'),
+        quantity: 800,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Siliguri Highway via NH-10',
+        checkpostEntry: 'rangpo',
+        purpose: 'manufacturing',
+        refundAmount: 18.00,
+        refundStatus: 'Pending'
+      },
+      // Commissioner Dashboard Data
+      {
+        id: '4',
+        referenceNo: 'CAN/BF703',
+        submissionDate: new Date('2025-09-13'),
+        distilleryName: 'Royal Sikkim Brewery',
+        status: 'PENDING COMMISSIONER REVIEW',
+        brAmount: 15.00,
+        cancellationAmount: 0.00,
+        originalPermitNo: 'BF505/EXCISE',
+        originalPermitDate: new Date('2025-08-13'),
+        reasonForCancellation: 'Operational changes - permit cancellation requested',
+        requestedBy: 'Mr. Deepak Sharma, Plant Manager',
+        authorizedBy: 'Mr. Ramesh Gupta, Director',
+        cancellationDate: new Date('2025-09-13'),
+        quantity: 1500,
+        numberOfPermits: 1,
+        bulkSpiritType: 'rectified-spirit',
+        strengthTo: '95.5',
+        liftedFrom: 'highland-breweries',
+        viaRoute: 'Singtam - Rangpo Road',
+        checkpostEntry: 'rangpo',
+        purpose: 'blending',
+        refundAmount: 11.00,
+        refundStatus: 'Pending'
+      },
+      {
+        id: '5',
+        referenceNo: 'CAN/BF704',
+        submissionDate: new Date('2025-09-12'),
+        distilleryName: 'Mountain View Distilleries',
+        status: 'APPROVED BY COMMISSIONER',
+        brAmount: 20.00,
+        cancellationAmount: 0.00,
+        originalPermitNo: 'BF506/EXCISE',
+        originalPermitDate: new Date('2025-08-12'),
+        reasonForCancellation: 'Strategic business decision - cancelling permit',
+        requestedBy: 'Mrs. Sunita Rai, Operations Director',
+        authorizedBy: 'Mr. Kiran Thapa, CEO',
+        cancellationDate: new Date('2025-09-12'),
+        quantity: 2000,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Rangpo Highway',
+        checkpostEntry: 'rangpo',
+        purpose: 'manufacturing',
+        refundAmount: 15.00,
+        refundStatus: 'Processed'
       }
     ];
 
@@ -116,12 +198,35 @@ export class SupplyChainCancellationViewComponent implements OnInit {
     if (found) {
       this.cancellationData = found;
     } else {
-      this.router.navigate(['/dev-supply-chain']);
+      this.goBack();
     }
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Check if we came from permit section, commissioner dashboard, or supply chain
+    const currentUrl = this.router.url;
+    console.log('Going back from URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      this.router.navigate(['/app-permit-section']);
+    } else if (currentUrl.includes('dev-cancellation-letter-view')) {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+    } else {
+      this.router.navigate(['/dev-supply-chain']);
+    }
+  }
+
+  getBackButtonText(): string {
+    const currentUrl = this.router.url;
+    console.log('Current URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      return 'Back to Permit Section';
+    } else if (currentUrl.includes('dev-cancellation-letter-view')) {
+      return 'Back to Commissioner Dashboard';
+    } else {
+      return 'Back to Supply Chain';
+    }
   }
 
   printApplication(): void {

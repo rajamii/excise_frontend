@@ -40,11 +40,16 @@ export class SupplyChainRequisitionViewComponent implements OnInit {
 
   ngOnInit(): void {
     if (this.isBrowser) {
-      const ref = this.route.snapshot.queryParamMap.get('ref');
+      // Check if ref is from route params or query params
+      let ref = this.route.snapshot.paramMap.get('ref');
+      if (!ref) {
+        ref = this.route.snapshot.queryParamMap.get('ref');
+      }
+      
       if (ref) {
         this.loadRequisitionData(ref);
       } else {
-        this.router.navigate(['/dev-supply-chain']);
+        this.goBack();
       }
     }
   }
@@ -314,7 +319,30 @@ export class SupplyChainRequisitionViewComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Check if we came from permit section, commissioner dashboard, or supply chain
+    const currentUrl = this.router.url;
+    console.log('Going back from URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      this.router.navigate(['/app-permit-section']);
+    } else if (currentUrl.includes('dev-requisition-letter-view')) {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+    } else {
+      this.router.navigate(['/dev-supply-chain']);
+    }
+  }
+
+  getBackButtonText(): string {
+    const currentUrl = this.router.url;
+    console.log('Current URL:', currentUrl); // Debug log
+    
+    if (currentUrl.includes('/app-permit-section/')) {
+      return 'Back to Permit Section';
+    } else if (currentUrl.includes('dev-requisition-letter-view')) {
+      return 'Back to Commissioner Dashboard';
+    } else {
+      return 'Back to Supply Chain';
+    }
   }
 
   printApplication(): void {
