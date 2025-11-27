@@ -6,8 +6,10 @@ import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregi
 import { RequisitionComponent } from "../../supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../supplychaincomponents/cancellation/cancellation.component";
 import { TransitComponent } from "../../supplychaincomponents/transit/transit.component";
+import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
+import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
 
-interface CommissionerTableData {
+export interface CommissionerTableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -64,14 +66,13 @@ interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent, PaymentSlipsViewComponent, HologramDetailsViewComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
 export class CommissionerDashboardComponent implements OnInit {
   Math = Math;
   activeTab = "requisition"; // Start with requisition tab as default
-  sidebarHidden = true;
   private isBrowser = false;
 
   // Filter properties for revalidation
@@ -96,15 +97,6 @@ export class CommissionerDashboardComponent implements OnInit {
   showHologramDetailsModal = false;
   selectedHologramApplication: CommissionerTableData | null = null;
   
-  // Edit mode for hologram quantities
-  isEditingQuantity = false;
-  editedLocalQty: number = 0;
-  editedExportQty: number = 0;
-  editedDefenceQty: number = 0;
-  originalLocalQty: number = 0;
-  originalExportQty: number = 0;
-  originalDefenceQty: number = 0;
-
   // Payment slips modal properties (separate from hologram details)
   showPaymentSlipsModal = false;
   selectedApplicationForSlips: CommissionerTableData | null = null;
@@ -430,11 +422,6 @@ export class CommissionerDashboardComponent implements OnInit {
   setActiveTab(tab: string): void {
     this.activeTab = tab;
   }
-
-  toggleSidebar(): void {
-    this.sidebarHidden = !this.sidebarHidden;
-  }
-
   // Navigation methods
   navigateTo(route: string): void {
     switch (route) {
@@ -823,7 +810,7 @@ export class CommissionerDashboardComponent implements OnInit {
     }
     
     // Reset edit mode
-    this.isEditingQuantity = false;
+    // this.isEditingQuantity = false; // Moved to component
     
     this.showHologramDetailsModal = true;
     console.log('Modal should be visible now:', this.showHologramDetailsModal);
@@ -834,128 +821,20 @@ export class CommissionerDashboardComponent implements OnInit {
   closeHologramDetailsModal(): void {
     this.showHologramDetailsModal = false;
     this.selectedHologramApplication = null;
-    this.isEditingQuantity = false;
   }
   
-  // Enable edit mode for quantities
-  enableQuantityEdit(): void {
-    if (!this.selectedHologramApplication) return;
-    
-    this.isEditingQuantity = true;
-    
-    // Store original values
-    this.originalLocalQty = this.selectedHologramApplication.localQtyLakh || 0;
-    this.originalExportQty = this.selectedHologramApplication.exportQtyLakh || 0;
-    this.originalDefenceQty = this.selectedHologramApplication.defenceQtyLakh || 0;
-    
-    // Set editable values
-    this.editedLocalQty = this.originalLocalQty;
-    this.editedExportQty = this.originalExportQty;
-    this.editedDefenceQty = this.originalDefenceQty;
+  // Handle events from hologram details modal
+  onHologramApprove(application: CommissionerTableData): void {
+    this.approveHologram(application);
+    this.closeHologramDetailsModal();
   }
-  
-  // Cancel edit mode
-  cancelQuantityEdit(): void {
-    this.isEditingQuantity = false;
-  }
-  
-  // Save updated quantities
-  saveQuantityEdit(): void {
-    if (!this.selectedHologramApplication || !this.isBrowser) return;
-    
-    const refNo = this.selectedHologramApplication.referenceNo;
-    
-    // Check if any quantity changed
-    const hasChanges = 
-      this.editedLocalQty !== this.originalLocalQty ||
-      this.editedExportQty !== this.originalExportQty ||
-      this.editedDefenceQty !== this.originalDefenceQty;
-    
-    if (!hasChanges) {
-      alert('No changes detected.');
-      this.isEditingQuantity = false;
-      return;
-    }
-    
-    // Prepare edit history
-    const editHistory = {
-      editedBy: 'Commissioner',
-      editedDate: new Date().toISOString().split('T')[0],
-      originalQuantities: {
-        local: this.originalLocalQty,
-        export: this.originalExportQty,
-        defence: this.originalDefenceQty,
-        total: this.originalLocalQty + this.originalExportQty + this.originalDefenceQty
-      },
-      updatedQuantities: {
-        local: this.editedLocalQty,
-        export: this.editedExportQty,
-        defence: this.editedDefenceQty,
-        total: this.editedLocalQty + this.editedExportQty + this.editedDefenceQty
-      }
-    };
-    
-    // Update hologramRequests - DON'T update quantities yet, only store pending changes
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const reqIndex = hologramRequests.findIndex((req: any) => req.refNo === refNo);
-    if (reqIndex !== -1) {
-      // Store pending quantities (will be applied on approval)
-      hologramRequests[reqIndex].pendingQuantities = {
-        local: this.editedLocalQty,
-        export: this.editedExportQty,
-        defence: this.editedDefenceQty
-      };
-      // Store edit history but don't show it yet (will be shown after approval)
-      hologramRequests[reqIndex].pendingEditHistory = editHistory;
-      hologramRequests[reqIndex].hasUnapprovedEdit = true;
-      localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-    }
-    
-    // Update hologramApplications (used by supply chain dashboard) - DON'T update quantities yet
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    applications.forEach((app: any) => {
-      if (app.refNo === refNo) {
-        // Store pending quantities (will be applied on approval)
-        app.pendingQuantities = {
-          local: this.editedLocalQty,
-          export: this.editedExportQty,
-          defence: this.editedDefenceQty
-        };
-        // Store edit history but don't show it yet (will be shown after approval)
-        app.pendingEditHistory = editHistory;
-        app.hasUnapprovedEdit = true;
-      }
-    });
-    localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    
-    // Update current modal data (only for Commissioner to see)
-    this.selectedHologramApplication.localQtyLakh = this.editedLocalQty;
-    this.selectedHologramApplication.exportQtyLakh = this.editedExportQty;
-    this.selectedHologramApplication.defenceQtyLakh = this.editedDefenceQty;
-    this.selectedHologramApplication.totalQtyLakh = this.editedLocalQty + this.editedExportQty + this.editedDefenceQty;
-    
-    // Exit edit mode
-    this.isEditingQuantity = false;
-    
-    // Reload data
+
+  onHologramDataUpdated(): void {
     this.loadHologramApplicationsFromITCell();
     this.applyHologramFilters();
-    
-    alert('Quantities updated successfully! The changes are now reflected in the supply chain view.');
   }
+  
 
-  // Payment calculation methods for hologram details
-  getTotalHolograms(hologram: any): number {
-    // Returns total pieces (data is already in pieces, not Lakh)
-    return (hologram?.localQtyLakh || 0) + (hologram?.exportQtyLakh || 0) + (hologram?.defenceQtyLakh || 0);
-  }
-
-  calculateWalletPayment(hologram: any): number {
-    // Wallet payment: ₹0.15 per hologram piece (only payment required)
-    // Data is already in pieces, no conversion needed
-    const totalPieces = this.getTotalHolograms(hologram);
-    return totalPieces * 0.15;
-  }
 
   // Pagination methods
   getCurrentPage(tab: string): number {
@@ -1031,50 +910,16 @@ export class CommissionerDashboardComponent implements OnInit {
     this.selectedApplicationForSlips = null;
   }
 
-  // Get slip details for a specific type
-  getSlipDetailsForType(application: CommissionerTableData, type: string): any {
-    return application.slipDetails?.[type] || null;
+
+
+  // Handle events from payment slips modal
+  onPaymentSlipsApprove(application: CommissionerTableData): void {
+    this.approveHologram(application);
+    this.closePaymentSlipsModal();
   }
 
-  // Check if a type has slip uploaded
-  hasSlipForType(application: CommissionerTableData, type: string): boolean {
-    return application.uploadedTypes?.includes(type) || false;
-  }
-
-  // Get formatted file size
-  getFormattedFileSize(bytes: number): string {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  }
-
-  // Get type badge class
-  getTypeBadgeClass(type: string): string {
-    switch (type) {
-      case 'Local':
-        return 'bg-success';
-      case 'Export':
-        return 'bg-dark';
-      case 'Defence':
-        return 'bg-warning text-dark';
-      default:
-        return 'bg-secondary';
-    }
-  }
-
-  // Download slip (placeholder - in real app would download from server)
-  downloadSlip(application: CommissionerTableData, type: string): void {
-    const slipDetails = this.getSlipDetailsForType(application, type);
-    if (slipDetails) {
-      alert(`Download functionality for: ${slipDetails.fileName}\n\nIn production, this would download the actual file from the server.`);
-    }
-  }
-
-  // View slip in new window (placeholder)
-  viewSlipInNewWindow(application: CommissionerTableData, type: string): void {
-    const slipDetails = this.getSlipDetailsForType(application, type);
-    if (slipDetails) {
-      alert(`View functionality for: ${slipDetails.fileName}\n\nIn production, this would open the file in a new window.`);
-    }
+  onPaymentSlipsReject(application: CommissionerTableData): void {
+    this.rejectHologram(application);
+    this.closePaymentSlipsModal();
   }
 }
