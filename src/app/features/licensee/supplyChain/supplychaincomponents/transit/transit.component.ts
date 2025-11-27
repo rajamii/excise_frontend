@@ -1,7 +1,7 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
-import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
+import { CommonModule, isPlatformBrowser } from "@angular/common";
+import { FormsModule } from "@angular/forms";
+import { Router } from "@angular/router";
 
 interface TableData {
   referenceNo: string;
@@ -9,6 +9,11 @@ interface TableData {
   distilleryName: string;
   status: string;
   amount: string;
+  priority?: string;
+  destination?: string;
+  transportMode?: string;
+  vehicleNumber?: string;
+  permitValidUntil?: string;
 }
 
 @Component({
@@ -24,189 +29,209 @@ export class TransitComponent implements OnInit {
   
   // Filter properties for transit
   transitDateFilter: string = '';
-  transitMonthFilter: string = '';
-  transitYearFilter: string = '';
   transitStatusFilter: string = '';
+  transitDestinationFilter: string = '';
   
-  transitData: TableData[] = [];
+  // Pagination
+  pageSizeOptions: number[] = [5, 10, 15];
+  currentPage: number = 1;
+  pageSize: number = 5;
   
   filteredTransitData: TableData[] = [];
   
-  // Pagination state
-  pageSizeOptions: number[] = [5, 10, 15];
-  pageSize: number = 5;
-  currentPage: number = 1;
+  // Sample data for transit permit applications (from commissioner's perspective)
+  transitData: TableData[] = [
+    {
+      referenceNo: "TRN/BF801",
+      submissionDate: "22-Sep-2025",
+      distilleryName: "Sikkim Distilleries Ltd",
+      status: "PENDING",
+      amount: "2500.00",
+      priority: "high",
+      destination: "Delhi",
+      transportMode: "Road",
+      vehicleNumber: "SK01AB1234",
+      permitValidUntil: "30-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF802",
+      submissionDate: "21-Sep-2025",
+      distilleryName: "Himalayan Distilleries Pvt Ltd",
+      status: "APPROVED",
+      amount: "3200.00",
+      priority: "normal",
+      destination: "Mumbai",
+      transportMode: "Road",
+      vehicleNumber: "MH12CD5678",
+      permitValidUntil: "28-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF803",
+      submissionDate: "20-Sep-2025",
+      distilleryName: "Royal Sikkim Brewery",
+      status: "ISSUED",
+      amount: "1800.00",
+      priority: "urgent",
+      destination: "Kolkata",
+      transportMode: "Road",
+      vehicleNumber: "WB03EF9012",
+      permitValidUntil: "25-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF804",
+      submissionDate: "19-Sep-2025",
+      distilleryName: "Mountain View Distilleries",
+      status: "PROCESSING",
+      amount: "2100.00",
+      priority: "normal",
+      destination: "Bangalore",
+      transportMode: "Road",
+      vehicleNumber: "KA05GH3456",
+      permitValidUntil: "27-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF805",
+      submissionDate: "18-Sep-2025",
+      distilleryName: "Eastern Himalaya Distillery",
+      status: "PENDING",
+      amount: "2800.00",
+      priority: "high",
+      destination: "Chennai",
+      transportMode: "Road",
+      vehicleNumber: "TN09IJ7890",
+      permitValidUntil: "26-Sep-2025"
+    },
+    {
+      referenceNo: "TRN/BF806",
+      submissionDate: "17-Sep-2025",
+      distilleryName: "Gangtok Premium Spirits",
+      status: "REJECTED",
+      amount: "1500.00",
+      priority: "normal",
+      destination: "Guwahati",
+      transportMode: "Road",
+      vehicleNumber: "AS01KL2345",
+      permitValidUntil: "24-Sep-2025"
+    }
+  ];
 
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
-    this.loadTransitData();
   }
 
   ngOnInit(): void {
     // Initialize filtered data
     this.filteredTransitData = [...this.transitData];
   }
-navigateTo(route:string) {
-  this.router.navigate(["/dev-transit-permit"]);
 
-}
-  private loadTransitData(): void {
-    if (!this.isBrowser) {
-      return;
+  // Filter methods
+  applyTransitFilters(): void {
+    let filtered = [...this.transitData];
+
+    if (this.transitDateFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        const filterDate = new Date(this.transitDateFilter);
+        return itemDate.toDateString() === filterDate.toDateString();
+      });
     }
 
-    // Load transit permit requests from localStorage
-    const transitPermitRequests = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+    if (this.transitStatusFilter) {
+      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
+    }
 
-    // Also check importPermitRequests for transit permits (for backward compatibility)
-    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-    const transitFromImport = importPermitRequests.filter((permit: any) => permit.type === 'transit-permit');
+    if (this.transitDestinationFilter) {
+      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
+    }
 
-    // Combine both sources
-    const allTransitRequests = [...transitPermitRequests, ...transitFromImport];
-
-    // Remove duplicates based on reference number (billNo or refNo)
-    const uniqueTransitRequests = allTransitRequests.reduce((acc: any[], current: any) => {
-      const refNo = current.billNo || current.refNo;
-      const isDuplicate = acc.some((item: any) => (item.billNo || item.refNo) === refNo);
-      if (!isDuplicate) {
-        acc.push(current);
-      }
-      return acc;
-    }, []);
-
-    // Sort by submission time (newest first)
-    uniqueTransitRequests.sort((a: any, b: any) => {
-      const dateA = new Date(a.submissionDate || a.date).getTime();
-      const dateB = new Date(b.submissionDate || b.date).getTime();
-      return dateB - dateA; // Newest first
-    });
-
-    // Convert transit permit data to table format
-    const transitPermitData: TableData[] = uniqueTransitRequests.map((permit: any) => ({
-      referenceNo: permit.billNo || permit.refNo,
-      submissionDate: new Date(permit.submissionDate || permit.date).toLocaleDateString('en-GB'),
-      distilleryName: permit.soleDistributor || permit.distilleryName || 'Unknown Distributor',
-      status: permit.status || 'TRANSIT PERMIT ISSUED',
-      amount: (permit.totalAmount || permit.brAmount || 0).toFixed(2)
-    }));
-
-    // Set transit data (no sample data)
-    this.transitData = transitPermitData;
-    this.filteredTransitData = [...this.transitData];
-  }
-
-  // Transit filter methods
-  applyTransitFilters(): void {
-    console.log('Applying transit filters:', {
-      dateFilter: this.transitDateFilter,
-      monthFilter: this.transitMonthFilter,
-      yearFilter: this.transitYearFilter,
-      statusFilter: this.transitStatusFilter
-    });
-
-    this.filteredTransitData = this.transitData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
-
-      // Parse the date from the format "13-Sep-2025"
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
-
-        // Convert month name to number
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
-
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
-
-          // Date filter (exact date match)
-          if (this.transitDateFilter) {
-            const filterDate = new Date(this.transitDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
-
-          // Month filter (month and year match)
-          if (this.transitMonthFilter) {
-            const filterDate = new Date(this.transitMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
-
-          // Year filter
-          if (this.transitYearFilter) {
-            const filterYear = parseInt(this.transitYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
-        }
-      }
-
-      // Status filter (partial match for long status messages)
-      if (this.transitStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.transitStatusFilter.toLowerCase());
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-      console.log('Transit match for:', item.referenceNo, finalMatch);
-
-      return finalMatch;
-    });
-
-    console.log('Filtered transit results:', this.filteredTransitData.length, 'out of', this.transitData.length);
-
-    // Reset pagination to first page when filters are applied
+    this.filteredTransitData = filtered;
     this.resetPagination();
   }
 
   clearTransitFilters(): void {
     this.transitDateFilter = '';
-    this.transitMonthFilter = '';
-    this.transitYearFilter = '';
     this.transitStatusFilter = '';
-    this.filteredTransitData = [...this.transitData];
-    this.resetPagination();
+    this.transitDestinationFilter = '';
+    this.applyTransitFilters();
   }
 
   onTransitDateFilterChange(): void {
-    console.log('Transit date filter changed to:', this.transitDateFilter);
-    this.applyTransitFilters();
-  }
-
-  onTransitMonthFilterChange(): void {
-    console.log('Transit month filter changed to:', this.transitMonthFilter);
-    this.applyTransitFilters();
-  }
-
-  onTransitYearFilterChange(): void {
-    console.log('Transit year filter changed to:', this.transitYearFilter);
     this.applyTransitFilters();
   }
 
   onTransitStatusFilterChange(): void {
-    console.log('Transit status filter changed to:', this.transitStatusFilter);
     this.applyTransitFilters();
   }
 
-  // Transit summary methods
+  onTransitDestinationFilterChange(): void {
+    this.applyTransitFilters();
+  }
+
+  // Summary methods
   getTransitStatusCount(status: string): number {
-    return this.transitData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
+    return this.filteredTransitData.filter(item => item.status === status).length;
+  }
+
+  getUrgentTransitCount(): number {
+    return this.filteredTransitData.filter(item => 
+      item.priority === 'urgent' || item.priority === 'high'
     ).length;
   }
 
   getTotalTransitAmount(): number {
-    return this.transitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  // Action methods
+  reviewTransit(item: TableData): void {
+    // Navigate to transit permit letter view with reference number
+    this.router.navigate(['/dev-transit-permit-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
+  }
+
+  approveTransit(item: TableData): void {
+    item.status = 'APPROVED';
+    console.log('Approved transit permit:', item.referenceNo);
+  }
+
+  rejectTransit(item: TableData): void {
+    item.status = 'REJECTED';
+    console.log('Rejected transit permit:', item.referenceNo);
+  }
+
+  issueTransit(item: TableData): void {
+    item.status = 'ISSUED';
+    console.log('Issued transit permit:', item.referenceNo);
+  }
+
+  // Helper methods
+  getStatusClass(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return 'pending';
+      case 'APPROVED':
+        return 'approved';
+      case 'REJECTED':
+        return 'rejected';
+      case 'PROCESSING':
+        return 'processing';
+      case 'ISSUED':
+        return 'issued';
+      default:
+        return 'default';
+    }
+  }
+
+  private parseDate(dateString: string): Date {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+    return new Date(dateString);
   }
 
   // Pagination methods
@@ -218,17 +243,17 @@ navigateTo(route:string) {
     return this.pageSize;
   }
 
-  getTotalPages(data: any[]): number {
-    return Math.max(1, Math.ceil((data?.length || 0) / this.pageSize));
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil((this.filteredTransitData?.length || 0) / this.pageSize));
   }
 
-  getPaged<T = any>(data: T[]): T[] {
+  getPaged(): TableData[] {
     const start = (this.currentPage - 1) * this.pageSize;
-    return (data || []).slice(start, start + this.pageSize);
+    return (this.filteredTransitData || []).slice(start, start + this.pageSize);
   }
 
-  goToPage(page: number, data: any[]): void {
-    const total = this.getTotalPages(data);
+  goToPage(page: number): void {
+    const total = this.getTotalPages();
     if (page < 1 || page > total) return;
     this.currentPage = page;
   }
@@ -242,58 +267,5 @@ navigateTo(route:string) {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
-  }
-
-  // Navigation methods
-  applicationCheck(item: TableData): void {
-    // Navigate to transit view level 1 component
-    console.log('Application Check clicked for:', item.referenceNo);
-    this.router.navigate(["/dev-supply-chain-transit-view-level1"], {
-      queryParams: { ref: item.referenceNo },
-    });
-  }
-
-  // Clear cache method
-  clearCache(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      'Are you sure you want to clear all transit data?\n\n' +
-      'This will remove:\n' +
-      '- All transit permit requests from localStorage\n' +
-      '- All transit permit data from importPermitRequests\n\n' +
-      'This action cannot be undone.'
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    // Clear transit permit requests from localStorage
-    localStorage.removeItem('transitPermitRequests');
-
-    // Also clear transit permits from importPermitRequests
-    const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-    const filteredImportRequests = importPermitRequests.filter((permit: any) => permit.type !== 'transit-permit');
-    localStorage.setItem('importPermitRequests', JSON.stringify(filteredImportRequests));
-
-    // Reset to empty data
-    this.transitData = [];
-
-    // Reset filtered data
-    this.filteredTransitData = [];
-
-    // Reset pagination
-    this.resetPagination();
-
-    // Clear filters
-    this.transitDateFilter = '';
-    this.transitMonthFilter = '';
-    this.transitYearFilter = '';
-    this.transitStatusFilter = '';
-
-    alert('✅ Transit cache cleared successfully!\n\nAll transit data has been removed from localStorage.');
   }
 }

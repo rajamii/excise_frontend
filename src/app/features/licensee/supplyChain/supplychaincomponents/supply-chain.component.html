@@ -8,124 +8,6 @@
         Distillery Managements
       </h5>
     </div>
-
-    <!-- Sidebar Content -->
-    <div class="p-0">
-      <!-- Accordion for Navigation -->
-      <div class="accordion accordion-flush" id="sidebarAccordion">
-        <!-- Distillery Section -->
-        <div class="accordion-item">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
-              data-bs-target="#distilleryCollapse">
-              <i class="bi bi-building me-2"></i>
-              Supply Chain
-            </button>
-          </h2>
-          <div id="distilleryCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
-            <div class="accordion-body p-0">
-              <ul class="list-group list-group-flush">
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('import-permit')" style="cursor: pointer">
-                  <i class="bi bi-file-earmark-arrow-down me-3 text-black fs-5"></i>
-                  <span>Import Permit</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('transit-permit')" style="cursor: pointer">
-                  <i class="bi bi-truck me-3 text-info fs-5"></i>
-                  <span>Transit Permit</span>
-                </li>
-                <!-- Hologram Dropdown -->
-                <li class="list-group-item p-0">
-                  <div class="accordion accordion-flush">
-                    <div class="accordion-item border-0">
-                      <h2 class="accordion-header">
-                        <button
-                          class="accordion-button collapsed list-group-item-action d-flex align-items-center py-3 border-0 bg-transparent"
-                          type="button" data-bs-toggle="collapse" data-bs-target="#hologramSubmenu"
-                          aria-expanded="false" aria-controls="hologramSubmenu">
-                          <i class="bi bi-qr-code me-3 text-primary fs-5"></i>
-                          <span>HOLOGRAM</span>
-                        </button>
-                      </h2>
-                      <div id="hologramSubmenu" class="accordion-collapse collapse" data-bs-parent="#hologramAccordion">
-                        <div class="accordion-body p-0">
-                          <ul class="list-group list-group-flush ms-4">
-                            <li class="list-group-item list-group-item-action d-flex align-items-center py-2 border-0"
-                              (click)="navigateTo('hologram')" style="cursor: pointer">
-                              <i class="bi bi-eye me-2 text-info"></i>
-                              <span>HOLOGRAM PROCUREMENT</span>
-                            </li>
-                            <li class="list-group-item list-group-item-action d-flex align-items-center py-2 border-0"
-                              (click)="navigateTo('request-hologram')" style="cursor: pointer">
-                              <i class="bi bi-plus-circle me-2 text-success"></i>
-                              <span>REQUEST HOLOGRAM</span>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <!-- Register Section -->
-        <div class="accordion-item">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
-              data-bs-target="#registerCollapse">
-              <i class="bi bi-journal-text me-2"></i>
-              Register
-            </button>
-          </h2>
-          <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
-            <div class="accordion-body p-0">
-              <ul class="list-group list-group-flush">
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('transit-permit-register')" style="cursor: pointer">
-                  <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
-                  <span>Transit Permit Register</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('daily-record-register')" style="cursor: pointer">
-                  <i class="bi bi-journal-check me-3 text-success fs-5"></i>
-                  <span>Daily Record Register</span>
-                </li>
-
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('brands-details')" style="cursor: pointer">
-                  <i class="bi bi-tags me-3 text-dark fs-5"></i>
-                  <span>Brands Details</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('yuksom-local-sales-register')" style="cursor: pointer">
-                  <i class="bi bi-journal-text me-3 text-warning fs-5"></i>
-                  <span>Yuksom Local Sale</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('beer-production-register')" style="cursor: pointer">
-                  <i class="bi bi-cup-hot me-3 text-info fs-5"></i>
-                  <span>Beer Production Register</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('hologram-daily-register')" style="cursor: pointer">
-                  <i class="bi bi-calendar-day me-3 text-success fs-5"></i>
-                  <span>Hologram Daily Register</span>
-                </li>
-                <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                  (click)="navigateTo('hologram-monthly-report')" style="cursor: pointer">
-                  <i class="bi bi-graph-up me-3 text-primary fs-5"></i>
-                  <span>Hologram Monthly Report</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </nav>
 
   <!-- Main Content Area -->
@@ -135,15 +17,6 @@
       <div class="header-section text-black">
         <div class="container-fluid">
           <div class="row align-items-center py-3">
-            <div class="col-auto">
-              <!-- Circular Hamburger Menu Button -->
-              <button class="hamburger-btn me-3" (click)="toggleSidebar()" title="Toggle Sidebar"
-                [class.active]="!sidebarHidden">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-              </button>
-            </div>
             <div class="col">
               <h1 class="h3 mb-1 fw-bold">Dashboard</h1>
               <p class="mb-0 small opacity-75">
@@ -250,4 +123,4 @@
       </div>
     </div>
   </main>
-</div>
+</div>

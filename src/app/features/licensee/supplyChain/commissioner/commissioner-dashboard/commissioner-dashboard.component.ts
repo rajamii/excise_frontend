@@ -4,6 +4,8 @@ import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../supplychaincomponents/requisition/requisition.component";
+import { CancellationComponent } from "../../supplychaincomponents/cancellation/cancellation.component";
+import { TransitComponent } from "../../supplychaincomponents/transit/transit.component";
 
 interface CommissionerTableData {
   referenceNo: string;
@@ -62,7 +64,7 @@ interface CommissionerTableData {
 @Component({
   selector: "app-commissioner-dashboard",
   standalone: true,
-  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent],
+  imports: [CommonModule, FormsModule, DailyhologramrecordregisterComponent, RequisitionComponent, CancellationComponent, TransitComponent],
   templateUrl: "./commissioner-dashboard.component.html",
   styleUrls: ["./commissioner-dashboard.component.scss"],
 })
@@ -77,16 +79,6 @@ export class CommissionerDashboardComponent implements OnInit {
   revalidationStatusFilter: string = '';
   revalidationPriorityFilter: string = '';
 
-  // Filter properties for cancellation
-  cancellationDateFilter: string = '';
-  cancellationStatusFilter: string = '';
-  cancellationReasonFilter: string = '';
-
-  // Filter properties for transit
-  transitDateFilter: string = '';
-  transitStatusFilter: string = '';
-  transitDestinationFilter: string = '';
-
   // Filter properties for hologram
   hologramDateFilter: string = '';
   hologramStatusFilter: string = '';
@@ -94,8 +86,6 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Filtered data arrays
   filteredRevalidationData: CommissionerTableData[] = [];
-  filteredCancellationData: CommissionerTableData[] = [];
-  filteredTransitData: CommissionerTableData[] = [];
   filteredHologramData: CommissionerTableData[] = [];
 
   // Modal properties
@@ -179,152 +169,6 @@ export class CommissionerDashboardComponent implements OnInit {
       priority: "urgent",
       isExpired: true,
       daysLeft: -4
-    }
-  ];
-
-  // Sample data for cancellation applications (from commissioner's perspective)
-  cancellationData: CommissionerTableData[] = [
-    {
-      referenceNo: "CAN/001/2025",
-      submissionDate: "20-Sep-2025",
-      requestDate: "20-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "15.00",
-      priority: "high",
-      cancellationReason: "Business Closure",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/002/2025",
-      submissionDate: "19-Sep-2025",
-      requestDate: "19-Sep-2025",
-      distilleryName: "Darjeeling Artisan Pvt Ltd",
-      status: "APPROVED",
-      amount: "20.00",
-      priority: "normal",
-      cancellationReason: "Voluntary Surrender",
-      licenseType: "Retail License"
-    },
-    {
-      referenceNo: "CAN/003/2025",
-      submissionDate: "18-Sep-2025",
-      requestDate: "18-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "APPROVED",
-      amount: "0.00",
-      priority: "urgent",
-      cancellationReason: "Non-Compliance",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/004/2025",
-      submissionDate: "17-Sep-2025",
-      requestDate: "17-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "PROCESSING",
-      amount: "0.00",
-      priority: "high",
-      cancellationReason: "License Transfer",
-      licenseType: "Wholesale License"
-    },
-    {
-      referenceNo: "CAN/005/2025",
-      submissionDate: "16-Sep-2025",
-      requestDate: "16-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "REJECTED",
-      amount: "0.00",
-      priority: "normal",
-      cancellationReason: "Financial Issues",
-      licenseType: "Manufacturing License"
-    },
-    {
-      referenceNo: "CAN/006/2025",
-      submissionDate: "15-Sep-2025",
-      requestDate: "15-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "PENDING",
-      amount: "0.00",
-      priority: "urgent",
-      cancellationReason: "Regulatory Violation",
-      licenseType: "Retail License"
-    }
-  ];
-
-  // Sample data for transit permit applications (from commissioner's perspective)
-  transitData: CommissionerTableData[] = [
-    {
-      referenceNo: "TRN/BF801",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "2500.00",
-      priority: "high",
-      destination: "Delhi",
-      transportMode: "Road",
-      vehicleNumber: "SK01AB1234",
-      permitValidUntil: "30-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF802",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "APPROVED",
-      amount: "3200.00",
-      priority: "normal",
-      destination: "Mumbai",
-      transportMode: "Road",
-      vehicleNumber: "MH12CD5678",
-      permitValidUntil: "28-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF803",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "ISSUED",
-      amount: "1800.00",
-      priority: "urgent",
-      destination: "Kolkata",
-      transportMode: "Road",
-      vehicleNumber: "WB03EF9012",
-      permitValidUntil: "25-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF804",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PROCESSING",
-      amount: "2100.00",
-      priority: "normal",
-      destination: "Bangalore",
-      transportMode: "Road",
-      vehicleNumber: "KA05GH3456",
-      permitValidUntil: "27-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF805",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PENDING",
-      amount: "2800.00",
-      priority: "high",
-      destination: "Chennai",
-      transportMode: "Road",
-      vehicleNumber: "TN09IJ7890",
-      permitValidUntil: "26-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF806",
-      submissionDate: "17-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "REJECTED",
-      amount: "1500.00",
-      priority: "normal",
-      destination: "Guwahati",
-      transportMode: "Road",
-      vehicleNumber: "AS01KL2345",
-      permitValidUntil: "24-Sep-2025"
     }
   ];
 
@@ -441,8 +285,6 @@ export class CommissionerDashboardComponent implements OnInit {
 
     // Initialize filtered data
     this.filteredRevalidationData = [...this.revalidationData];
-    this.filteredCancellationData = [...this.cancellationData];
-    this.filteredTransitData = [...this.transitData];
     this.filteredHologramData = [...this.hologramData];
 
     // Check for tab query parameter
@@ -654,30 +496,6 @@ export class CommissionerDashboardComponent implements OnInit {
     ).length;
   }
 
-  getCancellationStatusCount(status: string): number {
-    return this.filteredCancellationData.filter(item => item.status === status).length;
-  }
-
-  getUrgentCancellationCount(): number {
-    return this.filteredCancellationData.filter(item => 
-      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
-    ).length;
-  }
-
-  getTransitStatusCount(status: string): number {
-    return this.filteredTransitData.filter(item => item.status === status).length;
-  }
-
-  getUrgentTransitCount(): number {
-    return this.filteredTransitData.filter(item => 
-      item.priority === 'urgent' || item.priority === 'high'
-    ).length;
-  }
-
-  getTotalTransitAmount(): number {
-    return this.filteredTransitData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
-  }
-
   getHologramStatusCount(status: string): number {
     return this.filteredHologramData.filter(item => item.status === status).length;
   }
@@ -757,92 +575,6 @@ export class CommissionerDashboardComponent implements OnInit {
     this.resetPagination('revalidation');
   }
 
-  // Filter methods for cancellation
-  onCancellationDateFilterChange(): void {
-    this.applyCancellationFilters();
-  }
-
-  onCancellationStatusFilterChange(): void {
-    this.applyCancellationFilters();
-  }
-
-  onCancellationReasonFilterChange(): void {
-    this.applyCancellationFilters();
-  }
-
-  clearCancellationFilters(): void {
-    this.cancellationDateFilter = '';
-    this.cancellationStatusFilter = '';
-    this.cancellationReasonFilter = '';
-    this.applyCancellationFilters();
-  }
-
-  private applyCancellationFilters(): void {
-    let filtered = [...this.cancellationData];
-
-    if (this.cancellationDateFilter) {
-      filtered = filtered.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        const filterDate = new Date(this.cancellationDateFilter);
-        return itemDate.toDateString() === filterDate.toDateString();
-      });
-    }
-
-    if (this.cancellationStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.cancellationStatusFilter);
-    }
-
-    if (this.cancellationReasonFilter) {
-      filtered = filtered.filter(item => item.cancellationReason === this.cancellationReasonFilter);
-    }
-
-    this.filteredCancellationData = filtered;
-    this.resetPagination('cancellation');
-  }
-
-  // Filter methods for transit
-  onTransitDateFilterChange(): void {
-    this.applyTransitFilters();
-  }
-
-  onTransitStatusFilterChange(): void {
-    this.applyTransitFilters();
-  }
-
-  onTransitDestinationFilterChange(): void {
-    this.applyTransitFilters();
-  }
-
-  clearTransitFilters(): void {
-    this.transitDateFilter = '';
-    this.transitStatusFilter = '';
-    this.transitDestinationFilter = '';
-    this.applyTransitFilters();
-  }
-
-  private applyTransitFilters(): void {
-    let filtered = [...this.transitData];
-
-    if (this.transitDateFilter) {
-      filtered = filtered.filter(item => {
-        const itemDate = this.parseDate(item.submissionDate);
-        const filterDate = new Date(this.transitDateFilter);
-        return itemDate.toDateString() === filterDate.toDateString();
-      });
-    }
-
-    if (this.transitStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.transitStatusFilter);
-    }
-
-    if (this.transitDestinationFilter) {
-      filtered = filtered.filter(item => item.destination === this.transitDestinationFilter);
-    }
-
-    this.filteredTransitData = filtered;
-    this.resetPagination('transit');
-  }
-
   // Filter methods for hologram
   onHologramDateFilterChange(): void {
     this.applyHologramFilters();
@@ -903,20 +635,6 @@ export class CommissionerDashboardComponent implements OnInit {
     });
   }
 
-  reviewCancellation(item: CommissionerTableData): void {
-    // Navigate to cancellation letter view with reference number
-    this.router.navigate(['/dev-cancellation-letter-view'], {
-      queryParams: { ref: item.referenceNo }
-    });
-  }
-
-  reviewTransit(item: CommissionerTableData): void {
-    // Navigate to transit permit letter view with reference number
-    this.router.navigate(['/dev-transit-permit-letter-view'], {
-      queryParams: { ref: item.referenceNo }
-    });
-  }
-
   reviewHologram(item: CommissionerTableData): void {
     // Navigate to supply chain hologram view with reference number and from parameter
     this.router.navigate(['/dev-supply-chain-hologram-view'], {
@@ -948,31 +666,6 @@ export class CommissionerDashboardComponent implements OnInit {
       item.status = 'APPROVED';
     }
     console.log('Extended revalidation:', item.referenceNo);
-  }
-
-  approveCancellation(item: CommissionerTableData): void {
-    item.status = 'APPROVED';
-    console.log('Approved cancellation:', item.referenceNo);
-  }
-
-  rejectCancellation(item: CommissionerTableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected cancellation:', item.referenceNo);
-  }
-
-  approveTransit(item: CommissionerTableData): void {
-    item.status = 'APPROVED';
-    console.log('Approved transit permit:', item.referenceNo);
-  }
-
-  rejectTransit(item: CommissionerTableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected transit permit:', item.referenceNo);
-  }
-
-  issueTransit(item: CommissionerTableData): void {
-    item.status = 'ISSUED';
-    console.log('Issued transit permit:', item.referenceNo);
   }
 
   approveHologram(item: CommissionerTableData): void {
@@ -1067,14 +760,10 @@ export class CommissionerDashboardComponent implements OnInit {
     if (this.selectedApplication) {
       if (this.activeTab === 'revalidation') {
         this.approveRevalidation(this.selectedApplication);
-      } else if (this.activeTab === 'cancellation') {
-        this.approveCancellation(this.selectedApplication);
-      } else if (this.activeTab === 'transit') {
-        this.approveTransit(this.selectedApplication);
       } else if (this.activeTab === 'hologram') {
         this.approveHologram(this.selectedApplication);
       }
-      // Note: Requisition approval is now handled in the RequisitionComponent
+      // Note: Requisition, Cancellation, Transit approval is now handled in their respective components
       this.closeReviewModal();
     }
   }
@@ -1083,23 +772,17 @@ export class CommissionerDashboardComponent implements OnInit {
     if (this.selectedApplication) {
       if (this.activeTab === 'revalidation') {
         this.rejectRevalidation(this.selectedApplication);
-      } else if (this.activeTab === 'cancellation') {
-        this.rejectCancellation(this.selectedApplication);
-      } else if (this.activeTab === 'transit') {
-        this.rejectTransit(this.selectedApplication);
       } else if (this.activeTab === 'hologram') {
         this.rejectHologram(this.selectedApplication);
       }
-      // Note: Requisition rejection is now handled in the RequisitionComponent
+      // Note: Requisition, Cancellation, Transit rejection is now handled in their respective components
       this.closeReviewModal();
     }
   }
 
   issueFromModal(): void {
     if (this.selectedApplication) {
-      if (this.activeTab === 'transit') {
-        this.issueTransit(this.selectedApplication);
-      } else if (this.activeTab === 'hologram') {
+      if (this.activeTab === 'hologram') {
         this.issueHologram(this.selectedApplication);
       }
       this.closeReviewModal();

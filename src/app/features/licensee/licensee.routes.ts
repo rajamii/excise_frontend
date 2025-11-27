@@ -5,6 +5,7 @@ import { ApplyLicenseComponent } from './apply-license/apply-license.component';
 import { ApplyNewLicenseComponent } from './apply-new-license/apply-new-license.component';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
 import { Authority } from '../../shared/constants/authority.enum';
+import { SupplyChainComponent } from './supplyChain/supplychaincomponents/supply-chain.component';
 
 export const licenseeRoutes: Routes = [
   {
@@ -79,6 +80,12 @@ export const licenseeRoutes: Routes = [
           {
             path: 'application-status',
             loadComponent: () => import('./salesman-registration/application-status/application-status.component').then(m => m.ApplicationStatusComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'ena-import',
+            component:SupplyChainComponent,
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           }

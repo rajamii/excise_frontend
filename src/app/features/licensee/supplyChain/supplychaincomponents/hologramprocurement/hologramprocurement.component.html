@@ -12,7 +12,7 @@
       <p class="register-subtitle">Track and manage all hologram applications</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-success me-2">
+      <button class="btn btn-success me-2" (click)="navigateTo('hologram')">
         <i class="bi bi-plus-circle me-2"></i>
         New Hologram
       </button>
@@ -307,7 +307,9 @@
            'No holograms match your current filter criteria. Try adjusting your filters or clear them to see all holograms.' : 
            'You haven\'t created any holograms yet. Start by creating your first hologram.' }}
       </p>
-      <button class="btn btn-primary" *ngIf="filteredHologramData.length === 0 && !hologramDateFilter && !hologramMonthFilter && !hologramYearFilter && !hologramStatusFilter">
+      <button class="btn btn-primary" *ngIf="filteredHologramData.length === 0 && !hologramDateFilter && !hologramMonthFilter && !hologramYearFilter && !hologramStatusFilter"
+      (click)="navigateTo('hologram')"
+      >
         <i class="bi bi-plus-circle me-2"></i>
         Create New Hologram
       </button>

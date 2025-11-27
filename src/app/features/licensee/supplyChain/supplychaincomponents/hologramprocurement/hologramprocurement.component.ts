@@ -274,6 +274,9 @@ export class HologramprocurementComponent implements OnInit {
     });
   }
 
+  navigateTo(route: string){
+        this.router.navigate(["/dev-hologram"]);  
+    }
   navigateToPaymentPage(hologram: HologramRow): void {
     if (!this.isBrowser) return;
 

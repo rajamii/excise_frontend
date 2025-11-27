@@ -54,8 +54,7 @@ export class RequisitionComponent implements OnInit {
   }
 
   navigateTo(route: string){
-        this.router.navigate(["/dev-import-permit"]);
-        
+        this.router.navigate(["/dev-import-permit"]);  
     }
   
   private loadRequisitionData(): void {

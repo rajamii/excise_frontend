@@ -91,11 +91,6 @@ export class SupplyChainComponent implements OnInit {
     this.activeTab = tab;
   }
 
-  toggleSidebar(): void {
-    this.sidebarHidden = !this.sidebarHidden;
-    console.log('Sidebar toggled. sidebarHidden:', this.sidebarHidden);
-  }
-
   viewWallet(): void {
     this.router.navigate(["/dev-payment-confirmation"]);
   }

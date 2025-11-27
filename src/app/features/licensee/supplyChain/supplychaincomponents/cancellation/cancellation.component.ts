@@ -9,6 +9,10 @@ interface TableData {
   distilleryName: string;
   status: string;
   amount: string;
+  priority?: string;
+  cancellationReason?: string;
+  requestDate?: string;
+  licenseType?: string;
 }
 
 @Component({
@@ -24,9 +28,8 @@ export class CancellationComponent implements OnInit {
   
   // Filter properties for cancellation
   cancellationDateFilter: string = '';
-  cancellationMonthFilter: string = '';
-  cancellationYearFilter: string = '';
   cancellationStatusFilter: string = '';
+  cancellationReasonFilter: string = '';
   
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -35,21 +38,74 @@ export class CancellationComponent implements OnInit {
   
   filteredCancellationData: TableData[] = [];
   
+  // Sample data for cancellation applications (from commissioner's perspective)
   cancellationData: TableData[] = [
     {
-      referenceNo: "CAN/BF701",
-      submissionDate: "15-Sep-2025",
+      referenceNo: "CAN/001/2025",
+      submissionDate: "20-Sep-2025",
+      requestDate: "20-Sep-2025",
       distilleryName: "Sikkim Distilleries Ltd",
-      status: "CANCELLATION REQUEST APPROVED",
-      amount: "0.00",
+      status: "PENDING",
+      amount: "15.00",
+      priority: "high",
+      cancellationReason: "Business Closure",
+      licenseType: "Manufacturing License"
     },
     {
-      referenceNo: "CAN/BF702",
-      submissionDate: "14-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "CANCELLATION UNDER REVIEW",
-      amount: "0.00",
+      referenceNo: "CAN/002/2025",
+      submissionDate: "19-Sep-2025",
+      requestDate: "19-Sep-2025",
+      distilleryName: "Darjeeling Artisan Pvt Ltd",
+      status: "APPROVED",
+      amount: "20.00",
+      priority: "normal",
+      cancellationReason: "Voluntary Surrender",
+      licenseType: "Retail License"
     },
+    {
+      referenceNo: "CAN/003/2025",
+      submissionDate: "18-Sep-2025",
+      requestDate: "18-Sep-2025",
+      distilleryName: "Royal Sikkim Brewery",
+      status: "APPROVED",
+      amount: "0.00",
+      priority: "urgent",
+      cancellationReason: "Non-Compliance",
+      licenseType: "Manufacturing License"
+    },
+    {
+      referenceNo: "CAN/004/2025",
+      submissionDate: "17-Sep-2025",
+      requestDate: "17-Sep-2025",
+      distilleryName: "Himalayan Distilleries Pvt Ltd",
+      status: "PROCESSING",
+      amount: "0.00",
+      priority: "high",
+      cancellationReason: "License Transfer",
+      licenseType: "Wholesale License"
+    },
+    {
+      referenceNo: "CAN/005/2025",
+      submissionDate: "16-Sep-2025",
+      requestDate: "16-Sep-2025",
+      distilleryName: "Eastern Himalaya Distillery",
+      status: "REJECTED",
+      amount: "0.00",
+      priority: "normal",
+      cancellationReason: "Financial Issues",
+      licenseType: "Manufacturing License"
+    },
+    {
+      referenceNo: "CAN/006/2025",
+      submissionDate: "15-Sep-2025",
+      requestDate: "15-Sep-2025",
+      distilleryName: "Gangtok Premium Spirits",
+      status: "PENDING",
+      amount: "0.00",
+      priority: "urgent",
+      cancellationReason: "Regulatory Violation",
+      licenseType: "Retail License"
+    }
   ];
 
   constructor(
@@ -66,112 +122,100 @@ export class CancellationComponent implements OnInit {
 
   // Filter methods
   applyCancellationFilters(): void {
-    console.log('Applying cancellation filters:', {
-      dateFilter: this.cancellationDateFilter,
-      monthFilter: this.cancellationMonthFilter,
-      yearFilter: this.cancellationYearFilter,
-      statusFilter: this.cancellationStatusFilter
-    });
+    let filtered = [...this.cancellationData];
 
-    this.filteredCancellationData = this.cancellationData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
+    if (this.cancellationDateFilter) {
+      filtered = filtered.filter(item => {
+        const itemDate = this.parseDate(item.submissionDate);
+        const filterDate = new Date(this.cancellationDateFilter);
+        return itemDate.toDateString() === filterDate.toDateString();
+      });
+    }
 
-      // Parse the date from the format "15-Sep-2025"
-      const dateParts = item.submissionDate.split('-');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const monthName = dateParts[1];
-        const year = parseInt(dateParts[2]);
+    if (this.cancellationStatusFilter) {
+      filtered = filtered.filter(item => item.status === this.cancellationStatusFilter);
+    }
 
-        // Convert month name to number
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const month = monthNames.indexOf(monthName) + 1;
+    if (this.cancellationReasonFilter) {
+      filtered = filtered.filter(item => item.cancellationReason === this.cancellationReasonFilter);
+    }
 
-        if (month > 0) {
-          const itemDate = new Date(year, month - 1, day);
-
-          // Date filter (exact date match)
-          if (this.cancellationDateFilter) {
-            const filterDate = new Date(this.cancellationDateFilter);
-            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth() &&
-              itemDate.getDate() === filterDate.getDate();
-          }
-
-          // Month filter (month and year match)
-          if (this.cancellationMonthFilter) {
-            const filterDate = new Date(this.cancellationMonthFilter + '-01');
-            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-              itemDate.getMonth() === filterDate.getMonth();
-          }
-
-          // Year filter
-          if (this.cancellationYearFilter) {
-            const filterYear = parseInt(this.cancellationYearFilter);
-            matchesYear = itemDate.getFullYear() === filterYear;
-          }
-        }
-      }
-
-      // Status filter (partial match for long status messages)
-      if (this.cancellationStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.cancellationStatusFilter.toLowerCase());
-      }
-
-      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
-      console.log('Cancellation match for:', item.referenceNo, finalMatch);
-
-      return finalMatch;
-    });
-
-    console.log('Filtered cancellation results:', this.filteredCancellationData.length, 'out of', this.cancellationData.length);
-
-    // Reset pagination to first page when filters are applied
+    this.filteredCancellationData = filtered;
     this.resetPagination();
   }
 
   clearCancellationFilters(): void {
     this.cancellationDateFilter = '';
-    this.cancellationMonthFilter = '';
-    this.cancellationYearFilter = '';
     this.cancellationStatusFilter = '';
-    this.filteredCancellationData = [...this.cancellationData];
-    this.resetPagination();
+    this.cancellationReasonFilter = '';
+    this.applyCancellationFilters();
   }
 
   onCancellationDateFilterChange(): void {
-    console.log('Cancellation date filter changed to:', this.cancellationDateFilter);
-    this.applyCancellationFilters();
-  }
-
-  onCancellationMonthFilterChange(): void {
-    console.log('Cancellation month filter changed to:', this.cancellationMonthFilter);
-    this.applyCancellationFilters();
-  }
-
-  onCancellationYearFilterChange(): void {
-    console.log('Cancellation year filter changed to:', this.cancellationYearFilter);
     this.applyCancellationFilters();
   }
 
   onCancellationStatusFilterChange(): void {
-    console.log('Cancellation status filter changed to:', this.cancellationStatusFilter);
+    this.applyCancellationFilters();
+  }
+
+  onCancellationReasonFilterChange(): void {
     this.applyCancellationFilters();
   }
 
   // Summary methods
   getCancellationStatusCount(status: string): number {
-    return this.cancellationData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
+    return this.filteredCancellationData.filter(item => item.status === status).length;
+  }
+
+  getUrgentCancellationCount(): number {
+    return this.filteredCancellationData.filter(item => 
+      item.priority === 'urgent' || item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'
     ).length;
   }
 
-  getTotalCancellationAmount(): number {
-    return this.cancellationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  // Action methods
+  reviewCancellation(item: TableData): void {
+    // Navigate to cancellation letter view with reference number
+    this.router.navigate(['/dev-cancellation-letter-view'], {
+      queryParams: { ref: item.referenceNo }
+    });
+  }
+
+  approveCancellation(item: TableData): void {
+    item.status = 'APPROVED';
+    console.log('Approved cancellation:', item.referenceNo);
+  }
+
+  rejectCancellation(item: TableData): void {
+    item.status = 'REJECTED';
+    console.log('Rejected cancellation:', item.referenceNo);
+  }
+
+  // Helper methods
+  getStatusClass(status: string): string {
+    switch (status?.toUpperCase()) {
+      case 'PENDING':
+        return 'pending';
+      case 'APPROVED':
+        return 'approved';
+      case 'REJECTED':
+        return 'rejected';
+      case 'PROCESSING':
+        return 'processing';
+      case 'EXPIRED':
+        return 'expired';
+      default:
+        return 'default';
+    }
+  }
+
+  private parseDate(dateString: string): Date {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
+    return new Date(dateString);
   }
 
   // Pagination methods
@@ -207,19 +251,5 @@ export class CancellationComponent implements OnInit {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
-  }
-
-  // View application
-  viewApplication(item: TableData, event?: Event): void {
-    // Prevent form submission
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    // Navigate to cancellation application view
-    this.router.navigate(["/dev-supply-chain-cancellation-view"], {
-      queryParams: { ref: item.referenceNo },
-    });
   }
 }

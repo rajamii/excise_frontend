@@ -4,14 +4,14 @@
     <div class="header-info">
       <h4 class="register-title">
         <i class="bi bi-x-circle me-2"></i>
-        Cancellation Register
+        Cancellation Applications Review
       </h4>
-      <p class="register-subtitle">Track and manage all cancellation applications</p>
+      <p class="register-subtitle">Review and process license cancellation requests from licensees</p>
     </div>
     <div class="header-actions">
       <button class="btn btn-success">
-        <i class="bi bi-plus-circle me-2"></i>
-        New Cancellation
+        <i class="bi bi-download me-2"></i>
+        Export Report
       </button>
     </div>
   </div>
@@ -30,13 +30,13 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="summary-card cancelled-requests">
+      <div class="summary-card urgent-requests">
         <div class="card-icon">
-          <i class="bi bi-x-octagon"></i>
+          <i class="bi bi-exclamation-triangle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getCancellationStatusCount('CANCELLED') }}</h3>
-          <p class="card-label">Cancelled</p>
+          <h3 class="card-value">{{ getUrgentCancellationCount() }}</h3>
+          <p class="card-label">Urgent/Critical</p>
         </div>
       </div>
     </div>
@@ -47,18 +47,18 @@
         </div>
         <div class="card-content">
           <h3 class="card-value">{{ getCancellationStatusCount('PENDING') }}</h3>
-          <p class="card-label">Pending</p>
+          <p class="card-label">Pending Review</p>
         </div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="summary-card total-amount">
+      <div class="summary-card approved-requests">
         <div class="card-icon">
-          <i class="bi bi-currency-rupee"></i>
+          <i class="bi bi-check-circle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">₹{{ getTotalCancellationAmount() | number:'1.2-2' }}</h3>
-          <p class="card-label">Total Amount</p>
+          <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
         </div>
       </div>
     </div>
@@ -79,59 +79,39 @@
         (change)="onCancellationDateFilterChange()" placeholder="Date" title="Filter by date">
     </div>
 
-    <!-- Month Filter -->
-    <div class="compact-filter">
-      <input type="month" class="form-control form-control-sm" [(ngModel)]="cancellationMonthFilter"
-        (change)="onCancellationMonthFilterChange()" placeholder="Month" title="Filter by month">
-    </div>
-
-    <!-- Year Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="cancellationYearFilter"
-        (change)="onCancellationYearFilterChange()" title="Filter by year">
-        <option value="">All Years</option>
-        <option value="2025">2025</option>
-        <option value="2024">2024</option>
-        <option value="2023">2023</option>
-      </select>
-    </div>
-
     <!-- Status Filter -->
     <div class="compact-filter">
       <select class="form-select form-select-sm" [(ngModel)]="cancellationStatusFilter"
         (change)="onCancellationStatusFilterChange()" title="Filter by status">
         <option value="">All Status</option>
-        <option value="CANCELLED">Cancelled</option>
-        <option value="PENDING">Pending</option>
-        <option value="PROCESSING">Processing</option>
+        <option value="PENDING">Pending Review</option>
+        <option value="APPROVED">Approved</option>
         <option value="REJECTED">Rejected</option>
+        <option value="PROCESSING">Processing</option>
       </select>
     </div>
 
-    <!-- Clear Button - only show when filters are active -->
+    <!-- Reason Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationReasonFilter"
+        (change)="onCancellationReasonFilterChange()" title="Filter by reason">
+        <option value="">All Reasons</option>
+        <option value="Business Closure">Business Closure</option>
+        <option value="Voluntary Surrender">Voluntary Surrender</option>
+        <option value="Non-Compliance">Non-Compliance</option>
+        <option value="License Transfer">License Transfer</option>
+        <option value="Financial Issues">Financial Issues</option>
+        <option value="Regulatory Violation">Regulatory Violation</option>
+      </select>
+    </div>
+
+    <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearCancellationFilters()"
-      *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationYearFilter || cancellationStatusFilter"
+      *ngIf="cancellationDateFilter || cancellationStatusFilter || cancellationReasonFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>
-  </div>
-
-  <!-- Filter Results Summary -->
-  <div class="filter-results-compact mt-2"
-    *ngIf="cancellationDateFilter || cancellationMonthFilter || cancellationYearFilter || cancellationStatusFilter">
-    <small class="text-info">
-      <i class="bi bi-info-circle me-1"></i>
-      Showing <strong>{{ filteredCancellationData.length }}</strong> of <strong>{{ cancellationData.length
-        }}</strong> cancellations
-      <span *ngIf="cancellationDateFilter" class="filter-tag">Date: {{ cancellationDateFilter | date:'dd MMM
-        yyyy' }}</span>
-      <span *ngIf="cancellationMonthFilter" class="filter-tag">Month: {{ cancellationMonthFilter | date:'MMM
-        yyyy' }}</span>
-      <span *ngIf="cancellationYearFilter" class="filter-tag">Year: {{ cancellationYearFilter }}</span>
-      <span *ngIf="cancellationStatusFilter" class="filter-tag">Status: {{ cancellationStatusFilter
-        }}</span>
-    </small>
   </div>
 </div>
 
@@ -141,10 +121,10 @@
     <div class="register-header-bar">
       <h5 class="register-table-title">
         <i class="bi bi-table me-2"></i>
-        Cancellation Register Entries
+        Cancellation Applications
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredCancellationData.length }} Entries</span>
+        <span class="entries-count">{{ filteredCancellationData.length }} Applications</span>
       </div>
     </div>
 
@@ -153,12 +133,14 @@
         <thead>
           <tr>
             <th class="sl-no">Sl. No.</th>
-            <th class="ref-number">Ref. No</th>
-            <th class="submission-date">App. Sub. Date</th>
-            <th class="distillery-name">Distillery Name</th>
+            <th class="ref-number">Reference No</th>
+            <th class="submission-date">Request Date</th>
+            <th class="licensee-name">Licensee Name</th>
+            <th class="license-type">License Type</th>
+            <th class="cancellation-reason">Reason</th>
             <th class="status">Status</th>
-            <th class="amount">Imp. Pass Fee Amt.</th>
-            <th class="actions">Action</th>
+            <th class="priority">Priority</th>
+            <th class="actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -167,34 +149,53 @@
           track item.referenceNo;
           let i = $index
           ) {
-          <tr class="register-row">
-            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1
-              }}</td>
+          <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
             <td class="ref-number">
-              <span class="ref-text">{{ item.referenceNo }}</span>
+              <div class="d-flex align-items-center gap-2">
+                <span class="ref-text">{{ item.referenceNo }}</span>
+                @if (item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation') {
+                <span class="badge bg-warning text-dark">CRITICAL</span>
+                }
+              </div>
             </td>
             <td class="submission-date">
-              <span class="date-text">{{ item.submissionDate }}</span>
+              <span class="date-text">{{ item.requestDate }}</span>
             </td>
-            <td class="distillery-name">
+            <td class="licensee-name">
               <span class="company-name">{{ item.distilleryName }}</span>
             </td>
+            <td class="license-type">
+              <span class="license-badge">{{ item.licenseType }}</span>
+            </td>
+            <td class="cancellation-reason">
+              <span class="reason-badge" [class.text-danger]="item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'">
+                {{ item.cancellationReason }}
+              </span>
+            </td>
             <td class="status">
-              <span
-                class="status-badge status-{{ item.status.toLowerCase().includes('cancelled') ? 'cancelled' : 
-                                                      item.status.toLowerCase().includes('pending') ? 'pending' : 
-                                                      item.status.toLowerCase().includes('processing') ? 'processing' : 'default' }}">
+              <span class="status-badge status-{{ getStatusClass(item.status) }}">
                 {{ item.status }}
               </span>
             </td>
-            <td class="amount">
-              <span class="amount-value">₹{{ item.amount }}</span>
+            <td class="priority">
+              <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                {{ (item.priority || 'normal') | titlecase }}
+              </span>
             </td>
             <td class="actions">
               <div class="action-buttons">
-                <button class="btn btn-outline-primary btn-sm" (click)="viewApplication(item)"
-                  title="View Application">
+                <button class="btn btn-outline-primary btn-sm" (click)="reviewCancellation(item)"
+                  title="Review Application">
                   <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)"
+                  title="Approve" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-check"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)"
+                  title="Reject" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-x"></i>
                 </button>
               </div>
             </td>
@@ -209,85 +210,10 @@
       <div class="empty-icon">
         <i class="bi bi-journal-x"></i>
       </div>
-      <h5 class="empty-title">
-        {{ (cancellationDateFilter || cancellationMonthFilter || cancellationYearFilter ||
-        cancellationStatusFilter) ? 'No Matching Cancellations Found' : 'No Cancellations Found' }}
-      </h5>
+      <h5 class="empty-title">No Cancellation Applications Found</h5>
       <p class="empty-message">
-        {{ (cancellationDateFilter || cancellationMonthFilter || cancellationYearFilter ||
-        cancellationStatusFilter) ?
-        'No cancellations match your current filter criteria. Try adjusting your filters or clear them to
-        see all cancellations.' :
-        'You haven\'t submitted any cancellations yet. Start by creating your first cancellation.' }}
+        No cancellation applications match your current filter criteria.
       </p>
-      <button class="btn btn-primary"
-        *ngIf="filteredCancellationData.length === 0 && !cancellationDateFilter && !cancellationMonthFilter && !cancellationYearFilter && !cancellationStatusFilter">
-        <i class="bi bi-plus-circle me-2"></i>
-        Create New Cancellation
-      </button>
-    </div>
-
-    <!-- Register Summary Footer -->
-    <div class="register-footer" *ngIf="filteredCancellationData.length > 0">
-      <div class="summary-row">
-        <div class="summary-item">
-          <span class="summary-label">Total Cancellations:</span>
-          <span class="summary-value">{{ filteredCancellationData.length }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Total Amount:</span>
-          <span class="summary-value">₹{{ getTotalCancellationAmount() | number:'1.2-2' }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Pagination -->
-<div class="register-pagination" *ngIf="filteredCancellationData.length > 0">
-  <div class="d-flex justify-content-between align-items-center">
-    <div class="pagination-info">
-      <span class="info-text">
-        Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }}-{{
-        Math.min(getCurrentPage() * getPageSize(),
-        filteredCancellationData.length) }} of {{ filteredCancellationData.length }} entries
-      </span>
-    </div>
-    <div class="pagination-controls">
-      <div class="d-flex align-items-center gap-3">
-        <div class="page-size-selector">
-          <label class="selector-label">Show:</label>
-          <select class="form-select form-select-sm" [ngModel]="getPageSize()"
-            (ngModelChange)="changePageSize($event)">
-            <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-          </select>
-        </div>
-        <div class="btn-group btn-group-sm pagination-buttons">
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(1)"
-            [disabled]="getCurrentPage() === 1">
-            «
-          </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() - 1)"
-            [disabled]="getCurrentPage() === 1">
-            ‹
-          </button>
-          <span class="btn btn-light disabled">
-            {{ getCurrentPage() }} / {{ getTotalPages() }}
-          </span>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() + 1)"
-            [disabled]="getCurrentPage() === getTotalPages()">
-            ›
-          </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getTotalPages())"
-            [disabled]="getCurrentPage() === getTotalPages()">
-            »
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </div>

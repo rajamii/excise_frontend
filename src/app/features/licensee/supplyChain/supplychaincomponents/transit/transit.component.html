@@ -4,19 +4,14 @@
     <div class="header-info">
       <h4 class="register-title">
         <i class="bi bi-truck me-2"></i>
-        Transit Register
+        Transit Permit Applications Review
       </h4>
-      <p class="register-subtitle">Track and manage all transit permit applications</p>
+      <p class="register-subtitle">Review and process transit permit applications from licensees</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-success me-2"
-      (click)="navigateTo('transit-permit')" style="cursor: pointer">
-        <i class="bi bi-plus-circle me-2"></i>
-        New Transit Permit
-      </button>
-      <button class="btn btn-danger" (click)="clearCache()" title="Clear all transit data">
-        <i class="bi bi-trash me-2"></i>
-        Clear Cache
+      <button class="btn btn-success">
+        <i class="bi bi-download me-2"></i>
+        Export Report
       </button>
     </div>
   </div>
@@ -35,24 +30,24 @@
       </div>
     </div>
     <div class="col-md-3">
-      <div class="summary-card issued-requests">
+      <div class="summary-card urgent-requests">
         <div class="card-icon">
-          <i class="bi bi-check-circle"></i>
+          <i class="bi bi-exclamation-triangle"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getTransitStatusCount('ISSUED') }}</h3>
-          <p class="card-label">Issued</p>
+          <h3 class="card-value">{{ getUrgentTransitCount() }}</h3>
+          <p class="card-label">Urgent/High Priority</p>
         </div>
       </div>
     </div>
     <div class="col-md-3">
-      <div class="summary-card processing-requests">
+      <div class="summary-card pending-requests">
         <div class="card-icon">
-          <i class="bi bi-hourglass-split"></i>
+          <i class="bi bi-clock"></i>
         </div>
         <div class="card-content">
-          <h3 class="card-value">{{ getTransitStatusCount('PROCESSING') }}</h3>
-          <p class="card-label">Processing</p>
+          <h3 class="card-value">{{ getTransitStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending Review</p>
         </div>
       </div>
     </div>
@@ -84,58 +79,40 @@
         (change)="onTransitDateFilterChange()" placeholder="Date" title="Filter by date">
     </div>
 
-    <!-- Month Filter -->
-    <div class="compact-filter">
-      <input type="month" class="form-control form-control-sm" [(ngModel)]="transitMonthFilter"
-        (change)="onTransitMonthFilterChange()" placeholder="Month" title="Filter by month">
-    </div>
-
-    <!-- Year Filter -->
-    <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="transitYearFilter"
-        (change)="onTransitYearFilterChange()" title="Filter by year">
-        <option value="">All Years</option>
-        <option value="2025">2025</option>
-        <option value="2024">2024</option>
-        <option value="2023">2023</option>
-      </select>
-    </div>
-
     <!-- Status Filter -->
     <div class="compact-filter">
       <select class="form-select form-select-sm" [(ngModel)]="transitStatusFilter"
         (change)="onTransitStatusFilterChange()" title="Filter by status">
         <option value="">All Status</option>
-        <option value="ISSUED">Issued</option>
-        <option value="PROCESSING">Processing</option>
-        <option value="PENDING">Pending</option>
+        <option value="PENDING">Pending Review</option>
         <option value="APPROVED">Approved</option>
+        <option value="ISSUED">Issued</option>
+        <option value="REJECTED">Rejected</option>
+        <option value="PROCESSING">Processing</option>
       </select>
     </div>
 
-    <!-- Clear Button - only show when filters are active -->
+    <!-- Destination Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="transitDestinationFilter"
+        (change)="onTransitDestinationFilterChange()" title="Filter by destination">
+        <option value="">All Destinations</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Mumbai">Mumbai</option>
+        <option value="Kolkata">Kolkata</option>
+        <option value="Bangalore">Bangalore</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Guwahati">Guwahati</option>
+      </select>
+    </div>
+
+    <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearTransitFilters()"
-      *ngIf="transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter"
+      *ngIf="transitDateFilter || transitStatusFilter || transitDestinationFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>
-  </div>
-
-  <!-- Filter Results Summary -->
-  <div class="filter-results-compact mt-2"
-    *ngIf="transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter">
-    <small class="text-info">
-      <i class="bi bi-info-circle me-1"></i>
-      Showing <strong>{{ filteredTransitData.length }}</strong> of <strong>{{ transitData.length }}</strong>
-      transit permits
-      <span *ngIf="transitDateFilter" class="filter-tag">Date: {{ transitDateFilter | date:'dd MMM yyyy'
-        }}</span>
-      <span *ngIf="transitMonthFilter" class="filter-tag">Month: {{ transitMonthFilter | date:'MMM yyyy'
-        }}</span>
-      <span *ngIf="transitYearFilter" class="filter-tag">Year: {{ transitYearFilter }}</span>
-      <span *ngIf="transitStatusFilter" class="filter-tag">Status: {{ transitStatusFilter }}</span>
-    </small>
   </div>
 </div>
 
@@ -145,10 +122,10 @@
     <div class="register-header-bar">
       <h5 class="register-table-title">
         <i class="bi bi-table me-2"></i>
-        Transit Register Entries
+        Transit Permit Applications
       </h5>
       <div class="register-info">
-        <span class="entries-count">{{ filteredTransitData.length }} Entries</span>
+        <span class="entries-count">{{ filteredTransitData.length }} Applications</span>
       </div>
     </div>
 
@@ -156,21 +133,25 @@
       <table class="table register-table">
         <thead>
           <tr>
-            <th class="sl-no">Sl. No.</th>
+            <th class="sl-no">Sl.</th>
             <th class="ref-number">Ref. No</th>
-            <th class="submission-date">App. Sub. Date</th>
-            <th class="distillery-name">Distillery Name</th>
+            <th class="submission-date">App. Date</th>
+            <th class="licensee-name">Licensee</th>
+            <th class="destination">Destination</th>
+            <th class="vehicle-number">Vehicle No</th>
+            <th class="amount">Amount</th>
             <th class="status">Status</th>
-            <th class="actions">Action</th>
+            <th class="priority">Priority</th>
+            <th class="actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (
-          item of getPaged(filteredTransitData);
+          item of getPaged();
           track item.referenceNo;
           let i = $index
           ) {
-          <tr class="register-row">
+          <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
             <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
             <td class="ref-number">
               <span class="ref-text">{{ item.referenceNo }}</span>
@@ -178,23 +159,45 @@
             <td class="submission-date">
               <span class="date-text">{{ item.submissionDate }}</span>
             </td>
-            <td class="distillery-name">
+            <td class="licensee-name">
               <span class="company-name">{{ item.distilleryName }}</span>
             </td>
+            <td class="destination">
+              <span class="destination-text">{{ item.destination }}</span>
+            </td>
+            <td class="vehicle-number">
+              <span class="vehicle-text">{{ item.vehicleNumber }}</span>
+            </td>
+            <td class="amount">
+              <span class="amount-text">₹{{ item.amount }}</span>
+            </td>
             <td class="status">
-              <span
-                class="status-badge status-{{ item.status.toLowerCase().includes('issued') ? 'issued' : 
-                                                      item.status.toLowerCase().includes('processing') ? 'processing' : 
-                                                      item.status.toLowerCase().includes('pending') ? 'pending' : 'default' }}">
+              <span class="status-badge status-{{ getStatusClass(item.status) }}">
                 {{ item.status }}
+              </span>
+            </td>
+            <td class="priority">
+              <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                {{ (item.priority || 'normal') | titlecase }}
               </span>
             </td>
             <td class="actions">
               <div class="action-buttons">
-                <button type="button" class="btn btn-success btn-sm" (click)="applicationCheck(item)"
-                  title="Application Check">
-                  <i class="bi bi-search me-1"></i>
-                  Application Check
+                <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)"
+                  title="Review Application">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)"
+                  title="Approve" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-check"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)"
+                  title="Reject" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-x"></i>
+                </button>
+                <button class="btn btn-outline-info btn-sm" (click)="issueTransit(item)"
+                  title="Issue Permit" *ngIf="item.status === 'APPROVED'">
+                  <i class="bi bi-printer"></i>
                 </button>
               </div>
             </td>
@@ -209,84 +212,10 @@
       <div class="empty-icon">
         <i class="bi bi-journal-x"></i>
       </div>
-      <h5 class="empty-title">
-        {{ (transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter) ? 'No
-        Matching Transit Permits Found' : 'No Transit Permits Found' }}
-      </h5>
+      <h5 class="empty-title">No Transit Permit Applications Found</h5>
       <p class="empty-message">
-        {{ (transitDateFilter || transitMonthFilter || transitYearFilter || transitStatusFilter) ?
-        'No transit permits match your current filter criteria. Try adjusting your filters or clear them to
-        see all permits.' :
-        'You haven\'t submitted any transit permits yet. Start by creating your first transit permit.' }}
+        No transit permit applications match your current filter criteria.
       </p>
-      <button class="btn btn-primary"
-        *ngIf="filteredTransitData.length === 0 && !transitDateFilter && !transitMonthFilter && !transitYearFilter && !transitStatusFilter"
-        (click)="navigateTo('transit-permit')" style="cursor: pointer">
-        <i class="bi bi-plus-circle me-2"></i>
-        Create New Transit Permit
-      </button>
-    </div>
-
-    <!-- Register Summary Footer -->
-    <div class="register-footer" *ngIf="filteredTransitData.length > 0">
-      <div class="summary-row">
-        <div class="summary-item">
-          <span class="summary-label">Total Transit Permits:</span>
-          <span class="summary-value">{{ filteredTransitData.length }}</span>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Total Amount:</span>
-          <span class="summary-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Pagination -->
-<div class="register-pagination" *ngIf="filteredTransitData.length > 0">
-  <div class="d-flex justify-content-between align-items-center">
-    <div class="pagination-info">
-      <span class="info-text">
-        Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }}-{{
-        Math.min(getCurrentPage() * getPageSize(),
-        filteredTransitData.length) }} of {{ filteredTransitData.length }} entries
-      </span>
-    </div>
-    <div class="pagination-controls">
-      <div class="d-flex align-items-center gap-3">
-        <div class="page-size-selector">
-          <label class="selector-label">Show:</label>
-          <select class="form-select form-select-sm" [ngModel]="getPageSize()"
-            (ngModelChange)="changePageSize($event)">
-            <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
-          </select>
-        </div>
-        <div class="btn-group btn-group-sm pagination-buttons">
-          <button class="btn btn-outline-secondary" (click)="goToPage(1, filteredTransitData)"
-            [disabled]="getCurrentPage() === 1">
-            «
-          </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() - 1, filteredTransitData)"
-            [disabled]="getCurrentPage() === 1">
-            ‹
-          </button>
-          <span class="btn btn-light disabled">
-            {{ getCurrentPage() }} / {{ getTotalPages(filteredTransitData) }}
-          </span>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() + 1, filteredTransitData)"
-            [disabled]="getCurrentPage() === getTotalPages(filteredTransitData)">
-            ›
-          </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getTotalPages(filteredTransitData), filteredTransitData)"
-            [disabled]="getCurrentPage() === getTotalPages(filteredTransitData)">
-            »
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </div>
