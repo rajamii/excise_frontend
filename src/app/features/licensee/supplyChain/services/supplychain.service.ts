@@ -14,7 +14,7 @@ export class SupplyChainService {
   getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
     return this.http
       .get<{ success: boolean; data: BulkSpiritType[] }>(
-        `${environment.apiBaseUrl}/transactional/supply_chain/bulk-spirit/bulk-spirit-types/`
+        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`
       )
       .pipe(map((response) => response.data || []));
   }
@@ -22,7 +22,7 @@ export class SupplyChainService {
     getDistilleries(): Observable<Distillery[]> {
       return this.http
         .get<{ success?: boolean; data?: Distillery[] }>(
-          `${environment.apiBaseUrl}/transactional/supply_chain/ena-distillery-types/`
+          `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
         )
         .pipe(map((response: any) => response.data || []));
     }
@@ -30,7 +30,7 @@ export class SupplyChainService {
       getCheckposts(): Observable<Checkpost[]> {
         return this.http
           .get<{ status?: string; data?: Checkpost[] }>(
-            `${environment.apiBaseUrl}/transactional/supply_chain/checkposts/`
+            `${environment.apiBaseUrl}/masters/supply_chain/checkposts/checkposts/`
           )
           .pipe(
             map((response: any) => {
@@ -49,7 +49,7 @@ export class SupplyChainService {
       getPurposes(): Observable<Purpose[]> {
         return this.http
           .get<{ success?: boolean; data?: Purpose[] }>(
-            `${environment.apiBaseUrl}/transactional/supply_chain/purposes/`
+            `${environment.apiBaseUrl}/masters/supply_chain/purposes/purposes/`
           )
           .pipe(map((response: any) => response.data || []));
       }
@@ -60,7 +60,7 @@ export class SupplyChainService {
         success?: boolean;
         data?: { brandName: string; sizes: number[] }[];
       }>(
-        `${environment.apiBaseUrl}/transactional/supply_chain/liquor-data/brands/`
+        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`
       )
       .pipe(map((response: any) => response.data || []));
   }
@@ -74,7 +74,7 @@ export class SupplyChainService {
         success: boolean;
         data: LiquorRates;
       }>(
-        `${environment.apiBaseUrl}/transactional/supply_chain/liquor-data/rates/`,
+        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`,
         {
           params: {
             brand_name: brandName,
@@ -109,8 +109,8 @@ export class SupplyChainService {
       );
   }
 
-  getDistributors(): Observable<DistRow[]> {
-    const dataUrl = `${environment.apiBaseUrl}/transactional/supply_chain/distributor-data/`;
+    getDistributors(): Observable<DistRow[]> {
+    const dataUrl = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data/`;
 
     return this.http.get<DistRow[]>(dataUrl).pipe(
       map((response: any) => {
@@ -123,6 +123,14 @@ export class SupplyChainService {
       }),
       catchError(() => of([]))
     );
+  }
+
+  getStatuses(): Observable<any[]> {
+    return this.http
+      .get<{ success?: boolean; data?: any[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/status-master/`
+      )
+      .pipe(map((response: any) => response.results || response || []));
   }
 }
 

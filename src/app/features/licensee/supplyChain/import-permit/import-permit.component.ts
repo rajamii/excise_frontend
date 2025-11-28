@@ -1,7 +1,33 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  Inject,
+  PLATFORM_ID,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../../environments/environment';
+import Swal from 'sweetalert2';
+
+import { EnaRequisitionService } from '../../../../core/services/ena-requisition.service';
+import { BulkSpiritType, Distillery } from '../models/supply-chain.models';
+import { SupplyChainService } from '../../../licensee/supplyChain/services/supplychain.service';
+
+interface Checkpost {
+  id: number;
+  checkpostName: string;
+}
+
+interface Purpose {
+  id: number;
+  purposeName: string;
+}
 
 interface FormData {
   refNo: string;
@@ -21,18 +47,18 @@ interface FormData {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './import-permit.component.html',
-  styleUrls: ['./import-permit.component.scss']
+  styleUrls: ['./import-permit.component.scss'],
 })
-export class ImportPermitComponent implements OnInit {
+export class ImportPermitComponent implements OnInit, AfterViewInit {
+  @ViewChild('spiritTypeSelect')
+  spiritTypeSelect!: ElementRef<HTMLSelectElement>;
   errorMessage = '';
   refNoError = '';
   calculatedTotal = 0;
-  strengthFrom = '';
+  bulkSpiritKindType = '';
+  selectedDistilleryState = '';
   currentYear = new Date().getFullYear();
   private isBrowser = false;
-  viewModeRef?: string;
-  showApplicationTemplate = false;
-  submittedFormData?: FormData; // Store the submitted data separately for the template
 
   formData: FormData = {
     refNo: 'IBPS/01/EXCISE',
@@ -44,120 +70,223 @@ export class ImportPermitComponent implements OnInit {
     liftedFrom: '',
     viaRoute: '',
     checkpostEntry: '',
-    purpose: ''
+    purpose: '',
   };
 
-  constructor(private router: Router, private route: ActivatedRoute, @Inject(PLATFORM_ID) platformId: Object) {
+  bulkSpiritTypes: BulkSpiritType[] = [];
+  distilleries: Distillery[] = [];
+  checkposts: Checkpost[] = [];
+  purposes: Purpose[] = [];
+  statuses: any[] = [];
+  isLoading = false;
+
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private SupplyChainService: SupplyChainService,
+    private enaRequisitionService: EnaRequisitionService,
+    private http: HttpClient,
+    private changeDetector: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
+    if (this.isBrowser) {
+      this.initializeForm();
+      this.loadBulkSpiritTypes();
+      this.loadDistilleries();
+      this.fetchCheckposts();
+      this.fetchPurposes();
+      this.fetchStatuses();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    // Initialization code can be added here if needed
+  }
+
+  fetchCheckposts(): void {
+    this.isLoading = true;
+    const baseUrl = `${environment.apiBaseUrl}/masters/supply_chain/checkposts/checkposts/`;
+
+    this.http.get<{ status: string; data: Checkpost[] }>(baseUrl).subscribe({
+      next: (dataResponse) => {
+        if (dataResponse.status === 'success') {
+          this.checkposts = dataResponse.data || [];
+        }
+        this.isLoading = false;
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
+  fetchPurposes(): void {
+    this.isLoading = true;
+    const baseUrl = `${environment.apiBaseUrl}/masters/supply_chain/purposes/purposes/`;
+
+    this.http.get<{ status: string; data: Purpose[] }>(baseUrl).subscribe({
+      next: (dataResponse) => {
+        if (dataResponse.status === 'success') {
+          this.purposes = dataResponse.data || [];
+        }
+        this.isLoading = false;
+        this.changeDetector.detectChanges();
+      },
+      error: () => {
+        this.isLoading = false;
+        this.changeDetector.detectChanges();
+      },
+    });
+  }
+
+  fetchStatuses(): void {
+    this.SupplyChainService.getStatuses().subscribe({
+      next: (data) => {
+        this.statuses = data || [];
+        console.log('Fetched statuses:', this.statuses);
+      },
+      error: (err) => {
+        console.error('Error fetching statuses:', err);
+      }
+    });
+  }
+
+  private loadBulkSpiritTypes(): void {
+    this.isLoading = true;
+
+    this.SupplyChainService.getBulkSpiritTypes().subscribe({
+      next: (types) => {
+        this.bulkSpiritTypes = types || [];
+        this.changeDetector.detectChanges();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private initializeForm(): void {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
 
     // Generate reference number
     this.generateRefNumber();
-
-    // If navigated with a ref, attempt to load saved request and show it
-    const ref = this.route.snapshot.queryParamMap.get('ref');
-    if (ref && this.isBrowser) {
-      this.viewModeRef = ref;
-      const list: any[] = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-      const found = list.find(r => r.refNo === ref);
-      if (found) {
-        this.formData = { ...this.formData, ...found };
-        // recalc derived fields
-        this.onBulkSpiritTypeChange();
-        this.calculateTotal();
-      }
-    }
   }
 
   generateRefNumber(): void {
-    if (!this.isBrowser) {
-      this.formData.refNo = 'IBPS/01/EXCISE';
-      return;
-    }
-
-    // Get existing requests to determine next sequence number
-    const existingRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
-
-    // Find the highest sequence number
-    let maxSequence = 0;
-    existingRequests.forEach((request: any) => {
-      const match = request.refNo.match(/IBPS\/(\d+)\/EXCISE/);
-      if (match) {
-        const sequence = parseInt(match[1], 10);
-        if (sequence > maxSequence) {
-          maxSequence = sequence;
-        }
-      }
-    });
-
-    // Generate next sequence number
-    const nextSequence = maxSequence + 1;
-    this.formData.refNo = `IBPS/${String(nextSequence).padStart(2, '0')}/EXCISE`;
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    this.formData.refNo = `IBPS/${month}${day}/${year}`;
   }
 
   calculateTotal(): void {
-    this.calculatedTotal = (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
+    this.calculatedTotal =
+      (this.formData.quantity || 0) * (this.formData.numberOfPermits || 0);
   }
 
+  /**
+   * Handles changes to the bulk spirit type selection
+   */
   onBulkSpiritTypeChange(): void {
-    switch (this.formData.bulkSpiritType) {
-      case 'grain-ena':
-        this.formData.strengthTo = '96%';
-        this.strengthFrom = '95%';
-        break;
-      case 'molasses-ena':
-        this.formData.strengthTo = '95%';
-        this.strengthFrom = '94%';
-        break;
-      case 'rectified-spirit':
-        this.formData.strengthTo = '95.5%';
-        this.strengthFrom = '95%';
-        break;
-      default:
-        this.formData.strengthTo = '';
-        this.strengthFrom = '';
+    if (!this.formData.bulkSpiritType) {
+      this.formData.strengthTo = '';
+      this.bulkSpiritKindType = '';
+      return;
+    }
+
+    // Find the selected spirit type
+    const selectedType = this.bulkSpiritTypes.find(
+      (type) =>
+        (type.bulkSpiritKindType) ===
+        this.formData.bulkSpiritType
+    );
+
+    if (selectedType) {
+      // Set the strength values from the selected type
+      this.formData.strengthTo = selectedType.strength || '';
+      this.bulkSpiritKindType =
+        selectedType.bulkSpiritKindType || '';
+    } else {
+      this.formData.strengthTo = '';
+      this.bulkSpiritKindType = '';
     }
   }
 
   onLiftedFromChange(): void {
-    // Handle distillery selection change
-    console.log('Distillery changed to:', this.formData.liftedFrom);
+    if (this.formData.liftedFrom) {
+      // Convert both to string for comparison to handle both string and number IDs
+      const selectedDistillery = this.distilleries.find(
+        (d) => d.id.toString() === this.formData.liftedFrom.toString()
+      );
+
+      if (selectedDistillery) {
+        // Handle both camelCase and snake_case property names
+        const viaRoute = selectedDistillery.viaRoute || '';
+        // API returns 'state' property, not 'distilleryState'
+        const state = (selectedDistillery as any).state || selectedDistillery.distilleryState || selectedDistillery.distillery_state || '';
+        this.formData.viaRoute = viaRoute;
+        this.selectedDistilleryState = state;
+        console.log('Selected distillery:', selectedDistillery);
+        console.log('Captured state:', this.selectedDistilleryState);
+      } else {
+        this.formData.viaRoute = '';
+        this.selectedDistilleryState = '';
+      }
+    } else {
+      this.formData.viaRoute = '';
+      this.selectedDistilleryState = '';
+    }
+
+    // Trigger change detection to ensure the view updates
+    this.changeDetector.detectChanges();
+  }
+
+  private loadDistilleries(): void {
+    this.isLoading = true;
+
+    this.SupplyChainService.getDistilleries().subscribe({
+      next: (distilleries) => {
+        this.distilleries = distilleries || [];
+        this.isLoading = false;
+        this.changeDetector.detectChanges(); // Trigger change detection
+      },
+      error: () => {
+        this.distilleries = [];
+        this.isLoading = false;
+        this.changeDetector.detectChanges(); // Trigger change detection
+      },
+    });
   }
 
   getDistilleryName(value: string): string {
-    switch (value) {
-      case 'sikkim-distilleries':
-        return 'Sikkim Distilleries Ltd';
-      case 'mountain-spirits':
-        return 'Mountain Spirits Pvt Ltd';
-      case 'highland-breweries':
-        return 'Highland Breweries';
-      default:
-        return '';
-    }
+    if (!value) return '';
+    const distillery = this.distilleries.find(
+      (d) => d.id.toString() === value.toString()
+    );
+    return distillery
+      ? distillery.distilleryName || ''
+      : '';
   }
 
   saveForm(): void {
-    console.log('Saving form:', this.formData);
-    // Frontend save logic only
-    if (this.isBrowser) {
-      const key = 'importPermitRequests';
-      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const idx = list.findIndex(r => r.refNo === this.formData.refNo);
-      if (idx >= 0) list[idx] = { ...this.formData }; else list.unshift({ ...this.formData });
-      localStorage.setItem(key, JSON.stringify(list));
-    }
-    alert('Form saved successfully!');
+    // Logic for saving draft can be implemented here if needed in future
+    // Currently removing dummy localStorage logic
+    this.router.navigate(['/licensee/import-permit-view'], {
+      queryParams: { ref: this.formData.refNo },
+    });
   }
 
   printBill(): void {
-    console.log('Printing bill');
-
     if (!this.validateForm()) {
       alert('Please fill all required fields before printing the bill.');
       return;
@@ -165,9 +294,12 @@ export class ImportPermitComponent implements OnInit {
 
     // Extract printable HTML and open a clean window for printing
     setTimeout(() => {
-      const printable = document.getElementById('importPermitPrintSection')?.innerHTML || '';
-      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map(el => (el as HTMLElement).outerHTML)
+      const printable =
+        document.getElementById('importPermitPrintSection')?.innerHTML || '';
+      const styles = Array.from(
+        document.querySelectorAll('link[rel="stylesheet"], style')
+      )
+        .map((el) => (el as HTMLElement).outerHTML)
         .join('');
 
       const printWindow = window.open('', '_blank', 'width=900,height=1000');
@@ -200,53 +332,70 @@ export class ImportPermitComponent implements OnInit {
     }, 50);
   }
 
+
+
+
   submitForm(): void {
     if (this.validateForm()) {
-      console.log('Submitting form:', this.formData);
-      
-      // Store a copy of the submitted data for the template BEFORE any changes
-      this.submittedFormData = { ...this.formData };
-      
-      // Frontend submit logic only
-      if (this.isBrowser) {
-        const key = 'importPermitRequests';
-        const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
+      this.isLoading = true;
 
-        // Add timestamp for proper sorting
-        const submissionData = {
-          ...this.formData,
-          submittedAt: new Date().toISOString()
-        };
+      const now = new Date().toISOString();
 
-        // Check if entry with same refNo already exists
-        const existingIndex = list.findIndex(r => r.refNo === this.formData.refNo);
-        
-        if (existingIndex >= 0) {
-          // Update existing entry
-          list[existingIndex] = submissionData;
-        } else {
-          // Add as new entry at the beginning (unshift adds to top)
-          list.unshift(submissionData);
-        }
-        
-        localStorage.setItem(key, JSON.stringify(list));
-      }
+      const requisitionData = {
+        // Existing fields
+        requisiton_number_of_permits: this.formData.numberOfPermits,
+        our_ref_no: this.formData.refNo,
+        requisition_date: now,
+        lifted_from_distillery_name: this.getDistilleryName(
+          this.formData.liftedFrom
+        ),
+        branch_address: 'N/A',
+        branch_purpose: this.formData.purpose,
+        via_route: this.formData.viaRoute,
+        govt_officer: 'N/A',
+        grain_ena_number: this.formData.quantity,
+        bulk_spirit_type: this.formData.bulkSpiritType,
+        strength: parseFloat(this.formData.strengthTo) || 0,
+        strength_from: 0,
+        strength_to: parseFloat(this.formData.strengthTo) || 0,
+        status: this.getStatusId('PENDING'),
+        state: this.selectedDistilleryState || 'N/A',
+        totalbl: this.calculatedTotal,
+        approval_date: now,
+        lifted_from: this.getDistilleryName(this.formData.liftedFrom),
+        purpose_name: this.formData.purpose,
+        check_post_name: this.formData.checkpostEntry,
+      };
 
-      // Show the application template
-      this.showApplicationTemplate = true;
+      console.log('Submitting requisition with state:', requisitionData.state);
+      console.log('Full requisition data:', requisitionData);
 
-      // Scroll to the template
-      setTimeout(() => {
-        const templateElement = document.querySelector('.card.shadow-sm.border-0.mt-4');
-        if (templateElement) {
-          templateElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-
-      alert('Form submitted successfully! Application template is now displayed below.');
-
-      // Reset the form for next submission
-      this.resetForm();
+      this.enaRequisitionService.createRequisition(requisitionData).subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          Swal.fire({
+            title: 'Success!',
+            text: 'Form submitted successfully!',
+            icon: 'success',
+            confirmButtonText: 'OK',
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.router.navigate(['/dev-supply-chain']);
+            }
+          });
+        },
+        error: (error) => {
+          this.isLoading = false;
+          Swal.fire({
+            title: 'Error!',
+            text: `Error submitting form: ${
+              error.message || 'Please check the console for details'
+            }`,
+            icon: 'error',
+            confirmButtonText: 'OK',
+          });
+        },
+      });
     }
   }
 
@@ -288,112 +437,12 @@ export class ImportPermitComponent implements OnInit {
     return true;
   }
 
-  getBulkSpiritDisplayName(value: string): string {
-    switch (value) {
-      case 'grain-ena':
-        return 'Grain ENA';
-      case 'molasses-ena':
-        return 'Molasses ENA';
-      case 'rectified-spirit':
-        return 'Rectified Spirit';
-      default:
-        return value;
-    }
-  }
-
-  getPurposeDisplayName(value: string): string {
-    switch (value) {
-      case 'manufacturing':
-        return 'Manufacturing';
-      case 'blending':
-        return 'Blending';
-      case 'bottling':
-        return 'Bottling';
-      default:
-        return value;
-    }
-  }
-
-  getCheckpostDisplayName(value: string): string {
-    switch (value) {
-      case 'rangpo':
-        return 'Rangpo Checkpost';
-      case 'melli':
-        return 'Melli Checkpost';
-      case 'nathu-la':
-        return 'Nathu La Checkpost';
-      default:
-        return value;
-    }
-  }
-
-  hideApplicationTemplate(): void {
-    this.showApplicationTemplate = false;
-  }
-
-  printApplication(): void {
-    const printable = document.getElementById('importPermitPrintSection')?.innerHTML || '';
-    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-      .map(el => (el as HTMLElement).outerHTML)
-      .join('');
-    const win = window.open('', '_blank', 'width=900,height=1000');
-    if (!win) return;
-    win.document.open();
-    const ref = this.submittedFormData?.refNo || '';
-    win.document.write(`<!doctype html>
-      <html>
-        <head>
-          <title>Import Permit Application - ${ref}</title>
-          ${styles}
-          <style>
-            @page { size: A4; margin: 12mm; }
-            body { background: #fff; }
-            .no-print { display:none !important; }
-            .printable-content, .printable-content * { visibility: visible !important; }
-          </style>
-        </head>
-        <body>
-          ${printable}
-        </body>
-      </html>`);
-    win.document.close();
-    win.onload = () => {
-      win.focus();
-      win.print();
-      win.close();
-    };
-  }
-
-  resetForm(): void {
-    // Get today's date
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
-
-    // Reset form data to initial state
-    this.formData = {
-      refNo: '',
-      date: todayString,
-      quantity: 0,
-      numberOfPermits: 0,
-      bulkSpiritType: '',
-      strengthTo: '',
-      liftedFrom: '',
-      viaRoute: '',
-      checkpostEntry: '',
-      purpose: ''
-    };
-
-    // Reset calculated values
-    this.calculatedTotal = 0;
-    this.strengthFrom = '';
-    this.errorMessage = '';
-    this.refNoError = '';
-
-    // Generate new reference number
-    this.generateRefNumber();
-  }
-
   goBack(): void {
     this.router.navigate(['/dev-supply-chain']);
+  }
+
+  getStatusId(code: string): string {
+    const status = this.statuses.find(s => s.statusCode === code || s.status_code === code);
+    return status ? status.statusCode || status.status_code : code;
   }
 }

@@ -1,10 +1,10 @@
 export interface BulkSpiritType {
   spritId: number;
-  strengthFrom: string;
-  strengthTo: string;
-  priceBl: string;
-  createdAt: string;
-  updatedAt: string;
+  bulkSpiritKindType?: string;
+  strength?: string;
+  priceBl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Distillery {
@@ -13,20 +13,22 @@ export interface Distillery {
   distilleryAddress: string;
   distilleryState: string;
   viaRoute: string;
+  // Support snake_case from backend
   distillery_name?: string;
   distillery_address?: string;
   distillery_state?: string;
   via_route?: string;
+  state?: string; // API also returns 'state' property
 }  
 
 export interface Checkpost {
   id: number;
-  checkpost_name: string;
+  checkpostName: string;
 }
 
 export interface Purpose {
   id: number;
-  purpose_name: string;
+  purposeName: string;
 }
 
 export interface DistRow {
