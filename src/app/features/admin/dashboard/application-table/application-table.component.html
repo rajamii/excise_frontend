@@ -5,14 +5,15 @@
       <mat-header-cell *matHeaderCellDef class="sl-no"> Sl No </mat-header-cell>
       <mat-cell *matCellDef="let element; let i = index" class="sl-no"> {{ i + 1 }} </mat-cell>
     </ng-container>
+    
     <!-- Application ID Column -->
     <ng-container matColumnDef="id">
       <mat-header-cell *matHeaderCellDef class="app-id"> Application ID </mat-header-cell>
       <mat-cell *matCellDef="let element" class="app-id">
-        <div class="application-id" [ngClass]="{ 'objection-text': unresolvedObjectionAppIds.has(element.applicationId) }">
-          {{ element?.applicationId }}
+        <div class="application-id" [ngClass]="{ 'objection-text': unresolvedObjectionAppIds.has(element?.applicationId) }">
+          {{ element?.applicationId || 'N/A' }}
           <!-- Show warning icon if there is an unresolved objection -->
-          @if (unresolvedObjectionAppIds.has(element.applicationId)) {
+          @if (element?.applicationId && unresolvedObjectionAppIds.has(element.applicationId)) {
             <mat-icon
               color="warn"
               matTooltip="Objection pending"
@@ -23,52 +24,65 @@
         </div>
         <!-- Shows the submission date from the first transaction -->
         <div class="text-secondary">
-          Date: {{ element?.transactions[0]?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
+          @if (element?.transactions?.length > 0 && element.transactions[0]?.timestamp) {
+            Date: {{ element.transactions[0].timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
+          } @else {
+            Date: N/A
+          }
         </div>
       </mat-cell>
     </ng-container>
+    
     <!-- Current workflow stage of the application -->
     <ng-container matColumnDef="currentStage">
       <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        {{ stageDisplayMapping[element.currentStage] || 'N/A' }}
+        {{ stageDisplayMapping[element?.currentStage] || 'N/A' }}
       </mat-cell>
     </ng-container>
+    
     <!-- Most recent remarks on the application -->
     <ng-container matColumnDef="remarks">
       <mat-header-cell *matHeaderCellDef> Remarks </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        {{ element.latestTransaction?.remarks || '-' }}
+        {{ element?.latestTransaction?.remarks || '-' }}
       </mat-cell>
     </ng-container>
+    
     <!-- Performed By -->
     <ng-container matColumnDef="performedBy">
       <mat-header-cell *matHeaderCellDef> Performed By </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        <div>{{ element.latestTransaction?.performedBy?.username || 'Unknown' }}</div>
-        <div class="text-secondary"> Role: {{ roleDisplayMapping[element.latestTransaction?.performedBy?.roleName ] || 'Unknown' }}</div>
+        <div>{{ element?.latestTransaction?.performedBy?.username || 'Unknown' }}</div>
+        <div class="text-secondary"> 
+          Role: {{ roleDisplayMapping[element?.latestTransaction?.performedBy?.roleName] || 'Unknown' }}
+        </div>
         <div class="text-secondary">
-          Date: {{ element.latestTransaction?.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
+          @if (element?.latestTransaction?.timestamp) {
+            Date: {{ element.latestTransaction.timestamp | date: 'dd-MM-yyyy, hh:mm a' }}
+          } @else {
+            Date: N/A
+          }
         </div>
       </mat-cell>
     </ng-container>
+    
     <!-- Action buttons: view application or view movement timeline -->
     <ng-container matColumnDef="actions">
       <mat-header-cell *matHeaderCellDef> Actions </mat-header-cell>
       <mat-cell *matCellDef="let element">
-        <button mat-icon-button color="primary" (click)="onView(element)">
+        <button mat-icon-button color="primary" (click)="onView(element)" [disabled]="!element">
           <mat-icon>visibility</mat-icon>
         </button>
-        <button mat-icon-button color="primary" (click)="viewMovement(element)">
+        <button mat-icon-button color="primary" (click)="viewMovement(element)" [disabled]="!element">
           <mat-icon>timeline</mat-icon>
         </button>
       </mat-cell>
     </ng-container>
+    
     <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
     <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
   </mat-table>
 } @else {
   <div class="p-4 text-center text-muted">No applications found.</div>
 }
-
-<!-- Displayed if there is no data to show -->

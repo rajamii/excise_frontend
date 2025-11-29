@@ -9,7 +9,7 @@ import { LicenseType } from '../../core/models/license-type.model';
 import { LicenseCategory } from '../../core/models/license-category.model';
 import { LicenseSubcategory } from '../models/license-subcategory.model';
 import { LicenseTitle } from '../models/license-title.model';
-import { Road } from '../models/Road.model';
+import { Road } from '../models/road.model';
 
 @Injectable({
   providedIn: 'root'
@@ -54,35 +54,35 @@ export class MasterService {
     return this.http.get<LicenseCategory[]>(`${this.baseUrl}/license-categories`);
   }
 
-  // ✅ Removed duplicate - Choose the correct endpoint for your API
-  // Option 1: /license-subcategories
+  // Fetches all license subcategories
+  // Note: Choose the correct endpoint based on your API documentation
   getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
     return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/license-subcategories`);
   }
 
-  // Option 2: If you need the /licensesubcategories/list endpoint, use this instead:
+  // Alternative endpoint if your API uses this format:
   // getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
   //   return this.http.get<LicenseSubcategory[]>(`${this.baseUrl}/licensesubcategories/list`);
   // }
 
-  // ✅ Removed duplicate - Choose the correct endpoint for your API
-  // Option 1: /license-titles
+  // Fetches all license titles
+  // Note: Choose the correct endpoint based on your API documentation
   getLicenseTitles(): Observable<LicenseTitle[]> {
     return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
   }
 
-  // Option 2: If you need the /licensetitles/list endpoint, use this instead:
+  // Alternative endpoint if your API uses this format:
   // getLicenseTitles(): Observable<LicenseTitle[]> {
   //   return this.http.get<LicenseTitle[]>(`${this.baseUrl}/licensetitles/list`);
   // }
 
-  // ✅ Removed duplicate - Choose the correct endpoint for your API
-  // Option 1: /roads
+  // Fetches all roads
+  // Note: Choose the correct endpoint based on your API documentation
   getRoads(): Observable<Road[]> {
     return this.http.get<Road[]>(`${this.baseUrl}/roads`);
   }
 
-  // Option 2: If you need the /roads/list endpoint, use this instead:
+  // Alternative endpoint if your API uses this format:
   // getRoads(): Observable<Road[]> {
   //   return this.http.get<Road[]>(`${this.baseUrl}/roads/list`);
   // }

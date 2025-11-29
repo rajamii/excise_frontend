@@ -6,6 +6,15 @@ import { LicenseApplicationService } from '../../../core/services/license-applic
 import { MatDialog } from '@angular/material/dialog';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { LicenseApplication } from '../../../core/models/license-application.model';
+import { of, forkJoin } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
+
+type ApplicationType = 'license' | 'new_license';
+
+interface ApplicationTypeOption {
+  value: ApplicationType;
+  label: string;
+}
 
 @Component({
   selector: 'app-licensee-dashboard', 
@@ -17,7 +26,7 @@ import { LicenseApplication } from '../../../core/models/license-application.mod
   templateUrl: './licensee-dashboard.component.html',
   styleUrl: './licensee-dashboard.component.scss'   
 })
-export class LicenseeDashboardComponent implements OnInit{
+export class LicenseeDashboardComponent implements OnInit {
   // Dashboard counts for applied, pending, approved, and rejected applications
   dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
 
@@ -26,6 +35,16 @@ export class LicenseeDashboardComponent implements OnInit{
   pendingApplications: ApplicationStatus[] = [];
   approvedApplications: ApplicationStatus[] = [];
   rejectedApplications: ApplicationStatus[] = [];
+
+  // Application Type Filter
+  selectedApplicationType: ApplicationType = 'license'; // Default to License Application
+  applicationTypes: ApplicationTypeOption[] = [
+    { value: 'license', label: 'License Application' },
+    { value: 'new_license', label: 'New License Application' }
+  ];
+
+  // Loading state
+  isLoading = false;
 
   constructor(
     protected licenseAppService: LicenseApplicationService,
@@ -50,30 +69,123 @@ export class LicenseeDashboardComponent implements OnInit{
   }
 
   // Method to go back to the default page
-  goBack(){
+  goBack() {
     this.activeTable = 'default';
   }
 
   // Lifecycle hook to initialize data
   ngOnInit(): void {
-    // Fetch dashboard counts
-    this.licenseAppService.getDashboardCounts().subscribe({
-      next: (res) => {
-        this.dashboardCounts = res; // Update dashboard counts
+    this.loadDashboardData();
+  }
+
+  // Method to handle application type change
+  onApplicationTypeChange(): void {
+    this.activeTable = 'default'; // Reset to default view when filter changes
+    this.loadDashboardData();
+  }
+
+  // Load dashboard data based on selected application type
+  loadDashboardData(): void {
+    this.isLoading = true;
+
+    // Determine which service to call based on selected type
+    const countsObservable = this.getCountsObservable();
+    const applicationsObservable = this.getApplicationsObservable();
+
+    forkJoin({
+      counts: countsObservable,
+      applications: applicationsObservable
+    })
+    .pipe(
+      finalize(() => {
+        this.isLoading = false;
+      })
+    )
+    .subscribe({
+      next: (result) => {
+        this.dashboardCounts = {
+          applied: result.counts.applied || 0,
+          pending: result.counts.pending || 0,
+          approved: result.counts.approved || 0,
+          rejected: result.counts.rejected || 0
+        };
+        this.updateDataSources(result.applications);
+        console.log(`${this.getApplicationTypeLabel()} data loaded:`, result);
       },
-      error: (err) => {
-        console.error('Failed to fetch dashboard counts', err);
+      error: (error) => {
+        console.error('Error loading dashboard data:', error);
+        // Reset to default values on error
+        this.dashboardCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+        this.clearDataSources();
       }
     });
+  }
 
-    // Fetch applications by stage
-    this.licenseAppService.getApplicationsByStatus().subscribe(res => {
-      this.appliedDataSource.data = res.applied;
-      this.pendingDataSource.data = res.pending;
-      this.approvedDataSource.data = res.approved;
-      this.rejectedDataSource.data = res.rejected;
-    }, error => {
-      console.error('Error fetching applications:', error);
-    });
+  
+  private getCountsObservable() {
+    switch (this.selectedApplicationType) {
+      case 'license':
+        return this.licenseAppService.getDashboardCounts().pipe(
+          catchError(err => {
+            console.error('Failed to fetch license application counts:', err);
+            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+          })
+        );
+      
+      case 'new_license':
+        return this.licenseAppService.getNewLicenseDashboardCounts().pipe(
+          catchError(err => {
+            console.error('Failed to fetch new license application counts:', err);
+            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+          })
+        );
+      
+      default:
+        return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+    }
+  }
+
+  
+  private getApplicationsObservable() {
+    switch (this.selectedApplicationType) {
+      case 'license':
+        return this.licenseAppService.getApplicationsByStatus().pipe(
+          catchError(err => {
+            console.error('Failed to fetch license applications:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        );
+      
+      case 'new_license':
+        return this.licenseAppService.getNewLicenseApplicationsByStatus().pipe(
+          catchError(err => {
+            console.error('Failed to fetch new license applications:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        );
+      
+      default:
+        return of({ applied: [], pending: [], approved: [], rejected: [] });
+    }
+  }
+
+  
+  private updateDataSources(applications: any): void {
+    this.appliedDataSource.data = applications.applied || [];
+    this.pendingDataSource.data = applications.pending || [];
+    this.approvedDataSource.data = applications.approved || [];
+    this.rejectedDataSource.data = applications.rejected || [];
+  }
+
+  
+  private clearDataSources(): void {
+    this.appliedDataSource.data = [];
+    this.pendingDataSource.data = [];
+    this.approvedDataSource.data = [];
+    this.rejectedDataSource.data = [];
+  }
+  getApplicationTypeLabel(): string {
+    const option = this.applicationTypes.find(t => t.value === this.selectedApplicationType);
+    return option ? option.label : 'Application';
   }
 }

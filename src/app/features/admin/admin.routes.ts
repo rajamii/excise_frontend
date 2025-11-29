@@ -80,14 +80,6 @@ const routes: Routes = [
         },
       },
       {
-        path: 'license-titles',
-        loadComponent: () => import('./master/license-title/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
         path: 'license-subcategories',
         loadComponent: () => import('./master/license-subcategory/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
@@ -130,54 +122,6 @@ const routes: Routes = [
       {
         path: 'transitions',
         loadComponent: () => import('./master/workflow/transitions/list/list.component').then(m => m.WorkflowTransitionListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-subcategory/new',
-        loadComponent: () => import('./license-subcategory/add/add.component').then(m => m.SubcategoryAddComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-subcategories',
-        loadComponent: () => import('./license-subcategory/list/list.component').then(m => m.SubcategoryListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-title/new',
-        loadComponent: () => import('./license-title/add/add.component').then(m => m. LicenseTitleAddComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-titles',
-        loadComponent: () => import('./license-title/list/list.component').then(m => m.LicenseTitleListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'road/new',
-        loadComponent: () => import('./road/add/add.component').then(m => m.RoadAddComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'roads',
-        loadComponent: () => import('./road/list/list.component').then(m => m.RoadListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]

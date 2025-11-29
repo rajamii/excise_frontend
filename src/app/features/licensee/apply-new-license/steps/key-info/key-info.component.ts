@@ -70,7 +70,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadDropdownData();
     this.loadAllSubCategories();
 
@@ -86,7 +86,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnDestroy() {
+  ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -97,9 +97,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       (data: LicenseCategory[]) => {
         console.log('📦 Backend license categories:', data);
 
+        // ✅ FIX: Include the required 'description' field
         this.licenseCategories = data.map(item => ({
           id: item.id,
-          licenseCategory: item.licenseCategory
+          licenseCategory: item.licenseCategory,
+          description: item.description ?? '' // Added missing required field
         }));
       },
       error => {
@@ -152,12 +154,12 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     return storedData ? JSON.parse(storedData) : {};
   }
 
-  private saveToSessionStorage() {
+  private saveToSessionStorage(): void {
     const formData = this.keyInfoForm.getRawValue();
     sessionStorage.setItem('keyInfoData', JSON.stringify(formData));
   }
 
-  private updateErrorMessage(field: keyof typeof this.errorMessages) {
+  private updateErrorMessage(field: keyof typeof this.errorMessages): void {
     const control = this.keyInfoForm.get(field);
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
@@ -170,28 +172,28 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     }
   }
 
-  private updateAllErrorMessages() {
+  private updateAllErrorMessages(): void {
     Object.keys(this.errorMessages).forEach((field) => {
       this.updateErrorMessage(field as keyof typeof this.errorMessages);
     });
   }
 
-  getErrorMessage(field: keyof typeof this.errorMessages) {
+  getErrorMessage(field: keyof typeof this.errorMessages): string {
     return this.errorMessages[field]();
   }
 
-  proceedToNext() {
+  proceedToNext(): void {
     if (this.keyInfoForm.valid) {
       this.next.emit();
     }
   }
 
-  resetForm() {
+  resetForm(): void {
     this.keyInfoForm.reset();
     sessionStorage.removeItem('keyInfoData');
   }
 
-  goBack() {
+  goBack(): void {
     this.back.emit();
   }
 }

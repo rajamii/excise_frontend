@@ -80,6 +80,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     breadth: signal(''),
     siteOwned: signal(''),
     nocObtained: signal(''),
+    tradeLicenseCovered: signal(''), // ✅ NEW
   };
 
   constructor(
@@ -116,6 +117,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       // Radio button fields
       siteOwned: new FormControl(storedValues.siteOwned, [Validators.required]),
       nocObtained: new FormControl(storedValues.nocObtained),
+      tradeLicenseCovered: new FormControl(storedValues.tradeLicenseCovered, [Validators.required]), // ✅ NEW
     });
 
     this.setupConditionalValidation();
@@ -127,6 +129,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   ngOnInit() {
+    console.log('🚀 SiteDetailsComponent initialized');
     this.loadMasterData();
     this.restoreDocuments();
 
@@ -134,6 +137,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.siteDetailsForm.get('siteDistrict')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(districtId => {
+        console.log('🏛️ District changed to:', districtId);
         this.onDistrictChange(districtId);
       });
 
@@ -164,7 +168,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       const siteSubdivisionControl = this.siteDetailsForm.get('siteSubdivision');
       const currentValue = siteSubdivisionControl?.value;
 
-      // If exciseSubdivision is set from previous step and current value is different
       if (selectedExciseSubdivision && currentValue !== selectedExciseSubdivision) {
         console.log('🔄 Auto-setting subdivision from previous step:', selectedExciseSubdivision);
         this.siteDetailsForm.patchValue({ siteSubdivision: selectedExciseSubdivision }, { emitEvent: false });
@@ -185,7 +188,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .pipe(takeUntil(this.destroy$))
       .subscribe(value => {
         this.updateNocRequirements(value);
-        this.cdr.detectChanges(); // Ensure UI updates (e.g. button)
+        this.cdr.detectChanges();
       });
   }
 
@@ -224,6 +227,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getDistrict().subscribe({
       next: (districts) => {
         this.districts = districts;
+        console.log('✅ Districts loaded:', districts);
         this.restoreDistrictIfNeeded();
       },
       error: (err) => console.error('Failed to load districts', err)
@@ -233,6 +237,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getSubdivision().subscribe({
       next: (subdivisions) => {
         this.allSubdivisions = subdivisions;
+        console.log('✅ Subdivisions loaded:', subdivisions);
         this.restoreSubdivisionIfNeeded();
       },
       error: (err) => console.error('Failed to load subdivisions', err)
@@ -242,6 +247,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getPoliceStations().subscribe({
       next: (stations) => {
         this.allPoliceStations = stations;
+        console.log('✅ Police Stations loaded:', stations);
         this.restorePoliceStationIfNeeded();
       },
       error: (err) => console.error('Failed to load police stations', err)
@@ -250,10 +256,20 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     // Roads
     this.masterService.getRoads().subscribe({
       next: (roads) => {
+        console.log('✅ Roads API Response:', roads);
         this.allRoads = roads;
+        
+        const currentDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (currentDistrictId) {
+          console.log('🔄 Re-filtering roads for already selected district:', currentDistrictId);
+          this.filterRoads(currentDistrictId);
+        }
+        
         this.restoreRoadIfNeeded();
       },
-      error: (err) => console.error('Failed to load roads', err)
+      error: (err) => {
+        console.error('❌ Failed to load roads', err);
+      }
     });
   }
 
@@ -285,24 +301,36 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private filterRoads(districtId: number): void {
-    const district = this.districts.find(d => d.id === districtId);
-    const districtCode = district?.districtCode;
-    if (!districtCode) {
+    if (!districtId) {
       this.roadNames = [];
       return;
     }
 
+    const selectedDistrict = this.districts.find(d => d.id === districtId);
+    if (!selectedDistrict) {
+      this.roadNames = [];
+      return;
+    }
+
+    console.log('🔍 Filtering roads for district:', selectedDistrict.district, '(id:', districtId, ')');
+
     this.roadNames = this.allRoads
       .filter(road => {
         if (typeof road.district === 'number') {
-          return road.district === districtCode;
-        } else if (road.district && 'districtCode' in road.district) {
-          return road.district.districtCode === districtCode;
+          return road.district === districtId;
+        } else if (road.district && typeof road.district === 'object') {
+          const districtObj = road.district as District;
+          const matchById = districtObj.id === districtId;
+          const matchByName = districtObj.district === selectedDistrict.district;
+          return matchById || matchByName;
         }
         return false;
       })
       .map(road => road.roadName)
+      .filter((name): name is string => name !== undefined && name !== null)
       .sort();
+
+    console.log('✅ Filtered road names:', this.roadNames);
 
     const current = this.siteDetailsForm.get('roadName')?.value;
     if (current && !this.roadNames.includes(current)) {
@@ -374,7 +402,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       if (typeof stored.siteDistrict === 'number') {
         districtId = stored.siteDistrict;
       } else if (typeof (stored.siteDistrict as any).id === 'number') {
-        // Backward compatibility: someone saved full object
         districtId = (stored.siteDistrict as any).id;
       }
     }
@@ -443,7 +470,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     // Fix corrupted siteDistrict if it's an object
     if (parsed.siteDistrict && typeof parsed.siteDistrict !== 'number') {
       parsed.siteDistrict = parsed.siteDistrict.id ?? null;
-      sessionStorage.setItem('siteDetailsData', JSON.stringify(parsed)); // auto-fix
+      sessionStorage.setItem('siteDetailsData', JSON.stringify(parsed));
     }
 
     return parsed;
@@ -451,6 +478,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.siteDetailsForm.getRawValue();
+    console.log('💾 Saving Site Details:', formData);
     sessionStorage.setItem('siteDetailsData', JSON.stringify(formData));
   }
 
@@ -488,7 +516,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     if (this.siteDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
       this.next.emit();
     } else {
-      // Mark all fields as touched to show validation errors
       Object.keys(this.siteDetailsForm.controls).forEach(key => {
         this.siteDetailsForm.get(key)?.markAsTouched();
       });
@@ -507,7 +534,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       }
       doc.file = null;
       doc.fileUrl = '';
-      doc.required = false; // Reset required flag
+      doc.required = false;
       this.licenseApplicationService.removeSiteDocument(doc.name);
     });
     sessionStorage.removeItem('siteDetailsData');
