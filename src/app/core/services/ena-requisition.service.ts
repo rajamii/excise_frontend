@@ -66,4 +66,16 @@ export class EnaRequisitionService {
       .delete(`${this.apiUrl}${id}/`, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
+
+  getNextRefNumber(): Observable<any> {
+    return this.http
+      .get(`${this.apiUrl}next-ref-number/`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  updateStatus(id: number, statusCode: string): Observable<any> {
+    return this.http
+      .post(`${this.apiUrl}${id}/update-status/`, { status_code: statusCode }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
 }

@@ -6,6 +6,7 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 
 interface TableData {
+  id?: number; // Added ID field
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -68,23 +69,36 @@ export class RequisitionComponent implements OnInit {
 
     this.enaRequisitionService.getRequisitions().subscribe({
       next: (data: any[]) => {
+        console.log('Raw backend data:', data); // Debug log
+        
         // Sort by submission time (newest first) - assuming created_at or requisition_date
         data.sort((a: any, b: any) => {
-          const dateA = new Date(a.requisition_date || a.created_at).getTime();
-          const dateB = new Date(b.requisition_date || b.created_at).getTime();
+          const dateA = new Date(a.requisitionDate || a.requisition_date || a.createdAt || a.created_at).getTime();
+          const dateB = new Date(b.requisitionDate || b.requisition_date || b.createdAt || b.created_at).getTime();
           return dateB - dateA;
         });
 
         // Map backend data to TableData
+        // Backend uses camelCase due to djangorestframework-camel-case
         const mappedData: TableData[] = data.map((item: any) => {
+          const refNo = item.ourRefNo || item.our_ref_no || 'N/A';
+          const reqDate = item.requisitionDate || item.requisition_date;
+          const distilleryName = item.liftedFromDistilleryName || item.lifted_from_distillery_name || 
+                                 item.liftedFrom || item.lifted_from || 'Unknown';
+          const status = item.status || 'Pending';
+          const amount = item.totalbl || item.totalBl || item.brAmount || item.br_amount || '0.00';
+          
+          console.log('Mapping item:', { refNo, reqDate, distilleryName, status, amount }); // Debug log
+          
           return {
-            referenceNo: item.our_ref_no,
-            submissionDate: new Date(item.requisition_date).toLocaleDateString('en-GB'),
-            distilleryName: item.lifted_from_distillery_name || item.lifted_from || 'Unknown',
-            status: item.status || 'Pending',
-            amount: item.totalbl || item.br_amount || '0.00',
-            commissionerStatus: item.status, // Mapping status to commissionerStatus for now
-            forwardedToCommissioner: true // Assuming all are forwarded for now or need backend field
+            id: item.id, // Map ID
+            referenceNo: refNo,
+            submissionDate: reqDate ? new Date(reqDate).toLocaleDateString('en-GB') : 'Invalid Date',
+            distilleryName: distilleryName,
+            status: status,
+            amount: typeof amount === 'number' ? amount.toString() : amount,
+            commissionerStatus: status,
+            forwardedToCommissioner: true
           };
         });
 
@@ -270,24 +284,91 @@ export class RequisitionComponent implements OnInit {
   }
 
   // Workflow actions - Placeholder for now as backend integration for these actions is pending
+  // Workflow actions
+  // Workflow actions
   approveRequisition(item: TableData): void {
-    alert('Approve functionality not yet connected to backend.');
+    if (!(item as any).id) {
+      console.error('Requisition ID not found');
+      return;
+    }
+
+    let targetStatusCode = '';
+    
+    if (this.isPermitSection()) {
+      // Permit Section approves -> Forward to Commissioner (RQ_03)
+      targetStatusCode = 'RQ_03';
+    } else if (this.isCommissioner()) {
+      // Commissioner approves -> Approved by Commissioner (RQ_04)
+      targetStatusCode = 'RQ_04';
+    } else {
+      console.error('Unknown role for approval');
+      return;
+    }
+
+    this.enaRequisitionService.updateStatus((item as any).id, targetStatusCode).subscribe({
+      next: (response) => {
+        alert(`Requisition status updated to: ${response.data.status}`);
+        this.loadRequisitionData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error updating status:', error);
+        alert('Failed to update status.');
+      }
+    });
   }
 
   rejectRequisition(item: TableData): void {
-    alert('Reject functionality not yet connected to backend.');
+    if (!(item as any).id) {
+      console.error('Requisition ID not found');
+      return;
+    }
+
+    let targetStatusCode = '';
+    
+    if (this.isPermitSection()) {
+      // Permit Section rejects -> Rejected (RQ_02 - assuming)
+      targetStatusCode = 'RQ_02'; 
+    } else if (this.isCommissioner()) {
+      // Commissioner rejects -> Rejected by Commissioner (RQ_05)
+      targetStatusCode = 'RQ_05';
+    } else {
+      console.error('Unknown role for rejection');
+      return;
+    }
+
+    this.enaRequisitionService.updateStatus((item as any).id, targetStatusCode).subscribe({
+      next: (response) => {
+        alert(`Requisition status updated to: ${response.data.status}`);
+        this.loadRequisitionData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error updating status:', error);
+        alert('Failed to update status.');
+      }
+    });
   }
 
   forwardToCommissioner(item: TableData): void {
-    alert('Forward functionality not yet connected to backend.');
+    // This is now handled by approveRequisition for Permit Section
+    this.approveRequisition(item);
   }
 
   isForwardedToCommissioner(item: TableData): boolean {
-    return !!item.forwardedToCommissioner;
+    // Check if status indicates it's already forwarded
+    return item.status.toLowerCase().includes('forwarded') || 
+           item.status.toLowerCase().includes('commissioner');
   }
 
   isPendingCommissionerApproval(item: TableData): boolean {
-    return item.status === 'pending' || item.status === 'Pending';
+    // Commissioner sees items that are ForwardedToCommissioner
+    if (this.isCommissioner()) {
+      return item.status === 'ForwardedToCommissioner' || item.status.includes('Forwarded');
+    }
+    // Permit Section sees Pending items
+    if (this.isPermitSection()) {
+      return item.status === 'Pending' || item.status === 'PENDING';
+    }
+    return false;
   }
 
   payForRequisition(item: TableData): void {
