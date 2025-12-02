@@ -73,9 +73,9 @@ export class EnaRequisitionService {
       .pipe(catchError(this.handleError));
   }
 
-  updateStatus(id: number, statusCode: string): Observable<any> {
+  performAction(id: number, action: 'APPROVE' | 'REJECT'): Observable<any> {
     return this.http
-      .post(`${this.apiUrl}${id}/update-status/`, { status_code: statusCode }, this.httpOptions)
+      .post(`${this.apiUrl}${id}/perform-action/`, { action: action }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 }

@@ -7,4 +7,7 @@ export enum Authority {
   LEVEL_4 = 'level_4',
   LEVEL_5 = 'level_5',
   SUPPLY_CHAIN = 'Supply_Chain',
+  PERMIT_SECTION = 'Permit Section',
+  COMMISSIONER = 'commissioner',
 }
+  

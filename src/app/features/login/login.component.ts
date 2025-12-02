@@ -14,6 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
 import Swal from 'sweetalert2';
 import { ADMIN_ROLES } from '../../shared/constants/role.constants';
+import { Authority } from '../../shared/constants/authority.enum';
 import { PatternConstants } from '../../shared/constants/pattern.constants';
 
 @Component({
@@ -290,8 +291,14 @@ export class LoginComponent extends BaseComponent {
       this.router.navigate(['licensee/dashboard']);
     } else if (role === 'Supply_Chain') {
       this.router.navigate(['supply-chain/dashboard']);
+    } else if (role === Authority.PERMIT_SECTION) {
+      this.router.navigate(['/app-permit-section']);
+    } else if (role === Authority.COMMISSIONER) {
+      this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
       console.warn('Unknown role:', role);
+      // Fallback or show error to user if needed, but for now just warn
+      // potentially show a swal alert if it's a critical failure to redirect
     }
   }
 

@@ -6,15 +6,15 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 
 interface TableData {
-  id?: number; // Added ID field
+  id?: number;
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
   status: string;
   amount: string;
-  // Additional fields for workflow logic if available from backend
   commissionerStatus?: string;
   forwardedToCommissioner?: boolean;
+  allowedActions?: string[]; // Dynamic actions from backend
 }
 
 @Component({
@@ -71,7 +71,7 @@ export class RequisitionComponent implements OnInit {
       next: (data: any[]) => {
         console.log('Raw backend data:', data); // Debug log
         
-        // Sort by submission time (newest first) - assuming created_at or requisition_date
+        // Sort by submission time (newest first)
         data.sort((a: any, b: any) => {
           const dateA = new Date(a.requisitionDate || a.requisition_date || a.createdAt || a.created_at).getTime();
           const dateB = new Date(b.requisitionDate || b.requisition_date || b.createdAt || b.created_at).getTime();
@@ -79,7 +79,6 @@ export class RequisitionComponent implements OnInit {
         });
 
         // Map backend data to TableData
-        // Backend uses camelCase due to djangorestframework-camel-case
         const mappedData: TableData[] = data.map((item: any) => {
           const refNo = item.ourRefNo || item.our_ref_no || 'N/A';
           const reqDate = item.requisitionDate || item.requisition_date;
@@ -88,32 +87,32 @@ export class RequisitionComponent implements OnInit {
           const status = item.status || 'Pending';
           const amount = item.totalbl || item.totalBl || item.brAmount || item.br_amount || '0.00';
           
-          console.log('Mapping item:', { refNo, reqDate, distilleryName, status, amount }); // Debug log
-          
+          // Map allowed actions from backend
+          const allowedActions = item.allowedActions || item.allowed_actions || [];
+
           return {
-            id: item.id, // Map ID
+            id: item.id,
             referenceNo: refNo,
             submissionDate: reqDate ? new Date(reqDate).toLocaleDateString('en-GB') : 'Invalid Date',
             distilleryName: distilleryName,
             status: status,
             amount: typeof amount === 'number' ? amount.toString() : amount,
             commissionerStatus: status,
-            forwardedToCommissioner: true
+            forwardedToCommissioner: true,
+            allowedActions: allowedActions
           };
         });
 
         this.requisitionData = mappedData;
-        this.applyRequisitionFilters(); // Apply initial filters (which sets filteredRequisitionData)
+        this.applyRequisitionFilters();
       },
       error: (error) => {
         console.error('Error fetching requisitions:', error);
-        // Handle error (e.g., show toast)
       }
     });
   }
 
   private getDistilleryDisplayName(value: string): string {
-    // This might not be needed if backend returns full name, but keeping for safety
     const map: { [key: string]: string } = {
       'sikkim-distilleries': 'Sikkim Distilleries Ltd',
       'mountain-spirits': 'Mountain Spirits Pvt Ltd',
@@ -132,21 +131,28 @@ export class RequisitionComponent implements OnInit {
   }
 
   getRequisitionStatusCount(status: string): number {
-    if (status === 'PENDING' || status === 'REJECTED') {
-      // For commissioner view, match exact status
+    const targetStatus = status.toUpperCase();
+    
+    // Strict check for APPROVED to avoid counting 'ApprovedByCommissioner'
+    if (targetStatus === 'APPROVED') {
       return this.filteredRequisitionData.filter(item =>
-        item.status.toUpperCase() === status
+        item.status.toUpperCase() === 'APPROVED'
       ).length;
     }
-    // For other statuses, use includes for backward compatibility
+
+    if (targetStatus === 'PENDING' || targetStatus === 'REJECTED') {
+      return this.filteredRequisitionData.filter(item =>
+        item.status.toUpperCase() === targetStatus
+      ).length;
+    }
+    
     return this.filteredRequisitionData.filter(item =>
       item.status.toLowerCase().includes(status.toLowerCase())
     ).length;
   }
 
   getPriority(item: TableData): string {
-    // Determine priority based on status and submission date
-    const submissionDate = new Date(item.submissionDate.split('/').reverse().join('-')); // Changed split to '/' for en-GB
+    const submissionDate = new Date(item.submissionDate.split('/').reverse().join('-'));
     const daysSinceSubmission = Math.floor((new Date().getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24));
     
     if (item.status.toUpperCase() === 'PENDING' && daysSinceSubmission > 7) {
@@ -165,13 +171,11 @@ export class RequisitionComponent implements OnInit {
       let matchesYear = true;
       let matchesStatus = true;
 
-      // Parse DD/MM/YYYY
       const dateParts = item.submissionDate.split('/');
       if (dateParts.length === 3) {
         const day = parseInt(dateParts[0]);
         const month = parseInt(dateParts[1]);
         const year = parseInt(dateParts[2]);
-
         const itemDate = new Date(year, month - 1, day);
 
         if (this.requisitionDateFilter) {
@@ -283,8 +287,6 @@ export class RequisitionComponent implements OnInit {
     return 'licensee';
   }
 
-  // Workflow actions - Placeholder for now as backend integration for these actions is pending
-  // Workflow actions
   // Workflow actions
   approveRequisition(item: TableData): void {
     if (!(item as any).id) {
@@ -292,27 +294,14 @@ export class RequisitionComponent implements OnInit {
       return;
     }
 
-    let targetStatusCode = '';
-    
-    if (this.isPermitSection()) {
-      // Permit Section approves -> Forward to Commissioner (RQ_03)
-      targetStatusCode = 'RQ_03';
-    } else if (this.isCommissioner()) {
-      // Commissioner approves -> Approved by Commissioner (RQ_04)
-      targetStatusCode = 'RQ_04';
-    } else {
-      console.error('Unknown role for approval');
-      return;
-    }
-
-    this.enaRequisitionService.updateStatus((item as any).id, targetStatusCode).subscribe({
+    this.enaRequisitionService.performAction((item as any).id, 'APPROVE').subscribe({
       next: (response) => {
-        alert(`Requisition status updated to: ${response.data.status}`);
+        alert(`Action successful! Status updated to: ${response.data.status}`);
         this.loadRequisitionData(); // Reload data
       },
       error: (error) => {
-        console.error('Error updating status:', error);
-        alert('Failed to update status.');
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.message || ''));
       }
     });
   }
@@ -323,56 +312,67 @@ export class RequisitionComponent implements OnInit {
       return;
     }
 
-    let targetStatusCode = '';
-    
-    if (this.isPermitSection()) {
-      // Permit Section rejects -> Rejected (RQ_02 - assuming)
-      targetStatusCode = 'RQ_02'; 
-    } else if (this.isCommissioner()) {
-      // Commissioner rejects -> Rejected by Commissioner (RQ_05)
-      targetStatusCode = 'RQ_05';
-    } else {
-      console.error('Unknown role for rejection');
-      return;
-    }
-
-    this.enaRequisitionService.updateStatus((item as any).id, targetStatusCode).subscribe({
+    this.enaRequisitionService.performAction((item as any).id, 'REJECT').subscribe({
       next: (response) => {
-        alert(`Requisition status updated to: ${response.data.status}`);
+        alert(`Action successful! Status updated to: ${response.data.status}`);
         this.loadRequisitionData(); // Reload data
       },
       error: (error) => {
-        console.error('Error updating status:', error);
-        alert('Failed to update status.');
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.message || ''));
       }
     });
   }
 
   forwardToCommissioner(item: TableData): void {
-    // This is now handled by approveRequisition for Permit Section
     this.approveRequisition(item);
   }
 
   isForwardedToCommissioner(item: TableData): boolean {
-    // Check if status indicates it's already forwarded
     return item.status.toLowerCase().includes('forwarded') || 
            item.status.toLowerCase().includes('commissioner');
   }
 
-  isPendingCommissionerApproval(item: TableData): boolean {
-    // Commissioner sees items that are ForwardedToCommissioner
-    if (this.isCommissioner()) {
-      return item.status === 'ForwardedToCommissioner' || item.status.includes('Forwarded');
-    }
-    // Permit Section sees Pending items
-    if (this.isPermitSection()) {
-      return item.status === 'Pending' || item.status === 'PENDING';
+  canPerformAction(item: TableData): boolean {
+    // Fully dynamic check!
+    // We just check if 'APPROVE' is in the allowed actions list returned by backend.
+    if (item.allowedActions && item.allowedActions.includes('APPROVE')) {
+      return true;
     }
     return false;
   }
 
+  canReject(item: TableData): boolean {
+    // Check if 'REJECT' is in the allowed actions list
+    if (item.allowedActions && item.allowedActions.includes('REJECT')) {
+      return true;
+    }
+    return false;
+  }
+
+  // Deprecated: Use canPerformAction instead
+  isPendingCommissionerApproval(item: TableData): boolean {
+    return this.canPerformAction(item);
+  }
+
   payForRequisition(item: TableData): void {
-    alert(`Payment processing for requisition ${item.referenceNo}. Amount: ₹${item.amount}`);
+    if (!(item as any).id) {
+      console.error('Requisition ID not found');
+      return;
+    }
+
+    // For licensee, "Pay" button means they're submitting payment slip
+    // This triggers the transition from ApprovedByCommissioner -> ForwardedPaySLipToPermitSection
+    this.enaRequisitionService.performAction((item as any).id, 'APPROVE').subscribe({
+      next: (response) => {
+        alert(`Payment slip submitted successfully! Status updated to: ${response.data.status}`);
+        this.loadRequisitionData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error submitting payment slip:', error);
+        alert('Failed to submit payment slip. ' + (error.error?.message || ''));
+      }
+    });
   }
   
   clearAllRequisitionData(): void {

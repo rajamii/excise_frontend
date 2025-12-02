@@ -255,13 +255,15 @@
                   <i class="bi bi-file-earmark-text"></i>
                 </button>
                 
-                <!-- Permit Section: Approve/Reject buttons -->
-                @if (isPermitSection() && isPendingCommissionerApproval(item)) {
+                <!-- Permit Section: Approve/Reject buttons (dynamic based on workflow rules) -->
+                @if (isPermitSection() && canPerformAction(item)) {
                   <button class="btn btn-outline-success btn-sm" 
                     (click)="approveRequisition(item)" 
                     title="Approve Requisition">
                     <i class="bi bi-check-circle"></i>
                   </button>
+                }
+                @if (isPermitSection() && canReject(item)) {
                   <button class="btn btn-outline-danger btn-sm" 
                     (click)="rejectRequisition(item)" 
                     title="Reject Requisition">
@@ -269,13 +271,15 @@
                   </button>
                 }
                 
-                <!-- Commissioner: Approve/Reject buttons (only for forwarded requisitions pending approval) -->
-                @if (isCommissioner() && isPendingCommissionerApproval(item)) {
+                <!-- Commissioner: Approve/Reject buttons (dynamic based on workflow rules) -->
+                @if (isCommissioner() && canPerformAction(item)) {
                   <button class="btn btn-outline-success btn-sm" 
                     (click)="approveRequisition(item)" 
                     title="Approve Requisition">
                     <i class="bi bi-check-circle"></i>
                   </button>
+                }
+                @if (isCommissioner() && canReject(item)) {
                   <button class="btn btn-outline-danger btn-sm" 
                     (click)="rejectRequisition(item)" 
                     title="Reject Requisition">
@@ -283,11 +287,12 @@
                   </button>
                 }
                 
-                <!-- Supply Chain: Pay button (only when approved by commissioner) -->
-                @if (!isCommissioner() && !isPermitSection() && (item.status === 'APPROVED' || item.status === 'Approved by Commissioner')) {
+                
+                <!-- Licensee: Pay button (when approved by commissioner and can perform action) -->
+                @if (!isCommissioner() && !isPermitSection() && canPerformAction(item)) {
                   <button class="btn btn-outline-success btn-sm" 
                     (click)="payForRequisition(item)" 
-                    title="Make Payment">
+                    title="Submit Payment Slip">
                     <i class="bi bi-credit-card"></i>
                     Pay
                   </button>

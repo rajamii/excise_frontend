@@ -166,84 +166,6 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Sample data for hologram applications (from commissioner's perspective)
   hologramData: CommissionerTableData[] = [
-    {
-      referenceNo: "HOL/BF901",
-      submissionDate: "23-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "15000.00",
-      priority: "high",
-      localQtyLakh: 2.5,
-      exportQtyLakh: 1.0,
-      defenceQtyLakh: 0.5,
-      totalQtyLakh: 4.0,
-      hologramType: "Security Hologram"
-    },
-    {
-      referenceNo: "HOL/BF902",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "APPROVED",
-      amount: "22000.00",
-      priority: "normal",
-      localQtyLakh: 3.2,
-      exportQtyLakh: 1.8,
-      defenceQtyLakh: 0.0,
-      totalQtyLakh: 5.0,
-      hologramType: "Premium Hologram"
-    },
-    {
-      referenceNo: "HOL/BF903",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "ISSUED",
-      amount: "18500.00",
-      priority: "urgent",
-      localQtyLakh: 2.8,
-      exportQtyLakh: 0.7,
-      defenceQtyLakh: 1.0,
-      totalQtyLakh: 4.5,
-      hologramType: "Standard Hologram"
-    },
-    {
-      referenceNo: "HOL/BF904",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PROCESSING",
-      amount: "12000.00",
-      priority: "normal",
-      localQtyLakh: 2.0,
-      exportQtyLakh: 0.5,
-      defenceQtyLakh: 0.0,
-      totalQtyLakh: 2.5,
-      hologramType: "Security Hologram"
-    },
-    {
-      referenceNo: "HOL/BF905",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PENDING",
-      amount: "25000.00",
-      priority: "high",
-      localQtyLakh: 4.0,
-      exportQtyLakh: 2.0,
-      defenceQtyLakh: 0.5,
-      totalQtyLakh: 6.5,
-      hologramType: "Premium Hologram"
-    },
-    {
-      referenceNo: "HOL/BF906",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "REJECTED",
-      amount: "8000.00",
-      priority: "normal",
-      localQtyLakh: 1.5,
-      exportQtyLakh: 0.0,
-      defenceQtyLakh: 0.0,
-      totalQtyLakh: 1.5,
-      hologramType: "Standard Hologram"
-    }
   ];
 
   // Pagination state per tab
@@ -350,12 +272,6 @@ export class CommissionerDashboardComponent implements OnInit {
       return false;
     });
 
-    console.log('📊 Loading hologram applications for Commissioner:', {
-      total: hologramRequests.length,
-      applicationsForCommissioner: applicationsForCommissioner.length,
-      filtered: applicationsForCommissioner
-    });
-
     // Convert to commissioner table format
     const convertedData: CommissionerTableData[] = applicationsForCommissioner.map((req: any) => {
       // Determine status based on payment and approval stages
@@ -390,8 +306,7 @@ export class CommissionerDashboardComponent implements OnInit {
     // Replace sample data with real data (show applications forwarded by IT Cell)
     this.hologramData = convertedData;
     this.filteredHologramData = [...this.hologramData];
-    
-    console.log('✅ Commissioner hologram data loaded:', this.hologramData.length, 'applications forwarded by IT Cell');
+  
   }
 
   calculateHologramAmount(req: any): number {
