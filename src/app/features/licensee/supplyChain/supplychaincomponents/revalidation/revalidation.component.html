@@ -197,12 +197,10 @@
             </td>
             <td class="actions">
               <div class="action-buttons">
-                <button class="btn btn-outline-success btn-sm" (click)="requestRevlidation(item)"
-                  title="Revalidate">
+                <button class="btn btn-outline-success btn-sm" (click)="requestRevlidation(item)" title="Revalidate">
                   <i class="bi bi-arrow-repeat"></i>
                 </button>
-                <button class="btn btn-outline-primary btn-sm" (click)="viewApplication(item)"
-                  title="View Application">
+                <button class="btn btn-outline-primary btn-sm" (click)="viewApplication(item)" title="View Application">
                   <i class="bi bi-eye"></i>
                 </button>
               </div>
@@ -266,32 +264,26 @@
       <div class="d-flex align-items-center gap-3">
         <div class="page-size-selector">
           <label class="selector-label">Show:</label>
-          <select class="form-select form-select-sm" [ngModel]="getPageSize()"
-            (ngModelChange)="changePageSize($event)">
+          <select class="form-select form-select-sm" [ngModel]="getPageSize()" (ngModelChange)="changePageSize($event)">
             <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
           </select>
         </div>
         <div class="btn-group btn-group-sm pagination-buttons">
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(1)"
-            [disabled]="getCurrentPage() === 1">
+          <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="getCurrentPage() === 1">
             «
           </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() - 1)"
+          <button class="btn btn-outline-secondary" (click)="goToPage(getCurrentPage() - 1)"
             [disabled]="getCurrentPage() === 1">
             ‹
           </button>
           <span class="btn btn-light disabled">
             {{ getCurrentPage() }} / {{ getTotalPages() }}
           </span>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getCurrentPage() + 1)"
+          <button class="btn btn-outline-secondary" (click)="goToPage(getCurrentPage() + 1)"
             [disabled]="getCurrentPage() === getTotalPages()">
             ›
           </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getTotalPages())"
+          <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
             [disabled]="getCurrentPage() === getTotalPages()">
             »
           </button>

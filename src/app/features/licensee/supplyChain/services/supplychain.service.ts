@@ -5,11 +5,11 @@ import { Injectable } from "@angular/core";
 
 import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } from "../models/supply-chain.models";
 
-@Injectable ({
-    providedIn: 'root',
+@Injectable({
+  providedIn: 'root',
 })
 export class SupplyChainService {
-     constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
     return this.http
@@ -19,40 +19,40 @@ export class SupplyChainService {
       .pipe(map((response) => response.data || []));
   }
 
-    getDistilleries(): Observable<Distillery[]> {
-      return this.http
-        .get<{ success?: boolean; data?: Distillery[] }>(
-          `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
-        )
-        .pipe(map((response: any) => response.data || []));
-    }
+  getDistilleries(): Observable<Distillery[]> {
+    return this.http
+      .get<{ success?: boolean; data?: Distillery[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
+      )
+      .pipe(map((response: any) => response.data || []));
+  }
 
-      getCheckposts(): Observable<Checkpost[]> {
-        return this.http
-          .get<{ status?: string; data?: Checkpost[] }>(
-            `${environment.apiBaseUrl}/masters/supply_chain/checkposts/checkposts/`
-          )
-          .pipe(
-            map((response: any) => {
-              if (response && response.status === 'success') {
-                return response.data || [];
-              }
-              throw new Error('Failed to fetch checkposts');
-            }),
-            catchError((err) => {
-              console.error('getCheckposts error', err);
-              return of([]);
-            })
-          );
-      }
+  getCheckposts(): Observable<Checkpost[]> {
+    return this.http
+      .get<{ status?: string; data?: Checkpost[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/checkposts/checkposts/`
+      )
+      .pipe(
+        map((response: any) => {
+          if (response && response.status === 'success') {
+            return response.data || [];
+          }
+          throw new Error('Failed to fetch checkposts');
+        }),
+        catchError((err) => {
+          console.error('getCheckposts error', err);
+          return of([]);
+        })
+      );
+  }
 
-      getPurposes(): Observable<Purpose[]> {
-        return this.http
-          .get<{ success?: boolean; data?: Purpose[] }>(
-            `${environment.apiBaseUrl}/masters/supply_chain/purposes/purposes/`
-          )
-          .pipe(map((response: any) => response.data || []));
-      }
+  getPurposes(): Observable<Purpose[]> {
+    return this.http
+      .get<{ success?: boolean; data?: Purpose[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/purposes/purposes/`
+      )
+      .pipe(map((response: any) => response.data || []));
+  }
 
   getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
     return this.http
@@ -109,7 +109,7 @@ export class SupplyChainService {
       );
   }
 
-    getDistributors(): Observable<DistRow[]> {
+  getDistributors(): Observable<DistRow[]> {
     const dataUrl = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data/`;
 
     return this.http.get<DistRow[]>(dataUrl).pipe(
@@ -131,6 +131,23 @@ export class SupplyChainService {
         `${environment.apiBaseUrl}/masters/supply_chain/status-master/`
       )
       .pipe(map((response: any) => response.results || response || []));
+  }
+
+  getRevalidationData(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.results && Array.isArray(response.results)) {
+          return response.results;
+        }
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getRevalidationData error', error);
+        return of([]);
+      })
+    );
   }
 }
 
