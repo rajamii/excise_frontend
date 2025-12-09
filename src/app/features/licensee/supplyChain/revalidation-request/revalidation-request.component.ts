@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SupplyChainService } from '../services/supplychain.service';
 
 interface DisplayData {
   refNo: string;
@@ -12,6 +12,7 @@ interface DisplayData {
   permitNumbers: string;
   permitDate: Date;
   expiryDate: Date;
+  // Add other fields as needed based on backend response
 }
 
 @Component({
@@ -38,46 +39,39 @@ export class RevalidationRequestComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private http: HttpClient
-  ) {}
+    private supplyChainService: SupplyChainService
+  ) { }
 
   ngOnInit() {
     this.route.queryParams.subscribe((params) => {
-      const refNo = params['RefNo'];
+      const id = params['id'];
 
-      if (refNo) {
-        this.loadRevalidationData(refNo);
+      if (id) {
+        this.loadRevalidationData(id);
       } else {
-        this.initializeDefaultData();
+        // Handle missing ID, maybe redirect back or show error
+        this.showMessage('No Revalidation ID provided.', 'danger');
+        setTimeout(() => this.goBack(), 2000);
       }
     });
   }
 
-  private initializeDefaultData() {
-    this.displayData.date = new Date();
-    this.displayData.permitDate = new Date(
-      Date.now() - 30 * 24 * 60 * 60 * 1000
-    );
-    this.displayData.expiryDate = new Date();
-  }
-
-  private loadRevalidationData(refNo: string) {
-    // Replace with your Django API endpoint
-    this.http.get<any>(`/api/revalidation/${refNo}/`).subscribe({
+  private loadRevalidationData(id: string) {
+    this.supplyChainService.getRevalidationDetail(id).subscribe({
       next: (data) => {
+        console.log('Detail Data:', data); // Debug log
         this.displayData = {
-          refNo: data.our_ref_no,
-          date: new Date(data.requisition_date),
-          totalENA: data.total_bl,
-          strengthFrom: data.strength_from,
-          permitNumbers: data.permit_no_count,
-          permitDate: new Date(data.requisition_date),
-          expiryDate: new Date(),
+          refNo: data.ourRefNo || data.our_ref_no,
+          date: new Date(data.revalidationDate || data.revalidationDate),
+          totalENA: data.totalBl || data.total_bl,
+          strengthFrom: data.strength || data.strength_from || '',
+          permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
+          permitDate: new Date(data.requisitionDate || data.requisition_date),
+          expiryDate: new Date(data.revalidationDate || data.revalidation_date),
         };
       },
       error: (error) => {
         this.showMessage('Error loading data: ' + error.message, 'danger');
-        this.displayData.refNo = 'Error loading data';
       },
     });
   }
@@ -92,50 +86,23 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   submitRevalidation() {
-    // Close modal first
+    // Implement submission logic if needed, or if this view is just for re-requesting
+    // For now, let's keep the existing structure but maybe update the API call if different
+    this.showMessage('Feature not fully implemented yet.', 'info');
+
+    // Example submission logic placeholder
+    /*
     const modalElement = document.getElementById('declarationModal');
     if (modalElement) {
       const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
       modal.hide();
     }
-
-    // Prepare data for Django backend
-    const revalidationData = {
-      ref_no: this.displayData.refNo,
-      licensee_id: this.getLicenseeId(), // Get from auth service
-      amount: 1000,
-    };
-
-    // Call Django API
-    this.http.post('/api/revalidation/submit/', revalidationData).subscribe({
-      next: (response: any) => {
-        this.showMessage(
-          `Revalidation request submitted successfully! ₹1000 has been deducted from your wallet.`,
-          'success'
-        );
-
-        // Redirect after success
-        setTimeout(() => {
-          this.router.navigate(['/dashboard']);
-        }, 2000);
-      },
-      error: (error) => {
-        this.showMessage(
-          'Error submitting revalidation: ' + error.error.message,
-          'danger'
-        );
-      },
-    });
+    // ... submission code
+    */
   }
 
   goBack() {
-    this.router.navigate(['/licensee/ena-import']);
-  }
-
-  private getLicenseeId(): string {
-    // Implement your authentication service to get licensee ID
-    // This is a placeholder - replace with actual implementation
-    return localStorage.getItem('licensee_id') || '';
+    this.router.navigate(['/dev-supply-chain'], { queryParams: { tab: 'revalidation' } });
   }
 
   private showMessage(msg: string, type: string) {
@@ -148,3 +115,4 @@ export class RevalidationRequestComponent implements OnInit {
     }, 5000);
   }
 }
+

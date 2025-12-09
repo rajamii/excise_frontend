@@ -92,6 +92,13 @@ export const routes: Routes = [
       ).then((m) => m.SupplyChainRevalidationViewComponent),
   },
   {
+    path: "dev-supply-chain-revalidation-request",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/revalidation-request/revalidation-request.component"
+      ).then((m) => m.RevalidationRequestComponent),
+  },
+  {
     path: "dev-supply-chain-cancellation-view",
     loadComponent: () =>
       import(

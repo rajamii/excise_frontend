@@ -8,6 +8,7 @@ import { SupplyChainService } from '../../services/supplychain.service';
 import { environment } from '../../../../../../environments/environment'; // Added for debug
 
 interface TableData {
+  id: string; // Added id
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -80,6 +81,7 @@ export class RevalidationComponent implements OnInit {
       console.log('DEBUG: Raw Response:', response);
 
       this.revlidationData = (response || []).map((item: any) => ({
+        id: item.id, // Map ID
         referenceNo: item.ourRefNo,
         submissionDate: new Date(item.revalidationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         distilleryName: item.distilleryName,
@@ -208,10 +210,9 @@ export class RevalidationComponent implements OnInit {
   }
 
   requestRevlidation(item: TableData): void {
-    this.router.navigate(["/dev-payment-confirmation"], {
+    this.router.navigate(["/dev-supply-chain-revalidation-request"], {
       queryParams: {
-        tab: "revalidation",
-        referenceNo: item.referenceNo,
+        id: item.id,
       },
     });
   }

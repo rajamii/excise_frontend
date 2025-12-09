@@ -149,5 +149,14 @@ export class SupplyChainService {
       })
     );
   }
+
+  getRevalidationDetail(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`).pipe(
+      catchError((error) => {
+        console.error('getRevalidationDetail error', error);
+        throw error;
+      })
+    );
+  }
 }
 
