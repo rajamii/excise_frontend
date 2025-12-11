@@ -69,8 +69,13 @@
             <app-requisition></app-requisition>
           }
 
+          <!-- Use shared Revalidation Component for revalidation tab -->
+          @if (activeTab === 'revalidation') {
+            <app-revalidation></app-revalidation>
+          }
+
           <!-- Original permit section code for other tabs -->
-          @if (activeTab !== 'requisition') {
+          @if (activeTab !== 'requisition' && activeTab !== 'revalidation') {
           <!-- Permit Register Header -->
           <div class="permit-register-header">
             <div class="d-flex justify-content-between align-items-center mb-4">

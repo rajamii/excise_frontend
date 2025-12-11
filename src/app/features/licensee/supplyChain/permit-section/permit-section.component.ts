@@ -5,6 +5,7 @@ import { Router, RouterOutlet, NavigationEnd } from "@angular/router";
 import { Subscription } from "rxjs";
 import { filter } from "rxjs/operators";
 import { RequisitionComponent } from "../supplychaincomponents/requisition/requisition.component";
+import { RevalidationComponent } from "../supplychaincomponents/revalidation/revalidation.component";
 
 interface PermitData {
   referenceNo: string;
@@ -18,7 +19,7 @@ interface PermitData {
 @Component({
   selector: "app-permit-section",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterOutlet, RequisitionComponent],
+  imports: [CommonModule, FormsModule, RouterOutlet, RequisitionComponent, RevalidationComponent],
   templateUrl: "./permit-section.component.html",
   styleUrls: ["./permit-section.component.scss"],
 })

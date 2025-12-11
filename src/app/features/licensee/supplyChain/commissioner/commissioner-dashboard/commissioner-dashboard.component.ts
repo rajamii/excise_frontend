@@ -2,6 +2,11 @@ import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router, ActivatedRoute } from "@angular/router";
+import { firstValueFrom } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { SupplyChainService } from '../../services/supplychain.service';
+import { environment } from '../../../../../../environments/environment';
+import { AccountService } from '../../../../../core/services/account.service';
 import { DailyhologramrecordregisterComponent } from "../dailyhologramrecordregister/dailyhologramrecordregister.component";
 import { RequisitionComponent } from "../../supplychaincomponents/requisition/requisition.component";
 import { CancellationComponent } from "../../supplychaincomponents/cancellation/cancellation.component";
@@ -9,7 +14,9 @@ import { TransitComponent } from "../../supplychaincomponents/transit/transit.co
 import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
 import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
 
+
 export interface CommissionerTableData {
+  id?: string; // Added for actions
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -61,6 +68,7 @@ export interface CommissionerTableData {
   };
   // Commissioner status tracking
   commissionerStatus?: string;
+  allowedActions?: string[]; // stored from backend
 }
 
 @Component({
@@ -188,6 +196,8 @@ export class CommissionerDashboardComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
+    private http: HttpClient,
+    private supplyChainService: SupplyChainService,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -196,9 +206,12 @@ export class CommissionerDashboardComponent implements OnInit {
   ngOnInit(): void {
     // Load hologram applications from IT Cell
     this.loadHologramApplicationsFromITCell();
+    
+    // Fetch real revalidation data from backend
+    this.fetchRevalidationData();
 
     // Initialize filtered data
-    this.filteredRevalidationData = [...this.revalidationData];
+    this.filteredRevalidationData = []; // Will be populated by fetchRevalidationData
     this.filteredHologramData = [...this.hologramData];
 
     // Check for tab query parameter
@@ -418,20 +431,14 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Status class helper
   getStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'pending';
-      case 'APPROVED':
-        return 'approved';
-      case 'REJECTED':
-        return 'rejected';
-      case 'PROCESSING':
-        return 'processing';
-      case 'EXPIRED':
-        return 'expired';
-      default:
-        return 'default';
-    }
+    const s = status?.toUpperCase() || '';
+    if (s.includes('PENDING') || s.includes('FORWARDED')) return 'pending';
+    if (s.includes('APPROVED')) return 'approved';
+    if (s.includes('REJECTED')) return 'rejected';
+    if (s.includes('INVALID')) return 'expired';
+    if (s.includes('PROCESSING')) return 'processing';
+    if (s.includes('EXPIRED')) return 'expired';
+    return 'default';
   }
 
   // Filter methods for revalidation
@@ -530,7 +537,73 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   // Action methods
-  reviewRevalidation(item: CommissionerTableData): void{
+  async fetchRevalidationData() {
+    try {
+      console.log('Fetching revalidation data from backend...');
+      // Use direct HTTP or service
+      let response: any;
+      if (this.supplyChainService) {
+        response = await firstValueFrom(this.supplyChainService.getRevalidationData());
+      } else {
+         // Fallback manual fetch if service issue (unlikely)
+         console.warn('Service unavailable, trying manual fetch');
+         // const url = ...
+         return; 
+      }
+
+      console.log('Header/Data response:', response);
+      
+      const rawData = Array.isArray(response) ? response : (response?.results || []);
+
+      this.revalidationData = rawData.map((item: any) => {
+        // Calculate days left and status info
+        // Assuming backend gives us revalidationDate and we assume 30 days validity or getting it from item
+        
+        // Parsing dates
+        const subDate = new Date(item.revalidationDate || item.revalidation_date || item.created_at);
+        const expiryDate = new Date(subDate);
+        expiryDate.setDate(subDate.getDate() + 30); // Defaulting to 30 days validity assumption if not provided
+        
+        const now = new Date();
+        const diffTime = expiryDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const isExpired = diffDays <= 0;
+
+        // Map status
+        // Use backend status directly as requested
+        const status = item.status; 
+
+        // Determine priority based on expiry/status
+        let priority = 'normal';
+        if (isExpired || diffDays < 5) priority = 'urgent';
+        else if (diffDays < 10) priority = 'high';
+
+        return {
+          referenceNo: item.ourRefNo || item.our_ref_no,
+          submissionDate: subDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+          expiryDate: expiryDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+          distilleryName: item.distilleryName || item.distillery_name || 'Unknown Distillery',
+          status: status,
+          amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
+          priority: priority,
+          isExpired: isExpired,
+          daysLeft: diffDays,
+          // Store original ID for actions
+          id: item.id,
+          allowedActions: item.allowedActions || item.allowed_actions || [] 
+        } as any; // Cast to any to allow extra fields like ID
+      });
+
+      this.filteredRevalidationData = [...this.revalidationData];
+      console.log('Mapped Revalidation Data:', this.filteredRevalidationData);
+
+    } catch (error) {
+      console.error('Error fetching revalidation data:', error);
+    }
+  }
+
+  // Action methods
+  reviewRevalidation(item: any): void{
     // Navigate to revalidation letter view with reference number
     this.router.navigate(['/dev-revalidation-letter-view'], {
       queryParams: { ref: item.referenceNo }
@@ -547,14 +620,41 @@ export class CommissionerDashboardComponent implements OnInit {
     });
   }
 
-  approveRevalidation(item: CommissionerTableData): void {
-    item.status = 'APPROVED';
-    console.log('Approved revalidation:', item.referenceNo);
+  approveRevalidation(item: any): void {
+    if (!item.id) {
+        console.error('No ID found for action');
+        return;
+    }
+    
+    // Call API
+    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'commissioner').subscribe({
+        next: (res: any) => {
+            alert('Revalidation Approved Successfully');
+            this.fetchRevalidationData(); // Refresh
+        },
+        error: (err: any) => {
+            console.error('Approval failed', err);
+            alert('Approval Failed: ' + (err.error?.error || err.message));
+        }
+    });
   }
 
-  rejectRevalidation(item: CommissionerTableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected revalidation:', item.referenceNo);
+  rejectRevalidation(item: any): void {
+    if (!item.id) {
+        console.error('No ID found for action');
+        return;
+    }
+
+    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', 'commissioner').subscribe({
+        next: (res: any) => {
+            alert('Revalidation Rejected');
+            this.fetchRevalidationData(); // Refresh
+        },
+        error: (err: any) => {
+            console.error('Rejection failed', err);
+            alert('Rejection Failed: ' + (err.error?.error || err.message));
+        }
+    });
   }
 
   extendRevalidation(item: CommissionerTableData): void {
@@ -572,6 +672,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
   approveHologram(item: CommissionerTableData): void {
     item.status = 'APPROVED';
+    
     
     // Update in hologramRequests storage to enable payment (no slip upload needed in new flow)
     if (this.isBrowser) {

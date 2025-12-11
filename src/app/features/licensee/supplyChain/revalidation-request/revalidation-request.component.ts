@@ -8,7 +8,7 @@ interface DisplayData {
   refNo: string;
   date: Date;
   totalENA: string;
-  strengthFrom: string;
+  bulk_spirit_type: string;
   permitNumbers: string;
   permitDate: Date;
   expiryDate: Date;
@@ -30,7 +30,7 @@ export class RevalidationRequestComponent implements OnInit {
     refNo: '',
     date: new Date(),
     totalENA: '0',
-    strengthFrom: '',
+    bulk_spirit_type: '',
     permitNumbers: '',
     permitDate: new Date(),
     expiryDate: new Date(),
@@ -64,7 +64,7 @@ export class RevalidationRequestComponent implements OnInit {
           refNo: data.ourRefNo || data.our_ref_no,
           date: new Date(data.revalidationDate || data.revalidationDate),
           totalENA: data.totalBl || data.total_bl,
-          strengthFrom: data.strength || data.strength_from || '',
+          bulk_spirit_type: data.strength || data.bulk_spirit_type || '',
           permitNumbers: (data.requisitonNumberOfPermits || data.requisiton_number_of_permits || '0').toString(),
           permitDate: new Date(data.requisitionDate || data.requisition_date),
           expiryDate: new Date(data.revalidationDate || data.revalidation_date),
@@ -86,19 +86,47 @@ export class RevalidationRequestComponent implements OnInit {
   }
 
   submitRevalidation() {
-    // Implement submission logic if needed, or if this view is just for re-requesting
-    // For now, let's keep the existing structure but maybe update the API call if different
-    this.showMessage('Feature not fully implemented yet.', 'info');
-
-    // Example submission logic placeholder
-    /*
+    // Hide the modal first
     const modalElement = document.getElementById('declarationModal');
     if (modalElement) {
-      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
-      modal.hide();
+      // Use Bootstrap's instance to hide it properly
+      const bootstrap = (window as any).bootstrap;
+      if (bootstrap) {
+        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (modalInstance) {
+          modalInstance.hide();
+        }
+      } else {
+        // Fallback for direct DOM manipulation if bootstrap global not found (though it should be)
+        modalElement.classList.remove('show');
+        document.body.classList.remove('modal-open');
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) backdrop.remove();
+      }
     }
-    // ... submission code
-    */
+
+    const id = this.route.snapshot.queryParams['id'];
+    if (!id) {
+      this.showMessage('No Revalidation ID found to submit.', 'danger');
+      return;
+    }
+
+    this.supplyChainService.submitRevalidation(id).subscribe({
+      next: (response) => {
+        // Success
+        this.showMessage('Revalidation request submitted successfully!', 'success');
+        
+        // Navigate back to the list after a short delay
+        setTimeout(() => {
+          this.router.navigate(['/licensee/supply-chain'], { queryParams: { tab: 'revalidation' } });
+        }, 1500);
+      },
+      error: (error) => {
+        console.error('Submission error:', error);
+        const errMsg = error.error?.message || error.error?.error || error.message || 'Unknown error';
+        this.showMessage('Failed to submit revalidation: ' + errMsg, 'danger');
+      }
+    });
   }
 
   goBack() {

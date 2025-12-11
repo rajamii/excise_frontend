@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { HttpClient } from '@angular/common/http'; // Added for debug
+import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../services/supplychain.service';
-import { environment } from '../../../../../../environments/environment'; // Added for debug
+import { environment } from '../../../../../../environments/environment';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface TableData {
-  id: string; // Added id
+  id: string;
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -16,6 +17,7 @@ interface TableData {
   amount: string;
   isLive?: boolean;
   isInvalid?: boolean;
+  allowedActions?: string[]; // Dynamic actions from backend
 }
 
 @Component({
@@ -27,6 +29,7 @@ interface TableData {
 })
 export class RevalidationComponent implements OnInit {
   Math = Math;
+  private isBrowser = false;
 
   // Filter properties for revalidation
   revalidationDateFilter: string = '';
@@ -46,11 +49,12 @@ export class RevalidationComponent implements OnInit {
   constructor(
     private router: Router,
     private supplyChainService: SupplyChainService,
-    private http: HttpClient // Debug: Direct injection
+    private http: HttpClient,
+    private accountService: AccountService,
+    @Inject(PLATFORM_ID) platformId: Object
   ) {
+    this.isBrowser = isPlatformBrowser(platformId);
     console.log('DEBUG: RevalidationComponent Constructor');
-    console.log('DEBUG: supplyChainService:', this.supplyChainService);
-    console.log('DEBUG: http:', this.http);
   }
 
   ngOnInit(): void {
@@ -89,10 +93,25 @@ export class RevalidationComponent implements OnInit {
         amount: item.revalidationBrAmount || '0.00',
         isLive: !item.status.includes('INVALID') && !item.status.includes('EXPIRED'),
         isInvalid: item.status.includes('INVALID') || item.status.includes('EXPIRED'),
+        allowedActions: item.allowedActions || item.allowed_actions || [] // Map allowed_actions from backend (snake_case or camelCase)
       }));
+
+      // Freeze objects to prevent mutations
+      this.revlidationData.forEach(item => {
+        Object.freeze(item.allowedActions);
+      });
 
       this.filteredRevalidationData = [...this.revlidationData];
       console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
+      console.log('DEBUG: Each item allowedActions:');
+      this.filteredRevalidationData.forEach(item => {
+        console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
+      });
+      
+      console.log('DEBUG: revlidationData[0] reference check:');
+      console.log('  revlidationData[0]:', this.revlidationData[0]);
+      console.log('  filteredRevalidationData[0]:', this.filteredRevalidationData[0]);
+      console.log('  Same object?', this.revlidationData[0] === this.filteredRevalidationData[0]);
 
     } catch (error) {
       console.error('Error fetching revalidation data:', error);
@@ -101,6 +120,12 @@ export class RevalidationComponent implements OnInit {
 
   // Revalidation filter methods
   applyRevalidationFilters(): void {
+    console.log('applyRevalidationFilters called');
+    console.log('Source data (revlidationData) before filter:');
+    this.revlidationData.forEach(item => {
+      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
+    });
+    
     console.log('Applying revalidation filters:', {
       dateFilter: this.revalidationDateFilter,
       monthFilter: this.revalidationMonthFilter,
@@ -154,6 +179,11 @@ export class RevalidationComponent implements OnInit {
       const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
 
       return finalMatch;
+    });
+
+    console.log('Filtered data after filter:');
+    this.filteredRevalidationData.forEach(item => {
+      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
     });
 
     this.resetPagination();
@@ -231,7 +261,14 @@ export class RevalidationComponent implements OnInit {
 
   getPaged(): TableData[] {
     const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredRevalidationData.slice(start, start + this.pageSize);
+    const paged = this.filteredRevalidationData.slice(start, start + this.pageSize);
+    console.log('getPaged() returning:', paged.length, 'items');
+    console.log('CHECK SOURCE DATA - revlidationData[0]:', this.revlidationData[0]?.allowedActions);
+    console.log('CHECK FILTERED DATA - filteredRevalidationData[0]:', this.filteredRevalidationData[0]?.allowedActions);
+    paged.forEach(item => {
+      console.log(`  Paged ID ${item.id}: allowedActions =`, item.allowedActions);
+    });
+    return paged;
   }
 
   goToPage(page: number): void {
@@ -249,5 +286,83 @@ export class RevalidationComponent implements OnInit {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
+  }
+
+  // Role detection methods
+  isCommissioner(): boolean {
+    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
+    return hasRole || isCommissionerRoute;
+  }
+
+  isPermitSection(): boolean {
+    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+  }
+
+  getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
+  }
+
+  // Workflow actions
+  approveRevalidation(item: TableData): void {
+    if (!item.id) {
+      console.error('Revalidation ID not found');
+      return;
+    }
+
+    const role = this.getUserType();
+    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', role).subscribe({
+      next: (response) => {
+        alert(`Action successful! Status updated to: ${response.status}`);
+        this.fetchRevalidationData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.error || error.error?.message || ''));
+      }
+    });
+  }
+
+  rejectRevalidation(item: TableData): void {
+    if (!item.id) {
+      console.error('Revalidation ID not found');
+      return;
+    }
+
+    const role = this.getUserType();
+    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', role).subscribe({
+      next: (response) => {
+        alert(`Action successful! Status updated to: ${response.status}`);
+        this.fetchRevalidationData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.error || error.error?.message || ''));
+      }
+    });
+  }
+
+  canPerformAction(item: TableData): boolean {
+    if (item.status?.includes('INVALID')) return false;
+    console.log(`[ID: ${item.id}] canPerformAction - allowedActions:`, item.allowedActions);
+    if (item.allowedActions && item.allowedActions.includes('APPROVE')) {
+      console.log(`[ID: ${item.id}] ✓ APPROVE button WILL SHOW`);
+      return true;
+    }
+    console.log(`[ID: ${item.id}] ✗ APPROVE button HIDDEN`);
+    return false;
+  }
+
+  canReject(item: TableData): boolean {
+    if (item.status?.includes('INVALID')) return false;
+    console.log(`[ID: ${item.id}] canReject - allowedActions:`, item.allowedActions);
+    if (item.allowedActions && item.allowedActions.includes('REJECT')) {
+      console.log(`[ID: ${item.id}] ✓ REJECT button WILL SHOW`);
+      return true;
+    }
+    console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
+    return false;
   }
 }

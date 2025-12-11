@@ -158,5 +158,29 @@ export class SupplyChainService {
       })
     );
   }
+
+  submitRevalidation(id: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/submit_revalidation/`,
+      {}
+    ).pipe(
+      catchError((error) => {
+        console.error('submitRevalidation error', error);
+        throw error;
+      })
+    );
+  }
+
+  performRevalidationAction(id: string, action: 'APPROVE' | 'REJECT', role: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`,
+      { action, role }
+    ).pipe(
+      catchError((error) => {
+        console.error('performRevalidationAction error', error);
+        throw error;
+      })
+    );
+  }
 }
 
