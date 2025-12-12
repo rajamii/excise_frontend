@@ -107,6 +107,12 @@ export const licenseeRoutes: Routes = [
             loadComponent: () => import('./supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'cancellation-request',
+            loadComponent: () => import('./supplyChain/cancellation-request/cancellation-request.component').then(m => m.CancellationRequestComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
           }
         ]
       },

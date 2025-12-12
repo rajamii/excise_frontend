@@ -2,14 +2,12 @@
 :host {
   display: block;
   font-family: Arial, sans-serif;
-  background-color: #f4f6f9;
-  min-height: 100vh;
 }
 
 .main-container {
-  max-width: 900px;
-  margin: 40px auto;
-  padding: 0 15px;
+  /* Removed page specific margins for modal usage */
+  width: 100%;
+  padding: 0;
 }
 
 .card {

@@ -286,6 +286,16 @@
                     <i class="bi bi-x-circle"></i>
                   </button>
                 }
+
+                <!-- Licensee: Cancellation button (Approved only) -->
+                @if (!isCommissioner() && !isPermitSection() && item.canCancel) {
+                  <button class="btn btn-outline-danger btn-sm" 
+                    (click)="requestCancellation(item)" 
+                    title="Request Cancellation">
+                    <i class="bi bi-x-circle"></i>
+                    Cancel
+                  </button>
+                }
                 
                 
                 <!-- Licensee: Pay button (when approved by commissioner and can perform action) -->
@@ -373,3 +383,22 @@
     </div>
   </div>
 </div>
+
+<!-- Cancellation Modal Wrapper -->
+<div class="modal fade" *ngIf="isCancellationModalOpen" [class.show]="isCancellationModalOpen" [style.display]="isCancellationModalOpen ? 'block' : 'none'" tabindex="-1" role="dialog" aria-modal="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Request Cancellation</h5>
+        <button type="button" class="btn-close" (click)="closeCancellationModal()" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <app-cancellation-request 
+          [referenceNo]="selectedRequisitionRef" 
+          (close)="closeCancellationModal()">
+        </app-cancellation-request>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop fade show" *ngIf="isCancellationModalOpen"></div>

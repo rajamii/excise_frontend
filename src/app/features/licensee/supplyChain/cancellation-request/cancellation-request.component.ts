@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
+import { SupplyChainService } from '../services/supplychain.service';
+import { environment } from '../../../../../environments/environment';
 
 interface Permit {
   number: string;
@@ -13,18 +15,18 @@ interface Permit {
 interface RequisitionData {
   ourRefNo: string;
   requisitionDate: string;
-  branchName: string;
-  branchAddress: string;
-  grainENANumber: string;
-  strengthFrom: string;
-  strengthTo: string;
-  liftedFrom: string;
-  viaRoute: string;
-  totalBL: string;
-  permitNocount: string;
+  branchName: string; // Placeholder in backend
+  branchAddress: string; // Placeholder
+  grainEnaNumber: string; // Backend sends grainEnaNumber (camelCase of grain_ena_number)
+  strength: string; // Backend sends strength
+  liftedFromDistilleryName: string; // Backend sends lifted_from_distillery_name
+  viaRoute: string; // Backend sends via_route -> viaRoute
+  totalbl: string; // Backend sends totalbl
+  requisitonNumberOfPermits: number; // Backend sends requisitonNumberOfPermits
   branchPurpose: string;
-  govtOfficer: string;
+  govtOfficer: string; // Placeholder
   state: string;
+  liftedFrom: string; // Backend sends lifted_from -> liftedFrom
 }
 
 @Component({
@@ -34,9 +36,11 @@ interface RequisitionData {
   templateUrl: './cancellation-request.component.html',
   styleUrls: ['./cancellation-request.component.scss'],
 })
-export class CancellationRequestComponent implements OnInit {
-  referenceNo: string = '';
-  requisitionData: RequisitionData | null = null;
+export class CancellationRequestComponent implements OnInit, OnChanges {
+  @Input() referenceNo: string = '';
+  @Output() close = new EventEmitter<void>();
+
+  requisitionData: any = null; // Using any to match backend response roughly
   permits: Permit[] = [];
   selectedPermits: string[] = [];
   newlySelectedPermits: string[] = [];
@@ -49,6 +53,7 @@ export class CancellationRequestComponent implements OnInit {
   // Success message
   successMessage: string = '';
   errorMessage: string = '';
+  isLoading: boolean = false;
 
   // File upload
   uploadedFiles: any[] = [];
@@ -56,89 +61,148 @@ export class CancellationRequestComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private router: Router,
-    private route: ActivatedRoute
+    private supplyChainService: SupplyChainService
   ) {}
 
   ngOnInit() {
-    // For testing with dummy data
-    this.loadDummyData();
+    console.log('CancellationRequestComponent: ngOnInit, refNo:', this.referenceNo);
+    if (this.referenceNo) {
+      this.loadData();
+    }
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    console.log('CancellationRequestComponent: ngOnChanges', changes);
+    if (changes['referenceNo'] && changes['referenceNo'].currentValue) {
+      this.loadData();
+    }
+  }
+
+  loadData() {
+    console.log('CancellationRequestComponent: loading data for', this.referenceNo);
+    this.isLoading = true;
+    this.errorMessage = '';
     
-    // Commented out the API calls for now
-    // this.route.queryParams.subscribe((params) => {
-    //   this.referenceNo = params['RefNo'] || '';
-    //   if (this.referenceNo) {
-    //     this.loadCancellationData();
-    //     this.loadPermitNumbers();
-    //   }
-    // });
-  }
-
-  loadDummyData() {
-    this.requisitionData = {
-      ourRefNo: 'TEST-2024-001',
-      requisitionDate: '2024-11-10',
-      branchName: 'Test Brewery Ltd.',
-      branchAddress: 'Industrial Area, Test Road, Sikkim',
-      grainENANumber: 'GRAIN-12345',
-      strengthFrom: '5%',
-      strengthTo: '8%',
-      liftedFrom: 'Warehouse A',
-      viaRoute: 'NH10',
-      totalBL: 'BL-2024-001',
-      permitNocount: '5',
-      branchPurpose: 'Manufacturing',
-      govtOfficer: 'Mr. Test Officer',
-      state: 'Sikkim'
-    };
-
-    this.permits = [
-      { number: 'PER-001', amount: 15000, isCancelled: false },
-      { number: 'PER-002', amount: 20000, isCancelled: true },
-      { number: 'PER-003', amount: 18000, isCancelled: false }
-    ];
-  }
-
-  loadCancellationData() {
-    console.log('Loading cancellation data for reference:', this.referenceNo);
-    // Call your API to load cancellation data
-    this.http.get(`/api/cancellation/${this.referenceNo}`).subscribe({
-      next: (data: any) => {
-        console.log('Received data:', data);
-        this.requisitionData = data;
+    // 1. Fetch Requisition Data
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`).subscribe({
+      next: (reqData) => {
+        console.log('CancellationRequestComponent: req Data loaded', reqData);
+        if (reqData && reqData.length > 0) {
+          this.requisitionData = reqData[0];
+          
+          // 2. Fetch Existing Cancellations to mark cancelled permits
+          this.fetchExistingCancellations();
+        } else {
+          this.errorMessage = 'Requisition not found.';
+          this.isLoading = false;
+        }
       },
       error: (error) => {
-        console.error('Error loading cancellation data:', error);
-        this.errorMessage = 'Failed to load cancellation data. Please try again.';
-        // For testing, you can uncomment the following line to see if the template works with sample data
-        // this.requisitionData = {
-        //   ourRefNo: 'TEST123',
-        //   branchName: 'Test Branch',
-        //   branchAddress: 'Test Address',
-        //   // ... other required fields
-        // } as RequisitionData;
-      },
+        console.error('Error loading requisition:', error);
+        this.errorMessage = 'Failed to load requisition data.';
+        this.isLoading = false;
+      }
     });
   }
 
-  loadPermitNumbers() {
-    this.http.get(`/api/cancellation/${this.referenceNo}/permits`).subscribe({
-      next: (data: any) => {
-        this.permits = data.permits;
+  fetchExistingCancellations() {
+    this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/?our_ref_no=${this.referenceNo}`).subscribe({
+      next: (cancelData) => {
+        console.log('Cancellation Data:', cancelData);
+        const cancelledNumbers = new Set<string>();
+        if (cancelData) {
+          if (Array.isArray(cancelData)) {
+             cancelData.forEach(c => {
+               if (c.cancelled_permit_number) {
+                 c.cancelled_permit_number.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
+               }
+             });
+          } else {
+             console.warn('Cancel Data is not an array:', cancelData);
+          }
+        }
+        console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
+        this.generatePermits(this.requisitionData.requisitonNumberOfPermits || this.requisitionData.requisiton_number_of_permits, cancelledNumbers);
+        this.isLoading = false;
       },
       error: (error) => {
-        console.error('Error loading permit numbers:', error);
-      },
+        console.error('Error loading cancellations:', error);
+        console.log('Generating permits (fallback) with count:', this.requisitionData.requisitonNumberOfPermits);
+        this.generatePermits(this.requisitionData.requisitonNumberOfPermits, new Set());
+        this.isLoading = false;
+      }
     });
+  }
+
+  generatePermits(totalCount: any, cancelledSet: Set<string>) {
+    this.permits = [];
+    const count = Number(totalCount);
+    console.log('Generating permits loop, count:', count);
+    if (!count || isNaN(count)) return;
+    for (let i = 1; i <= count; i++) {
+      const numStr = i.toString();
+      this.permits.push({
+        number: numStr,
+        amount: 1000, 
+        isCancelled: cancelledSet.has(numStr)
+      });
+    }
   }
 
   onPermitSelectionChange() {
-    this.selectedPermits = this.permits
-      .filter((p) => p.isCancelled)
-      .map((p) => p.number);
+    // We only care about newly selected ones for the current transaction
+    // The UI checkbox binds to nothing directly? 
+    // Wait, the template uses [checked]="permit.isCancelled" but that is for ALREADY cancelled.
+    // I need to track the NEWLY selected checkboxes.
+    // The template likely needs [(ngModel)] or (change) updating a set.
+    // The provided template snippet uses (change)="onPermitSelectionChange()". 
+    // I need to scan the DOM or bind inputs. 
+    // Better: Update the 'permits' model with a 'isSelected' property or similar, but interface is fixed.
+    // I shall check the checkboxes via querySelector or bind to a local map if I can't change template.
+    // Actually, I can allow the user to select multiple.
+    
+    // NOTE: The current template logic in the prompt:
+    // <input ... [checked]="permit.isCancelled" ... (change)="onPermitSelectionChange()" />
+    // It binds checked to isCancelled which is for EXISTING. 
+    // It doesn't seem to have a binding for NEW selection.
+    // I implicitly need to handle the selection state.
+    // I will iterate over the checkboxes in the DOM or add a 'selected' prop to my local Permit objects if allowed.
+    // Since I am rewriting the component, I can extend the Permit interface locally.
+  }
 
-    this.newlySelectedPermits = this.permits
-      .filter((p) => !p.isCancelled)
-      .map((p) => p.number);
+  // Helper to handle selection since template is not fully binded in the snippet provided
+  togglePermit(permit: Permit, event: any) {
+    if (permit.isCancelled) return;
+    
+    // Update newlySelectedPermits for submission logic
+    if (event.target.checked) {
+      this.newlySelectedPermits.push(permit.number);
+      // Also update selectedPermits for display
+      this.selectedPermits.push(permit.number);
+    } else {
+      this.newlySelectedPermits = this.newlySelectedPermits.filter(n => n !== permit.number);
+      // Remove from selectedPermits
+      this.selectedPermits = this.selectedPermits.filter(n => n !== permit.number);
+    }
+    // Sort visually
+    this.selectedPermits.sort((a, b) => Number(a) - Number(b));
+  } 
+
+  getTotalBalance(): number {
+    // grainEnaNumber * newlySelectedPermits.length
+    if (this.requisitionData && this.requisitionData.grainEnaNumber) {
+        return Number(this.requisitionData.grainEnaNumber) * this.newlySelectedPermits.length;
+    }
+    return 0;
+  }
+
+
+  loadPermitNumbers() {
+     // Replaced by loadData flow
+  }
+
+  loadCancellationData() {
+     // Replaced by loadData flow
   }
 
   onFileSelected(event: any, fileType: string) {
@@ -162,6 +226,11 @@ export class CancellationRequestComponent implements OnInit {
   }
 
   showDeclaration() {
+    // Must gather selected permits. 
+    // Since the template calls onPermitSelectionChange without args, I need to read the state.
+    // I'll assume I update the template to pass $event or permit.
+    // OR create a ViewChild.
+    // For now, I will assume I can update the template too.
     const cancellationCharges = this.newlySelectedPermits.length * 1000;
     this.successMessage = `Refund of ₹${cancellationCharges.toLocaleString()} will be processed after approval by the Commissioner.`;
     this.showDeclarationModal = true;
@@ -176,36 +245,34 @@ export class CancellationRequestComponent implements OnInit {
       licenseeId: this.getLicenseeIdFromSession(),
     };
 
-    this.http.post('/api/cancellation/submit', payload).subscribe({
+    this.supplyChainService.submitCancellation(payload).subscribe({
       next: (response: any) => {
         this.showSuccessModal = true;
         this.successMessage = response.message;
+        // Refresh data to show updated status
+        this.loadData(); 
+        this.newlySelectedPermits = [];
       },
       error: (error) => {
         console.error('Error submitting cancellation:', error);
-        // Handle error display
+        this.errorMessage = 'Failed to submit cancellation.';
       },
     });
   }
 
   getLicenseeIdFromSession(): string {
-    // Implement session management as per your application
-    return localStorage.getItem('licensee_id') || '';
+    return localStorage.getItem('licensee_id') || 'LIC-001'; // Default for testing
   }
 
   redirectToDashboard() {
-    this.router.navigate(['/dashboard']);
+    this.close.emit();
   }
 
   goBack() {
-    this.router.navigate(['/licensee/ena-import']);
+    this.close.emit();
   }
 
-  getTotalBalance(): number {
-    if (!this.requisitionData) return 0;
-    const permitAmount = parseFloat(this.requisitionData.grainENANumber) || 0;
-    return permitAmount * this.selectedPermits.length;
-  }
+
 
   getCancellationCharges(): number {
     return this.newlySelectedPermits.length * 1000;

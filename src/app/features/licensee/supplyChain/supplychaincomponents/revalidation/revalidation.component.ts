@@ -364,5 +364,5 @@ export class RevalidationComponent implements OnInit {
     }
     console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
     return false;
-  }
+  } 
 }

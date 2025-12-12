@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
+import { SupplyChainService } from '../../services/supplychain.service';
+import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
 
 interface TableData {
   id?: number;
@@ -14,13 +16,14 @@ interface TableData {
   amount: string;
   commissionerStatus?: string;
   forwardedToCommissioner?: boolean;
+  canCancel?: boolean;
   allowedActions?: string[]; // Dynamic actions from backend
 }
 
 @Component({
   selector: 'app-requisition',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CancellationRequestComponent],
   templateUrl: './requisition.component.html',
   styleUrls: ['./requisition.component.scss']
 })
@@ -32,6 +35,7 @@ export class RequisitionComponent implements OnInit {
   public accountService = inject(AccountService);
   private router = inject(Router);
   private enaRequisitionService = inject(EnaRequisitionService);
+  private supplyChainService = inject(SupplyChainService);
 
   // Data
   requisitionData: TableData[] = [];
@@ -42,6 +46,10 @@ export class RequisitionComponent implements OnInit {
   requisitionMonthFilter: string = '';
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
+
+  // Cancellation Modal State
+  isCancellationModalOpen: boolean = false;
+  selectedRequisitionRef: string = '';
 
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
@@ -99,7 +107,8 @@ export class RequisitionComponent implements OnInit {
             amount: typeof amount === 'number' ? amount.toString() : amount,
             commissionerStatus: status,
             forwardedToCommissioner: true,
-            allowedActions: allowedActions
+            allowedActions: allowedActions,
+            canCancel: item.canInitiateCancellation || item.can_initiate_cancellation || false
           };
         });
 
@@ -377,5 +386,23 @@ export class RequisitionComponent implements OnInit {
   
   clearAllRequisitionData(): void {
       alert('Clear data functionality is disabled for backend data.');
+  }
+
+  requestCancellation(item: TableData): void {
+    if (!item.referenceNo) return;
+    this.openCancellationModal(item);
+  }
+
+  openCancellationModal(item: TableData) {
+    console.log('Opening Cancellation Modal for:', item.referenceNo);
+    this.selectedRequisitionRef = item.referenceNo;
+    this.isCancellationModalOpen = true;
+  }
+
+  closeCancellationModal() {
+    this.isCancellationModalOpen = false;
+    this.selectedRequisitionRef = '';
+    // Refresh data in case cancellation was submitted
+    this.loadRequisitionData();
   }
 }

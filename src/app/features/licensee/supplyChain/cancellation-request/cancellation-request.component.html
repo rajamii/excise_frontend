@@ -5,6 +5,13 @@
     {{ errorMessage }}
   </div>
 
+  <div *ngIf="isLoading" class="text-center p-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading details...</p>
+  </div>
+
   <div class="card p-4 mb-4">
     <div class="section-title">
       <i class="bi bi-list-check"></i>Select Permit(s) for Cancellation
@@ -27,7 +34,7 @@
             [value]="permit.number"
             [checked]="permit.isCancelled"
             [disabled]="permit.isCancelled"
-            (change)="onPermitSelectionChange()"
+            (change)="togglePermit(permit, $event)"
           />
           <label class="form-check-label" [for]="'chkPermit_' + permit.number">
             Permit {{ permit.number }} - ₹{{ permit.amount }}
@@ -38,107 +45,72 @@
     </div>
   </div>
 
-  <!-- Cancellation Letter -->
-  <div class="letter-card card p-4" *ngIf="requisitionData">
-    <div class="letter">
-      <div
-        class="header d-flex flex-column align-items-center mb-4 text-center"
-      >
-        <div class="logo mb-2">
-          <img
-            [src]="'/images/sikkimlogo.jpg'"
-            alt="Sikkim Logo"
-            style="height: 70px"
-          />
-        </div>
-        <div>
-          <p class="mb-1">
-            <strong style="font-size: large">{{
-              requisitionData.branchName
-            }}</strong>
-          </p>
-          <p class="mb-1">H.O. PS Road, Gangtok, East Sikkim</p>
-          <p class="mb-1">Factory: {{ requisitionData.branchAddress }}</p>
-          <p class="mb-1">
-            CONSUMER COMPLAINTS: 94311 34250 Email: mdlsikkim&#64;gmail.com
-          </p>
-        </div>
-      </div>
+  <!-- Cancellation Summary Table -->
+  <div class="card p-4" *ngIf="requisitionData">
+    <h5 class="mb-3 border-bottom pb-2">Cancellation Request Details</h5>
+    
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Parameter</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Requisition Reference No.</strong></td>
+            <td>{{ requisitionData.ourRefNo }}</td>
+          </tr>
+          <tr>
+            <td><strong>Dated</strong></td>
+            <td>{{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}</td>
+          </tr>
+          <tr>
+            <td><strong>Surrender of Import Permit No(s)</strong></td>
+            <td>
+              <span *ngIf="selectedPermits.length > 0; else noPermits">
+                {{ selectedPermits.join(", ") }}
+              </span>
+              <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Requisition Details</strong></td>
+            <td>
+              Fresh Import Permit for <strong>{{ getTotalBalance() }}</strong>
+              (<i>{{ requisitionData.grainEnaNumber }} x {{ selectedPermits.length }}</i>)<br/>
+              Strength: {{ requisitionData.strength }}<br/>
+              From: {{ requisitionData.liftedFromDistilleryName }}
+            </td>
+          </tr>
+          <tr>
+             <td><strong>Route</strong></td>
+             <td>{{ requisitionData.viaRoute }}</td>
+          </tr>
+          <tr>
+             <td><strong>Cancellation Charges</strong></td>
+             <td class="text-danger fw-bold">₹{{ getCancellationCharges().toLocaleString() }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-      <div class="row mb-3">
-        <div class="col">
-          <b>MDL/Ex-IP/2024-25/{{ requisitionData.ourRefNo }}</b>
-        </div>
-        <div class="col text-end">
-          <b>Dated:</b>
-          {{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}
-        </div>
-      </div>
-
-      <p><b>To,</b></p>
-      <p>
-        The Commissioner,<br />
-        Sikkim Excise Department,<br />
-        Government of Sikkim,<br />
-        Gangtok.
-      </p>
-
-      <p class="fw-bold">
-        <b>Subject:</b> Surrender of Import Permit No.
-        <span id="selectedPermitsSpan">{{ selectedPermits.join(", ") }}</span>
-        to /Excise both Dated:
-        <span>{{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}</span>
-      </p>
-
-      <div class="content">
-        <p>Dear Sir/Madam,</p>
-        <p>
-          We are surrendering here with Import Permit No.
-          {{ selectedPermits.join(", ") }}
-          to /Excise, both dated
-          {{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}
-          along with the Non Execution Certificate as they are not issuing the
-          Export Permit against our Import Permits due to non-availability of
-          tankers as Export Permission has not been granted.
-        </p>
-        <p>
-          Therefore, we may please be issued a fresh Import Permit for
-          {{ getTotalBalance() }}
-          ({{ requisitionData.grainENANumber }}
-          x
-          {{ selectedPermits.length }}) having strength of ({{
-            requisitionData.strengthFrom
-          }}
-          to
-          {{ requisitionData.strengthTo }}
-          proof) from <b>{{ requisitionData.liftedFrom }}</b
-          >. We have already deposited Challan.
-        </p>
-        <p><b>Route:</b> {{ requisitionData.viaRoute }}</p>
-        <p>Kindly acknowledge the receipt and arrange the permit.</p>
-        <p>Thanking you.</p>
-      </div>
-
-      <div class="signature mt-4">
-        <p><b>For Mount Distilleries Ltd.</b></p>
-        <p>__________________________</p>
-        <p>Authorized Signatory</p>
-      </div>
-
-      <p><b>Enclosed:</b></p>
-      <ul>
-        <li>Original Permit(s)</li>
-        <li>Original Non Execution Certificate</li>
-      </ul>
+    <!-- Additional info / Non-execution certificate note could go here -->
+    <div class="alert alert-light border mt-2">
+       <small>
+          <i class="bi bi-info-circle me-1"></i>
+          We are surrendering the above Import Permits along with the Non Execution Certificate due to non-availability of tankers / Export Permission not granted. We request a fresh Import Permit for the specified quantity.
+       </small>
     </div>
   </div>
 
   <!-- Action Buttons -->
-  <div class="d-flex justify-content-center gap-3">
-    <button class="btn btn-success" (click)="showDeclaration()">
-      Submit for Cancellation
+  <div class="d-flex justify-content-end gap-3 mt-4">
+    <button class="btn btn-outline-secondary" (click)="goBack()">Cancel</button>
+    <button class="btn btn-danger" [disabled]="newlySelectedPermits.length === 0" (click)="showDeclaration()">
+      Submit Cancellation Request
     </button>
-    <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>
   </div>
 </div>
 
