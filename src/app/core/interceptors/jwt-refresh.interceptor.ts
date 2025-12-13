@@ -73,8 +73,9 @@ export class JwtRefreshInterceptor implements HttpInterceptor {
       const refreshToken = localStorage.getItem('refresh');
 
       if (!refreshToken) {
-        console.error('No refresh token found, logging out.');
-        this.logoutAndRedirect();
+        console.error('No refresh token found. This might be a login issue.');
+        // Don't logout immediately - let the error propagate so the component can handle it
+        this.isRefreshing = false;
         return throwError(() => new Error('No refresh token available'));
       }
 

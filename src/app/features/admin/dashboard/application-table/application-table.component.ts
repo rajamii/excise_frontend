@@ -99,22 +99,22 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   private loadObjections(): void {
     this.dataSource.data.forEach(app => {
       // Safety check: ensure application has an ID
-      if (!app?.applicationId) {
-        console.warn('Application missing applicationId:', app);
+      if (!app?.application_id) {
+        console.warn('Application missing application_id:', app);
         return;
       }
 
       // Only fetch objections if application is in a state where they might exist
       if (this.shouldFetchObjections(app)) {
-        this.licenseAppService.getObjections(app.applicationId)
+        this.licenseAppService.getObjections(app.application_id)
           .pipe(
             takeUntil(this.destroy$),
             catchError(err => {
               // Handle 404 errors silently (no objections found)
               if (err.status === 404) {
-                console.log(`No objections found for application ${app.applicationId}`);
+                console.log(`No objections found for application ${app.application_id}`);
               } else {
-                console.error(`Error fetching objections for ${app.applicationId}:`, err);
+                console.error(`Error fetching objections for ${app.application_id}:`, err);
               }
               // Return empty array on error
               return of([]);
@@ -125,14 +125,15 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
               // Safety check: ensure objections is an array
               if (Array.isArray(objections) && objections.length > 0) {
                 const hasUnresolved = objections.some(obj => obj?.isResolved === false);
-                if (hasUnresolved) {
-                  this.unresolvedObjectionAppIds.add(app.applicationId);
+                if (hasUnresolved && app.application_id) {
+                  // ✅ FIXED Line 129: Type assertion since we already checked it's not undefined
+                  this.unresolvedObjectionAppIds.add(app.application_id as string);
                 }
               }
             },
             error: (err) => {
               // This shouldn't be reached due to catchError, but just in case
-              console.error(`Unexpected error for ${app.applicationId}:`, err);
+              console.error(`Unexpected error for ${app.application_id}:`, err);
             }
           });
       }
@@ -141,6 +142,11 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   // Helper method to determine if objections should be fetched
   private shouldFetchObjections(app: LicenseApplication): boolean {
+    // ✅ FIXED Line 158: Check if current_stage exists before using it
+    if (!app.current_stage) {
+      return false;
+    }
+
     // Only fetch objections if application is in a state where they might exist
     const objectionStages = [
       'level_1_objection',
@@ -155,7 +161,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
       'level_5'
     ];
     
-    return objectionStages.includes(app.currentStage);
+    return objectionStages.includes(app.current_stage);
   }
 
   // Method to view application details
@@ -175,6 +181,12 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   // Opens a dialog to show the movement history of the selected application
   viewMovement(application: any): void {
+    // Added null check and type assertion for application_id
+    if (!application?.application_id) {
+      console.error('Cannot view movement: application_id is missing');
+      return;
+    }
+
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',
       maxWidth: '100%',
@@ -185,7 +197,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
     });
   }
 
-  // Cleanup subscriptions on component destroy - ADDED override modifier
+  // Cleanup subscriptions on component destroy
   override ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

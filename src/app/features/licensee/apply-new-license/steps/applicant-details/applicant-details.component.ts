@@ -3,7 +3,7 @@ import {
   ChangeDetectorRef, signal
 } from '@angular/core';
 import {
-  FormBuilder, FormGroup, Validators, AbstractControl
+  FormBuilder, FormGroup, Validators
 } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -34,7 +34,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   // ---------- Dropdowns ----------
   nationalities = ['Indian', 'Foreign'];
   residentialStatuses = ['Resident', 'Non-Resident'];
-  // ✅ NEW: Added marital status dropdown
   maritalStatuses = ['Single', 'Married', 'Divorced'];
   modesOfOperation: ModeOfOperation[] = [
     { value: 'Self', label: 'Self' },
@@ -42,13 +41,14 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     { value: 'Barman', label: 'Barman' }
   ];
 
-  // ---------- Documents ----------
+  // ---------- Documents (matching backend field names) ----------
   documents: DocumentUpload[] = [
     { name: 'passportPhoto', label: 'Passport Size Photo', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png' },
-    { name: 'panCard', label: 'Pan card', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
-    { name: 'sikkimCertificate', label: 'Sikkim Subject Certificate / Certificate of Identification / Residential Certificate',
+    { name: 'pan_card', label: 'PAN Card', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    { name: 'sikkim_certificate', label: 'Sikkim Subject Certificate / Certificate of Identification / Residential Certificate',
       file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
-    { name: 'dobProof', label: 'Date of Birth Proof', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' }
+    { name: 'dob_proof', label: 'Date of Birth Proof', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    { name: 'noc_landlord', label: 'NOC from Landlord (if applicable)', file: null, fileUrl: '', required: false, formats: '.jpg,.jpeg,.png,.pdf' }
   ];
 
   @Output() readonly next = new EventEmitter<void>();
@@ -60,11 +60,11 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private errorMessages = {
     firstName: signal(''), lastName: signal(''), fatherHusbandName: signal(''),
     dob: signal(''), gender: signal(''), nationality: signal(''), 
-    maritalStatus: signal(''), // ✅ NEW
+    maritalStatus: signal(''),
     residentialStatus: signal(''),
     presentAddress: signal(''), permanentAddress: signal(''), pan: signal(''),
     email: signal(''), 
-    applicantMobileNumber: signal(''), // ✅ NEW
+    applicantMobileNumber: signal(''),
     hasSikkimCertificate: signal(''),
     hasExciseLicense: signal(''), familyExciseLicense: signal(''), criminalConviction: signal('')
   };
@@ -85,11 +85,11 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       dob: [stored.dob, [Validators.required]],
       gender: [stored.gender, Validators.required],
       nationality: [stored.nationality ?? 'Indian', Validators.required],
-      maritalStatus: [stored.maritalStatus ?? 'Single', Validators.required], // ✅ NEW
+      maritalStatus: [stored.maritalStatus ?? 'Single', Validators.required],
       residentialStatus: [stored.residentialStatus ?? 'Resident', Validators.required],
-      email: [stored.email, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]], // ✅ Made required
+      email: [stored.email, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]],
       
-      // ✅ NEW: Mobile number field
+      // Mobile number (backend expects CharField with numeric validation)
       applicantMobileNumber: [stored.applicantMobileNumber, [
         Validators.required,
         Validators.pattern(PatternConstants.MOBILE)
@@ -105,7 +105,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       // Mode
       modeOfOperation: [stored.modeOfOperation],
 
-      // Radio questions
+      // Radio questions (backend expects "Yes"/"No" strings)
       hasSikkimCertificate: [stored.hasSikkimCertificate, Validators.required],
       hasExciseLicense: [stored.hasExciseLicense, Validators.required],
       familyExciseLicense: [stored.familyExciseLicense, Validators.required],
@@ -150,24 +150,47 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const raw = this.applicantDetailsForm.getRawValue();
 
-    // Build the single applicantName required by the backend
+    // ✅ Build applicant_name (required by backend)
     const parts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
-    raw.applicantName = parts.join(' ');
+    raw.applicant_name = parts.join(' ');
 
-    // ✅ Ensure mobile number is stored as cleaned string
+    // ✅ father_husband_name (backend field name)
+    raw.father_husband_name = raw.fatherHusbandName;
+
+    // ✅ Clean mobile number (CharField but numeric)
     if (raw.applicantMobileNumber) {
-      raw.applicantMobileNumber = String(raw.applicantMobileNumber).replace(/\D/g, '');
+      raw.mobile_number = String(raw.applicantMobileNumber).replace(/\D/g, '');
     }
 
-    // ✅ Ensure email is stored properly
+    // ✅ Email field
     if (raw.email) {
-      raw.applicantEmail = raw.email;
+      raw.email = raw.email;
     }
 
-    // ✅ Store marital status as 'status' for backend
+    // ✅ Marital status
     if (raw.maritalStatus) {
-      raw.status = raw.maritalStatus;
+      raw.marital_status = raw.maritalStatus;
     }
+
+    // ✅ Residential status
+    if (raw.residentialStatus) {
+      raw.residential_status = raw.residentialStatus;
+    }
+
+    // ✅ Present and permanent addresses
+    raw.present_address = raw.presentAddress;
+    raw.permanent_address = raw.permanentAddress;
+
+    // ✅ Mode of operation
+    if (raw.modeOfOperation) {
+      raw.mode_of_operation = raw.modeOfOperation;
+    }
+
+    // ✅ Yes/No fields (backend ChoiceFields expect "Yes"/"No" strings)
+    raw.has_sikkim_certificate = raw.hasSikkimCertificate;
+    raw.has_excise_license = raw.hasExciseLicense;
+    raw.family_excise_license = raw.familyExciseLicense;
+    raw.criminal_conviction = raw.criminalConviction;
 
     console.log('💾 Saving Applicant Details:', raw);
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
@@ -230,6 +253,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       console.log('✅ Passport photo set:', file.name);
     } else {
       this.licenseSrv.setSiteDocument(docName, file);
+      console.log(`✅ Document ${docName} set:`, file.name);
     }
     
     this.cdr.detectChanges();

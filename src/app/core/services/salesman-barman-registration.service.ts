@@ -10,7 +10,7 @@ import { UnifiedApplication } from '../models/shared-application.model';
   providedIn: 'root'
 })
 export class SalesmanBarmanRegistrationService {
-  private baseUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`; // Updated path
+  private baseUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`;
 
   private documents: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
 
@@ -32,8 +32,8 @@ export class SalesmanBarmanRegistrationService {
   }
 
   // === ADVANCE STAGE ===
-  advanceStage(applicationId: string, stageId: number, remarks?: string): Observable<SalesmanBarman> {
-    return this.http.post<SalesmanBarman>(`${this.baseUrl}/${applicationId}/advance/${stageId}/`, { remarks });
+  advanceStage(applicationId: string, stageId: number, context?: any): Observable<SalesmanBarman> {
+    return this.http.post<SalesmanBarman>(`${this.baseUrl}/${applicationId}/advance/${stageId}/`, { context: context || {} });
   }
 
   // === NEXT STAGES ===
@@ -54,12 +54,10 @@ export class SalesmanBarmanRegistrationService {
     this.documents = {};
   }
 
-  // New: Fetch aggregated counts
   getDashboardCounts(): Observable<DashboardCount> {
     return this.http.get<DashboardCount>(`${this.baseUrl}/dashboard-counts/`);
   }
 
-  // New: Fetch apps grouped by status
   getApplicationsByStatus(): Observable<{
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];

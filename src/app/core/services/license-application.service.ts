@@ -1,632 +1,466 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApplicationStatus, DashboardCount } from '../models/dashboard.model';
-import { BehaviorSubject, Observable } from 'rxjs';
 import { LicenseApplication } from '../models/license-application.model';
 import { LocationFee } from '../models/location-fee.model';
 import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
-import { 
-  NewLicenseApplication, 
-} from '../models/new-license-application.model';
+import { NewLicenseApplication } from '../models/new-license-application.model';
 
 @Injectable({
   providedIn: 'root'
 })
-
 export class LicenseApplicationService {
 
-  private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
-  
-  // Store for passport photo
+  private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
+  private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
+
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
-  
-  // Store for site documents
   private siteDocuments: Map<string, File> = new Map();
 
   constructor(private http: HttpClient) { }
-    
-  // ========================== OLD LICENSE APPLICATION ==========================
-  
-  // Final application submission by the licensee (includes all sections + photo).
-  submitLicenseApplication(data: any): Observable<any> {
-    console.log(data);
-    return this.http.post<LicenseApplication[]>(`${this.baseUrl}/apply/`, data);
-  } 
 
-  // Updates a license application with the provided changes (e.g., status update, details change)
-  updateApplication(id: number, changes: Partial<any>): Observable<LicenseApplication> {
-    return this.http.put<LicenseApplication>(`${this.baseUrl}/${id}/update/`, changes);
+  // ========================== NEW LICENSE APPLICATION ==========================
+
+  submitNewLicenseApplication(formData: FormData): Observable<NewLicenseApplication> {
+    console.log('📤 Submitting New License Application');
+    this.logFormData(formData, 'New License Submission');
+    return this.http.post<NewLicenseApplication>(`${this.newLicenseUrl}/apply/`, formData);
   }
 
-  // Deletes a license application by its ID
-  deleteApplication(applicationId: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.delete(`${this.baseUrl}/${encodedId}/delete/`);
-  }
+  prepareNewLicenseFormData(): FormData {
+    console.group('📦 Preparing New License Application FormData');
 
-  // Fetches the counts for various categories on the dashboard (e.g., number of pending, approved, rejected applications)
-  getDashboardCounts(): Observable<DashboardCount> {
-    return this.http.get<any>(`${this.baseUrl}/dashboard-counts/`);
-  }
+    const sessionKeys = [
+      'selectLicenseData',
+      'keyInfoData',
+      'applicantDetailsData',
+      'siteDetailsData',
+      'unitDetailsData'
+    ];
 
-  getLocationFee(): Observable<LocationFee[]> {
-    return this.http.get<LocationFee[]>(`${this.baseUrl}/location-fee/`);
-  }
+    const combinedData: Record<string, any> = {};
+    sessionKeys.forEach(key => {
+      const data = this.getParsedSession(key);
+      if (data) {
+        Object.assign(combinedData, data);
+        console.log(`✅ Loaded ${key}:`, data);
+      }
+    });
 
-  // Retrieves a list of license applications, categorized by their current status (applied, accepted, pending or rejected)
-  getApplicationsByStatus(): Observable<ApplicationStatus> {
-    return this.http.get<ApplicationStatus>(`${this.baseUrl}/list-by-status/`);
-  }
-
-  getNextStages(applicationId: string): Observable<any[]> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/next-stages/`);
-  }
-
-  // Advances the application to the next stage based on the provided action (approve, reject, raise objection)
-  advanceApplication(
-    applicationId: string,
-    stageID: string | undefined,
-    remarks: string | undefined,
-    feeAmount: number | undefined,
-    action: 'approve' | 'reject' | 'raise_objection',
-    newLicenseCategoryId?: number,
-    objections?: { field: string; remarks: string }[],
-    context?: any
-  ): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    const encodedStageId = encodeURIComponent(stageID ?? '');
-    const body: any = {
-      remarks,
-      feeAmount,
-      action,
-      context
-    };
-
-    // Optional: include new license category during approval if changed
-    if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
-      body.newLicenseCategory = newLicenseCategoryId;
-    }
-
-    // Only include objections when action is 'raise_objection'
-    if (action === 'raise_objection' && objections) {
-      body.objections = objections;
-    }
-    return this.http.post(`${this.baseUrl}/${encodedId}/advance/${encodedStageId}/`, body);
-  }
-
-  // Method to raise objections for a given application
-  raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], remarks?: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    const body: any = {
-      objections: objections.map(obj => ({ field: obj.field, remarks: obj.remarks })),
-      remarks
-    };
-    return this.http.post(`${this.baseUrl}/${encodedId}/raise-objection/`, body);
-  }
-
-  // Retrieves all objections raised against a given application
-  getObjections(applicationId: string): Observable<any[]> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/objections/`);
-  }
-
-  // Resolves previously raised objections for a given application.
-  resolveObjections(applicationId: string, data: { [key: string]: any }, photo?: File): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
     const formData = new FormData();
 
-    // Append fields to FormData
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== null && value !== undefined) {
-        if (['licenseCategory', 'licenseType', 'exciseDistrict', 'exciseSubdivision', 'siteSubdivision', 'policeStation'].includes(key)) {
-          formData.append(key, value.id || value.subdivisionCode || value.districtCode || value.policeStationCode || value.toString());
-        } else {
-          formData.append(key, value.toString());
-        }
+    // ✅ **CRITICAL FIX**: Add license_type (PrimaryKeyRelatedField - expects ID)
+    if (combinedData['licenseType'] !== undefined && combinedData['licenseType'] !== null) {
+      formData.append('license_type', String(parseInt(combinedData['licenseType'])));
+      console.log('✅ Added license_type:', combinedData['licenseType']);
+    } else {
+      console.error('❌ CRITICAL: license_type is missing!');
+    }
+
+    // ✅ **CRITICAL FIX**: Add workflow (hardcoded to 1 for new applications)
+    // You may need to adjust this based on your workflow setup
+    formData.append('workflow', '1');
+    console.log('✅ Added workflow: 1');
+
+    // ✅ CodeRelatedField fields (need CODE strings, not IDs)
+    if (combinedData['site_district_code']) {
+      formData.append('site_district', String(combinedData['site_district_code']));
+    }
+    if (combinedData['site_subdivision_code']) {
+      formData.append('site_subdivision', String(combinedData['site_subdivision_code']));
+    }
+    if (combinedData['police_station_code']) {
+      formData.append('police_station', String(combinedData['police_station_code']));
+    }
+
+    // ✅ PrimaryKeyRelatedField fields (need IDs as integers)
+    if (combinedData['license_category'] !== undefined && combinedData['license_category'] !== null) {
+      formData.append('license_category', String(parseInt(combinedData['license_category'])));
+    }
+    if (combinedData['license_sub_category'] !== undefined && combinedData['license_sub_category'] !== null) {
+      formData.append('license_sub_category', String(parseInt(combinedData['license_sub_category'])));
+    }
+
+    // String fields
+    const stringFields = [
+      'establishment_name', 'site_type', 'applicant_name', 'father_husband_name',
+      'nationality', 'gender', 'residential_status', 'present_address', 'permanent_address',
+      'pan', 'email', 'mode_of_operation', 'location_category', 'location_name',
+      'ward_name', 'business_address', 'road_name', 'construction_type'
+    ];
+    stringFields.forEach(field => {
+      if (combinedData[field]) {
+        formData.append(field, String(combinedData[field]));
+      }
+    });
+
+    // ✅ Mobile number and PIN code (CharField in backend, but numeric validation)
+    if (combinedData['mobile_number']) {
+      const cleaned = String(combinedData['mobile_number']).replace(/\D/g, '');
+      formData.append('mobile_number', cleaned);
+    }
+    if (combinedData['pin_code']) {
+      const cleaned = String(combinedData['pin_code']).replace(/\D/g, '');
+      formData.append('pin_code', cleaned);
+    }
+
+    // Float fields
+    if (combinedData['length']) {
+      formData.append('length', String(parseFloat(combinedData['length'])));
+    }
+    if (combinedData['breadth']) {
+      formData.append('breadth', String(parseFloat(combinedData['breadth'])));
+    }
+
+    // Date fields (ISO format YYYY-MM-DD)
+    if (combinedData['dob']) {
+      const date = new Date(combinedData['dob']);
+      if (!isNaN(date.getTime())) {
+        formData.append('dob', date.toISOString().split('T')[0]);
       }
     }
 
-    // Append photo if provided
-    if (photo) {
-      formData.append('photo', photo, photo.name);
+    // ✅ ChoiceFields - Must match backend choices exactly ("Yes"/"No")
+    const yesNoFields = [
+      'has_sikkim_certificate', 'has_excise_license',
+      'family_excise_license', 'criminal_conviction',
+      'noc_obtained'
+    ];
+    yesNoFields.forEach(field => {
+      if (combinedData[field] !== undefined) {
+        const value = this.convertToYesNo(combinedData[field]);
+        formData.append(field, value);
+      }
+    });
+
+    // ✅ Site ownership (ChoiceField: "Owned"/"Rented")
+    if (combinedData['site_owned'] !== undefined) {
+      formData.append('site_owned', String(combinedData['site_owned']));
+      console.log('✅ site_owned value:', combinedData['site_owned']);
     }
 
-    return this.http.post(`${this.baseUrl}/${encodedId}/resolve-objections/`, formData);
-  }
-  
-  // Submits the site enquiry report associated with the application.
-  submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.baseUrl}/${encodedId}/site-enquiry/`, formData);
+    // Company details (optional, only if license_type = 2)
+    if (Number(combinedData['licenseType']) === 2) {
+      if (combinedData['company_name']) formData.append('company_name', combinedData['company_name']);
+      if (combinedData['company_address']) formData.append('company_address', combinedData['company_address']);
+      if (combinedData['company_pan']) formData.append('company_pan', combinedData['company_pan'].toUpperCase());
+      if (combinedData['company_cin']) formData.append('company_cin', combinedData['company_cin'].toUpperCase());
+      if (combinedData['incorporation_date']) {
+        const date = new Date(combinedData['incorporation_date']);
+        if (!isNaN(date.getTime())) {
+          formData.append('incorporation_date', date.toISOString().split('T')[0]);
+        }
+      }
+      if (combinedData['company_phone_number']) {
+        const cleaned = String(combinedData['company_phone_number']).replace(/\D/g, '');
+        formData.append('company_phone_number', cleaned);
+      }
+      if (combinedData['company_email']) formData.append('company_email', combinedData['company_email']);
+    }
+
+    // ✅ File uploads - Required fields
+    const passPhoto = this.getPassPhoto();
+    if (passPhoto) {
+      formData.append('pass_photo', passPhoto, passPhoto.name);
+      console.log('✅ Added pass_photo:', passPhoto.name);
+    } else {
+      console.error('❌ CRITICAL: pass_photo is missing!');
+    }
+
+    // Required documents
+    const requiredDocs = ['pan_card', 'sikkim_certificate', 'dob_proof'];
+    const siteDocuments = this.getAllSiteDocuments();
+    
+    requiredDocs.forEach(docName => {
+      if (siteDocuments[docName]) {
+        formData.append(docName, siteDocuments[docName], siteDocuments[docName].name);
+        console.log(`✅ Added ${docName}:`, siteDocuments[docName].name);
+      } else {
+        console.error(`❌ CRITICAL: ${docName} is missing!`);
+      }
+    });
+
+    // Optional NOC landlord document
+    if (siteDocuments['noc_landlord']) {
+      formData.append('noc_landlord', siteDocuments['noc_landlord'], siteDocuments['noc_landlord'].name);
+      console.log('✅ Added noc_landlord:', siteDocuments['noc_landlord'].name);
+    }
+
+    this.logFormData(formData, 'New License Final FormData');
+    console.groupEnd();
+    return formData;
   }
 
-  // Initiates the license printing process for an approved application.
-  printLicense(applicationId: string): Observable<any> {
+  private convertToYesNo(value: any): string {
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (typeof value === 'string') {
+      const lower = value.toLowerCase();
+      if (lower === 'yes' || lower === 'true') return 'Yes';
+      if (lower === 'no' || lower === 'false') return 'No';
+    }
+    return 'No';
+  }
+
+  getNewLicenseApplications(): Observable<NewLicenseApplication[]> {
+    return this.http.get<NewLicenseApplication[]>(`${this.newLicenseUrl}/list/`);
+  }
+
+  getNewLicenseApplicationById(applicationId: string): Observable<NewLicenseApplication> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.baseUrl}/${encodedId}/print/`, {});
+    return this.http.get<NewLicenseApplication>(`${this.newLicenseUrl}/detail/${encodedId}/`);
+  }
+
+  getNewLicenseApplicationsByStatus(): Observable<ApplicationStatus> {
+    return this.http.get<ApplicationStatus>(`${this.newLicenseUrl}/list-by-status/`);
+  }
+
+  getNewLicenseDashboardCounts(): Observable<DashboardCount> {
+    return this.http.get<DashboardCount>(`${this.newLicenseUrl}/dashboard-counts/`);
+  }
+
+  advanceNewLicenseApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    const body: any = { context: context || {} };
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, body);
+  }
+
+  getNewLicenseObjections(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.newLicenseUrl}/${encodedId}/objections/`);
+  }
+
+  resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+  }
+
+  printNewLicense(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/print/`, {});
+  }
+
+  payNewLicenseFee(applicationId: string, payload: any): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/pay-license-fee/`, payload);
+  }
+
+  // ========================== OLD LICENSE APPLICATION ==========================
+
+  submitOldLicenseApplication(formData: FormData): Observable<LicenseApplication> {
+    console.log('📤 Submitting Old License Application');
+    this.logFormData(formData, 'Old License Submission');
+    return this.http.post<LicenseApplication>(`${this.oldLicenseUrl}/apply/`, formData);
+  }
+
+  prepareOldLicenseFormData(): FormData {
+    const sessionKeys = [
+      'selectLicenseData',
+      'keyInfoData',
+      'addressData',
+      'unitDetailsData',
+      'memberDetailsData'
+    ];
+
+    console.group('📦 Preparing Old License Application FormData');
+
+    const combinedData: Record<string, any> = {};
+    sessionKeys.forEach(key => {
+      const data = this.getParsedSession(key);
+      if (data) {
+        Object.assign(combinedData, data);
+        console.log(`✅ Loaded ${key}:`, data);
+      } else {
+        console.warn(`⚠️ Missing session data: ${key}`);
+      }
+    });
+
+    const formData = new FormData();
+
+    // CodeRelatedField fields (need CODE strings, not IDs)
+    if (combinedData['excise_district_code']) {
+      formData.append('excise_district', String(combinedData['excise_district_code']));
+    }
+    if (combinedData['excise_subdivision_code']) {
+      formData.append('excise_subdivision', String(combinedData['excise_subdivision_code']));
+    }
+    if (combinedData['site_subdivision_code']) {
+      formData.append('site_subdivision', String(combinedData['site_subdivision_code']));
+    }
+    if (combinedData['police_station_code']) {
+      formData.append('police_station', String(combinedData['police_station_code']));
+    }
+
+    // PrimaryKeyRelatedField fields (need IDs as integers)
+    if (combinedData['license_category'] !== undefined && combinedData['license_category'] !== null) {
+      formData.append('license_category', String(parseInt(combinedData['license_category'])));
+    }
+    if (combinedData['license_type'] !== undefined && combinedData['license_type'] !== null) {
+      formData.append('license_type', String(parseInt(combinedData['license_type'])));
+    }
+
+    // String fields
+    const stringFields = [
+      'license', 'establishment_name', 'email', 'license_nature', 'functioning_status',
+      'mode_of_operation', 'location_category', 'location_name', 'ward_name',
+      'business_address', 'road_name', 'status', 'member_name', 'father_husband_name',
+      'nationality', 'gender', 'pan', 'member_email', 'yearly_license_fee', 'license_no'
+    ];
+    stringFields.forEach(field => {
+      if (combinedData[field]) {
+        formData.append(field, String(combinedData[field]));
+      }
+    });
+
+    // Integer fields
+    const integerFields = ['mobile_number', 'pin_code', 'member_mobile_number', 'company_phone_number'];
+    integerFields.forEach(field => {
+      if (combinedData[field] !== undefined && combinedData[field] !== null) {
+        const numValue = Number(String(combinedData[field]).replace(/\D/g, ''));
+        if (!isNaN(numValue)) {
+          formData.append(field, String(numValue));
+        }
+      }
+    });
+
+    // Float fields
+    const floatFields = ['latitude', 'longitude'];
+    floatFields.forEach(field => {
+      if (combinedData[field] !== undefined && combinedData[field] !== null) {
+        const floatValue = parseFloat(String(combinedData[field]));
+        if (!isNaN(floatValue)) {
+          formData.append(field, String(floatValue));
+        }
+      }
+    });
+
+    // Date fields
+    const dateFields = ['initial_grant_date', 'renewed_from', 'valid_up_to', 'incorporation_date'];
+    dateFields.forEach(field => {
+      if (combinedData[field]) {
+        const date = new Date(combinedData[field]);
+        if (!isNaN(date.getTime())) {
+          formData.append(field, date.toISOString().split('T')[0]);
+        }
+      }
+    });
+
+    // Boolean fields
+    formData.append('is_license_fee_paid', 'false');
+    formData.append('is_print_fee_paid', 'false');
+    formData.append('is_fee_calculated', 'false');
+    formData.append('is_license_category_updated', 'false');
+
+    // Company details
+    const companyFields = ['company_name', 'company_address', 'company_pan', 'company_cin', 'company_email'];
+    companyFields.forEach(field => {
+      if (combinedData[field]) {
+        formData.append(field, String(combinedData[field]));
+      }
+    });
+
+    // Photo
+    const photoFile = this.getPassPhoto();
+    if (photoFile) {
+      formData.append('photo', photoFile, photoFile.name);
+    }
+
+    this.logFormData(formData, 'Old License Final FormData');
+    console.groupEnd();
+    return formData;
+  }
+
+  submitLicenseApplication(formData: FormData): Observable<LicenseApplication> {
+    return this.submitOldLicenseApplication(formData);
+  }
+
+  getApplicationById(applicationId: string): Observable<LicenseApplication> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<LicenseApplication>(`${this.oldLicenseUrl}/detail/${encodedId}/`);
+  }
+
+  deleteApplication(applicationId: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.delete(`${this.oldLicenseUrl}/${encodedId}/delete/`);
+  }
+
+  getAllApplications(): Observable<LicenseApplication[]> {
+    return this.http.get<LicenseApplication[]>(`${this.oldLicenseUrl}/list/`);
+  }
+
+  getApplicationsByStatus(): Observable<ApplicationStatus> {
+    return this.http.get<ApplicationStatus>(`${this.oldLicenseUrl}/list-by-status/`);
+  }
+
+  getDashboardCounts(): Observable<DashboardCount> {
+    return this.http.get<DashboardCount>(`${this.oldLicenseUrl}/dashboard-counts/`);
+  }
+
+  getLocationFee(): Observable<LocationFee[]> {
+    return this.http.get<LocationFee[]>(`${this.oldLicenseUrl}/location-fee/`);
+  }
+
+  advanceApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });
+  }
+
+  raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], remarks?: string): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/raise-objection/`, {
+      objections,
+      remarks: remarks || ''
+    });
+  }
+
+  getObjections(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.oldLicenseUrl}/${encodedId}/objections/`);
+  }
+
+  resolveObjections(applicationId: string, data: any, photo?: File): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'boolean') {
+          formData.append(key, value ? 'true' : 'false');
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
+    
+    if (photo) formData.append('photo', photo, photo.name);
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/resolve-objections/`, formData);
+  }
+
+  submitSiteEnquiryData(applicationId: string, formData: FormData): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/site-enquiry/`, formData);
   }
 
   getSiteDetails(applicationId: string): Observable<SiteEnquiryFormModel> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<SiteEnquiryFormModel>(`${this.baseUrl}/${encodedId}/site-detail/`);
+    return this.http.get<SiteEnquiryFormModel>(`${this.oldLicenseUrl}/${encodedId}/site-detail/`);
   }
 
-  payLicenseFee(applicationId: string): Observable<any> {
+  printLicense(applicationId: string): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.baseUrl}/${encodedId}/pay-license-fee/`, {});
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/print/`, {});
   }
 
-  // ========================== NEW LICENSE APPLICATION ==========================
-
-  /**
-   * Submit new license application
-   */
-  submitNewLicenseApplication(formData: FormData): Observable<NewLicenseApplication> {
-    return this.http.post<NewLicenseApplication>(`${this.newLicenseBaseUrl}/apply/`, formData);
-  }
-
-  /**
-   * Update new license application (only at draft/level_1/level_1_objection stages)
-   */
-  updateNewLicenseApplication(applicationId: string, formData: FormData): Observable<NewLicenseApplication> {
+  payLicenseFee(applicationId: string, payload: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.patch<NewLicenseApplication>(`${this.newLicenseBaseUrl}/${encodedId}/update/`, formData);
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/pay-license-fee/`, payload);
   }
 
-  /**
-   * Prepare FormData for new license application submission
-   * ✅ FIXED: All required backend fields with proper defaults
-   */
-  prepareNewLicenseFormData(): FormData {
-    const formData = new FormData();
-    
-    // Get all session data
-    const selectLicenseData = this.getParsedSession('selectLicenseData');
-    const keyInfoData = this.getParsedSession('keyInfoData');
-    const applicantDetailsData = this.getParsedSession('applicantDetailsData');
-    const siteDetailsData = this.getParsedSession('siteDetailsData');
-    const unitDetailsData = this.getParsedSession('unitDetailsData');
+  // ========================== PHOTO & DOCUMENT MANAGEMENT ==========================
 
-    console.log('📦 Session Data Retrieved:', {
-      selectLicenseData,
-      keyInfoData,
-      applicantDetailsData,
-      siteDetailsData,
-      unitDetailsData
-    });
-
-    // ===== STEP 1: SELECT LICENSE =====
-    if (selectLicenseData?.licenseType) {
-      formData.append('license_type', selectLicenseData.licenseType.toString());
-      console.log('✅ License Type:', selectLicenseData.licenseType);
-    } else {
-      console.error('❌ Missing: licenseType');
-    }
-
-    // ===== STEP 2: KEY INFO (BASIC INFORMATION) =====
-    if (keyInfoData) {
-      if (keyInfoData.licenseCategory) {
-        formData.append('license_category', keyInfoData.licenseCategory.toString());
-        console.log('✅ License Category:', keyInfoData.licenseCategory);
-      } else {
-        console.error('❌ Missing: license_category');
-      }
-      
-      if (keyInfoData.licenseSubCategory) {
-        formData.append('license_sub_category', keyInfoData.licenseSubCategory.toString());
-        console.log('✅ License Sub Category:', keyInfoData.licenseSubCategory);
-      } else {
-        console.error('❌ Missing: license_sub_category');
-      }
-      
-      if (keyInfoData.establishmentName) {
-        formData.append('establishment_name', keyInfoData.establishmentName);
-        console.log('✅ Establishment Name:', keyInfoData.establishmentName);
-      } else {
-        console.error('❌ Missing: establishment_name');
-      }
-      
-      // ✅ FIX: location_district comes from siteDetailsData
-      if (siteDetailsData?.siteDistrict) {
-        formData.append('location_district', siteDetailsData.siteDistrict.toString());
-        console.log('✅ Location District:', siteDetailsData.siteDistrict);
-      } else {
-        console.error('❌ Missing: location_district (from siteDistrict)');
-      }
-      
-      if (keyInfoData.siteType) {
-        formData.append('site_type', keyInfoData.siteType);
-        console.log('✅ Site Type:', keyInfoData.siteType);
-      } else {
-        console.error('❌ Missing: site_type');
-      }
-    }
-
-    // ===== STEP 3: APPLICANT DETAILS =====
-    if (applicantDetailsData) {
-      // ✅ FIX: Status field (marital status) with default
-      if (applicantDetailsData.maritalStatus) {
-        formData.append('status', applicantDetailsData.maritalStatus);
-        console.log('✅ Status (Marital):', applicantDetailsData.maritalStatus);
-      } else if (applicantDetailsData.status) {
-        formData.append('status', applicantDetailsData.status);
-        console.log('✅ Status:', applicantDetailsData.status);
-      } else {
-        formData.append('status', 'Single');
-        console.warn('⚠️ Status defaulted to: Single');
-      }
-
-      // Build full name from first, middle, last
-      const nameParts = [
-        applicantDetailsData.firstName,
-        applicantDetailsData.middleName,
-        applicantDetailsData.lastName
-      ].filter(Boolean);
-      
-      if (nameParts.length > 0) {
-        const fullName = nameParts.join(' ');
-        formData.append('applicant_name', fullName);
-        console.log('✅ Applicant Name:', fullName);
-      } else if (applicantDetailsData.applicantName) {
-        formData.append('applicant_name', applicantDetailsData.applicantName);
-        console.log('✅ Applicant Name (fallback):', applicantDetailsData.applicantName);
-      } else {
-        console.error('❌ Missing: applicant_name');
-      }
-
-      if (applicantDetailsData.fatherHusbandName) {
-        formData.append('father_husband_name', applicantDetailsData.fatherHusbandName);
-        console.log('✅ Father/Husband Name:', applicantDetailsData.fatherHusbandName);
-      } else {
-        console.error('❌ Missing: father_husband_name');
-      }
-
-      // ✅ FIX: Date of Birth - CRITICAL REQUIRED FIELD
-      if (applicantDetailsData.dob) {
-        const dobDate = new Date(applicantDetailsData.dob);
-        const formattedDob = dobDate.toISOString().split('T')[0];
-        formData.append('dob', formattedDob);
-        console.log('✅ DOB:', formattedDob);
-      } else {
-        console.error('❌ CRITICAL: dob is missing! This is required by backend.');
-      }
-
-      if (applicantDetailsData.nationality) {
-        formData.append('nationality', applicantDetailsData.nationality);
-        console.log('✅ Nationality:', applicantDetailsData.nationality);
-      } else {
-        console.error('❌ Missing: nationality');
-      }
-
-      if (applicantDetailsData.gender) {
-        formData.append('gender', applicantDetailsData.gender);
-        console.log('✅ Gender:', applicantDetailsData.gender);
-      } else {
-        console.error('❌ Missing: gender');
-      }
-
-      if (applicantDetailsData.pan) {
-        formData.append('pan', applicantDetailsData.pan.toUpperCase());
-        console.log('✅ PAN:', applicantDetailsData.pan.toUpperCase());
-      } else {
-        console.error('❌ Missing: pan');
-      }
-      
-      // ✅ FIX: Mobile number - check all possible field names
-      const mobileNumber = applicantDetailsData.applicantMobileNumber || 
-                          applicantDetailsData.mobileNumber || 
-                          applicantDetailsData.mobile;
-      
-      if (mobileNumber) {
-        const cleanedMobile = String(mobileNumber).replace(/\D/g, '');
-        formData.append('applicant_mobile_number', cleanedMobile);
-        console.log('✅ Mobile Number:', cleanedMobile);
-      } else {
-        console.error('❌ CRITICAL: applicant_mobile_number is missing!');
-      }
-      
-      // ✅ FIX: Email - check all possible field names
-      const email = applicantDetailsData.applicantEmail || 
-                   applicantDetailsData.email;
-      
-      if (email) {
-        formData.append('applicant_email', email.toLowerCase());
-        console.log('✅ Email:', email);
-      } else {
-        console.error('❌ CRITICAL: applicant_email is missing!');
-      }
-    }
-
-    // ===== STEP 4: SITE DETAILS =====
-    if (siteDetailsData) {
-      if (siteDetailsData.siteSubdivision) {
-        formData.append('site_subdivision', siteDetailsData.siteSubdivision.toString());
-        console.log('✅ Site Subdivision:', siteDetailsData.siteSubdivision);
-      } else {
-        console.error('❌ Missing: site_subdivision');
-      }
-
-      if (siteDetailsData.policeStation) {
-        formData.append('police_station', siteDetailsData.policeStation.toString());
-        console.log('✅ Police Station:', siteDetailsData.policeStation);
-      } else {
-        console.error('❌ Missing: police_station');
-      }
-
-      if (siteDetailsData.locationCategory) {
-        formData.append('location_category', siteDetailsData.locationCategory);
-        console.log('✅ Location Category:', siteDetailsData.locationCategory);
-      } else {
-        console.error('❌ Missing: location_category');
-      }
-
-      if (siteDetailsData.locationName) {
-        formData.append('location_name', siteDetailsData.locationName);
-        console.log('✅ Location Name:', siteDetailsData.locationName);
-      } else {
-        console.error('❌ Missing: location_name');
-      }
-
-      if (siteDetailsData.wardName) {
-        formData.append('ward_name', siteDetailsData.wardName);
-        console.log('✅ Ward Name:', siteDetailsData.wardName);
-      } else {
-        console.error('❌ Missing: ward_name');
-      }
-
-      if (siteDetailsData.businessAddress) {
-        formData.append('business_address', siteDetailsData.businessAddress);
-        console.log('✅ Business Address:', siteDetailsData.businessAddress);
-      } else {
-        console.error('❌ Missing: business_address');
-      }
-
-      if (siteDetailsData.roadName) {
-        formData.append('road_name', siteDetailsData.roadName);
-        console.log('✅ Road Name:', siteDetailsData.roadName);
-      } else {
-        console.error('❌ Missing: road_name');
-      }
-
-      if (siteDetailsData.pinCode) {
-        formData.append('pin_code', siteDetailsData.pinCode.toString());
-        console.log('✅ PIN Code:', siteDetailsData.pinCode);
-      } else {
-        console.error('❌ Missing: pin_code');
-      }
-
-      // Optional fields
-      if (siteDetailsData.latitude) {
-        formData.append('latitude', siteDetailsData.latitude.toString());
-        console.log('✅ Latitude:', siteDetailsData.latitude);
-      }
-
-      if (siteDetailsData.longitude) {
-        formData.append('longitude', siteDetailsData.longitude.toString());
-        console.log('✅ Longitude:', siteDetailsData.longitude);
-      }
-
-      if (siteDetailsData.constructionType) {
-        formData.append('construction_type', siteDetailsData.constructionType);
-        console.log('✅ Construction Type:', siteDetailsData.constructionType);
-      } else {
-        console.error('❌ Missing: construction_type');
-      }
-
-      if (siteDetailsData.length) {
-        formData.append('length', siteDetailsData.length.toString());
-        console.log('✅ Length:', siteDetailsData.length);
-      }
-
-      if (siteDetailsData.breadth) {
-        formData.append('breadth', siteDetailsData.breadth.toString());
-        console.log('✅ Breadth:', siteDetailsData.breadth);
-      }
-
-      if (siteDetailsData.siteOwned) {
-        formData.append('site_owned', siteDetailsData.siteOwned);
-        console.log('✅ Site Owned:', siteDetailsData.siteOwned);
-      } else {
-        console.error('❌ Missing: site_owned');
-      }
-
-      // ✅ FIX: NOC Obtained - provide default value if missing
-      if (siteDetailsData.nocObtained) {
-        formData.append('noc_obtained', siteDetailsData.nocObtained);
-        console.log('✅ NOC Obtained:', siteDetailsData.nocObtained);
-      } else {
-        formData.append('noc_obtained', 'No');
-        console.warn('⚠️ NOC Obtained defaulted to: No');
-      }
-
-      // ✅ FIX: Trade license covered - provide default value
-      if (siteDetailsData.tradeLicenseCovered) {
-        formData.append('trade_license_covered', siteDetailsData.tradeLicenseCovered);
-        console.log('✅ Trade License Covered:', siteDetailsData.tradeLicenseCovered);
-      } else {
-        formData.append('trade_license_covered', 'No');
-        console.warn('⚠️ Trade License Covered defaulted to: No');
-      }
-    }
-
-    // ===== STEP 5: COMPANY DETAILS (only if licenseType is 2 - Company) =====
-    if (selectLicenseData?.licenseType === 2 && unitDetailsData) {
-      console.log('📋 Adding Company Details (License Type = Company)');
-      
-      if (unitDetailsData.companyName) {
-        formData.append('company_name', unitDetailsData.companyName);
-        console.log('✅ Company Name:', unitDetailsData.companyName);
-      }
-      if (unitDetailsData.companyAddress) {
-        formData.append('company_address', unitDetailsData.companyAddress);
-        console.log('✅ Company Address:', unitDetailsData.companyAddress);
-      }
-      if (unitDetailsData.companyPan) {
-        formData.append('company_pan', unitDetailsData.companyPan.toUpperCase());
-        console.log('✅ Company PAN:', unitDetailsData.companyPan.toUpperCase());
-      }
-      if (unitDetailsData.companyCin) {
-        formData.append('company_cin', unitDetailsData.companyCin.toUpperCase());
-        console.log('✅ Company CIN:', unitDetailsData.companyCin.toUpperCase());
-      }
-      if (unitDetailsData.incorporationDate) {
-        const incDate = new Date(unitDetailsData.incorporationDate);
-        const formattedIncDate = incDate.toISOString().split('T')[0];
-        formData.append('incorporation_date', formattedIncDate);
-        console.log('✅ Incorporation Date:', formattedIncDate);
-      }
-      if (unitDetailsData.companyPhoneNumber) {
-        const cleanedPhone = String(unitDetailsData.companyPhoneNumber).replace(/\D/g, '');
-        formData.append('company_phone_number', cleanedPhone);
-        console.log('✅ Company Phone:', cleanedPhone);
-      }
-      if (unitDetailsData.companyEmail) {
-        formData.append('company_email', unitDetailsData.companyEmail.toLowerCase());
-        console.log('✅ Company Email:', unitDetailsData.companyEmail);
-      }
-    }
-
-    // ===== PASSPORT PHOTO (REQUIRED) =====
-    const photo = this.getPassPhoto();
-    if (photo) {
-      formData.append('photo', photo, photo.name);
-      console.log('✅ Photo:', photo.name, `(${photo.size} bytes)`);
-    } else {
-      console.error('❌ CRITICAL: Passport photo is missing! This is a required field.');
-    }
-
-    // ===== FINAL VALIDATION =====
-    console.log('\n🔍 FormData Validation Summary:');
-    let entryCount = 0;
-    let fileCount = 0;
-    formData.forEach((value) => {
-      entryCount++;
-      if (value instanceof File) fileCount++;
-    });
-    console.log(`✅ Total entries: ${entryCount}`);
-    console.log(`📎 Files: ${fileCount}`);
-    console.log('================================\n');
-
-    return formData;
-  }
-
-  /**
-   * Get list of all new license applications
-   */
-  getNewLicenseApplications(): Observable<NewLicenseApplication[]> {
-    return this.http.get<NewLicenseApplication[]>(`${this.newLicenseBaseUrl}/list/`);
-  }
-
-  /**
-   * Get new license application by ID
-   */
-  getNewLicenseApplicationById(applicationId: string): Observable<NewLicenseApplication> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<NewLicenseApplication>(`${this.newLicenseBaseUrl}/detail/${encodedId}/`);
-  }
-
-  /**
-   * Delete new license application (only at level_1 stage)
-   */
-  deleteNewLicenseApplication(applicationId: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.delete(`${this.newLicenseBaseUrl}/${encodedId}/delete/`);
-  }
-
-  /**
-   * Get dashboard counts for new license applications
-   */
-  getNewLicenseDashboardCounts(): Observable<DashboardCount> {
-    return this.http.get<DashboardCount>(`${this.newLicenseBaseUrl}/dashboard-counts/`);
-  }
-
-  /**
-   * Get new license applications grouped by status
-   */
-  getNewLicenseApplicationsByStatus(): Observable<ApplicationStatus> {
-    return this.http.get<ApplicationStatus>(`${this.newLicenseBaseUrl}/list-by-status/`);
-  }
-
-  /**
-   * Advance new license application to next stage
-   */
-  advanceNewLicenseApplication(
-    applicationId: string,
-    action: 'approve' | 'reject' | 'raise_objection',
-    remarks?: string,
-    feeAmount?: number,
-    newLicenseCategoryId?: number,
-    objections?: { field: string; remarks: string }[]
-  ): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    
-    const body: any = {
-      action,
-      remarks: remarks || ''
-    };
-
-    if (feeAmount !== undefined) {
-      body.fee_amount = feeAmount;
-    }
-
-    if (newLicenseCategoryId !== undefined) {
-      body.new_license_category = newLicenseCategoryId;
-    }
-
-    if (action === 'raise_objection' && objections) {
-      body.objections = objections;
-    }
-
-    return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/advance/`, body);
-  }
-
-  /**
-   * Get objections for new license application
-   */
-  getNewLicenseObjections(applicationId: string): Observable<any[]> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<any[]>(`${this.newLicenseBaseUrl}/${encodedId}/objections/`);
-  }
-
-  /**
-   * Resolve objections for new license application
-   */
-  resolveNewLicenseObjections(applicationId: string, formData: FormData): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/resolve-objections/`, formData);
-  }
-
-  /**
-   * Submit site enquiry report for new license application (Level 2)
-   */
-  submitNewLicenseSiteEnquiry(applicationId: string, formData: FormData): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.post<any>(`${this.newLicenseBaseUrl}/${encodedId}/site-enquiry/`, formData);
-  }
-
-  /**
-   * Get site enquiry details for new license application
-   */
-  getNewLicenseSiteEnquiryDetail(applicationId: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<any>(`${this.newLicenseBaseUrl}/${encodedId}/site-detail/`);
-  }
-
-  /**
-   * Print new license (only for approved applications)
-   */
-  printNewLicense(applicationId: string): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseBaseUrl}/${encodedId}/print/`, {});
-  }
-
-  
-  
-  // ========================== PASSPORT PHOTO MANAGEMENT ==========================
-  
   setPassPhoto(file: File | null): void {
     this.passPhotoSubject.next(file);
   }
@@ -643,10 +477,6 @@ export class LicenseApplicationService {
     this.passPhotoSubject.next(null);
   }
 
-  
-  
-  // ========================== SITE DOCUMENTS MANAGEMENT ==========================
-  
   setSiteDocument(documentName: string, file: File): void {
     this.siteDocuments.set(documentName, file);
   }
@@ -674,9 +504,6 @@ export class LicenseApplicationService {
 
   // ========================== UTILITY METHODS ==========================
 
-  /**
-   * Helper method to safely parse session storage
-   */
   private getParsedSession(key: string): any {
     try {
       const data = sessionStorage.getItem(key);
@@ -687,45 +514,34 @@ export class LicenseApplicationService {
     }
   }
 
-  /**
-   * Convert camelCase string to snake_case
-   */
-  private toSnakeCase(str: string): string {
-    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+  clearSessionStorage(): void {
+    const keys = [
+      'selectLicenseData',
+      'keyInfoData',
+      'addressData',
+      'unitDetailsData',
+      'memberDetailsData',
+      'applicantDetailsData',
+      'siteDetailsData'
+    ];
+    keys.forEach(key => sessionStorage.removeItem(key));
+    console.log('✅ Session storage cleared');
   }
 
-  /**
-   * Format date to YYYY-MM-DD
-   */
-  private formatDate(date: Date | string): string {
-    if (typeof date === 'string') {
-      date = new Date(date);
-    }
-    return date.toISOString().split('T')[0];
-  }
-
-  /**
-   * Log FormData contents for debugging
-   */
-  logFormData(formData: FormData, prefix = 'FormData'): void {
-    console.log(`\n========== ${prefix} ==========`);
-    const entries: Array<{Field: string, Value: string}> = [];
-    
+  logFormData(formData: FormData, label: string = 'FormData'): void {
+    console.group(`📋 ${label}`);
+    const entries: Array<[string, any]> = [];
     formData.forEach((value, key) => {
       if (value instanceof File) {
-        entries.push({
-          Field: key,
-          Value: `[File] ${value.name} (${value.size} bytes)`
-        });
+        entries.push([key, `[File: ${value.name}, ${value.size} bytes]`]);
       } else {
-        entries.push({
-          Field: key,
-          Value: String(value)
-        });
+        entries.push([key, value]);
       }
     });
-    
-    console.table(entries);
-    console.log('================================\n');
+    entries.sort((a, b) => a[0].localeCompare(b[0]));
+    entries.forEach(([key, value]) => {
+      console.log(`  ${key}:`, value);
+    });
+    console.groupEnd();
   }
 }

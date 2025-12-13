@@ -2,18 +2,16 @@
   <mat-card>
     <mat-card-header>
       <div class="heading">Address</div>
-      <div class="validation">
-        * Marked Fields Are Mandatory
-      </div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
     <mat-card-content>
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division</mat-label>
-          <mat-select formControlName="siteSubdivision" required>
+          <mat-select formControlName="site_subdivision" required>
             @for (siteSubdivision of subdivisions; track siteSubdivision) {
-              <mat-option [value]="siteSubdivision.subdivisionCode">
+              <mat-option [value]="siteSubdivision.id">
                 {{ siteSubdivision.subdivision }}
               </mat-option>
             }
@@ -22,56 +20,58 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Police Station</mat-label>
-          <mat-select formControlName="policeStation" required>
+          <mat-select formControlName="police_station" required>
             @for (policeStation of sitePoliceStations; track policeStation) {
-              <mat-option [value]="policeStation.policeStationCode">{{ policeStation.policeStation }}</mat-option>
+              <mat-option [value]="policeStation.id">
+                {{ policeStation.policeStation }}
+              </mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['policeStation'].invalid) {
+          @if (addressForm.controls['police_station'].invalid) {
             <mat-error>
-              {{ getErrorMessage('policeStation') }}
+              {{ getErrorMessage('police_station') }}
             </mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Location Category</mat-label>
-          <mat-select formControlName="locationCategory" required>
+          <mat-select formControlName="location_category" required>
             @for (locationCategory of locationCategories; track locationCategory) {
               <mat-option [value]="locationCategory">{{ locationCategory }}</mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['locationCategory'].invalid) {
+          @if (addressForm.controls['location_category'].invalid) {
             <mat-error>
-              {{ getErrorMessage('locationCategory') }}
+              {{ getErrorMessage('location_category') }}
             </mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Location Name</mat-label>
-          <mat-select formControlName="locationName" required>
+          <mat-select formControlName="location_name" required>
             @for (locationName of locationNames; track locationName) {
               <mat-option [value]="locationName">{{ locationName }}</mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['locationName'].invalid) {
+          @if (addressForm.controls['location_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('locationName') }}
+              {{ getErrorMessage('location_name') }}
             </mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Ward Name</mat-label>
-          <mat-select formControlName="wardName" required>
+          <mat-select formControlName="ward_name" required>
             @for (wardName of wardNames; track wardName) {
               <mat-option [value]="wardName">{{ wardName }}</mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['wardName'].invalid) {
+          @if (addressForm.controls['ward_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('wardName') }}
+              {{ getErrorMessage('ward_name') }}
             </mat-error>
           }
         </mat-form-field>
@@ -80,40 +80,41 @@
           <mat-label>Address of the Business Premises</mat-label>
           <textarea matInput
             placeholder="Enter Site Address (max 500 characters)"
-            formControlName="businessAddress"
+            formControlName="business_address"
             cdkTextareaAutosize
             #autosize="cdkTextareaAutosize"
             cdkAutosizeMinRows="1"
             cdkAutosizeMaxRows="5"
             required>
           </textarea>
-          @if (addressForm.controls['businessAddress'].invalid) {
+          @if (addressForm.controls['business_address'].invalid) {
             <mat-error>
-              {{ getErrorMessage('businessAddress') }}
+              {{ getErrorMessage('business_address') }}
             </mat-error>
           }
         </mat-form-field>
 
+        <!-- ✅ FIXED: Road dropdown now loads from backend -->
         <mat-form-field appearance="outline">
           <mat-label>Road Name</mat-label>
-          <mat-select formControlName="roadName" required>
-            @for (roadName of roadNames; track roadName) {
-              <mat-option [value]="roadName">{{ roadName }}</mat-option>
+          <mat-select formControlName="road_name" required>
+            @for (road of roads; track road.id) {
+              <mat-option [value]="road.roadName">{{ road.roadName }}</mat-option>
             }
           </mat-select>
-          @if (addressForm.controls['roadName'].invalid) {
+          @if (addressForm.controls['road_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('roadName') }}
+              {{ getErrorMessage('road_name') }}
             </mat-error>
           }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>PIN Code</mat-label>
-          <input matInput placeholder="Enter PIN" type="number" formControlName="pinCode" required/>
-          @if (addressForm.controls['pinCode'].invalid) {
+          <input matInput placeholder="Enter PIN" type="number" formControlName="pin_code" required/>
+          @if (addressForm.controls['pin_code'].invalid) {
             <mat-error>
-              {{ getErrorMessage('pinCode') }}
+              {{ getErrorMessage('pin_code') }}
             </mat-error>
           }
         </mat-form-field>
@@ -124,7 +125,7 @@
       <div class="form-field-container">
         <mat-form-field appearance="outline">
           <mat-label>Latitude</mat-label>
-          <input matInput placeholder="Enter Latitude" type="text" formControlName="latitude"/>
+          <input matInput placeholder="Enter Latitude" type="number" step="any" formControlName="latitude"/>
           @if (addressForm.controls['latitude'].invalid) {
             <mat-error>
               {{ getErrorMessage('latitude') }}
@@ -134,7 +135,7 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Longitude</mat-label>
-          <input matInput placeholder="Enter Longitude" type="text" formControlName="longitude"/>
+          <input matInput placeholder="Enter Longitude" type="number" step="any" formControlName="longitude"/>
           @if (addressForm.controls['longitude'].invalid) {
             <mat-error>
               {{ getErrorMessage('longitude') }}
@@ -150,5 +151,4 @@
       <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!addressForm.valid">Next</button>
     </mat-card-actions>
   </mat-card>
-
 </form>

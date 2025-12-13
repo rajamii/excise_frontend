@@ -1,15 +1,10 @@
 <form [formGroup]="memberDetailsForm">
   <mat-card>
-
-    <!-- Form Header -->
     <mat-card-header>
       <div class="heading">Company Member Details</div>
-      <div class="validation">
-        * Marked Fields Are Mandatory
-      </div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
-    <!-- Form Content -->
     <mat-card-content>
       <div class="form-field-container">
 
@@ -31,10 +26,10 @@
         <!-- Member Name Input -->
         <mat-form-field appearance="outline">
           <mat-label>Member Name</mat-label>
-          <input matInput placeholder="Enter Your Name" type="text" formControlName="memberName"/>
-          @if (memberDetailsForm.controls['memberName'].invalid) {
+          <input matInput placeholder="Enter Your Name" type="text" formControlName="member_name"/>
+          @if (memberDetailsForm.controls['member_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('memberName') }}
+              {{ getErrorMessage('member_name') }}
             </mat-error>
           }
         </mat-form-field>
@@ -42,10 +37,10 @@
         <!-- Father's / Husband's Name Input -->
         <mat-form-field appearance="outline">
           <mat-label>Father's / Husband's Name</mat-label>
-          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="fatherHusbandName"/>
-          @if (memberDetailsForm.controls['fatherHusbandName'].invalid) {
+          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="father_husband_name"/>
+          @if (memberDetailsForm.controls['father_husband_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('fatherHusbandName') }}
+              {{ getErrorMessage('father_husband_name') }}
             </mat-error>
           }
         </mat-form-field>
@@ -90,10 +85,10 @@
         <!-- Phone Number Input -->
         <mat-form-field appearance="outline">
           <mat-label>Enter Phone Number</mat-label>
-          <input matInput placeholder="Enter Phone Number" type="number" formControlName="memberMobileNumber"/>
-          @if (memberDetailsForm.controls['memberMobileNumber'].invalid) {
+          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="member_mobile_number"/>
+          @if (memberDetailsForm.controls['member_mobile_number'].invalid) {
             <mat-error>
-              {{ getErrorMessage('memberMobileNumber') }}
+              {{ getErrorMessage('member_mobile_number') }}
             </mat-error>
           }
         </mat-form-field>
@@ -101,10 +96,10 @@
         <!-- Email ID Input -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="memberEmail"/>
-          @if (memberDetailsForm.controls['memberEmail'].invalid) {
+          <input matInput placeholder="Enter Email" type="email" formControlName="member_email"/>
+          @if (memberDetailsForm.controls['member_email'].invalid) {
             <mat-error>
-              {{ getErrorMessage('memberEmail') }}
+              {{ getErrorMessage('member_email') }}
             </mat-error>
           }
         </mat-form-field>
@@ -128,7 +123,6 @@
         </div>
       </mat-card-content>
 
-      <!-- Form Actions -->
       <mat-card-actions>
         <button matButton="outlined" (click)="goBack()">Back</button>
         <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>

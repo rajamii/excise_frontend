@@ -90,6 +90,7 @@ export class ListComponent implements OnInit {
       confirmButtonText: 'Yes, delete',
       cancelButtonText: 'Cancel'
     }).then(result => {
+      // FIXED: Use user.id (number) instead of user.username (string)
       if (result.isConfirmed && user.id) {
         this.adminService.deleteUser(user.id).subscribe({
           next: () => {

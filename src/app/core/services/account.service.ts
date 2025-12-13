@@ -10,16 +10,16 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class AccountService {
-  private baseUrl = `${environment.apiBaseUrl}`;
+  private baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private userIdentity: Account | null = null;
   private authenticationState = new ReplaySubject<Account | null>(1);
   private accountCache$?: Observable<Account> | null;
   private logoutTimer?: any;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router) { }
 
   getUserDetails(): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/auth/users/me/`);
+    return this.http.get<Account>(`${this.baseUrl}/me/`);
   }
 
   identity(force = false): Observable<Account | null> {
@@ -72,8 +72,15 @@ export class AccountService {
       : roles.toLowerCase().trim() === userRole;
   }
 
-  changePassword(username: string, old_password: string, new_password: string): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/change_password/`, { username, old_password, new_password });
+  // NOTE: Password change endpoint not available in backend
+  // Backend user URLs only provide: register, login, logout, detail, list, update, delete, roles
+  // Password change functionality needs to be implemented in backend if required
+  changePassword(userId: number, old_password: string, new_password: string): Observable<any> {
+    console.warn('Password change endpoint not available in backend. This feature needs backend implementation.');
+    return this.http.put(`${this.baseUrl}/${userId}/update/`, { 
+      password: new_password,
+      old_password: old_password 
+    });
   }
 
   clearAppData(): void {

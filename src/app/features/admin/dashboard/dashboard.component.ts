@@ -15,7 +15,7 @@ import { ChartConfiguration } from 'chart.js';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 type TableView = 'stats' | 'applied' | 'pending' | 'approved' | 'rejected';
-type ApplicationType = 'license' | 'new_license' | 'salesman_barman';
+type ApplicationType = 'license' | 'new_license' | '/salesman_barman/';
 
 interface ApplicationTypeOption {
   value: ApplicationType;
@@ -48,7 +48,7 @@ export class DashboardComponent extends BaseComponent {
     { value: 'license', label: 'License Application' },
     { value: 'new_license', label: 'New License Application' },
     { 
-      value: 'salesman_barman', 
+      value: '/salesman_barman/', 
       label: 'Salesman/Barman Application',
       requiresPermission: 'SALESMAN_BARMAN_ACCESS'
     }
@@ -173,7 +173,7 @@ export class DashboardComponent extends BaseComponent {
   constructor(
     public baseDependancy: BaseDependency,
     public override salesmanBarmanService: SalesmanBarmanRegistrationService,
-    private snackBar: MatSnackBar // Added MatSnackBar injection
+    private snackBar: MatSnackBar
   ) { 
     super(baseDependancy);
   }
@@ -211,40 +211,40 @@ export class DashboardComponent extends BaseComponent {
   // Check user permissions and filter available application types
   private checkUserPermissions(): void {
     // Get user account asynchronously (identity() returns Observable<Account | null>)
-        this.accountService.identity().subscribe(
-          (user) => {
-            // Account type may not expose 'authorities' directly; cast to any and also fallback to 'roles' if present
-            const authorities: string[] = ((user as any)?.authorities ?? (user as any)?.roles) ?? [];
-    
-            // Filter application types based on permissions
-            this.availableApplicationTypes = this.applicationTypes.filter(type => {
-              // If no permission required, include it
-              if (!type.requiresPermission) {
-                return true;
-              }
-    
-              // Check if user has the required permission
-              return authorities.some(auth => auth === type.requiresPermission);
-            });
-    
-            // If current selection is not available, default to first available
-            const isCurrentTypeAvailable = this.availableApplicationTypes.some(
-              type => type.value === this.selectedApplicationType
-            );
-    
-            if (!isCurrentTypeAvailable && this.availableApplicationTypes.length > 0) {
-              this.selectedApplicationType = this.availableApplicationTypes[0].value;
-            }
-          },
-          (err) => {
-            console.error('Failed to get user identity:', err);
-            // Fallback: include only non-restricted types
-            this.availableApplicationTypes = this.applicationTypes.filter(t => !t.requiresPermission);
-            if (this.availableApplicationTypes.length > 0) {
-              this.selectedApplicationType = this.availableApplicationTypes[0].value;
-            }
+    this.accountService.identity().subscribe(
+      (user) => {
+        // Account type may not expose 'authorities' directly; cast to any and also fallback to 'roles' if present
+        const authorities: string[] = ((user as any)?.authorities ?? (user as any)?.roles) ?? [];
+
+        // Filter application types based on permissions
+        this.availableApplicationTypes = this.applicationTypes.filter(type => {
+          // If no permission required, include it
+          if (!type.requiresPermission) {
+            return true;
           }
+
+          // Check if user has the required permission
+          return authorities.some(auth => auth === type.requiresPermission);
+        });
+
+        // If current selection is not available, default to first available
+        const isCurrentTypeAvailable = this.availableApplicationTypes.some(
+          type => type.value === this.selectedApplicationType
         );
+
+        if (!isCurrentTypeAvailable && this.availableApplicationTypes.length > 0) {
+          this.selectedApplicationType = this.availableApplicationTypes[0].value;
+        }
+      },
+      (err) => {
+        console.error('Failed to get user identity:', err);
+        // Fallback: include only non-restricted types
+        this.availableApplicationTypes = this.applicationTypes.filter(t => !t.requiresPermission);
+        if (this.availableApplicationTypes.length > 0) {
+          this.selectedApplicationType = this.availableApplicationTypes[0].value;
+        }
+      }
+    );
   }
 
   // Method to handle application type change
@@ -328,7 +328,7 @@ export class DashboardComponent extends BaseComponent {
           })
         );
       
-      case 'salesman_barman':
+      case '/salesman_barman/':
         return this.salesmanBarmanService.getDashboardCounts().pipe(
           catchError(err => {
             console.error('Failed to fetch salesman/barman application counts:', err);
@@ -363,7 +363,7 @@ export class DashboardComponent extends BaseComponent {
           })
         );
       
-      case 'salesman_barman':
+      case '/salesman_barman/':
         return this.salesmanBarmanService.getApplicationsByStatus().pipe(
           catchError(err => {
             console.error('Failed to fetch salesman/barman applications:', err);
@@ -388,7 +388,7 @@ export class DashboardComponent extends BaseComponent {
     }
   }
 
-  // Show permission error to user - FIXED: Using injected snackBar
+  // Show permission error to user
   private showPermissionError(resourceType: string): void {
     const message = `You don't have permission to access ${resourceType}. Please contact your administrator.`;
     
@@ -398,7 +398,7 @@ export class DashboardComponent extends BaseComponent {
     });
   }
 
-  // Show generic error message - FIXED: Using injected snackBar
+  // Show generic error message
   private showErrorMessage(message: string): void {
     this.snackBar.open(message, 'Close', {
       duration: 5000,

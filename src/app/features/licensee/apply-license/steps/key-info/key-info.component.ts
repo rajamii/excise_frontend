@@ -18,37 +18,31 @@ import { MasterService } from '../../../../../core/services/master.service';
   providers: [DatePipe]
 })
 export class KeyInfoComponent implements OnInit, OnDestroy {
-
-  // Reactive form group
   keyInfoForm: FormGroup;
 
-  // Dropdown options
   licenseTypes: LicenseType[] = [];
   licenseNatures: string[] = ['Regular', 'Temporary', 'Seasonal', 'Special Event'];
   functioningStatuses: string[] = ['Yes', 'No'];
   modeOfOperations: string[] = ['Self', 'Salesman', 'Barman'];
 
-  // Emit navigation events to parent component
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  // Used for unsubscribing from observables
   private destroy$ = new Subject<void>();
 
-  // Signal-based error messages for reactive display
   errorMessages = {
-    licenseType: signal(''),
-    establishmentName: signal(''),
-    mobileNumber: signal(''),
+    license_type: signal(''),
+    establishment_name: signal(''),
+    mobile_number: signal(''),
     email: signal(''),
-    licenseNo: signal(''),
-    initialGrantDate: signal(''),
-    renewedFrom: signal(''),
-    validUpTo: signal(''),
-    yearlyLicenseFee: signal(''),
-    licenseNature: signal(''),
-    functioningStatus: signal(''),
-    modeOfOperation: signal('')
+    license_no: signal(''),
+    initial_grant_date: signal(''),
+    renewed_from: signal(''),
+    valid_up_to: signal(''),
+    yearly_license_fee: signal(''),
+    license_nature: signal(''),
+    functioning_status: signal(''),
+    mode_of_operation: signal('')
   };
 
   constructor(
@@ -56,18 +50,16 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     private masterService: MasterService,
     private datePipe: DatePipe
   ) {
-    // Retrieve data from session storage if available
     const storedValues = this.getFromSessionStorage();
 
-    // Initialize reactive form with validation
     this.keyInfoForm = this.fb.group({
-      licenseType: new FormControl(storedValues.licenseType, [Validators.required]),
-      establishmentName: new FormControl(storedValues.establishmentName, [
+      license_type: new FormControl(storedValues.license_type, [Validators.required]),
+      establishment_name: new FormControl(storedValues.establishment_name, [
         Validators.required,
         Validators.maxLength(150),
         Validators.pattern(PatternConstants.ORGANISATION_NAME),
       ]),
-      mobileNumber: new FormControl(storedValues.mobileNumber, [
+      mobile_number: new FormControl(storedValues.mobile_number, [
         Validators.required,
         Validators.pattern(PatternConstants.MOBILE)
       ]),
@@ -75,22 +67,20 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
         Validators.required,
         Validators.pattern(PatternConstants.EMAIL)
       ]),
-      licenseNo: new FormControl(storedValues.licenseNo, [
-        Validators.pattern(PatternConstants.CODE),
-        Validators.maxLength(50)
+      license_no: new FormControl(storedValues.license_no, [
+        Validators.pattern(PatternConstants.CODE)
       ]),
-      initialGrantDate: new FormControl(storedValues?.initialGrantDate ?? null),
-      renewedFrom: new FormControl(storedValues?.renewedFrom ?? null),
-      validUpTo: new FormControl(storedValues?.validUpTo ?? null),
-      yearlyLicenseFee: new FormControl(storedValues.yearlyLicenseFee, [
+      initial_grant_date: new FormControl(storedValues?.initial_grant_date ?? null),
+      renewed_from: new FormControl(storedValues?.renewed_from ?? null),
+      valid_up_to: new FormControl(storedValues?.valid_up_to ?? null),
+      yearly_license_fee: new FormControl(storedValues.yearly_license_fee, [
         Validators.pattern(PatternConstants.NUMBER)
       ]),
-      licenseNature: new FormControl(storedValues.licenseNature, [Validators.required]),
-      functioningStatus: new FormControl(storedValues.functioningStatus, [Validators.required]),
-      modeOfOperation: new FormControl(storedValues.modeOfOperation, [Validators.required])
+      license_nature: new FormControl(storedValues.license_nature, [Validators.required]),
+      functioning_status: new FormControl(storedValues.functioning_status, [Validators.required]),
+      mode_of_operation: new FormControl(storedValues.mode_of_operation, [Validators.required])
     });
 
-    // Subscribe to form changes to update session storage and errors
     this.keyInfoForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -100,51 +90,71 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Load license type dropdown data on init
     this.loadDropdownData();
   }
 
   ngOnDestroy() {
-    // Cleanup observable subscription
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // Load data for License Type dropdown from service
   private loadDropdownData(): void {
-    this.masterService.getLicenseTypes().subscribe(
-      (data: LicenseType[]) => {
+    this.masterService.getLicenseTypes().subscribe({
+      next: (data: LicenseType[]) => {
         this.licenseTypes = data;
+        console.log('✅ License types loaded:', data);
       },
-      error => {
-        console.error('Failed to load license types.', error);
+      error: (error) => {
+        console.error('❌ Failed to load license types:', error);
       }
-    );
+    });
   }
 
-  // Fetch form values from session storage if available
   private getFromSessionStorage(): Partial<LicenseApplication> {
     const storedData = sessionStorage.getItem('keyInfoData');
     return storedData ? JSON.parse(storedData) as LicenseApplication : {};
   }
 
-  // Save form values to session storage on change
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.keyInfoForm.getRawValue();
 
+    // Convert dates to YYYY-MM-DD format
     const parsedDates = {
-      initialGrantDate: this.transformValidDate(formData.initialGrantDate),
-      renewedFrom: this.transformValidDate(formData.renewedFrom),
-      validUpTo: this.transformValidDate(formData.validUpTo),
+      initial_grant_date: this.transformValidDate(formData.initial_grant_date),
+      renewed_from: this.transformValidDate(formData.renewed_from),
+      valid_up_to: this.transformValidDate(formData.valid_up_to),
     };
 
-    sessionStorage.setItem(
-      'keyInfoData',
-      JSON.stringify({
-        ...formData,
-        ...parsedDates
-      })
-    );
+    // ✅ CRITICAL: Convert to proper types - integers for IDs, numbers for numeric fields
+    const enrichedData: any = {
+      license_type: formData.license_type ? parseInt(String(formData.license_type)) : null,
+      establishment_name: formData.establishment_name,
+      mobile_number: formData.mobile_number ? Number(formData.mobile_number) : null,
+      email: formData.email,
+      license_no: formData.license_no ? Number(formData.license_no) : null,
+      ...parsedDates,
+      yearly_license_fee: formData.yearly_license_fee ? String(formData.yearly_license_fee) : null,
+      license_nature: formData.license_nature,
+      functioning_status: formData.functioning_status,
+      mode_of_operation: formData.mode_of_operation
+    };
+
+    // Validate conversions
+    if (enrichedData.license_type && isNaN(enrichedData.license_type)) {
+      console.error('❌ Invalid license_type ID:', formData.license_type);
+      enrichedData.license_type = null;
+    }
+    if (enrichedData.mobile_number && isNaN(enrichedData.mobile_number)) {
+      console.error('❌ Invalid mobile_number:', formData.mobile_number);
+      enrichedData.mobile_number = null;
+    }
+    if (enrichedData.license_no && isNaN(enrichedData.license_no)) {
+      console.error('❌ Invalid license_no:', formData.license_no);
+      enrichedData.license_no = null;
+    }
+
+    console.log('💾 Saving key info to sessionStorage:', enrichedData);
+    sessionStorage.setItem('keyInfoData', JSON.stringify(enrichedData));
   }
 
   private transformValidDate(dateValue: unknown): string | null {
@@ -153,45 +163,40 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     return isNaN(date.getTime()) ? null : this.datePipe.transform(date, 'yyyy-MM-dd');
   }
 
-
-  // Update the error message of a specific form control
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.keyInfoForm.get(field);
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
       this.errorMessages[field].set('Invalid format');
+    } else if (control?.hasError('maxlength')) {
+      this.errorMessages[field].set('Maximum 150 characters allowed');
     } else {
       this.errorMessages[field].set('');
     }
   }
 
-  // Update all error messages for all form fields
   private updateAllErrorMessages() {
     Object.keys(this.errorMessages).forEach((field) => {
       this.updateErrorMessage(field as keyof typeof this.errorMessages);
     });
   }
 
-  // Retrieve error message for a specific field
   getErrorMessage(field: keyof typeof this.errorMessages) {
     return this.errorMessages[field]();
   }
 
-  // Emit event to proceed to next step if form is valid
   proceedToNext() {
     if (this.keyInfoForm.valid) {
       this.next.emit();
     }
   }
 
-  // Reset form and remove session data
   resetForm() {
     this.keyInfoForm.reset();
     sessionStorage.removeItem('keyInfoData');
   }
 
-  // Emit event to go back to the previous step
   goBack() {
     this.back.emit();
   }

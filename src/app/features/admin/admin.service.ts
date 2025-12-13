@@ -16,6 +16,7 @@ import { Role } from '../../core/models/role.model';
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private readonly baseUrl = environment.apiBaseUrl;
+  private readonly authUrl = `${this.baseUrl}/auth`;
   private readonly mastersUrl = `${this.baseUrl}/masters/core`;
 
   constructor(private http: HttpClient) { }
@@ -24,54 +25,54 @@ export class AdminService {
 
   // Register a new user (addUser)
   addUser(user: Account): Observable<any> {
-    return this.http.post(`${this.baseUrl}/user/register/`, user);
+    return this.http.post(`${this.authUrl}/users/register/`, user);
   }
 
-  // Update existing user
+  // Update existing user (backend expects username)
   updateUser(id: number, user: Account): Observable<Account> {
-    return this.http.put<Account>(`${this.baseUrl}/user/update/${id}/`, user);
+    return this.http.put<Account>(`${this.authUrl}/users/${id}/update/`, user);
   }
 
   // Get all users
   getUsers(): Observable<Account[]> {
-    return this.http.get<Account[]>(`${this.baseUrl}/user/list/?username=all`);
+    return this.http.get<Account[]>(`${this.authUrl}/users/`);
   }
 
   // Get user by username
-  getUserByUsername(username: string): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/user/detail/${username}/`);
+  getUserByUsername(id: string | number): Observable<Account> {
+    return this.http.get<Account>(`${this.authUrl}/users/${id}/detail/`);
   }
 
-  // Get currently logged-in user
+  // Get currently logged-in user (backend: detail/me/)
   getCurrentUser(): Observable<Account> {
-    return this.http.get<Account>(`${this.baseUrl}/user/detail/`);
+    return this.http.get<Account>(`${this.authUrl}/users/me/`);
   }
 
-  // Delete user by ID (converted to string for API)
+  // Delete user by username (backend uses username)
   deleteUser(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/user/delete/${id}/`);
+    return this.http.delete(`${this.authUrl}/users/${id}/delete/`);
   }
 
   // ========================== ROLE MANAGEMENT ==========================
 
-  // Add new role
-  addRole(role: Role): Observable<Role> {
-    return this.http.post<Role>(`${this.baseUrl}/roles/create/`, role);
-  }
-
-  // Update existing role
-  updateRole(id: number, role: Role): Observable<Role> {
-    return this.http.put<Role>(`${this.baseUrl}/roles/update/${id}/`, role);
-  }
-
-  // Delete role
-  deleteRole(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/roles/delete/${id}/`);
-  }
-
   // Get all roles
   getRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.baseUrl}/roles/list/`);
+    return this.http.get<Role[]>(`${this.authUrl}/roles/`);
+  }
+
+  // Add a new role
+  addRole(role: Role): Observable<Role> {
+    return this.http.post<Role>(`${this.authUrl}/roles/create/`, role);
+  }
+
+  // Update an existing role
+  updateRole(id: number, role: Partial<Role>): Observable<Role> {
+    return this.http.put<Role>(`${this.authUrl}/roles/${id}/update/`, role);
+  }
+
+  // Delete a role
+  deleteRole(id: number): Observable<any> {
+    return this.http.delete(`${this.authUrl}/roles/${id}/delete/`);
   }
 
   // ========================== DISTRICT MANAGEMENT ==========================
@@ -95,7 +96,7 @@ export class AdminService {
   }
 
   getDistricts(): Observable<District[]> {
-    return this.http.get<District[]>(`${this.mastersUrl}/districts/list/`);
+    return this.http.get<District[]>(`${this.mastersUrl}/districts/`);
   }
 
   // ========================== SUBDIVISION MANAGEMENT ==========================
@@ -112,7 +113,7 @@ export class AdminService {
 
   // Updates an existing subdivision by ID
   updateSubDivision(id: number, changes: Partial<Subdivision>): Observable<Subdivision> {
-    return this.http.put<Subdivision>(`${this.mastersUrl}/subdivisions/update/${id}/`, changes);
+    return this.http.put<Subdivision>(`${this.mastersUrl}/subdivisions/${id}/update/`, changes);
   }
 
   // Alias for consistency
@@ -125,7 +126,7 @@ export class AdminService {
   }
 
   getSubdivisions(): Observable<Subdivision[]> {
-    return this.http.get<Subdivision[]>(`${this.mastersUrl}/subdivisions/list/`);
+    return this.http.get<Subdivision[]>(`${this.mastersUrl}/subdivisions/`);
   }
 
   // ========================== POLICE STATION MANAGEMENT ==========================
@@ -134,9 +135,9 @@ export class AdminService {
     return this.http.post(`${this.mastersUrl}/police-stations/create/`, policeStation);
   }
 
-  // Updates a police station's details by ID (fixed method name)
+  // Updates a police station's details by ID (fixed endpoint path)
   updatePolicestation(id: number, changes: Partial<PoliceStation>): Observable<PoliceStation> {
-    return this.http.put<PoliceStation>(`${this.mastersUrl}/policestations/update/${id}/`, changes);
+    return this.http.put<PoliceStation>(`${this.mastersUrl}/police-stations/${id}/update/`, changes);
   }
 
   // Alias for consistency
@@ -149,7 +150,7 @@ export class AdminService {
   }
 
   getPoliceStations(): Observable<PoliceStation[]> {
-    return this.http.get<PoliceStation[]>(`${this.mastersUrl}/policestations/list/`);
+    return this.http.get<PoliceStation[]>(`${this.mastersUrl}/police-stations/`);
   }
 
   // ========================== LICENSE TYPE MANAGEMENT ==========================
@@ -167,7 +168,7 @@ export class AdminService {
   }
 
   getLicenseTypes(): Observable<LicenseType[]> {
-    return this.http.get<LicenseType[]>(`${this.mastersUrl}/licensetypes/list/`);
+    return this.http.get<LicenseType[]>(`${this.mastersUrl}/license-types/`);
   }
 
   // ========================== LICENSE CATEGORY MANAGEMENT ==========================
@@ -185,13 +186,13 @@ export class AdminService {
   }
 
   getLicenseCategories(): Observable<LicenseCategory[]> {
-    return this.http.get<LicenseCategory[]>(`${this.mastersUrl}/licensecategories/list/`);
+    return this.http.get<LicenseCategory[]>(`${this.mastersUrl}/license-categories/`);
   }
 
   // ========================== LICENSE SUBCATEGORY MANAGEMENT ==========================
 
   getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
-    return this.http.get<LicenseSubcategory[]>(`${this.mastersUrl}/license-subcategories/list/`);
+    return this.http.get<LicenseSubcategory[]>(`${this.mastersUrl}/license-subcategories/`);
   }
 
   addLicenseSubcategory(subcategory: LicenseSubcategory): Observable<LicenseSubcategory> {
@@ -199,35 +200,35 @@ export class AdminService {
   }
 
   updateLicenseSubcategory(id: number, subcategory: Partial<LicenseSubcategory>): Observable<LicenseSubcategory> {
-    return this.http.put<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/update/${id}/`, subcategory);
+    return this.http.put<LicenseSubcategory>(`${this.mastersUrl}/license-subcategories/${id}/update/`, subcategory);
   }
 
   deleteLicenseSubcategory(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.mastersUrl}/license-subcategories/delete/${id}/`);
+    return this.http.delete<void>(`${this.mastersUrl}/license-subcategories/${id}/delete/`);
   }
 
   // ========================== LICENSE TITLE MANAGEMENT ==========================
 
   getLicenseTitles(): Observable<LicenseTitle[]> {
-    return this.http.get<LicenseTitle[]>(`${this.mastersUrl}/licensetitles/list/`);
+    return this.http.get<LicenseTitle[]>(`${this.mastersUrl}/license-titles/`);
   }
 
   addLicenseTitle(title: LicenseTitle): Observable<LicenseTitle> {
-    return this.http.post<LicenseTitle>(`${this.mastersUrl}/licensetitles/create/`, title);
+    return this.http.post<LicenseTitle>(`${this.mastersUrl}/license-titles/create/`, title);
   }
 
   updateLicenseTitle(id: number, title: Partial<LicenseTitle>): Observable<LicenseTitle> {
-    return this.http.put<LicenseTitle>(`${this.mastersUrl}/licensetitles/update/${id}/`, title);
+    return this.http.put<LicenseTitle>(`${this.mastersUrl}/license-titles/${id}/update/`, title);
   }
 
   deleteLicenseTitle(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.mastersUrl}/licensetitles/delete/${id}/`);
+    return this.http.delete<void>(`${this.mastersUrl}/license-titles/${id}/delete/`);
   }
 
   // ========================== ROAD MANAGEMENT ==========================
 
   getRoads(): Observable<Road[]> {
-    return this.http.get<Road[]>(`${this.mastersUrl}/roads/list/`);
+    return this.http.get<Road[]>(`${this.mastersUrl}/roads/`);
   }
 
   addRoad(road: Road): Observable<Road> {
@@ -235,10 +236,10 @@ export class AdminService {
   }
 
   updateRoad(id: number, road: Partial<Road>): Observable<Road> {
-    return this.http.put<Road>(`${this.mastersUrl}/roads/update/${id}/`, road);
+    return this.http.put<Road>(`${this.mastersUrl}/roads/${id}/update/`, road);
   }
 
   deleteRoad(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.mastersUrl}/roads/delete/${id}/`);
+    return this.http.delete<void>(`${this.mastersUrl}/roads/${id}/delete/`);
   }
 }

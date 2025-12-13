@@ -220,9 +220,27 @@ export class LoginComponent extends BaseComponent {
   }
 
   private handleAuthResponse(res: any): void {
+    console.log('Login response:', res);
+    
+    // Handle different response structures
+    let accessToken: string | null = null;
+    let refreshToken: string | null = null;
+
     if (res.authenticatedUser?.access && res.authenticatedUser?.refresh) {
-      localStorage.setItem('access', res.authenticatedUser.access);
-      localStorage.setItem('refresh', res.authenticatedUser.refresh);
+      accessToken = res.authenticatedUser.access;
+      refreshToken = res.authenticatedUser.refresh;
+    } else if (res.access && res.refresh) {
+      accessToken = res.access;
+      refreshToken = res.refresh;
+    } else if (res.token && res.refresh_token) {
+      accessToken = res.token;
+      refreshToken = res.refresh_token;
+    }
+
+    if (accessToken && refreshToken) {
+      localStorage.setItem('access', accessToken);
+      localStorage.setItem('refresh', refreshToken);
+      console.log('Tokens stored successfully');
 
       this.accountService.identity(true).subscribe({
         next: (user) => {
@@ -232,9 +250,14 @@ export class LoginComponent extends BaseComponent {
             alert('Failed to fetch user details. Please log in again.');
           }
         },
+        error: (err) => {
+          console.error('Error fetching user details:', err);
+          alert('Failed to fetch user details. Please log in again.');
+        }
       });
     } else {
-      alert('Authentication failed.');
+      console.error('Invalid login response structure:', res);
+      alert('Authentication failed. Invalid response from server.');
     }
   }
 

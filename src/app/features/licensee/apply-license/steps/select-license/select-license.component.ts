@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { District } from '../../../../../core/models/district.model';
@@ -17,109 +17,130 @@ import { MasterService } from '../../../../../core/services/master.service';
   styleUrl: './select-license.component.scss',
 })
 export class SelectLicenseComponent implements OnInit, OnDestroy {
-  // Reactive form instance
   selectLicenseForm: FormGroup;
 
-  // Dropdown data
   districts: District[] = [];
   private subdivisions: Subdivision[] = [];
   filteredSubdivisions: Subdivision[] = [];
   licenseCategories: LicenseCategory[] = [];
-
-  // Static license types
   licenses: string[] = ['New'];
 
-  // Event emitters for navigation
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  // Used to unsubscribe from observables
   private destroy$ = new Subject<void>();
+  private dataLoaded = false;
 
-  // Signal-based error messages
   errorMessages = {
-    exciseDistrict: signal(''),
-    licenseCategory: signal(''),
-    exciseSubdivision: signal(''),
+    excise_district: signal(''),
+    license_category: signal(''),
+    excise_subdivision: signal(''),
     license: signal('')
   };
 
   constructor(private fb: FormBuilder, private masterService: MasterService) {
-    // Preload saved data from session storage
     const storedValues = this.getFromSessionStorage();
 
-    // Initialize form group with default or stored values
     this.selectLicenseForm = this.fb.group({
-      exciseDistrict: new FormControl(storedValues.exciseDistrict, [Validators.required]),
-      licenseCategory: new FormControl(storedValues.licenseCategory, [Validators.required]),
-      exciseSubdivision: new FormControl(storedValues.exciseSubdivision, [Validators.required]),
+      excise_district: new FormControl(storedValues.excise_district, [Validators.required]),
+      license_category: new FormControl(storedValues.license_category, [Validators.required]),
+      excise_subdivision: new FormControl(storedValues.excise_subdivision, [Validators.required]),
       license: new FormControl(storedValues.license || 'New', [Validators.required]),
     });
 
-    // Save form to session storage on change and update validation messages
     this.selectLicenseForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.saveToSessionStorage();
       this.updateAllErrorMessages();
     });
   }
 
-  // Lifecycle hook - Component init
   ngOnInit() {
     this.loadDropdownData();
   }
 
-  // Lifecycle hook - Cleanup
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // Load dropdown values from service
   private loadDropdownData(): void {
-    this.masterService.getDistrict().subscribe({
-      next: (data: District[]) => this.districts = data,
-      error: (error) => console.error('Error fetching districts:', error)
-    });
-
-    this.masterService.getSubdivision().subscribe({
-      next: (data: Subdivision[]) => {
-        this.subdivisions = data;
-
-        // After loading subdivisions, trigger filtering using saved district
-        const storedDistrict = this.selectLicenseForm.get('exciseDistrict')?.value;
+    forkJoin({
+      districts: this.masterService.getDistrict(),
+      subdivisions: this.masterService.getSubdivision(),
+      licenseCategories: this.masterService.getLicenseCategories()
+    }).subscribe({
+      next: ({ districts, subdivisions, licenseCategories }) => {
+        this.districts = districts;
+        this.subdivisions = subdivisions;
+        this.licenseCategories = licenseCategories;
+        this.dataLoaded = true;
+        
+        console.log('✅ Master data loaded');
+        
+        const storedDistrict = this.selectLicenseForm.get('excise_district')?.value;
         if (storedDistrict) {
           this.onDistrictChange(storedDistrict);
         }
       },
-      error: (error) => console.error('Failed to load subdivisions.', error)
-    });
-
-    this.masterService.getLicenseCategories().subscribe({
-      next: (data: LicenseCategory[]) => this.licenseCategories = data,
-      error: (error) => console.error('Failed to load license categories.', error)
+      error: (error) => {
+        console.error('❌ Failed to load master data:', error);
+      }
     });
   }
 
-  // Filter sub-divisions when district changes
-  onDistrictChange(selectedDistrictCode: number): void {
+  onDistrictChange(districtId: number): void {
+    if (!this.dataLoaded || this.districts.length === 0 || this.subdivisions.length === 0) {
+      return;
+    }
+    
+    const district = this.districts.find(d => d.id === districtId);
+    
+    if (!district) {
+      console.warn('⚠️ District not found for ID:', districtId);
+      this.filteredSubdivisions = [];
+      return;
+    }
+
+    console.log('🔍 Filtering subdivisions for district code:', district.districtCode);
+    
     this.filteredSubdivisions = this.subdivisions.filter(
-      subdiv => subdiv.districtCode === selectedDistrictCode
+      subdiv => subdiv.districtCode === district.districtCode
     );
+    
+    console.log('✅ Filtered subdivisions:', this.filteredSubdivisions);
   }
 
-  // Read form data from session storage
   private getFromSessionStorage(): Partial<LicenseApplication> {
     const storedData = sessionStorage.getItem('selectLicenseData');
     return storedData ? JSON.parse(storedData) as LicenseApplication : {};
   }
 
-  // Save form data to session storage
   private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.selectLicenseForm.getRawValue(); 
-    sessionStorage.setItem('selectLicenseData', JSON.stringify(formData));
+    const formData: Partial<LicenseApplication> = this.selectLicenseForm.getRawValue();
+    
+    // ✅ CRITICAL: Store BOTH the ID and the CODE
+    const enrichedData: any = { ...formData };
+    
+    // Get district code
+    if (formData.excise_district) {
+      const district = this.districts.find(d => d.id === formData.excise_district);
+      if (district) {
+        enrichedData.excise_district_code = district.districtCode;
+      }
+    }
+    
+    // Get subdivision code
+    if (formData.excise_subdivision) {
+      const subdivision = this.subdivisions.find(s => s.id === formData.excise_subdivision);
+      if (subdivision) {
+        enrichedData.excise_subdivision_code = subdivision.subdivisionCode;
+      }
+    }
+    
+    console.log('💾 Saving to session:', enrichedData);
+    sessionStorage.setItem('selectLicenseData', JSON.stringify(enrichedData));
   }
 
-  // Update specific field error message
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.selectLicenseForm.get(field);
     if (control?.hasError('required')) {
@@ -129,32 +150,27 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Update all field error messages
   private updateAllErrorMessages() {
     Object.keys(this.errorMessages).forEach((field) => {
       this.updateErrorMessage(field as keyof typeof this.errorMessages);
     });
   }
 
-  // Used in template to retrieve error message
   getErrorMessage(field: keyof typeof this.errorMessages) {
     return this.errorMessages[field]();
   }
 
-  // Emit event if form is valid
   proceedToNext() {
     if (this.selectLicenseForm.valid) {
       this.next.emit();
     }
   }
-  
-  // Reset form and remove saved session data
+
   resetForm() {
     this.selectLicenseForm.reset();
     sessionStorage.removeItem('selectLicenseData');
   }
 
-  // Emit back navigation
   goBack() {
     this.back.emit();
   }

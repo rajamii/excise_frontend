@@ -7,28 +7,33 @@ import { environment } from '../../../environments/environment';
     providedIn: 'root'
 })
 export class CompanyCollaborationService {
-    private baseUrl = `${environment.apiBaseUrl}/masters/company-collaboration/collaboration/`;
+    // Backend repository does not expose collaboration endpoints; keep a safe guard.
+    private baseUrl = `${environment.apiBaseUrl}`;
 
     constructor(private http: HttpClient) { }
 
     createCollaboration(data: any): Observable<any> {
-        return this.http.post(this.baseUrl, data);
+        return this.unavailable();
     }
 
     getCollaborations(params: any = {}): Observable<any> {
-        return this.http.get(this.baseUrl, { params });
+        return this.unavailable();
     }
 
     getCollaboration(id: number): Observable<any> {
-        return this.http.get(`${this.baseUrl}${id}/`);
+        return this.unavailable();
     }
 
     updateCollaboration(id: number, data: any): Observable<any> {
-        return this.http.patch(`${this.baseUrl}${id}/`, data);
+        return this.unavailable();
     }
 
     deleteCollaboration(id: number): Observable<any> {
-        return this.http.delete(`${this.baseUrl}${id}/`);
+        return this.unavailable();
+    }
+
+    private unavailable(): Observable<never> {
+        throw new Error('Company collaboration APIs are not available in the backend.');
     }
 }
 

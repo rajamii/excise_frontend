@@ -30,8 +30,7 @@
         <!-- SUBDIVISION (filtered by district) -->
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division <span class="required"></span></mat-label>
-          <mat-select formControlName="siteSubdivision" required
-            [disabled]="!siteDetailsForm.get('siteDistrict')?.value">
+          <mat-select formControlName="siteSubdivision" required>
             @if (siteSubdivisions.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
             <mat-option disabled>No subdivisions available</mat-option>
             }
@@ -53,8 +52,7 @@
         <!-- POLICE STATION (filtered by subdivision) -->
         <mat-form-field appearance="outline">
           <mat-label>Police Station <span class="required"></span></mat-label>
-          <mat-select formControlName="policeStation" required
-            [disabled]="!siteDetailsForm.get('siteSubdivision')?.value">
+          <mat-select formControlName="policeStation" required>
             @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value) {
             <mat-option disabled>No police stations available</mat-option>
             }
@@ -131,7 +129,7 @@
         <!-- ROAD (filtered by district) -->
         <mat-form-field appearance="outline">
           <mat-label>Road Name <span class="required"></span></mat-label>
-          <mat-select formControlName="roadName" required [disabled]="!siteDetailsForm.get('siteDistrict')?.value">
+          <mat-select formControlName="roadName" required>
             @if (roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
             <mat-option disabled>No roads available</mat-option>
             }
@@ -215,7 +213,8 @@
         </div>
 
         <!-- 2. NOC question – shown only when siteOwned === 'No' -->
-        <div class="radio-question" *ngIf="siteDetailsForm.get('siteOwned')?.value === 'No'">
+        @if (siteDetailsForm.get('siteOwned')?.value === 'No') {
+        <div class="radio-question">
           <label class="question-label">
             If no, whether NOC along with the Parcha from Land Lord regarding the use of
             Premises to run the Excise License Applied for, has been obtained? <span class="required">*</span>
@@ -228,8 +227,9 @@
           <mat-error class="radio-error">{{ getErrorMessage('nocObtained') }}</mat-error>
           }
         </div>
+        }
 
-        <!-- 3. Trade License Coverage - ✅ NEW FIELD -->
+        <!-- 3. Trade License Coverage -->
         <div class="radio-question">
           <label class="question-label">
             Whether the proposed shop is covered by Trade License? <span class="required">*</span>
@@ -246,7 +246,8 @@
       </div>
 
       <!-- Document Upload Section – Only show if site is NOT owned -->
-      <div *ngIf="siteDetailsForm.get('siteOwned')?.value === 'No'">
+      @if (siteDetailsForm.get('siteOwned')?.value === 'No') {
+      <div>
         <h5 class="section-title">Upload Documents</h5>
         <div class="documents-upload-container">
           @for (doc of documents; track doc.name) {
@@ -298,6 +299,7 @@
           }
         </div>
       </div>
+      }
     </mat-card-content>
 
     <mat-card-actions>

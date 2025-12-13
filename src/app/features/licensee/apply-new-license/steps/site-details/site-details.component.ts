@@ -4,7 +4,6 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
-import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 import { District } from '../../../../../core/models/district.model';
@@ -48,15 +47,15 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
   constructionTypes: string[] = ['RCC', 'Wooden Structure'];
 
-  // Document upload configuration
+  // Document upload configuration (backend field name: noc_landlord)
   documents: DocumentUpload[] = [
     {
-      name: 'nocLandlord',
+      name: 'noc_landlord',
       label: 'NOC from the Land lord regarding the use of the Premises',
       file: null,
       fileUrl: '',
       required: false,
-      formats: '.jpg, .png, .pdf, .doc, .docx'
+      formats: '.jpg,.jpeg,.png,.pdf'
     },
   ];
 
@@ -80,7 +79,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     breadth: signal(''),
     siteOwned: signal(''),
     nocObtained: signal(''),
-    tradeLicenseCovered: signal(''), // ✅ NEW
+    tradeLicenseCovered: signal(''),
   };
 
   constructor(
@@ -89,17 +88,19 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     private licenseApplicationService: LicenseApplicationService,
     private cdr: ChangeDetectorRef
   ) {
-    const storedValues = this.getFromSessionStorage();
+    const storedValues: any = this.getFromSessionStorage();
+    const hasDistrict = !!storedValues.siteDistrict;
+    const hasSubdivision = !!storedValues.siteSubdivision;
 
     this.siteDetailsForm = this.fb.group({
       siteDistrict: new FormControl(storedValues.siteDistrict ?? null, [Validators.required]),
-      siteSubdivision: new FormControl(storedValues.siteSubdivision, [Validators.required]),
-      policeStation: new FormControl(storedValues.policeStation, [Validators.required]),
-      locationCategory: new FormControl(storedValues.locationCategory, [Validators.required]),
-      locationName: new FormControl(storedValues.locationName, [Validators.required]),
-      wardName: new FormControl(storedValues.wardName, [Validators.required]),
-      businessAddress: new FormControl(storedValues.businessAddress, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl(storedValues.roadName, [Validators.required]),
+      siteSubdivision: new FormControl({value: storedValues.siteSubdivision ?? null, disabled: !hasDistrict}, [Validators.required]),
+      policeStation: new FormControl({value: storedValues.policeStation ?? null, disabled: !hasSubdivision}, [Validators.required]),
+      locationCategory: new FormControl(storedValues.locationCategory ?? null, [Validators.required]),
+      locationName: new FormControl(storedValues.locationName ?? null, [Validators.required]),
+      wardName: new FormControl(storedValues.wardName ?? null, [Validators.required]),
+      businessAddress: new FormControl(storedValues.businessAddress ?? null, [Validators.required, Validators.maxLength(500)]),
+      roadName: new FormControl({value: storedValues.roadName ?? null, disabled: !hasDistrict}, [Validators.required]),
       pinCode: new FormControl(storedValues.pinCode, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)
@@ -114,10 +115,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         Validators.pattern(/^\d+(\.\d{1,2})?$/)
       ]),
 
-      // Radio button fields
+      // Radio button fields (Backend expects "Yes"/"No" strings for ChoiceFields)
       siteOwned: new FormControl(storedValues.siteOwned, [Validators.required]),
       nocObtained: new FormControl(storedValues.nocObtained),
-      tradeLicenseCovered: new FormControl(storedValues.tradeLicenseCovered, [Validators.required]), // ✅ NEW
+      tradeLicenseCovered: new FormControl(storedValues.tradeLicenseCovered, [Validators.required]),
     });
 
     this.setupConditionalValidation();
@@ -139,14 +140,26 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .subscribe(districtId => {
         console.log('🏛️ District changed to:', districtId);
         this.onDistrictChange(districtId);
+        const siteSubdivisionCtrl = this.siteDetailsForm.get('siteSubdivision');
+        const roadNameCtrl = this.siteDetailsForm.get('roadName');
+        if (districtId) {
+          siteSubdivisionCtrl?.enable();
+          roadNameCtrl?.enable();
+        } else {
+          siteSubdivisionCtrl?.disable();
+          roadNameCtrl?.disable();
+        }
       });
 
     this.siteDetailsForm.get('siteSubdivision')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(subdivisionId => {
+        const policeStationCtrl = this.siteDetailsForm.get('policeStation');
         if (subdivisionId) {
+          policeStationCtrl?.enable();
           this.filterPoliceStations(subdivisionId);
         } else {
+          policeStationCtrl?.disable();
           this.sitePoliceStations = [];
           this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
         }
@@ -194,14 +207,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   private updateNocRequirements(siteOwnedValue: 'Yes' | 'No' | null): void {
     const nocObtainedCtrl = this.siteDetailsForm.get('nocObtained');
-    const nocDoc = this.documents.find(d => d.name === 'nocLandlord');
+    const nocDoc = this.documents.find(d => d.name === 'noc_landlord');
 
     if (siteOwnedValue === 'Yes') {
-      // Clear value and validators
       nocObtainedCtrl?.setValue(null);
       nocObtainedCtrl?.clearValidators();
 
-      // Clear document
       if (nocDoc) {
         nocDoc.required = false;
         if (nocDoc.file) {
@@ -212,7 +223,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         }
       }
     } else if (siteOwnedValue === 'No') {
-      // Apply required validator
       nocObtainedCtrl?.setValidators(Validators.required);
       if (nocDoc) {
         nocDoc.required = true;
@@ -274,13 +284,24 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   onDistrictChange(districtId: number) {
-    this.filterSubdivisions(districtId);
-    this.filterRoads(districtId);
-    this.siteDetailsForm.patchValue({
-      siteSubdivision: null,
-      policeStation: null,
-      roadName: null
-    }, { emitEvent: false });
+    if (districtId) {
+      this.filterSubdivisions(districtId);
+      this.filterRoads(districtId);
+      this.siteDetailsForm.patchValue({
+        siteSubdivision: null,
+        policeStation: null,
+        roadName: null
+      }, { emitEvent: false });
+    } else {
+      this.siteSubdivisions = [];
+      this.roadNames = [];
+      this.sitePoliceStations = [];
+      this.siteDetailsForm.patchValue({
+        siteSubdivision: null,
+        policeStation: null,
+        roadName: null
+      }, { emitEvent: false });
+    }
   }
 
   private filterSubdivisions(districtId: number): void {
@@ -313,21 +334,27 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     }
 
     console.log('🔍 Filtering roads for district:', selectedDistrict.district, '(id:', districtId, ')');
+    console.log('🔍 Total roads available:', this.allRoads.length);
 
     this.roadNames = this.allRoads
       .filter(road => {
-        if (typeof road.district === 'number') {
-          return road.district === districtId;
+        let roadDistrictId: number | undefined;
+        
+        // Handle multiple possible data structures from the API
+        if ((road as any).districtId !== undefined) {
+          roadDistrictId = (road as any).districtId;
+        } else if (typeof road.district === 'number') {
+          roadDistrictId = road.district;
         } else if (road.district && typeof road.district === 'object') {
-          const districtObj = road.district as District;
-          const matchById = districtObj.id === districtId;
-          const matchByName = districtObj.district === selectedDistrict.district;
-          return matchById || matchByName;
+          roadDistrictId = (road.district as District).id;
+        } else if ((road as any).district_id !== undefined) {
+          roadDistrictId = (road as any).district_id;
         }
-        return false;
+        
+        return roadDistrictId === districtId;
       })
       .map(road => road.roadName)
-      .filter((name): name is string => name !== undefined && name !== null)
+      .filter((name): name is string => name !== undefined && name !== null && name.trim() !== '')
       .sort();
 
     console.log('✅ Filtered road names:', this.roadNames);
@@ -366,7 +393,22 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const doc = this.documents.find(d => d.name === docName);
     if (!doc) return;
 
-    // Revoke old URL if exists
+    // File size validation (< 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5 MB');
+      event.target.value = '';
+      return;
+    }
+
+    // Format validation
+    const allowed = doc.formats.split(',').map(f => f.trim());
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowed.includes(ext)) {
+      alert(`Allowed formats: ${doc.formats}`);
+      event.target.value = '';
+      return;
+    }
+
     if (doc.fileUrl) {
       URL.revokeObjectURL(doc.fileUrl);
       doc.fileUrl = '';
@@ -375,6 +417,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     doc.file = file;
     doc.fileUrl = URL.createObjectURL(file);
     this.licenseApplicationService.setSiteDocument(docName, file);
+    console.log(`✅ Document ${docName} uploaded:`, file.name);
     this.cdr.detectChanges();
   }
 
@@ -395,7 +438,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private restoreDistrictIfNeeded(): void {
-    const stored = this.getFromSessionStorage();
+    const stored: any = this.getFromSessionStorage();
     let districtId: number | undefined;
 
     if (stored.siteDistrict != null) {
@@ -417,7 +460,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private restoreSubdivisionIfNeeded(): void {
-    const stored = this.getFromSessionStorage();
+    const stored: any = this.getFromSessionStorage();
     if (stored.siteSubdivision && this.siteSubdivisions.length > 0) {
       const valid = this.siteSubdivisions.some(s => s.id === stored.siteSubdivision);
       if (valid) {
@@ -427,7 +470,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private restorePoliceStationIfNeeded(): void {
-    const stored = this.getFromSessionStorage();
+    const stored: any = this.getFromSessionStorage();
     if (stored.policeStation && this.sitePoliceStations.length > 0) {
       const valid = this.sitePoliceStations.some(p => p.id === stored.policeStation);
       if (valid) {
@@ -437,7 +480,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private restoreRoadIfNeeded(): void {
-    const stored = this.getFromSessionStorage();
+    const stored: any = this.getFromSessionStorage();
     if (stored.roadName && this.roadNames.length > 0) {
       const valid = this.roadNames.includes(stored.roadName);
       if (valid) {
@@ -461,7 +504,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       .every(doc => !!doc.file);
   }
 
-  private getFromSessionStorage(): Partial<LicenseApplication> {
+  private getFromSessionStorage(): any {
     const storedData = sessionStorage.getItem('siteDetailsData');
     if (!storedData) return {};
 
@@ -477,7 +520,47 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.siteDetailsForm.getRawValue();
+    const formData: any = this.siteDetailsForm.getRawValue();
+    
+    // ✅ Store CODES for CodeRelatedField (backend expects codes, not IDs)
+    if (formData.siteDistrict) {
+      const district = this.districts.find(d => d.id === formData.siteDistrict);
+      if (district) {
+        formData.site_district_code = district.districtCode;
+      }
+    }
+    
+    if (formData.siteSubdivision) {
+      const subdivision = this.allSubdivisions.find(s => s.id === formData.siteSubdivision);
+      if (subdivision) {
+        formData.site_subdivision_code = subdivision.subdivisionCode;
+      }
+    }
+    
+    if (formData.policeStation) {
+      const policeStation = this.allPoliceStations.find(p => p.id === formData.policeStation);
+      if (policeStation) {
+        formData.police_station_code = policeStation.policeStationCode;
+      }
+    }
+    
+    // ✅ Map to backend field names (CharField)
+    formData.location_category = formData.locationCategory;
+    formData.location_name = formData.locationName;
+    formData.ward_name = formData.wardName;
+    formData.business_address = formData.businessAddress;
+    formData.road_name = formData.roadName;
+    formData.pin_code = formData.pinCode;
+    formData.construction_type = formData.constructionType;
+    
+    // ✅ CRITICAL FIX: site_owned must be "Yes" or "No", NOT "Owned" or "Rented"
+    // Store the raw "Yes"/"No" value directly - NO CONVERSION
+    formData.site_owned = formData.siteOwned;  // Keep as "Yes" or "No"
+    
+    // ✅ ChoiceField: "Yes"/"No"
+    formData.noc_obtained = formData.nocObtained;
+    formData.trade_license_covered = formData.tradeLicenseCovered;
+    
     console.log('💾 Saving Site Details:', formData);
     sessionStorage.setItem('siteDetailsData', JSON.stringify(formData));
   }

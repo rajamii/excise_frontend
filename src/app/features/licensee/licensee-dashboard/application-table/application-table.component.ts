@@ -14,54 +14,41 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-export class ApplicationTableComponent implements OnChanges{
-  // Input properties to receive data from parent component
+export class ApplicationTableComponent implements OnChanges {
   @Input() title!: string;
   @Input() displayedColumns!: string[];
   @Input() dataSource!: MatTableDataSource<LicenseApplication>;
-  @Input() tableType!: string;  // For conditional rendering of action buttons
+  @Input() tableType!: string;
 
   objections: Objection[] = [];
   unresolvedObjectionAppIds: Set<string> = new Set();
 
-  // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
   @Output() print = new EventEmitter<any>();
   @Output() payment = new EventEmitter<any>();
   @Output() movement = new EventEmitter<any>();
 
-  constructor(
-    protected licenseAppService: LicenseApplicationService,
-    private dialog: MatDialog
-  ) { }
-
-  // Mapping of internal application stages to user-friendly display strings
   stageDisplayMapping: { [key: string]: string } = {
     level_1: 'Under Review by Level 1',
     level_2: 'Under Review by Level 2',
     level_3: 'Under Review by Level 3',
     level_4: 'Under Review by Level 4',
     level_5: 'Under Review by Level 5',
-
     awaiting_payment: 'Awaiting Payment',
-
     level_1_objection: 'Objection Raised by Level 1',
     level_2_objection: 'Objection Raised by Level 2',
     level_3_objection: 'Objection Raised by Level 3',
     level_4_objection: 'Objection Raised by Level 4',
     level_5_objection: 'Objection Raised by Level 5',
-    
     rejected_by_level_1: 'Rejected by Level 1',
     rejected_by_level_2: 'Rejected by Level 2',
     rejected_by_level_3: 'Rejected by Level 3',
     rejected_by_level_4: 'Rejected by Level 4',
     rejected_by_level_5: 'Rejected by Level 5',
-
     approved: 'Application Approved',
     rejected: 'Application Rejected'
   };
 
-  // Mapping for displaying roles
   roleDisplayMapping: { [key: string]: string } = {
     level_1: 'Level 1',
     level_2: 'Level 2',
@@ -71,21 +58,26 @@ export class ApplicationTableComponent implements OnChanges{
     licensee: 'Licensee',
   };
 
-  // Angular lifecycle hook that runs when input properties change
+  constructor(
+    protected licenseAppService: LicenseApplicationService,
+    private dialog: MatDialog
+  ) { }
+
   ngOnChanges() {
     this.unresolvedObjectionAppIds.clear();
 
     this.dataSource?.data?.forEach(app => {
-      this.licenseAppService.getObjections(app.applicationId).subscribe((objections) => {
+      // ✅ FIXED Line 79: Use application_id
+      this.licenseAppService.getObjections(app.application_id!).subscribe((objections) => {
         const hasUnresolved = objections?.some(obj => obj.isResolved === false);
         if (hasUnresolved) {
-          this.unresolvedObjectionAppIds.add(app.applicationId);
+          // ✅ FIXED Line 82: Use application_id
+          this.unresolvedObjectionAppIds.add(app.application_id!);
         }
       });
     });
   }
 
-  // Print the selected application
   onPrint(application: any) {
     this.dialog.open(PrintApplicationComponent, {
       width: '450px',
@@ -93,7 +85,6 @@ export class ApplicationTableComponent implements OnChanges{
     });
   }
   
-  // Method to view application details
   onView(application: any) {
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
@@ -103,13 +94,11 @@ export class ApplicationTableComponent implements OnChanges{
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
-        // Refresh table or show success notification
         location.reload();
       }
     });
   }
   
-  // Opens a dialog to show the movement history of the selected application
   viewMovement(application: any): void {
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',        

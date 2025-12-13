@@ -1,8 +1,5 @@
-<!-- Reactive Form for Key Info -->
 <form [formGroup]="keyInfoForm">
   <mat-card>
-
-    <!-- Header Section -->
     <mat-card-header>
       <div class="heading">Key Info</div>
       <div class="validation">* Marked Fields Are Mandatory</div>
@@ -14,16 +11,16 @@
         <!-- License Type Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>License Type</mat-label>
-          <mat-select formControlName="licenseType" required>
+          <mat-select formControlName="license_type" required>
             @for (licenseType of licenseTypes; track licenseType) {
               <mat-option [value]="licenseType.id">
                 {{ licenseType.licenseType }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseType'].invalid) {
+          @if (keyInfoForm.controls['license_type'].invalid) {
             <mat-error>
-              {{ getErrorMessage('licenseType') }}
+              {{ getErrorMessage('license_type') }}
             </mat-error>
           }
         </mat-form-field>
@@ -33,15 +30,15 @@
           <mat-label>Establishment Name</mat-label>
           <textarea matInput
             placeholder="Enter Establishment Name (max 150 characters)"
-            formControlName="establishmentName"
+            formControlName="establishment_name"
             cdkTextareaAutosize
             cdkAutosizeMinRows="1"
             cdkAutosizeMaxRows="5"
             required>
           </textarea>
-          @if (keyInfoForm.controls['establishmentName'].invalid) {
+          @if (keyInfoForm.controls['establishment_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('establishmentName') }}
+              {{ getErrorMessage('establishment_name') }}
             </mat-error>
           }
         </mat-form-field>
@@ -49,10 +46,10 @@
         <!-- Contact Number -->
         <mat-form-field appearance="outline">
           <mat-label>Contact Number</mat-label>
-          <input matInput placeholder="Enter Contact Number" type="tel" formControlName="mobileNumber" required />
-          @if (keyInfoForm.controls['mobileNumber'].invalid) {
+          <input matInput placeholder="Enter Contact Number" type="tel" formControlName="mobile_number" required />
+          @if (keyInfoForm.controls['mobile_number'].invalid) {
             <mat-error>
-              {{ getErrorMessage('mobileNumber') }}
+              {{ getErrorMessage('mobile_number') }}
             </mat-error>
           }
         </mat-form-field>
@@ -71,24 +68,23 @@
         <!-- Manual License Number -->
         <mat-form-field appearance="outline">
           <mat-label>License Number (Manual System)</mat-label>
-          <textarea matInput
-            placeholder="Enter License Number if any (max 50 characters)"
-            formControlName="licenseNo"
-            cdkTextareaAutosize
-            cdkAutosizeMinRows="1"
-            cdkAutosizeMaxRows="5">
-          </textarea>
+          <input matInput placeholder="Enter License Number if any" type="number" formControlName="license_no" />
+          @if (keyInfoForm.controls['license_no'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('license_no') }}
+            </mat-error>
+          }
         </mat-form-field>
 
         <!-- Initial Grant Date -->
         <mat-form-field appearance="outline">
           <mat-label>Initial Grant Date</mat-label>
-          <input matInput [matDatepicker]="initialGrantDate" formControlName="initialGrantDate">
+          <input matInput [matDatepicker]="initialGrantDate" formControlName="initial_grant_date">
           <mat-datepicker-toggle matIconSuffix [for]="initialGrantDate"></mat-datepicker-toggle>
           <mat-datepicker #initialGrantDate></mat-datepicker>
-          @if (keyInfoForm.controls['initialGrantDate'].invalid) {
+          @if (keyInfoForm.controls['initial_grant_date'].invalid) {
             <mat-error>
-              {{ getErrorMessage('initialGrantDate') }}
+              {{ getErrorMessage('initial_grant_date') }}
             </mat-error>
           }
         </mat-form-field>
@@ -96,12 +92,12 @@
         <!-- Renewed From Date -->
         <mat-form-field appearance="outline">
           <mat-label>Renewed From</mat-label>
-          <input matInput [matDatepicker]="renewedFrom" formControlName="renewedFrom">
+          <input matInput [matDatepicker]="renewedFrom" formControlName="renewed_from">
           <mat-datepicker-toggle matIconSuffix [for]="renewedFrom"></mat-datepicker-toggle>
           <mat-datepicker #renewedFrom></mat-datepicker>
-          @if (keyInfoForm.controls['renewedFrom'].invalid) {
+          @if (keyInfoForm.controls['renewed_from'].invalid) {
             <mat-error>
-              {{ getErrorMessage('renewedFrom') }}
+              {{ getErrorMessage('renewed_from') }}
             </mat-error>
           }
         </mat-form-field>
@@ -109,12 +105,12 @@
         <!-- Valid Up To Date -->
         <mat-form-field appearance="outline">
           <mat-label>Valid Up to Date</mat-label>
-          <input matInput [matDatepicker]="validUpTo" formControlName="validUpTo">
+          <input matInput [matDatepicker]="validUpTo" formControlName="valid_up_to">
           <mat-datepicker-toggle matIconSuffix [for]="validUpTo"></mat-datepicker-toggle>
           <mat-datepicker #validUpTo></mat-datepicker>
-          @if (keyInfoForm.controls['validUpTo'].invalid) {
+          @if (keyInfoForm.controls['valid_up_to'].invalid) {
             <mat-error>
-              {{ getErrorMessage('validUpTo') }}
+              {{ getErrorMessage('valid_up_to') }}
             </mat-error>
           }
         </mat-form-field>
@@ -122,11 +118,11 @@
         <!-- Yearly License Fee -->
         <mat-form-field floatLabel="always" appearance="outline">
           <mat-label>Yearly License Fee (Rs.)</mat-label>
-          <input matInput type="number" class="example-right-align" formControlName="yearlyLicenseFee" placeholder="0" />
+          <input matInput type="text" class="example-right-align" formControlName="yearly_license_fee" placeholder="0" />
           <span matTextPrefix>₹&nbsp;</span>
-          @if (keyInfoForm.controls['yearlyLicenseFee'].invalid) {
+          @if (keyInfoForm.controls['yearly_license_fee'].invalid) {
             <mat-error>
-              {{ getErrorMessage('yearlyLicenseFee') }}
+              {{ getErrorMessage('yearly_license_fee') }}
             </mat-error>
           }
         </mat-form-field>
@@ -134,16 +130,16 @@
         <!-- License Nature Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>License Nature</mat-label>
-          <mat-select formControlName="licenseNature" required>
+          <mat-select formControlName="license_nature" required>
             @for (licenseNature of licenseNatures; track licenseNature) {
               <mat-option [value]="licenseNature">
                 {{ licenseNature }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseNature'].invalid) {
+          @if (keyInfoForm.controls['license_nature'].invalid) {
             <mat-error>
-              {{ getErrorMessage('licenseNature') }}
+              {{ getErrorMessage('license_nature') }}
             </mat-error>
           }
         </mat-form-field>
@@ -151,16 +147,16 @@
         <!-- Functioning Status Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Functioning Status</mat-label>
-          <mat-select formControlName="functioningStatus" required>
+          <mat-select formControlName="functioning_status" required>
             @for (functioningStatus of functioningStatuses; track functioningStatus) {
               <mat-option [value]="functioningStatus">
                 {{ functioningStatus }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['functioningStatus'].invalid) {
+          @if (keyInfoForm.controls['functioning_status'].invalid) {
             <mat-error>
-              {{ getErrorMessage('functioningStatus') }}
+              {{ getErrorMessage('functioning_status') }}
             </mat-error>
           }
         </mat-form-field>
@@ -168,16 +164,16 @@
         <!-- Mode of Operation Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Mode Of Operation</mat-label>
-          <mat-select formControlName="modeOfOperation" required>
+          <mat-select formControlName="mode_of_operation" required>
             @for (modeOfOperation of modeOfOperations; track modeOfOperation) {
               <mat-option [value]="modeOfOperation">
                 {{ modeOfOperation }}
               </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['modeOfOperation'].invalid) {
+          @if (keyInfoForm.controls['mode_of_operation'].invalid) {
             <mat-error>
-              {{ getErrorMessage('modeOfOperation') }}
+              {{ getErrorMessage('mode_of_operation') }}
             </mat-error>
           }
         </mat-form-field>
@@ -185,15 +181,9 @@
       </div>
     </mat-card-content>
 
-    <!-- Action Buttons -->
     <mat-card-actions>
-      <!-- Navigate back to previous step -->
       <button matButton="outlined" (click)="goBack()">Back</button>
-
-      <!-- Reset the form fields -->
       <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
-
-      <!-- Proceed to next step only if form is valid -->
       <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid">Next</button>
     </mat-card-actions>
 

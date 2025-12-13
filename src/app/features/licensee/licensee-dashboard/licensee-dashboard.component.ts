@@ -37,7 +37,7 @@ export class LicenseeDashboardComponent implements OnInit {
   rejectedApplications: ApplicationStatus[] = [];
 
   // Application Type Filter
-  selectedApplicationType: ApplicationType = 'license'; // Default to License Application
+  selectedApplicationType: ApplicationType = 'license';
   applicationTypes: ApplicationTypeOption[] = [
     { value: 'license', label: 'License Application' },
     { value: 'new_license', label: 'New License Application' }
@@ -80,7 +80,7 @@ export class LicenseeDashboardComponent implements OnInit {
 
   // Method to handle application type change
   onApplicationTypeChange(): void {
-    this.activeTable = 'default'; // Reset to default view when filter changes
+    this.activeTable = 'default';
     this.loadDashboardData();
   }
 
@@ -88,7 +88,6 @@ export class LicenseeDashboardComponent implements OnInit {
   loadDashboardData(): void {
     this.isLoading = true;
 
-    // Determine which service to call based on selected type
     const countsObservable = this.getCountsObservable();
     const applicationsObservable = this.getApplicationsObservable();
 
@@ -114,14 +113,13 @@ export class LicenseeDashboardComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading dashboard data:', error);
-        // Reset to default values on error
         this.dashboardCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
         this.clearDataSources();
       }
     });
   }
 
-  
+  // Get counts observable based on selected application type
   private getCountsObservable() {
     switch (this.selectedApplicationType) {
       case 'license':
@@ -145,7 +143,7 @@ export class LicenseeDashboardComponent implements OnInit {
     }
   }
 
-  
+  // Get applications observable based on selected application type  
   private getApplicationsObservable() {
     switch (this.selectedApplicationType) {
       case 'license':
@@ -169,7 +167,7 @@ export class LicenseeDashboardComponent implements OnInit {
     }
   }
 
-  
+  // Update data sources with fetched applications
   private updateDataSources(applications: any): void {
     this.appliedDataSource.data = applications.applied || [];
     this.pendingDataSource.data = applications.pending || [];
@@ -177,13 +175,15 @@ export class LicenseeDashboardComponent implements OnInit {
     this.rejectedDataSource.data = applications.rejected || [];
   }
 
-  
+  // Clear all data sources
   private clearDataSources(): void {
     this.appliedDataSource.data = [];
     this.pendingDataSource.data = [];
     this.approvedDataSource.data = [];
     this.rejectedDataSource.data = [];
   }
+
+  // Get human-readable label for current application type
   getApplicationTypeLabel(): string {
     const option = this.applicationTypes.find(t => t.value === this.selectedApplicationType);
     return option ? option.label : 'Application';

@@ -2,9 +2,7 @@
   <mat-card>
     <mat-card-header>
       <div class="heading">Select License</div>
-      <div class="validation">
-        * Marked Fields Are Mandatory
-      </div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
     <mat-card-content>
@@ -13,41 +11,44 @@
         <mat-form-field appearance="outline">
           <mat-label>Excise District</mat-label>
           <mat-select
-            formControlName="exciseDistrict"
+            formControlName="excise_district"
             (selectionChange)="onDistrictChange($event.value)"
             required>
-            <mat-option *ngFor="let district of districts" [value]="district.districtCode">
+            <!-- ✅ FIXED: Use .id instead of .districtCode -->
+            <mat-option *ngFor="let district of districts" [value]="district.id">
               {{ district.district }}
             </mat-option>
           </mat-select>
-          <mat-error *ngIf="selectLicenseForm.controls['exciseDistrict'].invalid">
-            {{ getErrorMessage('exciseDistrict') }}
+          <mat-error *ngIf="selectLicenseForm.controls['excise_district'].invalid">
+            {{ getErrorMessage('excise_district') }}
           </mat-error>
         </mat-form-field>
 
         <!-- License Category Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Select License Category</mat-label>
-          <mat-select formControlName="licenseCategory" required>
+          <mat-select formControlName="license_category" required>
+            <!-- ✅ CORRECT: Already using .id -->
             <mat-option *ngFor="let category of licenseCategories" [value]="category.id">
               {{ category.licenseCategory }}
             </mat-option>
           </mat-select>
-          <mat-error *ngIf="selectLicenseForm.controls['licenseCategory'].invalid">
-            {{ getErrorMessage('licenseCategory') }}
+          <mat-error *ngIf="selectLicenseForm.controls['license_category'].invalid">
+            {{ getErrorMessage('license_category') }}
           </mat-error>
         </mat-form-field>
 
         <!-- Excise Sub Division Dropdown -->
         <mat-form-field appearance="outline">
           <mat-label>Excise Sub Division</mat-label>
-          <mat-select formControlName="exciseSubdivision" required>
-            <mat-option *ngFor="let subdivision of filteredSubdivisions" [value]="subdivision.subdivisionCode">
+          <mat-select formControlName="excise_subdivision" required>
+            <!-- ✅ FIXED: Use .id instead of .subdivisionCode -->
+            <mat-option *ngFor="let subdivision of filteredSubdivisions" [value]="subdivision.id">
               {{ subdivision.subdivision }}
             </mat-option>
           </mat-select>
-          <mat-error *ngIf="selectLicenseForm.controls['exciseSubdivision'].invalid">
-            {{ getErrorMessage('exciseSubdivision') }}
+          <mat-error *ngIf="selectLicenseForm.controls['excise_subdivision'].invalid">
+            {{ getErrorMessage('excise_subdivision') }}
           </mat-error>
         </mat-form-field>
 

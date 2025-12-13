@@ -8,7 +8,8 @@ import { CompanyDocuments } from '../models/company.model';
   providedIn: 'root'
 })
 export class CompanyRegistrationService {
-  private baseUrl = `${environment.apiBaseUrl}/masters/company-registration`; // Base URL for the API
+  // Backend: transactional/company-registration/*
+  private baseUrl = `${environment.apiBaseUrl}/transactional/company-registration`;
   private companyDocs: Partial<Record<keyof CompanyDocuments, File>> = {};
 
   constructor(private http: HttpClient) { }
@@ -19,6 +20,18 @@ export class CompanyRegistrationService {
 
   getCompanyDetail(id: number): Observable<any> {
     return this.http.get(`${this.baseUrl}/${id}/`);
+  }
+
+  updateCompany(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/${id}/update/`, data);
+  }
+
+  deleteCompany(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/${id}/delete/`);
+  }
+
+  getCompanyByApplicationId(applicationId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/appid/${applicationId}/`);
   }
 
   setCompanyDocuments(docs: Partial<Record<keyof CompanyDocuments, File>>): void {
