@@ -8,12 +8,7 @@ import { LicenseApplication } from '../models/license-application.model';
 import { LocationFee } from '../models/location-fee.model';
 import { SiteEnquiryFormModel } from '../models/site-enquiry.model';
 import { NewLicenseApplication } from '../models/new-license-application.model';
-
-
-export interface UnifiedApplication extends LicenseApplication {
-  applicationType: 'existing' | 'new';
-  displayId: string;
-}
+import { UnifiedApplication } from '../models/unified-application.model';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +17,8 @@ export interface UnifiedApplication extends LicenseApplication {
 export class LicenseApplicationService {
 
   private readonly baseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
+  private readonly newLicenseBaseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly commonUrl = `${environment.apiBaseUrl}/auth`
   // Store for passport photo
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
 
@@ -62,43 +58,6 @@ export class LicenseApplicationService {
   // Retrieves a list of license applications, categorized by their current status (applied, accepted, pending or rejected)
   getApplicationsByStatus(): Observable<ApplicationStatus> {
     return this.http.get<ApplicationStatus>(`${this.baseUrl}/list-by-status/`);
-  }
-
-  getNextStages(applicationId: string): Observable<any[]> {
-    const encodedId = encodeURIComponent(applicationId);
-    return this.http.get<any[]>(`${this.baseUrl}/${encodedId}/next-stages/`);
-  }
-
-  // Advances the application to the next stage based on the provided action (approve, reject, raise objection)
-  advanceApplication(
-    applicationId: string,
-    stageID: string | undefined,
-    remarks: string | undefined,
-    feeAmount: number | undefined,
-    action: 'approve' | 'reject' | 'raise_objection',
-    newLicenseCategoryId?: number,
-    objections?: { field: string; remarks: string }[],
-    context?: any
-  ): Observable<any> {
-    const encodedId = encodeURIComponent(applicationId);
-    const encodedStageId = encodeURIComponent(stageID ?? '');
-    const body: any = {
-      remarks,
-      feeAmount,
-      action,
-      context
-    };
-
-    // Optional: include new license category during approval if changed
-    if (newLicenseCategoryId !== undefined && newLicenseCategoryId !== null) {
-      body.newLicenseCategory = newLicenseCategoryId;
-    }
-
-    // Only include objections when action is 'raise_objection'
-    if (action === 'raise_objection' && objections) {
-      body.objections = objections;
-    }
-    return this.http.post(`${this.baseUrl}/${encodedId}/advance/${encodedStageId}/`, body);
   }
 
   // Method to raise objections for a given application
@@ -172,110 +131,102 @@ export class LicenseApplicationService {
 
   // ========================== NEW LICENSE APPLICATION ==========================
 
-  /**
-   * Submit new license application
-   * Converts camelCase to snake_case and builds FormData
-   */
+  //  Submit new license application
   submitNewLicenseApplication(formData: FormData): Observable<NewLicenseApplication> {
     return this.http.post<NewLicenseApplication>(`${this.newLicenseBaseUrl}/apply/`, formData);
   }
 
-  /**
-   * Update new license application (only at draft/level_1/level_1_objection stages)
-   */
+  // Update new license application (only at draft/level_1/level_1_objection stages)
   updateNewLicenseApplication(applicationId: string, formData: FormData): Observable<NewLicenseApplication> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.patch<NewLicenseApplication>(`${this.newLicenseBaseUrl}/${encodedId}/update/`, formData);
   }
 
-  /**
-   * Prepare FormData for new license application submission
-   * Handles field name mapping from camelCase to snake_case
-   */
+  // Prepare FormData for new license application submission
   prepareNewLicenseFormData(): FormData {
-  const formData = new FormData();
-  const get = (key: string) => JSON.parse(sessionStorage.getItem(key) || '{}');
+    const formData = new FormData();
+    const get = (key: string) => JSON.parse(sessionStorage.getItem(key) || '{}');
 
-  const select = get('selectLicenseData');
-  const keyInfo = get('keyInfoData');
-  const applicant = get('applicantDetailsData');
-  const site = get('siteDetailsData');
-  const company = get('unitDetailsData');
+    const select = get('selectLicenseData');
+    const keyInfo = get('keyInfoData');
+    const applicant = get('applicantDetailsData');
+    const site = get('siteDetailsData');
+    const company = get('unitDetailsData');
 
-  const append = (camel: string, value: any) => {
-    if (value === null || value === undefined || value === '' || value === false) return;
-    const snake = this.toSnakeCase(camel);
-    formData.append(String(snake), value instanceof Blob ? value : String(value));
-  };
+    const append = (camel: string, value: any) => {
+      if (value === null || value === undefined || value === '' || value === false) return;
+      const snake = this.toSnakeCase(camel);
+      formData.append(String(snake), value instanceof Blob ? value : String(value));
+    };
 
-  // === MUST HAVE ===
-  append('licenseType', select.licenseType);
-  append('licenseCategory', keyInfo.licenseCategory);
-  append('licenseSubCategory', keyInfo.licenseSubCategory);
-  append('establishmentName', keyInfo.establishmentName);
-  append('siteType', keyInfo.siteType);
+    // === MUST HAVE ===
+    append('licenseType', select.licenseType);
+    append('licenseCategory', keyInfo.licenseCategory);
+    append('licenseSubCategory', keyInfo.licenseSubCategory);
+    append('establishmentName', keyInfo.establishmentName);
+    append('siteType', keyInfo.siteType);
 
-  const fullName = [applicant.firstName, applicant.middleName, applicant.lastName].filter(Boolean).join(' ');
-  append('applicantName', fullName);
-  append('fatherHusbandName', applicant.fatherHusbandName);
-  append('dob', this.formatDate(applicant.dob));
-  append('gender', applicant.gender);
-  append('nationality', applicant.nationality);
-  append('residentialStatus', applicant.residentialStatus);
-  append('presentAddress', applicant.presentAddress);
-  append('permanentAddress', applicant.permanentAddress || applicant.presentAddress);
-  append('pan', (applicant.pan || '').toUpperCase());
-  append('email', applicant.email);
-  append('mobileNumber', applicant.mobileNumber);
-  append('modeOfOperation', applicant.modeOfOperation);
+    const fullName = [applicant.firstName, applicant.middleName, applicant.lastName].filter(Boolean).join(' ');
+    append('applicantName', fullName);
+    append('fatherHusbandName', applicant.fatherHusbandName);
+    append('dob', this.formatDate(applicant.dob));
+    append('gender', applicant.gender);
+    append('nationality', applicant.nationality);
+    append('residentialStatus', applicant.residentialStatus);
+    append('presentAddress', applicant.presentAddress);
+    append('permanentAddress', applicant.permanentAddress || applicant.presentAddress);
+    append('pan', (applicant.pan || '').toUpperCase());
+    append('email', applicant.email);
+    append('mobileNumber', applicant.mobileNumber);
+    append('modeOfOperation', applicant.modeOfOperation);
 
-  append('hasSikkimCertificate', applicant.hasSikkimCertificate ? 'Yes' : 'No');
-  append('hasExciseLicense', applicant.hasExciseLicense ? 'Yes' : 'No');
-  append('familyExciseLicense', applicant.familyExciseLicense ? 'Yes' : 'No');
-  append('criminalConviction', applicant.criminalConviction ? 'Yes' : 'No');
+    append('hasSikkimCertificate', applicant.hasSikkimCertificate ? 'Yes' : 'No');
+    append('hasExciseLicense', applicant.hasExciseLicense ? 'Yes' : 'No');
+    append('familyExciseLicense', applicant.familyExciseLicense ? 'Yes' : 'No');
+    append('criminalConviction', applicant.criminalConviction ? 'Yes' : 'No');
 
-  // === SITE - CODES! ===
-  append('site_district', site.siteDistrict);
-  append('site_subdivision', site.siteSubdivision);
-  append('police_station', site.policeStation);
-  append('locationCategory', site.locationCategory);
-  append('locationName', site.locationName);
-  append('wardName', site.wardName);
-  append('businessAddress', site.businessAddress);
-  append('road_name', site.roadNameCode || site.roadName);
-  append('pinCode', site.pinCode);
-  append('constructionType', site.constructionType);
-  append('length', site.length);
-  append('breadth', site.breadth);
-  append('siteOwned', site.siteOwned || 'Yes');
-  if (site.siteOwned === 'No') append('nocObtained', site.nocObtained || 'No');
+    // === SITE - CODES! ===
+    append('site_district', site.siteDistrict);
+    append('site_subdivision', site.siteSubdivision);
+    append('police_station', site.policeStation);
+    append('locationCategory', site.locationCategory);
+    append('locationName', site.locationName);
+    append('wardName', site.wardName);
+    append('businessAddress', site.businessAddress);
+    append('road_name', site.roadNameCode || site.roadName);
+    append('pinCode', site.pinCode);
+    append('constructionType', site.constructionType);
+    append('length', site.length);
+    append('breadth', site.breadth);
+    append('siteOwned', site.siteOwned || 'Yes');
+    if (site.siteOwned === 'No') append('nocObtained', site.nocObtained || 'No');
 
-  // === COMPANY ===
-  if (select.licenseType == 2) {
-    append('companyName', company.companyName);
-    append('companyAddress', company.companyAddress);
-    append('companyPan', (company.companyPan || '').toUpperCase());
-    append('companyCin', company.companyCin?.toUpperCase());
-    append('incorporationDate', this.formatDate(company.incorporationDate));
-    append('companyPhoneNumber', company.companyPhoneNumber);
-    append('companyEmail', company.companyEmail);
+    // === COMPANY ===
+    if (select.licenseType == 2) {
+      append('companyName', company.companyName);
+      append('companyAddress', company.companyAddress);
+      append('companyPan', (company.companyPan || '').toUpperCase());
+      append('companyCin', company.companyCin?.toUpperCase());
+      append('incorporationDate', this.formatDate(company.incorporationDate));
+      append('companyPhoneNumber', company.companyPhoneNumber);
+      append('companyEmail', company.companyEmail);
+    }
+
+    // === FILES ===
+    if (this.getPassPhoto()) append('pass_photo', this.getPassPhoto()!);
+    ['panCard', 'sikkimCertificate', 'dobProof'].forEach(key => {
+      const file = this.siteDocuments.get(key);
+      if (file) append(key, file);
+    });
+    if (site.siteOwned === 'No' && this.siteDocuments.get('nocLandlord')) {
+      append('nocLandlord', this.siteDocuments.get('nocLandlord')!);
+    }
+
+    append('workflow', '1');
+
+    this.logFormData(formData);
+    return formData;
   }
-
-  // === FILES ===
-  if (this.getPassPhoto()) append('pass_photo', this.getPassPhoto()!);
-  ['panCard', 'sikkimCertificate', 'dobProof'].forEach(key => {
-    const file = this.siteDocuments.get(key);
-    if (file) append(key, file);
-  });
-  if (site.siteOwned === 'No' && this.siteDocuments.get('nocLandlord')) {
-    append('nocLandlord', this.siteDocuments.get('nocLandlord')!);
-  }
-
-  append('workflow', '1');
-
-  this.logFormData(formData);
-  return formData;
-}
 
   /**
    * Get list of all new license applications
@@ -534,4 +485,29 @@ export class LicenseApplicationService {
     });
     console.table(entries);
   }
+
+  getNextStages(applicationId: string): Observable<any[]> {
+    const encodedId = encodeURIComponent(applicationId);
+    return this.http.get<any[]>(`${this.commonUrl}/${applicationId}/next-stages/`);
+  }
+
+  // Advances the application to the next stage based on the provided action (approve, reject, raise objection)
+  advanceApplication(
+    applicationId: string,
+    stageID: string | undefined,
+    context: any = {},
+  ): Observable<any> {
+    const encodedId = encodeURIComponent(applicationId);
+    const encodedStageId = encodeURIComponent(stageID ?? '');
+    const payload: any = {
+      context
+    };
+
+    return this.http.post(`${this.commonUrl}/${encodedId}/advance/${encodedStageId}/`, payload);
+  }
+
+
 }
+
+export type { UnifiedApplication };
+

@@ -476,8 +476,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       applicationId,
       this.stageID,
       remarks,
-      undefined,
-      'reject'
+      
     ).subscribe({
       next: () => reload('Application rejected.'),
       error: () => showError('Rejection failed.')
@@ -485,7 +484,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     return;
   }
 
-    if (this.accountService.hasAnyRole('level_1')) {
+    if (this.accountService.hasAnyRole('level_3')) {
       // Level 1 approval requires fee amount from selected location
       const fee = this.selectedLocation?.feeAmount;
       if (!fee) {
@@ -496,11 +495,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         applicationId,
         this.stageID,
         remarks, 
-        fee, 
-        'approve',
-        undefined, 
-        undefined,
-        { is_fee_calculated: true}
+       
       ).subscribe({
         next: () => reload('Application approved.'),
         error: () => showError('Approval failed.')
@@ -538,9 +533,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
           applicationId,
           this.stageID,
           remarks, 
-          undefined, 
-          'approve', 
-          catId).subscribe({
+          ).subscribe({
           next: () => reload('Application approved.'),
           error: () => showError('Advancing failed.')
         }),
@@ -554,8 +547,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       applicationId, 
       this.stageID,
       remarks, 
-      undefined,
-      'approve'
     ).subscribe({
       next: () => reload('Application approved.'),
       error: () => showError('Approval failed.')
