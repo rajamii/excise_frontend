@@ -1,96 +1,446 @@
-.dashboard-container{
+.dashboard-container {
     display: flex;
     flex-direction: column;
     padding: 20px;
+    padding-top: 0;
 }
 
+// ========================================
+// FILTER CONTAINER STYLES
+// ========================================
+.filter-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 16px;
+    margin-top: 0;
+    padding: 16px 20px;
+    padding-right: 4px;
+    position: relative;
+    z-index: 1000;
+    background-color: transparent;
+
+    .application-type-filter {
+        min-width: 300px;
+        max-width: 350px;
+
+        ::ng-deep {
+            // Main flex container
+            .mat-mdc-form-field-flex {
+                background: linear-gradient(145deg, #ffffff, #f8f9fc);
+                border-radius: 10px;
+                padding: 0 16px;
+                align-items: center;
+                height: 52px;
+                box-shadow: 0 4px 12px rgba(28, 43, 120, 0.08),
+                            0 1px 3px rgba(28, 43, 120, 0.04);
+                border: 1.5px solid rgba(28, 43, 120, 0.08);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            // Hover state
+            .mat-mdc-form-field-flex:hover {
+                box-shadow: 0 6px 16px rgba(28, 43, 120, 0.12),
+                            0 2px 4px rgba(28, 43, 120, 0.06);
+                border-color: rgba(28, 43, 120, 0.15);
+                transform: translateY(-1px);
+            }
+
+            // Text field wrapper
+            .mat-mdc-text-field-wrapper {
+                background-color: transparent;
+                padding-bottom: 0;
+                height: 52px;
+            }
+
+            // Form field infix (contains the actual content)
+            .mat-mdc-form-field-infix {
+                display: flex;
+                align-items: center;
+                padding: 10px 0;
+                min-height: 52px;
+                border-top: none;
+            }
+
+            .mat-mdc-form-field-focus-overlay {
+                background-color: transparent;
+            }
+
+            // Icon styling
+            .mat-icon[matPrefix] {
+                color: #1C2B78;
+                margin-right: 12px;
+                font-size: 22px;
+                width: 22px;
+                height: 22px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 22px;
+                transition: transform 0.2s ease;
+            }
+
+            // Select value styling
+            .mat-mdc-select-value {
+                color: #1C2B78;
+                font-weight: 600;
+                font-size: 15px;
+                letter-spacing: 0.2px;
+            }
+
+            // Dropdown arrow
+            .mat-mdc-select-arrow {
+                color: #1C2B78;
+                transition: transform 0.3s ease;
+            }
+
+            // Label styling
+            .mat-mdc-floating-label {
+                color: #5a6a8a;
+                font-size: 14px;
+                font-weight: 500;
+            }
+
+            // Outline color
+            .mat-mdc-notch-piece {
+                border-color: transparent !important;
+            }
+
+            // Focus state
+            .mat-focused {
+                .mat-mdc-form-field-flex {
+                    box-shadow: 0 6px 20px rgba(28, 43, 120, 0.15),
+                                0 2px 6px rgba(28, 43, 120, 0.08);
+                    border-color: #1C2B78;
+                }
+
+                .mat-mdc-form-field-focus-overlay {
+                    opacity: 0;
+                }
+
+                .mat-mdc-select-arrow {
+                    transform: rotate(180deg);
+                }
+
+                .mat-icon[matPrefix] {
+                    transform: scale(1.1);
+                }
+
+                .mat-mdc-floating-label {
+                    color: #1C2B78;
+                }
+            }
+
+            // Remove subscript wrapper (error messages area)
+            .mat-mdc-form-field-subscript-wrapper {
+                display: none;
+            }
+
+            // Ensure proper vertical alignment
+            .mat-mdc-select {
+                display: flex;
+                align-items: center;
+            }
+
+            .mat-mdc-select-trigger {
+                display: flex;
+                align-items: center;
+                height: 100%;
+            }
+
+            // Placeholder text
+            .mat-mdc-select-placeholder {
+                color: #8896b4;
+                font-weight: 500;
+            }
+        }
+    }
+}
+
+// Dropdown panel styling
+::ng-deep .mat-mdc-select-panel {
+    border-radius: 10px !important;
+    box-shadow: 0 8px 24px rgba(28, 43, 120, 0.12),
+                0 2px 8px rgba(28, 43, 120, 0.06) !important;
+    margin-top: 8px;
+    border: 1px solid rgba(28, 43, 120, 0.08);
+    
+    .mat-mdc-option {
+        padding: 12px 16px;
+        font-size: 15px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+            background-color: rgba(28, 43, 120, 0.06) !important;
+        }
+        
+        &.mat-mdc-option-active,
+        &.mdc-list-item--selected {
+            background-color: rgba(28, 43, 120, 0.1) !important;
+            color: #1C2B78;
+            font-weight: 600;
+        }
+    }
+}
+
+// ========================================
+// LOADING OVERLAY STYLES
+// ========================================
+.loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    margin-top: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+
+    mat-spinner {
+        margin-bottom: 16px;
+
+        ::ng-deep circle {
+            stroke: #1C2B78 !important;
+        }
+    }
+
+    .loading-text {
+        color: #1C2B78;
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+    }
+}
+
+// ========================================
+// STATS CONTAINER STYLES
+// ========================================
 .stats-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 25px;
+    gap: 20px;
+    transition: opacity 0.3s ease;
+    margin-top: 12px;
+
+    &.loading {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
     .stat-card {
         background-color: #fff;
         border-radius: 12px;
-        padding: 24px;
+        padding: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
         display: flex;
         align-items: center;
-        flex: 1 1 calc(25% - 25px);
+        flex: 1 1 calc(25% - 20px);
         margin-top: 0;
         transition: transform 0.25s ease, box-shadow 0.25s ease;
+        min-width: 200px;
+
         &:hover {
             transform: translateY(-5px) scale(1.02);
             box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
             cursor: pointer;
         }
+
         .circle-icon {
-            width: 56px;
-            height: 56px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+
             img {
-                width: 28px;
-                height: 28px;
+                width: 26px;
+                height: 26px;
             }
         }
+
         .red-bg {
-            background-color: rgba(255, 0, 0, 0.17 );
+            background-color: rgba(255, 0, 0, 0.17);
         }
-        
+
         .green-bg {
             background-color: rgba(9, 255, 0, 0.17);
         }
-        
+
         .yellow-bg {
             background-color: rgba(231, 184, 0, 0.17);
-        } 
+        }
+
+        .blue-bg {
+            background-color: rgba(28, 43, 120, 0.17);
+        }
+
         .value {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             color: #1c1c1c;
+            line-height: 1.2;
         }
+
         .label {
             font-size: 14px;
             color: #666;
-            margin-top: 6px;
+            margin-top: 4px;
+            font-weight: 500;
         }
     }
 }
 
+// ========================================
+// RESPONSIVE STYLES
+// ========================================
 @media (max-width: 768px) {
-  .stat-card {
-    flex: 1 1 calc(50% - 25px);
-  }
+    .stat-card {
+        flex: 1 1 calc(50% - 20px) !important;
+    }
+
+    .filter-container {
+        margin-top: 0;
+        margin-bottom: 16px;
+        padding-right: 0;
+
+        .application-type-filter {
+            min-width: 100%;
+            max-width: 100%;
+        }
+    }
+
+    .dashboard-container {
+        padding-top: 20px;
+        padding: 16px;
+    }
+
+    .stats-container {
+        margin-top: 8px;
+        gap: 16px;
+    }
 }
 
-mat-card{
+// ========================================
+// MAT-CARD STYLES
+// ========================================
+mat-card {
     background-color: #fff;
     border-radius: 12px;
-    margin-top: 24px;
+    margin-top: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 
-    mat-card-header{
-        font-size: 20px;
+    mat-card-header {
+        font-size: 19px;
         font-weight: 500;
         color: #ffffff;
-        padding: 16px;
+        padding: 14px 16px;
         background-color: #1C2B78;
         border-radius: 8px 8px 0 0;
         justify-content: center;
     }
-    mat-card-content{
-        padding: 15px;
+
+    mat-card-content {
+        padding: 14px;
     }
 }
 
-@media(max-width: 674px){
-    .stats-container{
+@media(max-width: 674px) {
+    .stats-container {
         grid-template-columns: 1fr 1fr;
     }
-    mat-card-content{
+
+    mat-card-content {
         overflow-x: scroll;
+    }
+}
+
+// ========================================
+// CUSTOM SCROLLBAR STYLES
+// ========================================
+mat-card-content {
+    &::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #1C2B78;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: #152154;
+    }
+}
+
+// ========================================
+// BACK BUTTON STYLES
+// ========================================
+mat-card {
+    button[mat-icon-button] {
+        position: absolute;
+        left: 10px;
+        top: 10px;
+        z-index: 10;
+        color: #ffffff;
+
+        mat-icon {
+            color: #ffffff;
+        }
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    }
+}
+
+// ========================================
+// ANIMATION STYLES
+// ========================================
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stats-container,
+.filter-container,
+mat-card {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+// ========================================
+// EMPTY STATE STYLES
+// ========================================
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+
+    mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        color: #ccc;
+        margin-bottom: 16px;
+    }
+
+    p {
+        margin: 0;
+        font-size: 16px;
     }
 }

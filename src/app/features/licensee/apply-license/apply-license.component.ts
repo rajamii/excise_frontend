@@ -1,7 +1,5 @@
 import { Component } from '@angular/core';
-import { MaterialModule } from '../../../shared/material.module'; // Shared Angular Material components
-
-// Importing step components for the multi-step license application form
+import { MaterialModule } from '../../../shared/material.module';
 import { KeyInfoComponent } from './steps/key-info/key-info.component';
 import { AddressComponent } from './steps/address/address.component';
 import { UnitDetailsComponent } from './steps/unit-details/unit-details.component';

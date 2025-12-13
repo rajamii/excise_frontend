@@ -1,0 +1,83 @@
+<form [formGroup]="keyInfoForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Basic Information</div>
+      <div class="validation">* Marked Fields Are Mandatory</div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="form-field-container">
+
+        <!-- License Category -->
+        <mat-form-field appearance="outline">
+          <mat-label>Category of License</mat-label>
+          <mat-select formControlName="licenseCategory" required>
+            @for (category of licenseCategories; track category.id) {
+              <mat-option [value]="category.id">
+                {{ category.licenseCategory }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (keyInfoForm.controls['licenseCategory'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseCategory') }}
+            </mat-error>
+          }
+        </mat-form-field>
+        
+        <!-- License Sub-Category -->
+        <mat-form-field appearance="outline">
+          <mat-label>Sub Category of License</mat-label>
+          <mat-select formControlName="licenseSubCategory" required>
+            @for (subCategory of licenseSubCategories; track subCategory.id) {
+              <mat-option [value]="subCategory.id">
+                {{ subCategory.description }}
+              </mat-option>
+            }
+          </mat-select>
+          @if (keyInfoForm.controls['licenseSubCategory'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('licenseSubCategory') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Establishment Name -->
+        <mat-form-field appearance="outline">
+          <mat-label>Name of the Business Premises (FLR/Hotel/Restaurant/Pachiwai)</mat-label>
+          <input matInput 
+            placeholder="Enter Establishment Name (max 150 characters)"
+            formControlName="establishmentName"
+            required>
+          @if (keyInfoForm.controls['establishmentName'].invalid) {
+            <mat-error>
+              {{ getErrorMessage('establishmentName') }}
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Site Type Radio Buttons -->
+        <div class="radio-group-container">
+          <label class="field-label">Site Type <span class="required">*</span></label>
+          <mat-radio-group formControlName="siteType" required>
+            <mat-radio-button value="New">New</mat-radio-button>
+            <mat-radio-button value="Existing">Existing</mat-radio-button>
+          </mat-radio-group>
+          @if (keyInfoForm.controls['siteType'].invalid && keyInfoForm.controls['siteType'].touched) {
+            <mat-error class="radio-error">
+              {{ getErrorMessage('siteType') }}
+            </mat-error>
+          }
+        </div>
+
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid" type="button">Next</button>
+    </mat-card-actions>
+
+  </mat-card>
+</form>

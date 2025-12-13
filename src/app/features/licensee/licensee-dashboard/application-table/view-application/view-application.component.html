@@ -154,7 +154,7 @@
             Resolve Objections
           </button> 
         }
-        @if (!application.isLicenseFeePaid) {
+        @if (!application.isLicenseFeePaid && application.currentStage === 'awaiting_payment') {
           <button matButton="filled" color="primary" (click)="stepper.next()">
             <mat-icon>payment</mat-icon>
             Pay Fees

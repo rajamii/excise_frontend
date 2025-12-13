@@ -6,7 +6,7 @@
     <mat-dialog-content>
 
       <!-- Subcategory description input -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Description</mat-label>
         <input
           matInput
@@ -21,7 +21,7 @@
       </mat-form-field>
 
       <!-- Category selection (dropdown) -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>License Category</mat-label>
         <mat-select
           [(ngModel)]="licenseSubcategory.category"

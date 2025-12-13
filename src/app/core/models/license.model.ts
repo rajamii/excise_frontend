@@ -56,3 +56,13 @@ export class License {
 
   print_count?: number;
 }
+
+export interface Licensee {
+  id: string;                // license_id
+  licensee_id: string;       // same as id – keep for backward compat
+  establishment_name: string;
+  license_category: string;  // "Individual", "Company", …
+  district: string;
+  district_code: number;     // NOTE: number, not string
+  status: string;
+}

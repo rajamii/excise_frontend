@@ -1,0 +1,183 @@
+<form [formGroup]="uploadDocumentsForm">
+  <mat-card>
+    <mat-card-header>
+      <div class="heading">Upload Documents & Payment Details</div>
+      <div class="validation">
+        * Marked Fields Are Mandatory
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Upload Documents Section -->
+      <div class="section-wrapper">
+        <div class="section-header">
+          <mat-icon>upload_file</mat-icon>
+          <h3>Upload Required Documents</h3>
+        </div>
+        
+        <div class="table-container">
+          <table mat-table [dataSource]="documents" class="mat-elevation-z2">
+
+            <!-- Serial Number Column -->
+            <ng-container matColumnDef="serialNo">
+              <th mat-header-cell *matHeaderCellDef> Sl. No </th>
+              <td mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </td>
+            </ng-container>
+
+            <!-- Document Type Column -->
+            <ng-container matColumnDef="docType">
+              <th mat-header-cell *matHeaderCellDef> Document Type Description </th>
+              <td mat-cell *matCellDef="let element">
+                <div class="doc-type-cell">
+                  @if (element.requiredAtStart) {
+                    <span class="required">*</span>
+                  }
+                  <span class="doc-name">{{ element.name }}</span>
+                  @if (element.required && !element.requiredAtStart) {
+                    <span class="required">*</span>
+                  }
+                  @if (element.format) {
+                    <span class="format">({{ element.format }})</span>
+                  }
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- File Upload Column -->
+            <ng-container matColumnDef="upload">
+              <th mat-header-cell *matHeaderCellDef> Browse File </th>
+              <td mat-cell *matCellDef="let element">
+                <div class="file-upload-wrapper">
+                  <input 
+                    type="file" 
+                    (change)="onFileSelect($event, element)" 
+                    [accept]="element.accept"
+                    [id]="'file-' + element.key"
+                    class="file-input">
+                  <label [for]="'file-' + element.key" class="file-label">
+                    <mat-icon>attach_file</mat-icon>
+                    {{ element.file ? element.file.name : 'Choose File' }}
+                  </label>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- View File Column -->
+            <ng-container matColumnDef="view">
+              <th mat-header-cell *matHeaderCellDef> View </th>
+              <td mat-cell *matCellDef="let element">
+                @if (element.file) {
+                  <button mat-icon-button color="primary" (click)="viewFile(element)" matTooltip="View Document">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                } @else {
+                  <mat-icon class="no-file-icon">remove_circle_outline</mat-icon>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class.uploaded]="row.file"></tr>
+          </table>
+        </div>
+
+        <!-- Document Upload Status -->
+        <div class="upload-status" [class.complete]="areDocumentsUploaded()">
+          <mat-icon>{{ areDocumentsUploaded() ? 'check_circle' : 'info' }}</mat-icon>
+          <span>{{ areDocumentsUploaded() ? 'All required documents uploaded successfully' : 'Please upload all required documents to proceed' }}</span>
+        </div>
+      </div>
+
+      <!-- Payment Details Section -->
+      <div class="section-wrapper">
+        <div class="section-header">
+          <mat-icon>payment</mat-icon>
+          <h3>Payment Details</h3>
+        </div>
+
+        <div class="form-field-container">
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Reference Id</mat-label>
+            <input matInput placeholder="Enter Payment Reference Id" type="text" formControlName="paymentId" required/>
+            <mat-icon matSuffix>receipt_long</mat-icon>
+            @if (uploadDocumentsForm.controls['paymentId'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('paymentId') }}
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Payment Date</mat-label>
+            <input matInput [matDatepicker]="picker" placeholder="Select Payment Date" formControlName="paymentDate" required/>
+            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+            @if (uploadDocumentsForm.controls['paymentDate'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('paymentDate') }}
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field floatLabel="always" appearance="outline">
+            <mat-label>Payment Amount</mat-label>
+            <input matInput type="number" class="example-right-align" formControlName="paymentAmount" placeholder="0" required/>
+            <span matTextPrefix>₹&nbsp;</span>
+            <mat-icon matSuffix>currency_rupee</mat-icon>
+            @if (uploadDocumentsForm.controls['paymentAmount'].invalid) {
+              <mat-error>
+                {{ getErrorMessage('paymentAmount') }}
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Payment Remarks</mat-label>
+            <textarea matInput
+              placeholder="Enter payment remarks (optional, max 500 characters)"
+              formControlName="paymentRemarks"
+              cdkTextareaAutosize
+              #autosize="cdkTextareaAutosize"
+              cdkAutosizeMinRows="2"
+              cdkAutosizeMaxRows="5">
+            </textarea>
+            <mat-icon matSuffix>notes</mat-icon>
+            <mat-hint align="end">{{ uploadDocumentsForm.get('paymentRemarks')?.value?.length || 0 }}/500</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <!-- Payment Info Card -->
+        @if (uploadDocumentsForm.valid) {
+          <div class="payment-info-card">
+            <div class="info-header">
+              <mat-icon>info</mat-icon>
+              <h4>Payment Summary</h4>
+            </div>
+            <div class="info-content">
+              <div class="info-row">
+                <span class="label">Reference ID:</span>
+                <span class="value">{{ uploadDocumentsForm.get('paymentId')?.value }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Payment Date:</span>
+                <span class="value">{{ uploadDocumentsForm.get('paymentDate')?.value | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="info-row highlight">
+                <span class="label">Amount Paid:</span>
+                <span class="value">₹{{ uploadDocumentsForm.get('paymentAmount')?.value | number:'1.2-2' }}</span>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!uploadDocumentsForm.valid || !areDocumentsUploaded()">
+        Next
+      </button>
+      <button mat-stroked-button color="warn" (click)="resetForm()">Reset</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

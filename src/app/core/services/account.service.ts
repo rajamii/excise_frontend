@@ -27,7 +27,7 @@ export class AccountService {
       this.accountCache$ = this.getUserDetails().pipe(
         tap(account => {
           localStorage.setItem('username', account?.username ?? '');
-          localStorage.setItem('role', account.role.name);
+          localStorage.setItem('role', account.role!.name);
           localStorage.setItem('firstName', account.firstName);
           localStorage.setItem('lastName', account.lastName);
 

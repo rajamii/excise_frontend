@@ -1,0 +1,57 @@
+<div class="container-fluid">
+    <mat-card>
+      <mat-card-header>
+        <div class="page-title">Workflow Transitions List</div>
+        <button matButton="filled" (click)="onAdd()">
+          <mat-icon>add</mat-icon> Add Transition
+        </button>
+      </mat-card-header>
+  
+      <mat-card-content>
+        <div class="table-container">
+          <mat-table [dataSource]="transitions">
+            <ng-container matColumnDef="workflow">
+              <mat-header-cell *matHeaderCellDef class="small-column"> Workflow </mat-header-cell>
+              <mat-cell *matCellDef="let transition" class="small-column">
+                {{ transition.workflow?.name || transition.workflow }}
+              </mat-cell>
+            </ng-container>
+  
+            <ng-container matColumnDef="from_stage">
+              <mat-header-cell *matHeaderCellDef class="small-column"> From Stage </mat-header-cell>
+              <mat-cell *matCellDef="let transition" class="small-column">
+                {{ transition.from_stage?.name || transition.fromStage }}
+              </mat-cell>
+            </ng-container>
+  
+            <ng-container matColumnDef="to_stage">
+              <mat-header-cell *matHeaderCellDef class="small-column"> To Stage </mat-header-cell>
+              <mat-cell *matCellDef="let transition" class="small-column">
+                {{ transition.to_stage?.name || transition.toStage }}
+              </mat-cell>
+            </ng-container>
+  
+            <ng-container matColumnDef="condition">
+              <mat-header-cell *matHeaderCellDef> Condition </mat-header-cell>
+              <mat-cell *matCellDef="let transition"> {{ (transition.condition | json) || '-' }} </mat-cell>
+            </ng-container>
+  
+            <ng-container matColumnDef="actions">
+              <mat-header-cell *matHeaderCellDef class="action-column"> Actions </mat-header-cell>
+              <mat-cell *matCellDef="let transition" class="action-column">
+                <button matIconButton color="primary" (click)="onEdit(transition)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button matIconButton color="warn" (click)="onDelete(transition)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </mat-cell>
+            </ng-container>
+  
+            <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+            <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+          </mat-table>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>

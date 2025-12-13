@@ -5,7 +5,7 @@
     <mat-dialog-content>
 
       <!-- Subdivision Name -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Subdivision Name</mat-label>
         <input
           matInput
@@ -20,7 +20,7 @@
       </mat-form-field>
 
       <!-- Subdivision Code (1000–9999) -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Subdivision Code</mat-label>
         <input
           matInput
@@ -41,7 +41,7 @@
       </mat-form-field>
 
       <!-- District Selection -->
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>District</mat-label>
         <mat-select
           [(ngModel)]="subdivision.districtCode"

@@ -1,0 +1,36 @@
+<!-- Horizontal Stepper with linear navigation enabled -->
+<mat-horizontal-stepper [linear]="true" #stepper>
+
+  <!-- Step 1: Application Type -->
+  <mat-step label="Application Type">
+    <app-select-license (next)="stepper.next()"></app-select-license>
+  </mat-step>
+
+  <!-- Step 2: Basic Info -->
+  <mat-step label="Basic Info">
+    <app-key-info (back)="stepper.previous()" (next)="stepper.next()"></app-key-info>
+  </mat-step>
+
+  <!-- Step 3: Applicant Details -->
+  <mat-step label="Applicant Details">
+    <app-applicant-details (back)="stepper.previous()" (next)="stepper.next()"></app-applicant-details>
+  </mat-step>
+
+  <!-- Step 4: Site Details & Documents Combined -->
+  <mat-step label="Site Details">
+    <app-site-details (back)="stepper.previous()" (next)="stepper.next()"></app-site-details>
+  </mat-step>
+
+  <!-- Step 5: Company Details (Only if licenseType is 'Company') -->
+  @if (licenseType == 2) {
+    <mat-step label="Company Details">
+      <app-unit-details (back)="stepper.previous()" (next)="stepper.next()"></app-unit-details>
+    </mat-step>
+  }
+
+  <!-- Step 6: Declaration & Payment -->
+  <mat-step label="Declaration & Payment">
+    <app-declaration-payment (back)="stepper.previous()"></app-declaration-payment>
+  </mat-step>
+
+</mat-horizontal-stepper>

@@ -88,7 +88,7 @@ export class ListComponent implements OnInit {
       confirmButtonText: 'Yes, delete',
       cancelButtonText: 'Cancel'
     }).then(result => {
-      if (result.isConfirmed) {
+      if (result.isConfirmed && user.id) {
         this.adminService.deleteUser(user.id).subscribe({
           next: () => {
             Swal.fire('Deleted!', 'User has been deleted.', 'success');

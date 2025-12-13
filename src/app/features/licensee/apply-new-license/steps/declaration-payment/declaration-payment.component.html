@@ -1,0 +1,67 @@
+<mat-card>
+  <mat-card-header>
+    <div class="heading">Declaration & Payment</div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Application Summary -->
+    <h5 class="section-title">Application Summary</h5>
+    
+    @for (section of displaySections; track section.title) {
+      @if (!section.condition || section.condition()) {
+        <div class="subsection-title">{{ section.title }}</div>
+        <div class="section-table">
+          @for (item of section.data; track item.key) {
+            @if (item.value) {
+              <div class="row">
+                <div class="key">{{ item.key }}</div>
+                <div class="value">{{ item.value }}</div>
+              </div>
+            }
+          }
+        </div>
+      }
+    }
+
+    <!-- Applicant Photo Display -->
+    @if (passPhotoUrl) {
+      <div class="subsection-title">Applicant Photo</div>
+      <div class="photo-display">
+        <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
+      </div>
+    }
+
+    <!-- Fee Information -->
+    <h5 class="section-title">Application Fee</h5>
+    <div class="fee-container">
+      <div class="fee-info">
+        <mat-icon class="fee-icon">info</mat-icon>
+        <div class="fee-details">
+          <p class="fee-label">Total Application Fee</p>
+          <p class="fee-amount">Rs {{ applicationFee }}/-</p>
+          <p class="fee-note">** State Excise Department, Government of Sikkim shall not entertain any chargeback or refund request made by the payer at any stage during or after the transaction. In case of any such concerns, the payer should raise it to <a href="mailto:excise.dept&#64;sikkim.gov.in">excise.dept&#64;sikkim.gov.in</a> for resolution.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Declaration Section -->
+    <h5 class="section-title">Declaration</h5>
+    <form [formGroup]="declarationForm">
+      <div class="declaration-container">
+        <mat-checkbox formControlName="acceptDeclaration" color="primary">
+          <span class="declaration-text">
+            I hereby declare that the information provided in this application is true and correct to the best of my knowledge. I understand that any false information may lead to rejection of my application or cancellation of the license.
+          </span>
+        </mat-checkbox>
+      </div>
+    </form>
+  </mat-card-content>
+
+  <!-- Action buttons -->
+  <mat-card-actions>
+    <button mat-stroked-button (click)="goBack()" type="button">Back</button>
+    <button mat-flat-button color="primary" (click)="submit()" [disabled]="!declarationForm.valid" type="button">
+      Proceed to Pay Application Fees
+    </button>
+  </mat-card-actions>
+</mat-card>

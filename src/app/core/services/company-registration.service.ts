@@ -8,10 +8,10 @@ import { CompanyDocuments } from '../models/company.model';
   providedIn: 'root'
 })
 export class CompanyRegistrationService {
-  private baseUrl = `${environment.apiBaseUrl}/company_registration`; // Base URL for the API
+  private baseUrl = `${environment.apiBaseUrl}/masters/company-registration`; // Base URL for the API
   private companyDocs: Partial<Record<keyof CompanyDocuments, File>> = {};
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   createCompany(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/create/`, data);

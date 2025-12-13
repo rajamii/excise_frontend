@@ -1,0 +1,34 @@
+<div class="container-fluid">
+    <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Stage Permission</h2>
+  
+    <form #form="ngForm">
+      <mat-dialog-content>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Stage</mat-label>
+          <mat-select [(ngModel)]="permission.stage" name="stage" required #stageModel="ngModel">
+            <mat-option *ngFor="let stage of stages" [value]="stage.id">{{ stage.name }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="stageModel.invalid && stageModel.touched">
+            Stage is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Role</mat-label>
+          <mat-select [(ngModel)]="permission.role" name="role" required #roleModel="ngModel">
+            <mat-option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="roleModel.invalid && roleModel.touched">
+            Role is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-checkbox [(ngModel)]="permission.can_process" name="can_process">Can Process</mat-checkbox>
+      </mat-dialog-content>
+  
+      <mat-dialog-actions align="center">
+        <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+        <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+      </mat-dialog-actions>
+    </form>
+  </div>

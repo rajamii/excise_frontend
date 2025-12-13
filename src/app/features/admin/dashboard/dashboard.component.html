@@ -1,10 +1,45 @@
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
-  @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5'])) {
-    <div class="stats-container">
+  @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'single_window'])) {
+    
+    <!-- APPLICATION TYPE FILTER DROPDOWN -->
+    <div class="filter-container">
+      <mat-form-field appearance="outline" class="application-type-filter">
+        <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
+        <mat-label>Application Type</mat-label>
+        <mat-select 
+          [(value)]="selectedApplicationType" 
+          (selectionChange)="onApplicationTypeChange()">
+          @for (type of applicationTypes; track type.value) {
+            <mat-option [value]="type.value">
+              {{ type.label }}
+            </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
 
-      @if (accountService.hasAnyRole('site_admin')) {
+    <!-- STATS WRAPPER -->
+    <div class="stats-wrapper">
+      <!-- LOADING SPINNER -->
+      @if (isLoading) {
+        <div class="loading-overlay">
+          <div class="simple-spinner" aria-hidden="true">
+            <svg width="50" height="50" viewBox="0 0 50 50" role="img" aria-label="Loading">
+              <circle cx="25" cy="25" r="20" fill="none" stroke="#3f51b5" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
+                <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+          <p class="loading-text">Loading {{ getApplicationTypeLabel() }} data...</p>
+        </div>
+      }
+
+      <!-- STATS CARDS -->
+      <div class="stats-container" [class.loading]="isLoading">
+
+      @if (accountService.hasAnyRole(['site_admin', 'single_window'])) {
         <!-- Applied Stat Card -->
         <mat-card class="stat-card applied" (click)="showTable('applied')">
           <div class="circle-icon blue-bg">
@@ -23,6 +58,7 @@
         <div class="value">{{ dashboardCounts.pending }}</div>
         <div class="label">Pending</div>
       </mat-card>
+
       <!-- Approved Stats Card -->
       <mat-card class="stat-card approved" (click)="showTable('approved')">
         <div class="circle-icon green-bg">
@@ -31,15 +67,17 @@
         <div class="value">{{ dashboardCounts.approved }}</div>
         <div class="label">Approved</div>
       </mat-card>
-      <!-- Rejected Stats Card -->
-      <mat-card class="stat-card rejected" (click)="showTable('rejected')">
-        <div class="circle-icon red-bg">
-          <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.rejected }}</div>
-        <div class="label">Rejected</div>
-      </mat-card>
+
+    <!-- Rejected Stats Card -->
+    <mat-card class="stat-card rejected" (click)="showTable('rejected')">
+      <div class="circle-icon red-bg">
+        <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
+      </div>
+      <div class="value">{{ dashboardCounts.rejected }}</div>
+      <div class="label">Rejected</div>
+    </mat-card>
     </div>
+  </div>
   }
 
   @if (accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5'])) {
@@ -48,7 +86,7 @@
       @if (activeTable === 'stats') {
         <mat-card>
           <mat-card-header>
-            Statistics
+            Statistics - {{ getApplicationTypeLabel() }}
           </mat-card-header>
           <mat-card-content>
             <!-- Table: Displays detailed information in a table format -->
@@ -96,6 +134,26 @@
           </mat-card-content>
         </mat-card>
       }
+
+      <!-- Applied Table -->
+      @if (activeTable === 'applied') {
+        <mat-card>
+          <button mat-icon-button (click)="goBackToStats()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-header>
+            Applied - {{ getApplicationTypeLabel() }}
+          </mat-card-header>
+          <mat-card-content>
+            <app-application-table
+              [dataSource]="appliedDataSource"
+              [displayedColumns]="displayedColumns"
+              [tableType]="'applied'">
+            </app-application-table>
+          </mat-card-content>
+        </mat-card>
+      }
+
       <!-- Pending Table -->
       @if (activeTable === 'pending') {
         <mat-card>
@@ -103,7 +161,7 @@
             <mat-icon>arrow_back</mat-icon>
           </button>
           <mat-card-header>
-            Pending
+            Pending - {{ getApplicationTypeLabel() }}
           </mat-card-header>
           <mat-card-content>
             <app-application-table
@@ -114,6 +172,7 @@
           </mat-card-content>
         </mat-card>
       }
+
       <!-- Approved Table -->
       @if (activeTable === 'approved') {
         <mat-card>
@@ -121,7 +180,7 @@
             <mat-icon>arrow_back</mat-icon>
           </button>
           <mat-card-header>
-            Approved
+            Approved - {{ getApplicationTypeLabel() }}
           </mat-card-header>
           <mat-card-content>
             <app-application-table
@@ -132,6 +191,7 @@
           </mat-card-content>
         </mat-card>
       }
+
       <!-- Rejected Table -->
       @if (activeTable === 'rejected') {
         <mat-card>
@@ -139,7 +199,7 @@
             <mat-icon>arrow_back</mat-icon>
           </button>
           <mat-card-header>
-            Rejected
+            Rejected - {{ getApplicationTypeLabel() }}
           </mat-card-header>
           <mat-card-content>
             <app-application-table

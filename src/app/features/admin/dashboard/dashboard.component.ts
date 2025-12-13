@@ -6,11 +6,18 @@ import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboar
 import { MatTableDataSource } from '@angular/material/table';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { LICENSE_DATA } from '../../../core/models/license-stats.model';
-import { of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { of, forkJoin } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { LicenseApplication } from '../../../core/models/license-application.model';
+import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 
 type TableView = 'stats' | 'applied' | 'pending' | 'approved' | 'rejected';
+type ApplicationType = 'license' | 'new_license' | 'salesman_barman';
+
+interface ApplicationTypeOption {
+  value: ApplicationType;
+  label: string;
+}
 
 @Component({
   selector: 'app-dashboard', 
@@ -21,7 +28,7 @@ type TableView = 'stats' | 'applied' | 'pending' | 'approved' | 'rejected';
 })
 export class DashboardComponent extends BaseComponent {
   // Dashboard counts for pending, approved, and rejected applications
-  dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  dashboardCounts: DashboardCount = { pending: 0, approved: 0, rejected: 0 };
 
   // Arrays to store applications 
   appliedApplications: ApplicationStatus[] = [];
@@ -29,18 +36,30 @@ export class DashboardComponent extends BaseComponent {
   approvedApplications: ApplicationStatus[] = [];
   rejectedApplications: ApplicationStatus[] = [];
 
+  // Application Type Filter
+  selectedApplicationType: ApplicationType = 'license'; // Default to License Application
+  applicationTypes: ApplicationTypeOption[] = [
+    { value: 'license', label: 'License Application' },
+    { value: 'new_license', label: 'New License Application' },
+    { value: 'salesman_barman', label: 'Salesman/Barman Application' }
+  ];
+
+  // Loading state
+  isLoading = false;
+
   constructor(
-    public baseDependancy: BaseDependency, 
+    public baseDependancy: BaseDependency,
+    public override salesmanBarmanService: SalesmanBarmanRegistrationService
   ) { 
-    super(baseDependancy); // Calling the parent class constructor
+    super(baseDependancy);
   }
 
   // Table Data Sources
-  statsDataSource = LICENSE_DATA; // Data source for license statistics
-  appliedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for pending applications
-  pendingDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for pending applications
-  approvedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for approved applications
-  rejectedDataSource = new MatTableDataSource<LicenseApplication>(); // Data source for rejected applications
+  statsDataSource = LICENSE_DATA;
+  appliedDataSource = new MatTableDataSource<LicenseApplication>();
+  pendingDataSource = new MatTableDataSource<LicenseApplication>();
+  approvedDataSource = new MatTableDataSource<LicenseApplication>();
+  rejectedDataSource = new MatTableDataSource<LicenseApplication>();
   
   // Columns to be displayed in the tables
   statsColumns: string[] = ['slNo', 'serviceName', 'rejected', 'approved', 'executed', 'pending'];
@@ -61,28 +80,134 @@ export class DashboardComponent extends BaseComponent {
 
   // Lifecycle hook to initialize data
   ngOnInit(): void {
-    // Fetch dashboard counts
-    this.licenseAppService.getDashboardCounts()
+    this.loadDashboardData();
+  }
+
+  // Method to handle application type change
+  onApplicationTypeChange(): void {
+    this.activeTable = 'stats'; // Reset to stats view when filter changes
+    this.loadDashboardData();
+  }
+
+  // Load dashboard data based on selected application type
+  loadDashboardData(): void {
+    this.isLoading = true;
+
+    // Determine which service to call based on selected type
+    const countsObservable = this.getCountsObservable();
+    const applicationsObservable = this.getApplicationsObservable();
+
+    forkJoin({
+      counts: countsObservable,
+      applications: applicationsObservable
+    })
     .pipe(
-      catchError(err => {
-        console.error('Failed to fetch dashboard counts:', err);
-        // Provide a fallback default value
-        return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
+      finalize(() => {
+        this.isLoading = false;
       })
     )
-    .subscribe(res => {
-      this.dashboardCounts = res; 
+    .subscribe({
+      next: (result) => {
+        this.dashboardCounts = {
+          pending: result.counts.pending || 0,
+          approved: result.counts.approved || 0,
+          rejected: result.counts.rejected || 0
+        };
+        this.updateDataSources(result.applications);
+        console.log(`${this.getApplicationTypeLabel()} data loaded:`, result);
+      },
+      error: (error) => {
+        console.error('Error loading dashboard data:', error);
+        // Reset to default values on error
+        this.dashboardCounts = { pending: 0, approved: 0, rejected: 0 };
+        this.clearDataSources();
+      }
     });
+  }
 
-    // Fetch applications by stage
-    this.licenseAppService.getApplicationsByStatus().subscribe(res => {
-      this.appliedDataSource.data = res.applied; 
-      this.pendingDataSource.data = res.pending; 
-      this.approvedDataSource.data = res.approved; 
-      this.rejectedDataSource.data = res.rejected;
-      console.log(res)
-    }, error => {
-      console.error('Error fetching applications:', error); // Log error
-    });
+  // Get counts observable based on selected application type
+  private getCountsObservable() {
+    switch (this.selectedApplicationType) {
+      case 'license':
+        return this.licenseAppService.getDashboardCounts().pipe(
+          catchError(err => {
+            console.error('Failed to fetch license application counts:', err);
+            return of({ pending: 0, approved: 0, rejected: 0 });
+          })
+        );
+      
+      case 'new_license':
+        return this.licenseAppService.getNewLicenseDashboardCounts().pipe(
+          catchError(err => {
+            console.error('Failed to fetch new license application counts:', err);
+            return of({ pending: 0, approved: 0, rejected: 0 });
+          })
+        );
+      
+      case 'salesman_barman':
+        return this.salesmanBarmanService.getDashboardCounts().pipe(
+          catchError(err => {
+            console.error('Failed to fetch salesman/barman application counts:', err);
+            return of({ pending: 0, approved: 0, rejected: 0 });
+          })
+        );
+      
+      default:
+        return of({ pending: 0, approved: 0, rejected: 0 });
+    }
+  }
+
+  // Get applications observable based on selected application type
+  private getApplicationsObservable() {
+    switch (this.selectedApplicationType) {
+      case 'license':
+        return this.licenseAppService.getApplicationsByStatus().pipe(
+          catchError(err => {
+            console.error('Failed to fetch license applications:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        );
+      
+      case 'new_license':
+        return this.licenseAppService.getNewLicenseApplicationsByStatus().pipe(
+          catchError(err => {
+            console.error('Failed to fetch new license applications:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        );
+      
+      case 'salesman_barman':
+        return this.salesmanBarmanService.getApplicationsByStatus().pipe(
+          catchError(err => {
+            console.error('Failed to fetch salesman/barman applications:', err);
+            return of({ applied: [], pending: [], approved: [], rejected: [] });
+          })
+        );
+      
+      default:
+        return of({ applied: [], pending: [], approved: [], rejected: [] });
+    }
+  }
+
+  // Update data sources with fetched applications
+  private updateDataSources(applications: any): void {
+    this.appliedDataSource.data = applications.applied || [];
+    this.pendingDataSource.data = applications.pending || [];
+    this.approvedDataSource.data = applications.approved || [];
+    this.rejectedDataSource.data = applications.rejected || [];
+  }
+
+  // Clear all data sources
+  private clearDataSources(): void {
+    this.appliedDataSource.data = [];
+    this.pendingDataSource.data = [];
+    this.approvedDataSource.data = [];
+    this.rejectedDataSource.data = [];
+  }
+
+  // Get human-readable label for current application type
+  getApplicationTypeLabel(): string {
+    const option = this.applicationTypes.find(t => t.value === this.selectedApplicationType);
+    return option ? option.label : 'Application';
   }
 }

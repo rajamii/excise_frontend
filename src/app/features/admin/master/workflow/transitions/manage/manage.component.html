@@ -1,0 +1,56 @@
+<div class="container-fluid">
+    <h2 mat-dialog-title align="center">{{ isEditMode ? 'Edit' : 'Add' }} Workflow Transition</h2>
+  
+    <form #form="ngForm">
+      <mat-dialog-content>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Workflow</mat-label>
+          <mat-select [(ngModel)]="transition.workflow" name="workflow" required #workflowModel="ngModel" (ngModelChange)="onWorkflowChange()">
+            <mat-option *ngFor="let wf of workflows" [value]="wf.id">{{ wf.name }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="workflowModel.invalid && workflowModel.touched">
+            Workflow is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>From Stage</mat-label>
+          <mat-select [(ngModel)]="transition.from_stage" name="from_stage" required #fromStageModel="ngModel">
+            <mat-option *ngFor="let stage of stages" [value]="stage.id">{{ stage.name }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="fromStageModel.invalid && fromStageModel.touched">
+            From stage is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>To Stage</mat-label>
+          <mat-select [(ngModel)]="transition.to_stage" name="to_stage" required #toStageModel="ngModel">
+            <mat-option *ngFor="let stage of stages" [value]="stage.id">{{ stage.name }}</mat-option>
+          </mat-select>
+          <mat-error *ngIf="toStageModel.invalid && toStageModel.touched">
+            To stage is required
+          </mat-error>
+        </mat-form-field>
+  
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Condition (JSON)</mat-label>
+          <textarea 
+            matInput 
+            [(ngModel)]="transition.condition" 
+            name="condition"
+            rows="4"
+            #conditionModel="ngModel"
+          ></textarea>
+          <mat-error *ngIf="conditionModel.errors?.['json']">
+            Invalid JSON format
+          </mat-error>
+        </mat-form-field>
+      </mat-dialog-content>
+  
+      <mat-dialog-actions align="center">
+        <button matButton="filled" color="primary" (click)="onSave()" [disabled]="form.invalid">Save</button>
+        <button matButton="filled" color="warn" (click)="onCancel()">Cancel</button>
+      </mat-dialog-actions>
+    </form>
+  </div>

@@ -6,4 +6,5 @@ export const ADMIN_ROLES = [
   'level_5',
   'site_admin',
   'dev',
+  'single_window'
 ];

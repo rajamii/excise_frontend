@@ -1,27 +1,30 @@
 import { Component, Inject, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import Swal from 'sweetalert2';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { Account } from '../../../../../core/models/account.model';
 import { District } from '../../../../../core/models/district.model';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { Role } from '../../../../../core/models/role.model';
-import Swal from 'sweetalert2';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
+import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 
 @Component({
-  selector: 'app-manage-user',
+  selector: 'app-manage',
   standalone: true,
   imports: [MaterialModule],
   templateUrl: './manage.component.html',
-  styleUrl: './manage.component.scss'
+  styleUrl: './manage.component.scss',
 })
 export class ManageComponent extends BaseComponent implements OnInit {
+  // Import pattern constants for form validation
+  patternConstants = PatternConstants;
+
+  // Initialize empty user object with default values
   user: Account = {
-    id: 0,
     firstName: '',
     lastName: '',
-    middleName: '',
     email: '',
     phoneNumber: '',
     district: {} as District,
@@ -29,158 +32,168 @@ export class ManageComponent extends BaseComponent implements OnInit {
     address: '',
     role: {} as Role,
     isActive: true,
-    password: '',
-    confirmPassword: ''
   };
 
+  // Flag to determine if we're in edit mode
   isEditMode = false;
+  // Arrays to store dropdown options
   districts: District[] = [];
   subdivisions: Subdivision[] = [];
+  // Filtered subdivisions based on selected district
   filteredSubdivisions: Subdivision[] = [];
   roles: Role[] = [];
 
   constructor(
     deps: BaseDependency,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account | null
+    @Inject(MAT_DIALOG_DATA) public data: Account | null // Injected data when editing existing user
   ) {
-    super(deps)
+    super(deps);
   }
 
   ngOnInit(): void {
+    // Check if we're editing an existing user
+    if (this.data) {
+      // Clone the user data to avoid direct mutation
+      this.user = { ...this.data };
+      this.isEditMode = true;
+    }
     this.loadDistricts();
     this.loadRoles();
-    this.loadSubdivisions(() => {
-      if (this.data) {
-        this.user = { ...this.data };
-        this.isEditMode = true;
-
-        // Handle case where backend might send numbers instead of objects
-        if (this.user.district && typeof this.user.district === 'object') {
-          // Already in correct format
-        } else if (typeof this.user.district === 'number') {
-          const districtCode = this.user.district;
-          const district = this.districts.find(d => d.districtCode === districtCode);
-          this.user.district = district || {} as District;
-        }
-
-        if (this.user.subdivision && typeof this.user.subdivision === 'object') {
-          // Already in correct format
-        } else if (typeof this.user.subdivision === 'number') {
-          const subdivisionCode = this.user.subdivision;
-          const subdivision = this.subdivisions.find(s => s.subdivisionCode === subdivisionCode);
-          this.user.subdivision = subdivision || {} as Subdivision;
-        }
-
-        // Initialize filtered subdivisions
-        if (this.user.district?.districtCode) {
-          this.onDistrictChange(this.user.district.districtCode);
-
-          // Ensure subdivision belongs to selected district
-          if (this.user.subdivision?.subdivisionCode &&
-            this.user.subdivision.districtCode !== this.user.district.districtCode) {
-            this.user.subdivision = {} as Subdivision;
-          }
-        }
-      }
-    });
   }
 
+  /**
+   * Load all districts for the dropdown
+   */
   loadDistricts(): void {
     this.masterService.getDistrict().subscribe({
-      next: (data) => this.districts = data,
-      error: () => Swal.fire('Error', 'Failed to load districts.', 'error')
+      next: (data) => {
+        this.districts = data;
+        // If editing, find and set the exact district object from the loaded list
+        if (this.isEditMode && this.user.district?.districtCode) {
+          this.user.district = this.districts.find(
+            d => d.districtCode === this.user.district?.districtCode
+          );
+          if (this.user.district) {
+            this.loadSubdivisions(this.user.district.districtCode, true);
+          }
+        }
+      },
+      error: () => Swal.fire('Error', 'Failed to load districts.', 'error'),
     });
   }
 
-  loadSubdivisions(callback?: () => void): void {
+  /**
+   * Load subdivisions for a specific district
+   * @param districtCode - The district code to filter subdivisions
+   * @param isInit - Flag to indicate if this is initial load during edit
+   */
+  loadSubdivisions(districtCode: number, isInit = false): void {
     this.masterService.getSubdivision().subscribe({
       next: (data) => {
         this.subdivisions = data;
-        callback?.();
+        // Filter subdivisions based on selected district
+        this.filteredSubdivisions = data.filter(
+          sub => sub.districtCode === districtCode
+        );
+
+        // If initial load during edit, find and set the exact subdivision
+        if (isInit && this.user.subdivision?.subdivisionCode) {
+          this.user.subdivision = this.filteredSubdivisions.find(
+            s => s.subdivisionCode === this.user.subdivision?.subdivisionCode
+          )!;
+        }
       },
-      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error')
+      error: () => Swal.fire('Error', 'Failed to load subdivisions.', 'error'),
     });
   }
 
+  /**
+   * Load all available roles for the dropdown
+   */
   loadRoles(): void {
     this.userService.getRoles().subscribe({
-      next: (data) => this.roles = data,
-      error: () => Swal.fire('Error', 'Failed to load roles.', 'error')
+      next: (data) => {
+        this.roles = data;
+        // If editing, find and set the exact role object
+        if (this.isEditMode && this.user.role?.id) {
+          this.user.role = this.roles.find(r => r.id === this.user.role!.id)!;
+        }
+      },
+      error: () => Swal.fire('Error', 'Failed to load roles.', 'error'),
     });
   }
 
-  onDistrictChange(districtCode: number): void {
-    this.user.subdivision = {} as Subdivision; // Reset subdivision when district changes
-    this.filteredSubdivisions = this.subdivisions.filter(
-      s => s.districtCode === districtCode
-    );
+  /**
+   * Handler for district dropdown change
+   * Loads subdivisions for the selected district and resets subdivision selection
+   */
+  onDistrictChange(): void {
+    if (this.user.district?.districtCode) {
+      this.loadSubdivisions(this.user.district.districtCode);
+      this.user.subdivision = {} as Subdivision; // Reset subdivision selection
+    }
   }
 
+  /**
+   * Validates if password and confirm password match
+   * @returns boolean indicating if passwords match
+   */
+  passwordsMatch(): boolean {
+    return this.user.password === this.user.confirmPassword;
+  }
+
+  /**
+   * Save handler for both create and update operations
+   * Shows confirmation dialog before proceeding
+   */
   onSave(): void {
-    const requiredFields = [
-      'firstName', 'lastName', 'email', 'phoneNumber',
-      'district', 'subdivision', 'address', 'role'
-    ];
-    const userObj = this.user as any;
-
-    for (const field of requiredFields) {
-      if (!userObj[field]) {
-        Swal.fire('Warning', 'Please fill all required fields.', 'warning');
-        return;
-      }
-    }
-
-    if (!this.isEditMode && this.user.password !== this.user.confirmPassword) {
-      Swal.fire('Warning', 'Passwords do not match.', 'warning');
-      return;
-    }
-
-    const userPayload: any = {
-      ...this.user,
-      district: this.user.district.districtCode,
-      subdivision: this.user.subdivision.subdivisionCode,
-      role: this.user.role.id
-    };
-
-    //Do not send ID in payload when adding a new user
-    if (this.isEditMode) {
-      delete userPayload.id;
-    }
-
     Swal.fire({
       title: this.isEditMode ? 'Update User?' : 'Add User?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: this.isEditMode ? 'Update' : 'Save'
-    }).then(result => {
+      confirmButtonText: this.isEditMode ? 'Update' : 'Save',
+    }).then((result) => {
       if (!result.isConfirmed) return;
 
+      // Prepare payload for registration
+      const payload = {
+        email: this.user.email,
+        password: this.user.password,
+        confirmPassword: this.user.confirmPassword,
+        role: this.user.role?.id,
+        firstName: this.user.firstName,
+        middleName: this.user.middleName || '',
+        lastName: this.user.lastName,
+        phoneNumber: this.user.phoneNumber,
+        district: this.user.district?.districtCode,
+        subdivision: this.user.subdivision?.subdivisionCode,
+        address: this.user.address,
+      } as Account; // Type assertion to treat payload as Account
+
+      console.log('payload being sent:', payload)
+
+      // Determine which API call to make based on edit mode
       const request = this.isEditMode
-        ? this.adminService.updateUser(this.user.id, userPayload)
-        : this.adminService.addUser(userPayload);
+        ? this.adminService.updateUser(this.user.id!, { ...this.user })
+        : this.adminService.addUser(payload);
 
       request.subscribe({
-        next: (res: any) => {
-          if (this.isEditMode) {
-            Swal.fire('Success', 'User updated!', 'success');
-          } else {
-            Swal.fire({
-              icon: 'success',
-              title: 'User added!',
-              html: `Generated username: <strong>${res.userId}</strong>
-              `
-            });
-          }
+        next: () => {
+          Swal.fire('Success', this.isEditMode ? 'Updated!' : 'Added!', 'success');
+          // Close dialog with success flag
           this.dialogRef.close(true);
         },
-        error: () => {
-          Swal.fire('Error', 'Failed to save user.', 'error');
-        }
+        error: (err) => {
+          Swal.fire('Error', err.error?.message || 'Failed to save user.', 'error');
+        },
       });
     });
   }
 
+  /**
+   * Cancel handler - closes the dialog without saving
+   */
   onCancel(): void {
     this.dialogRef.close();
   }
