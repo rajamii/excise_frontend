@@ -287,7 +287,17 @@
                               title="View Application">
                               <i class="bi bi-eye"></i>
                             </button>
-                            @if (canViewPaymentSlip(permit)) {
+                            
+                            <!-- Approve Button for Cancellation Workflow -->
+                            @if (activeTab === 'cancellation' && permit.allowedActions?.includes('APPROVE')) {
+                              <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(permit)"
+                                title="Approve Cancellation">
+                                <i class="bi bi-check-lg"></i>
+                              </button>
+                            }
+
+                            <!-- Payment Slip (Original Logic) -->
+                            @if (canViewPaymentSlip(permit) && activeTab !== 'cancellation') {
                               <button class="btn btn-outline-warning btn-sm" (click)="viewPermitSlip(permit)"
                                 title="View Permit Slip">
                                 <i class="bi bi-file-earmark-text"></i>

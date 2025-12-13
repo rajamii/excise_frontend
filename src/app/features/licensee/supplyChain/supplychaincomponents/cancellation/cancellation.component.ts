@@ -5,6 +5,7 @@ import { Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
 
 interface TableData {
+  id?: string | number;
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -14,6 +15,7 @@ interface TableData {
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
+  allowedActions?: string[];
 }
 
 @Component({
@@ -127,16 +129,19 @@ export class CancellationComponent implements OnInit {
     this.supplyChainService.getCancellations().subscribe({
       next: (data) => {
         this.cancellationData = data.map((item: any) => ({
-          referenceNo: item.our_ref_no || item.referenceNo,
-          submissionDate: item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB') : 'N/A',
-          requestDate: item.created_at ? new Date(item.created_at).toLocaleDateString('en-GB') : 'N/A',
-          distilleryName: item.distillery_name || 'N/A', // Assuming field exists or mapped
+          id: item.id,
+          referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
+          submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 'N/A'),
+          requestDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 'N/A'),
+          distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
           status: item.status || 'PENDING',
-          amount: item.total_cancellation_amount || '0.00',
-          priority: 'normal', // Default or derived
-          cancellationReason: 'N/A', // Field might need to be added to model if critical
-          licenseType: 'N/A'
+          amount: item.totalCancellationAmount || item.total_cancellation_amount || '0.00',
+          priority: 'normal',
+          cancellationReason: 'N/A',
+          licenseType: 'N/A',
+          allowedActions: item.allowedActions || item.allowed_actions || []
         }));
+        console.log('Cancellation Data:', this.cancellationData);
         this.applyCancellationFilters();
       },
       error: (err) => console.error('Error fetching cancellations', err)
@@ -208,13 +213,39 @@ export class CancellationComponent implements OnInit {
   }
 
   approveCancellation(item: TableData): void {
-    item.status = 'APPROVED';
-    console.log('Approved cancellation:', item.referenceNo);
+    if (!item.id) return;
+    if (!confirm('Are you sure you want to approve this cancellation request?')) return;
+
+    const role = 'commissioner'; 
+
+    this.supplyChainService.performCancellationAction(item.id, 'APPROVE', role).subscribe({
+      next: () => {
+        alert('Cancellation Request Approved Successfully');
+        this.loadCancellationData();
+      },
+      error: (err) => {
+        console.error('Error approving cancellation', err);
+        alert('Failed to approve cancellation');
+      }
+    });
   }
 
   rejectCancellation(item: TableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected cancellation:', item.referenceNo);
+    if (!item.id) return;
+    if (!confirm('Are you sure you want to reject this cancellation request?')) return;
+
+    const role = 'commissioner';
+
+    this.supplyChainService.performCancellationAction(item.id, 'REJECT', role).subscribe({
+      next: () => {
+        alert('Cancellation Request Rejected');
+        this.loadCancellationData();
+      },
+      error: (err) => {
+        console.error('Error rejecting cancellation', err);
+        alert('Failed to reject cancellation');
+      }
+    });
   }
 
   // Helper methods

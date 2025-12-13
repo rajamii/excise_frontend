@@ -6,6 +6,7 @@ import { Subscription } from "rxjs";
 import { filter } from "rxjs/operators";
 import { RequisitionComponent } from "../supplychaincomponents/requisition/requisition.component";
 import { RevalidationComponent } from "../supplychaincomponents/revalidation/revalidation.component";
+import { SupplyChainService } from "../services/supplychain.service";
 
 interface PermitData {
   referenceNo: string;
@@ -14,6 +15,8 @@ interface PermitData {
   status: string;
   amount: number;
   type: "requisition" | "revalidation" | "cancellation" | "transit";
+  allowedActions?: string[];
+  id?: number; // Added to support actions requiring ID
 }
 
 @Component({
@@ -37,34 +40,12 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
   // Sample data matching the .NET dashboard image
   // Requisition data is now handled by the shared RequisitionComponent
   // This array only contains data for other permit types (revalidation, cancellation, transit)
-  allPermits: PermitData[] = [
-    {
-      referenceNo: "REV/001/2025",
-      submissionDate: new Date("2025-09-10"),
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "REVALIDATION APPROVED BY COMMISSIONER",
-      amount: 50.0,
-      type: "revalidation",
-    },
-    {
-      referenceNo: "CAN/001/2025",
-      submissionDate: new Date("2025-09-08"),
-      distilleryName: "Mount Distilleries Ltd",
-      status: "CANCELLATION PENDING APPROVAL",
-      amount: 25.0,
-      type: "cancellation",
-    },
-    {
-      referenceNo: "TRP/001/2025",
-      submissionDate: new Date("2025-09-20"),
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "TRANSIT PERMIT APPROVED",
-      amount: 75.0,
-      type: "transit",
-    },
-  ];
+  allPermits: PermitData[] = [];
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private supplyChainService: SupplyChainService
+  ) {}
 
   ngOnInit(): void {
     // Listen to router events to determine if we're viewing an individual application
@@ -87,6 +68,35 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
         this.router.url.includes("/revalidation/") ||
         this.router.url.includes("/cancellation/") ||
         this.router.url.includes("/transit/"));
+
+    this.loadCancellationData();
+  }
+
+  loadCancellationData() {
+    this.supplyChainService.getCancellations().subscribe({
+      next: (data) => {
+        const cancellations: PermitData[] = data.map((item: any) => ({
+          referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || 'N/A',
+          submissionDate: item.cancellationDate ? new Date(item.cancellationDate) : (item.cancellation_date ? new Date(item.cancellation_date) : new Date()),
+          distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
+          status: item.status || 'PENDING',
+          amount: parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0'),
+          type: "cancellation",
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          id: item.id
+        }));
+        console.log("Mapped Cancellations:", cancellations);
+        
+        // Merge or replace cancellation data in allPermits
+        // For now, we'll replace the static sample data with this real data + other static samples if needed
+        // Assuming we only want real cancellation data for now or appending it
+        this.allPermits = [
+          ...this.allPermits.filter(p => p.type !== 'cancellation'), // Remove old cancellation mock data
+          ...cancellations
+        ];
+      },
+      error: (err) => console.error('Error fetching cancellations', err)
+    });
   }
 
   ngOnDestroy(): void {
@@ -98,7 +108,6 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
   setActiveTab(tab: string): void {
     this.activeTab = tab;
   }
-
   getFilteredData(): PermitData[] {
     let filtered = this.allPermits.filter(
       (permit) => permit.type === this.activeTab,
@@ -161,6 +170,28 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     this.selectedYear = "";
     this.selectedDistillery = "";
     this.selectedStatus = "";
+  }
+
+  approveCancellation(permit: PermitData): void {
+    if (!permit.id) {
+        console.error('Permit ID missing for approval');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to approve this cancellation request?')) {
+      this.supplyChainService.performCancellationAction(permit.id, 'APPROVE', 'permit-section')
+        .subscribe({
+          next: (res) => {
+            alert('Cancellation approved successfully');
+            // Refresh logic - ideally reload data
+            this.loadCancellationData();
+          },
+          error: (err) => {
+            console.error('Error approving cancellation', err);
+            alert('Failed to approve cancellation');
+          }
+        });
+    }
   }
 
   viewPermitSlip(permit: PermitData): void {

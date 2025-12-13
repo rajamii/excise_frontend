@@ -184,7 +184,10 @@ export class SupplyChainService {
   }
 
   submitCancellation(payload: any): Observable<any> {
-    return this.http.post<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/submit/`, payload).pipe(
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/submit/`;
+    console.log('submitCancellation: Payload:', payload);
+    console.log('submitCancellation: URL:', url);
+    return this.http.post<any>(url, payload).pipe(
       catchError((error) => {
         console.error('submitCancellation error', error);
         throw error;
@@ -202,6 +205,18 @@ export class SupplyChainService {
       catchError((error) => {
         console.error('getCancellations error', error);
         return of([]);
+      })
+    );
+  }
+
+  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT', role: string = 'permit-section'): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
+      { action, role }
+    ).pipe(
+      catchError((error) => {
+        console.error('performCancellationAction error', error);
+        throw error;
       })
     );
   }
