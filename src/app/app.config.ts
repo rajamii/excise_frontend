@@ -32,6 +32,6 @@ export const appConfig: ApplicationConfig = {
     { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
     
     // ✅ Chart.js configuration
-    provideCharts(withDefaultRegisterables()),
+    provideCharts(withDefaultRegisterables()), provideCharts(withDefaultRegisterables()),
   ]
 };

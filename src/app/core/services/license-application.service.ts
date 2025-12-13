@@ -14,7 +14,7 @@ import { NewLicenseApplication } from '../models/new-license-application.model';
 export class LicenseApplicationService {
 
   private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
+  private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocuments: Map<string, File> = new Map();
