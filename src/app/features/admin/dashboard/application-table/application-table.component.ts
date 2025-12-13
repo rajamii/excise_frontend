@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { BaseDependency } from '../../../../base/dependency/base.dependency';
@@ -7,6 +7,9 @@ import { BaseComponent } from '../../../../base/base.components';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ReviewApplicationComponent } from './review-application/review-application.component';
 import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
+import { Subject } from 'rxjs';
+import { takeUntil, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
 @Component({
   selector: 'app-application-table',
@@ -14,8 +17,7 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-
-export class ApplicationTableComponent extends BaseComponent implements OnChanges{
+export class ApplicationTableComponent extends BaseComponent implements OnChanges, OnDestroy {
   // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
@@ -24,6 +26,9 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   objections: Objection[] = [];
   unresolvedObjectionAppIds: Set<string> = new Set();
+  
+  // Subject for managing subscriptions
+  private destroy$ = new Subject<void>();
 
   // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
@@ -78,17 +83,85 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   }
 
   // Angular lifecycle hook that runs when input properties change
-  ngOnChanges() {
-    this.unresolvedObjectionAppIds.clear();
+  ngOnChanges(changes: SimpleChanges): void {
+    // Only process if dataSource actually changed and has data
+    if (changes['dataSource'] && this.dataSource?.data) {
+      this.unresolvedObjectionAppIds.clear();
+      
+      // Safety check: ensure data is an array and has length
+      if (Array.isArray(this.dataSource.data) && this.dataSource.data.length > 0) {
+        this.loadObjections();
+      }
+    }
+  }
 
-    this.dataSource?.data?.forEach(app => {
-      this.licenseAppService.getObjections(app.applicationId).subscribe((objections) => {
-        const hasUnresolved = objections?.some(obj => obj.isResolved === false);
-        if (hasUnresolved) {
-          this.unresolvedObjectionAppIds.add(app.applicationId);
-        }
-      });
+  // Separate method to load objections with proper error handling
+  private loadObjections(): void {
+    this.dataSource.data.forEach(app => {
+      // Safety check: ensure application has an ID
+      if (!app?.application_id) {
+        console.warn('Application missing application_id:', app);
+        return;
+      }
+
+      // Only fetch objections if application is in a state where they might exist
+      if (this.shouldFetchObjections(app)) {
+        this.licenseAppService.getObjections(app.application_id)
+          .pipe(
+            takeUntil(this.destroy$),
+            catchError(err => {
+              // Handle 404 errors silently (no objections found)
+              if (err.status === 404) {
+                console.log(`No objections found for application ${app.application_id}`);
+              } else {
+                console.error(`Error fetching objections for ${app.application_id}:`, err);
+              }
+              // Return empty array on error
+              return of([]);
+            })
+          )
+          .subscribe({
+            next: (objections) => {
+              // Safety check: ensure objections is an array
+              if (Array.isArray(objections) && objections.length > 0) {
+                const hasUnresolved = objections.some(obj => obj?.isResolved === false);
+                if (hasUnresolved && app.application_id) {
+                  // ✅ FIXED Line 129: Type assertion since we already checked it's not undefined
+                  this.unresolvedObjectionAppIds.add(app.application_id as string);
+                }
+              }
+            },
+            error: (err) => {
+              // This shouldn't be reached due to catchError, but just in case
+              console.error(`Unexpected error for ${app.application_id}:`, err);
+            }
+          });
+      }
     });
+  }
+
+  // Helper method to determine if objections should be fetched
+  private shouldFetchObjections(app: LicenseApplication): boolean {
+    // ✅ FIXED Line 158: Check if current_stage exists before using it
+    if (!app.current_stage) {
+      return false;
+    }
+
+    // Only fetch objections if application is in a state where they might exist
+    const objectionStages = [
+      'level_1_objection',
+      'level_2_objection',
+      'level_3_objection',
+      'level_4_objection',
+      'level_5_objection',
+      'level_1',
+      'level_2',
+      'level_3',
+      'level_4',
+      'level_5'
+    ];
+    
+    return objectionStages.includes(app.current_stage);
   }
 
   // Method to view application details
@@ -108,6 +181,12 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   // Opens a dialog to show the movement history of the selected application
   viewMovement(application: any): void {
+    // Added null check and type assertion for application_id
+    if (!application?.application_id) {
+      console.error('Cannot view movement: application_id is missing');
+      return;
+    }
+
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',
       maxWidth: '100%',
@@ -116,5 +195,12 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
         movementDataSource: new MatTableDataSource([application])
       }
     });
+  }
+
+  // Cleanup subscriptions on component destroy
+  override ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    super.ngOnDestroy();
   }
 }

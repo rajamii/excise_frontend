@@ -15,22 +15,22 @@ import { MasterService } from '../../../../../core/services/master.service';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  licenseSubcategory: LicenseSubcategory = { description: '', category: 0 }; // Holds form data for subcategory
-  isEditMode = false; // Flag to determine add/edit mode
-  categories: LicenseCategory[] = []; // List of categories for dropdown
+  licenseSubcategory: LicenseSubcategory = { description: '', category: 0 };
+  isEditMode = false;
+  categories: LicenseCategory[] = [];
 
   constructor(
     private adminService: AdminService,
     private masterService: MasterService,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: LicenseSubcategory | null // Injected data for edit mode
+    @Inject(MAT_DIALOG_DATA) public data: LicenseSubcategory | null
   ) {}
 
   ngOnInit(): void {
-    this.loadCategories(); // Load categories for dropdown
+    this.loadCategories();
 
     if (this.data) {
-      this.licenseSubcategory = { ...this.data }; // Pre-fill form in edit mode
+      this.licenseSubcategory = { ...this.data };
 
       // Ensure category is a number for mat-select
       if (typeof this.licenseSubcategory.category === 'object') {
@@ -43,8 +43,8 @@ export class ManageComponent implements OnInit {
 
   loadCategories(): void {
     this.masterService.getLicenseCategories().subscribe({
-      next: (data) => this.categories = data, // Populate dropdown with categories
-      error: () => Swal.fire('Error', 'Failed to load license categories.', 'error') // Handle fetch error
+      next: (data) => this.categories = data,
+      error: () => Swal.fire('Error', 'Failed to load license categories.', 'error')
     });
   }
 
@@ -62,26 +62,26 @@ export class ManageComponent implements OnInit {
         ...this.licenseSubcategory,
         category: typeof this.licenseSubcategory.category === 'number'
           ? this.licenseSubcategory.category
-          : this.licenseSubcategory.category?.id // Normalize category ID
+          : (this.licenseSubcategory.category as any)?.id
       };
 
       const request = this.isEditMode
-        ? this.adminService.updateLicenseSubcategory(payload.id!, payload) // API call for update
-        : this.adminService.addLicenseSubcategory(payload); // API call for add
+        ? this.adminService.updateLicenseSubcategory(payload.id!, payload)
+        : this.adminService.addLicenseSubcategory(payload);
 
       request.subscribe({
         next: () => {
           Swal.fire('Success', this.isEditMode ? 'Subcategory updated!' : 'Subcategory added!', 'success');
-          this.dialogRef.close(true); // Close dialog on success
+          this.dialogRef.close(true);
         },
         error: () => {
-          Swal.fire('Error', 'Failed to save license subcategory.', 'error'); // Handle API error
+          Swal.fire('Error', 'Failed to save license subcategory.', 'error');
         }
       });
     });
   }
 
   onCancel(): void {
-    this.dialogRef.close(); // Close dialog on cancel
+    this.dialogRef.close();
   }
 }

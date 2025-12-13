@@ -10,7 +10,7 @@ import { AdminService } from '../../../admin.service';
   standalone: true,
   imports: [MaterialModule],
   templateUrl: './manage.component.html',
-  styleUrl: './manage.component.scss'
+  styleUrls: ['./manage.component.scss']
 })
 export class ManageComponent implements OnInit {
   role: Role = new Role();
@@ -24,24 +24,24 @@ export class ManageComponent implements OnInit {
 
   // App keys
   appLabels: string[] = [
-    'user', 
-    'roles', 
-    'masters',
-    'license_application',
-    'salesman_barman_registration', 
-    'company_registration', 
-    'contact_us'
+    'user',
+    'roles',
+    '/masters//',
+    '/license_application/',
+    'salesman_barman_registration',
+    '/company_registration/',
+    '/contact_us//'
   ];
 
   // Display map for UI
   appDisplayMap: { [key: string]: string } = {
-    salesman_barman_registration: 'Salesman/Barman Registration',
-    company_registration: 'Company Registration',
-    license_application: 'License Application',
-    contact_us: 'Contact Us',
-    masters: 'Masters',
-    roles: 'Roles',
-    user: 'User'
+    'salesman_barman_registration': 'Salesman/Barman Registration',
+    '/company_registration/': 'Company Registration',
+    '/license_application/': 'License Application',
+    '/contact_us//': 'Contact Us',
+    '/masters//': 'Masters',
+    'roles': 'Roles',
+    'user': 'User'
   };
 
   constructor(
@@ -64,7 +64,7 @@ export class ManageComponent implements OnInit {
   }
 
   // Fill permission map based on existing permissions
-  populatePermissionMap(map: { [key: string]: boolean }, permissions: string[]) {
+  populatePermissionMap(map: { [key: string]: boolean }, permissions: string[]): void {
     this.appLabels.forEach(app => {
       map[app] = permissions.includes(app);
     });
@@ -102,7 +102,7 @@ export class ManageComponent implements OnInit {
           Swal.fire('Success', this.isEditMode ? 'Role updated successfully!' : 'Role added successfully!', 'success');
           this.dialogRef.close(true);
         },
-        error: (error) => {
+        error: (error: any) => {
           Swal.fire('Error', this.isEditMode ? 'Failed to update Role' : 'Failed to add Role', 'error');
           console.error('Error:', error);
         }

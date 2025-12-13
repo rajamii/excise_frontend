@@ -36,13 +36,14 @@ export class ApplicationMovementComponent {
       ? data.movementDataSource.data
       : [];
 
+    // ✅ FIXED: Changed applicationId to application_id (snake_case)
     // Flatten transactions from all applications and add the application ID to each
     const transactions: Transaction[] = apps.flatMap(app =>
       (app.transactions || []).map(txn => ({
         ...txn,
-        applicationId: app.applicationId,
+        applicationId: app.application_id,
       }))
-    ) // .reverse(); // Reverse to show latest transaction first
+    ); // .reverse(); // Reverse to show latest transaction first
 
     // Initialize data source for the mat-table
     this.movementDataSource = new MatTableDataSource(transactions);

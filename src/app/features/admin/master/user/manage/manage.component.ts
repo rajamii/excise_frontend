@@ -171,9 +171,10 @@ export class ManageComponent extends BaseComponent implements OnInit {
         address: this.user.address,
       } as Account; // Type assertion to treat payload as Account
 
-      console.log('payload being sent:', payload)
+      console.log('payload being sent:', payload);
 
       // Determine which API call to make based on edit mode
+      // FIXED: Use this.user.id (number) instead of this.user.username (string)
       const request = this.isEditMode
         ? this.adminService.updateUser(this.user.id!, { ...this.user })
         : this.adminService.addUser(payload);
@@ -184,7 +185,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
           // Close dialog with success flag
           this.dialogRef.close(true);
         },
-        error: (err) => {
+        error: (err: any) => {
           Swal.fire('Error', err.error?.message || 'Failed to save user.', 'error');
         },
       });

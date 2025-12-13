@@ -54,7 +54,7 @@
         <!-- Select Licensee -->
         <mat-form-field appearance="outline">
           <mat-label>Select Licensee</mat-label>
-          <mat-select formControlName="licensee" [disabled]="!applicationForm.get('district')?.value">
+          <mat-select formControlName="licensee">
             <mat-option value="">-- Select Licensee --</mat-option>
             @for (licensee of filteredLicensees; track licensee.id) {
             <mat-option [value]="licensee.id">
@@ -102,20 +102,17 @@
           }
         </mat-form-field>
 
-        <!-- Information Card for Selected Mode - spans full width -->
+        <!-- Information Card for Selected Mode -->
         @if (applicationForm.get('modeOfOperation')?.value) {
         <div class="info-section">
           <div class="info-card">
             <div class="info-header">
-              <mat-icon class="info-icon">{{ applicationForm.get('modeOfOperation')?.value === 'salesman' ? 'person' :
-                'local_bar' }}</mat-icon>
+              <mat-icon class="info-icon">{{ applicationForm.get('modeOfOperation')?.value === 'salesman' ? 'person' : 'local_bar' }}</mat-icon>
               <h4>{{ getModeOfOperationLabel(applicationForm.get('modeOfOperation')?.value) }} Registration</h4>
             </div>
             <div class="info-content">
               @if (applicationForm.get('modeOfOperation')?.value === 'salesman') {
-              <p><strong>Salesman Registration:</strong> Register as a licensed salesman to work in liquor retail
-                establishments. You will need to provide personal details, identity proofs, and complete the required
-                documentation process.</p>
+              <p><strong>Salesman Registration:</strong> Register as a licensed salesman to work in liquor retail establishments. You will need to provide personal details, identity proofs, and complete the required documentation process.</p>
               <ul>
                 <li>Personal information and identity verification</li>
                 <li>Educational qualifications (if required)</li>
@@ -124,8 +121,7 @@
                 <li>Application fee: ₹{{ calculateApplicationFee('salesman') }}</li>
               </ul>
               } @else {
-              <p><strong>Barman Registration:</strong> Register as a licensed barman to work in bars, restaurants, and
-                hospitality establishments. Complete documentation and verification process required.</p>
+              <p><strong>Barman Registration:</strong> Register as a licensed barman to work in bars, restaurants, and hospitality establishments. Complete documentation and verification process required.</p>
               <ul>
                 <li>Personal information and identity verification</li>
                 <li>Previous experience certificates (if any)</li>
@@ -139,50 +135,8 @@
         </div>
         }
       </div>
-
-      <!-- Summary Section - outside form-field-container but inside mat-card-content -->
-      <!-- @if (applicationForm.valid) {
-      <div class="summary-section">
-        <div class="heading">
-          Application Summary
-        </div>
-        <div class="summary-grid">
-          <div class="summary-item">
-            <span class="summary-label">Financial Year:</span>
-            <span class="summary-value">{{ applicationForm.get('financialYear')?.value }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">District:</span>
-            <span class="summary-value">{{ getDistrictName(applicationForm.get('district')?.value) }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">License Category:</span>
-            <span class="summary-value">{{ getLicenseCategoryName(applicationForm.get('licenseCategory')?.value)
-              }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Selected Licensee:</span>
-            <span class="summary-value">
-              @if (getLicenseeDetails(applicationForm.get('licensee')?.value); as licensee) {
-              {{ licensee.establishment_name }} ({{ licensee.licensee_id }})
-              }
-            </span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">Mode of Operation:</span>
-            <span class="summary-value">{{ getModeOfOperationLabel(applicationForm.get('modeOfOperation')?.value)
-              }}</span>
-          </div>
-          <div class="summary-item highlight">
-            <span class="summary-label">Application Fee:</span>
-            <span class="summary-value">₹{{ calculateApplicationFee(applicationForm.get('modeOfOperation')?.value)
-              }}</span>
-          </div>
-        </div>
-      </div>
-      }-->
-
     </mat-card-content>
+    
     <mat-card-actions>
       <button mat-flat-button color="primary" type="submit" [disabled]="!applicationForm.valid" (click)="onSubmit()">
         Proceed to Next Step

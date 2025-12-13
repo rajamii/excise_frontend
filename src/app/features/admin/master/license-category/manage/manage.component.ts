@@ -13,19 +13,22 @@ import { AdminService } from '../../../admin.service';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  licenseCategory: LicenseCategory = { licenseCategory: '' };
+  licenseCategory: LicenseCategory = { 
+    licenseCategory: '', 
+    description: '' 
+  };
   isEditMode = false;
 
   constructor(
     private adminService: AdminService,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: LicenseCategory | null // Inject dialog data
+    @Inject(MAT_DIALOG_DATA) public data: LicenseCategory | null
   ) {}
 
   ngOnInit(): void {
     if (this.data) {
-      this.licenseCategory = { ...this.data }; // Populate form for edit mode
-      this.isEditMode = true; // Set edit mode flag
+      this.licenseCategory = { ...this.data };
+      this.isEditMode = true;
     }
   }
 
@@ -37,24 +40,23 @@ export class ManageComponent implements OnInit {
       confirmButtonText: this.isEditMode ? 'Update' : 'Save',
       cancelButtonText: 'Cancel'
     }).then(result => {
-      if (!result.isConfirmed) return; // Abort if user cancels
+      if (!result.isConfirmed) return;
 
-      // Choose add or update API call based on mode
       const request = this.isEditMode
         ? this.adminService.updateLicenseCategory(this.licenseCategory.id!, this.licenseCategory)
         : this.adminService.addLicenseCategory(this.licenseCategory);
 
       request.subscribe({
         next: () => {
-          Swal.fire('Success', this.isEditMode ? 'Category updated!' : 'Category added!', 'success'); // Show success message
-          this.dialogRef.close(true); // Close dialog and notify parent
+          Swal.fire('Success', this.isEditMode ? 'Category updated!' : 'Category added!', 'success');
+          this.dialogRef.close(true);
         },
-        error: () => Swal.fire('Error', 'Failed to save license category.', 'error') // Show error message
+        error: () => Swal.fire('Error', 'Failed to save license category.', 'error')
       });
     });
   }
 
   onCancel(): void {
-    this.dialogRef.close(); // Close dialog without saving
+    this.dialogRef.close();
   }
 }

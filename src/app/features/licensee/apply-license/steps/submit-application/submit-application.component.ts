@@ -1,30 +1,22 @@
-import { ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Router, RouterModule } from '@angular/router';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
-import Swal from 'sweetalert2'; 
+import Swal from 'sweetalert2';
 import { Subscription } from 'rxjs';
-import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
 
 @Component({
   selector: 'app-submit-application',
   standalone: true,
-  imports: [
-    MaterialModule,
-    RouterModule
-],
+  imports: [MaterialModule, RouterModule],
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })
-export class SubmitApplicationComponent implements OnInit, OnDestroy{
-  // Emits event to move to the previous screen
+export class SubmitApplicationComponent implements OnInit, OnDestroy {
   @Output() back = new EventEmitter<void>();
 
-  // Stores the URL for previewing the uploaded photo
   passPhotoUrl: string | null = null;
-
-  // Holds the subscription to the photo observable for cleanup
   private photoSub?: Subscription;
 
   constructor(
@@ -33,123 +25,111 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy{
     private cdr: ChangeDetectorRef
   ) {}
 
-  // On component init, subscribe to the photo observable
   ngOnInit(): void {
-    this.photoSub = this.licenseAppService.getPassPhotoObservable().subscribe(file => {
-      // Release previous object URL if exists
+    this.photoSub = this.licenseAppService.getPassPhotoObservable().subscribe((file: File | null) => {
       if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
 
-      // Create a new preview URL if file exists
       this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
 
       setTimeout(() => {
         this.passPhotoUrl = file ? URL.createObjectURL(file) : null;
-        this.cdr.detectChanges(); // safe after timeout
+        this.cdr.detectChanges();
       });
     });
   }
 
-  // Cleanup: revoke object URL and unsubscribe
   ngOnDestroy(): void {
     if (this.passPhotoUrl) URL.revokeObjectURL(this.passPhotoUrl);
     this.photoSub?.unsubscribe();
   }
 
-  /**
-   * Labels for displaying field names instead of raw keys
-   * This ensures readable display of keys from session storage
-   */
   readonly licenseApplicationLabels: Partial<Record<keyof LicenseApplication, string>> = {
-    exciseDistrict: 'Excise District',
-    licenseCategory: 'License Category',
-    exciseSubdivision: 'Excise Sub Division',
+    excise_district: 'Excise District',
+    license_category: 'License Category',
+    excise_subdivision: 'Excise Sub Division',
     license: 'License',
-    licenseType: 'License Type',
-    establishmentName: 'Establishment Name',
-    mobileNumber: 'Mobile Number',
+    license_type: 'License Type',
+    establishment_name: 'Establishment Name',
+    mobile_number: 'Mobile Number',
     email: 'Email Id',
-    licenseNo: 'License No.',
-    initialGrantDate: 'Initial Grant Date',
-    renewedFrom: 'Renewed From',
-    validUpTo: 'Valid Up To',
-    yearlyLicenseFee: 'Yearly License Fee',
-    licenseNature: 'License Nature',
-    functioningStatus: 'Functioning Status',
-    modeOfOperation: 'Mode of Operation',
-    siteSubdivision: 'Site Sub Division',
-    policeStation: 'Police Station',
-    locationCategory: 'Location Category',
-    locationName: 'Location Name',
-    wardName: 'Ward Name',
-    businessAddress: 'Business Address',
-    roadName: 'Road Name',
-    pinCode: 'PIN Code',
+    license_no: 'License No.',
+    initial_grant_date: 'Initial Grant Date',
+    renewed_from: 'Renewed From',
+    valid_up_to: 'Valid Up To',
+    yearly_license_fee: 'Yearly License Fee',
+    license_nature: 'License Nature',
+    functioning_status: 'Functioning Status',
+    mode_of_operation: 'Mode of Operation',
+    site_subdivision: 'Site Sub Division',
+    police_station: 'Police Station',
+    location_category: 'Location Category',
+    location_name: 'Location Name',
+    ward_name: 'Ward Name',
+    business_address: 'Business Address',
+    road_name: 'Road Name',
+    pin_code: 'PIN Code',
     latitude: 'Latitude',
     longitude: 'Longitude',
-    companyName: 'Company Name',
-    companyAddress: 'Company Address',
-    companyPan: 'Company PIN',
-    companyCin: 'Company CIN',
-    incorporationDate: 'Incorporation Date',
-    companyPhoneNumber: 'Company Phone Number',
-    companyEmail: 'Company Email Id',
+    company_name: 'Company Name',
+    company_address: 'Company Address',
+    company_pan: 'Company PAN',
+    company_cin: 'Company CIN',
+    incorporation_date: 'Incorporation Date',
+    company_phone_number: 'Company Phone Number',
+    company_email: 'Company Email Id',
     status: 'Status',
-    memberName: 'Member Name',
-    fatherHusbandName: 'Father/Husband Name',
+    member_name: 'Member Name',
+    father_husband_name: 'Father/Husband Name',
     nationality: 'Nationality',
     gender: 'Gender',
     pan: 'PAN',
-    memberMobileNumber: 'Member Mobile Number',
-    memberEmail: 'Member Email Id',
+    member_mobile_number: 'Member Mobile Number',
+    member_email: 'Member Email Id',
     photo: 'Photo'
   };
 
-  // Returns license type to conditionally show unit details
-  get licenseType() {
-    return this.getParsedSession<Partial<LicenseApplication>>('keyInfoData')?.licenseType;
+  get licenseType(): number | null {
+    return this.getParsedSession<Partial<LicenseApplication>>('keyInfoData')?.license_type ?? null;
   }
 
-  // Convert each group into label-value array for template rendering
-  get selectLicenseData() {
+  get selectLicenseData(): { key: string; value: any }[] {
     return this.getDataForView('selectLicenseData');
   }
 
-  get keyInfoData() {
+  get keyInfoData(): { key: string; value: any }[] {
     return this.getDataForView('keyInfoData');
   }
 
-  get addressData() {
+  get addressData(): { key: string; value: any }[] {
     return this.getDataForView('addressData');
   }
 
-  get unitDetailsData() {
+  get unitDetailsData(): { key: string; value: any }[] {
     return this.getDataForView('unitDetailsData');
   }
 
-  get memberDetailsData() {
+  get memberDetailsData(): { key: string; value: any }[] {
     return this.getDataForView('memberDetailsData');
   }
 
-  /**
-   * Sections to display dynamically in the HTML template.
-   * Each section includes a title, data, and optional display condition.
-   */
-  get displaySections() {
+  get displaySections(): Array<{
+    title: string;
+    data: { key: string; value: any }[];
+    condition?: () => boolean;
+  }> {
     return [
       { title: 'License Details', data: this.selectLicenseData },
       { title: 'Key Info', data: this.keyInfoData },
       {
         title: 'Unit Details',
         data: this.unitDetailsData,
-        condition: () => this.licenseType === 'Company',
+        condition: () => this.licenseType === 2
       },
-      { title: 'Address Details', data: this.addressData }
+      { title: 'Address Details', data: this.addressData },
+      { title: 'Member Details', data: this.memberDetailsData }
     ];
   }
 
-  /**
-   * Parses JSON from sessionStorage and returns it as typed object.
-   */
   private getParsedSession<T>(key: string): T | null {
     try {
       const data = sessionStorage.getItem(key);
@@ -160,40 +140,121 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy{
     }
   }
 
-  /**
-   * Safely fetches the label for a given key.
-   * Ensures type safety using 'key in object' check.
-   */
   private getSafeLabel(key: string): string {
     return (key in this.licenseApplicationLabels)
       ? this.licenseApplicationLabels[key as keyof LicenseApplication]!
       : key;
   }
 
-  /**
-   * Converts parsed object to a label-value array for display.
-   */
   private getDataForView(key: string): { key: string; value: any }[] {
     const data = this.getParsedSession<Partial<LicenseApplication>>(key);
-
-    return data
-      ? Object.entries(data).map(([k, v]) => {
-          const label = this.getSafeLabel(k);
-          return { key: label, value: v };
-        })
-      : [];
+    if (!data) return [];
+    
+    return Object.entries(data)
+      .filter(([k]) => !k.endsWith('_code')) // Filter out the _code fields from display
+      .map(([k, v]) => {
+        const label = this.getSafeLabel(k);
+        
+        // Convert IDs to display names using the master data
+        let displayValue = v;
+        
+        // Map field names to their display values
+        if (k === 'excise_district' || k === 'license_category' || k === 'excise_subdivision' || 
+            k === 'license_type' || k === 'site_subdivision' || k === 'police_station') {
+          displayValue = this.getDisplayName(k, v);
+        }
+        
+        return { key: label, value: displayValue };
+      });
   }
 
   /**
-   * Emits the back event to navigate to the previous step
+   * Get display name for an ID field from master data stored in sessionStorage
    */
-  goBack() {
+  private getDisplayName(fieldName: string, id: any): string {
+    if (!id) return '';
+    
+    try {
+      let masterData: any[] = [];
+      
+      switch (fieldName) {
+        case 'excise_district':
+          masterData = JSON.parse(sessionStorage.getItem('districts') || '[]');
+          const district = masterData.find(d => d.id === id);
+          return district?.district || id.toString();
+          
+        case 'license_category':
+          masterData = JSON.parse(sessionStorage.getItem('licenseCategories') || '[]');
+          const category = masterData.find(d => d.id === id);
+          return category?.licenseCategory || id.toString();
+          
+        case 'excise_subdivision':
+        case 'site_subdivision':
+          masterData = JSON.parse(sessionStorage.getItem('subdivisions') || '[]');
+          const subdivision = masterData.find(d => d.id === id);
+          return subdivision?.subdivision || id.toString();
+          
+        case 'license_type':
+          masterData = JSON.parse(sessionStorage.getItem('licenseTypes') || '[]');
+          const licenseType = masterData.find(d => d.id === id);
+          return licenseType?.licenseType || id.toString();
+          
+        case 'police_station':
+          masterData = JSON.parse(sessionStorage.getItem('policeStations') || '[]');
+          const station = masterData.find(d => d.id === id);
+          return station?.policeStation || id.toString();
+          
+        default:
+          return id.toString();
+      }
+    } catch (e) {
+      console.error(`Failed to get display name for ${fieldName}:`, e);
+      return id.toString();
+    }
+  }
+
+  goBack(): void {
     this.back.emit();
   }
 
   /**
-   * Final submission of the license application.
-   * Combines data from session storage, photo, and submits via API.
+   * 🔍 DEBUG: Check sessionStorage before submission
+   */
+  private debugSessionStorage(): void {
+    console.group('🔍 DEBUG: SessionStorage Contents Before Submission');
+    
+    const keys = [
+      'selectLicenseData',
+      'keyInfoData',
+      'addressData',
+      'unitDetailsData',
+      'memberDetailsData'
+    ];
+    
+    keys.forEach(key => {
+      const data = sessionStorage.getItem(key);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          console.group(`📄 ${key}`);
+          console.table(parsed);
+          console.groupEnd();
+        } catch (e) {
+          console.error(`❌ Failed to parse ${key}:`, e);
+        }
+      } else {
+        console.warn(`⚠️ ${key} is empty`);
+      }
+    });
+    
+    const photoFile = this.licenseAppService.getPassPhoto();
+    console.log('📷 Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : 'MISSING');
+    
+    console.groupEnd();
+  }
+
+  /**
+   * ✅ FINAL SUBMIT for OLD LICENSE APPLICATION
    */
   async submit(): Promise<void> {
     const confirm = await Swal.fire({
@@ -208,48 +269,83 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy{
     if (!confirm.isConfirmed) return;
 
     try {
-      const keys = [
-        'selectLicenseData',
-        'keyInfoData',
-        'addressData',
-        'unitDetailsData',
-        'memberDetailsData',
-      ];
+      // 🔍 DEBUG: Show what we have in sessionStorage
+      this.debugSessionStorage();
 
-      const formValues = keys.reduce((acc, key) => {
-        const data = this.getParsedSession<Partial<LicenseApplication>>(key);
-        return { ...acc, ...data };
-      }, {});
-
+      // Check if photo exists
       const photoFile = this.licenseAppService.getPassPhoto();
-
-      if (!photoFile || Object.keys(formValues).length === 0) {
-        alert('Missing application data. Please complete the form.');
+      if (!photoFile) {
+        Swal.fire('Error', 'Please upload a photo to continue.', 'error');
         return;
       }
 
-      // Use FormDataService to build FormData with snake_case keys
-      const formData = FormDataUtil.buildFormData(formValues);
-      formData.append('photo', photoFile); // append file separately to root
-      console.log(formData);
-      this.licenseAppService.submitLicenseApplication(formData).subscribe({
-        next: () => {
-          Swal.fire('Submitted!', 'Application submitted successfully!', 'success').then(() => {
+      // ✅ Use the service method to prepare FormData correctly
+      const formData = this.licenseAppService.prepareOldLicenseFormData();
+
+      console.log('📦 FINAL FORMDATA SENT TO BACKEND');
+      const formDataArray: any[] = [];
+      formData.forEach((value, key) => {
+        formDataArray.push([key, value instanceof File ? `[File: ${value.name}, ${value.size} bytes]` : value]);
+      });
+      console.table(formDataArray);
+
+      // ✅ Submit old license application
+      this.licenseAppService.submitOldLicenseApplication(formData).subscribe({
+        next: (response: any) => {
+          console.log('✅ Application submitted successfully:', response);
+          Swal.fire({
+            icon: 'success',
+            title: 'Submitted!',
+            text: 'Application submitted successfully!',
+            confirmButtonText: 'OK'
+          }).then(() => {
             sessionStorage.clear();
+            this.licenseAppService.clearAllDocuments();
             this.router.navigate(['/licensee/dashboard']);
           });
         },
-        error: (err) => {
-          const message = err?.error?.detail || 'Failed to submit application.';
-          console.error('❌ Submission failed:', err);
-          Swal.fire('Error', message, 'error');
+
+        error: (err: any) => {
+          console.error('❌ Submission error:', err);
+          console.log('Full error object:', err);
+          
+          // Extract error message (enhanced for validation arrays/objects)
+          let errorMessage = 'Failed to submit application.';
+          
+          if (err?.error) {
+            if (typeof err.error === 'object') {
+              // Format validation errors (arrays or objects)
+              const errors = Object.entries(err.error)
+                .map(([key, value]) => {
+                  if (Array.isArray(value)) {
+                    return `${key}: ${value.join(', ')}`;
+                  } else if (typeof value === 'object') {
+                    return `${key}: ${JSON.stringify(value, null, 2)}`;
+                  }
+                  return `${key}: ${value}`;
+                })
+                .join('\n');
+              errorMessage = errors || errorMessage;
+            } else if (typeof err.error === 'string') {
+              errorMessage = err.error;
+            }
+          } else if (err?.statusText) {
+            errorMessage = err.statusText;
+          }
+          
+          Swal.fire({
+            icon: 'error',
+            title: 'Submission Failed',
+            html: `<pre style="text-align: left; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">${errorMessage}</pre>`,
+            confirmButtonText: 'OK',
+            width: 600
+          });
         }
       });
 
     } catch (error) {
-      console.error('Unexpected error during submission:', error);
+      console.error('❌ Unexpected error:', error);
       Swal.fire('Error', 'An unexpected error occurred.', 'error');
     }
   }
-
 }

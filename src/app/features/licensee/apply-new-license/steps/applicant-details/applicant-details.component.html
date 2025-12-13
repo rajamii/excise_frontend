@@ -79,6 +79,19 @@
           </mat-error>
         </mat-form-field>
 
+        <!-- ✅ NEW: Marital Status -->
+        <mat-form-field appearance="outline">
+          <mat-label>Marital Status</mat-label>
+          <mat-select formControlName="maritalStatus" required>
+            @for (status of maritalStatuses; track status) {
+              <mat-option [value]="status">{{ status }}</mat-option>
+            }
+          </mat-select>
+          <mat-error *ngIf="f.maritalStatus.touched && f.maritalStatus.invalid">
+            {{ getErrorMessage('maritalStatus') }}
+          </mat-error>
+        </mat-form-field>
+
         <!-- Residential Status -->
         <mat-form-field appearance="outline">
           <mat-label>Residential Status</mat-label>
@@ -92,10 +105,20 @@
           </mat-error>
         </mat-form-field>
 
-        <!-- Email -->
+        <!-- ✅ NEW: Mobile Number -->
+        <mat-form-field appearance="outline">
+          <mat-label>Mobile Number</mat-label>
+          <input matInput placeholder="Enter 10-digit mobile number" type="tel" 
+                 formControlName="applicantMobileNumber" required maxlength="10" />
+          <mat-error *ngIf="f.applicantMobileNumber.touched && f.applicantMobileNumber.invalid">
+            {{ getErrorMessage('applicantMobileNumber') }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Email (now required) -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter email id" type="email" formControlName="email" />
+          <input matInput placeholder="Enter email id" type="email" formControlName="email" required />
           <mat-error *ngIf="f.email.touched && f.email.invalid">
             {{ getErrorMessage('email') }}
           </mat-error>
@@ -128,27 +151,6 @@
             Present and Permanent Address are same
           </mat-checkbox>
         </div>
-
-        <!-- Past / Present Occupation
-        <mat-form-field appearance="outline">
-          <mat-label>Past Occupation</mat-label>
-          <input matInput placeholder="Enter Past Occupation" formControlName="pastOccupation" />
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Present Occupation</mat-label>
-          <input matInput placeholder="Enter Present Occupation" formControlName="presentOccupation" />
-        </mat-form-field>
-
-        
-        <mat-form-field appearance="outline">
-          <mat-label>Aadhaar No</mat-label>
-          <input matInput placeholder="Enter Aadhaar No" type="text"
-                 formControlName="aadhaarNo" [pattern]="PatternConstants.AADHAAR" />
-          <mat-error *ngIf="f.aadhaarNo.touched && f.aadhaarNo.invalid">
-            {{ getErrorMessage('aadhaarNo') }}
-          </mat-error>
-        </mat-form-field> -->
 
         <!-- PAN -->
         <mat-form-field appearance="outline">

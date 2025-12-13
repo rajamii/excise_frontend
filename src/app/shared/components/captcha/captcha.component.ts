@@ -36,8 +36,14 @@ export class CaptchaComponent implements OnInit {
 
   loadCaptcha(): void {
     this.authService.getCaptcha().subscribe({
-      next: (data: { key: string; imageUrl: string }) => {
-        this.captchaImageUrl = `${this.baseUrl}${data.imageUrl}`;
+      next: (data: { key: string; imageUrl?: string; image_url?: string }) => {
+        const imagePath = data.image_url || data.imageUrl;
+        if (!imagePath) {
+          console.error('Captcha response missing image path', data);
+          alert('Failed to load captcha. Please try again.');
+          return;
+        }
+        this.captchaImageUrl = `${this.baseUrl}${imagePath}`;
         this.captchaKey = data.key;
         this.formGroup.patchValue({ hashkey: this.captchaKey });
       },

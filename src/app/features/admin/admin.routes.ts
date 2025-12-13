@@ -14,15 +14,14 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [
-            Authority.SITE_ADMIN, 
-            Authority.LEVEL_1, 
+            Authority.SITE_ADMIN,
+            Authority.LEVEL_1,
             Authority.LEVEL_2,
-            Authority.LEVEL_3, 
-            Authority.LEVEL_4, 
-            Authority.LEVEL_5, 
-            Authority.SINGLE_WINDOW
+            Authority.LEVEL_3,
+            Authority.LEVEL_4,
+            Authority.LEVEL_5,
           ]
-        }, 
+        },
       },
       {
         path: 'users',
@@ -75,14 +74,6 @@ const routes: Routes = [
       {
         path: 'license-categories',
         loadComponent: () => import('./master/license-category/list/list.component').then(m => m.ListComponent),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN]
-        },
-      },
-      {
-        path: 'license-titles',
-        loadComponent: () => import('./master/license-title/list/list.component').then(m => m.ListComponent),
         canActivate: [UserRouteAccessService],
         data: {
           authorities: [Authority.SITE_ADMIN]

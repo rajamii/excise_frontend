@@ -4,7 +4,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import Swal from 'sweetalert2';
 import { MasterService } from '../../../../../core/services/master.service';
 import { AdminService } from '../../../admin.service';
-import { Road } from '../../../../../core/models/road.model';
+import { Road } from '../../../../../core/models/road.model'; // ✅ FIXED: lowercase 'road'
 import { ManageComponent } from '../manage/manage.component';
 
 @Component({

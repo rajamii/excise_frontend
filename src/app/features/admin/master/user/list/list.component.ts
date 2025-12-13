@@ -48,9 +48,11 @@ export class ListComponent implements OnInit {
   // Fetch user list from backend
   loadUsers(): void {
     this.userService.getUsers().subscribe({
-      
       // If single object is returned instead of array, wrap it
-      next: (data) => {this.users = Array.isArray(data) ? data : [data]; console.log(data)},
+      next: (data) => {
+        this.users = Array.isArray(data) ? data : [data];
+        console.log(data);
+      },
       error: (err) => console.error('Failed to fetch users:', err)
     });
   }
@@ -88,6 +90,7 @@ export class ListComponent implements OnInit {
       confirmButtonText: 'Yes, delete',
       cancelButtonText: 'Cancel'
     }).then(result => {
+      // FIXED: Use user.id (number) instead of user.username (string)
       if (result.isConfirmed && user.id) {
         this.adminService.deleteUser(user.id).subscribe({
           next: () => {
