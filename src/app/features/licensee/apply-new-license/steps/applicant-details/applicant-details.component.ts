@@ -3,7 +3,7 @@ import {
   ChangeDetectorRef, signal
 } from '@angular/core';
 import {
-  FormBuilder, FormGroup, Validators, AbstractControl
+  FormBuilder, FormGroup, Validators
 } from '@angular/forms';
 import { Subject, takeUntil } from 'rxjs';
 import { MaterialModule } from '../../../../../shared/material.module';
@@ -29,24 +29,26 @@ interface ModeOfOperation { value: string; label: string; }
 })
 export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   applicantDetailsForm!: FormGroup;
-  f!: any;                     // shortcut for form controls
+  f!: any;
 
   // ---------- Dropdowns ----------
   nationalities = ['Indian', 'Foreign'];
   residentialStatuses = ['Resident', 'Non-Resident'];
+  maritalStatuses = ['Single', 'Married', 'Divorced'];
   modesOfOperation: ModeOfOperation[] = [
     { value: 'Self', label: 'Self' },
     { value: 'Salesman', label: 'Salesman' },
     { value: 'Barman', label: 'Barman' }
   ];
 
-  // ---------- Documents (same style as site-details) ----------
+  // ---------- Documents (matching backend field names) ----------
   documents: DocumentUpload[] = [
     { name: 'passportPhoto', label: 'Passport Size Photo', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png' },
-    { name: 'panCard',   label: 'Pan card',      file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
-    { name: 'sikkimCertificate', label: 'Sikkim Subject Certificate / Certificate of Identification / Residential Certificate',
+    { name: 'pan_card', label: 'PAN Card', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    { name: 'sikkim_certificate', label: 'Sikkim Subject Certificate / Certificate of Identification / Residential Certificate',
       file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
-    {name: 'dobProof', label: 'Date of Birth Proof', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' }
+    { name: 'dob_proof', label: 'Date of Birth Proof', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
+    { name: 'noc_landlord', label: 'NOC from Landlord (if applicable)', file: null, fileUrl: '', required: false, formats: '.jpg,.jpeg,.png,.pdf' }
   ];
 
   @Output() readonly next = new EventEmitter<void>();
@@ -57,9 +59,13 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   // ---------- Error messages (signal based) ----------
   private errorMessages = {
     firstName: signal(''), lastName: signal(''), fatherHusbandName: signal(''),
-    dob: signal(''), gender: signal(''), nationality: signal(''), residentialStatus: signal(''),
+    dob: signal(''), gender: signal(''), nationality: signal(''), 
+    maritalStatus: signal(''),
+    residentialStatus: signal(''),
     presentAddress: signal(''), permanentAddress: signal(''), pan: signal(''),
-    aadhaarNo: signal(''), email: signal(''), hasSikkimCertificate: signal(''),
+    email: signal(''), 
+    applicantMobileNumber: signal(''),
+    hasSikkimCertificate: signal(''),
     hasExciseLicense: signal(''), familyExciseLicense: signal(''), criminalConviction: signal('')
   };
 
@@ -79,25 +85,27 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       dob: [stored.dob, [Validators.required]],
       gender: [stored.gender, Validators.required],
       nationality: [stored.nationality ?? 'Indian', Validators.required],
+      maritalStatus: [stored.maritalStatus ?? 'Single', Validators.required],
       residentialStatus: [stored.residentialStatus ?? 'Resident', Validators.required],
-      email: [stored.email, [Validators.pattern(PatternConstants.EMAIL)]],
+      email: [stored.email, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]],
+      
+      // Mobile number (backend expects CharField with numeric validation)
+      applicantMobileNumber: [stored.applicantMobileNumber, [
+        Validators.required,
+        Validators.pattern(PatternConstants.MOBILE)
+      ]],
 
       // Address
       presentAddress: [stored.presentAddress, Validators.required],
       permanentAddress: [stored.permanentAddress, Validators.required],
 
-      // Occupation
-      pastOccupation: [stored.pastOccupation],
-      presentOccupation: [stored.presentOccupation],
-
       // ID
-      // aadhaarNo: [stored.aadhaarNo, [Validators.pattern(PatternConstants.AADHAAR)]],
       pan: [stored.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]],
 
       // Mode
       modeOfOperation: [stored.modeOfOperation],
 
-      // Radio questions
+      // Radio questions (backend expects "Yes"/"No" strings)
       hasSikkimCertificate: [stored.hasSikkimCertificate, Validators.required],
       hasExciseLicense: [stored.hasExciseLicense, Validators.required],
       familyExciseLicense: [stored.familyExciseLicense, Validators.required],
@@ -120,12 +128,9 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- LIFECYCLE -------------------------- */
-  /* --------------------------------------------------------------- */
   ngOnInit(): void {
     this.restoreDocuments();
-    this.validateAge();               // initial check
+    this.validateAge();
   }
 
   ngOnDestroy(): void {
@@ -145,10 +150,49 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const raw = this.applicantDetailsForm.getRawValue();
 
-    // Build the single applicantName required by the backend
+    // ✅ Build applicant_name (required by backend)
     const parts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
-    raw.applicantName = parts.join(' ');
+    raw.applicant_name = parts.join(' ');
 
+    // ✅ father_husband_name (backend field name)
+    raw.father_husband_name = raw.fatherHusbandName;
+
+    // ✅ Clean mobile number (CharField but numeric)
+    if (raw.applicantMobileNumber) {
+      raw.mobile_number = String(raw.applicantMobileNumber).replace(/\D/g, '');
+    }
+
+    // ✅ Email field
+    if (raw.email) {
+      raw.email = raw.email;
+    }
+
+    // ✅ Marital status
+    if (raw.maritalStatus) {
+      raw.marital_status = raw.maritalStatus;
+    }
+
+    // ✅ Residential status
+    if (raw.residentialStatus) {
+      raw.residential_status = raw.residentialStatus;
+    }
+
+    // ✅ Present and permanent addresses
+    raw.present_address = raw.presentAddress;
+    raw.permanent_address = raw.permanentAddress;
+
+    // ✅ Mode of operation
+    if (raw.modeOfOperation) {
+      raw.mode_of_operation = raw.modeOfOperation;
+    }
+
+    // ✅ Yes/No fields (backend ChoiceFields expect "Yes"/"No" strings)
+    raw.has_sikkim_certificate = raw.hasSikkimCertificate;
+    raw.has_excise_license = raw.hasExciseLicense;
+    raw.family_excise_license = raw.familyExciseLicense;
+    raw.criminal_conviction = raw.criminalConviction;
+
+    console.log('💾 Saving Applicant Details:', raw);
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
 
@@ -157,10 +201,18 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   /* --------------------------------------------------------------- */
   private restoreDocuments(): void {
     this.documents.forEach(d => {
-      const stored = this.licenseSrv.getSiteDocument(d.name);
-      if (stored) {
-        d.file = stored;
-        d.fileUrl = URL.createObjectURL(stored);
+      if (d.name === 'passportPhoto') {
+        const stored = this.licenseSrv.getPassPhoto();
+        if (stored) {
+          d.file = stored;
+          d.fileUrl = URL.createObjectURL(stored);
+        }
+      } else {
+        const stored = this.licenseSrv.getSiteDocument(d.name);
+        if (stored) {
+          d.file = stored;
+          d.fileUrl = URL.createObjectURL(stored);
+        }
       }
     });
   }
@@ -178,7 +230,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     const doc = this.documents.find(d => d.name === docName);
     if (!file || !doc) return;
 
-    // size < 5 MB
+    // Size < 5 MB
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be < 5 MB');
       input.value = '';
@@ -195,7 +247,15 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     doc.file = file;
     doc.fileUrl = URL.createObjectURL(file);
-    this.licenseSrv.setSiteDocument(docName, file);
+    
+    if (docName === 'passportPhoto') {
+      this.licenseSrv.setPassPhoto(file);
+      console.log('✅ Passport photo set:', file.name);
+    } else {
+      this.licenseSrv.setSiteDocument(docName, file);
+      console.log(`✅ Document ${docName} set:`, file.name);
+    }
+    
     this.cdr.detectChanges();
   }
 
@@ -248,8 +308,8 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       this.errorMessages[field].set('This field is required');
     } else if (ctrl.hasError('pattern')) {
       const msg = field === 'pan' ? 'Invalid PAN format' :
-                  field === 'aadhaarNo' ? 'Invalid Aadhaar format' :
-                  field === 'email' ? 'Invalid email address' : 'Invalid format';
+                  field === 'email' ? 'Invalid email address' :
+                  field === 'applicantMobileNumber' ? 'Invalid mobile number format' : 'Invalid format';
       this.errorMessages[field].set(msg);
     } else if (ctrl.hasError('minAge')) {
       this.errorMessages[field].set('Applicant must be at least 21 years old');
@@ -289,7 +349,12 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       d.file = null;
       if (d.fileUrl) URL.revokeObjectURL(d.fileUrl);
       d.fileUrl = '';
-      this.licenseSrv.removeSiteDocument(d.name);
+      
+      if (d.name === 'passportPhoto') {
+        this.licenseSrv.clearPassPhoto();
+      } else {
+        this.licenseSrv.removeSiteDocument(d.name);
+      }
     });
     sessionStorage.removeItem('applicantDetailsData');
   }

@@ -15,12 +15,17 @@ import { AdminService } from '../../../admin.service';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  road: Road = { roadName: '', roadType: '', district: 0 };
+  road: Road = { 
+    roadName: '', 
+    roadType: 'NH', // Default to valid value instead of empty string
+    district: 0 
+  };
   isEditMode = false;
   districts: District[] = [];
+  selectedDistrictId: number = 0; // Track selected district ID separately
 
   // Predefined road type choices for dropdown
-  roadTypes: { value: string, label: string }[] = [
+  roadTypes: { value: 'NH' | 'SH' | 'LINK ROAD', label: string }[] = [
     { value: 'NH', label: 'National Highway' },
     { value: 'SH', label: 'State Highway' },
     { value: 'LINK ROAD', label: 'Link Road' }
@@ -39,9 +44,11 @@ export class ManageComponent implements OnInit {
     if (this.data) {
       this.road = { ...this.data };
 
-      // In case district is an object (from list view), convert to numeric ID for mat-select binding
-      if (typeof this.road.district === 'object') {
-        this.road.district = (this.road.district as District).id;
+      // Extract district ID whether it's a number or District object
+      if (typeof this.road.district === 'object' && this.road.district !== null) {
+        this.selectedDistrictId = (this.road.district as District).id ?? 0;
+      } else {
+        this.selectedDistrictId = (this.road.district as number) ?? 0;
       }
 
       this.isEditMode = true;
@@ -66,11 +73,10 @@ export class ManageComponent implements OnInit {
     }).then(result => {
       if (!result.isConfirmed) return;
 
+      // Create payload with numeric district ID
       const payload: Road = {
         ...this.road,
-        // Ensure district is a number before submitting
-        district: typeof this.road.district === 'number' 
-          ? this.road.district : this.road.district?.id
+        district: this.selectedDistrictId
       };
 
       const request = this.isEditMode

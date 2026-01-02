@@ -7,6 +7,7 @@ import { LicenseApplication } from '../../../../../core/models/license-applicati
 
 @Component({
   selector: 'app-print-application',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './print-application.component.html',
   styleUrl: './print-application.component.scss'
@@ -24,11 +25,11 @@ export class PrintApplicationComponent {
   }
 
   onPrint(): void {
-    // Call backend API to register a license print and get updated count
-    this.licenseApplicationService.printLicense(this.application.applicationId).subscribe({
+    // ✅ FIXED: Use application_id instead of applicationId
+    this.licenseApplicationService.printLicense(this.application.application_id!).subscribe({
       next: (res) => { 
-        // Update local print count with response from backend
-        this.application.printCount = res.printCount;
+        // ✅ FIXED: Use print_count instead of printCount
+        this.application.print_count = res.print_count;
 
         // Trigger the actual browser print dialog with license layout
         this.triggerPrint();
@@ -117,18 +118,19 @@ export class PrintApplicationComponent {
     const printContents = document.getElementById('licenseToPrint')?.innerHTML;
     const printStyles = this.getPrintStyles();
 
+    // ✅ FIXED: Use application_id instead of applicationId
     // Open a new popup window to render license HTML for printing
     const popupWin = window.open('', '_blank', 'width=800,height=600');
     popupWin?.document.open();
     popupWin?.document.write(`
       <html>
         <head>
-          <title>${this.application.applicationId}</title>
+          <title>${this.application.application_id}</title>
           <style>${printStyles}</style>
         </head>
         <script>
           // Replace default about:blank URL in the new tab with a custom one
-          window.history.replaceState({}, 'License Print', '/license/print/${this.application.applicationId}');
+          window.history.replaceState({}, 'License Print', '/license/print/${this.application.application_id}');
         </script>
         <body onload="window.print(); window.close();">
           ${printContents}

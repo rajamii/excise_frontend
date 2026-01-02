@@ -1,4 +1,4 @@
-export class LicenseTitle {
-    id?: number;
-    description!: string;
+export interface LicenseTitle {
+  id?: number;
+  description?: string;
 }

@@ -8,25 +8,28 @@ import { SubmitApplicationComponent } from './steps/submit-application/submit-ap
 import { SelectLicenseComponent } from './steps/select-license/select-license.component';
 
 @Component({
-  selector: 'app-apply-license', // Selector for the component
-  standalone: true,             // Declares this component as standalone
+  selector: 'app-apply-license',
+  standalone: true,
   imports: [
-    MaterialModule,             // Angular Material components
-    SelectLicenseComponent,     // Step 1: Select license
-    KeyInfoComponent,           // Step 2: Key information
-    AddressComponent,           // Step 3: Address details
-    UnitDetailsComponent,       // Step 4: Unit details
-    MemberDetailsComponent,     // Step 5: Member details
-    SubmitApplicationComponent            // Step 6: Final license info and submission
+    MaterialModule,
+    SelectLicenseComponent,
+    KeyInfoComponent,
+    AddressComponent,
+    UnitDetailsComponent,
+    MemberDetailsComponent,
+    SubmitApplicationComponent
   ],
-  templateUrl: './apply-license.component.html', // Template for rendering UI
-  styleUrl: './apply-license.component.scss'     // Styling for the component
+  templateUrl: './apply-license.component.html',
+  styleUrl: './apply-license.component.scss'
 })
 export class ApplyLicenseComponent {
 
-  // Getter to retrieve the selected license type from session storage
+  /**
+   * Get license type from session storage
+   * Using updated field name: license_type (with underscore)
+   */
   get licenseType() {
-    const storedData = sessionStorage.getItem('keyInfoData'); // Fetching saved key info
-    return storedData ? JSON.parse(storedData).licenseType : null; // Return licenseType if exists
+    const storedData = sessionStorage.getItem('keyInfoData');
+    return storedData ? JSON.parse(storedData).license_type : null;
   }
 }

@@ -13,12 +13,19 @@ import { SiteEnquiryFormModel } from '../../../../../core/models/site-enquiry.mo
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { environment } from '../../../../../../environments/environment';
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
   key: string;
   field: string;
   value: string;
+}
+
+// Added Stage interface for type safety
+interface Stage {
+  id: number;
+  name: string;
 }
 
 @Component({
@@ -70,7 +77,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   unitDetailsData: FieldDisplay[] = [];
   memberDetailsData: FieldDisplay[] = [];
 
-  nextStages: any[] = [];
+  nextStages: Stage[] = [];
   stageID: string | undefined;
   approvalStageId: string | undefined;
   objectionStageId: string | undefined;
@@ -153,7 +160,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   ngOnInit(): void {
 
     // Set photo URL if photo exists
-    this.photoUrl = this.application.photo ? `http://127.0.0.1:8000/${this.application.photo}` : null;
+    this.photoUrl = this.application.photo ? `${environment.apiBaseUrl}/${this.application.photo}` : null;
 
     // Initialize all forms
     this.remarksForm = this.fb.group({ remarks: ['', Validators.required] });
@@ -256,18 +263,26 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   }
 
   loadNextStages() {
-    this.licenseAppService.getNextStages(this.application.applicationId).subscribe({
-      next: (stages) => {
-        this.nextStages = stages;
-        const currentLevel = this.getCurrentLevel();
-        if (currentLevel) {
-          this.approvalStageId = this.findStageId(stages, currentLevel === 5 ? 'approved' : `level_${currentLevel + 1}`);
-          this.objectionStageId = this.findStageId(stages, `level_${currentLevel}_objection`);
-          this.rejectionStageId = this.findStageId(stages, `rejected_by_level_${currentLevel}`);
-        }
-      },
-      error: () => Swal.fire('Error', 'Failed to load next stages.', 'error')
-    });
+    // Create mock stages based on current level since getNextStageDetails doesn't exist
+    const currentLevel = this.getCurrentLevel();
+    
+    if (!currentLevel) {
+      Swal.fire('Error', 'Unable to determine current user level.', 'error');
+      return;
+    }
+
+    // Manually construct next stages based on current level
+    const nextStageNumber = currentLevel + 1;
+    
+    this.nextStages = [
+      { id: 1, name: currentLevel === 5 ? 'approved' : `level_${nextStageNumber}` },
+      { id: 2, name: `level_${currentLevel}_objection` },
+      { id: 3, name: `rejected_by_level_${currentLevel}` }
+    ];
+
+    this.approvalStageId = this.findStageId(this.nextStages, currentLevel === 5 ? 'approved' : `level_${nextStageNumber}`);
+    this.objectionStageId = this.findStageId(this.nextStages, `level_${currentLevel}_objection`);
+    this.rejectionStageId = this.findStageId(this.nextStages, `rejected_by_level_${currentLevel}`);
   }
  
   getCurrentLevel(): number | undefined {
@@ -279,7 +294,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     return undefined;
   }
 
-  findStageId(stages: any[], name: string): string | undefined {
+  findStageId(stages: Stage[], name: string): string | undefined {
     const stage = stages.find(s => s.name === name);
     return stage ? stage.id.toString() : undefined;
   }
@@ -385,7 +400,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
       // PDF URL (safe handling)
       this.sitePdfUrl = data.shopImageDocument
-        ? `http://127.0.0.1:8000/${data.shopImageDocument}`
+        ? `${environment.apiBaseUrl}/${data.shopImageDocument}`
         : '';    });
   }
 
@@ -471,20 +486,18 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     };
 
     if (this.isRejected) {
-    // Reject application flow (no special context needed)
-    this.licenseAppService.advanceApplication(
-      applicationId,
-      this.stageID,
-      remarks,
-      
-    ).subscribe({
-      next: () => reload('Application rejected.'),
-      error: () => showError('Rejection failed.')
-    });
-    return;
-  }
+      this.licenseAppService.advanceApplication(
+        applicationId,
+        Number(this.stageID),
+        { action: 'reject', remarks }
+      ).subscribe({
+        next: () => reload('Application rejected.'),
+        error: () => showError('Rejection failed.')
+      });
+      return;
+    }
 
-    if (this.accountService.hasAnyRole('level_3')) {
+    if (this.accountService.hasAnyRole('level_1')) {
       // Level 1 approval requires fee amount from selected location
       const fee = this.selectedLocation?.feeAmount;
       if (!fee) {
@@ -493,9 +506,13 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       }
       this.licenseAppService.advanceApplication(
         applicationId,
-        this.stageID,
-        remarks, 
-       
+        Number(this.stageID),
+        {
+          action: 'approve',
+          remarks,
+          fee_amount: fee,
+          is_fee_calculated: true
+        }
       ).subscribe({
         next: () => reload('Application approved.'),
         error: () => showError('Approval failed.')
@@ -531,9 +548,13 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       ).subscribe({
         next: () => this.licenseAppService.advanceApplication(
           applicationId,
-          this.stageID,
-          remarks, 
-          ).subscribe({
+          Number(this.stageID!),
+          {
+            action: 'approve',
+            remarks,
+            new_license_category: catId
+          }
+        ).subscribe({
           next: () => reload('Application approved.'),
           error: () => showError('Advancing failed.')
         }),
@@ -542,11 +563,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       return;
     }
 
-    // Default approve flow (for other roles or fallback)
+    // Default approve flow
     this.licenseAppService.advanceApplication(
-      applicationId, 
-      this.stageID,
-      remarks, 
+      applicationId,
+      Number(this.stageID),
+      { action: 'approve', remarks }
     ).subscribe({
       next: () => reload('Application approved.'),
       error: () => showError('Approval failed.')

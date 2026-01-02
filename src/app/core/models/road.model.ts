@@ -1,8 +1,8 @@
-import { District } from "./district.model";
+import { District } from './district.model';
 
-export class Road {
+export interface Road {
   id?: number;
-  roadName!: string;
-  roadType!: string;
-  district!: number | District | undefined;
+  roadName: string;
+  roadType: 'NH' | 'SH' | 'LINK ROAD';
+  district: number | District;
 }

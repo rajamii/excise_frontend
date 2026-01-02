@@ -13,6 +13,7 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { JwtRefreshInterceptor } from './core/interceptors/jwt-refresh.interceptor';
 import { routes } from './app.routes';
 import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts'; // ✅ Added for Chart.js
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -29,5 +30,8 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     { provide: HTTP_INTERCEPTORS, useClass: JwtRefreshInterceptor, multi: true },
+    
+    // ✅ Chart.js configuration
+    provideCharts(withDefaultRegisterables()), provideCharts(withDefaultRegisterables()),
   ]
 };

@@ -1,26 +1,20 @@
-<!-- Angular Reactive Form for Unit Details -->
 <form [formGroup]="unitDetailsForm">
-
-  <!-- Card wrapper for the form -->
   <mat-card>
-
-    <!-- Card Header with title and mandatory note -->
     <mat-card-header>
       <div class="heading">Company Form</div>
       <div class="validation">* Marked Fields Are Mandatory</div>
     </mat-card-header>
 
-    <!-- Form Content Section -->
     <mat-card-content>
       <div class="form-field-container">
 
         <!-- Company Name Field -->
         <mat-form-field appearance="outline">
           <mat-label>Company Name</mat-label>
-          <input matInput placeholder="Enter Company Name" type="text" formControlName="companyName" required/>
-          @if (unitDetailsForm.controls['companyName'].invalid) {
+          <input matInput placeholder="Enter Company Name" type="text" formControlName="company_name" required/>
+          @if (unitDetailsForm.controls['company_name'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyName') }}
+              {{ getErrorMessage('company_name') }}
             </mat-error>
           }
         </mat-form-field>
@@ -29,17 +23,17 @@
         <mat-form-field appearance="outline">
           <mat-label>Registered Office Address</mat-label>
           <textarea matInput
-            placeholder="Enter License Number if any (max 50 characters)"
-            formControlName="companyAddress"
+            placeholder="Enter Registered Office Address"
+            formControlName="company_address"
             cdkTextareaAutosize
             #autosize="cdkTextareaAutosize"
             cdkAutosizeMinRows="1"
             cdkAutosizeMaxRows="5"
             required>
           </textarea>
-          @if (unitDetailsForm.controls['companyAddress'].invalid) {
+          @if (unitDetailsForm.controls['company_address'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyAddress') }}
+              {{ getErrorMessage('company_address') }}
             </mat-error>
           }
         </mat-form-field>
@@ -47,10 +41,10 @@
         <!-- PAN Field -->
         <mat-form-field appearance="outline">
           <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter Company PAN" type="text" formControlName="companyPan" required/>
-          @if (unitDetailsForm.controls['companyPan'].invalid) {
+          <input matInput placeholder="Enter Company PAN" type="text" formControlName="company_pan" required/>
+          @if (unitDetailsForm.controls['company_pan'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyPan') }}
+              {{ getErrorMessage('company_pan') }}
             </mat-error>
           }
         </mat-form-field>
@@ -58,10 +52,10 @@
         <!-- CIN Field -->
         <mat-form-field appearance="outline">
           <mat-label>CIN Number</mat-label>
-          <input matInput placeholder="Enter Company CIN" type="text" formControlName="companyCin" required/>
-          @if (unitDetailsForm.controls['companyCin'].invalid) {
+          <input matInput placeholder="Enter Company CIN" type="text" formControlName="company_cin" required/>
+          @if (unitDetailsForm.controls['company_cin'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyCin') }}
+              {{ getErrorMessage('company_cin') }}
             </mat-error>
           }
         </mat-form-field>
@@ -69,12 +63,12 @@
         <!-- Incorporation Date Field with Date Picker -->
         <mat-form-field appearance="outline">
           <mat-label>Incorporation Date</mat-label>
-          <input matInput [matDatepicker]="incorporationDate" formControlName="incorporationDate" required>
+          <input matInput [matDatepicker]="incorporationDate" formControlName="incorporation_date" required>
           <mat-datepicker-toggle matIconSuffix [for]="incorporationDate"></mat-datepicker-toggle>
           <mat-datepicker #incorporationDate></mat-datepicker>
-          @if (unitDetailsForm.controls['incorporationDate'].invalid) {
+          @if (unitDetailsForm.controls['incorporation_date'].invalid) {
             <mat-error>
-              {{ getErrorMessage('incorporationDate') }}
+              {{ getErrorMessage('incorporation_date') }}
             </mat-error>
           }
         </mat-form-field>
@@ -82,10 +76,10 @@
         <!-- Phone Number Field -->
         <mat-form-field appearance="outline">
           <mat-label>Phone Number</mat-label>
-          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="companyPhoneNumber" required />
-          @if (unitDetailsForm.controls['companyPhoneNumber'].invalid) {
+          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="company_phone_number" required />
+          @if (unitDetailsForm.controls['company_phone_number'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyPhoneNumber') }}
+              {{ getErrorMessage('company_phone_number') }}
             </mat-error>
           }
         </mat-form-field>
@@ -93,10 +87,10 @@
         <!-- Email Field -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email Id" type="email" formControlName="companyEmail" required/>
-          @if (unitDetailsForm.controls['companyEmail'].invalid) {
+          <input matInput placeholder="Enter Email Id" type="email" formControlName="company_email" required/>
+          @if (unitDetailsForm.controls['company_email'].invalid) {
             <mat-error>
-              {{ getErrorMessage('companyEmail') }}
+              {{ getErrorMessage('company_email') }}
             </mat-error>
           }
         </mat-form-field>
@@ -104,15 +98,9 @@
       </div>
     </mat-card-content>
 
-    <!-- Action Buttons -->
     <mat-card-actions>
-      <!-- Go back to previous step -->
       <button matButton="outlined" (click)="goBack()">Back</button>
-
-      <!-- Reset form values -->
       <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
-
-      <!-- Proceed to next step, disabled if form is invalid -->
       <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!unitDetailsForm.valid">Next</button>
     </mat-card-actions>
 

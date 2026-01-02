@@ -13,18 +13,21 @@ import { LicenseTitle } from '../../../../../core/models/license-title.model';
   styleUrl: './manage.component.scss'
 })
 export class ManageComponent implements OnInit {
-  licenseTitle: LicenseTitle = new LicenseTitle(); // Holds form data for license title
-  isEditMode = false; // Flag for add/edit mode
+  licenseTitle: LicenseTitle = { 
+    id: undefined,
+    description: '' 
+  };
+  isEditMode = false;
 
   constructor(
     private adminService: AdminService,
     public dialogRef: MatDialogRef<ManageComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: LicenseTitle | null // Injected data if editing
+    @Inject(MAT_DIALOG_DATA) public data: LicenseTitle | null
   ) {}
 
   ngOnInit(): void {
     if (this.data) {
-      this.licenseTitle = { ...this.data }; // Pre-fill form in edit mode
+      this.licenseTitle = { ...this.data };
       this.isEditMode = true;
     }
   }
@@ -40,22 +43,22 @@ export class ManageComponent implements OnInit {
       if (!result.isConfirmed) return;
 
       const request = this.isEditMode
-        ? this.adminService.updateLicenseTitle(this.licenseTitle.id!, this.licenseTitle) // API call to update
-        : this.adminService.addLicenseTitle(this.licenseTitle); // API call to add
+        ? this.adminService.updateLicenseTitle(this.licenseTitle.id!, this.licenseTitle)
+        : this.adminService.addLicenseTitle(this.licenseTitle);
 
       request.subscribe({
         next: () => {
           Swal.fire('Success', this.isEditMode ? 'License title updated!' : 'License title added!', 'success');
-          this.dialogRef.close(true); // Close dialog on success
+          this.dialogRef.close(true);
         },
         error: () => {
-          Swal.fire('Error', 'Failed to save license title.', 'error'); // Show error message
+          Swal.fire('Error', 'Failed to save license title.', 'error');
         }
       });
     });
   }
 
   onCancel(): void {
-    this.dialogRef.close(); // Close dialog without saving
+    this.dialogRef.close();
   }
 }

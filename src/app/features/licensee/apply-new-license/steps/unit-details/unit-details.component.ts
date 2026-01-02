@@ -5,7 +5,6 @@ import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../shared/utils/capitalize.util';
-import { LicenseApplication } from '../../../../../core/models/license-application.model';
 import { DatePipe } from '@angular/common';
 
 @Component({
@@ -18,17 +17,13 @@ import { DatePipe } from '@angular/common';
 })
 export class UnitDetailsComponent implements OnInit, OnDestroy {
   
-  // Reactive form for unit/company details
   unitDetailsForm: FormGroup;
 
-  // Emit events to go to the next or previous step in the stepper
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  // Used to unsubscribe from observables on destroy
   private destroy$ = new Subject<void>();
 
-  // Signal-based error message store for each form field
   errorMessages = {
     companyName: signal(''),
     companyAddress: signal(''),
@@ -40,10 +35,8 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   };
 
   constructor(private fb: FormBuilder, private datePipe: DatePipe) {
-    // Retrieve session-stored form data if available
-    const storedValues = this.getFromSessionStorage();
+    const storedValues: any = this.getFromSessionStorage();
     
-    // Initialize the form with validation and pre-filled session values
     this.unitDetailsForm = this.fb.group({
       companyName: new FormControl(storedValues.companyName, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       companyAddress: new FormControl(storedValues.companyAddress, [Validators.required]),
@@ -54,84 +47,101 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       companyEmail: new FormControl(storedValues.companyEmail, [Validators.required, Validators.pattern(PatternConstants.EMAIL)])
     });
 
-    // Save to session storage and update error messages on form change
     this.unitDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.saveToSessionStorage();
       this.updateAllErrorMessages();
     });
   }
 
-  // Lifecycle hook to perform operations after component loads
   ngOnInit() {
-    // Automatically capitalize PAN field value as user types
     FormUtils.capitalize(this.unitDetailsForm.get('companyPan')!, this.destroy$);
     FormUtils.capitalize(this.unitDetailsForm.get('companyCin')!, this.destroy$);
   }
 
-  // Lifecycle hook to clean up subscriptions
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // Retrieves stored form values from sessionStorage
-  private getFromSessionStorage(): Partial<LicenseApplication> {
+  private getFromSessionStorage(): any {
     const storedData = sessionStorage.getItem('unitDetailsData');
-    return storedData ? JSON.parse(storedData) as LicenseApplication : {};
+    return storedData ? JSON.parse(storedData) : {};
   }
 
-  // Stores current form data into sessionStorage
   private saveToSessionStorage() {
-    const formData: Partial<LicenseApplication> = this.unitDetailsForm.getRawValue(); 
+    const formData: any = this.unitDetailsForm.getRawValue(); 
     
-    if (formData.incorporationDate) {
-      const date = new Date(formData.incorporationDate as string);
-      formData.incorporationDate = !isNaN(date.getTime())
-        ? this.datePipe.transform(date, 'yyyy-MM-dd') ?? undefined
-        : undefined;
+    // ✅ Map to backend field names (CharField)
+    formData.company_name = formData.companyName;
+    formData.company_address = formData.companyAddress;
+    formData.company_pan = formData.companyPan?.toUpperCase();
+    formData.company_cin = formData.companyCin?.toUpperCase();
+    formData.company_email = formData.companyEmail;
+    
+    // ✅ Clean phone number (CharField but numeric)
+    if (formData.companyPhoneNumber) {
+      formData.company_phone_number = String(formData.companyPhoneNumber).replace(/\D/g, '');
     }
-
+    
+    // ✅ Date field (ISO format YYYY-MM-DD)
+    if (formData.incorporationDate) {
+      const date = new Date(formData.incorporationDate);
+      if (!isNaN(date.getTime())) {
+        formData.incorporation_date = date.toISOString().split('T')[0];
+      }
+    }
+    
+    console.log('💾 Saving Unit Details:', formData);
     sessionStorage.setItem('unitDetailsData', JSON.stringify(formData));
   }
 
-  // Sets an error message for a specific field based on its validation state
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.unitDetailsForm.get(field);
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
-      this.errorMessages[field].set('Invalid format');
+      if (field === 'companyPan') {
+        this.errorMessages[field].set('Invalid PAN format (e.g., ABCDE1234F)');
+      } else if (field === 'companyCin') {
+        this.errorMessages[field].set('Invalid CIN format');
+      } else if (field === 'companyPhoneNumber') {
+        this.errorMessages[field].set('Invalid phone number format');
+      } else if (field === 'companyEmail') {
+        this.errorMessages[field].set('Invalid email format');
+      } else {
+        this.errorMessages[field].set('Invalid format');
+      }
     } else {
       this.errorMessages[field].set('');
     }
   }
 
-  // Updates all error messages for all form fields
   private updateAllErrorMessages() {
     Object.keys(this.errorMessages).forEach((field) => {
       this.updateErrorMessage(field as keyof typeof this.errorMessages);
     });
   }
 
-  // Returns current error message for a given field
   getErrorMessage(field: keyof typeof this.errorMessages) {
     return this.errorMessages[field]();
   }
 
-  // Emits the next event if the form is valid
   proceedToNext() {
     if (this.unitDetailsForm.valid) {
       this.next.emit();
+    } else {
+      // Mark all fields as touched to show validation errors
+      Object.keys(this.unitDetailsForm.controls).forEach(key => {
+        this.unitDetailsForm.get(key)?.markAsTouched();
+      });
     }
   }
 
-  // Resets the form and clears session data
   resetForm() {
     this.unitDetailsForm.reset();
     sessionStorage.removeItem('unitDetailsData');
   }
 
-  // Emits the back event
   goBack() {
     this.back.emit();
   }

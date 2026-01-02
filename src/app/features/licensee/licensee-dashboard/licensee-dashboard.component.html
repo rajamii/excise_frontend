@@ -1,45 +1,75 @@
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
-  <ng-container>
-    <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
-    <div class="stats-container">
-      <!-- Applied Stat Card -->
-      <mat-card class="stat-card applied" (click)="showTable('applied')">
-        <div class="circle-icon blue-bg">
-          <img src="assets/images/dashboard/applied.png" alt="Applied Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.applied }}</div>
-        <div class="label">Applied</div>
-      </mat-card>
+  
+  <!-- APPLICATION TYPE FILTER DROPDOWN -->
+  <div class="filter-container">
+    <mat-form-field appearance="outline" class="application-type-filter">
+      <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
+      <mat-label>Application Type</mat-label>
+      <mat-select 
+        [(value)]="selectedApplicationType" 
+        (selectionChange)="onApplicationTypeChange()">
+        @for (type of applicationTypes; track type.value) {
+          <mat-option [value]="type.value">
+            {{ type.label }}
+          </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
 
-      <!-- Pending Stat Card -->
-      <mat-card class="stat-card pending" (click)="showTable('pending')">
-        <div class="circle-icon yellow-bg">
-          <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.pending }}</div>
-        <div class="label">Pending</div>
-      </mat-card>
-
-      <!-- Approved Stat Card -->
-      <mat-card class="stat-card approved" (click)="showTable('approved')">
-        <div class="circle-icon green-bg">
-          <img src="assets/images/dashboard/approved.png" alt="Approved Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.approved }}</div>
-        <div class="label">Approved</div>
-      </mat-card>
-
-      <!-- Rejected Stat Card -->
-      <mat-card class="stat-card rejected" (click)="showTable('rejected')">
-        <div class="circle-icon red-bg">
-          <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.rejected }}</div>
-        <div class="label">Rejected</div>
-      </mat-card>
+  <!-- LOADING SPINNER -->
+  @if (isLoading) {
+    <div class="loading-overlay">
+      <div class="simple-spinner" aria-hidden="true">
+        <svg width="50" height="50" viewBox="0 0 50 50" role="img" aria-label="Loading">
+          <circle cx="25" cy="25" r="20" fill="none" stroke="#1C2B78" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
+            <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+          </circle>
+        </svg>
+      </div>
+      <p class="loading-text">Loading {{ getApplicationTypeLabel() }} data...</p>
     </div>
-  </ng-container>
+  }
+
+  <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
+  <div class="stats-container" [class.loading]="isLoading">
+    <!-- Applied Stat Card -->
+    <mat-card class="stat-card applied" (click)="showTable('applied')">
+      <div class="circle-icon blue-bg">
+        <img src="assets/images/dashboard/applied.png" alt="Applied Icon">
+      </div>
+      <div class="value">{{ dashboardCounts.applied }}</div>
+      <div class="label">Applied</div>
+    </mat-card>
+
+    <!-- Pending Stat Card -->
+    <mat-card class="stat-card pending" (click)="showTable('pending')">
+      <div class="circle-icon yellow-bg">
+        <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
+      </div>
+      <div class="value">{{ dashboardCounts.pending }}</div>
+      <div class="label">Pending</div>
+    </mat-card>
+
+    <!-- Approved Stat Card -->
+    <mat-card class="stat-card approved" (click)="showTable('approved')">
+      <div class="circle-icon green-bg">
+        <img src="assets/images/dashboard/approved.png" alt="Approved Icon">
+      </div>
+      <div class="value">{{ dashboardCounts.approved }}</div>
+      <div class="label">Approved</div>
+    </mat-card>
+
+    <!-- Rejected Stat Card -->
+    <mat-card class="stat-card rejected" (click)="showTable('rejected')">
+      <div class="circle-icon red-bg">
+        <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
+      </div>
+      <div class="value">{{ dashboardCounts.rejected }}</div>
+      <div class="label">Rejected</div>
+    </mat-card>
+  </div>
 
   <!-- Dashboard for Permit Section -->
   <ng-container>
@@ -47,7 +77,7 @@
     @if (activeTable === 'default') {
       <mat-card>
         <mat-card-header>
-          Statistics
+          Statistics - {{ getApplicationTypeLabel() }}
         </mat-card-header>
         <mat-card-content>
           <!-- Content for default table -->
@@ -62,14 +92,13 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Applied
+          Applied - {{ getApplicationTypeLabel() }}
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="appliedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'applied'"
-            >
+            [tableType]="'applied'">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -82,7 +111,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Pending
+          Pending - {{ getApplicationTypeLabel() }}
         </mat-card-header>
         <mat-card-content>
           <app-application-table
@@ -101,7 +130,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Approved
+          Approved - {{ getApplicationTypeLabel() }}
         </mat-card-header>
         <mat-card-content>
           <app-application-table
@@ -120,7 +149,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Rejected
+          Rejected - {{ getApplicationTypeLabel() }}
         </mat-card-header>
         <mat-card-content>
           <app-application-table

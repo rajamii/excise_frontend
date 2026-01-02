@@ -1,9 +1,8 @@
-<!-- Dashboard Container: This contains the entire dashboard layout -->
+<!-- Dashboard Container -->
 <div class="dashboard-container">
-  <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
   @if (accountService.hasAnyRole(['site_admin', 'level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'single_window'])) {
     
-    <!-- APPLICATION TYPE FILTER DROPDOWN -->
+    <!-- APPLICATION TYPE FILTER -->
     <div class="filter-container">
       <mat-form-field appearance="outline" class="application-type-filter">
         <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
@@ -27,7 +26,7 @@
         <div class="loading-overlay">
           <div class="simple-spinner" aria-hidden="true">
             <svg width="50" height="50" viewBox="0 0 50 50" role="img" aria-label="Loading">
-              <circle cx="25" cy="25" r="20" fill="none" stroke="#3f51b5" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
+              <circle cx="25" cy="25" r="20" fill="none" stroke="#1C2B78" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
                 <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
               </circle>
             </svg>
@@ -39,96 +38,107 @@
       <!-- STATS CARDS -->
       <div class="stats-container" [class.loading]="isLoading">
 
-      @if (accountService.hasAnyRole(['site_admin', 'single_window'])) {
-        <!-- Applied Stat Card -->
-        <mat-card class="stat-card applied" (click)="showTable('applied')">
-          <div class="circle-icon blue-bg">
-            <img src="assets/images/dashboard/applied.png" alt="Applied Icon">
+        @if (accountService.hasAnyRole(['site_admin', 'single_window'])) {
+          <!-- Applied Stat Card -->
+          <mat-card class="stat-card applied" (click)="showTable('applied')">
+            <div class="circle-icon blue-bg">
+              <img src="assets/images/dashboard/applied.png" alt="Applied Icon">
+            </div>
+            <div class="value">{{ dashboardCounts.applied }}</div>
+            <div class="label">Applied</div>
+          </mat-card>
+        }
+
+        <!-- Pending Stats Card -->
+        <mat-card class="stat-card pending" (click)="showTable('pending')">
+          <div class="circle-icon yellow-bg">
+            <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
           </div>
-          <div class="value">{{ dashboardCounts.applied }}</div>
-          <div class="label">Applied</div>
+          <div class="value">{{ dashboardCounts.pending }}</div>
+          <div class="label">Pending</div>
         </mat-card>
-      }
 
-      <!-- Pending Stats Card -->
-      <mat-card class="stat-card pending" (click)="showTable('pending')">
-        <div class="circle-icon yellow-bg">
-          <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.pending }}</div>
-        <div class="label">Pending</div>
-      </mat-card>
+        <!-- Approved Stats Card -->
+        <mat-card class="stat-card approved" (click)="showTable('approved')">
+          <div class="circle-icon green-bg">
+            <img src="assets/images/dashboard/approved.png" alt="Approved Icon">
+          </div>
+          <div class="value">{{ dashboardCounts.approved }}</div>
+          <div class="label">Approved</div>
+        </mat-card>
 
-      <!-- Approved Stats Card -->
-      <mat-card class="stat-card approved" (click)="showTable('approved')">
-        <div class="circle-icon green-bg">
-          <img src="assets/images/dashboard/approved.png" alt="Approved Icon">
-        </div>
-        <div class="value">{{ dashboardCounts.approved }}</div>
-        <div class="label">Approved</div>
-      </mat-card>
-
-    <!-- Rejected Stats Card -->
-    <mat-card class="stat-card rejected" (click)="showTable('rejected')">
-      <div class="circle-icon red-bg">
-        <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
+        <!-- Rejected Stats Card -->
+        <mat-card class="stat-card rejected" (click)="showTable('rejected')">
+          <div class="circle-icon red-bg">
+            <img src="assets/images/dashboard/rejected.png" alt="Rejected Icon">
+          </div>
+          <div class="value">{{ dashboardCounts.rejected }}</div>
+          <div class="label">Rejected</div>
+        </mat-card>
       </div>
-      <div class="value">{{ dashboardCounts.rejected }}</div>
-      <div class="label">Rejected</div>
-    </mat-card>
+
+      <!-- BAR CHART SECTION - ONLY FOR SITE ADMIN -->
+      @if (accountService.hasAnyRole(['site_admin'])) {
+        <div class="chart-container">
+          <mat-card class="chart-card">
+            <mat-card-header>
+              <mat-card-title>{{ getApplicationTypeLabel() }} Statistics</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <div class="chart-wrapper">
+                <canvas 
+                  baseChart
+                  [data]="barChartData"
+                  [options]="barChartOptions"
+                  [type]="barChartType">
+                </canvas>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      }
     </div>
-  </div>
   }
 
   @if (accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5'])) {
     <div>
-      <!-- Table Container: This section contains the table for detailed stats -->
+      <!-- Statistics Table -->
       @if (activeTable === 'stats') {
         <mat-card>
           <mat-card-header>
             Statistics - {{ getApplicationTypeLabel() }}
           </mat-card-header>
           <mat-card-content>
-            <!-- Table: Displays detailed information in a table format -->
             <mat-table [dataSource]="statsDataSource">
-              <!-- Column Definition for Serial Number (Sl No) -->
               <ng-container matColumnDef="slNo">
                 <mat-header-cell *matHeaderCellDef> Sl No. </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.slNo }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Service Name -->
               <ng-container matColumnDef="serviceName">
                 <mat-header-cell *matHeaderCellDef> Service Name </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.serviceName }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Applied Status -->
               <ng-container matColumnDef="applied">
                 <mat-header-cell *matHeaderCellDef> Applied </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.applied }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Rejected Status -->
               <ng-container matColumnDef="rejected">
                 <mat-header-cell *matHeaderCellDef> Rejected </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.rejected }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Approved Status -->
               <ng-container matColumnDef="approved">
                 <mat-header-cell *matHeaderCellDef> Approved </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.approved }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Executed Status -->
               <ng-container matColumnDef="executed">
                 <mat-header-cell *matHeaderCellDef> Executed </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.executed }} </mat-cell>
               </ng-container>
-              <!-- Column Definition for Pending Status -->
               <ng-container matColumnDef="pending">
                 <mat-header-cell *matHeaderCellDef> Pending </mat-header-cell>
                 <mat-cell *matCellDef="let stats"> {{ stats.pending }} </mat-cell>
               </ng-container>
-              <!-- Header Row for the table -->
               <mat-header-row *matHeaderRowDef="statsColumns"></mat-header-row>
-              <!-- Data Row for the table -->
               <mat-row *matRowDef="let row; columns: statsColumns;"></mat-row>
             </mat-table>
           </mat-card-content>

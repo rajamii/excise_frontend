@@ -6,23 +6,36 @@ import { Licensee } from '../models/license.model';
 
 @Injectable({ providedIn: 'root' })
 export class LicenseService {
-  /** The URL you tested in the browser */
   private readonly baseUrl = `${environment.apiBaseUrl}/masters/license`;
 
   constructor(private http: HttpClient) {}
 
-  /** Fetch licensees filtered by district (and optionally by category) */
+  /**
+   * Fetch active licensees filtered by district, category, and optional mode.
+   * 🔴 FIX: Capitalizes mode parameter to match database format
+   */
   getActiveLicensees(
     districtCode?: number | string,
-    licenseCategory?: string
+    licenseCategory?: string,
+    mode?: string
   ): Observable<Licensee[]> {
     let params = new HttpParams();
+
     if (districtCode != null) {
       params = params.set('district_code', districtCode.toString());
     }
+    
     if (licenseCategory) {
       params = params.set('license_category', licenseCategory);
     }
+    
+    // 🔴 FIX: Capitalize mode to match database format
+    // Frontend sends: "salesman" -> Backend expects: "Salesman"
+    if (mode) {
+      const formattedMode = mode.charAt(0).toUpperCase() + mode.slice(1);
+      params = params.set('mode', formattedMode);
+    }
+
     return this.http.get<Licensee[]>(`${this.baseUrl}/active/`, { params });
   }
 }

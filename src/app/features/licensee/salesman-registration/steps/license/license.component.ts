@@ -1,5 +1,5 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Subject, takeUntil } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -21,9 +21,13 @@ interface ModeOfOperation {
   standalone: true,
   imports: [MaterialModule, ReactiveFormsModule, CommonModule],
   templateUrl: './license.component.html',
-  styleUrl: './license.component.scss'
+  styleUrls: ['./license.component.scss']
 })
 export class LicenseComponent implements OnInit, OnDestroy {
+  private fb = inject(FormBuilder);
+  private masterService = inject(MasterService);
+  private licenseService = inject(LicenseService);
+
   applicationForm: FormGroup;
 
   districts: District[] = [];
@@ -38,20 +42,22 @@ export class LicenseComponent implements OnInit, OnDestroy {
   @Output() readonly next = new EventEmitter<void>();
   private destroy$ = new Subject<void>();
 
-  // -----------------------------------------------------------------
-  constructor(
-    private fb: FormBuilder,
-    private masterService: MasterService,
-    private licenseService: LicenseService
-  ) {
+  errorMessages = {
+    district: signal(''),
+    licenseCategory: signal(''),
+    licensee: signal(''),
+    modeOfOperation: signal('')
+  };
+
+  constructor() {
     const stored = this.getFromSessionStorage();
 
     this.applicationForm = this.fb.group({
       financialYear: [this.getCurrentFinancialYear(), Validators.required],
-      district: [stored.district, Validators.required],
-      licenseCategory: [stored.licenseCategory, Validators.required],
-      licensee: [stored.license, Validators.required],
-      modeOfOperation: ['', Validators.required]
+      district: [stored['district'], Validators.required],
+      licenseCategory: [stored['licenseCategory'], Validators.required],
+      licensee: [{value: stored['license'], disabled: true}, Validators.required],
+      modeOfOperation: [stored['modeOfOperation'] || '', Validators.required]
     });
 
     this.applicationForm.valueChanges
@@ -62,11 +68,10 @@ export class LicenseComponent implements OnInit, OnDestroy {
       });
   }
 
-  // -----------------------------------------------------------------
   ngOnInit(): void {
     this.loadDropdownData();
     this.setupFormSubscriptions();
-    this.loadSavedData();          // will trigger fetch if district already saved
+    this.loadSavedData();
   }
 
   ngOnDestroy(): void {
@@ -74,22 +79,22 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // -----------------------------------------------------------------
   private getCurrentFinancialYear(): string {
     const today = new Date();
     const year = today.getFullYear();
-    const month = today.getMonth() + 1; // 1-12
-    if (month >= 4) {
-      return `${year}-${(year + 1) % 100}`;
-    } else {
-      return `${year - 1}-${year % 100}`;
-    }
+    const month = today.getMonth() + 1;
+    return month >= 4 ? `${year}-${(year + 1) % 100}` : `${year - 1}-${year % 100}`;
   }
 
-  // -----------------------------------------------------------------
   private loadDropdownData(): void {
     this.masterService.getDistrict().subscribe({
-      next: (data) => (this.districts = data),
+      next: (data) => {
+        this.districts = data;
+        console.log('🏛️ Loaded districts:', data);
+        if (data.length > 0) {
+          console.log('First district sample:', data[0]);
+        }
+      },
       error: (e) => console.error('Districts error', e)
     });
 
@@ -99,8 +104,6 @@ export class LicenseComponent implements OnInit, OnDestroy {
     });
   }
 
-  // -----------------------------------------------------------------
-  /** Watch district & category → refetch licensees */
   private setupFormSubscriptions(): void {
     this.applicationForm.get('district')?.valueChanges
       .pipe(takeUntil(this.destroy$))
@@ -109,41 +112,51 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.applicationForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchLicensees());
+
+    this.applicationForm.get('modeOfOperation')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.fetchLicensees());
   }
 
-  // -----------------------------------------------------------------
-  /** Core server-side fetch */
   private fetchLicensees(): void {
     const districtCode = this.applicationForm.get('district')?.value;
     const licenseCategory = this.applicationForm.get('licenseCategory')?.value;
+    const modeOfOperation = this.applicationForm.get('modeOfOperation')?.value;
 
     if (!districtCode) {
       this.filteredLicensees = [];
       this.applicationForm.get('licensee')?.setValue('');
+      this.applicationForm.get('licensee')?.disable();
       return;
     }
 
     this.licenseService
-      .getActiveLicensees(districtCode, licenseCategory)
+      .getActiveLicensees(districtCode, licenseCategory, modeOfOperation)
       .subscribe({
         next: (data) => {
+          console.log('Fetched licensees:', data);
           this.filteredLicensees = data;
-
-          // Reset licensee if it disappeared
-          const cur = this.applicationForm.get('licensee')?.value;
-          if (cur && !data.some((l) => l.id === cur)) {
+          
+          if (data.length > 0) {
+            this.applicationForm.get('licensee')?.enable();
+          } else {
+            this.applicationForm.get('licensee')?.disable();
+          }
+          
+          const currentLicensee = this.applicationForm.get('licensee')?.value;
+          if (currentLicensee && !data.some((l) => l.id === currentLicensee)) {
             this.applicationForm.get('licensee')?.setValue('');
           }
         },
         error: (e) => {
           console.error('Licensee fetch error', e);
           this.filteredLicensees = [];
+          this.applicationForm.get('licensee')?.disable();
         }
       });
   }
 
-  // -----------------------------------------------------------------
-  private getFromSessionStorage(): Partial<SalesmanBarman> {
+  private getFromSessionStorage(): Partial<SalesmanBarman> & Record<string, any> {
     const raw = sessionStorage.getItem('licenseDetails');
     return raw ? JSON.parse(raw) : {};
   }
@@ -153,7 +166,6 @@ export class LicenseComponent implements OnInit, OnDestroy {
     sessionStorage.setItem('licenseDetails', JSON.stringify(data));
   }
 
-  // -----------------------------------------------------------------
   private updateErrorMessage(field: keyof typeof this.errorMessages): void {
     const ctrl = this.applicationForm.get(field);
     this.errorMessages[field].set(ctrl?.hasError('required') ? 'This field is required' : '');
@@ -165,21 +177,19 @@ export class LicenseComponent implements OnInit, OnDestroy {
     );
   }
 
-  // -----------------------------------------------------------------
   loadSavedData(): void {
     const saved = sessionStorage.getItem('licenseDetails');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         this.applicationForm.patchValue(parsed);
-        setTimeout(() => this.fetchLicensees(), 0);
+        setTimeout(() => this.fetchLicensees(), 100);
       } catch (e) {
         console.error('Saved data parse error', e);
       }
     }
   }
 
-  // -----------------------------------------------------------------
   onSubmit(): void {
     if (this.applicationForm.invalid) {
       this.markFormGroupTouched();
@@ -187,30 +197,60 @@ export class LicenseComponent implements OnInit, OnDestroy {
     }
 
     const form = this.applicationForm.value;
-    const enhanced = {
-      ...form,
-      role: form.modeOfOperation === 'salesman' ? 'Salesman' : 'Barman',
-      excise_district: form.district,
-      license_category: form.licenseCategory,
+    
+    // 🔴 FIX: Get districtCode from selected district
+    const selectedDistrict = this.districts.find(d => d.id === form.district);
+    const districtCode = selectedDistrict?.districtCode;
+
+    if (!districtCode) {
+      console.error('❌ District code not found for district ID:', form.district);
+      console.error('Available districts:', this.districts);
+      console.error('Selected district:', selectedDistrict);
+      alert('Error: District code not found. Please select a district again.');
+      return;
+    }
+
+    // 🔴 CRITICAL: Store in EXACT format backend expects
+    const backendFormat = {
+      // Backend CodeRelatedField expects districtCode as string (e.g., "101")
+      district: districtCode.toString(),
+      
+      // Backend expects license_category as Category ID (integer)
+      licenseCategory: form.licenseCategory,
+      
+      // Backend expects license as License ID (string like "LIC/101/2025-26/0001")
       licensee: form.licensee,
+      
+      // Role: "Salesman" or "Barman" (exact capitalization)
+      role: form.modeOfOperation === 'salesman' ? 'Salesman' : 'Barman',
+      
+      // Keep for display purposes
+      modeOfOperation: form.modeOfOperation,
+      financialYear: form.financialYear,
+      
+      // Store names for display
+      districtName: this.getDistrictName(form.district),
+      categoryName: this.getLicenseCategoryName(form.licenseCategory),
+      licenseeName: this.getLicenseeName(form.licensee)
     };
 
-    sessionStorage.setItem('licenseDetails', JSON.stringify(enhanced));
-    // console.log('Saved', enhanced);
+    sessionStorage.setItem('licenseDetails', JSON.stringify(backendFormat));
+    
+    console.log('✅ Stored License Details (Backend Format):', backendFormat);
+    console.log('🔑 District Code (for backend):', districtCode.toString());
+    console.log('📋 Category ID:', form.licenseCategory);
+    console.log('📄 License Application ID:', form.licensee);
+    console.log('👤 Role:', backendFormat.role);
+    
     this.next.emit();
-    console.log('licenseDetails:', enhanced);
   }
 
-  // -----------------------------------------------------------------
   generateApplicationId(): string {
     const dist = this.districts.find((d) => d.id?.toString() === this.applicationForm.value.district);
     const districtCode = dist?.districtCode ?? 'XX';
     const year = new Date().getFullYear();
-    const rand = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, '0');
-    const mode = this.modesOfOperation.find((m) => m.value === this.applicationForm.value.modeOfOperation)
-      ?.code ?? 'XX';
+    const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const mode = this.modesOfOperation.find((m) => m.value === this.applicationForm.value.modeOfOperation)?.code ?? 'XX';
     return `${districtCode}/${mode}/${year}/${rand}`;
   }
 
@@ -223,8 +263,11 @@ export class LicenseComponent implements OnInit, OnDestroy {
   }
 
   getLicenseCategoryName(id: string): string {
-    const cat = this.licenseCategories.find((c) => c.id?.toString() === id);
-    return cat?.licenseCategory ?? '';
+    return this.licenseCategories.find((c) => c.id?.toString() === id)?.licenseCategory ?? '';
+  }
+
+  getLicenseeName(id: string): string {
+    return this.filteredLicensees.find((l) => l.id === id)?.establishment_name ?? '';
   }
 
   getLicenseeDetails(id: string): Licensee | null {
@@ -239,8 +282,6 @@ export class LicenseComponent implements OnInit, OnDestroy {
     Object.values(this.applicationForm.controls).forEach((c) => c.markAsTouched());
   }
 
-  // -----------------------------------------------------------------
-  // Template helpers
   isFieldInvalid(name: string): boolean {
     const c = this.applicationForm.get(name);
     return !!(c && c.invalid && c.touched);
@@ -261,13 +302,4 @@ export class LicenseComponent implements OnInit, OnDestroy {
     };
     return map[name] ?? name;
   }
-
-  // -----------------------------------------------------------------
-  // Signal-based error messages (kept for your existing UI)
-  errorMessages = {
-    district: signal(''),
-    licenseCategory: signal(''),
-    licensee: signal(''),
-    modeOfOperation: signal('')
-  };
 }

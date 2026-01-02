@@ -1,9 +1,10 @@
 import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, DoCheck } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Subject } from 'rxjs';
+import { Subject, forkJoin } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
 import { PoliceStation } from '../../../../../core/models/policestation.model';
+import { Road } from '../../../../../core/models/road.model';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplication } from '../../../../../core/models/license-application.model';
@@ -17,61 +18,55 @@ import { MasterService } from '../../../../../core/services/master.service';
   styleUrl: './address.component.scss',
 })
 export class AddressComponent implements OnInit, OnDestroy, DoCheck {
-  addressForm: FormGroup; // Main form group for address
+  addressForm: FormGroup;
   siteDistrict = '';
 
-  // Raw data from API for dropdowns
   subdivisions: Subdivision[] = [];
   private policeStations: PoliceStation[] = [];
+  sitePoliceStations: PoliceStation[] = [];
+  
+  // ✅ FIXED: Load roads from backend
+  roads: Road[] = [];
 
-  // Filtered data shown in dropdowns
-  sitePoliceStations: any[] = [];
-
-  // Static dropdown values
   locationCategories: string[] = ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'];
   locationNames: string[] = ['Location 1', 'Location 2', 'Location 3'];
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3'];
-  roadNames: string[] = ['Road 1', 'Road 2', 'Road 3'];
 
-  // Outputs for navigation between form steps
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
-  // Subject to destroy subscriptions on component destroy
   private destroy$ = new Subject<void>();
+  private dataLoaded = false;
 
-  // Error messages using Angular signal for reactive UI updates
   errorMessages = {
-    siteSubdivision: signal(''),
-    policeStation: signal(''),
-    locationCategory: signal(''),
-    locationName: signal(''),
-    wardName: signal(''),
-    businessAddress: signal(''),
-    roadName: signal(''),
-    pinCode: signal(''),
+    site_subdivision: signal(''),
+    police_station: signal(''),
+    location_category: signal(''),
+    location_name: signal(''),
+    ward_name: signal(''),
+    business_address: signal(''),
+    road_name: signal(''),
+    pin_code: signal(''),
     latitude: signal(''),
     longitude: signal('')
   };
 
   constructor(private fb: FormBuilder, private masterService: MasterService) {
-    const storedValues = this.getFromSessionStorage(); // Retrieve saved form values from session storage
+    const storedValues = this.getFromSessionStorage();
 
-    // Initialize the form with stored values and validators
     this.addressForm = this.fb.group({
-      siteSubdivision: new FormControl({ value: storedValues.siteSubdivision, disabled: true }, [Validators.required]),
-      policeStation: new FormControl(storedValues.policeStation, [Validators.required]),
-      locationCategory: new FormControl(storedValues.locationCategory, [Validators.required]),
-      locationName: new FormControl(storedValues.locationName, [Validators.required]),
-      wardName: new FormControl(storedValues.wardName, [Validators.required]),
-      businessAddress: new FormControl(storedValues.businessAddress, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl(storedValues.roadName, [Validators.required]),
-      pinCode: new FormControl(storedValues.pinCode, [Validators.required, Validators.pattern(PatternConstants.PINCODE)]),
+      site_subdivision: new FormControl({ value: storedValues.site_subdivision, disabled: true }, [Validators.required]),
+      police_station: new FormControl(storedValues.police_station, [Validators.required]),
+      location_category: new FormControl(storedValues.location_category, [Validators.required]),
+      location_name: new FormControl(storedValues.location_name, [Validators.required]),
+      ward_name: new FormControl(storedValues.ward_name, [Validators.required]),
+      business_address: new FormControl(storedValues.business_address, [Validators.required, Validators.maxLength(500)]),
+      road_name: new FormControl(storedValues.road_name, [Validators.required]),
+      pin_code: new FormControl(storedValues.pin_code, [Validators.required, Validators.pattern(PatternConstants.PINCODE)]),
       latitude: new FormControl(storedValues.latitude),
       longitude: new FormControl(storedValues.longitude),
     });
 
-    // Save form changes to session storage and update error messages live
     this.addressForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.saveToSessionStorage();
       this.updateAllErrorMessages();
@@ -79,91 +74,134 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   ngOnInit() {
-    this.loadDropdownData(); // Load data for subdivisions and police stations
-
-    // Optional: auto-populate police stations if a subdivision was already selected
-    const subdivision = this.addressForm.get('siteSubdivision')?.value;
-    if (subdivision) {
-      this.onSubDivisionChange(subdivision);
-    }
+    this.loadDropdownData();
   }
 
   ngOnDestroy() {
-    this.destroy$.next(); // Signal to complete observable streams
+    this.destroy$.next();
     this.destroy$.complete();
   }
 
   ngDoCheck(): void {
+    if (!this.dataLoaded) return;
+
     const selectLicenseData = sessionStorage.getItem('selectLicenseData');
     if (selectLicenseData) {
       const parsed = JSON.parse(selectLicenseData);
-      const selectedExciseSubdivision = parsed?.exciseSubdivision;
+      const selectedExciseSubdivision = parsed?.excise_subdivision;
 
-      const siteSubdivisionControl = this.addressForm.get('siteSubdivision');
+      const siteSubdivisionControl = this.addressForm.get('site_subdivision');
       const currentValue = siteSubdivisionControl?.value;
 
       if (selectedExciseSubdivision && currentValue !== selectedExciseSubdivision) {
         siteSubdivisionControl?.setValue(selectedExciseSubdivision);
         siteSubdivisionControl?.disable({ emitEvent: false });
-
-        // ⬅️ This line ensures police stations are filtered immediately
         this.onSubDivisionChange(selectedExciseSubdivision);
       }
     }
   }
 
-  // Fetches dropdown data from backend service
+  /**
+   * ✅ Load subdivisions, police stations, and roads
+   */
   private loadDropdownData(): void {
-    this.masterService.getSubdivision().subscribe((data: Subdivision[]) => {
-      this.subdivisions = data;
-    }, error => {
-      console.error('Failed to load subdivisions.', error);
-    });
-
-    this.masterService.getPoliceStations().subscribe({
-      next: (data: PoliceStation[]) => {
-        this.policeStations = data;
-
-        // After loading subdivisions, trigger filtering using saved district
-        const storedSubdivision = this.addressForm.get('siteSubdivision')?.value;
+    forkJoin({
+      subdivisions: this.masterService.getSubdivision(),
+      policeStations: this.masterService.getPoliceStations(),
+      roads: this.masterService.getRoads()
+    }).subscribe({
+      next: ({ subdivisions, policeStations, roads }) => {
+        this.subdivisions = subdivisions;
+        this.policeStations = policeStations;
+        this.roads = roads;
+        this.dataLoaded = true;
+        
+        console.log('✅ All master data loaded');
+        console.log('  Subdivisions:', subdivisions);
+        console.log('  Police Stations:', policeStations);
+        console.log('  Roads:', roads);
+        
+        const storedSubdivision = this.addressForm.get('site_subdivision')?.value;
         if (storedSubdivision) {
           this.onSubDivisionChange(storedSubdivision);
         }
       },
-      error: (error) => console.error('Failed to load subdivisions.', error)
+      error: (error) => {
+        console.error('❌ Failed to load master data:', error);
+      }
     });
   }
 
-  // Filters police stations based on selected subdivision
-  onSubDivisionChange(code: number): void {
+  onSubDivisionChange(subdivisionId: number): void {
+    if (!this.dataLoaded || this.subdivisions.length === 0 || this.policeStations.length === 0) {
+      return;
+    }
+    
+    const subdivision = this.subdivisions.find(s => s.id === subdivisionId);
+    
+    if (!subdivision) {
+      console.warn('⚠️ Subdivision not found for ID:', subdivisionId);
+      this.sitePoliceStations = [];
+      return;
+    }
+
+    console.log('🔍 Filtering police stations for subdivision code:', subdivision.subdivisionCode);
+    
     this.sitePoliceStations = this.policeStations.filter(
-      ps => ps.subdivisionCode === code
+      ps => ps.subdivisionCode === subdivision.subdivisionCode
     );
+    
+    console.log('✅ Filtered police stations:', this.sitePoliceStations);
   }
 
-  // Retrieves form data from session storage
   private getFromSessionStorage(): Partial<LicenseApplication> {
     const storedData = sessionStorage.getItem('addressData');
     return storedData ? JSON.parse(storedData) as LicenseApplication : {};
   }
 
-  // Saves current form data to session storage
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.addressForm.getRawValue();
-    sessionStorage.setItem('addressData', JSON.stringify(formData));
+
+    // Convert number fields to actual numbers
+    const parsedNumbers = {
+      pin_code: formData.pin_code ? Number(formData.pin_code) : null,
+      latitude: formData.latitude ? Number(formData.latitude) : null,
+      longitude: formData.longitude ? Number(formData.longitude) : null,
+    };
+
+    // ✅ Store both ID and CODE
+    const enrichedData: any = {
+      ...formData,
+      ...parsedNumbers
+    };
+    
+    // Get subdivision code
+    if (formData.site_subdivision) {
+      const subdivision = this.subdivisions.find(s => s.id === formData.site_subdivision);
+      if (subdivision) {
+        enrichedData.site_subdivision_code = subdivision.subdivisionCode;
+      }
+    }
+    
+    // Get police station code
+    if (formData.police_station) {
+      const policeStation = this.policeStations.find(ps => ps.id === formData.police_station);
+      if (policeStation) {
+        enrichedData.police_station_code = policeStation.policeStationCode;
+      }
+    }
+    
+    console.log('💾 Saving address to session:', enrichedData);
+    sessionStorage.setItem('addressData', JSON.stringify(enrichedData));
   }
 
-  /**
-   * Updates the error message for a specific form control
-   * @param field form control name
-   */
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.addressForm.get(field);
 
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
-      if (field === 'pinCode') {
+      if (field === 'pin_code') {
         this.errorMessages[field].set('PIN Code must be a 6-digit number');
       } else {
         this.errorMessages[field].set('Invalid format');
@@ -173,35 +211,27 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
     }
   }
 
-  // Updates all error messages on the form
   private updateAllErrorMessages() {
     Object.keys(this.errorMessages).forEach((field) => {
       this.updateErrorMessage(field as keyof typeof this.errorMessages);
     });
   }
 
-  /**
-   * Returns the current error message of a form field
-   * @param field form control name
-   */
   getErrorMessage(field: keyof typeof this.errorMessages) {
     return this.errorMessages[field]();
   }
 
-  // Emits 'next' event if form is valid
   proceedToNext() {
     if (this.addressForm.valid) {
       this.next.emit();
     }
   }
 
-  // Clears the form and session storage
   resetForm() {
     this.addressForm.reset();
     sessionStorage.removeItem('addressData');
   }
 
-  // Emits 'back' event to navigate to the previous step
   goBack() {
     this.back.emit();
   }

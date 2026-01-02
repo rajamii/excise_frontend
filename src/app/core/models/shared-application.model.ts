@@ -1,6 +1,6 @@
 // core/models/shared-application.model.ts (new file)
 export interface UnifiedApplication {
-  type: 'license' | 'salesman_barman'; // Discriminator
+  type: 'license' | '/salesman_barman/'; // Discriminator
   applicationId: string;
   currentStage: string; // e.g., 'level_1'
   currentStageName?: string; // Human-readable, e.g., 'Under Review by Level 1'

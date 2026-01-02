@@ -8,55 +8,59 @@
     <mat-card-content>
       <div class="form-field-container">
 
-        <!-- License Category -->
+        <!-- Category of License -->
         <mat-form-field appearance="outline">
-          <mat-label>Category of License</mat-label>
+          <mat-label>Category of License<span class="required">*</span></mat-label>
           <mat-select formControlName="licenseCategory" required>
+            @if (licenseCategories.length === 0) {
+            <mat-option disabled>Loading categories...</mat-option>
+            }
             @for (category of licenseCategories; track category.id) {
-              <mat-option [value]="category.id">
-                {{ category.licenseCategory }}
-              </mat-option>
+            <mat-option [value]="category.id">
+              {{ category.licenseCategory }}
+            </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseCategory'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('licenseCategory') }}
-            </mat-error>
+          @if (keyInfoForm.controls['licenseCategory'].invalid && keyInfoForm.controls['licenseCategory'].touched) {
+          <mat-error>{{ getErrorMessage('licenseCategory') }}</mat-error>
           }
         </mat-form-field>
-        
-        <!-- License Sub-Category -->
+
+        <!-- Sub Category of License -->
         <mat-form-field appearance="outline">
-          <mat-label>Sub Category of License</mat-label>
+          <mat-label>Sub Category of License<span class="required">*</span></mat-label>
           <mat-select formControlName="licenseSubCategory" required>
+            @if (licenseSubCategories.length === 0 && keyInfoForm.get('licenseCategory')?.value) {
+            <mat-option disabled>No subcategories available for this category</mat-option>
+            }
+            @if (licenseSubCategories.length === 0 && !keyInfoForm.get('licenseCategory')?.value) {
+            <mat-option disabled>Please select a category first</mat-option>
+            }
             @for (subCategory of licenseSubCategories; track subCategory.id) {
-              <mat-option [value]="subCategory.id">
-                {{ subCategory.description }}
-              </mat-option>
+            <mat-option [value]="subCategory.id">
+              {{ subCategory.description }}
+            </mat-option>
             }
           </mat-select>
-          @if (keyInfoForm.controls['licenseSubCategory'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('licenseSubCategory') }}
-            </mat-error>
+          @if (keyInfoForm.controls['licenseSubCategory'].invalid && keyInfoForm.controls['licenseSubCategory'].touched) {
+          <mat-error>{{ getErrorMessage('licenseSubCategory') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Establishment Name -->
+        <!-- Name of the Business Premises -->
         <mat-form-field appearance="outline">
-          <mat-label>Name of the Business Premises (FLR/Hotel/Restaurant/Pachiwai)</mat-label>
+          <mat-label>Name of the Business Premises<span class="required">*</span></mat-label>
           <input matInput 
-            placeholder="Enter Establishment Name (max 150 characters)"
-            formControlName="establishmentName"
-            required>
-          @if (keyInfoForm.controls['establishmentName'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('establishmentName') }}
-            </mat-error>
+                 placeholder="Enter Establishment Name (max 150 characters)"
+                 formControlName="establishmentName" 
+                 required
+                 maxlength="150">
+          @if (keyInfoForm.controls['establishmentName'].invalid && keyInfoForm.controls['establishmentName'].touched) {
+          <mat-error>{{ getErrorMessage('establishmentName') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Site Type Radio Buttons -->
+        <!-- Site Type (Radio Group) -->
         <div class="radio-group-container">
           <label class="field-label">Site Type <span class="required">*</span></label>
           <mat-radio-group formControlName="siteType" required>
@@ -64,9 +68,7 @@
             <mat-radio-button value="Existing">Existing</mat-radio-button>
           </mat-radio-group>
           @if (keyInfoForm.controls['siteType'].invalid && keyInfoForm.controls['siteType'].touched) {
-            <mat-error class="radio-error">
-              {{ getErrorMessage('siteType') }}
-            </mat-error>
+          <mat-error class="radio-error">{{ getErrorMessage('siteType') }}</mat-error>
           }
         </div>
 
@@ -74,10 +76,9 @@
     </mat-card-content>
 
     <mat-card-actions>
-      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
-      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
-      <button mat-flat-button color="primary" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid" type="button">Next</button>
+      <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+      <button mat-stroked-button color="warn" type="button" (click)="resetForm()">Reset</button>
+      <button mat-flat-button color="primary" type="button" (click)="proceedToNext()" [disabled]="!keyInfoForm.valid">Next</button>
     </mat-card-actions>
-
   </mat-card>
 </form>
