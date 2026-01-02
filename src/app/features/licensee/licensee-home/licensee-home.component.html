@@ -1,9 +1,6 @@
 <!-- Main container for the sidenav layout with elevation and minimum height -->
 @if (loaded) {
-<mat-sidenav-container
-  class="mat-elevation-z8"
-  style="padding: 0; min-height: 800px"
->
+<mat-sidenav-container class="mat-elevation-z8" style="padding: 0; min-height: 800px">
   <!-- Sidebar (sidenav) section -->
   <mat-sidenav #sidenav mode="side" [opened]="false">
     <!-- Header section of the sidebar with a close button -->
@@ -21,12 +18,7 @@
           <!-- Displays the user's name -->
         </div>
         <!-- Button to view the user's profile -->
-        <button
-          mat-mini-fab
-          class="view-profile"
-          (click)="viewProfile()"
-          type="button"
-        >
+        <button mat-mini-fab class="view-profile" (click)="viewProfile()" type="button">
           <mat-icon>account_circle</mat-icon>
         </button>
       </div>
@@ -47,78 +39,77 @@
         <mat-list-item (click)="openNewLicenseInfo()" class="nav-header-cus">
           <span class="nav-header-cus">Apply New License</span>
         </mat-list-item>
+    
+        <!-- Accordion Menu for Company Registration/Collaboration -->
+        <mat-accordion>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              Company
+            </mat-expansion-panel-header>
+            <div class="button-column">
+              <button mat-menu-item
+                routerLink="company-registration-and-collaboration/company-registration/prepare-application"
+                routerLinkActive="active-link">Company Registration</button>
+              <button mat-menu-item
+                routerLink="company-registration-and-collaboration/company-collaboration/prepare-application"
+                routerLinkActive="active-link">Company Collaboration</button>
+            </div>
+          </mat-expansion-panel>
+        </mat-accordion>
+
+        <!-- Simplified Salesman/Barman Registration - Direct Navigation -->
+        <mat-list-item routerLink="salesman-barman/prepare-application" routerLinkActive="active-link">
+          <span class="nav-header-cus">
+            Salesman/Barman Registration
+          </span>
+        </mat-list-item>
+
+        <!-- Apply Supply Chain Link -->
         <mat-list-item routerLink="supply-chain" routerLinkActive="active-link">
           <span class="nav-header-cus">Apply Supply Chain</span>
         </mat-list-item>
+
+        <!-- Accordion for Registers Section -->
         <div class="accordion accordion-flush" id="sidebarAccordion">
           <!-- Register Section -->
           <div class="accordion-item">
             <h2 class="accordion-header">
-              <button
-                class="accordion-button collapsed text-black fw-semibold"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#registerCollapse"
-              >
-                <i class="bi bi-journal-text me-2"></i> 
+              <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
+                data-bs-target="#registerCollapse">
                 Register
               </button>
             </h2>
-            <div
-              id="registerCollapse"
-              class="accordion-collapse collapse"
-              data-bs-parent="#sidebarAccordion"
-            >
+            <div id="registerCollapse" class="accordion-collapse collapse" data-bs-parent="#sidebarAccordion">
               <div class="accordion-body p-0">
                 <ul class="list-group list-group-flush">
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('transit-permit-register')"
-                    style="cursor: pointer"
-                  >
-                    <i
-                      class="bi bi-journal-arrow-down me-3 text-primary fs-5"
-                    ></i>
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('transit-permit-register')" style="cursor: pointer">
+                    <i class="bi bi-journal-arrow-down me-3 text-primary fs-5"></i>
                     <span>Transit Permit Register</span>
                   </li>
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('daily-record-register')"
-                    style="cursor: pointer"
-                  >
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('daily-record-register')" style="cursor: pointer">
                     <i class="bi bi-journal-check me-3 text-success fs-5"></i>
                     <span>Daily Record Register</span>
                   </li>
 
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('brands-details')"
-                    style="cursor: pointer"
-                  >
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('brands-details')" style="cursor: pointer">
                     <i class="bi bi-tags me-3 text-dark fs-5"></i>
                     <span>Brands Details</span>
                   </li>
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('yuksom-local-sales-register')"
-                    style="cursor: pointer"
-                  >
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('yuksom-local-sales-register')" style="cursor: pointer">
                     <i class="bi bi-journal-text me-3 text-warning fs-5"></i>
                     <span>Yuksom Local Sale</span>
                   </li>
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('beer-production-register')"
-                    style="cursor: pointer"
-                  >
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('beer-production-register')" style="cursor: pointer">
                     <i class="bi bi-cup-hot me-3 text-info fs-5"></i>
                     <span>Beer Production Register</span>
                   </li>
-                  <li
-                    class="list-group-item list-group-item-action d-flex align-items-center py-3"
-                    (click)="navigateTo('hologram-monthly-report')"
-                    style="cursor: pointer"
-                  >
+                  <li class="list-group-item list-group-item-action d-flex align-items-center py-3"
+                    (click)="navigateTo('hologram-monthly-report')" style="cursor: pointer">
                     <i class="bi bi-graph-up me-3 text-primary fs-5"></i>
                     <span>Hologram Monthly Report</span>
                   </li>
@@ -127,75 +118,6 @@
             </div>
           </div>
         </div>
-        <!-- Accordion Menu for Company Registration -->
-        <mat-accordion>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              Company Registration
-            </mat-expansion-panel-header>
-            <div class="button-column">
-              <button
-                mat-menu-item
-                routerLink="company/prepare-application"
-                routerLinkActive="active-link"
-              >
-                Prepare Application
-              </button>
-              <button
-                mat-menu-item
-                routerLink="company/application-action"
-                routerLinkActive="active-link"
-              >
-                Act On Application
-              </button>
-              <button
-                mat-menu-item
-                routerLink="company/print-certificate"
-                routerLinkActive="active-link"
-              >
-                Print Certificate
-              </button>
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-        <!-- Accordion Menu for Salesman/Barman Registration -->
-        <mat-accordion>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              Salesman/Barman Registration
-            </mat-expansion-panel-header>
-            <div class="button-column">
-              <button
-                mat-menu-item
-                routerLink="salesman-barman/prepare-application"
-                routerLinkActive="active-link"
-              >
-                Prepare Application
-              </button>
-              <button
-                mat-menu-item
-                routerLink="salesman-barman/application-action"
-                routerLinkActive="active-link"
-              >
-                Act On Draft Application
-              </button>
-              <button
-                mat-menu-item
-                routerLink="salesman-barman/print-certificate"
-                routerLinkActive="active-link"
-              >
-                Print Certificate
-              </button>
-              <button
-                mat-menu-item
-                routerLink="salesman-barman/application-status"
-                routerLinkActive="active-link"
-              >
-                Application Status
-              </button>
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
       </mat-nav-list>
       }
     </div>
@@ -205,12 +127,7 @@
   <mat-sidenav-content>
     <!-- Toggle button to open the sidenav when it's closed -->
     <div class="toggle-btn">
-      <button
-        mat-icon-button
-        [class.hidden]="isSidenavOpen"
-        (click)="snavToggle(sidenav)"
-        color="primary"
-      >
+      <button mat-icon-button [class.hidden]="isSidenavOpen" (click)="snavToggle(sidenav)" color="primary">
         <mat-icon style="font-size: 27px">menu</mat-icon>
       </button>
     </div>
