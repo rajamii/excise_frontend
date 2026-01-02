@@ -1,0 +1,221 @@
+<!-- Transit Register Header -->
+<div class="transit-register-header">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="header-info">
+      <h4 class="register-title">
+        <i class="bi bi-truck me-2"></i>
+        Transit Permit Applications Review
+      </h4>
+      <p class="register-subtitle">Review and process transit permit applications from licensees</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-success">
+        <i class="bi bi-download me-2"></i>
+        Export Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="summary-card total-requests">
+        <div class="card-icon">
+          <i class="bi bi-list-ul"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ filteredTransitData.length }}</h3>
+          <p class="card-label">Total Transit Permits</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card urgent-requests">
+        <div class="card-icon">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getUrgentTransitCount() }}</h3>
+          <p class="card-label">Urgent/High Priority</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card pending-requests">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getTransitStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending Review</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card total-amount">
+        <div class="card-icon">
+          <i class="bi bi-currency-rupee"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">₹{{ getTotalTransitAmount() | number:'1.2-2' }}</h3>
+          <p class="card-label">Total Amount</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compact Filter Section for Transit -->
+<div class="compact-filter-section mb-3">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="filter-label-text">
+      <i class="bi bi-funnel me-1"></i>
+      <small class="text-muted">Filters:</small>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="compact-filter">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="transitDateFilter"
+        (change)="onTransitDateFilterChange()" placeholder="Date" title="Filter by date">
+    </div>
+
+    <!-- Status Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="transitStatusFilter"
+        (change)="onTransitStatusFilterChange()" title="Filter by status">
+        <option value="">All Status</option>
+        <option value="PENDING">Pending Review</option>
+        <option value="APPROVED">Approved</option>
+        <option value="ISSUED">Issued</option>
+        <option value="REJECTED">Rejected</option>
+        <option value="PROCESSING">Processing</option>
+      </select>
+    </div>
+
+    <!-- Destination Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="transitDestinationFilter"
+        (change)="onTransitDestinationFilterChange()" title="Filter by destination">
+        <option value="">All Destinations</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Mumbai">Mumbai</option>
+        <option value="Kolkata">Kolkata</option>
+        <option value="Bangalore">Bangalore</option>
+        <option value="Chennai">Chennai</option>
+        <option value="Guwahati">Guwahati</option>
+      </select>
+    </div>
+
+    <!-- Clear Button -->
+    <button class="btn btn-outline-danger btn-sm" (click)="clearTransitFilters()"
+      *ngIf="transitDateFilter || transitStatusFilter || transitDestinationFilter"
+      title="Clear all filters">
+      <i class="bi bi-x-circle"></i>
+      Clear
+    </button>
+  </div>
+</div>
+
+<!-- Transit Register Table -->
+<div class="transit-register-table">
+  <div class="register-container">
+    <div class="register-header-bar">
+      <h5 class="register-table-title">
+        <i class="bi bi-table me-2"></i>
+        Transit Permit Applications
+      </h5>
+      <div class="register-info">
+        <span class="entries-count">{{ filteredTransitData.length }} Applications</span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="filteredTransitData.length > 0">
+      <table class="table register-table">
+        <thead>
+          <tr>
+            <th class="sl-no">Sl.</th>
+            <th class="ref-number">Ref. No</th>
+            <th class="submission-date">App. Date</th>
+            <th class="licensee-name">Licensee</th>
+            <th class="destination">Destination</th>
+            <th class="vehicle-number">Vehicle No</th>
+            <th class="amount">Amount</th>
+            <th class="status">Status</th>
+            <th class="priority">Priority</th>
+            <th class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (
+          item of getPaged();
+          track item.referenceNo;
+          let i = $index
+          ) {
+          <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
+            <td class="ref-number">
+              <span class="ref-text">{{ item.referenceNo }}</span>
+            </td>
+            <td class="submission-date">
+              <span class="date-text">{{ item.submissionDate }}</span>
+            </td>
+            <td class="licensee-name">
+              <span class="company-name">{{ item.distilleryName }}</span>
+            </td>
+            <td class="destination">
+              <span class="destination-text">{{ item.destination }}</span>
+            </td>
+            <td class="vehicle-number">
+              <span class="vehicle-text">{{ item.vehicleNumber }}</span>
+            </td>
+            <td class="amount">
+              <span class="amount-text">₹{{ item.amount }}</span>
+            </td>
+            <td class="status">
+              <span class="status-badge status-{{ getStatusClass(item.status) }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="priority">
+              <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                {{ (item.priority || 'normal') | titlecase }}
+              </span>
+            </td>
+            <td class="actions">
+              <div class="action-buttons">
+                <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)"
+                  title="Review Application">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)"
+                  title="Approve" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-check"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)"
+                  title="Reject" *ngIf="item.status === 'PENDING'">
+                  <i class="bi bi-x"></i>
+                </button>
+                <button class="btn btn-outline-info btn-sm" (click)="issueTransit(item)"
+                  title="Issue Permit" *ngIf="item.status === 'APPROVED'">
+                  <i class="bi bi-printer"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredTransitData.length === 0">
+      <div class="empty-icon">
+        <i class="bi bi-journal-x"></i>
+      </div>
+      <h5 class="empty-title">No Transit Permit Applications Found</h5>
+      <p class="empty-message">
+        No transit permit applications match your current filter criteria.
+      </p>
+    </div>
+  </div>
+</div>

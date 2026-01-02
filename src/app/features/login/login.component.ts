@@ -1,5 +1,10 @@
 import { Component } from '@angular/core';
-import { FormGroup, FormBuilder, FormControl, Validators } from '@angular/forms';
+import {
+  FormGroup,
+  FormBuilder,
+  FormControl,
+  Validators,
+} from '@angular/forms';
 import { MaterialModule } from '../../shared/material.module';
 import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
@@ -9,6 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
 import Swal from 'sweetalert2';
 import { ADMIN_ROLES } from '../../shared/constants/role.constants';
+import { Authority } from '../../shared/constants/authority.enum';
 import { PatternConstants } from '../../shared/constants/pattern.constants';
 
 @Component({
@@ -16,16 +22,26 @@ import { PatternConstants } from '../../shared/constants/pattern.constants';
   standalone: true,
   imports: [MaterialModule, CaptchaComponent, NgOtpInputModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.scss'
+  styleUrl: './login.component.scss',
 })
 export class LoginComponent extends BaseComponent {
   loginForm: FormGroup;
+  registrationForm: FormGroup;
   isPasswordMode = true;
   hidePassword = true;
+  hideRegPassword = true;
+  hideConfirmPassword = true;
   otpSent = false;
   otpIndex: string | null = null;
   otpAutoSubmitted = false;
   isSendingOtp = false; // To prevent multiple OTP requests
+
+  // Registration related properties
+  registrationOtpSent = false;
+  registrationOtpIndex: string | null = null;
+  registrationOtpAutoSubmitted = false;
+  registrationError = false;
+  registrationErrorMessages: string[] = [];
 
   loginError = false;
   loginErrorMessages: string[] = [];
@@ -48,24 +64,41 @@ export class LoginComponent extends BaseComponent {
       hashkey: ['', Validators.required],
     });
 
+    this.registrationForm = this.fb.group(
+      {
+        firstName: ['', Validators.required],
+        lastName: ['', Validators.required],
+        email: ['', [Validators.required, Validators.email]],
+        phoneNumber: [
+          '',
+          [Validators.required, Validators.pattern(PatternConstants.MOBILE)],
+        ],
+        password: ['', [Validators.required, Validators.minLength(8)]],
+        confirmPassword: ['', Validators.required],
+        response: ['', Validators.required],
+        hashkey: ['', Validators.required],
+      },
+      { validator: this.passwordMatchValidator }
+    );
+
     this.setValidators();
   }
 
   ngOnInit(): void {
-    this.route.queryParams.subscribe(params => {
+    this.route.queryParams.subscribe((params) => {
       if (params['sessionExpired']) {
         setTimeout(() => {
           Swal.fire({
             icon: 'warning',
             title: 'Session Expired',
             text: 'Your session has expired. Please log in again.',
-            confirmButtonText: 'OK'
+            confirmButtonText: 'OK',
           });
 
           // Remove the query param after showing
           this.router.navigate([], {
             queryParams: { sessionExpired: null },
-            queryParamsHandling: 'merge'
+            queryParamsHandling: 'merge',
           });
         }, 100);
       }
@@ -74,6 +107,19 @@ export class LoginComponent extends BaseComponent {
 
   switchToSignUp() {
     this.isRightPanelActive = true;
+  }
+
+  private passwordMatchValidator(formGroup: FormGroup) {
+    const password = formGroup.get('password')?.value;
+    const confirmPassword = formGroup.get('confirmPassword')?.value;
+
+    if (password !== confirmPassword) {
+      formGroup.get('confirmPassword')?.setErrors({ mismatch: true });
+      return { mismatch: true };
+    } else {
+      formGroup.get('confirmPassword')?.setErrors(null);
+      return null;
+    }
   }
 
   switchToSignIn() {
@@ -126,7 +172,7 @@ export class LoginComponent extends BaseComponent {
         console.error('Error sending OTP:', err);
         alert('Failed to send OTP. Please try again.');
         this.isSendingOtp = false;
-      }
+      },
     });
   }
 
@@ -152,7 +198,7 @@ export class LoginComponent extends BaseComponent {
 
   private loginWithPassword(): void {
     if (this.loginForm.invalid) {
-      alert("Please fill in all fields correctly.");
+      alert('Please fill in all fields correctly.');
       return;
     }
 
@@ -166,7 +212,7 @@ export class LoginComponent extends BaseComponent {
         console.error('Login error:', err);
         this.loginError = true;
         this.loginErrorMessages = this.extractErrorMessages(err.error);
-      }
+      },
     });
   }
 
@@ -175,7 +221,7 @@ export class LoginComponent extends BaseComponent {
 
     return Object.values(errorObj).flatMap((val) => {
       if (Array.isArray(val)) {
-        return val.map(v => String(v));
+        return val.map((v) => String(v));
       }
       return [String(val)];
     });
@@ -188,7 +234,7 @@ export class LoginComponent extends BaseComponent {
       this.otpAutoSubmitted = true;
       this.verifyOtp();
     }
-  } 
+  }
 
   private verifyOtp(): void {
     if (!this.loginForm.value.otp) {
@@ -204,7 +250,7 @@ export class LoginComponent extends BaseComponent {
     const requestData = {
       phoneNumber: this.loginForm.value.phoneNumber,
       otp: this.loginForm.value.otp,
-      otpId: this.otpIndex
+      otpId: this.otpIndex,
     };
 
     this.authService.verifyOtp(requestData).subscribe({
@@ -215,7 +261,7 @@ export class LoginComponent extends BaseComponent {
         console.error('OTP verification error:', err);
         alert('Invalid OTP. Please try again.');
         this.otpAutoSubmitted = false; // Allow retry
-      }
+      },
     });
   }
 
@@ -266,8 +312,16 @@ export class LoginComponent extends BaseComponent {
       this.router.navigate(['admin/dashboard']);
     } else if (role === 'licensee') {
       this.router.navigate(['licensee/dashboard']);
+    } else if (role === 'Supply_Chain') {
+      this.router.navigate(['supply-chain/dashboard']);
+    } else if (role === Authority.PERMIT_SECTION) {
+      this.router.navigate(['/app-permit-section']);
+    } else if (role === Authority.COMMISSIONER) {
+      this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
       console.warn('Unknown role:', role);
+      // Fallback or show error to user if needed, but for now just warn
+      // potentially show a swal alert if it's a critical failure to redirect
     }
   }
 

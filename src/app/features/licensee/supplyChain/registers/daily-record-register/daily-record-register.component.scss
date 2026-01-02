@@ -1,0 +1,126 @@
+// Keep any minimal overrides
+.table thead th { white-space: nowrap; }
+
+/* Add local minimal styles to ensure readability if global styles are absent */
+.daily-record-register .record-count { font-size: 0.875rem; color: #6c757d; }
+.daily-record-register .form-label { font-weight: 600; }
+.daily-record-register .card-header { background-color: #f8f9fa; }
+
+.print-header { display: none; }
+
+@media print {
+  .no-print { display: none !important; }
+  .print-header { display: block !important; }
+  .container-fluid { padding: 0 !important; }
+  .d-flex.flex-wrap.align-items-end.gap-2.mb-3 { display: none !important; }
+  /* Remove extra borders/lines and shadows */
+  .card, .card-body, .card-header { border: 0 !important; box-shadow: none !important; }
+  .card-header { display: none !important; }
+  /* Page sizing and compact layout */
+  @page { size: A4 portrait; margin: 10mm; }
+  table { page-break-inside: auto; width: 100% !important; font-size: 12px; border-collapse: collapse !important; }
+  thead th, tbody td, tfoot td { padding: 4px 6px !important; }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  /* Light table borders for cleaner print */
+  table.table, table.table th, table.table td { border: 1px solid #ddd !important; }
+  thead.table-success th { background: #D1E7DD !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* Summary colored boxes */
+.daily-record-register .summary-box {
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  color: #0b2e13; /* will be overridden by variants */
+}
+
+.daily-record-register .summary-box .label {
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+.daily-record-register .summary-box .value {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.daily-record-register .bg-deposit {
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #1b5e20;
+}
+
+.daily-record-register .bg-utilised {
+  background: #fff3e0;
+  border: 1px solid #ffe0b2;
+  color: #e65100;
+}
+
+.daily-record-register .bg-current {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  color: #0d47a1;
+}
+
+.daily-record-register .bg-info {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+}
+
+.daily-record-register .bg-success {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+.daily-record-register .bg-primary {
+  background: #cce5ff;
+  border: 1px solid #99d6ff;
+  color: #004085;
+}
+
+.daily-record-register .bg-danger {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.daily-record-register .bg-dark {
+  background: #343a40;
+  border: 1px solid #495057;
+  color: #ffffff;
+}
+
+/* Wallet deposit row highlighting */
+.daily-record-register .table-warning {
+  background-color: #fff3cd !important;
+}
+
+.daily-record-register .table-warning:hover {
+  background-color: #ffeaa7 !important;
+}
+
+/* Dropdown styling for wallet deposits */
+.daily-record-register .dropdown-menu {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border: 1px solid #dee2e6;
+}
+
+.daily-record-register .dropdown-toggle::after {
+  margin-left: 0.5rem;
+}
+
+.daily-record-register .dropdown-item-text {
+  background-color: #f8f9fa;
+  border-radius: 0.375rem;
+}
+
+/* Highlight deposit amount column for wallet entries */
+.daily-record-register .table-warning td:nth-child(5) {
+  background-color: #d4edda !important;
+  border-left: 3px solid #28a745 !important;
+}
+
+.daily-record-register .table-warning:hover td:nth-child(5) {
+  background-color: #c3e6cb !important;
+}

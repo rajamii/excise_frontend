@@ -5,6 +5,7 @@ import { ApplyLicenseComponent } from './apply-license/apply-license.component';
 import { ApplyNewLicenseComponent } from './apply-new-license/apply-new-license.component';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
 import { Authority } from '../../shared/constants/authority.enum';
+import { SupplyChainComponent } from './supplyChain/supplychaincomponents/supply-chain.component';
 
 export const licenseeRoutes: Routes = [
   {
@@ -30,21 +31,25 @@ export const licenseeRoutes: Routes = [
         data: { authorities: [Authority.LICENSEE] },
       },      
 
-      // Company Registration and Collaboration Flow with separate components
+      // Company Registration Flow
       {
-        path: 'company-registration-and-collaboration',
+        path: 'company',
         children: [
-          // Company Registration Flow
           {
-            path: 'company-registration/prepare-application',
-            loadComponent: () => import('./company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
+            path: 'prepare-application',
+            loadComponent: () => import('./company-registration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           },
-          // Company Collaboration Flow
           {
-            path: 'company-collaboration/prepare-application',
-            loadComponent: () => import('./company-registration-and-collaboration/company-collaboration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
+            path: 'application-action',
+            loadComponent: () => import('./company-registration/act-on-application/act-on-application.component').then(m => m.ActOnApplicationComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'print-certificate',
+            loadComponent: () => import('./company-registration/print-certificate/print-certificate.component').then(m => m.PrintCertificateComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
           },
@@ -56,12 +61,62 @@ export const licenseeRoutes: Routes = [
         children: [
           {
             path: 'prepare-application',
-            loadComponent: () => import('./salesman-registration/prepare-application.component').then(m => m.PrepareApplicationComponent),
+            loadComponent: () => import('./salesman-registration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
-          }, 
+          },
+          {
+            path: 'application-action',
+            loadComponent: () => import('./salesman-registration/act-on-draft-application/act-on-draft-application.component').then(m => m.ActOnDraftApplicationComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'print-certificate',
+            loadComponent: () => import('./salesman-registration/print-certificate/print-certificate.component').then(m => m.PrintCertificateComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'application-status',
+            loadComponent: () => import('./salesman-registration/application-status/application-status.component').then(m => m.ApplicationStatusComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'ena-import',
+            component:SupplyChainComponent,
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          }
         ]
       },
+      
+      // Supply Chain Management
+      {
+        path: 'supply-chain',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./supplyChain/supplychaincomponents/supply-chain.component').then(m => m.SupplyChainComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'payments',
+            loadComponent: () => import('./supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'cancellation-request',
+            loadComponent: () => import('./supplyChain/cancellation-request/cancellation-request.component').then(m => m.CancellationRequestComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          }
+        ]
+      },
+      
       // Default Redirect to Dashboard
       {
         path: '',

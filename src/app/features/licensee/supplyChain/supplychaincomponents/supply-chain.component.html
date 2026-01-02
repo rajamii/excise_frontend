@@ -1,0 +1,126 @@
+<div class="d-flex min-vh-100">
+  <!-- Bootstrap Sidebar Navigation -->
+  <nav class="bg-light border-end sidebar-nav" [class.sidebar-hidden]="sidebarHidden">
+    <!-- Sidebar Header -->
+    <div class="p-3 border-bottom text-black" style="background-color: #d1e7dd">
+      <h5 class="mb-0 fw-bold">
+        <i class="bi bi-building me-2"></i>
+        Distillery Managements
+      </h5>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="flex-grow-1 bg-light">
+    <div class="container-fluid p-0">
+      <!-- Header Section -->
+      <div class="header-section text-black">
+        <div class="container-fluid">
+          <div class="row align-items-center py-3">
+            <div class="col">
+              <h1 class="h3 mb-1 fw-bold">Dashboard</h1>
+              <p class="mb-0 small opacity-75">
+                Licensees: Sikkim Distilleries Ltd (01202506012)
+              </p>
+            </div>
+            <div class="col-auto">
+              <div class="d-flex gap-2">
+                <button class="btn btn-light bg-success btn-sm text-white">
+                  Distillery
+                </button>
+                <button class="btn btn-sm bg-success text-white" (click)="viewWallet()">
+                  <i class="bi bi-grid-3x3-gap me-1"></i> View Wallet
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- Tabs Section -->
+      <div class="bg-white border-bottom">
+        <div class="container-fluid">
+          <ul class="nav nav-tabs border-0">
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'requisition'"
+                (click)="setActiveTab('requisition')">
+                <i class="bi bi-file-text me-2"></i> REQUISITION
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'revalidation'"
+                (click)="setActiveTab('revalidation')">
+                <i class="bi bi-arrow-repeat me-2"></i> REVALIDATION
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'cancellation'"
+                (click)="setActiveTab('cancellation')">
+                <i class="bi bi-x-circle me-2"></i> CANCELLATION
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'transit'" (click)="setActiveTab('transit')">
+                <i class="bi bi-truck me-2"></i> TRANSIT
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'hologram'" (click)="setActiveTab('hologram')">
+                <i class="bi bi-qr-code me-2"></i> HOLOGRAM PROCUREMENT
+
+              </button>
+            </li>
+            <li class="nav-item">
+              <button class="nav-link" [class.active]="activeTab === 'hologram-request'"
+                (click)="setActiveTab('hologram-request')">
+                <i class="bi bi-plus-square me-2"></i> HOLOGRAM REQUEST
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <div class="table-responsive">
+            <!-- Requisition Tab Content -->
+            @if (activeTab === "requisition") {
+              <app-requisition></app-requisition>
+            }
+
+            <!-- Revalidation Tab Content -->
+            @if (activeTab === "revalidation") {
+              <app-revalidation></app-revalidation>
+            }
+
+            <!-- Cancellation Tab Content -->
+            @if (activeTab === "cancellation") {
+              <app-cancellation></app-cancellation>
+            }
+
+            <!-- Transit Tab Content -->
+            @if (activeTab === "transit") {
+              <app-transit></app-transit>
+            }
+
+            <!-- Hologram Tab Content -->
+            @if (activeTab === "hologram") {
+              <app-hologramprocurement></app-hologramprocurement>
+            }
+
+            <!-- OLD HOLOGRAM CODE REMOVED - NOW IN hologramprocurement component -->
+
+            <!-- Hologram Request Tab Content -->
+            @if (activeTab === "hologram-request") {
+              <app-hologramrequest></app-hologramrequest>
+            }
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>

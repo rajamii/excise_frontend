@@ -1,0 +1,153 @@
+<div class="main-wrapper">
+  <!-- Message Alert -->
+  <div
+    *ngIf="message"
+    [class]="'alert alert-' + messageType + ' w-100'"
+    style="max-width: 700px; margin-bottom: 1.5rem"
+  >
+    {{ message }}
+  </div>
+
+  <!-- Main Letter Card -->
+  <div class="card main-card shadow mb-4 w-100">
+    <div class="card-header bg-white text-center">
+      <span class="letter-header"
+        >DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span
+      >
+    </div>
+    <div class="card-body p-4">
+      <div class="row mb-3">
+        <div class="col">
+          <b>Ref No:</b>
+          <span class="fw-bold text-dark">{{ displayData.refNo }}</span>
+        </div>
+        <div class="col text-end">
+          <b>Date:</b>
+          <span class="fw-bold text-dark">{{
+            displayData.date | date : "dd.MM.yyyy"
+          }}</span>
+        </div>
+      </div>
+
+      <p>
+        To,<br />
+        The Commissioner,<br />
+        Excise Department,<br />
+        Government of Sikkim,<br />
+        Gangtok.
+      </p>
+
+      <p>
+        <b>Sub:</b> REQUEST FOR REVALIDATION OF IMPORT PERMITS
+        <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
+        DATED
+        <span class="fw-bold text-dark">{{
+          displayData.permitDate | date : "dd.MM.yyyy"
+        }}</span>
+      </p>
+
+      <p>Respected Madam,</p>
+
+      <p>
+        Due to unavoidable circumstances, we could not procure
+        <span class="fw-bold text-dark">{{ displayData.totalENA }}</span>
+        BL
+        <b
+          ><span class="fw-bold text-dark">{{
+            displayData.bulk_spirit_type
+          }}</span></b
+        >
+        against Import Permits No.
+        <span class="fw-bold text-dark">{{ displayData.permitNumbers }}</span>
+        dated
+        <span class="fw-bold text-dark">{{
+          displayData.permitDate | date : "dd.MM.yyyy"
+        }}</span>
+        which expired on
+        <span class="fw-bold text-dark">{{
+          displayData.expiryDate | date : "dd.MM.yyyy"
+        }}</span
+        >.
+      </p>
+
+      <p>
+        Hence, we request you to revalidate the above mentioned import permits.
+      </p>
+
+      <p>Your co-operation will be highly appreciable.</p>
+
+      <p>Thanking You</p>
+
+      <p>
+        <b>Enclose herewith:</b><br />
+        1. Non-Execution certificate
+      </p>
+
+      <div class="signature-section">
+        <p>Yours faithfully,</p>
+        <p>For SIKKIM DISTILLERIES LIMITED:</p>
+        <br />
+        <br />
+        <br />
+        <p>Authorized Signatory</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="btn-group-custom no-print">
+    <button class="btn btn-success px-4" (click)="showDeclarationModal()">
+      Submit for Revalidation
+    </button>
+    <button class="btn btn-outline-secondary" (click)="goBack()">Back</button>
+  </div>
+
+  <!-- Declaration Modal -->
+  <div
+    class="modal fade"
+    id="declarationModal"
+    tabindex="-1"
+    aria-labelledby="declarationModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-warning text-dark">
+          <h5 class="modal-title" id="declarationModalLabel">
+            <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            <strong>Note:</strong> By submitting this revalidation request, you
+            acknowledge that <b>₹1000 will be deducted</b> from your account for
+            revalidation charges.
+          </div>
+          <p class="mb-0">Do you wish to proceed?</p>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-success"
+            (click)="submitRevalidation()"
+          >
+            Yes, Proceed
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

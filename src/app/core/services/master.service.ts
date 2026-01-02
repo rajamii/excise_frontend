@@ -1,168 +1,81 @@
-import { Injectable } from '@angular/core';
+// src/app/core/services/master.service.ts
 import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { map, switchMap, catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
-import { LicenseType } from '../models/license-type.model';
-import { LicenseCategory } from '../models/license-category.model';
+import { District } from '../../core/models/district.model';
+import { Subdivision } from '../../core/models/subdivision.model';
+import { PoliceStation } from '../../core/models/policestation.model';
+import { LicenseType } from '../../core/models/license-type.model';
+import { LicenseCategory } from '../../core/models/license-category.model';
 import { LicenseSubcategory } from '../models/license-subcategory.model';
-import { District } from '../models/district.model';
-import { Subdivision } from '../models/subdivision.model';
-import { PoliceStation } from '../models/policestation.model';
+import { LicenseTitle } from '../models/license-title.model';
 import { Road } from '../models/road.model';
 
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class MasterService {
-  // All master data is served from /masters/core/*
-  private apiUrl = `${environment.apiBaseUrl}/masters/core`;
+  // note: this.baseUrl is used for "masters/core" endpoints
+  private readonly baseUrl = `${environment.apiBaseUrl}/masters/core`;
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
-  /**
-   * Get all license types
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
-  getLicenseTypes(): Observable<LicenseType[]> {
-    return this.http.get<LicenseType[]>(`${this.apiUrl}/license-types/`).pipe(
-      tap(data => {
-        console.log('✅ License types loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('licenseTypes', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading license types:', error);
-        // Return mock data as fallback
-        const mockData = [
-          { id: 1, licenseType: 'Individual' },
-          { id: 2, licenseType: 'Company' },
-          { id: 3, licenseType: 'Multiple Individual' }
-        ];
-        sessionStorage.setItem('licenseTypes', JSON.stringify(mockData));
-        return of(mockData);
-      })
-    );
-  }
-
-  /**
-   * Get all license categories
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
-  getLicenseCategories(): Observable<LicenseCategory[]> {
-    return this.http.get<LicenseCategory[]>(`${this.apiUrl}/license-categories/`).pipe(
-      tap(data => {
-        console.log('✅ License categories loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('licenseCategories', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading license categories:', error);
-        sessionStorage.setItem('licenseCategories', JSON.stringify([]));
-        return of([]);
-      })
-    );
-  }
-
-  /**
-   * Get all license subcategories
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
-  getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
-    return this.http.get<LicenseSubcategory[]>(`${this.apiUrl}/license-subcategories/`).pipe(
-      tap(data => {
-        console.log('✅ License subcategories loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('licenseSubcategories', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading license subcategories:', error);
-        sessionStorage.setItem('licenseSubcategories', JSON.stringify([]));
-        return of([]);
-      })
-    );
-  }
-
-  /**
-   * Get all districts
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
+  // Fetches a list of all districts
   getDistrict(): Observable<District[]> {
-    return this.http.get<District[]>(`${this.apiUrl}/districts/`).pipe(
-      tap(data => {
-        console.log('✅ Districts loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('districts', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading districts:', error);
-        sessionStorage.setItem('districts', JSON.stringify([]));
-        return of([]);
-      })
-    );
+    return this.http.get<District[]>(`${this.baseUrl}/districts`);
   }
 
-  /**
-   * Get all subdivisions
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
+  // Retrieves all subdivisions
   getSubdivision(): Observable<Subdivision[]> {
-    return this.http.get<Subdivision[]>(`${this.apiUrl}/subdivisions/`).pipe(
-      tap(data => {
-        console.log('✅ Subdivisions loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('subdivisions', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading subdivisions:', error);
-        sessionStorage.setItem('subdivisions', JSON.stringify([]));
-        return of([]);
-      })
-    );
+    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions`);
   }
 
-  /**
-   * Get all police stations
-   * ✅ FIXED: Changed endpoint to match backend URL pattern
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
+  // Gets subdivisions filtered by a specific district ID
+  getSubDivisionByDistrictCode(id: number): Observable<Subdivision[]> {
+    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/${id}`);
+  }
+
+  // Retrieves all police stations
   getPoliceStations(): Observable<PoliceStation[]> {
-    return this.http.get<PoliceStation[]>(`${this.apiUrl}/police-stations/`).pipe(
-      tap(data => {
-        console.log('✅ Police stations loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('policeStations', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading police stations:', error);
-        sessionStorage.setItem('policeStations', JSON.stringify([]));
-        return of([]);
-      })
+    return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations`);
+  }
+
+  // Retrieves police stations within a specified subdivision (by code)
+  getPoliceStationBySubDivision(code: number): Observable<PoliceStation[]> {
+    return this.http.get<PoliceStation[]>(
+      `${this.baseUrl}/subdivision/detail/${code}`
     );
   }
 
-  /**
-   * Get all roads
-   * ✅ FIXED: Changed endpoint from '/roads/' to '/roads/list/'
-   * ✅ ADDED: Store in sessionStorage for display mapping
-   */
-  getRoads(): Observable<Road[]> {
-    return this.http.get<Road[]>(`${this.apiUrl}/roads/`).pipe(
-      tap(data => {
-        console.log('✅ Roads loaded:', data);
-        // Store in sessionStorage for submit page display
-        sessionStorage.setItem('roads', JSON.stringify(data));
-      }),
-      catchError(error => {
-        console.error('❌ Error loading roads:', error);
-        sessionStorage.setItem('roads', JSON.stringify([]));
-        return of([]);
-      })
+  // Fetches all available license types
+  getLicenseTypes(): Observable<LicenseType[]> {
+    return this.http.get<LicenseType[]>(`${this.baseUrl}/license-types`);
+  }
+
+  // Fetches all license categories
+  getLicenseCategories(): Observable<LicenseCategory[]> {
+    return this.http.get<LicenseCategory[]>(
+      `${this.baseUrl}/license-categories`
     );
+  }
+
+  // Fetches all license subcategories
+  getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
+    return this.http.get<LicenseSubcategory[]>(
+      `${this.baseUrl}/license-subcategories`
+    );
+  }
+
+  // Fetches all available license titles
+  getLicenseTitles(): Observable<LicenseTitle[]> {
+    return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
+  }
+
+  // Fetches all available roads
+  getRoads(): Observable<Road[]> {
+    return this.http.get<Road[]>(`${this.baseUrl}/roads`);
   }
 }
