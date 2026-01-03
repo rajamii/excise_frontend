@@ -5,6 +5,7 @@ import {
   FormControl,
   Validators,
 } from '@angular/forms';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MaterialModule } from '../../shared/material.module';
 import { CaptchaComponent } from '../../shared/components/captcha/captcha.component';
 import { BaseComponent } from '../../base/base.components';
@@ -20,7 +21,7 @@ import { PatternConstants } from '../../shared/constants/pattern.constants';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule],
+  imports: [MaterialModule, CaptchaComponent, NgOtpInputModule, MatProgressSpinnerModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -34,14 +35,18 @@ export class LoginComponent extends BaseComponent {
   otpSent = false;
   otpIndex: string | null = null;
   otpAutoSubmitted = false;
-  isSendingOtp = false; // To prevent multiple OTP requests
+  isSendingOtp = false;
 
   // Registration related properties
   registrationOtpSent = false;
-  registrationOtpIndex: string | null = null;
   registrationOtpAutoSubmitted = false;
   registrationError = false;
   registrationErrorMessages: string[] = [];
+  registrationOtpControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
+  registrationComplete = false;
+  registrationOtpId: string | null = null; // ← Renamed from otpId
+  otpVerified = false;
+  isRegistering = false; // ← New: loading state for final registration
 
   loginError = false;
   loginErrorMessages: string[] = [];
@@ -67,16 +72,18 @@ export class LoginComponent extends BaseComponent {
     this.registrationForm = this.fb.group(
       {
         firstName: ['', Validators.required],
+        middleName: [''],
         lastName: ['', Validators.required],
+        phoneNumber: ['', [Validators.required, Validators.pattern(PatternConstants.MOBILE)]],
         email: ['', [Validators.required, Validators.email]],
-        phoneNumber: [
-          '',
-          [Validators.required, Validators.pattern(PatternConstants.MOBILE)],
-        ],
+        panNumber: ['', Validators.required],
+        address: ['', Validators.required],
+        district: ['', Validators.required],
+        subdivision: ['', Validators.required],
         password: ['', [Validators.required, Validators.minLength(8)]],
         confirmPassword: ['', Validators.required],
+        hashkey: ['', Validators.required],    // From CaptchaComponent
         response: ['', Validators.required],
-        hashkey: ['', Validators.required],
       },
       { validator: this.passwordMatchValidator }
     );
@@ -95,7 +102,6 @@ export class LoginComponent extends BaseComponent {
             confirmButtonText: 'OK',
           });
 
-          // Remove the query param after showing
           this.router.navigate([], {
             queryParams: { sessionExpired: null },
             queryParamsHandling: 'merge',
@@ -109,6 +115,10 @@ export class LoginComponent extends BaseComponent {
     this.isRightPanelActive = true;
   }
 
+  switchToSignIn() {
+    this.isRightPanelActive = false;
+  }
+
   private passwordMatchValidator(formGroup: FormGroup) {
     const password = formGroup.get('password')?.value;
     const confirmPassword = formGroup.get('confirmPassword')?.value;
@@ -120,10 +130,6 @@ export class LoginComponent extends BaseComponent {
       formGroup.get('confirmPassword')?.setErrors(null);
       return null;
     }
-  }
-
-  switchToSignIn() {
-    this.isRightPanelActive = false;
   }
 
   toggleMode(isPassword: boolean): void {
@@ -165,7 +171,7 @@ export class LoginComponent extends BaseComponent {
       next: (response) => {
         this.otpSent = true;
         this.otpIndex = response.otpId;
-        console.log('OTP:', response.otp); // Log for dev only
+        console.log('OTP:', response.otp);
         this.isSendingOtp = false;
       },
       error: (err) => {
@@ -180,6 +186,140 @@ export class LoginComponent extends BaseComponent {
     return this.loginForm.get('otp') as FormControl;
   }
 
+  sendRegistrationOtp() {
+    this.isSendingOtp = true;
+    this.registrationError = false;
+    this.registrationErrorMessages = [];
+
+    const data = {
+      phoneNumber: this.registrationForm.controls['phoneNumber'].value,
+      purpose: 'register'
+    };
+
+    this.authService.sendRegOtp(data).subscribe({
+      next: (res: any) => {
+        this.registrationOtpSent = true;
+        this.registrationOtpId = res.otpId;
+        this.isSendingOtp = false;
+        console.log('Registration OTP:', res.otp); // For testing purposes
+      },
+      error: (err) => {
+        this.isSendingOtp = false;
+        this.registrationError = true;
+        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+      }
+    });
+  }
+
+  verifyRegistrationOtp() {
+    const otp = this.registrationOtpControl.value;
+    const data = {
+      phoneNumber: this.registrationForm.controls['phoneNumber'].value,
+      otp: otp,
+      otpId: this.registrationOtpId
+    };
+
+    this.authService.verifyRegOtp(data).subscribe({
+      next: () => {
+        this.otpVerified = true;
+        this.registrationError = false;
+      },
+      error: (err) => {
+        this.registrationError = true;
+        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+      }
+    });
+  }
+
+  onRegistrationOtpChange(otp: string) {
+
+    this.registrationOtpControl.setValue(otp);
+
+    if (otp && otp.length === 4 && this.registrationOtpId && !this.otpVerified) {
+      setTimeout(() => this.verifyRegistrationOtp(), 300);
+    }
+  }
+
+  onRegister() {
+
+    if (this.isRegistering || !this.otpVerified || !this.registrationOtpId) {
+      return;
+    }
+
+    this.isRegistering = true;
+    this.registrationError = false;
+    this.registrationErrorMessages = [];
+
+    const form = this.registrationForm.value;
+
+    const payload = {
+      phone_number: form.phoneNumber?.trim(),
+      otp_id: this.registrationOtpId,
+      first_name: form.firstName?.trim(),
+      last_name: form.lastName?.trim(),
+      email: form.email?.trim(),
+      pan_number: form.panNumber?.trim(),
+      address: form.address?.trim(),
+      district: form.district,
+      subdivision: form.subdivision,
+      password: form.password,
+      hashkey: form.hashkey,
+      response: form.response
+    };
+
+    console.log('Registration payload:', payload); // ← Check this in browser console!
+
+    console.log('Full form value:', this.registrationForm.value);
+    console.log('Hashkey:', this.registrationForm.get('hashkey')?.value);
+    console.log('Response:', this.registrationForm.get('response')?.value);
+
+    this.authService.licenseeRegisterWithOtp(payload).subscribe({
+      next: (res: any) => {
+        console.log('Registration success:', res);
+        this.registrationComplete = true;
+        this.isRegistering = false;
+
+        // Auto-login with returned tokens
+        let access = res.tokens?.access || res.access || res.authenticatedUser?.access;
+        let refresh = res.tokens?.refresh || res.refresh || res.authenticatedUser?.refresh;
+
+        if (access && refresh) {
+          localStorage.setItem('access', access);
+          localStorage.setItem('refresh', refresh);
+          this.accountService.identity(true).subscribe(user => {
+            if (user) {
+              this.redirectBasedOnRole(user.role!.name);
+            }
+          });
+        } else {
+          this.handleAuthResponse(res); // fallback
+        }
+      },
+      error: (err) => {
+        this.isRegistering = false;
+        this.registrationError = true;
+        console.error('Registration error response:', err);
+
+        const errors = err.error?.errors || err.error || { non_field_errors: ['Registration failed'] };
+        this.registrationErrorMessages = this.extractErrorMessages(errors);
+      }
+    });
+  }
+
+  // Resets the registration process
+  resetRegistration() {
+    this.registrationOtpSent = false;
+    this.otpVerified = false;
+    this.registrationOtpId = null;
+    this.registrationOtpControl.reset();
+    this.registrationForm.patchValue({
+      phoneNumber: '',
+      firstName: '',
+      middleName: '',
+      lastName: ''
+    });
+  }
+  // Handles login submission
   onLogin(): void {
     if (this.isPasswordMode) {
       this.loginWithPassword();
@@ -190,10 +330,6 @@ export class LoginComponent extends BaseComponent {
         this.verifyOtp();
       }
     }
-  }
-
-  goToApplyLicense(): void {
-    this.router.navigate(['/licensee/apply-license']);
   }
 
   private loginWithPassword(): void {
@@ -237,13 +373,9 @@ export class LoginComponent extends BaseComponent {
   }
 
   private verifyOtp(): void {
-    if (!this.loginForm.value.otp) {
-      alert('Please enter the OTP.');
-      return;
-    }
-
-    if (!this.otpIndex) {
-      alert('OTP index missing. Please request OTP again.');
+    if (!this.loginForm.value.otp || !this.otpIndex) {
+      alert('Please enter a valid OTP.');
+      this.otpAutoSubmitted = false;
       return;
     }
 
@@ -260,15 +392,14 @@ export class LoginComponent extends BaseComponent {
       error: (err) => {
         console.error('OTP verification error:', err);
         alert('Invalid OTP. Please try again.');
-        this.otpAutoSubmitted = false; // Allow retry
+        this.otpAutoSubmitted = false;
       },
     });
   }
 
   private handleAuthResponse(res: any): void {
     console.log('Login response:', res);
-    
-    // Handle different response structures
+
     let accessToken: string | null = null;
     let refreshToken: string | null = null;
 
@@ -286,7 +417,6 @@ export class LoginComponent extends BaseComponent {
     if (accessToken && refreshToken) {
       localStorage.setItem('access', accessToken);
       localStorage.setItem('refresh', refreshToken);
-      console.log('Tokens stored successfully');
 
       this.accountService.identity(true).subscribe({
         next: (user) => {
@@ -320,8 +450,6 @@ export class LoginComponent extends BaseComponent {
       this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
       console.warn('Unknown role:', role);
-      // Fallback or show error to user if needed, but for now just warn
-      // potentially show a swal alert if it's a critical failure to redirect
     }
   }
 

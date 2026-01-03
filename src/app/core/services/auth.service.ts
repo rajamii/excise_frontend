@@ -13,7 +13,24 @@ export class AuthService {
 
   private baseUrl = `${environment.apiBaseUrl}/auth/users`;  // ✅ Changed from /user to /auth/users
 
-  constructor(private http: HttpClient, private accountService: AccountService) {}
+  constructor(private http: HttpClient, private accountService: AccountService) { }
+
+  sendRegOtp(data: { phoneNumber: string; purpose?: string }): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, data);
+  }
+
+  verifyRegOtp(data: { phoneNumber: string; otp: string|null; otpId: string|null }): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/verify/`, data);
+  }
+
+  licenseeRegisterWithOtp(data: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/otp-complete/`, data);
+  }
+
+  // Licensee signup
+  licenseeSignup(data: any) {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/`, data);
+  }
 
   // Standard login using JSON body
   login(data: any): Observable<any> {
