@@ -16,11 +16,16 @@
 
         <input formControlName="phoneNumber" placeholder="Phone Number" type="text" maxlength="10" required />
 
-        <button matButton="filled" class="filled-button" type="button" (click)="sendRegistrationOtp()" [disabled]="registrationForm.controls['firstName'].invalid || 
-                    registrationForm.controls['lastName'].invalid || 
-                    registrationForm.controls['phoneNumber'].invalid || 
-                    isSendingOtp">
-          {{ isSendingOtp ? 'Sending OTP...' : 'Send OTP' }}
+        <button mat-raised-button color="primary" class="filled-button" type="button" (click)="sendRegistrationOtp()"
+          [disabled]="isSendingOtp || 
+                    registrationForm.get('firstName')?.invalid || 
+                    registrationForm.get('lastName')?.invalid || 
+                    registrationForm.get('phoneNumber')?.invalid">
+          <span *ngIf="!isSendingOtp">Send OTP</span>
+          <span *ngIf="isSendingOtp">
+            Sending OTP...
+            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+          </span>
         </button>
 
         @if (registrationError) {
@@ -97,12 +102,13 @@
 
         <app-captcha [formGroup]="registrationForm"></app-captcha>
 
+        <!-- Final Register Button -->
         <button mat-raised-button color="primary" class="filled-button" (click)="onRegister()"
           [disabled]="!otpVerified || registrationForm.invalid || isRegistering">
-          <span>{{ isRegistering ? 'Registering...' : 'Complete Registration' }}</span>
-          @if (isRegistering) {
-          <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-          }
+          <span *ngIf="!isRegistering">Register</span>
+          <span *ngIf="isRegistering">
+            Registering... <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+          </span>
         </button>
         }
 

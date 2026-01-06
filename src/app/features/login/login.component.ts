@@ -75,18 +75,16 @@ export class LoginComponent extends BaseComponent {
         middleName: [''],
         lastName: ['', Validators.required],
         phoneNumber: ['', [Validators.required, Validators.pattern(PatternConstants.MOBILE)]],
-        email: ['', [Validators.required, Validators.email]],
-        panNumber: ['', Validators.required],
-        address: ['', Validators.required],
-        district: ['', Validators.required],
-        subdivision: ['', Validators.required],
-        password: ['', [Validators.required, Validators.minLength(8)]],
-        confirmPassword: ['', Validators.required],
-        hashkey: ['', Validators.required],    // From CaptchaComponent
-        response: ['', Validators.required],
-      },
-      { validator: this.passwordMatchValidator }
-    );
+        email: [''],
+        panNumber: [''],
+        address: [''],
+        district: [''],
+        subdivision: [''],
+        password: [''],
+        confirmPassword: [''],
+        hashkey: [''],
+        response: [''],
+      }, { validator: this.passwordMatchValidator });
 
     this.setValidators();
   }
@@ -187,44 +185,24 @@ export class LoginComponent extends BaseComponent {
   }
 
   sendRegistrationOtp() {
+    if (this.registrationForm.invalid) { console.log('Invalid registration form'); return }
+    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
     this.isSendingOtp = true;
     this.registrationError = false;
-    this.registrationErrorMessages = [];
-
-    const data = {
-      phoneNumber: this.registrationForm.controls['phoneNumber'].value,
+    console.log('Sending registration OTP to:', phoneNumber);
+    this.authService.sendRegistrationOtp({
+      phoneNumber: phoneNumber,
       purpose: 'register'
-    };
-
-    this.authService.sendRegOtp(data).subscribe({
+    }).subscribe({
       next: (res: any) => {
-        this.registrationOtpSent = true;
         this.registrationOtpId = res.otpId;
+        this.registrationOtpSent = true;
         this.isSendingOtp = false;
-        console.log('Registration OTP:', res.otp); // For testing purposes
+        //debug log
+        console.log('Registration OTP sent. OTP:', res.otp);
       },
       error: (err) => {
         this.isSendingOtp = false;
-        this.registrationError = true;
-        this.registrationErrorMessages = this.extractErrorMessages(err.error);
-      }
-    });
-  }
-
-  verifyRegistrationOtp() {
-    const otp = this.registrationOtpControl.value;
-    const data = {
-      phoneNumber: this.registrationForm.controls['phoneNumber'].value,
-      otp: otp,
-      otpId: this.registrationOtpId
-    };
-
-    this.authService.verifyRegOtp(data).subscribe({
-      next: () => {
-        this.otpVerified = true;
-        this.registrationError = false;
-      },
-      error: (err) => {
         this.registrationError = true;
         this.registrationErrorMessages = this.extractErrorMessages(err.error);
       }
@@ -232,76 +210,89 @@ export class LoginComponent extends BaseComponent {
   }
 
   onRegistrationOtpChange(otp: string) {
-
     this.registrationOtpControl.setValue(otp);
+  }
 
-    if (otp && otp.length === 4 && this.registrationOtpId && !this.otpVerified) {
-      setTimeout(() => this.verifyRegistrationOtp(), 300);
-    }
+  verifyRegistrationOtp() {
+    const otp = this.registrationOtpControl.value;
+    const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
+
+    if (!otp || otp.length !== 4 || !this.registrationOtpId) return;
+
+    this.authService.verifyRegistrationOtp({
+      phoneNumber: phoneNumber,
+      otp: otp,
+      otpId: this.registrationOtpId
+    }).subscribe({
+      next: () => {
+        this.otpVerified = true;
+        this.registrationError = false;
+
+        // Validators for the remaining fields
+        this.registrationForm.get('email')?.setValidators([Validators.required, Validators.email]);
+        this.registrationForm.get('panNumber')?.setValidators(Validators.required);
+        this.registrationForm.get('address')?.setValidators(Validators.required);
+        this.registrationForm.get('district')?.setValidators(Validators.required);
+        this.registrationForm.get('subdivision')?.setValidators(Validators.required);
+        this.registrationForm.get('password')?.setValidators([Validators.required, Validators.minLength(8)]);
+        this.registrationForm.get('confirmPassword')?.setValidators(Validators.required);
+        this.registrationForm.get('hashkey')?.setValidators(Validators.required);
+        this.registrationForm.get('response')?.setValidators(Validators.required);
+
+        // Update validity of all controls
+        Object.keys(this.registrationForm.controls).forEach(key => {
+          this.registrationForm.get(key)?.updateValueAndValidity();
+        });
+      },
+      error: (err) => {
+        this.registrationError = true;
+        this.registrationErrorMessages = this.extractErrorMessages(err.error || { detail: ['Invalid OTP'] });
+      }
+    });
   }
 
   onRegister() {
-
-    if (this.isRegistering || !this.otpVerified || !this.registrationOtpId) {
-      return;
-    }
+    if (this.registrationForm.invalid || !this.otpVerified) return;
 
     this.isRegistering = true;
     this.registrationError = false;
-    this.registrationErrorMessages = [];
 
-    const form = this.registrationForm.value;
+    const formValue = this.registrationForm.value;
 
-    const payload = {
-      phone_number: form.phoneNumber?.trim(),
-      otp_id: this.registrationOtpId,
-      first_name: form.firstName?.trim(),
-      last_name: form.lastName?.trim(),
-      email: form.email?.trim(),
-      pan_number: form.panNumber?.trim(),
-      address: form.address?.trim(),
-      district: form.district,
-      subdivision: form.subdivision,
-      password: form.password,
-      hashkey: form.hashkey,
-      response: form.response
+    const requestPayload = {
+      phoneNumber: formValue.phoneNumber,
+      firstName: formValue.firstName,
+      middleName: formValue.middleName || '',
+      lastName: formValue.lastName,
+      email: formValue.email,
+      panNumber: formValue.panNumber,
+      address: formValue.address,
+      district: formValue.district,
+      subdivision: formValue.subdivision,
+      password: formValue.password,
+      hashkey: formValue.hashkey,
+      response: formValue.response
     };
 
-    console.log('Registration payload:', payload); // ← Check this in browser console!
+    console.log('Final registration payload:', requestPayload); // Debug this!
 
-    console.log('Full form value:', this.registrationForm.value);
-    console.log('Hashkey:', this.registrationForm.get('hashkey')?.value);
-    console.log('Response:', this.registrationForm.get('response')?.value);
-
-    this.authService.licenseeRegisterWithOtp(payload).subscribe({
+    this.authService.licenseeRegister(requestPayload).subscribe({
       next: (res: any) => {
-        console.log('Registration success:', res);
-        this.registrationComplete = true;
         this.isRegistering = false;
+        if (res.success) {
+          this.registrationComplete = true;
 
-        // Auto-login with returned tokens
-        let access = res.tokens?.access || res.access || res.authenticatedUser?.access;
-        let refresh = res.tokens?.refresh || res.refresh || res.authenticatedUser?.refresh;
-
-        if (access && refresh) {
-          localStorage.setItem('access', access);
-          localStorage.setItem('refresh', refresh);
-          this.accountService.identity(true).subscribe(user => {
-            if (user) {
-              this.redirectBasedOnRole(user.role!.name);
-            }
-          });
-        } else {
-          this.handleAuthResponse(res); // fallback
+          // Auto redirect to licensee dashboard
+          setTimeout(() => {
+            this.router.navigate(['/licensee/dashboard']);
+          }, 2000);
         }
       },
       error: (err) => {
         this.isRegistering = false;
         this.registrationError = true;
-        console.error('Registration error response:', err);
-
-        const errors = err.error?.errors || err.error || { non_field_errors: ['Registration failed'] };
-        this.registrationErrorMessages = this.extractErrorMessages(errors);
+        this.registrationErrorMessages = this.extractErrorMessages(err.error);
+        console.error('Registration error response:', err.error); // ← Check this in console
       }
     });
   }
@@ -317,6 +308,11 @@ export class LoginComponent extends BaseComponent {
       firstName: '',
       middleName: '',
       lastName: ''
+    });
+    // Clear validators for later fields
+    ['email', 'panNumber', 'address', 'district', 'subdivision', 'password', 'confirmPassword', 'hashkey', 'response'].forEach(field => {
+      this.registrationForm.get(field)?.clearValidators();
+      this.registrationForm.get(field)?.updateValueAndValidity();
     });
   }
   // Handles login submission

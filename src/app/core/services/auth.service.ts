@@ -15,16 +15,24 @@ export class AuthService {
 
   constructor(private http: HttpClient, private accountService: AccountService) { }
 
-  sendRegOtp(data: { phoneNumber: string; purpose?: string }): Observable<any> {
-    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, data);
+  sendRegistrationOtp(request: { phoneNumber: string; purpose?: 'register' }): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/`, request);
   }
 
-  verifyRegOtp(data: { phoneNumber: string; otp: string|null; otpId: string|null }): Observable<any> {
-    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/verify/`, data);
+  verifyRegistrationOtp(request: { phoneNumber: string; otp: string | null; otpId: string | null }): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/otp/verify/`, request);
   }
 
-  licenseeRegisterWithOtp(data: any): Observable<any> {
-    return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/otp-complete/`, data);
+  licenseeRegister(request: any): Observable<any> {
+    return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/final/`, request).pipe(
+      tap((response: any) => {
+        if (response.success && response.tokens) {
+          localStorage.setItem('access', response.tokens.access);
+          localStorage.setItem('refresh', response.tokens.refresh);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+        }
+      })
+    );
   }
 
   // Licensee signup
