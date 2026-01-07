@@ -17,6 +17,9 @@ import Swal from 'sweetalert2';
 import { ADMIN_ROLES } from '../../shared/constants/role.constants';
 import { Authority } from '../../shared/constants/authority.enum';
 import { PatternConstants } from '../../shared/constants/pattern.constants';
+import { District } from '../../core/models/district.model';
+import { Subdivision } from '../../core/models/subdivision.model';
+import { MasterService } from '../../core/services/master.service';
 
 @Component({
   selector: 'app-login',
@@ -44,19 +47,26 @@ export class LoginComponent extends BaseComponent {
   registrationErrorMessages: string[] = [];
   registrationOtpControl = new FormControl('', [Validators.required, Validators.minLength(4)]);
   registrationComplete = false;
-  registrationOtpId: string | null = null; // ← Renamed from otpId
+  registrationOtpId: string | null = null;
   otpVerified = false;
-  isRegistering = false; // ← New: loading state for final registration
+  isRegistering = false;
 
   loginError = false;
   loginErrorMessages: string[] = [];
 
   isRightPanelActive = false;
 
+  districts: District[] = [];
+  subdivisions: Subdivision[] = [];
+  loadingDistricts = false;
+  loadingSubdivisions = false;
+
+
   constructor(
     protected override baseDependency: BaseDependency,
     protected override authService: AuthService,
-    private fb: FormBuilder
+    protected override masterService: MasterService,
+    private fb: FormBuilder,
   ) {
     super(baseDependency);
 
@@ -107,6 +117,7 @@ export class LoginComponent extends BaseComponent {
         }, 100);
       }
     });
+    this.fetchDistricts();
   }
 
   switchToSignUp() {
@@ -152,8 +163,54 @@ export class LoginComponent extends BaseComponent {
     this.loginForm.controls['otp'].updateValueAndValidity();
   }
 
+  private enableRemainingFields() {
+    const fields = ['email', 'panNumber', 'address', 'district', 'subdivision', 'password', 'confirmPassword'];
+    fields.forEach(field => {
+      this.registrationForm.get(field)?.setValidators(Validators.required);
+      this.registrationForm.get(field)?.updateValueAndValidity();
+    });
+  }
+
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
+  }
+
+  // Fetch districts
+  fetchDistricts(): void {
+    this.loadingDistricts = true;
+    this.masterService.getDistrict().subscribe({
+      next: (districts) => {
+        this.districts = districts;
+        this.loadingDistricts = false;
+      },
+      error: (err) => {
+        console.error('Failed to load districts', err);
+        this.loadingDistricts = false;
+      }
+    });
+  }
+
+  // Fetch subdivisions based on selected district
+  onDistrictChange(districtCode: number): void {
+    if (!districtCode) {
+      this.subdivisions = [];
+      this.registrationForm.get('subdivision')?.reset();
+      return;
+    }
+
+    this.loadingSubdivisions = true;
+    this.masterService.getSubdivisionsByDistrict(districtCode).subscribe({
+      next: (subdivisions) => {
+        this.subdivisions = subdivisions;
+        this.loadingSubdivisions = false;
+        this.registrationForm.get('subdivision')?.reset();
+      },
+      error: (err) => {
+        console.error('Failed to load subdivisions', err);
+        this.subdivisions = [];
+        this.loadingSubdivisions = false;
+      }
+    });
   }
 
   sendOtp(): void {
@@ -227,6 +284,7 @@ export class LoginComponent extends BaseComponent {
       next: () => {
         this.otpVerified = true;
         this.registrationError = false;
+        this.enableRemainingFields();
 
         // Validators for the remaining fields
         this.registrationForm.get('email')?.setValidators([Validators.required, Validators.email]);

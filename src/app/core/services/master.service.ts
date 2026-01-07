@@ -34,10 +34,11 @@ export class MasterService {
   }
 
   // Gets subdivisions filtered by a specific district ID
-  getSubDivisionByDistrictCode(id: number): Observable<Subdivision[]> {
-    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/${id}`);
-  }
-
+  getSubdivisionsByDistrict(districtCode: number): Observable<Subdivision[]> {
+  return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/`, {
+    params: { district_code: districtCode }
+  });
+}
   // Retrieves all police stations
   getPoliceStations(): Observable<PoliceStation[]> {
     return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations`);

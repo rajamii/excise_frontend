@@ -79,8 +79,31 @@
         <input formControlName="email" type="email" placeholder="Email Address" required />
         <input formControlName="panNumber" placeholder="PAN Number (e.g. ABCDE1234F)" required />
         <input formControlName="address" placeholder="Full Address" required />
-        <input formControlName="district" placeholder="District Code (e.g. 1101)" required />
-        <input formControlName="subdivision" placeholder="Subdivision Code (e.g. 11)" required />
+
+        <!-- District Select -->
+        <mat-form-field appearance="fill">
+          <mat-label>District</mat-label>
+          <mat-select formControlName="district" (selectionChange)="onDistrictChange($event.value)" required>
+            <mat-option>-- Select District --</mat-option>
+            <mat-option *ngFor="let district of districts" [value]="district.districtCode">
+              {{ district.district }}
+            </mat-option>
+          </mat-select>
+          <mat-spinner *ngIf="loadingDistricts" diameter="20"></mat-spinner>
+        </mat-form-field>
+
+        <!-- Subdivision Select -->
+        <mat-form-field appearance="fill">
+          <mat-label>Subdivision</mat-label>
+          <mat-select formControlName="subdivision" required
+            [disabled]="!registrationForm.get('district')?.value || loadingSubdivisions">
+            <mat-option>-- Select Subdivision --</mat-option>
+            <mat-option *ngFor="let sub of subdivisions" [value]="sub.subdivisionCode">
+              {{ sub.subdivision }}
+            </mat-option>
+          </mat-select>
+          <mat-spinner *ngIf="loadingSubdivisions" diameter="20"></mat-spinner>
+        </mat-form-field>
 
         <!-- Password Field -->
         <div class="input-wrapper">
