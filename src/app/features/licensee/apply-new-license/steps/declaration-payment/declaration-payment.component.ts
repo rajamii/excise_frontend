@@ -199,25 +199,25 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   private getDataForView(key: string): { key: string; value: any }[] {
     const data = this.getParsedSession<Record<string, any>>(key);
     if (!data) return [];
-    
+
     const processedFields = new Set<string>();
-    
+
     return Object.entries(data)
       .filter(([k]) => {
         // Skip code fields
         if (k.endsWith('_code') || k.endsWith('code')) return false;
-        
+
         // Skip duplicates (normalize field names)
         const normalized = k.toLowerCase().replace(/_/g, '');
         if (processedFields.has(normalized)) return false;
         processedFields.add(normalized);
-        
+
         return true;
       })
       .map(([k, v]) => {
         const label = this.getSafeLabel(k);
         const displayValue = this.getDisplayName(k, v);
-        
+
         return { key: label, value: displayValue };
       })
       .filter(item => item.value !== null && item.value !== undefined && item.value !== '');
@@ -228,58 +228,58 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
    */
   private getDisplayName(field: string, value: any): string {
     if (!value) return '';
-    
+
     // Normalize field name (handle both snake_case and camelCase)
     const normalized = field.toLowerCase().replace(/_/g, '');
-    
+
     try {
       let masterData: any[] = [];
-      
+
       // License Type
       if (normalized === 'licensetype') {
         masterData = JSON.parse(sessionStorage.getItem('licenseTypes') || '[]');
         const licenseType = masterData.find(d => d.id === Number(value));
         return licenseType?.licenseType || value.toString();
       }
-      
+
       // License Category
       if (normalized === 'licensecategory') {
         masterData = JSON.parse(sessionStorage.getItem('licenseCategories') || '[]');
         const category = masterData.find(d => d.id === Number(value));
         return category?.licenseCategory || value.toString();
       }
-      
+
       // License Sub Category
       if (normalized === 'licensesubcategory') {
         masterData = JSON.parse(sessionStorage.getItem('licenseSubcategories') || '[]');
         const subCategory = masterData.find(d => d.id === Number(value));
         return subCategory?.licenseSubcategory || subCategory?.name || value.toString();
       }
-      
+
       // Site District
       if (normalized === 'sitedistrict') {
         masterData = JSON.parse(sessionStorage.getItem('districts') || '[]');
         const district = masterData.find(d => d.id === Number(value));
         return district?.district || value.toString();
       }
-      
+
       // Site Subdivision
       if (normalized === 'sitesubdivision') {
         masterData = JSON.parse(sessionStorage.getItem('subdivisions') || '[]');
         const subdivision = masterData.find(d => d.id === Number(value));
         return subdivision?.subdivision || value.toString();
       }
-      
+
       // Police Station
       if (normalized === 'policestation') {
         masterData = JSON.parse(sessionStorage.getItem('policeStations') || '[]');
         const station = masterData.find(d => d.id === Number(value));
         return station?.policeStation || value.toString();
       }
-      
+
       // Default: return value as-is
       return value.toString();
-      
+
     } catch (e) {
       console.error(`Failed to get display name for ${field}:`, e);
       return value.toString();
@@ -291,11 +291,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * 🔍 DEBUG: Check sessionStorage before submission
+   * DEBUG: Check sessionStorage before submission
    */
   private debugSessionStorage(): void {
-    console.group('🔍 DEBUG: SessionStorage Contents Before Submission (NEW LICENSE)');
-    
+    console.group('DEBUG: SessionStorage Contents Before Submission (NEW LICENSE)');
+
     const keys = [
       'selectLicenseData',
       'keyInfoData',
@@ -303,7 +303,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       'siteDetailsData',
       'unitDetailsData'
     ];
-    
+
     keys.forEach(key => {
       const data = sessionStorage.getItem(key);
       if (data) {
@@ -319,38 +319,38 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         console.warn(`⚠️ ${key} is empty`);
       }
     });
-    
+
     const photoFile = this.licenseAppService.getPassPhoto();
     console.log('📷 Pass Photo file:', photoFile ? `${photoFile.name} (${photoFile.size} bytes)` : 'MISSING');
-    
+
     const siteDocuments = this.licenseAppService.getAllSiteDocuments();
     console.log('📁 Site Documents:', Object.keys(siteDocuments).length, 'files');
     Object.entries(siteDocuments).forEach(([name, file]) => {
       console.log(`  - ${name}: ${file.name} (${file.size} bytes)`);
     });
-    
+
     console.groupEnd();
   }
 
   /**
-   * ✅ Validate all required data before submission
+   *  Validate all required data before submission
    */
   private validateRequiredData(): { valid: boolean; missingFields: string[] } {
     const missingFields: string[] = [];
-    
+
     // Check license type
     const selectData = this.getParsedSession('selectLicenseData');
-    if (!selectData?.licenseType && !selectData?.license_type) {
+    if (!selectData?.license_type) {
       missingFields.push('License Type');
     }
-    
+
     // Check key info
     const keyData = this.getParsedSession('keyInfoData');
     if (!keyData?.license_category) missingFields.push('License Category');
     if (!keyData?.license_sub_category) missingFields.push('License Sub Category');
     if (!keyData?.establishment_name) missingFields.push('Establishment Name');
     if (!keyData?.site_type) missingFields.push('Site Type');
-    
+
     // Check applicant details
     const applicantData = this.getParsedSession('applicantDetailsData');
     if (!applicantData?.applicant_name) missingFields.push('Applicant Name');
@@ -359,149 +359,63 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     if (!applicantData?.gender) missingFields.push('Gender');
     if (!applicantData?.email) missingFields.push('Email');
     if (!applicantData?.mobile_number) missingFields.push('Mobile Number');
-    
+
     // Check site details
     const siteData = this.getParsedSession('siteDetailsData');
-    if (!siteData?.site_district_code) missingFields.push('Site District');
-    if (!siteData?.site_subdivision_code) missingFields.push('Site Subdivision');
-    if (!siteData?.police_station_code) missingFields.push('Police Station');
+    if (!siteData?.site_district) missingFields.push('Site District');
+    if (!siteData?.site_subdivision) missingFields.push('Site Subdivision');
+    if (!siteData?.police_station) missingFields.push('Police Station');
     if (!siteData?.site_owned) missingFields.push('Site Ownership');
-    
+
     // Check documents
     const passPhoto = this.licenseAppService.getPassPhoto();
     if (!passPhoto) missingFields.push('Passport Photo');
-    
+
     const docs = this.licenseAppService.getAllSiteDocuments();
     if (!docs['pan_card']) missingFields.push('PAN Card');
     if (!docs['sikkim_certificate']) missingFields.push('Sikkim Certificate');
     if (!docs['dob_proof']) missingFields.push('Date of Birth Proof');
-    
+
     return {
       valid: missingFields.length === 0,
       missingFields
     };
   }
 
-  async submit(): Promise<void> {
-    if (!this.declarationForm.valid) {
-      Swal.fire('Warning', 'Please accept the declaration to proceed.', 'warning');
-      return;
-    }
-
-    // Prevent double submission
-    if (this.isSubmitting) {
-      return;
-    }
-
-    // ✅ Validate all required data
-    const validation = this.validateRequiredData();
-    if (!validation.valid) {
-      Swal.fire({
-        title: 'Incomplete Data',
-        html: `<div style="text-align: left;">
-          <p>The following required fields are missing:</p>
-          <ul style="color: #d32f2f;">
-            ${validation.missingFields.map(f => `<li>${f}</li>`).join('')}
-          </ul>
-          <p style="margin-top: 12px; font-size: 14px;">Please go back and complete all required fields.</p>
-        </div>`,
-        icon: 'error'
-      });
-      return;
-    }
-
-    const confirm = await Swal.fire({
-      title: 'Are you sure?',
-      text: 'Do you want to submit this application?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel',
-    });
-
-    if (!confirm.isConfirmed) return;
-
+  async submit() {
+    if (this.isSubmitting) return;
     this.isSubmitting = true;
 
-    // Show loading indicator
-    Swal.fire({
-      title: 'Submitting Application...',
-      html: 'Please wait while we process your application.',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
     try {
-      // 🔍 DEBUG: Show what we have in sessionStorage
-      this.debugSessionStorage();
-
-      // ✅ Use the service method to prepare FormData
       const formData = this.licenseAppService.prepareNewLicenseFormData();
+      const response = await this.licenseAppService.submitNewLicenseApplication(formData).toPromise();
 
-      // DEBUG: Log FormData contents
-      console.group("📦 FINAL FORMDATA SENT TO BACKEND (NEW LICENSE)");
-      FormDataBuilder.logFormData(formData, 'New License Application');
-      console.groupEnd();
-
-      // Submit to backend
-      this.licenseAppService.submitNewLicenseApplication(formData).subscribe({
-        next: (response: any) => {
-          console.log('✅ New License Application submitted successfully:', response);
-
-          Swal.fire({
-            title: 'Success!',
-            html: `
-              <div style="text-align: center;">
-                <p>Your application has been submitted successfully!</p>
-                <p><strong>Application ID:</strong> ${response.application_id || response.applicationId || 'Pending'}</p>
-                <p style="font-size: 14px; color: #666; margin-top: 12px;">
-                  You will receive a confirmation email shortly.
-                </p>
-              </div>
-            `,
-            icon: 'success',
-            confirmButtonText: 'Go to Dashboard',
-            allowOutsideClick: false
-          }).then(() => {
-            // Clear all session storage and documents
-            this.clearApplicationData();
-
-            // Navigate to dashboard
-            this.router.navigate(['/licensee/dashboard']);
-          });
-        },
-        error: (err: any) => {
-          console.error('❌ New License submission failed:', err);
-          console.log('Full error object:', err);
-
-          // Format error message
-          const errorMessage = this.formatErrorMessage(err);
-
-          Swal.fire({
-            title: 'Submission Failed',
-            html: errorMessage,
-            icon: 'error',
-            confirmButtonText: 'OK',
-            allowOutsideClick: false,
-            width: 600
-          });
-        },
-        complete: () => {
-          this.isSubmitting = false;
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Unexpected error during submission:', error);
-      this.isSubmitting = false;
       Swal.fire({
-        title: 'Error',
-        text: 'An unexpected error occurred. Please try again.',
-        icon: 'error',
-        confirmButtonText: 'OK'
+        title: 'Success!',
+        html: `Application Submitted Successfully!<br><strong></strong>`,
+        icon: 'success'
+      }).then(() => {
+        this.clearApplicationData();
+        this.router.navigate(['/licensee/dashboard']); // or your applicant dashboard
       });
+
+    } catch (error: any) {
+      console.error('Submission failed:', error);
+
+      // Handle our custom missing field errors
+      if (error.message && error.message.includes('required')) {
+        Swal.fire({
+          title: 'Incomplete Data',
+          html: `<p style="text-align:left">${error.message}</p>`,
+          icon: 'warning'
+        });
+      } else {
+        // Use your existing formatErrorMessage
+        const msg = this.formatErrorMessage(error);
+        Swal.fire('Error', msg, 'error');
+      }
+    } finally {
+      this.isSubmitting = false;
     }
   }
 
@@ -532,22 +446,22 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
    */
   private formatErrorMessage(err: any): string {
     if (!err) return 'An unknown error occurred.';
-    
+
     // Check for validation errors from Django
     if (err?.error && typeof err.error === 'object') {
       const errors = err.error;
       const errorMessages: string[] = [];
-      
+
       Object.entries(errors).forEach(([field, messages]) => {
         const fieldLabel = this.getSafeLabel(field);
-        
+
         if (Array.isArray(messages)) {
           errorMessages.push(`<strong>${fieldLabel}:</strong> ${messages.join(', ')}`);
         } else {
           errorMessages.push(`<strong>${fieldLabel}:</strong> ${messages}`);
         }
       });
-      
+
       if (errorMessages.length > 0) {
         return `
           <div style="text-align: left; max-height: 400px; overflow-y: auto;">
@@ -559,11 +473,11 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
         `;
       }
     }
-    
+
     const message = err?.error?.message || err?.message || err?.statusText;
     const status = err?.status ? ` (Status: ${err.status})` : '';
     if (message) return `${message}${status}`;
-    
+
     try {
       return `<pre style="text-align: left; font-size: 12px;">${JSON.stringify(err, null, 2)}</pre>`;
     } catch {

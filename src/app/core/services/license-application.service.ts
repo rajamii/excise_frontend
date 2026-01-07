@@ -24,13 +24,12 @@ export class LicenseApplicationService {
   // ========================== NEW LICENSE APPLICATION ==========================
 
   submitNewLicenseApplication(formData: FormData): Observable<NewLicenseApplication> {
-    console.log('📤 Submitting New License Application');
     this.logFormData(formData, 'New License Submission');
     return this.http.post<NewLicenseApplication>(`${this.newLicenseUrl}/apply/`, formData);
   }
 
   prepareNewLicenseFormData(): FormData {
-    console.group('📦 Preparing New License Application FormData');
+    console.group('Preparing New License Application FormData');
 
     const sessionKeys = [
       'selectLicenseData',
@@ -45,150 +44,132 @@ export class LicenseApplicationService {
       const data = this.getParsedSession(key);
       if (data) {
         Object.assign(combinedData, data);
-        console.log(`✅ Loaded ${key}:`, data);
+        console.log(`Loaded ${key}:`, data);
+      } else {
+        console.warn(`No data found for ${key}`);
       }
     });
 
     const formData = new FormData();
 
-    // ✅ **CRITICAL FIX**: Add license_type (PrimaryKeyRelatedField - expects ID)
-    if (combinedData['licenseType'] !== undefined && combinedData['licenseType'] !== null) {
-      formData.append('license_type', String(parseInt(combinedData['licenseType'])));
-      console.log('✅ Added license_type:', combinedData['licenseType']);
-    } else {
-      console.error('❌ CRITICAL: license_type is missing!');
+    // === CRITICAL REQUIRED FIELDS ===
+
+    // License Type (from selectLicenseData)
+    const licenseType = combinedData['license_type'] ?? combinedData['licenseType'];
+    if (!licenseType) {
+      console.error('Missing license_type');
+      throw new Error('License Type is required. Please go back to the first step.');
+    }
+    formData.append('license_type', String(licenseType));
+    console.log('Added license_type:', licenseType);
+
+    // Site District (from siteDetailsData)
+    const siteDistrict = combinedData['site_district'] ?? combinedData['siteDistrict'];
+    if (!siteDistrict) {
+      console.error('Missing site_district');
+      throw new Error('Site District is required. Please complete Site Details.');
+    }
+    formData.append('site_district', String(siteDistrict));
+    console.log('Added site_district:', siteDistrict);
+
+    // Site Subdivision (from siteDetailsData)
+    const siteSubdivision = combinedData['site_subdivision'] ?? combinedData['siteSubdivision'];
+    if (!siteSubdivision) {
+      console.error('Missing site_subdivision');
+      throw new Error('Site Subdivision is required. Please complete Site Details.');
+    }
+    formData.append('site_subdivision', String(siteSubdivision));
+    console.log('Added site_subdivision:', siteSubdivision);
+
+    // Police Station (also required by backend)
+    const policeStation = combinedData['police_station'] ?? combinedData['policeStation'];
+    if (policeStation) {
+      formData.append('police_station', String(policeStation));
     }
 
-    // ✅ **CRITICAL FIX**: Add workflow (hardcoded to 1 for new applications)
-    // You may need to adjust this based on your workflow setup
-    formData.append('workflow', '1');
-    console.log('✅ Added workflow: 1');
+    // After combining data
+    formData.append('dob', String(combinedData['dob'] || ''));
 
-    // ✅ CodeRelatedField fields (need CODE strings, not IDs)
-    if (combinedData['site_district_code']) {
-      formData.append('site_district', String(combinedData['site_district_code']));
-    }
-    if (combinedData['site_subdivision_code']) {
-      formData.append('site_subdivision', String(combinedData['site_subdivision_code']));
-    }
-    if (combinedData['police_station_code']) {
-      formData.append('police_station', String(combinedData['police_station_code']));
+    // Always append noc_obtained
+    const nocObtained = combinedData['noc_obtained'] ?? combinedData['nocObtained'] ?? 'No';
+    if (nocObtained) {
+      formData.append('noc_obtained', nocObtained);
     }
 
-    // ✅ PrimaryKeyRelatedField fields (need IDs as integers)
-    if (combinedData['license_category'] !== undefined && combinedData['license_category'] !== null) {
-      formData.append('license_category', String(parseInt(combinedData['license_category'])));
-    }
-    if (combinedData['license_sub_category'] !== undefined && combinedData['license_sub_category'] !== null) {
-      formData.append('license_sub_category', String(parseInt(combinedData['license_sub_category'])));
-    }
+    // === OTHER FIELDS (safe to append if exist) ===
+    const fieldMap: Record<string, string> = {
+      // From keyInfoData
+      license_category: combinedData['license_category'] || combinedData['licenseCategory'],
+      license_sub_category: combinedData['license_sub_category'] || combinedData['licenseSubCategory'],
+      establishment_name: combinedData['establishment_name'] || combinedData['establishmentName'],
+      site_type: combinedData['site_type'] || combinedData['siteType'],
 
-    // String fields
-    const stringFields = [
-      'establishment_name', 'site_type', 'applicant_name', 'father_husband_name',
-      'nationality', 'gender', 'residential_status', 'present_address', 'permanent_address',
-      'pan', 'email', 'mode_of_operation', 'location_category', 'location_name',
-      'ward_name', 'business_address', 'road_name', 'construction_type'
-    ];
-    stringFields.forEach(field => {
-      if (combinedData[field]) {
-        formData.append(field, String(combinedData[field]));
+      // From applicantDetailsData
+      applicant_name: combinedData['applicant_name'],
+      father_husband_name: combinedData['father_husband_name'],
+      dob: combinedData['dob'],
+      gender: combinedData['gender'],
+      nationality: combinedData['nationality'],
+      residential_status: combinedData['residential_status'],
+      present_address: combinedData['present_address'],
+      permanent_address: combinedData['permanent_address'],
+      pan: combinedData['pan'],
+      email: combinedData['email'],
+      mobile_number: combinedData['mobile_number'],
+      mode_of_operation: combinedData['mode_of_operation'],
+      has_sikkim_certificate: combinedData['has_sikkim_certificate'],
+      has_excise_license: combinedData['has_excise_license'],
+      family_excise_license: combinedData['family_excise_license'],
+      criminal_conviction: combinedData['criminal_conviction'],
+
+      // From siteDetailsData
+      location_category: combinedData['location_category'],
+      location_name: combinedData['location_name'],
+      ward_name: combinedData['ward_name'],
+      business_address: combinedData['business_address'],
+      road_name: combinedData['road_name'],
+      pin_code: combinedData['pin_code'],
+      construction_type: combinedData['construction_type'],
+      length: combinedData['length'],
+      breadth: combinedData['breadth'],
+      site_owned: combinedData['site_owned'],
+      noc_obtained: combinedData['noc_obtained'],
+      trade_license_covered: combinedData['trade_license_covered'],
+
+      // From unitDetailsData (if company)
+      company_name: combinedData['company_name'],
+      company_address: combinedData['company_address'],
+      company_pan: combinedData['company_pan'],
+      company_cin: combinedData['company_cin'],
+      incorporation_date: combinedData['incorporation_date'],
+      company_phone_number: combinedData['company_phone_number'],
+      company_email: combinedData['company_email'],
+
+      // Workflow
+      workflow: '1'
+    };
+
+    Object.entries(fieldMap).forEach(([backendKey, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(backendKey, String(value));
       }
     });
 
-    // ✅ Mobile number and PIN code (CharField in backend, but numeric validation)
-    if (combinedData['mobile_number']) {
-      const cleaned = String(combinedData['mobile_number']).replace(/\D/g, '');
-      formData.append('mobile_number', cleaned);
-    }
-    if (combinedData['pin_code']) {
-      const cleaned = String(combinedData['pin_code']).replace(/\D/g, '');
-      formData.append('pin_code', cleaned);
-    }
-
-    // Float fields
-    if (combinedData['length']) {
-      formData.append('length', String(parseFloat(combinedData['length'])));
-    }
-    if (combinedData['breadth']) {
-      formData.append('breadth', String(parseFloat(combinedData['breadth'])));
-    }
-
-    // Date fields (ISO format YYYY-MM-DD)
-    if (combinedData['dob']) {
-      const date = new Date(combinedData['dob']);
-      if (!isNaN(date.getTime())) {
-        formData.append('dob', date.toISOString().split('T')[0]);
-      }
-    }
-
-    // ✅ ChoiceFields - Must match backend choices exactly ("Yes"/"No")
-    const yesNoFields = [
-      'has_sikkim_certificate', 'has_excise_license',
-      'family_excise_license', 'criminal_conviction',
-      'noc_obtained'
-    ];
-    yesNoFields.forEach(field => {
-      if (combinedData[field] !== undefined) {
-        const value = this.convertToYesNo(combinedData[field]);
-        formData.append(field, value);
-      }
-    });
-
-    // ✅ Site ownership (ChoiceField: "Owned"/"Rented")
-    if (combinedData['site_owned'] !== undefined) {
-      formData.append('site_owned', String(combinedData['site_owned']));
-      console.log('✅ site_owned value:', combinedData['site_owned']);
-    }
-
-    // Company details (optional, only if license_type = 2)
-    if (Number(combinedData['licenseType']) === 2) {
-      if (combinedData['company_name']) formData.append('company_name', combinedData['company_name']);
-      if (combinedData['company_address']) formData.append('company_address', combinedData['company_address']);
-      if (combinedData['company_pan']) formData.append('company_pan', combinedData['company_pan'].toUpperCase());
-      if (combinedData['company_cin']) formData.append('company_cin', combinedData['company_cin'].toUpperCase());
-      if (combinedData['incorporation_date']) {
-        const date = new Date(combinedData['incorporation_date']);
-        if (!isNaN(date.getTime())) {
-          formData.append('incorporation_date', date.toISOString().split('T')[0]);
-        }
-      }
-      if (combinedData['company_phone_number']) {
-        const cleaned = String(combinedData['company_phone_number']).replace(/\D/g, '');
-        formData.append('company_phone_number', cleaned);
-      }
-      if (combinedData['company_email']) formData.append('company_email', combinedData['company_email']);
-    }
-
-    // ✅ File uploads - Required fields
+    // === FILES ===
     const passPhoto = this.getPassPhoto();
     if (passPhoto) {
       formData.append('pass_photo', passPhoto, passPhoto.name);
-      console.log('✅ Added pass_photo:', passPhoto.name);
+      console.log('Added pass_photo:', passPhoto.name);
     } else {
-      console.error('❌ CRITICAL: pass_photo is missing!');
+      console.warn('No passport photo uploaded');
     }
 
-    // Required documents
-    const requiredDocs = ['pan_card', 'sikkim_certificate', 'dob_proof'];
-    const siteDocuments = this.getAllSiteDocuments();
-    
-    requiredDocs.forEach(docName => {
-      if (siteDocuments[docName]) {
-        formData.append(docName, siteDocuments[docName], siteDocuments[docName].name);
-        console.log(`✅ Added ${docName}:`, siteDocuments[docName].name);
-      } else {
-        console.error(`❌ CRITICAL: ${docName} is missing!`);
-      }
+    // Site documents (e.g., noc_landlord)
+    this.siteDocuments.forEach((file, key) => {
+      formData.append(key, file, file.name);
+      console.log(`Added ${key}:`, file.name);
     });
 
-    // Optional NOC landlord document
-    if (siteDocuments['noc_landlord']) {
-      formData.append('noc_landlord', siteDocuments['noc_landlord'], siteDocuments['noc_landlord'].name);
-      console.log('✅ Added noc_landlord:', siteDocuments['noc_landlord'].name);
-    }
-
-    this.logFormData(formData, 'New License Final FormData');
     console.groupEnd();
     return formData;
   }
@@ -423,7 +404,7 @@ export class LicenseApplicationService {
 
   resolveObjections(applicationId: string, data: any, photo?: File): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    
+
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
@@ -434,7 +415,7 @@ export class LicenseApplicationService {
         }
       }
     });
-    
+
     if (photo) formData.append('photo', photo, photo.name);
     return this.http.post(`${this.oldLicenseUrl}/${encodedId}/resolve-objections/`, formData);
   }

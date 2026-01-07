@@ -63,14 +63,12 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.keyInfoForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.saveToSessionStorage();
         this.updateAllErrorMessages();
       });
   }
 
   ngOnInit(): void {
-    console.log('🚀 KeyInfoComponent initialized');
-    
+       
     // Load categories first
     this.loadDropdownData();
     
@@ -100,9 +98,8 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /**
-   * Load license categories from API
-   */
+  
+  //Load license categories from API
   private loadDropdownData(): void {
     this.masterService.getLicenseCategories().subscribe({
       next: (data: LicenseCategory[]) => {
@@ -110,19 +107,14 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           id: item.id ?? 0,
           licenseCategory: item.licenseCategory,
           description: item.description ?? ''
-        }));
-        console.log('✅ License Categories loaded:', this.licenseCategories);
-        
-        // Restore category if needed
+        }));        
         this.restoreCategoryIfNeeded();
       },
-      error: (err) => console.error('❌ Failed to load license categories', err)
+      error: (err) => console.error('Failed to load license categories', err)
     });
   }
 
-  /**
-   * Load ALL subcategories from API and store them
-   */
+  //Load ALL subcategories from API and store them   
   private loadAllSubCategories(): void {
     this.masterService.getLicenseSubcategories().subscribe({
       next: (data: any[]) => {
@@ -147,7 +139,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
               categoryId = Number(d.licenseCategory);
             }
           } else {
-            console.warn('⚠️ No category field found in subcategory:', d);
+            console.warn('No category field found in subcategory:', d);
             categoryId = 0;
           }
             
@@ -159,19 +151,16 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
           
           return subcategory;
         });
-        
-        console.log('✅ All subcategories processed:', this.allSubCategories);
 
         // Filter based on current category selection
         const currentCategory = this.keyInfoForm.get('licenseCategory')?.value;
         if (currentCategory) {
-          console.log('🔄 Filtering subcategories for already selected category:', currentCategory);
           this.filterSubCategories(currentCategory);
         }
         
         this.restoreSubcategoryIfNeeded();
       },
-      error: (err) => console.error('❌ Failed to load subcategories', err)
+      error: (err) => console.error('Failed to load subcategories', err)
     });
   }
 
@@ -183,15 +172,9 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       this.licenseSubCategories = [];
       return;
     }
-
-    console.log('🔍 Filtering subcategories for category ID:', categoryId);
-
     this.licenseSubCategories = this.allSubCategories.filter(sub => sub.category === categoryId);
-
-    console.log('✅ Filtered subcategories count:', this.licenseSubCategories.length);
-
     if (this.licenseSubCategories.length === 0) {
-      console.warn('⚠️ No subcategories found for category:', categoryId);
+      console.warn('No subcategories found for category:', categoryId);
     }
 
     // Check if current subcategory is still valid for the new category
@@ -199,7 +182,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     if (currentSubCategory) {
       const isValid = this.licenseSubCategories.some(s => s.id === currentSubCategory);
       if (!isValid) {
-        console.log('⚠️ Current subcategory not valid for new category, resetting');
+        console.log('Current subcategory not valid for new category, resetting');
         this.keyInfoForm.patchValue({ licenseSubCategory: null }, { emitEvent: false });
       }
     }
@@ -215,7 +198,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     const categoryId = stored['licenseCategory'];
     
     if (categoryId && this.licenseCategories.some(c => c.id === categoryId)) {
-      console.log('🔄 Restoring category:', categoryId);
       this.keyInfoForm.patchValue({ licenseCategory: categoryId }, { emitEvent: false });
       
       // Trigger filtering after a short delay to ensure subcategories are loaded
@@ -237,7 +219,6 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     if (subCategoryId && this.licenseSubCategories.length > 0) {
       const isValid = this.licenseSubCategories.some(s => s.id === subCategoryId);
       if (isValid) {
-        console.log('🔄 Restoring subcategory:', subCategoryId);
         this.keyInfoForm.patchValue({ licenseSubCategory: subCategoryId }, { emitEvent: false });
       }
     }
@@ -257,7 +238,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const formData = this.keyInfoForm.getRawValue();
     
-    // ✅ Map to backend field names
+    // Map to backend field names
     const backendData = {
       // Keep original for restoration
       licenseCategory: formData.licenseCategory,
@@ -272,7 +253,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       site_type: formData.siteType
     };
     
-    console.log('💾 Saving Key Info:', backendData);
+    console.log('Saving Key Info:', backendData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(backendData));
   }
 
@@ -314,6 +295,7 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
    */
   proceedToNext(): void {
     if (this.keyInfoForm.valid) {
+      this.saveToSessionStorage();
       this.next.emit();
     } else {
       // Mark all fields as touched to show validation errors

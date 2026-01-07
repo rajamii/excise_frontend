@@ -39,7 +39,6 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     this.selectLicenseForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.saveToSessionStorage();
         this.updateAllErrorMessages();
       });
   }
@@ -66,20 +65,17 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   private getFromSessionStorage(): any {
     const storedData = sessionStorage.getItem('selectLicenseData');
-    return storedData ? JSON.parse(storedData) : {};
+    if (!storedData) return {};
+    const parsed = JSON.parse(storedData);
+    return parsed;
   }
 
   private saveToSessionStorage() {
     const formData = this.selectLicenseForm.getRawValue();
-    
-    // ✅ Store both camelCase and snake_case for compatibility
-    const dataToStore = {
-      licenseType: formData.licenseType,
-      license_type: formData.licenseType  // Backend expects this
-    };
-    
-    console.log('💾 Saving Select License Data:', dataToStore);
-    sessionStorage.setItem('selectLicenseData', JSON.stringify(dataToStore));
+       
+    formData.license_type = formData.license_type,
+    console.log('Saving Select License Data:', formData); // Debug log
+    sessionStorage.setItem('selectLicenseData', JSON.stringify(formData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
@@ -103,7 +99,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   proceedToNext() {
     if (this.selectLicenseForm.valid) {
-      console.log('Selected License Type:', this.selectLicenseForm.value.licenseType);
+      this.saveToSessionStorage();
       this.next.emit();
     }
   }

@@ -21,7 +21,7 @@ export class MasterService {
   // note: this.baseUrl is used for "masters/core" endpoints
   private readonly baseUrl = `${environment.apiBaseUrl}/masters/core`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // Fetches a list of all districts
   getDistrict(): Observable<District[]> {
@@ -35,21 +35,37 @@ export class MasterService {
 
   // Gets subdivisions filtered by a specific district ID
   getSubdivisionsByDistrict(districtCode: number): Observable<Subdivision[]> {
-  return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/`, {
-    params: { district_code: districtCode }
-  });
-}
+    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/`, {
+      params: { district_code: districtCode }
+    });
+  }
   // Retrieves all police stations
   getPoliceStations(): Observable<PoliceStation[]> {
     return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations`);
   }
 
   // Retrieves police stations within a specified subdivision (by code)
-  getPoliceStationBySubDivision(code: number): Observable<PoliceStation[]> {
-    return this.http.get<PoliceStation[]>(
-      `${this.baseUrl}/subdivision/detail/${code}`
-    );
+  getPoliceStationBySubDivision(subdivisionCode?: number): Observable<PoliceStation[]> {
+    let params = {};
+    if (subdivisionCode) {
+      params = { subdivision_code: subdivisionCode };
+    }
+    return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations/`, { params });
   }
+
+  // Fetches all available roads
+  getRoads(): Observable<Road[]> {
+    return this.http.get<Road[]>(`${this.baseUrl}/roads`);
+  }
+
+  // Fetches roads filtered by a specific district code
+  getRoadsByDistrict(districtCode?: number): Observable<Road[]> {
+  let params = {};
+  if (districtCode) {
+    params = { district_code: districtCode };
+  }
+  return this.http.get<Road[]>(`${this.baseUrl}/roads/`, { params });
+}
 
   // Fetches all available license types
   getLicenseTypes(): Observable<LicenseType[]> {
@@ -73,10 +89,5 @@ export class MasterService {
   // Fetches all available license titles
   getLicenseTitles(): Observable<LicenseTitle[]> {
     return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
-  }
-
-  // Fetches all available roads
-  getRoads(): Observable<Road[]> {
-    return this.http.get<Road[]>(`${this.baseUrl}/roads`);
   }
 }

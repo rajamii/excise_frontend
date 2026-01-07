@@ -30,16 +30,18 @@ interface DocumentUpload {
 export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   siteDetailsForm: FormGroup;
 
-  // Raw data from API for dropdowns
+  // Master data
   districts: District[] = [];
-  private allSubdivisions: Subdivision[] = [];
-  private allPoliceStations: PoliceStation[] = [];
-  private allRoads: Road[] = [];
-
   // Filtered data shown in dropdowns
   siteSubdivisions: Subdivision[] = [];
   sitePoliceStations: PoliceStation[] = [];
-  roadNames: string[] = [];
+  roadNames: Road[] = [];
+
+  // Loading indicators
+  loadingDistricts = false;
+  loadingSubdivisions = false;
+  loadingPoliceStations = false;
+  loadingRoads = false;
 
   // Static dropdown values
   locationCategories: string[] = ['Municipal Corporation', 'Municipal Council', 'Nagar Panchayat', 'Block'];
@@ -101,7 +103,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       wardName: new FormControl(storedValues.wardName ?? null, [Validators.required]),
       businessAddress: new FormControl(storedValues.businessAddress ?? null, [Validators.required, Validators.maxLength(500)]),
       roadName: new FormControl({ value: storedValues.roadName ?? null, disabled: !hasDistrict }, [Validators.required]),
-      pinCode: new FormControl(storedValues.pinCode, [
+      pinCode: new FormControl(storedValues.pin_code, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)
       ]),
@@ -124,52 +126,22 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.setupConditionalValidation();
 
     this.siteDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.saveToSessionStorage();
       this.updateAllErrorMessages();
     });
   }
 
   ngOnInit() {
-    this.loadMasterData();
     this.restoreDocuments();
-
-    // Watch district → subdivision → police station
-    this.siteDetailsForm.get('siteDistrict')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(districtId => {
-        console.log('District changed to:', districtId);
-        this.onDistrictChange(districtId);
-        const siteSubdivisionCtrl = this.siteDetailsForm.get('siteSubdivision');
-        const roadNameCtrl = this.siteDetailsForm.get('roadName');
-        if (districtId) {
-          siteSubdivisionCtrl?.enable();
-          roadNameCtrl?.enable();
-        } else {
-          siteSubdivisionCtrl?.disable();
-          roadNameCtrl?.disable();
-        }
-      });
-
-    this.siteDetailsForm.get('siteSubdivision')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(subdivisionId => {
-        const policeStationCtrl = this.siteDetailsForm.get('policeStation');
-        if (subdivisionId) {
-          policeStationCtrl?.enable();
-          this.filterPoliceStations(subdivisionId);
-        } else {
-          policeStationCtrl?.disable();
-          this.sitePoliceStations = [];
-          this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
-        }
-      });
-
-    this.masterService.getSubdivision().subscribe({
-      next: (subs) => {
-        this.allSubdivisions = subs;
-        console.log('✅ All subdivisions loaded:', subs);
+    this.loadingDistricts = true;
+    this.masterService.getDistrict().subscribe({
+      next: (districts) => {
+        this.districts = districts;
+        this.loadingDistricts = false;
       },
-      error: (err) => console.error('❌ Failed to load subdivisions', err)
+      error: (err) => {
+        console.error('Failed to load districts', err);
+        this.loadingDistricts = false;
+      }
     });
   }
 
@@ -195,10 +167,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     }
   }
 
+  trackById(index: number, item: any): number { return item.id; }
+
   // === Conditional Validators ===
   private setupConditionalValidation(): void {
     const siteOwnedCtrl = this.siteDetailsForm.get('siteOwned');
-    const nocObtainedCtrl = this.siteDetailsForm.get('nocObtained');
 
     // Initial state
     this.updateNocRequirements(siteOwnedCtrl?.value);
@@ -239,158 +212,72 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     nocObtainedCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
-  private loadMasterData(): void {
-    // Districts
-    this.masterService.getDistrict().subscribe({
-      next: (districts) => {
-        this.districts = districts;
-        console.log('Districts loaded:', districts);
-        this.restoreDistrictIfNeeded();
-      },
-      error: (err) => console.error('Failed to load districts', err)
-    });
+  // === Dropdown Change Handlers ===
+  onSubdivisionChange(subdivisionCode: number): void {
+    if (!subdivisionCode) {
+      this.sitePoliceStations = [];
+      this.siteDetailsForm.get('policeStation')?.reset();
+      return;
+    }
 
-    // Subdivisions
-    this.masterService.getSubdivision().subscribe({
-      next: (subdivisions) => {
-        this.allSubdivisions = subdivisions;
-        console.log('Subdivisions loaded:', subdivisions);
-        this.restoreSubdivisionIfNeeded();
-      },
-      error: (err) => console.error('Failed to load subdivisions', err)
-    });
-
-    // Police Stations
-    this.masterService.getPoliceStations().subscribe({
-      next: (stations) => {
-        this.allPoliceStations = stations;
-        console.log('Police Stations loaded:', stations);
-        this.restorePoliceStationIfNeeded();
-      },
-      error: (err) => console.error('Failed to load police stations', err)
-    });
-
-    // Roads
-    this.masterService.getRoads().subscribe({
-      next: (roads) => {
-        console.log('Roads API Response:', roads);
-        this.allRoads = roads;
-
-        const currentDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
-        if (currentDistrictId) {
-          console.log('Re-filtering roads for already selected district:', currentDistrictId);
-          this.filterRoads(currentDistrictId);
-        }
-
-        this.restoreRoadIfNeeded();
+    this.loadingPoliceStations = true;
+    this.masterService.getPoliceStationBySubDivision(subdivisionCode).subscribe({
+      next: (policeStations) => {
+        this.sitePoliceStations = policeStations;
+        this.loadingPoliceStations = false;
+        this.siteDetailsForm.get('policeStation')?.reset();  // Reset if needed
       },
       error: (err) => {
-        console.error('Failed to load roads', err);
+        console.error('Failed to load police stations', err);
+        this.sitePoliceStations = [];
+        this.loadingPoliceStations = false;
       }
     });
   }
 
-  onDistrictChange(districtId: number) {
-    if (districtId) {
-      this.filterSubdivisions(districtId);
-      this.filterRoads(districtId);
-      this.siteDetailsForm.patchValue({
-        siteSubdivision: null,
-        policeStation: null,
-        roadName: null
-      }, { emitEvent: false });
-    } else {
+  // Update onDistrictChange to fetch BOTH subdivisions and roads
+  onDistrictChange(districtCode: number): void {
+    if (!districtCode) {
       this.siteSubdivisions = [];
-      this.roadNames = [];
       this.sitePoliceStations = [];
-      this.siteDetailsForm.patchValue({
-        siteSubdivision: null,
-        policeStation: null,
-        roadName: null
-      }, { emitEvent: false });
-    }
-  }
-
-  private filterSubdivisions(districtId: number): void {
-    const district = this.districts.find(d => d.id === districtId);
-    if (!district) {
-      this.siteSubdivisions = [];
-      return;
-    }
-
-    this.siteSubdivisions = this.allSubdivisions.filter(s => s.districtCode === district.districtCode);
-
-    const current = this.siteDetailsForm.get('siteSubdivision')?.value;
-    if (current && !this.siteSubdivisions.some(s => s.id === current)) {
-      this.siteDetailsForm.patchValue({ siteSubdivision: null }, { emitEvent: false });
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  private filterRoads(districtId: number): void {
-    if (!districtId) {
       this.roadNames = [];
+      this.siteDetailsForm.get('siteSubdivision')?.reset();
+      this.siteDetailsForm.get('policeStation')?.reset();
+      this.siteDetailsForm.get('roadName')?.reset();
       return;
     }
 
-    const selectedDistrict = this.districts.find(d => d.id === districtId);
-    if (!selectedDistrict) {
-      this.roadNames = [];
-      return;
-    }
+    // Fetch subdivisions
+    this.loadingSubdivisions = true;
+    this.masterService.getSubdivisionsByDistrict(districtCode).subscribe({
+      next: (subdivisions) => {
+        this.siteSubdivisions = subdivisions;
+        this.loadingSubdivisions = false;
+        this.siteDetailsForm.get('siteSubdivision')?.reset();
+        this.sitePoliceStations = [];
+        this.siteDetailsForm.get('policeStation')?.reset();
+      },
+      error: (err) => {
+        console.error('Failed to load subdivisions', err);
+        this.siteSubdivisions = [];
+        this.loadingSubdivisions = false;
+      }
+    });
 
-    console.log('Filtering roads for district:', selectedDistrict.district, '(id:', districtId, ')');
-    console.log('Total roads available:', this.allRoads.length);
-
-    this.roadNames = this.allRoads
-      .filter(road => {
-        let roadDistrictId: number | undefined;
-
-        // Handle multiple possible data structures from the API
-        if ((road as any).districtId !== undefined) {
-          roadDistrictId = (road as any).districtId;
-        } else if (typeof road.district === 'number') {
-          roadDistrictId = road.district;
-        } else if (road.district && typeof road.district === 'object') {
-          roadDistrictId = (road.district as District).id;
-        } else if ((road as any).district_id !== undefined) {
-          roadDistrictId = (road as any).district_id;
-        }
-
-        return roadDistrictId === districtId;
-      })
-      .map(road => road.roadName)
-      .filter((name): name is string => name !== undefined && name !== null && name.trim() !== '')
-      .sort();
-
-    console.log('Filtered road names:', this.roadNames);
-
-    const current = this.siteDetailsForm.get('roadName')?.value;
-    if (current && !this.roadNames.includes(current)) {
-      this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
-    }
-
-    this.cdr.detectChanges();
-  }
-
-  private filterPoliceStations(subdivisionId: number): void {
-    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
-    if (!subdivision) {
-      this.sitePoliceStations = [];
-      return;
-    }
-
-    this.sitePoliceStations = this.allPoliceStations.filter(ps =>
-      ps.subdivisionCode === subdivision.subdivisionCode
-    );
-
-    const current = this.siteDetailsForm.get('policeStation')?.value;
-    if (current && !this.sitePoliceStations.some(p => p.id === current)) {
-      this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
-    }
-
-    this.cdr.detectChanges();
+    // Fetch roads (populate roadNames)
+    this.loadingRoads = true;
+    this.masterService.getRoadsByDistrict(districtCode).subscribe({
+      next: (roads) => {
+        this.roadNames = roads;
+        this.loadingRoads = false;
+        this.siteDetailsForm.get('roadName')?.reset();
+      },
+      error: (err) => {
+        console.error('Failed to load roads', err);
+        this.roadNames = [];
+        this.loadingRoads = false;
+      }
+    });
   }
 
   onDocumentSelect(event: any, docName: string) {
@@ -444,58 +331,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     });
   }
 
-  private restoreDistrictIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    let districtId: number | undefined;
-
-    if (stored.siteDistrict != null) {
-      if (typeof stored.siteDistrict === 'number') {
-        districtId = stored.siteDistrict;
-      } else if (typeof (stored.siteDistrict as any).id === 'number') {
-        districtId = (stored.siteDistrict as any).id;
-      }
-    }
-
-    if (districtId != null && this.districts.some(d => d.id === districtId)) {
-      this.siteDetailsForm.patchValue(
-        { siteDistrict: districtId },
-        { emitEvent: false }
-      );
-
-      setTimeout(() => this.onDistrictChange(districtId!), 0);
-    }
-  }
-
-  private restoreSubdivisionIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.siteSubdivision && this.siteSubdivisions.length > 0) {
-      const valid = this.siteSubdivisions.some(s => s.id === stored.siteSubdivision);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ siteSubdivision: stored.siteSubdivision }, { emitEvent: false });
-      }
-    }
-  }
-
-  private restorePoliceStationIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.policeStation && this.sitePoliceStations.length > 0) {
-      const valid = this.sitePoliceStations.some(p => p.id === stored.policeStation);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ policeStation: stored.policeStation }, { emitEvent: false });
-      }
-    }
-  }
-
-  private restoreRoadIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.roadName && this.roadNames.length > 0) {
-      const valid = this.roadNames.includes(stored.roadName);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ roadName: stored.roadName }, { emitEvent: false });
-      }
-    }
-  }
-
   private clearAllDocumentUrls() {
     this.documents.forEach(doc => {
       if (doc.fileUrl) {
@@ -529,28 +364,27 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   private saveToSessionStorage() {
     const formData: any = this.siteDetailsForm.getRawValue();
 
-    // Store CODES for CodeRelatedField (backend expects codes, not IDs)
+
     if (formData.siteDistrict) {
       const district = this.districts.find(d => d.id === formData.siteDistrict);
       if (district) {
-        formData.site_district_code = district.districtCode;
+        formData.site_district = district.districtCode;
       }
     }
 
     if (formData.siteSubdivision) {
-      const subdivision = this.allSubdivisions.find(s => s.id === formData.siteSubdivision);
+      const subdivision = this.siteSubdivisions.find(s => s.id === formData.siteSubdivision);
       if (subdivision) {
-        formData.site_subdivision_code = subdivision.subdivisionCode;
+        formData.site_subdivision = subdivision.subdivisionCode;
       }
     }
 
     if (formData.policeStation) {
-      const policeStation = this.allPoliceStations.find(p => p.id === formData.policeStation);
+      const policeStation = this.sitePoliceStations.find(p => p.id === formData.policeStation);
       if (policeStation) {
-        formData.police_station_code = policeStation.policeStationCode;
+        formData.police_station = policeStation.policeStationCode;
       }
     }
-
 
     formData.location_category = formData.locationCategory;
     formData.location_name = formData.locationName;
@@ -559,13 +393,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     formData.road_name = formData.roadName;
     formData.pin_code = formData.pinCode;
     formData.construction_type = formData.constructionType;
-
-    // CRITICAL FIX: site_owned must be "Yes" or "No", NOT "Owned" or "Rented"
-    // Store the raw "Yes"/"No" value directly - NO CONVERSION
-    formData.site_owned = formData.siteOwned;  // Keep as "Yes" or "No"
-
-    // ChoiceField: "Yes"/"No"
-    formData.noc_obtained = formData.nocObtained;
+    formData.site_owned = formData.siteOwned; 
+    formData.noc_obtained = formData.nocObtained || 'No';
     formData.trade_license_covered = formData.tradeLicenseCovered;
 
     console.log('Saving Site Details:', formData);
@@ -604,6 +433,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   proceedToNext() {
     if (this.siteDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
+      this.saveToSessionStorage();
       this.next.emit();
     } else {
       Object.keys(this.siteDetailsForm.controls).forEach(key => {

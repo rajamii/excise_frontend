@@ -16,58 +16,59 @@
         <mat-form-field appearance="outline">
           <mat-label>District <span class="required"></span></mat-label>
           <mat-select formControlName="siteDistrict" required (selectionChange)="onDistrictChange($event.value)">
-            @for (district of districts; track district.id) {
-            <mat-option [value]="district.districtCode">
+            <mat-option *ngIf="loadingDistricts" disabled>Loading districts...</mat-option>
+            <mat-option *ngFor="let district of districts; trackBy: trackById" [value]="district.districtCode">
               {{ district.district }}
             </mat-option>
-            }
           </mat-select>
-          @if (siteDetailsForm.controls['siteDistrict'].invalid && siteDetailsForm.controls['siteDistrict'].touched) {
-          <mat-error>{{ getErrorMessage('siteDistrict') }}</mat-error>
-          }
+          <mat-error
+            *ngIf="siteDetailsForm.controls['siteDistrict'].invalid && siteDetailsForm.controls['siteDistrict'].touched">
+            {{ getErrorMessage('siteDistrict') }}
+          </mat-error>
         </mat-form-field>
 
         <!-- SUBDIVISION (filtered by district) -->
         <mat-form-field appearance="outline">
           <mat-label>Site Sub Division <span class="required"></span></mat-label>
-          <mat-select formControlName="siteSubdivision" required>
-            @if (siteSubdivisions.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>No subdivisions available</mat-option>
-            }
-            @if (siteSubdivisions.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>Please select district first</mat-option>
-            }
-            @for (subdivision of siteSubdivisions; track subdivision.id) {
-            <mat-option [value]="subdivision.subdivisionCode">
+          <mat-select formControlName="siteSubdivision" required (selectionChange)="onSubdivisionChange($event.value)"
+            [disabled]="loadingSubdivisions || !siteDetailsForm.get('siteDistrict')?.value">
+            <mat-option *ngIf="loadingSubdivisions" disabled>Loading subdivisions...</mat-option>
+            <mat-option *ngIf="!siteDetailsForm.get('siteDistrict')?.value && !loadingSubdivisions" disabled>Please
+              select district first</mat-option>
+            <mat-option
+              *ngIf="siteSubdivisions.length === 0 && siteDetailsForm.get('siteDistrict')?.value && !loadingSubdivisions"
+              disabled>No subdivisions available</mat-option>
+            <mat-option *ngFor="let subdivision of siteSubdivisions; trackBy: trackById"
+              [value]="subdivision.subdivisionCode">
               {{ subdivision.subdivision }}
             </mat-option>
-            }
           </mat-select>
-          @if (siteDetailsForm.controls['siteSubdivision'].invalid &&
-          siteDetailsForm.controls['siteSubdivision'].touched) {
-          <mat-error>{{ getErrorMessage('siteSubdivision') }}</mat-error>
-          }
+          <mat-error
+            *ngIf="siteDetailsForm.controls['siteSubdivision'].invalid && siteDetailsForm.controls['siteSubdivision'].touched">
+            {{ getErrorMessage('siteSubdivision') }}
+          </mat-error>
         </mat-form-field>
 
         <!-- POLICE STATION (filtered by subdivision) -->
         <mat-form-field appearance="outline">
           <mat-label>Police Station <span class="required"></span></mat-label>
-          <mat-select formControlName="policeStation" required>
-            @if (sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value) {
-            <mat-option disabled>No police stations available</mat-option>
-            }
-            @if (sitePoliceStations.length === 0 && !siteDetailsForm.get('siteSubdivision')?.value) {
-            <mat-option disabled>Please select subdivision first</mat-option>
-            }
-            @for (policeStation of sitePoliceStations; track policeStation.id) {
-            <mat-option [value]="policeStation.policeStationCode">
+          <mat-select formControlName="policeStation" required
+            [disabled]="loadingPoliceStations || !siteDetailsForm.get('siteSubdivision')?.value">
+            <mat-option *ngIf="loadingPoliceStations" disabled>Loading police stations...</mat-option>
+            <mat-option *ngIf="!siteDetailsForm.get('siteSubdivision')?.value && !loadingPoliceStations" disabled>Please
+              select subdivision first</mat-option>
+            <mat-option
+              *ngIf="sitePoliceStations.length === 0 && siteDetailsForm.get('siteSubdivision')?.value && !loadingPoliceStations"
+              disabled>No police stations available</mat-option>
+            <mat-option *ngFor="let policeStation of sitePoliceStations; trackBy: trackById"
+              [value]="policeStation.policeStationCode">
               {{ policeStation.policeStation }}
             </mat-option>
-            }
           </mat-select>
-          @if (siteDetailsForm.controls['policeStation'].invalid && siteDetailsForm.controls['policeStation'].touched) {
-          <mat-error>{{ getErrorMessage('policeStation') }}</mat-error>
-          }
+          <mat-error
+            *ngIf="siteDetailsForm.controls['policeStation'].invalid && siteDetailsForm.controls['policeStation'].touched">
+            {{ getErrorMessage('policeStation') }}
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -126,23 +127,24 @@
           }
         </mat-form-field>
 
-        <!-- ROAD (filtered by district) -->
+        <!-- ROAD NAME (filtered by district) -->
         <mat-form-field appearance="outline">
           <mat-label>Road Name <span class="required"></span></mat-label>
-          <mat-select formControlName="roadName" required>
-            @if (roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>No roads available</mat-option>
-            }
-            @if (roadNames.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
-            <mat-option disabled>Please select district first</mat-option>
-            }
-            @for (road of roadNames; track road) {
-            <mat-option [value]="road">{{ road }}</mat-option>
-            }
+          <mat-select formControlName="roadName" required
+            [disabled]="loadingRoads || !siteDetailsForm.get('siteDistrict')?.value">
+            <mat-option *ngIf="loadingRoads" disabled>Loading roads...</mat-option>
+            <mat-option *ngIf="!siteDetailsForm.get('siteDistrict')?.value && !loadingRoads" disabled>Please select
+              district first</mat-option>
+            <mat-option *ngIf="roadNames.length === 0 && siteDetailsForm.get('siteDistrict')?.value && !loadingRoads"
+              disabled>No roads available</mat-option>
+            <mat-option *ngFor="let roadName of roadNames; trackBy: trackById" [value]="roadName.roadName">
+              {{ roadName.roadName }}
+            </mat-option>
           </mat-select>
-          @if (siteDetailsForm.controls['roadName'].invalid && siteDetailsForm.controls['roadName'].touched) {
-          <mat-error>{{ getErrorMessage('roadName') }}</mat-error>
-          }
+          <mat-error
+            *ngIf="siteDetailsForm.controls['roadName'].invalid && siteDetailsForm.controls['roadName'].touched">
+            {{ getErrorMessage('roadName') }}
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -238,8 +240,8 @@
             <mat-radio-button value="Yes">Yes</mat-radio-button>
             <mat-radio-button value="No">No</mat-radio-button>
           </mat-radio-group>
-          @if (siteDetailsForm.controls['tradeLicenseCovered'].invalid && 
-               siteDetailsForm.controls['tradeLicenseCovered'].touched) {
+          @if (siteDetailsForm.controls['tradeLicenseCovered'].invalid &&
+          siteDetailsForm.controls['tradeLicenseCovered'].touched) {
           <mat-error class="radio-error">{{ getErrorMessage('tradeLicenseCovered') }}</mat-error>
           }
         </div>
@@ -251,51 +253,37 @@
         <h5 class="section-title">Upload Documents</h5>
         <div class="documents-upload-container">
           @for (doc of documents; track doc.name) {
-            <div class="document-upload-row">
-              <div class="document-info">
-                <span class="document-label">
-                  {{ doc.label }}
-                  @if (doc.required) {
-                    <span class="required">*</span>
-                  }
-                </span>
-                <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
-              </div>
-              <div class="document-actions">
-                <input
-                  type="file"
-                  [id]="doc.name"
-                  (change)="onDocumentSelect($event, doc.name)"
-                  [accept]="doc.formats"
-                  style="display: none"
-                />
-                <label
-                  [for]="doc.name"
-                  mat-raised-button
-                  color="primary"
-                  style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;"
-                >
-                  <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
-                  Choose File
-                </label>
-
-                @if (doc.fileUrl) {
-                  <button
-                    mat-icon-button
-                    color="accent"
-                    (click)="viewDocument(doc)"
-                    type="button"
-                    aria-label="View Document"
-                  >
-                    <mat-icon>visibility</mat-icon>
-                  </button>
+          <div class="document-upload-row">
+            <div class="document-info">
+              <span class="document-label">
+                {{ doc.label }}
+                @if (doc.required) {
+                <span class="required">*</span>
                 }
-
-                @if (doc.file) {
-                  <span class="file-name">{{ doc.file.name }}</span>
-                }
-              </div>
+              </span>
+              <span class="document-formats">Supported File Formats: {{ doc.formats }}</span>
             </div>
+            <div class="document-actions">
+              <input type="file" [id]="doc.name" (change)="onDocumentSelect($event, doc.name)" [accept]="doc.formats"
+                style="display: none" />
+              <label [for]="doc.name" mat-raised-button color="primary"
+                style="cursor: pointer; margin: 0; display: inline-flex; align-items: center;">
+                <mat-icon style="margin-right: 4px;">upload_file</mat-icon>
+                Choose File
+              </label>
+
+              @if (doc.fileUrl) {
+              <button mat-icon-button color="accent" (click)="viewDocument(doc)" type="button"
+                aria-label="View Document">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              }
+
+              @if (doc.file) {
+              <span class="file-name">{{ doc.file.name }}</span>
+              }
+            </div>
+          </div>
           }
         </div>
       </div>
