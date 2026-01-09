@@ -220,5 +220,31 @@ export class SupplyChainService {
       })
     );
   }
+
+
+
+  getTransitPermits(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (response?.results) return response.results;
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getTransitPermits error', error);
+        return of([]);
+      })
+    );
+  }
+
+  submitTransitPermit(payload: any): Observable<any> {
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/submit/`;
+    return this.http.post<any>(url, payload).pipe(
+      catchError((error) => {
+        console.error('submitTransitPermit error', error);
+        throw error;
+      })
+    );
+  }
 }
 

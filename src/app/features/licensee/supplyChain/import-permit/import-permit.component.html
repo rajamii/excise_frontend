@@ -6,10 +6,7 @@
     <div class="row justify-content-center">
       <div class="col-12">
         <!-- Main Form Card -->
-        <div
-          class="card shadow-lg border-0 mb-4"
-          style="max-width: 1150px; margin: 0 auto"
-        >
+        <div class="card shadow-lg border-0 mb-4" style="max-width: 1150px; margin: 0 auto">
           <div class="card-header bg-secondary text-white text-center py-3">
             <h4 class="mb-0 fw-bold">Requisition for ENA Import Permit</h4>
           </div>
@@ -24,57 +21,32 @@
               <div class="row mb-4">
                 <div class="col-md-6">
                   <label class="form-label">Our Ref. No:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.refNo"
-                    readonly
-                    placeholder="IBPS/01/EXCISE"
-                    title="Auto-generated"
-                  />
+                  <input type="text" class="form-control" [(ngModel)]="formData.refNo" readonly
+                    placeholder="IBPS/01/EXCISE" title="Auto-generated" />
                   <small class="text-danger" *ngIf="refNoError">{{
                     refNoError
-                  }}</small>
+                    }}</small>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Date:</label>
-                  <input
-                    type="date"
-                    class="form-control"
-                    [(ngModel)]="formData.date"
-                    required
-                  />
+                  <input type="date" class="form-control" [(ngModel)]="formData.date" required />
                 </div>
               </div>
 
               <div class="row mb-4">
                 <div class="col-md-4">
                   <label class="form-label">Quantity:</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [(ngModel)]="formData.quantity"
-                    (ngModelChange)="calculateTotal()"
-                    required
-                  />
+                  <input type="number" class="form-control" [(ngModel)]="formData.quantity"
+                    (ngModelChange)="calculateTotal()" required />
                 </div>
                 <div class="col-md-4">
                   <label class="form-label">No. of Permits:</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [(ngModel)]="formData.numberOfPermits"
-                    (ngModelChange)="calculateTotal()"
-                    required
-                  />
+                  <input type="number" class="form-control" [(ngModel)]="formData.numberOfPermits"
+                    (ngModelChange)="calculateTotal()" required />
                 </div>
-                <div
-                  class="col-md-4 d-flex flex-column align-items-center justify-content-center text-center"
-                >
+                <div class="col-md-4 d-flex flex-column align-items-center justify-content-center text-center">
                   <label class="form-label w-100 text-center">Total BL:</label>
-                  <div
-                    class="form-control-plaintext fw-bold w-100 text-center fs-5 text-primary"
-                  >
+                  <div class="form-control-plaintext fw-bold w-100 text-center fs-5 text-primary">
                     {{ calculatedTotal }}
                   </div>
                 </div>
@@ -84,50 +56,27 @@
                 <div class="col-md-6">
                   <label class="form-label">Bulk Spirit Type:</label>
                   <div class="position-relative">
-                    <select
-                      #spiritTypeSelect
-                      class="form-select"
-                      [(ngModel)]="formData.bulkSpiritType"
-                      (change)="onBulkSpiritTypeChange()"
-                      [disabled]="isLoading"
-                      required
-                    >
+                    <select #spiritTypeSelect class="form-select" [(ngModel)]="formData.bulkSpiritType"
+                      (change)="onBulkSpiritTypeChange()" [disabled]="isLoading" required>
                       <option value="">Select Bulk Spirit Type</option>
-                      <option
-                        *ngFor="let type of bulkSpiritTypes; let i = index"
-                        [value]="type.bulkSpiritKindType "
-                        [attr.data-index]="i"
-                      >
-                        {{ type.bulkSpiritKindType  }}
+                      <option *ngFor="let type of bulkSpiritTypes; let i = index" [value]="type.bulkSpiritKindType "
+                        [attr.data-index]="i">
+                        {{ type.bulkSpiritKindType }}
                       </option>
                     </select>
-                    <div
-                      *ngIf="isLoading"
-                      class="position-absolute top-0 end-0 me-2 mt-2"
-                    >
-                      <div
-                        class="spinner-border spinner-border-sm"
-                        role="status"
-                      >
+                    <div *ngIf="isLoading" class="position-absolute top-0 end-0 me-2 mt-2">
+                      <div class="spinner-border spinner-border-sm" role="status">
                         <span class="visually-hidden">Loading...</span>
                       </div>
                     </div>
                   </div>
-                  <div
-                    *ngIf="!isLoading && bulkSpiritTypes.length === 0"
-                    class="text-danger small mt-1"
-                  >
+                  <div *ngIf="!isLoading && bulkSpiritTypes.length === 0" class="text-danger small mt-1">
                     No bulk spirit types available
                   </div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Strength:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.strengthTo"
-                    readonly
-                  />
+                  <input type="text" class="form-control" [(ngModel)]="formData.strengthTo" readonly />
                 </div>
               </div>
 
@@ -135,44 +84,29 @@
                 <div class="col-md-6">
                   <label class="form-label">Lifted From:</label>
                   <div *ngIf="isLoading" class="d-flex align-items-center mb-2">
-                    <div
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                    >
+                    <div class="spinner-border spinner-border-sm me-2" role="status">
                       <span class="visually-hidden">Loading...</span>
                     </div>
                     <span>Loading distilleries...</span>
                   </div>
 
                   <div *ngIf="!isLoading">
-                    <select
-                      class="form-select"
-                      [(ngModel)]="formData.liftedFrom"
-                      (ngModelChange)="onLiftedFromChange()"
-                      [disabled]="distilleries.length === 0"
-                      [class.is-invalid]="distilleries.length === 0"
-                      required
-                    >
+                    <select class="form-select" [(ngModel)]="formData.liftedFrom" (ngModelChange)="onLiftedFromChange()"
+                      [disabled]="distilleries.length === 0" [class.is-invalid]="distilleries.length === 0" required>
                       <option [ngValue]="''">Select Distillery</option>
-                      <option
-                        *ngFor="let distillery of distilleries"
-                        [value]="distillery.id.toString()"
-                      >
+                      <option *ngFor="let distillery of distilleries" [value]="distillery.id.toString()">
                         {{
-                          distillery.distilleryName 
-                            
+                        distillery.distilleryName
+
                         }}
                         ({{
-                          distillery.distilleryState 
-                            
+                        distillery.distilleryState
+
                         }})
                       </option>
                     </select>
 
-                    <div
-                      *ngIf="distilleries.length === 0"
-                      class="invalid-feedback"
-                    >
+                    <div *ngIf="distilleries.length === 0" class="invalid-feedback">
                       <i class="bi bi-exclamation-triangle-fill me-1"></i>
                       No distilleries available. Please try again later.
                     </div>
@@ -180,31 +114,18 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Via Route:</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [(ngModel)]="formData.viaRoute"
-                    placeholder="Enter route details"
-                    required
-                  />
+                  <input type="text" class="form-control" [(ngModel)]="formData.viaRoute"
+                    placeholder="Enter route details" required />
                 </div>
               </div>
 
               <div class="row mb-4">
                 <div class="col-md-6">
                   <label class="form-label">Checkpost Entry:</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="formData.checkpostEntry"
-                    name="checkpostEntry"
-                    required
-                    [disabled]="isLoading"
-                  >
+                  <select class="form-select" [(ngModel)]="formData.checkpostEntry" name="checkpostEntry" required
+                    [disabled]="isLoading">
                     <option [ngValue]="''">Select Checkpost</option>
-                    <option
-                      *ngFor="let checkpost of checkposts"
-                      [ngValue]="checkpost.checkpostName"
-                    >
+                    <option *ngFor="let checkpost of checkposts" [ngValue]="checkpost.checkpostName">
                       {{ checkpost.checkpostName }}
                     </option>
                   </select>
@@ -214,18 +135,10 @@
                 </div>
                 <div class="col-md-6">
                   <label class="form-label">Choose Purpose:</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="formData.purpose"
-                    name="purpose"
-                    required
-                    [disabled]="isLoading"
-                  >
+                  <select class="form-select" [(ngModel)]="formData.purpose" name="purpose" required
+                    [disabled]="isLoading">
                     <option [ngValue]="''">Select Purpose</option>
-                    <option
-                      *ngFor="let purpose of purposes"
-                      [ngValue]="purpose.purposeName"
-                    >
+                    <option *ngFor="let purpose of purposes" [ngValue]="purpose.purposeName">
                       {{ purpose.purposeName }}
                     </option>
                   </select>
@@ -255,20 +168,12 @@
         </div>
 
         <!-- Letter Preview Card -->
-        <div
-          id="importPermitPrintSection"
-          class="main card shadow-sm border-0 printable-content"
-          style="max-width: 1150px; margin: 0 auto"
-        >
+        <div id="importPermitPrintSection" class="main card shadow-sm border-0 printable-content"
+          style="max-width: 1150px; margin: 0 auto">
           <div class="letter-header text-center fw-bold mb-3 fs-5">
-            <div
-              class="d-flex align-items-center justify-content-center gap-3 mb-2"
-            >
-              <img
-                src="assets/images/header/Seal_of_Sikkim_greyscale.png"
-                alt="Department Seal"
-                style="height: 60px; width: auto"
-              />
+            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+              <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+                style="height: 60px; width: auto" />
               <span>DISTILLERS OF WHISKY, BRANDY, RUM, GIN & LIQUORS</span>
             </div>
           </div>
@@ -282,7 +187,7 @@
                 <strong>Date:</strong>
                 <span class="fw-bold">{{
                   formData.date | date : "dd-MM-yyyy"
-                }}</span>
+                  }}</span>
               </div>
             </div>
 
@@ -300,12 +205,11 @@
               <span class="fw-bold">{{ formData.numberOfPermits }}</span> import
               permits for <span class="fw-bold">{{ calculatedTotal }}</span> BL
               Grain ENA, having strength of
-              <span class="fw-bold">{{ bulkSpiritKindType }}</span
-              >° to <span class="fw-bold">{{ formData.strengthTo }}</span
-              >°, to be lifted from
+              <span class="fw-bold">{{ bulkSpiritKindType }}</span>° to <span class="fw-bold">{{ formData.strengthTo
+                }}</span>°, to be lifted from
               <span class="fw-bold">{{
                 getDistilleryName(formData.liftedFrom)
-              }}</span>
+                }}</span>
             </p>
 
             <p>

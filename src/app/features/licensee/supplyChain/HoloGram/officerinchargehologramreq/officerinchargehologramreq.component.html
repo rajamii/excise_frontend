@@ -12,7 +12,8 @@
                     <p class="register-subtitle">Track and manage all hologram requests from supply chain users</p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-outline-primary me-2" (click)="refreshRequests()" title="Refresh to load latest requests">
+                    <button class="btn btn-outline-primary me-2" (click)="refreshRequests()"
+                        title="Refresh to load latest requests">
                         <i class="bi bi-arrow-clockwise me-2"></i>
                         Refresh Requests
                     </button>
@@ -20,7 +21,8 @@
                         <i class="bi bi-plus-square me-2"></i>
                         Add Test Request
                     </button>
-                    <button class="btn btn-outline-warning me-2" (click)="showStorageContents()" title="Show localStorage contents">
+                    <button class="btn btn-outline-warning me-2" (click)="showStorageContents()"
+                        title="Show localStorage contents">
                         <i class="bi bi-database me-2"></i>
                         Debug Storage
                     </button>
@@ -28,7 +30,8 @@
                         <i class="bi bi-trash me-2"></i>
                         Clear Test Data
                     </button>
-                    <button class="btn btn-outline-success me-2" (click)="addSampleInventory()" title="Add sample inventory for testing">
+                    <button class="btn btn-outline-success me-2" (click)="addSampleInventory()"
+                        title="Add sample inventory for testing">
                         <i class="bi bi-plus-circle me-2"></i>
                         Add Sample Inventory
                     </button>
@@ -239,8 +242,7 @@
                                     </div>
                                 </td>
                                 <td class="type">
-                                    <span class="badge" 
-                                        [class.bg-success]="request.hologramType === 'LOCAL'"
+                                    <span class="badge" [class.bg-success]="request.hologramType === 'LOCAL'"
                                         [class.bg-primary]="request.hologramType === 'EXPORT'"
                                         [class.bg-warning]="request.hologramType === 'DEFENCE'"
                                         [class.text-white]="request.hologramType === 'LOCAL' || request.hologramType === 'EXPORT'"
@@ -254,44 +256,41 @@
                                         <span class="qty-label">units</span>
                                     </div>
                                 </td>
-                                <td class="status">
-                                    <span class="status-badge" 
-                                        [class.bg-warning-subtle]="request.status === 'PENDING'"
-                                        [class.bg-info-subtle]="request.status === 'UNDER_PROCESS'"
-                                        [class.bg-success-subtle]="request.status === 'APPROVED' || request.status === 'COMPLETED'"
-                                        [class.bg-danger-subtle]="request.status === 'REJECTED'">
-                                        <i [class]="getStatusIcon(request.status)"></i>
-                                        {{ request.status === 'UNDER_PROCESS' ? 'UNDER PROCESS' : request.status }}
-                                    </span>
-                                </td>
+                                <span class="status-badge" [ngClass]="getStatusClass(request.status)">
+                                    <i [class]="getStatusIcon(request.status)" class="me-1"></i>
+                                    {{ request.status }}
+                                </span>
                                 <td class="actions">
                                     <div class="action-buttons">
                                         <!-- Show view details button only for APPROVED requests (has allocation data) -->
-                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view" (click)="viewRequestDetails(request)"
-                                            title="View Allocation Details">
+                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view"
+                                            (click)="viewRequestDetails(request)" title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <!-- Show approve/reject buttons only for PENDING status -->
-                                        <button *ngIf="request.status === 'PENDING'" class="btn-action approve"
-                                            (click)="approveRequest(request)" title="Approve Request">
+                                        <!-- Show approve/reject buttons based on Dynamic Actions -->
+                                        <button *ngIf="canIssue(request)" class="btn-action approve"
+                                            (click)="approveRequest(request)" title="Confirm Allocation & Issue">
                                             <i class="bi bi-check-circle"></i>
                                         </button>
-                                        <button *ngIf="request.status === 'PENDING'" class="btn-action reject"
+                                        <button *ngIf="canReject(request)" class="btn-action reject"
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
+                                        <!-- Show status badge for APPROVED/COMPLETED -->
                                         <!-- Show status badge for APPROVED -->
                                         <span *ngIf="request.status === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Approved
                                         </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
-                                        <span *ngIf="request.status === 'UNDER_PROCESS'" class="badge bg-info text-white">
+                                        <span *ngIf="request.status === 'UNDER_PROCESS'"
+                                            class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
                                             Under Process
                                         </span>
                                         <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="request.status === 'COMPLETED'" class="badge bg-success text-white">
+                                        <span *ngIf="request.status === 'COMPLETED'"
+                                            class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
                                             Completed
                                         </span>
@@ -390,7 +389,8 @@
 </div>
 
 <!-- Allocation Details Modal (Only for Approved Requests) -->
-<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
+<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'"
+    style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
     <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">
             <div class="modal-header bg-success text-white">
@@ -434,7 +434,8 @@
                                 <tr>
                                     <td colspan="3" class="text-end fw-bold">Total Allocated:</td>
                                     <td class="text-end fw-bold text-success">
-                                        {{ getTotalAllocatedQuantityFromAllocations(selectedRequest.allocations) | number }}
+                                        {{ getTotalAllocatedQuantityFromAllocations(selectedRequest.allocations) |
+                                        number }}
                                         <span class="text-muted small ms-1">units</span>
                                     </td>
                                 </tr>
@@ -442,7 +443,8 @@
                         </table>
                     </div>
                 </div>
-                <div *ngIf="!selectedRequest.allocations || selectedRequest.allocations.length === 0" class="text-center py-4">
+                <div *ngIf="!selectedRequest.allocations || selectedRequest.allocations.length === 0"
+                    class="text-center py-4">
                     <i class="bi bi-inbox display-4 text-muted"></i>
                     <p class="text-muted mt-3">No allocation details available for this request.</p>
                 </div>
@@ -458,7 +460,8 @@
 </div>
 
 <!-- Hologram Allocation Modal -->
-<div class="modal fade show" *ngIf="showAllocationModal" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeAllocationModal()">
+<div class="modal fade show" *ngIf="showAllocationModal"
+    style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeAllocationModal()">
     <div class="modal-dialog modal-xl" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">
             <div class="modal-header bg-primary text-white">
@@ -471,21 +474,28 @@
             <div class="modal-body">
                 <div *ngIf="allocationResult">
                     <!-- Prominent Availability Status Banner -->
-                    <div class="alert mb-4" [class.alert-success]="allocationResult.canAllocate" [class.alert-danger]="!allocationResult.canAllocate">
+                    <div class="alert mb-4" [class.alert-success]="allocationResult.canAllocate"
+                        [class.alert-danger]="!allocationResult.canAllocate">
                         <div class="d-flex align-items-center justify-content-center">
-                            <i class="bi me-3" [class.bi-check-circle-fill]="allocationResult.canAllocate" [class.bi-x-circle-fill]="!allocationResult.canAllocate" style="font-size: 2rem;"></i>
+                            <i class="bi me-3" [class.bi-check-circle-fill]="allocationResult.canAllocate"
+                                [class.bi-x-circle-fill]="!allocationResult.canAllocate" style="font-size: 2rem;"></i>
                             <div class="text-center">
-                                <h4 class="mb-1" [class.text-success]="allocationResult.canAllocate" [class.text-danger]="!allocationResult.canAllocate">
+                                <h4 class="mb-1" [class.text-success]="allocationResult.canAllocate"
+                                    [class.text-danger]="!allocationResult.canAllocate">
                                     <strong *ngIf="allocationResult.canAllocate">✓ INVENTORY AVAILABLE</strong>
                                     <strong *ngIf="!allocationResult.canAllocate">✗ INSUFFICIENT INVENTORY</strong>
                                 </h4>
                                 <p class="mb-0">
                                     <span *ngIf="allocationResult.canAllocate">
-                                        Ready to allocate {{ getTotalAllocatedQuantity() | number }} holograms from {{ allocationResult.allocations.length }} cartoon(s)
+                                        Ready to allocate {{ getTotalAllocatedQuantity() | number }} holograms from {{
+                                        allocationResult.allocations.length }} cartoon(s)
                                     </span>
                                     <span *ngIf="!allocationResult.canAllocate">
-                                        <strong>{{ selectedRequest?.hologramType }}</strong> type: Only {{ allocationResult.totalAvailable | number }} holograms available. 
-                                        You need <strong class="text-danger">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} more</strong> {{ selectedRequest?.hologramType }} holograms.
+                                        <strong>{{ selectedRequest?.hologramType }}</strong> type: Only {{
+                                        allocationResult.totalAvailable | number }} holograms available.
+                                        You need <strong class="text-danger">{{ (selectedRequest?.requestedQuantity ||
+                                            0) - allocationResult.totalAvailable | number }} more</strong> {{
+                                        selectedRequest?.hologramType }} holograms.
                                     </span>
                                 </p>
                             </div>
@@ -506,7 +516,8 @@
                                     <div class="row g-2">
                                         <div class="col-6">
                                             <strong>Brand:</strong><br>
-                                            <span class="text-muted">{{ selectedRequest?.brandDetails?.brandName }}</span>
+                                            <span class="text-muted">{{ selectedRequest?.brandDetails?.brandName
+                                                }}</span>
                                         </div>
                                         <div class="col-6">
                                             <strong>Type:</strong><br>
@@ -514,165 +525,176 @@
                                         </div>
                                         <div class="col-6">
                                             <strong>Requested:</strong><br>
-                                            <span class="text-primary fw-bold">{{ selectedRequest?.requestedQuantity | number }}</span>
+                                            <span class="text-primary fw-bold">{{ selectedRequest?.requestedQuantity |
+                                                number }}</span>
                                         </div>
                                         <div class="col-6">
                                             <strong>Available:</strong><br>
-                                            <span class="text-success fw-bold">{{ allocationResult.totalAvailable | number }}</span>
+                                            <span class="text-success fw-bold">{{ allocationResult.totalAvailable |
+                                                number }}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="card" [class.border-success]="allocationResult.canAllocate" [class.border-danger]="!allocationResult.canAllocate">
-                                <div class="card-header" [class.bg-success]="allocationResult.canAllocate" [class.bg-danger]="!allocationResult.canAllocate" class="text-white">
+                            <div class="card" [class.border-success]="allocationResult.canAllocate"
+                                [class.border-danger]="!allocationResult.canAllocate">
+                                <div class="card-header" [class.bg-success]="allocationResult.canAllocate"
+                                    [class.bg-danger]="!allocationResult.canAllocate" class="text-white">
                                     <h6 class="mb-0">
-                                        <i class="bi" [class.bi-check-circle]="allocationResult.canAllocate" [class.bi-x-circle]="!allocationResult.canAllocate" class="me-2"></i>
+                                        <i class="bi" [class.bi-check-circle]="allocationResult.canAllocate"
+                                            [class.bi-x-circle]="!allocationResult.canAllocate" class="me-2"></i>
                                         Inventory Status
                                     </h6>
                                 </div>
                                 <div class="card-body">
                                     <!-- Clear Availability Status -->
-                                    <div class="alert" [class.alert-success]="allocationResult.canAllocate" [class.alert-danger]="!allocationResult.canAllocate" class="mb-3"></div>
-                                        <div class="d-flex align-items-center">
-                                            <i class="bi" [class.bi-check-circle-fill]="allocationResult.canAllocate" [class.bi-x-circle-fill]="!allocationResult.canAllocate" class="me-2 fs-4"></i>
-                                            <div>
-                                                <strong *ngIf="allocationResult.canAllocate" class="text-success">✓ AVAILABLE</strong>
-                                                <strong *ngIf="!allocationResult.canAllocate" class="text-danger">✗ NOT AVAILABLE</strong>
-                                                <br>
-                                                <small>{{ allocationResult.message }}</small>
-                                            </div>
+                                    <div class="alert" [class.alert-success]="allocationResult.canAllocate"
+                                        [class.alert-danger]="!allocationResult.canAllocate" class="mb-3"></div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi" [class.bi-check-circle-fill]="allocationResult.canAllocate"
+                                            [class.bi-x-circle-fill]="!allocationResult.canAllocate"
+                                            class="me-2 fs-4"></i>
+                                        <div>
+                                            <strong *ngIf="allocationResult.canAllocate" class="text-success">✓
+                                                AVAILABLE</strong>
+                                            <strong *ngIf="!allocationResult.canAllocate" class="text-danger">✗ NOT
+                                                AVAILABLE</strong>
+                                            <br>
+                                            <small>{{ allocationResult.message }}</small>
                                         </div>
                                     </div>
-                                    
-                                    <div *ngIf="allocationResult.canAllocate">
-                                        <strong>Cartoons Used:</strong> {{ allocationResult.allocations.length }}<br>
-                                        <strong>Total Allocated:</strong> <span class="text-success fw-bold">{{ getTotalAllocatedQuantity() | number }}</span>
-                                    </div>
-                                    <div *ngIf="!allocationResult.canAllocate">
-                                        <strong>{{ selectedRequest?.hologramType }} Available:</strong> <span class="text-warning">{{ allocationResult.totalAvailable | number }}</span><br>
-                                        <strong>{{ selectedRequest?.hologramType }} Shortage:</strong> <span class="text-danger fw-bold">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} holograms</span>
-                                    </div>
+                                </div>
+
+                                <div *ngIf="allocationResult.canAllocate">
+                                    <strong>Cartoons Used:</strong> {{ allocationResult.allocations.length }}<br>
+                                    <strong>Total Allocated:</strong> <span class="text-success fw-bold">{{
+                                        getTotalAllocatedQuantity() | number }}</span>
+                                </div>
+                                <div *ngIf="!allocationResult.canAllocate">
+                                    <strong>{{ selectedRequest?.hologramType }} Available:</strong> <span
+                                        class="text-warning">{{ allocationResult.totalAvailable | number }}</span><br>
+                                    <strong>{{ selectedRequest?.hologramType }} Shortage:</strong> <span
+                                        class="text-danger fw-bold">{{ (selectedRequest?.requestedQuantity || 0) -
+                                        allocationResult.totalAvailable | number }} holograms</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Allocation Details -->
-                    <div *ngIf="allocationResult?.canAllocate">
-                        <h6 class="mb-3">
-                            <i class="bi bi-list-check me-2"></i>
-                            Hologram Allocation Details (FIFO - Oldest First)
-                        </h6>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead class="table-success">
-                                    <tr>
-                                        <th>Cartoon Number</th>
-                                        <th>Serial Range</th>
-                                        <th>Quantity</th>
-                                        <th>Remaining in Cartoon</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let allocation of allocationResult?.allocations || []; let i = index">
-                                        <td>
-                                            <span class="fw-bold text-primary">{{ allocation.cartoonNumber }}</span>
-                                            <br>
-                                            <small class="text-muted">
-                                                <i class="bi bi-clock me-1"></i>
-                                                Oldest Available
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <span class="font-monospace small">
-                                                {{ allocation.fromSerial }} - {{ allocation.toSerial }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="input-group input-group-sm" style="width: 120px;">
-                                                <input type="number" class="form-control" 
-                                                       [value]="allocation.quantity"
-                                                       (input)="onAllocationQuantityChange(allocation, $event)"
-                                                       min="1" 
-                                                       [max]="allocation.quantity + allocation.remainingInCartoon">
-                                                <span class="input-group-text">units</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted">{{ allocation.remainingInCartoon | number }}</span>
-                                            <div class="progress mt-1" style="height: 8px;">
-                                                <div class="progress-bar bg-warning" 
-                                                     [style.width.%]="(allocation.quantity / (allocation.quantity + allocation.remainingInCartoon)) * 100">
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-outline-info btn-sm" 
-                                                    title="View cartoon details">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                <tfoot class="table-light">
-                                    <tr>
-                                        <td colspan="2" class="fw-bold">Total Allocation:</td>
-                                        <td class="fw-bold text-success">
-                                            {{ getTotalAllocatedQuantity() | number }} units
-                                        </td>
-                                        <td colspan="2"></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                <!-- Allocation Details -->
+                <div *ngIf="allocationResult?.canAllocate">
+                    <h6 class="mb-3">
+                        <i class="bi bi-list-check me-2"></i>
+                        Hologram Allocation Details (FIFO - Oldest First)
+                    </h6>
 
-                        <!-- Comments Section -->
-                        <div class="mt-4">
-                            <label class="form-label fw-bold">Approval Comments (Optional)</label>
-                            <textarea class="form-control" rows="3" 
-                                      [(ngModel)]="approvalComments"
-                                      placeholder="Enter any comments for this hologram allocation..."></textarea>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>Cartoon Number</th>
+                                    <th>Serial Range</th>
+                                    <th>Quantity</th>
+                                    <th>Remaining in Cartoon</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let allocation of allocationResult?.allocations || []; let i = index">
+                                    <td>
+                                        <span class="fw-bold text-primary">{{ allocation.cartoonNumber }}</span>
+                                        <br>
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock me-1"></i>
+                                            Oldest Available
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <span class="font-monospace small">
+                                            {{ allocation.fromSerial }} - {{ allocation.toSerial }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm" style="width: 120px;">
+                                            <input type="number" class="form-control" [value]="allocation.quantity"
+                                                (input)="onAllocationQuantityChange(allocation, $event)" min="1"
+                                                [max]="allocation.quantity + allocation.remainingInCartoon">
+                                            <span class="input-group-text">units</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ allocation.remainingInCartoon | number }}</span>
+                                        <div class="progress mt-1" style="height: 8px;">
+                                            <div class="progress-bar bg-warning"
+                                                [style.width.%]="(allocation.quantity / (allocation.quantity + allocation.remainingInCartoon)) * 100">
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-outline-info btn-sm" title="View cartoon details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="2" class="fw-bold">Total Allocation:</td>
+                                    <td class="fw-bold text-success">
+                                        {{ getTotalAllocatedQuantity() | number }} units
+                                    </td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
 
-                    <!-- Insufficient Inventory Message -->
-                    <div *ngIf="!allocationResult?.canAllocate" class="alert alert-danger"></div>
-                        <h6 class="alert-heading">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Insufficient Hologram Inventory
-                        </h6>
-                        <p class="mb-2">{{ allocationResult?.message }}</p>
-                        <hr>
-                        <div class="mb-0">
-                            <strong>Suggestions:</strong>
-                            <ul class="mb-0">
-                                <li>Reduce the requested quantity to {{ allocationResult?.totalAvailable | number }} or less</li>
-                                <li>Wait for new hologram arrivals</li>
-                                <li>Check if holograms are available in other types</li>
-                            </ul>
-                        </div>
+                    <!-- Comments Section -->
+                    <div class="mt-4">
+                        <label class="form-label fw-bold">Approval Comments (Optional)</label>
+                        <textarea class="form-control" rows="3" [(ngModel)]="approvalComments"
+                            placeholder="Enter any comments for this hologram allocation..."></textarea>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
 
-                <button type="button" class="btn btn-secondary me-2" (click)="closeAllocationModal()">
-                    <i class="bi bi-x-lg me-1"></i>
-                    Cancel
-                </button>
-                <button *ngIf="allocationResult?.canAllocate" type="button" class="btn btn-success" 
-                        (click)="confirmHologramAllocation()">
-                    <i class="bi bi-check-circle me-1"></i>
-                    Confirm Allocation & Approve Request
-                </button>
-                <button *ngIf="!allocationResult?.canAllocate" type="button" class="btn btn-warning" 
-                        (click)="forceApproveWithoutInventory()">
-                    <i class="bi bi-exclamation-triangle me-1"></i>
-                    Force Approve (Test Mode)
-                </button>
+                <!-- Insufficient Inventory Message -->
+                <div *ngIf="!allocationResult?.canAllocate" class="alert alert-danger"></div>
+                <h6 class="alert-heading">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Insufficient Hologram Inventory
+                </h6>
+                <p class="mb-2">{{ allocationResult?.message }}</p>
+                <hr>
+                <div class="mb-0">
+                    <strong>Suggestions:</strong>
+                    <ul class="mb-0">
+                        <li>Reduce the requested quantity to {{ allocationResult?.totalAvailable | number }} or less
+                        </li>
+                        <li>Wait for new hologram arrivals</li>
+                        <li>Check if holograms are available in other types</li>
+                    </ul>
+                </div>
             </div>
         </div>
+    </div>
+    <div class="modal-footer">
+
+        <button type="button" class="btn btn-secondary me-2" (click)="closeAllocationModal()">
+            <i class="bi bi-x-lg me-1"></i>
+            Cancel
+        </button>
+        <button *ngIf="allocationResult?.canAllocate" type="button" class="btn btn-success"
+            (click)="confirmHologramAllocation()">
+            <i class="bi bi-check-circle me-1"></i>
+            Confirm Allocation & Issue
+        </button>
+        <button *ngIf="!allocationResult?.canAllocate" type="button" class="btn btn-warning"
+            (click)="forceApproveWithoutInventory()">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Force Approve (Test Mode)
+        </button>
+    </div>
+</div>

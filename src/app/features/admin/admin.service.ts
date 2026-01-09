@@ -52,13 +52,36 @@ export class AdminService {
   // ========================== ROLE MANAGEMENT ==========================
 
   // Adds a new role record
-  addRole(district: Role): Observable<any> {
-    return this.http.post(`${this.usersUrl}/roles/create/`, district);
+  addRole(role: Role): Observable<any> {
+    const payload = {
+      name: role.name,
+      can_view: role.canView,
+      can_add: role.canAdd,
+      can_update: role.canUpdate,
+      can_delete: role.canDelete,
+      precedence: role.rolePrecedence,
+      // Include other fields if necessary
+    };
+    return this.http.post(`${this.usersUrl}/roles/create/`, payload);
   }
 
   // Updates details of an existing role by ID
   updateRole(id: number, changes: Partial<Role>): Observable<Role> {
-    return this.http.put<Role>(`${this.usersUrl}/roles/${id}/update/`, changes);
+    const payload: any = { ...changes };
+    if (changes.canView) payload.can_view = changes.canView;
+    if (changes.canAdd) payload.can_add = changes.canAdd;
+    if (changes.canUpdate) payload.can_update = changes.canUpdate;
+    if (changes.canDelete) payload.can_delete = changes.canDelete;
+    if (changes.rolePrecedence !== undefined) payload.precedence = changes.rolePrecedence;
+
+    // Cleanup camelCase keys if they are still present (optional but cleaner)
+    delete payload.canView;
+    delete payload.canAdd;
+    delete payload.canUpdate;
+    delete payload.canDelete;
+    delete payload.rolePrecedence;
+
+    return this.http.put<Role>(`${this.usersUrl}/roles/${id}/update/`, payload);
   }
 
   // Deletes a district by ID

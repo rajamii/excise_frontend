@@ -77,7 +77,6 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   distilleries: Distillery[] = [];
   checkposts: Checkpost[] = [];
   purposes: Purpose[] = [];
-  statuses: any[] = [];
   isLoading = false;
 
   constructor(
@@ -99,7 +98,6 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
       this.loadDistilleries();
       this.fetchCheckposts();
       this.fetchPurposes();
-      this.fetchStatuses();
     }
   }
 
@@ -145,17 +143,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     });
   }
 
-  fetchStatuses(): void {
-    this.SupplyChainService.getStatuses().subscribe({
-      next: (data) => {
-        this.statuses = data || [];
-        console.log('Fetched statuses:', this.statuses); 
-      },
-      error: (err) => {
-        console.error('Error fetching statuses:', err);
-      }
-    });
-  }
+  // fetchStatuses removed (Legacy)
 
   private loadBulkSpiritTypes(): void {
     this.isLoading = true;
@@ -449,7 +437,6 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   }
 
   getStatusId(code: string): string {
-    const status = this.statuses.find(s => s.statusCode === code || s.status_code === code);
-    return status ? status.statusCode || status.status_code : code;
+    return code;
   }
 }

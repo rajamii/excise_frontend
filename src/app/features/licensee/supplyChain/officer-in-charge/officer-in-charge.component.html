@@ -44,17 +44,27 @@
           </button>
         </li>
         <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-requests'"
+            [class.text-danger]="activeTab === 'hologram-requests'" (click)="setActiveTab('hologram-requests')"
+            type="button">
+            <i class="bi bi-file-earmark-text me-2"></i> HOLOGRAM REQUESTS
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-register'"
-            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')" type="button">
+            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')"
+            type="button">
             <i class="bi bi-shield-plus me-2"></i> HOLOGRAM REGISTER
           </button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-daily-entry'"
-            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')" type="button">
+            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')"
+            type="button">
             <i class="bi bi-calendar-check me-2"></i> HOLOGRAM DAILY ENTRY
           </button>
         </li>
+
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'register'"
             [class.text-danger]="activeTab === 'register'" (click)="setActiveTab('register')" type="button">
@@ -374,10 +384,12 @@
                       <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
                         <i class="bi bi-x-lg"></i>
                       </button>
-                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)"
+                        [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-check-circle"></i>
                       </button>
-                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)"
+                        [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-x-circle"></i>
                       </button>
                     </div>
@@ -390,18 +402,19 @@
       </div>
     </div>
 
-    <!-- Hologram Register Tab -->
-    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'" [class.active]="activeTab === 'hologram-register'">
+    <!-- Hologram Requests Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-requests'"
+      [class.active]="activeTab === 'hologram-requests'">
       <div class="bg-white">
-        <!-- Show Hologram Requests Component if activated -->
-        <div *ngIf="showHologramRequests">
-          <app-officerinchargehologramreq (backToRegister)="closeHologramRequests()"></app-officerinchargehologramreq>
-        </div>
-        
-        <!-- Show Hologram Details Component by default -->
-        <div *ngIf="!showHologramRequests">
-          <app-hologramdetails (hologramRequestsClicked)="openHologramRequests()"></app-hologramdetails>
-        </div>
+        <app-officerinchargehologramreq></app-officerinchargehologramreq>
+      </div>
+    </div>
+
+    <!-- Hologram Register Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'"
+      [class.active]="activeTab === 'hologram-register'">
+      <div class="bg-white">
+        <app-hologramdetails></app-hologramdetails>
       </div>
     </div>
 
@@ -485,7 +498,7 @@
               Daily Hologram Manufacturing Register - Officer In-Charge
             </h6>
             <p class="mb-0">
-              <strong>Purpose:</strong> Manually enter production details for approved hologram requests. 
+              <strong>Purpose:</strong> Manually enter production details for approved hologram requests.
               Record which brands were manufactured, quantities produced, and any wastage/damage.
               This register tracks the actual usage of allocated holograms in production.
             </p>
@@ -496,7 +509,8 @@
     </div>
 
     <!-- Hologram Daily Entry Tab -->
-    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'" [class.active]="activeTab === 'hologram-daily-entry'">
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'"
+      [class.active]="activeTab === 'hologram-daily-entry'">
       <div class="bg-light p-3 border-bottom">
         <div class="container-fluid">
           <div class="alert alert-primary mb-0">
@@ -505,8 +519,8 @@
               Hologram Daily Entry Register - Officer In-Charge
             </h6>
             <p class="mb-0">
-              <strong>Purpose:</strong> Daily entry register for hologram usage tracking. 
-              Record daily hologram consumption, production details, and maintain accurate records 
+              <strong>Purpose:</strong> Daily entry register for hologram usage tracking.
+              Record daily hologram consumption, production details, and maintain accurate records
               of hologram utilization in the manufacturing process.
             </p>
           </div>
@@ -514,6 +528,8 @@
       </div>
       <app-oicdailyhologramregister></app-oicdailyhologramregister>
     </div>
+
+
   </div>
 </div>
 

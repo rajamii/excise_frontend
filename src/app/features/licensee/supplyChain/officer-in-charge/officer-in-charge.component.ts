@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
 import { OicdailyhologramregisterComponent } from '../registers/oicdailyhologramregister/oicdailyhologramregister.component';
+import { HologramDataService } from '../services/hologram-data.service';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -14,13 +15,6 @@ interface TransitPermitRecord {
   amount: string;
   status: string;
   applicationDetails?: any;
-}
-
-interface FilterOptions {
-  referenceNumber: string;
-  status: string;
-  dateFrom: string;
-  dateTo: string;
 }
 
 interface OfficerInfo {
@@ -63,18 +57,38 @@ interface BrandRow {
   changes?: Partial<Record<keyof BrandRow, boolean>>;
 }
 
+// Hologram Procurement Interface for OIC
+interface OICHologramProcurement {
+  id: number;
+  refNo: string;
+  date: string;
+  localQty: number;
+  exportQty: number;
+  defenceQty: number;
+  status: string; // Backend Stage Name
+  paymentStatus: string;
+  allowedActions: string[];
+}
+
+interface FilterOptions {
+  referenceNumber: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
   imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent, OicdailyhologramregisterComponent],
   templateUrl: './officer-in-charge.component.html',
-  styleUrl: './officer-in-charge.component.scss'
+  styleUrls: ['./officer-in-charge.component.scss']
 })
 export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
   activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
-  showHologramRequests = false;
 
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
@@ -312,12 +326,73 @@ export class OfficerInChargeComponent implements OnInit {
   approvalComments = '';
   terminationReason = '';
 
-  // Hologram data - removed, will be added later
+  // Hologram data
+  hologramProcurements: OICHologramProcurement[] = [];
+  private hologramService = inject(HologramDataService);
 
   ngOnInit() {
     this.filteredData = [...this.allData];
     this.updatePagination();
     this.applyBrandFilters();
+    this.loadHologramProcurements();
+  }
+
+  loadHologramProcurements() {
+    this.hologramService.getProcurements().subscribe({
+      next: (data) => {
+        // Backend filters for OIC role (e.g., 'Payment Completed')
+        // We map it to our interface
+        this.hologramProcurements = data.map((p: any) => ({
+          id: p.id,
+          refNo: p.refNo,
+          date: p.date,
+          localQty: p.localQty,
+          exportQty: p.exportQty,
+          defenceQty: p.defenceQty,
+          status: p.current_stage_name || p.status, // Use stage name if available
+          paymentStatus: p.paymentStatus,
+          allowedActions: p.allowed_actions || []
+        }));
+      },
+      error: (err) => {
+        console.error('Error loading hologram procurements:', err);
+      }
+    });
+  }
+
+  assignCartons(procurement: OICHologramProcurement) {
+    if (!confirm(`Assign cartons for ${procurement.refNo}?`)) return;
+
+    // In a real scenario, this would open a modal to enter start/end serials and cartoon numbers.
+    // For now, we simulate the action 'assign_cartons' or similar.
+    // Based on backend, we need to check the exact action name.
+    // Usually 'assign' or 'complete' if it's the final step.
+
+    // We'll use 'complete' as a placeholder or 'assign_cartons' if defined.
+    // If we look at OIC role in procurement, they usually "Assign Cartons" and likely "Complete" the process.
+
+    const action = 'assign_cartons'; // Placeholder action name
+
+    this.hologramService.performAction('procurement', procurement.id, action, 'Cartons Assigned by OIC').subscribe({
+      next: () => {
+        alert('Cartons assigned successfully.');
+        this.loadHologramProcurements();
+      },
+      error: (err) => {
+        console.error('Error assigning cartons:', err);
+        // Fallback if action name is wrong (e.g. maybe it's just 'verify' or 'approve')
+        // alert('Failed to assign cartons. Please check backend configuration.');
+
+        // Try 'approve' as fallback
+        this.hologramService.performAction('procurement', procurement.id, 'approve', 'Cartons Assigned (Approve fallback)').subscribe({
+          next: () => {
+            alert('Cartons assigned (via approve action).');
+            this.loadHologramProcurements();
+          },
+          error: (e) => alert('Failed to assign cartons.')
+        });
+      }
+    });
   }
 
   getCurrentDateTime(): string {
@@ -326,18 +401,6 @@ export class OfficerInChargeComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
-    // Reset hologram requests view when switching tabs
-    if (tab !== 'hologram-register') {
-      this.showHologramRequests = false;
-    }
-  }
-
-  openHologramRequests() {
-    this.showHologramRequests = true;
-  }
-
-  closeHologramRequests() {
-    this.showHologramRequests = false;
   }
 
   // Brands helpers

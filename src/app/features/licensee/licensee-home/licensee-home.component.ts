@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterModule, RouterOutlet } from '@angular/router';
 
 import { MatDialog } from '@angular/material/dialog';
@@ -10,6 +10,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Account } from '../../../core/models/account.model';
 import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
+import { SupplyChainProfileService } from '../../../core/services/supply-chain-profile.service';
+
 
 @Component({
   selector: 'app-licensee-home', // Component selector used in HTML
@@ -23,6 +25,7 @@ export class LicenseeHomeComponent extends BaseComponent {
   subscription?: Subscription; // For managing any active subscriptions
   loaded = true; // Flag to track when data has loaded
   userName!: string; // Holds the display name of the user
+  private profileService = inject(SupplyChainProfileService);
 
   constructor(
     public baseDependancy: BaseDependency,
@@ -31,6 +34,27 @@ export class LicenseeHomeComponent extends BaseComponent {
     // Call parent constructor to initialize services from BaseComponent
     super(baseDependancy);
   }
+
+  openSupplyChain(): void {
+    this.profileService.getProfile().subscribe({
+      next: (res) => {
+        if (res.exists) {
+          this.router.navigate(['licensee/supply-chain']);
+        } else {
+          this.router.navigate(['licensee/supply-chain-registration']);
+        }
+      },
+      error: (err) => {
+        console.error('Error checking profile', err);
+        // Fallback to dashboard? or show error?
+        // For now, assume if error, maybe network, try dashboard or stay put.
+        // Let's go to dashboard as fallback so we don't block users if API fails.
+        // But actually if API fails we can't save ID anyway.
+        this.router.navigate(['licensee/supply-chain']);
+      }
+    });
+  }
+
 
   ngOnInit(): void {
     // Subscribe to authentication state from AccountService

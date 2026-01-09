@@ -216,9 +216,7 @@ export class CancellationComponent implements OnInit {
     if (!item.id) return;
     if (!confirm('Are you sure you want to approve this cancellation request?')) return;
 
-    const role = 'commissioner'; 
-
-    this.supplyChainService.performCancellationAction(item.id, 'APPROVE', role).subscribe({
+    this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'Approved from Cancellation Component').subscribe({
       next: () => {
         alert('Cancellation Request Approved Successfully');
         this.loadCancellationData();
@@ -234,9 +232,7 @@ export class CancellationComponent implements OnInit {
     if (!item.id) return;
     if (!confirm('Are you sure you want to reject this cancellation request?')) return;
 
-    const role = 'commissioner';
-
-    this.supplyChainService.performCancellationAction(item.id, 'REJECT', role).subscribe({
+    this.supplyChainService.performCancellationAction(item.id, 'REJECT', 'Rejected from Cancellation Component').subscribe({
       next: () => {
         alert('Cancellation Request Rejected');
         this.loadCancellationData();

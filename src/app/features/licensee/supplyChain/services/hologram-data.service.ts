@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, BehaviorSubject, map } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
   id: string;
@@ -16,6 +18,43 @@ export interface HologramWastageEntry {
   damageReason: string;
 }
 
+export interface HologramProcurement {
+  id?: number;
+  refNo?: string;
+  licensee?: number;
+  licenseeName?: string;
+  manufacturingUnit?: string;
+  date?: string;
+  localQty: number;
+  exportQty: number;
+  defenceQty: number;
+  paymentStatus?: string;
+  paymentDetails?: any;
+  remarks?: string;
+  status?: string;
+  stageId?: number;
+  workflow?: number;
+  currentStage?: number;
+  carton_details?: any[];
+}
+
+export interface HologramRequest {
+  id?: number;
+  refNo?: string;
+  licensee?: number;
+  licenseeName?: string;
+  submissionDate?: string;
+  usageDate: string;
+  quantity: number;
+  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Added to support type
+  remarks?: string;
+  status?: string;
+  stageId?: number;
+  workflow?: number;
+  currentStage?: number;
+}
+
+// Keep legacy interfaces for compatibility if needed, but we are moving to API
 export interface HologramDailyEntry {
   id: string;
   date: string;
@@ -25,7 +64,7 @@ export interface HologramDailyEntry {
   utilizedQuantity: number;
   leftOverQuantity: number;
   isFixed: boolean;
-  
+
   // Legacy fields for backward compatibility
   issuedFromSerial?: string;
   issuedToSerial?: string;
@@ -34,6 +73,7 @@ export interface HologramDailyEntry {
   wastageToSerial?: string;
   wastageQuantity?: number;
   damageReason?: string;
+  // ... other legacy fields
 }
 
 export interface MonthlyTotals {
@@ -74,7 +114,11 @@ export interface HologramArrivalRecord {
   providedIn: 'root'
 })
 export class HologramDataService {
-  private dailyEntriesSubject = new BehaviorSubject<HologramDailyEntry[]>([]);
+  private http = inject(HttpClient);
+  private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
+
+  // Legacy subjects (keep if necessary for other components, but ideally should be replaced)
+  private dailyEntriesSubject = new BehaviorSubject<any[]>([]);
   public dailyEntries$ = this.dailyEntriesSubject.asObservable();
 
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
@@ -98,9 +142,60 @@ export class HologramDataService {
     DEFENCE: 0
   };
 
-  constructor() {
-    // Load initial data from localStorage if available
-    this.loadFromStorage();
+  private get procurementApiUrl() { return `${this.apiUrl}/procurement`; }
+  private get requestApiUrl() { return `${this.apiUrl}/request`; }
+
+  constructor() { }
+
+  // --- Procurement APIs ---
+
+  getProcurements(): Observable<HologramProcurement[]> {
+    const t = new Date().getTime();
+    return this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/?_t=${t}`);
+  }
+
+  createProcurement(data: HologramProcurement): Observable<HologramProcurement> {
+    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data);
+  }
+
+  getProcurement(id: number): Observable<HologramProcurement> {
+    return this.http.get<HologramProcurement>(`${this.apiUrl}/procurement/${id}/`);
+  }
+
+  forwardProcurement(id: number, targetStage: string, remarks: string = ''): Observable<any> {
+    return this.http.post(`${this.apiUrl}/procurement/${id}/forward_request/`, {
+      target_stage: targetStage,
+      remarks: remarks
+    });
+  }
+
+  // --- Request APIs ---
+
+  getRequests(): Observable<HologramRequest[]> {
+    const t = new Date().getTime();
+    return this.http.get<HologramRequest[]>(`${this.apiUrl}/request/?_t=${t}`);
+  }
+
+  createRequest(data: HologramRequest): Observable<HologramRequest> {
+    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data);
+  }
+
+  getRequest(id: number): Observable<HologramRequest> {
+    const t = new Date().getTime();
+    return this.http.get<HologramRequest>(`${this.requestApiUrl}/${id}/?_t=${t}`);
+  }
+
+  updateRequestStatus(id: number, targetStage: string, remarks: string = ''): Observable<any> {
+    return this.http.post(`${this.requestApiUrl}/${id}/update_status/`, {
+      target_stage: targetStage,
+      remarks: remarks
+    });
+  }
+
+  // Generic Workflow Action
+  performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
+    const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
+    return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data });
   }
 
   private loadFromStorage(): void {
@@ -302,21 +397,21 @@ export class HologramDataService {
    */
   calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
     if (!fromSerial || !toSerial) return 0;
-    
+
     // Extract numeric parts from serials (assuming format like HG001001, EX002001, etc.)
     const fromMatch = fromSerial.match(/(\d+)$/);
     const toMatch = toSerial.match(/(\d+)$/);
-    
+
     if (fromMatch && toMatch) {
       const fromNum = parseInt(fromMatch[1], 10);
       const toNum = parseInt(toMatch[1], 10);
-      
+
       if (toNum >= fromNum) {
         // Inclusive range calculation: from 1 to 1 = 1, from 1 to 10 = 10
         return toNum - fromNum + 1;
       }
     }
-    
+
     return 0;
   }
 
@@ -324,29 +419,29 @@ export class HologramDataService {
    * Validates that serial ranges don't overlap
    */
   validateSerialRanges(entries: (HologramIssuedEntry | HologramWastageEntry)[]): boolean {
-    const ranges: Array<{from: number, to: number}> = [];
-    
+    const ranges: Array<{ from: number, to: number }> = [];
+
     for (const entry of entries) {
       const fromMatch = entry.fromSerial.match(/(\d+)$/);
       const toMatch = entry.toSerial.match(/(\d+)$/);
-      
+
       if (fromMatch && toMatch) {
         const fromNum = parseInt(fromMatch[1], 10);
         const toNum = parseInt(toMatch[1], 10);
-        
+
         // Check for overlaps with existing ranges
         for (const range of ranges) {
           if ((fromNum >= range.from && fromNum <= range.to) ||
-              (toNum >= range.from && toNum <= range.to) ||
-              (fromNum <= range.from && toNum >= range.to)) {
+            (toNum >= range.from && toNum <= range.to) ||
+            (fromNum <= range.from && toNum >= range.to)) {
             return false; // Overlap detected
           }
         }
-        
+
         ranges.push({ from: fromNum, to: toNum });
       }
     }
-    
+
     return true;
   }
 
@@ -685,5 +780,24 @@ export class HologramDataService {
       sortedKeys,
       initialOpening
     };
+  }
+  // --- Daily Register Integration ---
+
+  /**
+   * Save Daily Register Entry to Backend
+   */
+  saveDailyRegisterEntry(entryData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/daily-register/`, entryData);
+  }
+
+  /**
+   * Fetch Daily Register Entries from Backend
+   */
+  getDailyRegisterEntries(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/daily-register/`);
+  }
+
+  getRollsDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/rolls-details/`);
   }
 }

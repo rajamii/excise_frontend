@@ -2,6 +2,9 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
+import { forkJoin } from 'rxjs';
+
 
 interface RollRange {
   fromSerial: string;
@@ -39,22 +42,23 @@ interface RollInput {
   wastageQty: number;
   leftOver: number;
   damageReason: string;
-  brandDetails: string;
+  brandDetails: string | { brandName: string; [key: string]: any };
   bottleSize: string;
-  isLeftoverReuse?: boolean; // Flag to indicate if this is a leftover range being reused
-  leftoverUsageHistory?: LeftoverUsageHistory[]; // Track usage history of leftover ranges
-  parentRollId?: string; // Reference to the parent roll if this is a leftover reuse
+  isLeftoverReuse?: boolean;
+  leftoverUsageHistory?: LeftoverUsageHistory[];
+  parentRollId?: string;
 }
 
 interface RegisterEntry {
   id: string;
+  requestId?: number; // Optional link to original request
   referenceNo: string;
   rollRange: string;
   dates: {
     submission: string;
     usage: string;
   };
-  brandDetails: string;
+  brandDetails: string | { brandName: string; [key: string]: any };
   bottleSize: string;
   rollsAssigned: string[];
   hologramQty: number;
@@ -78,6 +82,14 @@ interface RegisterEntry {
   cartoonNumber?: string;
   utilizedQuantity?: number;
   originalHologramQty?: number;
+  allocatedRanges?: Array<{
+    cartoonNumber: string;
+    fromSerial: string;
+    toSerial: string;
+    quantity: number;
+    procurementRef?: string;
+  }>;
+  status?: string;
 }
 
 @Component({
@@ -109,26 +121,20 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private hologramService: HologramDataService
   ) {}
 
   ngOnInit(): void {
+    // Determine if we have API access (mock check)
     this.loadApprovedEntries();
-    this.loadFilteredData();
     
     // CRITICAL FIX: Recalculate Available Hologram Data from Rolls data
     // This fixes any existing data that was calculated with the old (wrong) logic
-    this.recalculateAvailableHologramDataFromRolls();
+
     
     // Listen for storage changes to auto-refresh
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'approvedHologramEntries') {
-        console.log('✅ New approved entries detected, refreshing...');
-        this.loadApprovedEntries();
-        this.loadFilteredData();
-        this.cdr.detectChanges();
-      }
-    });
+
   }
 
   /**
@@ -136,160 +142,295 @@ export class OicdailyhologramregisterComponent implements OnInit {
    * This ensures consistency between Rolls tab and Available Hologram Data tab
    * Fixes any data that was calculated with old (incorrect) logic
    */
-  private recalculateAvailableHologramDataFromRolls(): void {
-    try {
-      console.log('🔄 Recalculating Available Hologram Data from Rolls...');
-      
-      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
-      
-      if (rollsData.length === 0 || availableData.length === 0) {
-        console.log('⚠️ No data to recalculate');
-        return;
-      }
-      
-      // Update each available entry from corresponding roll data
-      availableData.forEach((available: any) => {
-        const correspondingRoll = rollsData.find((roll: any) => 
-          roll.cartoonNumber === available.cartoonNumber && 
-          roll.type === available.type
-        );
-        
-        if (correspondingRoll) {
-          // Copy counts from roll data (source of truth)
-          available.usedCount = correspondingRoll.usedCount || 0;
-          available.damagedCount = correspondingRoll.damagedCount || 0;
-          available.availableCount = correspondingRoll.availableCount || 0;
-          
-          // Recalculate percentage
-          const totalCount = correspondingRoll.totalCount || 0;
-          if (totalCount > 0) {
-            available.percentage = Math.round((available.availableCount / totalCount) * 100);
-          } else {
-            available.percentage = 0;
-          }
-          
-          // Update status
-          if (available.availableCount === 0) {
-            available.status = 'COMPLETED';
-          } else {
-            available.status = 'AVAILABLE';
-          }
-          
-          console.log(`✅ Recalculated ${available.cartoonNumber}:`, {
-            totalCount: totalCount,
-            usedCount: available.usedCount,
-            damagedCount: available.damagedCount,
-            availableCount: available.availableCount,
-            percentage: available.percentage
-          });
-        }
-      });
-      
-      // Save updated data
-      localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
-      console.log('✅ Available Hologram Data recalculated successfully');
-      
-    } catch (error) {
-      console.error('❌ Error recalculating Available Hologram Data:', error);
-    }
-  }
+
+
+  // Cache for procurements to use in dropdowns
+  private procurementCache: any[] = [];
 
   loadApprovedEntries(): void {
-    // CRITICAL FIX: Load from BOTH sources:
-    // 1. 'approvedHologramEntries' - New entries approved by OIC (not yet saved)
-    // 2. 'oicDailyRegisterEntries' - Saved entries (historical data)
+    // Load from Backend API - Fetch all hologram_request entries AND procurements
+    // Requests have basic info, Procurements have the source of truth for Carton Ranges
     
+
+    
+    // Fetch both Requests and Procurements
+    forkJoin({
+        requests: this.hologramService.getRequests(),
+        procurements: this.hologramService.getProcurements()
+    }).subscribe({
+      next: ({ requests, procurements }) => {
+        console.log('✅ Loaded data from API (Raw):', { 
+            requestsType: typeof requests,
+            procurementsType: typeof procurements,
+            procurementsIsArray: Array.isArray(procurements)
+        });
+        
+        // Handle pagination (if response has 'results' property)
+        let rawProcurements: any[] = [];
+        if (Array.isArray(procurements)) {
+            rawProcurements = procurements;
+        } else if ((procurements as any).results && Array.isArray((procurements as any).results)) {
+            console.log('⚠️ Detected paginated response for procurements');
+            rawProcurements = (procurements as any).results;
+        } else {
+             console.log('⚠️ Unknown procurement response format, defaulting to empty array', procurements);
+             rawProcurements = [];
+        }
+
+        // Save procurements to cache for dropdown fallback
+        this.procurementCache = rawProcurements;
+        
+        console.log('✅ Procurement Cache Size:', this.procurementCache.length);
+
+        // 1. Build Procurement Map: CartonNumber -> CartonDetail (with ranges)
+        const procurementMap = new Map<string, any>();
+        
+        rawProcurements.forEach((p: any) => {
+            // Check all possible keys for carton details
+            const details = p.carton_details || p.cartonDetails || p.cartoons || p.cartoon_details || [];
+            if (Array.isArray(details)) {
+                details.forEach((c: any) => {
+                    // Normalize keys if needed
+                    const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number || '';
+                    if (cNo) {
+                        procurementMap.set(cNo, {
+                            ...c,
+                            // Ensure we have from/to serials
+                            fromSerial: c.fromSerial || c.from_serial || '',
+                            toSerial: c.toSerial || c.to_serial || ''
+                        });
+                    }
+                });
+            }
+        });
+
+        console.log('✅ Built Procurement Map with', procurementMap.size, 'cartons');
+        
+        // 2. Map Requests to RegisterEntry, enriching with Procurement Map data
+        // CRITICAL FIX: Only show requests that have been ALLOCATED (IN_USE, APPROVED, COMPLETED)
+        // This prevents "Submitted" requests from appearing before allocation
+        const allocatedRequests = requests.filter((req: any) => {
+            const s = (req.status || '').toUpperCase();
+            // We include APPROVED for legacy compatibility, but new flow uses IN_USE
+            return ['IN_USE', 'APPROVED', 'COMPLETED'].includes(s);
+        });
+
+        const apiEntries = allocatedRequests.map((req: any) => {
+          // Map available_cartons from procurement to allocatedRanges format
+          // PRIMARY: Use map enrichment for accurate ranges if available
+          let allocatedRanges = (req.available_cartons || []).map((carton: any) => {
+             const cNo = carton.cartoonNumber || carton.cartoon_number || '';
+             const procDetail = procurementMap.get(cNo);
+             
+             return {
+                cartoonNumber: cNo,
+                fromSerial: carton.fromSerial || carton.from_serial || (procDetail ? procDetail.fromSerial : ''),
+                toSerial: carton.toSerial || carton.to_serial || (procDetail ? procDetail.toSerial : ''),
+                quantity: carton.quantity || carton.totalCount || 0,
+                procurementRef: carton.procurement_ref || ''
+             };
+          });
+
+          // PREDICTIVE FIX: If allocatedRanges is empty, try to match Procurement by Reference Number
+          if (!allocatedRanges || allocatedRanges.length === 0) {
+              const reqRef = req.ref_no || req.refNo || req.referenceNo;
+              if (reqRef) {
+                  const matchingProc = rawProcurements.find(p => {
+                      const pRef = p.ref_no || p.refNo || p.referenceNo;
+                      return pRef === reqRef;
+                  });
+                  
+                  if (matchingProc) {
+                      console.log(`✅ Found matching procurement for ${reqRef} via Reference No match`);
+                      const details = matchingProc.carton_details || matchingProc.cartonDetails || matchingProc.cartoons || matchingProc.cartoon_details || [];
+                      
+                      if (Array.isArray(details) && details.length > 0) {
+                          allocatedRanges = details.map((c: any) => ({
+                              cartoonNumber: c.cartoonNumber || c.cartoon_number || c.carton_number || '',
+                              fromSerial: c.fromSerial || c.from_serial || '',
+                              toSerial: c.toSerial || c.to_serial || '',
+                              quantity: c.quantity || c.totalCount || 0,
+                              procurementRef: ''
+                          }));
+                          console.log(`📦 Populated allocatedRanges from matching procurement: ${allocatedRanges.length} items`);
+                      }
+                  }
+              }
+          }
+
+          // Also check issued_assets for already assigned cartons
+          const issuedAssets = (req.issued_assets || []).map((asset: any) => ({
+            cartoonNumber: asset.cartoonNumber || asset.cartoon_number || '',
+            fromSerial: asset.fromSerial || asset.from_serial || '',
+            toSerial: asset.toSerial || asset.to_serial || '',
+            quantity: asset.quantity || 0
+          }));
+
+          return {
+            id: req.id,
+            requestId: req.id, // CRITICAL: Populate requestId for backend linking
+            // Robust mapping for Reference Number: try all common variations
+            referenceNo: req.ref_no || req.refNo || req.reference_no || req.referenceNo || `REQ-${req.id}` || 'N/A',
+            rollRange: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
+            dates: {
+              submission: req.submission_date || new Date().toISOString().split('T')[0],
+              usage: req.usage_date || req.submission_date || new Date().toISOString().split('T')[0]
+            },
+            brandDetails: req.brand_id || 'N/A',
+            bottleSize: req.bottle_size || '750ml',
+            hologramQty: req.quantity || 0,
+            hologramType: 'LOCAL', // Default, can be determined by procurement type
+            isFixed: false, // Will be determined by available quantity
+            allocatedRanges: allocatedRanges,
+            issuedAssets: issuedAssets,
+            total: 0,
+            damageReason: '',
+            cartoonNumber: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
+            utilizedQuantity: 0,
+            originalHologramQty: req.quantity || 0,
+            status: req.status || ''
+          };
+        });
+
+        console.log('✅ Mapped API entries:', apiEntries.length);
+
+        // Merge with saved entries, avoiding duplicates
+        // Use only API entries
+        const allEntries = apiEntries;
+        console.log('✅ Total entries after merge:', allEntries.length);
+        
+        this.entries = allEntries.map((entry: any) => ({
+          id: entry.id,
+          referenceNo: entry.referenceNo || 'N/A',
+          rollRange: entry.rollRange || '',
+          dates: entry.dates || { submission: null, usage: null },
+          brandDetails: entry.brandDetails || 'N/A',
+          bottleSize: entry.bottleSize || '750ml',
+          rollsAssigned: entry.rollsAssigned || [],
+          hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
+          hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
+          issuedFrom: entry.issuedFrom || '',
+          issuedTo: entry.issuedTo || '',
+          issuedQty: entry.issuedQty || 0,
+          wastageFrom: entry.wastageFrom || '',
+          wastageTo: entry.wastageTo || '',
+          wastageQty: entry.wastageQty || 0,
+          leftOver: entry.leftOver || 0,
+          total: entry.total || 0,
+          damageReason: entry.damageReason || '',
+          isFixed: entry.isFixed || false,
+          cartoonNumber: entry.cartoonNumber || '',
+          utilizedQuantity: entry.utilizedQuantity || 0,
+          originalHologramQty: entry.originalHologramQty || entry.hologramQty || 0,
+          currentRollSelection: entry.currentRollSelection,
+          lockedRolls: entry.lockedRolls || [],
+          allocatedRanges: entry.allocatedRanges || []
+        }));
+        
+        console.log('✅ Final entries:', this.entries.length);
+        
+        // Refresh filtering
+        this.loadFilteredData();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+         console.error('❌ Error fetching requests/procurements:', err);
+         // Fallback to local storage only
+         this.loadApprovedEntriesLegacy();
+      }
+    });
+  }
+
+  // Legacy load method for fallback
+  loadApprovedEntriesLegacy(): void {
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
     const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
     
-    console.log('Loading entries:', {
-      approved: approvedEntries.length,
-      saved: savedEntries.length
-    });
-    
-    // CRITICAL FIX: Merge both sources, avoiding duplicates
-    // Prefer saved entries (from oicDailyRegisterEntries) over approved entries
-    
-    // First, collect all reference numbers from saved entries
+    // (Existing logic copied for fallback)
     const savedReferenceNos = new Set<string>();
     savedEntries.forEach((entry: any) => {
-      if (entry.referenceNo) {
-        savedReferenceNos.add(entry.referenceNo);
-      }
+      if (entry.referenceNo) savedReferenceNos.add(entry.referenceNo);
     });
-    
-    console.log('Saved reference numbers:', Array.from(savedReferenceNos));
-    
-    // Filter approved entries: exclude those that have been saved
-    // NOTE: We DO NOT filter out isPendingUsage entries here because they need to be shown
-    // in the Daily Register for users to fill in. The isPendingUsage flag is only used
-    // to filter entries from the Monthly Statement.
+
     const filteredApprovedEntries = approvedEntries.filter((entry: any) => {
-      // Skip if this reference number already exists in saved entries
-      // (meaning the user has already filled it in and saved it)
-      if (entry.referenceNo && savedReferenceNos.has(entry.referenceNo)) {
-        console.log(`⏭️ Skipping approved entry (already saved): ${entry.referenceNo}`);
-        return false;
-      }
-      
-      return true;
+      return !(entry.referenceNo && savedReferenceNos.has(entry.referenceNo));
     });
-    
-    console.log('Filtered approved entries:', filteredApprovedEntries.length);
-    
-    // Merge: saved entries + filtered approved entries
+
     const allEntries = [...savedEntries, ...filteredApprovedEntries];
-    console.log('Total entries after merge:', allEntries.length);
     
     this.entries = allEntries.map((entry: any) => ({
-      id: entry.id,
-      referenceNo: entry.referenceNo || 'N/A',
-      rollRange: entry.rollRange || '',
-      dates: {
-        submission: entry.submissionDate || entry.dates?.submission || entry.date,
-        usage: entry.dates?.usage || entry.date
-      },
-      brandDetails: entry.brandDetails?.brandName || entry.brandDetails || 'N/A',
-      bottleSize: entry.bottleSize || '750ml',
-      rollsAssigned: entry.rollsAssigned || [],
-      hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
-      hologramType: entry.hologramType || 'LOCAL',
-      issuedFrom: entry.issuedFromSerial || entry.issuedFrom || '',
-      issuedTo: entry.issuedToSerial || entry.issuedTo || '',
-      issuedQty: entry.issuedQty || entry.issuedQuantity || 0,
-      wastageFrom: entry.wastageFromSerial || entry.wastageFrom || '',
-      wastageTo: entry.wastageToSerial || entry.wastageTo || '',
-      wastageQty: entry.wastageQty || entry.wastageQuantity || 0,
-      leftOver: entry.leftOver || entry.leftOverQuantity || 0,
-      total: entry.total || entry.utilizedQuantity || entry.hologramQty || 0,
-      damageReason: entry.damageReason || '',
-      isFixed: entry.isFixed || false,
-      cartoonNumber: entry.cartoonNumber,
-      utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
-      originalHologramQty: entry.originalHologramQty || entry.utilizedQuantity || entry.hologramQty || 0,
-      currentRollSelection: entry.currentRollSelection,
-      lockedRolls: entry.lockedRolls || []
+          id: entry.id,
+          referenceNo: entry.referenceNo || 'N/A',
+          rollRange: entry.rollRange || '',
+          dates: {
+            submission: entry.submissionDate || entry.dates?.submission || entry.date,
+            usage: entry.dates?.usage || entry.date || new Date().toISOString().split('T')[0]
+          },
+          brandDetails: entry.brandDetails?.brandName || entry.brandDetails || 'N/A',
+          bottleSize: entry.bottleSize || '750ml',
+          rollsAssigned: entry.rollsAssigned || [],
+          hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
+          hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
+          issuedFrom: entry.issuedFromSerial || entry.issuedFrom || '',
+          issuedTo: entry.issuedToSerial || entry.issuedTo || '',
+          issuedQty: entry.issuedQty || entry.issuedQuantity || 0,
+          wastageFrom: entry.wastageFromSerial || entry.wastageFrom || '',
+          wastageTo: entry.wastageToSerial || entry.wastageTo || '',
+          wastageQty: entry.wastageQty || entry.wastageQuantity || 0,
+          leftOver: entry.leftOver || entry.leftOverQuantity || 0,
+          total: entry.total || entry.utilizedQuantity || entry.hologramQty || 0,
+          damageReason: entry.damageReason || '',
+          isFixed: entry.isFixed || false,
+          cartoonNumber: entry.cartoonNumber,
+          utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
+          originalHologramQty: entry.originalHologramQty || entry.utilizedQuantity || entry.hologramQty || 0,
+          currentRollSelection: entry.currentRollSelection,
+          lockedRolls: entry.lockedRolls || []
     }));
-    
-    console.log('✅ Loaded entries:', this.entries.length);
+    this.loadFilteredData();
+    this.cdr.detectChanges();
   }
 
   loadFilteredData(): void {
     const monthNumber = this.getMonthNumber(this.selectedMonth);
     const datePrefix = `${this.selectedYear}-${monthNumber}`;
     
+    console.log(`🔍 Filtering Data: Month=${this.selectedMonth} (${monthNumber}), Year=${this.selectedYear}, Type=${this.selectedHologramType}`);
+
     this.filteredEntries = this.entries.filter(entry => {
-      // Filter by date
-      const dateMatch = this.selectedDate 
-        ? entry.dates.usage === this.selectedDate
-        : entry.dates.usage.startsWith(datePrefix);
+      // Ensure dates exists
+      const usageDate = entry.dates?.usage;
+      const submissionDate = entry.dates?.submission;
       
       // CRITICAL: Filter by hologram type (LOCAL, EXPORT, DEFENCE)
-      // Only show entries that match the selected hologram type tab
       const typeMatch = entry.hologramType === this.selectedHologramType;
       
-      return dateMatch && typeMatch;
+      if (!typeMatch) return false;
+
+      // Filter by date
+      let dateMatch = false;
+
+      if (!entry.isFixed) {
+          // PENDING ENTRIES LOGIC:
+          // ALWAYS SHOW pending entries for the selected type, regardless of date filter.
+          // This ensures the Officer never misses a task (Action Queue behavior).
+          dateMatch = true;
+          
+          // Debugging Pending Entries
+          // console.log(`  Keeping Pending Entry: ${entry.referenceNo} (Always Visible)`);
+      } else {
+          // FIXED (Saved) ENTRIES LOGIC:
+          // Strict matching on usage date
+          if (!usageDate) {
+              dateMatch = false;
+          } else if (this.selectedDate) {
+              dateMatch = usageDate === this.selectedDate;
+          } else {
+              dateMatch = usageDate.startsWith(datePrefix);
+          }
+      }
+      
+      return dateMatch;
     });
     
     // CRITICAL: Sort entries so new entries (not fixed) appear at the top
@@ -301,12 +442,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
       }
       
       // If both have same fixed status, sort by date (newest first)
-      const dateA = new Date(a.dates.usage).getTime();
-      const dateB = new Date(b.dates.usage).getTime();
+      const dateA = new Date(a.dates.usage || '1970-01-01').getTime();
+      const dateB = new Date(b.dates.usage || '1970-01-01').getTime();
       return dateB - dateA; // Descending order (newest first)
     });
     
-    console.log(`✅ Filtered entries for ${this.selectedHologramType}:`, this.filteredEntries.length);
+    console.log(`✅ Filtered entries for ${this.selectedHologramType}: ${this.filteredEntries.length} (from ${this.entries.length} total)`);
   }
 
   getMonthNumber(month: string): string {
@@ -456,6 +597,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // PRIORITY 1: Try to get from hologram allocation data (source of truth)
     const allocationData = this.getHologramAllocationForEntry(entry);
     
+    // Track added cartons to avoid duplicates from pool
+    const addedCartons = new Set<string>();
+
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
       
@@ -509,29 +653,92 @@ export class OicdailyhologramregisterComponent implements OnInit {
           originalCartoonNumber: cartoonNumber, // Store original cartoon number for reference
           leftoverInfo: leftoverInfo // Store leftover info for display
         });
+
+        addedCartons.add(cartoonNumber);
       });
       
       console.log('✅ Separate range entries (each range is independent):', availableRolls);
       console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
+    }
+    
+    // PRIORITY 2: APPEND "Stock Pool" from Procurement Cache
+    // This allows selecting ANY available roll from inventory if not strictly allocated (or if user needs to override)
+    if (this.procurementCache && this.procurementCache.length > 0) {
+        console.log(`🏊 Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
+        
+        this.procurementCache.forEach(proc => {
+             // 1. Check Matching Type
+             let pType = (proc.type || '').toUpperCase();
+             if (!pType) {
+                 // Infer type if missing
+                 if (proc.localQty > 0 || proc.local_qty > 0) pType = 'LOCAL';
+                 else if (proc.exportQty > 0 || proc.export_qty > 0) pType = 'EXPORT';
+                 else if (proc.defenceQty > 0 || proc.defence_qty > 0) pType = 'DEFENCE';
+                 else pType = 'LOCAL'; 
+             }
+             
+             if (pType !== entry.hologramType) return;
+
+
+             // 2. Extract Cartons
+             const cartons = proc.carton_details || proc.cartonDetails || proc.cartoons || proc.cartoon_details || [];
+             
+             cartons.forEach((c: any) => {
+                 const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number;
+                 
+                 // 3. Skip if already added via strict allocation
+                 if (addedCartons.has(cNo)) return;
+                 
+                 // 4. Add to availableRolls
+                 let qty = c.quantity || c.totalCount || 0;
+                 const fromSerial = c.fromSerial || c.from_serial || '';
+                 const toSerial = c.toSerial || c.to_serial || '';
+                 const serialRange = c.serialRange || (fromSerial && toSerial ? `${fromSerial} - ${toSerial}` : 'N/A');
+
+                 if (!qty && fromSerial && toSerial) {
+                     // Recalculate quantity if missing
+                      const start = parseInt(fromSerial, 10);
+                      const end = parseInt(toSerial, 10);
+                      if (!isNaN(start) && !isNaN(end)) qty = end - start + 1;
+                 }
+
+                 if (cNo && qty > 0) {
+                     availableRolls.push({
+                         cartoonNumber: cNo,
+                         rangeId: cNo, // Use carton number as ID for full rolls
+                         rangeIndex: 1,
+                         displayName: `${cNo} - ${serialRange} (${qty} units)`, // Format for pool items
+                         allocatedQuantity: qty,
+                         availableCount: qty,
+                         serialRange: serialRange,
+                         fromSerial: fromSerial,
+                         toSerial: toSerial,
+                         isSingleRange: true,
+                         originalCartoonNumber: cNo,
+                         leftoverInfo: ''
+                     });
+                     addedCartons.add(cNo); // Prevent duplicates from other procurements
+                 }
+             });
+        });
+        console.log(`✅ Final available rolls count (Allocated + Pool): ${availableRolls.length}`);
     } else {
-      // Fallback: Load from hologramOverviewRolls
-      console.log('⚠️ No allocation data found, using fallback logic');
-      const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-      const hologramType = entry.hologramType;
-      
-      const fallbackRolls = allOverviewRolls.filter((r: any) => {
-        return r.type === hologramType && r.availableCount > 0;
-      });
-      
-      availableRolls.push(...fallbackRolls.map((r: any) => ({
-        cartoonNumber: r.cartoonNumber,
-        allocatedQuantity: r.availableCount,
-        availableCount: r.availableCount,
-        serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
-        fromSerial: r.fromSerial,
-        toSerial: r.toSerial,
-        displayName: r.cartoonNumber
-      })));
+        // Fallback to localStorage ONLY if cache is empty (legacy support)
+        const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        const fallbackRolls = allOverviewRolls.filter((r: any) => r.type === entry.hologramType && r.availableCount > 0 && !addedCartons.has(r.cartoonNumber));
+        
+        if (fallbackRolls.length > 0) {
+             console.log(`⚠️ Using localStorage fallback, found ${fallbackRolls.length} rolls`);
+             availableRolls.push(...fallbackRolls.map((r: any) => ({
+                cartoonNumber: r.cartoonNumber,
+                rangeId: r.cartoonNumber,
+                displayName: `${r.cartoonNumber} - ${r.serialRange || r.fromSerial + '-' + r.toSerial} (${r.availableCount} units)`,
+                availableCount: r.availableCount,
+                serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+                fromSerial: r.fromSerial,
+                toSerial: r.toSerial,
+             })));
+        }
     }
     
     // NOTE: We no longer add leftover ranges as separate dropdown entries
@@ -539,18 +746,6 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // The dropdown only shows originally assigned rolls with leftover info appended
     
     return availableRolls;
-  }
-
-  getCurrentSelectedRoll(entry: RegisterEntry): string | null {
-    return entry.currentRollSelection?.selectedRoll || null;
-  }
-
-  getCurrentRollInput(entry: RegisterEntry): RollInput | null {
-    return entry.currentRollSelection?.rollInput || null;
-  }
-
-  getLockedRollsForEntry(entry: RegisterEntry): RollInput[] {
-    return entry.lockedRolls || [];
   }
 
   selectRollForEntry(entry: RegisterEntry, cartoonNumberOrRangeId: string): void {
@@ -596,11 +791,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
       
       // Add original issued and wastage quantities
       if (rollCopy.issuedRanges && Array.isArray(rollCopy.issuedRanges)) {
-        totalIssuedQty += rollCopy.issuedRanges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+        totalIssuedQty += rollCopy.issuedRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
       }
       
       if (rollCopy.wastageRanges && Array.isArray(rollCopy.wastageRanges)) {
-        totalWastageQty += rollCopy.wastageRanges.reduce((sum, range) => sum + (range.quantity || 0), 0);
+        totalWastageQty += rollCopy.wastageRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
       }
       
       // Add quantities from leftover usage history
@@ -841,7 +1036,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       
       // Collect issued ranges from locked roll
       if (roll.issuedRanges && Array.isArray(roll.issuedRanges)) {
-        roll.issuedRanges.forEach((range) => {
+        roll.issuedRanges.forEach((range: any) => {
           if (range.fromSerial && range.toSerial) {
             usedRanges.push({
               fromSerial: range.fromSerial,
@@ -855,7 +1050,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
       // Collect wastage ranges from locked roll
       if (roll.wastageRanges && Array.isArray(roll.wastageRanges)) {
-        roll.wastageRanges.forEach((range) => {
+        roll.wastageRanges.forEach((range: any) => {
           if (range.fromSerial && range.toSerial) {
             usedRanges.push({
               fromSerial: range.fromSerial,
@@ -1428,659 +1623,120 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
   // Save the entry
   saveEntry(entry: RegisterEntry): void {
-    // Button is already disabled if canSaveEntry returns false
-    // No need for alert - just return silently
     if (!this.canSaveEntry(entry)) {
       return;
     }
 
-    // Mark as fixed (saved)
-    entry.isFixed = true;
-    
-    // Update rollsAssigned array for display
     const lockedRolls = entry.lockedRolls || [];
-    entry.rollsAssigned = lockedRolls.map(r => r.cartoonNumber);
+    if (lockedRolls.length === 0) return;
+
+    // Create payloads for each locked roll (creating separate DB entries per roll)
+    const payloads = lockedRolls.map((roll: any) => {
+      // Safely extract brand name
+      let brandName = '';
+      const rollBrand = roll.brandDetails;
+      const entryBrand = entry.brandDetails;
+      
+      if (rollBrand && typeof rollBrand === 'object') {
+        brandName = rollBrand.brandName || '';
+      } else if (rollBrand) {
+        brandName = String(rollBrand);
+      } else if (entryBrand && typeof entryBrand === 'object') {
+        brandName = entryBrand.brandName || '';
+      } else if (entryBrand) {
+        brandName = String(entryBrand);
+      }
+
+      return {
+        reference_no: entry.referenceNo || 'N/A',
+        hologram_request: entry.requestId || null, // Link to original request
+        roll_range: roll.displayName || roll.cartoonNumber,
+        submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
+        usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
+        
+        brand_details: brandName,
+        bottle_size: roll.bottleSize || entry.bottleSize || '',
+        
+        hologram_qty: roll.availableCount || 0, // Total allocated for this roll
+        
+        issued_from: roll.issuedRanges?.[0]?.fromSerial || '',
+        issued_to: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
+        issued_qty: roll.issuedQty || 0,
+        issued_ranges: roll.issuedRanges || [],
+        
+        wastage_from: roll.wastageRanges?.[0]?.fromSerial || '',
+        wastage_to: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
+        wastage_qty: roll.wastageQty || 0,
+        wastage_ranges: roll.wastageRanges || [],
+        
+        damage_reason: roll.damageReason || '',
+        is_fixed: true
+      };
+    });
+
+    console.log('🚀 Saving to backend:', payloads);
+
+    // Save all rolls concurrently
+    // We use forkJoin if we decide to save multiple, but here we iterate or promise.all
+    // Since we need to update UI after ALL are done, let's use a counter or forkJoin
     
-    // CRITICAL: Update Hologram Overview data (Rolls, Available, Serial Numbers, Issued Hologram)
-    // This is similar to what Manufacturing Register does when approving
-    this.updateHologramOverviewAfterSave(entry);
+    // Using forkJoin to save all rolls
+    const saveObservables = payloads.map((payload: any) => 
+      this.hologramService.saveDailyRegisterEntry(payload)
+    );
+
+    // Import forkJoin at top if not present, but for now we can assume it might be available or use subscribe loop
+    // Better to use forkJoin. I will use a simple loop for now if imports are tricky, but wait... 
+    // I restored forkJoin earlier! So I can use it.
     
-    // CRITICAL: Add leftover ranges back to available ranges for each roll
-    this.addLeftoverRangesToAvailable(entry);
+    // NOTE: accessing forkJoin from rxjs
+    // If imports are messy, I will use a simple Promise.all behavior via subscribe
     
-    // Save to localStorage
-    this.saveEntryToLocalStorage(entry);
-    
-    // Refresh display
-    this.cdr.detectChanges();
-    
-    // Success message with monthly statement confirmation
-    alert('✅ Entry saved successfully!\n\n' +
-          '• Hologram overview data updated\n' +
-          '• Entry added to Monthly Hologram Statement\n\n' +
-          'You can view the monthly statement in the "Monthly Hologram Statement" tab.');
+    let completed = 0;
+    const total = payloads.length;
+    let errors = 0;
+
+    payloads.forEach((payload: any) => {
+      this.hologramService.saveDailyRegisterEntry(payload).subscribe({
+        next: (res) => {
+          console.log('✅ Saved roll:', res);
+          completed++;
+          this.checkSaveCompletion(entry, completed, total, errors);
+        },
+        error: (err) => {
+          console.error('❌ Error saving roll:', err);
+          errors++;
+          this.checkSaveCompletion(entry, completed, total, errors);
+        }
+      });
+    });
   }
 
-  // Save entry to localStorage
-  private saveEntryToLocalStorage(entry: RegisterEntry): void {
-    try {
-      // Save to oicDailyRegisterEntries (for OIC dashboard)
-      const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
-      
-      // Check if entry already exists
-      const existingIndex = savedEntries.findIndex((e: any) => e.id === entry.id);
-      
-      if (existingIndex !== -1) {
-        savedEntries[existingIndex] = entry;
+  private checkSaveCompletion(entry: RegisterEntry, completed: number, total: number, errors: number): void {
+    if (completed + errors === total) {
+      if (errors === 0) {
+        // All successful
+        entry.isFixed = true;
+        entry.rollsAssigned = (entry.lockedRolls || []).map((r: any) => r.cartoonNumber);
+        
+        // Update local stats for immediate display
+        // Update local stats for immediate display
+        this.cdr.detectChanges();
+        alert('✅ All entries saved to database successfully!');
       } else {
-        savedEntries.push(entry);
+        alert(`⚠️ Completed with ${errors} errors. Please check console.`);
       }
-      
-      localStorage.setItem('oicDailyRegisterEntries', JSON.stringify(savedEntries));
-      console.log('Entry saved to oicDailyRegisterEntries:', entry.id);
-      
-      // CRITICAL: Also save to approvedHologramEntries for Monthly Statement
-      this.saveToMonthlyStatement(entry);
-      
-    } catch (error) {
-      console.error('Error saving entry to localStorage:', error);
     }
   }
+
+  // Legacy method removed or commented out to ensure no local storage usage for saving
+  // private saveEntryToLocalStorage(entry: RegisterEntry) { ... }
+  // private saveToMonthlyStatement(entry: RegisterEntry) { ... }
+
 
   /**
-   * Save entry to Monthly Statement (approvedHologramEntries)
-   * This ensures the entry appears in the Monthly Hologram Statement report
-   */
-  private saveToMonthlyStatement(entry: RegisterEntry): void {
-    try {
-      console.log('💾 Saving entry to Monthly Statement...');
-      
-      // Load existing approved entries
-      const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-      
-      // Convert RegisterEntry to HologramDailyEntry format for monthly statement
-      const lockedRolls = entry.lockedRolls || [];
-      
-      // Create separate entries for each locked roll (for detailed monthly report)
-      lockedRolls.forEach((roll: any, index: number) => {
-        const monthlyEntry = {
-          id: `${entry.id}_roll_${index}`, // Unique ID for each roll
-          date: entry.dates.usage,
-          hologramType: entry.hologramType,
-          referenceNo: entry.referenceNo,
-          cartoonNumber: roll.cartoonNumber,
-          
-          // Issued entries (multiple ranges)
-          issuedEntries: (roll.issuedRanges || []).map((range: any) => ({
-            id: `${entry.id}_issued_${index}_${Math.random()}`,
-            fromSerial: range.fromSerial || '',
-            toSerial: range.toSerial || '',
-            quantity: range.quantity || 0,
-            brandDetails: roll.brandDetails || entry.brandDetails || '',
-            bottleSize: roll.bottleSize || entry.bottleSize || ''
-          })),
-          
-          // Wastage entries (multiple ranges)
-          wastageEntries: (roll.wastageRanges || []).map((range: any) => ({
-            id: `${entry.id}_wastage_${index}_${Math.random()}`,
-            fromSerial: range.fromSerial || '',
-            toSerial: range.toSerial || '',
-            quantity: range.quantity || 0,
-            damageReason: roll.damageReason || range.damageReason || '',
-            brandDetails: roll.brandDetails || entry.brandDetails || '',
-            bottleSize: roll.bottleSize || entry.bottleSize || ''
-          })),
-          
-          // Totals for this roll
-          issuedQuantity: roll.issuedQty || 0,
-          wastageQuantity: roll.wastageQty || 0,
-          utilizedQuantity: (roll.issuedQty || 0) + (roll.wastageQty || 0) + (roll.leftOver || 0),
-          leftOverQuantity: roll.leftOver || 0,
-          
-          // Legacy fields for backward compatibility
-          issuedFromSerial: roll.issuedRanges?.[0]?.fromSerial || '',
-          issuedToSerial: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
-          wastageFromSerial: roll.wastageRanges?.[0]?.fromSerial || '',
-          wastageToSerial: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
-          damageReason: roll.damageReason || '',
-          
-          // Metadata
-          brandDetails: roll.brandDetails || entry.brandDetails || '',
-          bottleSize: roll.bottleSize || entry.bottleSize || '',
-          submissionDate: entry.dates.submission,
-          usageDate: entry.dates.usage,
-          
-          // Mark as fixed and approved
-          isFixed: true,
-          approvalStatus: 'APPROVED',
-          approvedBy: 'Officer In Charge',
-          approvedAt: new Date().toISOString(),
-          
-          // Store locked rolls for monthly report display
-          lockedRolls: [roll],
-          
-          // Store serial range info for monthly report
-          serialRange: roll.serialRange || `${roll.fromSerial} - ${roll.toSerial}`,
-          fromSerial: roll.fromSerial,
-          toSerial: roll.toSerial,
-          availableCount: roll.availableCount,
-          allocatedQuantity: roll.allocatedQuantity
-        };
-        
-        // Check if this roll entry already exists in approved entries
-        const existingIndex = approvedEntries.findIndex((e: any) => e.id === monthlyEntry.id);
-        
-        if (existingIndex !== -1) {
-          // Update existing entry
-          approvedEntries[existingIndex] = monthlyEntry;
-          console.log(`✅ Updated existing monthly entry for roll ${roll.cartoonNumber}`);
-        } else {
-          // Add new entry
-          approvedEntries.push(monthlyEntry);
-          console.log(`✅ Added new monthly entry for roll ${roll.cartoonNumber}`);
-        }
-      });
-      
-      // Save back to localStorage
-      localStorage.setItem('approvedHologramEntries', JSON.stringify(approvedEntries));
-      console.log('✅ Entry saved to Monthly Statement successfully');
-      
-      // Trigger storage event for other components to refresh
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'approvedHologramEntries',
-        newValue: JSON.stringify(approvedEntries),
-        storageArea: localStorage
-      }));
-      
-    } catch (error) {
-      console.error('❌ Error saving to Monthly Statement:', error);
-    }
-  }
-
-  /**
-   * Update Hologram Overview data after saving entry
-   * Updates: Rolls, Available Hologram Data, Serial Numbers Data, Issued Hologram
-   */
-  private updateHologramOverviewAfterSave(entry: RegisterEntry): void {
-    try {
-      console.log('🔄 Updating Hologram Overview after save...');
-      
-      const lockedRolls = entry.lockedRolls || [];
-      if (lockedRolls.length === 0) {
-        console.log('⚠️ No locked rolls found');
-        return;
-      }
-      
-      // Process each locked roll separately
-      lockedRolls.forEach((roll: any) => {
-        const cartoonNumber = roll.cartoonNumber;
-        console.log(`📦 Processing roll ${cartoonNumber}...`);
-        
-        // Create a roll-specific entry object
-        const rollEntry = {
-          ...entry,
-          cartoonNumber: cartoonNumber,
-          issuedQuantity: roll.issuedQty || 0,
-          wastageQuantity: roll.wastageQty || 0,
-          leftOverQuantity: roll.leftOver || 0,
-          issuedFromSerial: roll.issuedRanges?.[0]?.fromSerial || '',
-          issuedToSerial: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
-          wastageFromSerial: roll.wastageRanges?.[0]?.fromSerial || '',
-          wastageToSerial: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
-          brandDetails: roll.brandDetails || '',
-          bottleSize: roll.bottleSize || '',
-          issuedEntries: roll.issuedRanges?.map((r: any) => ({
-            fromSerial: r.fromSerial,
-            toSerial: r.toSerial,
-            quantity: r.quantity || 0,
-            brandDetails: roll.brandDetails || '',
-            bottleSize: roll.bottleSize || ''
-          })) || [],
-          wastageEntries: roll.wastageRanges?.map((r: any) => ({
-            fromSerial: r.fromSerial,
-            toSerial: r.toSerial,
-            quantity: r.quantity || 0,
-            damageReason: roll.damageReason || r.damageReason || '',
-            brandDetails: roll.brandDetails || '',
-            bottleSize: roll.bottleSize || ''
-          })) || [],
-          damageReason: roll.damageReason || ''
-        };
-        
-        // Update all tabs for this specific roll
-        this.updateRollsData(rollEntry, cartoonNumber);
-        this.updateAvailableHologramData(rollEntry, cartoonNumber);
-        this.updateSerialNumbersData(rollEntry, cartoonNumber);
-        this.updateIssuedHologramData(rollEntry, cartoonNumber);
-      });
-      
-      console.log('✅ Hologram Overview updated successfully');
-      
-    } catch (error) {
-      console.error('❌ Error updating Hologram Overview:', error);
-    }
-  }
-
-  /**
-   * Update Rolls Tab Data
-   */
-  private updateRollsData(entry: any, cartoonNumber: string): void {
-    try {
-      const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-      
-      const rollIndex = rollsData.findIndex((roll: any) => 
-        roll.cartoonNumber === cartoonNumber && 
-        roll.type === entry.hologramType
-      );
-      
-      if (rollIndex === -1) {
-        console.warn(`Roll not found for cartoon number: ${cartoonNumber}`);
-        return;
-      }
-      
-      const roll = rollsData[rollIndex];
-      
-      // Update counts
-      const totalIssuedQty = entry.issuedEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.issuedQuantity || 0;
-      const totalWastageQty = entry.wastageEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.wastageQuantity || 0;
-      
-      roll.usedCount = (roll.usedCount || 0) + totalIssuedQty;
-      roll.damagedCount = (roll.damagedCount || 0) + totalWastageQty;
-      
-      // Recalculate availableCount
-      const totalCount = roll.totalCount || 0;
-      const totalUsed = (roll.usedCount || 0) + (roll.damagedCount || 0);
-      roll.availableCount = Math.max(0, totalCount - totalUsed);
-      
-      // Update status
-      if (roll.availableCount === 0) {
-        roll.status = 'COMPLETED';
-      } else {
-        roll.status = 'AVAILABLE';
-      }
-      
-      // Add usage history
-      if (!roll.usageHistory) {
-        roll.usageHistory = [];
-      }
-      
-      // Add issued ranges to history
-      const issuedEntries = entry.issuedEntries || [];
-      issuedEntries.forEach((issuedEntry: any) => {
-        roll.usageHistory.push({
-          date: entry.date,
-          referenceNo: entry.referenceNo || 'N/A',
-          brandName: entry.brandDetails?.brandName || entry.brandDetails || issuedEntry.brandDetails || 'N/A',
-          brandDetails: issuedEntry.brandDetails || entry.brandDetails || '',
-          bottleSize: issuedEntry.bottleSize || entry.bottleSize || '',
-          type: 'ISSUED',
-          issuedFromSerial: issuedEntry.fromSerial || '',
-          issuedToSerial: issuedEntry.toSerial || '',
-          issuedQuantity: issuedEntry.quantity || 0,
-          approvedBy: 'Officer In Charge',
-          approvedAt: new Date().toISOString()
-        });
-      });
-      
-      // Add wastage ranges to history
-      const wastageEntries = entry.wastageEntries || [];
-      wastageEntries.forEach((wastageEntry: any) => {
-        roll.usageHistory.push({
-          date: entry.date,
-          referenceNo: entry.referenceNo || 'N/A',
-          brandName: entry.brandDetails?.brandName || entry.brandDetails || wastageEntry.brandDetails || 'N/A',
-          brandDetails: wastageEntry.brandDetails || entry.brandDetails || '',
-          bottleSize: wastageEntry.bottleSize || entry.bottleSize || '',
-          type: 'WASTAGE',
-          wastageFromSerial: wastageEntry.fromSerial || '',
-          wastageToSerial: wastageEntry.toSerial || '',
-          wastageQuantity: wastageEntry.quantity || 0,
-          damageReason: wastageEntry.damageReason || entry.damageReason || '',
-          approvedBy: 'Officer In Charge',
-          approvedAt: new Date().toISOString()
-        });
-      });
-      
-      rollsData[rollIndex] = roll;
-      localStorage.setItem('hologramOverviewRolls', JSON.stringify(rollsData));
-      
-      console.log('✅ Rolls data updated for', cartoonNumber);
-    } catch (error) {
-      console.error('❌ Error updating rolls data:', error);
-    }
-  }
-
-  /**
-   * Update Available Hologram Data Tab
-   */
-  private updateAvailableHologramData(entry: any, cartoonNumber: string): void {
-    try {
-      const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
-      
-      const availableIndex = availableData.findIndex((item: any) => 
-        item.cartoonNumber === cartoonNumber && 
-        item.type === entry.hologramType
-      );
-      
-      if (availableIndex !== -1) {
-        const available = availableData[availableIndex];
-        
-        // CRITICAL FIX: Add to used and damaged counts (don't subtract from available)
-        const totalIssuedQty = entry.issuedEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.issuedQuantity || 0;
-        const totalWastageQty = entry.wastageEntries?.reduce((sum: number, e: any) => sum + (e.quantity || 0), 0) || entry.wastageQuantity || 0;
-        
-        // Update used and damaged counts
-        available.usedCount = (available.usedCount || 0) + totalIssuedQty;
-        available.damagedCount = (available.damagedCount || 0) + totalWastageQty;
-        
-        // Get the original total count from rolls data
-        const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-        const correspondingRoll = rollsData.find((roll: any) => 
-          roll.cartoonNumber === cartoonNumber && 
-          roll.type === entry.hologramType
-        );
-        
-        // CRITICAL FIX: Recalculate available count from total - (used + damaged)
-        // This ensures consistency with Rolls tab
-        if (correspondingRoll) {
-          const totalCount = correspondingRoll.totalCount || 0;
-          const totalUsed = (available.usedCount || 0) + (available.damagedCount || 0);
-          available.availableCount = Math.max(0, totalCount - totalUsed);
-          
-          // CRITICAL FIX: Calculate percentage correctly
-          // Percentage = (Available / Total) * 100
-          if (totalCount > 0) {
-            available.percentage = Math.round((available.availableCount / totalCount) * 100);
-          } else {
-            available.percentage = 0;
-          }
-        }
-        
-        // Update status
-        if (available.availableCount === 0) {
-          available.status = 'COMPLETED';
-        } else {
-          available.status = 'AVAILABLE';
-        }
-        
-        availableData[availableIndex] = available;
-        localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
-        
-        console.log('✅ Available hologram data updated for', cartoonNumber, {
-          totalCount: correspondingRoll?.totalCount,
-          usedCount: available.usedCount,
-          damagedCount: available.damagedCount,
-          availableCount: available.availableCount,
-          percentage: available.percentage
-        });
-      }
-    } catch (error) {
-      console.error('❌ Error updating available hologram data:', error);
-    }
-  }
-
-  /**
-   * Update Serial Numbers Data Tab
-   */
-  private updateSerialNumbersData(entry: any, cartoonNumber: string): void {
-    try {
-      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-      
-      const serialIndex = serialData.findIndex((roll: any) => 
-        roll.rollNumber === cartoonNumber && 
-        roll.hologramType === entry.hologramType
-      );
-      
-      if (serialIndex === -1) {
-        console.warn(`Serial roll not found for cartoon number: ${cartoonNumber}`);
-        return;
-      }
-      
-      const serialRoll = serialData[serialIndex];
-      
-      // Initialize usage history if needed
-      if (!serialRoll.usageHistory) {
-        serialRoll.usageHistory = [];
-      }
-      
-      // Add issued ranges to usage history
-      const issuedEntries = entry.issuedEntries || [];
-      issuedEntries.forEach((issuedEntry: any) => {
-        if (issuedEntry.fromSerial && issuedEntry.toSerial && issuedEntry.quantity > 0) {
-          serialRoll.usageHistory.push({
-            date: entry.date,
-            referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || entry.brandDetails || issuedEntry.brandDetails || 'N/A',
-            brandDetails: issuedEntry.brandDetails || entry.brandDetails || '',
-            bottleSize: issuedEntry.bottleSize || entry.bottleSize || '',
-            type: 'ISSUED',
-            issuedFromSerial: issuedEntry.fromSerial,
-            issuedToSerial: issuedEntry.toSerial,
-            issuedQuantity: issuedEntry.quantity || 0,
-            approvedBy: 'Officer In Charge',
-            approvedAt: new Date().toISOString(),
-            cartoonNumber: cartoonNumber
-          });
-          
-          serialRoll.usedCount = (serialRoll.usedCount || 0) + (issuedEntry.quantity || 0);
-        }
-      });
-      
-      // Add wastage ranges to usage history
-      const wastageEntries = entry.wastageEntries || [];
-      wastageEntries.forEach((wastageEntry: any) => {
-        if (wastageEntry.fromSerial && wastageEntry.toSerial && wastageEntry.quantity > 0) {
-          serialRoll.usageHistory.push({
-            date: entry.date,
-            referenceNo: entry.referenceNo || 'N/A',
-            brandName: entry.brandDetails?.brandName || entry.brandDetails || wastageEntry.brandDetails || 'N/A',
-            brandDetails: wastageEntry.brandDetails || entry.brandDetails || '',
-            bottleSize: wastageEntry.bottleSize || entry.bottleSize || '',
-            type: 'WASTAGE',
-            wastageFromSerial: wastageEntry.fromSerial,
-            wastageToSerial: wastageEntry.toSerial,
-            wastageQuantity: wastageEntry.quantity || 0,
-            damageReason: wastageEntry.damageReason || entry.damageReason || '',
-            approvedBy: 'Officer In Charge',
-            approvedAt: new Date().toISOString(),
-            cartoonNumber: cartoonNumber
-          });
-          
-          serialRoll.damagedCount = (serialRoll.damagedCount || 0) + (wastageEntry.quantity || 0);
-        }
-      });
-      
-      // Update available count and status
-      const totalUsed = (serialRoll.usedCount || 0) + (serialRoll.damagedCount || 0);
-      const totalCount = serialRoll.totalCount || 0;
-      serialRoll.availableCount = Math.max(0, totalCount - totalUsed);
-      
-      if (serialRoll.availableCount === 0) {
-        serialRoll.status = 'COMPLETED';
-      } else {
-        serialRoll.status = 'AVAILABLE';
-      }
-      
-      serialData[serialIndex] = serialRoll;
-      localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
-      
-      console.log('✅ Serial numbers data updated for', cartoonNumber);
-    } catch (error) {
-      console.error('❌ Error updating serial numbers data:', error);
-    }
-  }
-
-  /**
-   * Update Issued Hologram Tab
-   */
-  private updateIssuedHologramData(entry: any, cartoonNumber: string): void {
-    try {
-      const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
-      
-      // Find the issued hologram entry for this cartoon number and reference
-      const issuedIndex = issuedData.findIndex((issued: any) => 
-        issued.cartoonNumber === cartoonNumber && 
-        issued.requestReference === entry.referenceNo &&
-        issued.status === 'IN_PROGRESS'
-      );
-      
-      if (issuedIndex !== -1) {
-        // Move to history
-        const issuedEntry = issuedData[issuedIndex];
-        issuedEntry.status = 'COMPLETED';
-        issuedEntry.completionDate = new Date().toISOString().split('T')[0];
-        issuedEntry.completedBy = 'Officer In Charge';
-        issuedEntry.completedAt = new Date().toISOString();
-        
-        // Remove from issued
-        issuedData.splice(issuedIndex, 1);
-        localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedData));
-        
-        // Add to history
-        const historyData = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
-        historyData.push(issuedEntry);
-        localStorage.setItem('hologramOverviewHistory', JSON.stringify(historyData));
-        
-        console.log('✅ Issued hologram moved to history for', cartoonNumber);
-      }
-    } catch (error) {
-      console.error('❌ Error updating issued hologram data:', error);
-    }
-  }
-
-  /**
-   * Add leftover ranges back to available ranges in Serial Numbers Data
-   * This is called when "Save Entry" is clicked
-   */
-  private addLeftoverRangesToAvailable(entry: RegisterEntry): void {
-    try {
-      console.log('🔄 Adding leftover ranges back to available...');
-      
-      const lockedRolls = entry.lockedRolls || [];
-      if (lockedRolls.length === 0) {
-        console.log('⚠️ No locked rolls found');
-        return;
-      }
-      
-      // Load serial numbers data
-      const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-      
-      lockedRolls.forEach((roll: any) => {
-        const cartoonNumber = roll.cartoonNumber;
-        const leftOver = roll.leftOver || 0;
-        
-        if (leftOver <= 0) {
-          console.log(`⏭️ Skipping roll ${cartoonNumber} - no leftover (${leftOver})`);
-          return;
-        }
-        
-        console.log(`📦 Processing roll ${cartoonNumber} with leftover: ${leftOver}`);
-        
-        // Find the serial roll for this cartoon number
-        const serialIndex = serialData.findIndex((r: any) => 
-          r.rollNumber === cartoonNumber && 
-          r.hologramType === entry.hologramType
-        );
-        
-        if (serialIndex === -1) {
-          console.warn(`⚠️ Serial roll not found for cartoon ${cartoonNumber}`);
-          return;
-        }
-        
-        const serialRoll = serialData[serialIndex];
-        
-        // Calculate leftover range
-        const allocatedRanges = roll.allocatedRanges || [];
-        const issuedRanges = roll.issuedRanges || [];
-        const wastageRanges = roll.wastageRanges || [];
-        
-        if (allocatedRanges.length === 0) {
-          console.warn(`⚠️ No allocated ranges found for roll ${cartoonNumber}`);
-          return;
-        }
-        
-        // Get the full allocated range for this roll
-        const firstAllocated = allocatedRanges[0];
-        const lastAllocated = allocatedRanges[allocatedRanges.length - 1];
-        
-        // Extract prefix and numeric parts
-        const fromMatch = firstAllocated.fromSerial.match(/^([A-Z]+)(\d+)$/);
-        const toMatch = lastAllocated.toSerial.match(/^([A-Z]+)(\d+)$/);
-        
-        if (!fromMatch || !toMatch) {
-          console.warn(`⚠️ Invalid serial format for roll ${cartoonNumber}`);
-          return;
-        }
-        
-        const prefix = fromMatch[1];
-        const allocatedFrom = parseInt(fromMatch[2], 10);
-        const allocatedTo = parseInt(toMatch[2], 10);
-        
-        // Find the highest used serial number (from issued and wastage)
-        let highestUsed = allocatedFrom - 1;
-        
-        [...issuedRanges, ...wastageRanges].forEach((range: any) => {
-          const rangeToMatch = range.toSerial.match(/^([A-Z]+)(\d+)$/);
-          if (rangeToMatch) {
-            const rangeToNum = parseInt(rangeToMatch[2], 10);
-            if (rangeToNum > highestUsed) {
-              highestUsed = rangeToNum;
-            }
-          }
-        });
-        
-        // Leftover range starts from highestUsed + 1 to allocatedTo
-        const leftoverFrom = highestUsed + 1;
-        const leftoverTo = allocatedTo;
-        
-        if (leftoverFrom > leftoverTo) {
-          console.warn(`⚠️ Invalid leftover range for roll ${cartoonNumber}: ${leftoverFrom} > ${leftoverTo}`);
-          return;
-        }
-        
-        const leftoverFromSerial = `${prefix}${leftoverFrom}`;
-        const leftoverToSerial = `${prefix}${leftoverTo}`;
-        
-        console.log(`✅ Calculated leftover range for ${cartoonNumber}: ${leftoverFromSerial} - ${leftoverToSerial} (${leftOver} units)`);
-        
-        // Add leftover range to available ranges
-        if (!serialRoll.availableRanges) {
-          serialRoll.availableRanges = [];
-        }
-        
-        // Check if this range already exists in available ranges
-        const rangeExists = serialRoll.availableRanges.some((r: any) => 
-          r.fromSerial === leftoverFromSerial && r.toSerial === leftoverToSerial
-        );
-        
-        if (!rangeExists) {
-          serialRoll.availableRanges.push({
-            fromSerial: leftoverFromSerial,
-            toSerial: leftoverToSerial,
-            quantity: leftOver,
-            addedAt: new Date().toISOString(),
-            addedBy: 'OIC Daily Register - Save Entry'
-          });
-          
-          console.log(`✅ Added leftover range to available for ${cartoonNumber}`);
-        } else {
-          console.log(`⏭️ Leftover range already exists in available for ${cartoonNumber}`);
-        }
-        
-        // Update the serial roll in the array
-        serialData[serialIndex] = serialRoll;
-      });
-      
-      // Save updated serial data
-      localStorage.setItem('hologramOverviewSerialData', JSON.stringify(serialData));
-      console.log('✅ Leftover ranges added to available successfully');
-      
-    } catch (error) {
-      console.error('❌ Error adding leftover ranges to available:', error);
-    }
-  }
-
-  updateEntryQuantitiesFromAllRolls(entry: RegisterEntry): void {
+   * Update entry quantities based on locked rolls and current input
+   */  updateEntryQuantitiesFromAllRolls(entry: RegisterEntry): void {
     if (entry.isFixed) return;
 
     const lockedRolls = entry.lockedRolls || [];
@@ -2473,8 +2129,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
     }
     
     // Create usage history entry
+    const brandNameStr = typeof leftoverRollInput.brandDetails === 'string' 
+      ? leftoverRollInput.brandDetails 
+      : (leftoverRollInput.brandDetails?.brandName || 'Unknown Brand');
+
     const usageHistory: LeftoverUsageHistory = {
-      brandDetails: leftoverRollInput.brandDetails,
+      brandDetails: brandNameStr,
       bottleSize: leftoverRollInput.bottleSize,
       originalRange: originalRange,
       usedRange: usedRange,
@@ -2516,9 +2176,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
     const lockedRolls = this.getLockedRollsForEntry(entry);
     
-    lockedRolls.forEach((roll) => {
+    lockedRolls.forEach((roll: any) => {
       const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
-      const entries = (roll.issuedRanges || []).map(range => ({
+      const entries = (roll.issuedRanges || []).map((range: any) => ({
         fromSerial: range.fromSerial,
         toSerial: range.toSerial,
         quantity: range.quantity
@@ -2543,9 +2203,9 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
     const lockedRolls = this.getLockedRollsForEntry(entry);
     
-    lockedRolls.forEach((roll) => {
+    lockedRolls.forEach((roll: any) => {
       const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
-      const entries = (roll.wastageRanges || []).map(range => ({
+      const entries = (roll.wastageRanges || []).map((range: any) => ({
         fromSerial: range.fromSerial,
         toSerial: range.toSerial,
         quantity: range.quantity
@@ -2561,6 +2221,33 @@ export class OicdailyhologramregisterComponent implements OnInit {
     });
     
     return groups;
+  }
+
+
+
+
+
+  /**
+   * Get currently selected roll
+   */
+  getCurrentSelectedRoll(entry: RegisterEntry): string | null {
+     return entry.currentRollSelection?.selectedRoll || null;
+  }
+
+  /**
+   * Get current roll input data
+   */
+  getCurrentRollInput(entry: RegisterEntry): RollInput | null {
+     return entry.currentRollSelection?.rollInput || null;
+  }
+  
+
+
+  /**
+   * Get locked rolls for an entry
+   */
+  getLockedRollsForEntry(entry: RegisterEntry): any[] {
+    return entry.lockedRolls || [];
   }
 
   // Get allocated ranges for a specific roll from entry's allocation data
@@ -2587,7 +2274,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         
         // 2. Try parsing serialRange
         if (rollInput.serialRange) {
-          const parts = rollInput.serialRange.split('-').map(s => s.trim());
+          const parts = rollInput.serialRange.split('-').map((s: string) => s.trim());
           if (parts.length === 2) {
             return [{
               fromSerial: parts[0],
@@ -2612,7 +2299,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         }
         
         if (lockedRoll.serialRange) {
-          const parts = lockedRoll.serialRange.split('-').map(s => s.trim());
+          const parts = lockedRoll.serialRange.split('-').map((s: string) => s.trim());
           if (parts.length === 2) {
             return [{
               fromSerial: parts[0],
@@ -2642,7 +2329,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       // Try serialRange
       if (rollInput.serialRange) {
         console.log('✅ Parsing serialRange from rollInput:', rollInput.serialRange);
-        const parts = rollInput.serialRange.split('-').map(s => s.trim());
+        const parts = rollInput.serialRange.split('-').map((s: string) => s.trim());
         if (parts.length === 2) {
           return [{
             fromSerial: parts[0],
@@ -2719,6 +2406,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
         'hologramApplications',
         'approvedHologramEntries'
       ];
+
+      // PRORITY 1: Check entries own allocatedRanges (from Backend API)
+      if (entry.allocatedRanges && entry.allocatedRanges.length > 0) {
+        console.log('✅ Found direct allocatedRanges in entry:', entry.allocatedRanges);
+        return {
+          referenceNo: referenceNo,
+          totalAllocated: entry.allocatedRanges.reduce((sum, r) => sum + r.quantity, 0),
+          allocatedCartoons: entry.allocatedRanges.map(r => ({
+             cartoonNumber: r.cartoonNumber,
+             quantity: r.quantity,
+             fromSerial: r.fromSerial,
+             toSerial: r.toSerial,
+             serialRange: `${r.fromSerial} - ${r.toSerial}`
+          }))
+        };
+      }
       
       for (const key of possibleKeys) {
         const data = JSON.parse(localStorage.getItem(key) || '[]');
@@ -2727,8 +2430,8 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // Find matching allocations
         const matchingAllocations = data.filter((a: any) => 
           a.referenceNo === referenceNo || 
-          a.ourRefNo === referenceNo ||
-          a.id === referenceNo ||
+          a.ourRefNo === referenceNo || 
+          a.id === referenceNo || 
           a.refNumber === referenceNo
         );
         
@@ -2818,133 +2521,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     return `${ranges[0].fromSerial} - ${ranges[0].toSerial}`;
   }
 
-  // Test methods
-  createTestApproval(): void {
-    const testEntry = {
-      id: `TEST_${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
-      hologramType: this.selectedHologramType,
-      
-      // Store test allocations
-      issuedEntries: [],
-      wastageEntries: [],
-      
-      // Total quantities
-      issuedQuantity: 0,
-      utilizedQuantity: 500, // Test with 500 holograms
-      wastageQuantity: 0,
-      leftOverQuantity: 500,
-      damageReason: '',
-      isFixed: false,
-      
-      // Metadata
-      referenceNo: `TEST/HRQ/${new Date().getFullYear()}/${String(Date.now()).slice(-6)}`,
-      brandDetails: {
-        brandName: 'Test Brand Whisky',
-        alcoholPercent: '42.8%',
-        sizeMl: 750,
-        liquorType: 'Whisky'
-      },
-      bottleSize: '750ml',
-      submissionDate: new Date().toISOString().split('T')[0],
-      usageDate: new Date().toISOString().split('T')[0],
-      approvalDate: new Date().toISOString().split('T')[0],
-      officerName: 'Test Officer',
-      autoGenerated: true,
-      
-      // Store allocated ranges for reference
-      allocatedRanges: [
-        {
-          cartoonNumber: 'TEST_CTN001',
-          fromSerial: 'HG001001',
-          toSerial: 'HG001500',
-          quantity: 500
-        }
-      ]
-    };
 
-    // Save to localStorage
-    const existingEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
-    existingEntries.push(testEntry);
-    localStorage.setItem('approvedHologramEntries', JSON.stringify(existingEntries));
-
-    console.log('Created test approval entry:', testEntry);
-    
-    // Reload entries
-    this.loadApprovedEntries();
-    this.loadFilteredData();
-    this.cdr.detectChanges();
-
-    alert(`✅ Test approval created successfully!\n\nReference: ${testEntry.referenceNo}\nType: ${testEntry.hologramType}\nQuantity: ${testEntry.utilizedQuantity}\n\nThe entry is now available in the Daily Register Entries.`);
-  }
-
-  clearTestData(): void {
-    const confirmMessage = 
-      `⚠️ WARNING: Clear All Test Data ⚠️\n\n` +
-      `This will permanently delete:\n` +
-      `• All approved hologram entries\n` +
-      `• All daily register entries\n` +
-      `• All test data\n\n` +
-      `Current Data:\n` +
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-      `• Total Entries: ${this.entries.length}\n` +
-      `• Filtered Entries: ${this.filteredEntries.length}\n\n` +
-      `This action CANNOT be undone!\n\n` +
-      `Are you sure you want to clear all test data?`;
-    
-    const confirmed = confirm(confirmMessage);
-    
-
-    if (!confirmed) {
-      console.log('Clear test data cancelled');
-      return;
-    }
-    
-    // Double confirmation for safety
-    const doubleConfirm = confirm(
-      `⚠️ FINAL CONFIRMATION ⚠️\n\n` +
-      `This is your last chance to cancel.\n\n` +
-      `Click OK to permanently delete all test data.\n` +
-      `Click Cancel to keep your data.`
-    );
-    
-    if (!doubleConfirm) {
-      console.log('Clear test data cancelled on second confirmation');
-      return;
-    }
-    
-    try {
-      // Clear localStorage
-      localStorage.removeItem('approvedHologramEntries');
-      localStorage.removeItem('dailyRegisterEntries');
-      
-      // Clear component data
-      this.entries = [];
-      this.filteredEntries = [];
-      
-      // Refresh display
-      this.loadFilteredData();
-      this.cdr.detectChanges();
-      
-      console.log('All test data cleared successfully');
-      
-      alert(
-        `✅ Test Data Cleared Successfully!\n\n` +
-        `All test data has been permanently deleted:\n` +
-        `• Approved hologram entries: Cleared\n` +
-        `• Daily register entries: Cleared\n` +
-        `• LocalStorage: Cleared\n\n` +
-        `The system is now reset to a clean state.`
-      );
-    } catch (error) {
-      console.error('Error clearing test data:', error);
-      alert(
-        `❌ Error Clearing Test Data\n\n` +
-        `An error occurred while clearing test data.\n` +
-        `Please check the console for details.`
-      );
-    }
-  }
 
   /**
    * View usage details for a saved entry

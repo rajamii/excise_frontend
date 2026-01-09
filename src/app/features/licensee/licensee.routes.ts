@@ -6,6 +6,7 @@ import { ApplyNewLicenseComponent } from './apply-new-license/apply-new-license.
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
 import { Authority } from '../../shared/constants/authority.enum';
 import { SupplyChainComponent } from './supplyChain/supplychaincomponents/supply-chain.component';
+import { TransitPermitComponent } from './supplyChain/transit-permit/transit-permit.component';
 
 export const licenseeRoutes: Routes = [
   {
@@ -29,7 +30,7 @@ export const licenseeRoutes: Routes = [
         component: ApplyNewLicenseComponent,
         canActivate: [UserRouteAccessService],
         data: { authorities: [Authority.LICENSEE] },
-      },      
+      },
 
       // Company Registration Flow
       {
@@ -85,13 +86,13 @@ export const licenseeRoutes: Routes = [
           },
           {
             path: 'ena-import',
-            component:SupplyChainComponent,
+            component: SupplyChainComponent,
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
-          }
+          },
         ]
       },
-      
+
       // Supply Chain Management
       {
         path: 'supply-chain',
@@ -113,10 +114,23 @@ export const licenseeRoutes: Routes = [
             loadComponent: () => import('./supplyChain/cancellation-request/cancellation-request.component').then(m => m.CancellationRequestComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'transit-permit',
+            component: TransitPermitComponent,
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
           }
         ]
       },
-      
+
+      {
+        path: 'supply-chain-registration',
+        loadComponent: () => import('./supply-chain-registration/supply-chain-registration.component').then(m => m.SupplyChainRegistrationComponent),
+        canActivate: [UserRouteAccessService],
+        data: { authorities: [Authority.LICENSEE] },
+      },
+
       // Default Redirect to Dashboard
       {
         path: '',
