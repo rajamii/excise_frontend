@@ -210,12 +210,23 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // CRITICAL FIX: Only show requests that have been ALLOCATED (IN_USE, APPROVED, COMPLETED)
         // This prevents "Submitted" requests from appearing before allocation
         const allocatedRequests = requests.filter((req: any) => {
-            const s = (req.status || '').toUpperCase();
+            const s = (req.status || '').toUpperCase().replace(/\s+/g, '_');
             // We include APPROVED for legacy compatibility, but new flow uses IN_USE
             return ['IN_USE', 'APPROVED', 'COMPLETED'].includes(s);
         });
 
+        console.log(`✅ FILTERED REQUESTS: ${allocatedRequests.length} requests passed status filter`);
+        if (allocatedRequests.length > 0) {
+          console.log('🔍 First filtered request:', allocatedRequests[0]);
+        }
+
         const apiEntries = allocatedRequests.map((req: any) => {
+          console.log('🔍 RAW REQUEST FULL:', req);
+          console.log('🔍 rolls_assigned variations:', {
+            rollsAssigned: req.rollsAssigned,
+            rolls_assigned: req.rolls_assigned,
+            keys: Object.keys(req)
+          });
           // Map available_cartons from procurement to allocatedRanges format
           // PRIMARY: Use map enrichment for accurate ranges if available
           let allocatedRanges = (req.available_cartons || []).map((carton: any) => {
@@ -258,8 +269,8 @@ export class OicdailyhologramregisterComponent implements OnInit {
               }
           }
 
-          // Also check issued_assets for already assigned cartons
-          const issuedAssets = (req.issued_assets || []).map((asset: any) => ({
+          // CRITICAL FIX: Use rolls_assigned instead of issued_assets (HTTP interceptor safe)
+          const rollsAssigned = (req.rollsAssigned || req.rolls_assigned || []).map((asset: any) => ({
             cartoonNumber: asset.cartoonNumber || asset.cartoon_number || '',
             fromSerial: asset.fromSerial || asset.from_serial || '',
             toSerial: asset.toSerial || asset.to_serial || '',
@@ -282,7 +293,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
             hologramType: 'LOCAL', // Default, can be determined by procurement type
             isFixed: false, // Will be determined by available quantity
             allocatedRanges: allocatedRanges,
-            issuedAssets: issuedAssets,
+            rollsAssigned: rollsAssigned,
             total: 0,
             damageReason: '',
             cartoonNumber: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
@@ -306,7 +317,6 @@ export class OicdailyhologramregisterComponent implements OnInit {
           dates: entry.dates || { submission: null, usage: null },
           brandDetails: entry.brandDetails || 'N/A',
           bottleSize: entry.bottleSize || '750ml',
-          rollsAssigned: entry.rollsAssigned || [],
           hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
           hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
           issuedFrom: entry.issuedFrom || '',
@@ -324,7 +334,8 @@ export class OicdailyhologramregisterComponent implements OnInit {
           originalHologramQty: entry.originalHologramQty || entry.hologramQty || 0,
           currentRollSelection: entry.currentRollSelection,
           lockedRolls: entry.lockedRolls || [],
-          allocatedRanges: entry.allocatedRanges || []
+          allocatedRanges: entry.allocatedRanges || [],
+          rollsAssigned: entry.rollsAssigned || [] // CRITICAL FIX: Use rolls_assigned from database
         }));
         
         console.log('✅ Final entries:', this.entries.length);
@@ -594,25 +605,34 @@ export class OicdailyhologramregisterComponent implements OnInit {
     
     const availableRolls: any[] = [];
     
-    // PRIORITY 1: Try to get from hologram allocation data (source of truth)
-    const allocationData = this.getHologramAllocationForEntry(entry);
+    // CRITICAL FIX: Use rollsAssigned from entry (loaded from database via rolls_assigned column)
+    // This bypasses HTTP interceptor issues with issued_assets field
+    const rollsAssigned = (entry as any).rollsAssigned || [];
+    const allocatedRanges = (entry as any).allocatedRanges || [];
+    
+    // Combine both sources
+    const allAllocations = [...rollsAssigned, ...allocatedRanges];
+    
+    console.log('📦 API allocated rolls:', allAllocations);
     
     // Track added cartons to avoid duplicates from pool
     const addedCartons = new Set<string>();
 
-    if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
-      console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
+    if (allAllocations && allAllocations.length > 0) {
+      console.log('✅ Using API allocation data (NOT localStorage):', allAllocations);
       
       // CRITICAL FIX: Create SEPARATE dropdown entries for each range
       // Instead of grouping multiple ranges into one roll, each range gets its own entry
       const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
       
-      allocationData.allocatedCartoons.forEach((cartoon: any) => {
-        const cartoonNumber = cartoon.cartoonNumber;
-        const quantity = cartoon.quantity || 0;
-        const fromSerial = cartoon.fromSerial || '';
-        const toSerial = cartoon.toSerial || '';
-        const serialRange = cartoon.serialRange || `${fromSerial} - ${toSerial}`;
+      allAllocations.forEach((allocation: any) => {
+        const cartoonNumber = allocation.cartoonNumber || allocation.cartoon_number || '';
+        const quantity = allocation.quantity || allocation.count || 0;
+        const fromSerial = allocation.fromSerial || allocation.from_serial || allocation.from || '';
+        const toSerial = allocation.toSerial || allocation.to_serial || allocation.to || '';
+        const serialRange = allocation.serialRange || allocation.range || `${fromSerial} - ${toSerial}`;
+        
+        if (!cartoonNumber) return;
         
         // Increment range count for this roll
         const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
@@ -661,10 +681,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
       console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
     }
     
-    // PRIORITY 2: APPEND "Stock Pool" from Procurement Cache
-    // This allows selecting ANY available roll from inventory if not strictly allocated (or if user needs to override)
-    if (this.procurementCache && this.procurementCache.length > 0) {
-        console.log(`🏊 Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
+    
+    // CRITICAL FIX: ONLY add stock pool if NO allocations were found
+    // If rolls are explicitly assigned (allAllocations > 0), show ONLY those rolls
+    if (allAllocations.length === 0 && this.procurementCache && this.procurementCache.length > 0) {
+        console.log(`🏊 NO ALLOCATIONS FOUND - Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
         
         this.procurementCache.forEach(proc => {
              // 1. Check Matching Type
