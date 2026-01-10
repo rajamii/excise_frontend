@@ -42,7 +42,7 @@ interface RollInput {
   wastageQty: number;
   leftOver: number;
   damageReason: string;
-  brandDetails: string | { brandName: string; [key: string]: any };
+  brandDetails: string | { brandName: string;[key: string]: any };
   bottleSize: string;
   isLeftoverReuse?: boolean;
   leftoverUsageHistory?: LeftoverUsageHistory[];
@@ -58,7 +58,7 @@ interface RegisterEntry {
     submission: string;
     usage: string;
   };
-  brandDetails: string | { brandName: string; [key: string]: any };
+  brandDetails: string | { brandName: string;[key: string]: any };
   bottleSize: string;
   rollsAssigned: string[];
   hologramQty: number;
@@ -105,34 +105,38 @@ export class OicdailyhologramregisterComponent implements OnInit {
   selectedYear = '2025';
   selectedDate = new Date().toISOString().split('T')[0];
   selectedHologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
-  
+
   entries: RegisterEntry[] = [];
   filteredEntries: RegisterEntry[] = [];
-  
+
   pageSize = 10;
   currentPage = 1;
-  
+
   // For rolls view section above table
   selectedEntryForRollsView: RegisterEntry | null = null;
-  
+
   // For usage details modal
   selectedEntryForDetails: RegisterEntry | null = null;
   selectedRollTabIndex: number = 0;
+  
+  // View state management
+  private viewDetailsState: { [key: string]: boolean } = {};
+  private readonly VIEW_STATE_KEY = 'hologramViewState';
 
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef,
     private hologramService: HologramDataService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
-    // Determine if we have API access (mock check)
+    this.loadViewState();
     this.loadApprovedEntries();
-    
+
     // CRITICAL FIX: Recalculate Available Hologram Data from Rolls data
     // This fixes any existing data that was calculated with the old (wrong) logic
 
-    
+
     // Listen for storage changes to auto-refresh
 
   }
@@ -150,69 +154,103 @@ export class OicdailyhologramregisterComponent implements OnInit {
   loadApprovedEntries(): void {
     // Load from Backend API - Fetch all hologram_request entries AND procurements
     // Requests have basic info, Procurements have the source of truth for Carton Ranges
-    
 
-    
-    // Fetch both Requests and Procurements
+
+
+    // Fetch Requests, Procurements, AND saved Daily Register entries
     forkJoin({
-        requests: this.hologramService.getRequests(),
-        procurements: this.hologramService.getProcurements()
+      requests: this.hologramService.getRequests(),
+      procurements: this.hologramService.getProcurements(),
+      dailyRegister: this.hologramService.getDailyRegisterEntries()
     }).subscribe({
-      next: ({ requests, procurements }) => {
-        console.log('✅ Loaded data from API (Raw):', { 
-            requestsType: typeof requests,
-            procurementsType: typeof procurements,
-            procurementsIsArray: Array.isArray(procurements)
+      next: ({ requests, procurements, dailyRegister }) => {
+        // MEGA DEBUG - Very visible
+        console.warn('🔔🔔🔔🔔🔔 FRESH CODE v2 - dailyRegister RAW:', dailyRegister);
+        console.warn('🔔🔔🔔🔔🔔 dailyRegister is array?', Array.isArray(dailyRegister));
+        console.warn('🔔🔔🔔🔔🔔 dailyRegister count:', Array.isArray(dailyRegister) ? dailyRegister.length : (dailyRegister as any)?.results?.length || 0);
+
+        console.log('✅ Loaded data from API (Raw):', {
+          requestsType: typeof requests,
+          procurementsType: typeof procurements,
+          procurementsIsArray: Array.isArray(procurements)
         });
-        
+
         // Handle pagination (if response has 'results' property)
         let rawProcurements: any[] = [];
         if (Array.isArray(procurements)) {
-            rawProcurements = procurements;
+          rawProcurements = procurements;
         } else if ((procurements as any).results && Array.isArray((procurements as any).results)) {
-            console.log('⚠️ Detected paginated response for procurements');
-            rawProcurements = (procurements as any).results;
+          console.log('⚠️ Detected paginated response for procurements');
+          rawProcurements = (procurements as any).results;
         } else {
-             console.log('⚠️ Unknown procurement response format, defaulting to empty array', procurements);
-             rawProcurements = [];
+          console.log('⚠️ Unknown procurement response format, defaulting to empty array', procurements);
+          rawProcurements = [];
         }
 
         // Save procurements to cache for dropdown fallback
         this.procurementCache = rawProcurements;
-        
+
         console.log('✅ Procurement Cache Size:', this.procurementCache.length);
 
         // 1. Build Procurement Map: CartonNumber -> CartonDetail (with ranges)
         const procurementMap = new Map<string, any>();
-        
+
         rawProcurements.forEach((p: any) => {
-            // Check all possible keys for carton details
-            const details = p.carton_details || p.cartonDetails || p.cartoons || p.cartoon_details || [];
-            if (Array.isArray(details)) {
-                details.forEach((c: any) => {
-                    // Normalize keys if needed
-                    const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number || '';
-                    if (cNo) {
-                        procurementMap.set(cNo, {
-                            ...c,
-                            // Ensure we have from/to serials
-                            fromSerial: c.fromSerial || c.from_serial || '',
-                            toSerial: c.toSerial || c.to_serial || ''
-                        });
-                    }
+          // Check all possible keys for carton details
+          const details = p.carton_details || p.cartonDetails || p.cartoons || p.cartoon_details || [];
+          if (Array.isArray(details)) {
+            details.forEach((c: any) => {
+              // Normalize keys if needed
+              const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number || '';
+              if (cNo) {
+                procurementMap.set(cNo, {
+                  ...c,
+                  // Ensure we have from/to serials
+                  fromSerial: c.fromSerial || c.from_serial || '',
+                  toSerial: c.toSerial || c.to_serial || ''
                 });
-            }
+              }
+            });
+          }
         });
 
         console.log('✅ Built Procurement Map with', procurementMap.size, 'cartons');
-        
-        // 2. Map Requests to RegisterEntry, enriching with Procurement Map data
+
+        // 2. Build map of saved daily register entries by reference_no
+        // This allows us to restore isFixed status and lockedRolls after page refresh
+        const savedEntriesMap = new Map<string, any[]>();
+        const rawDailyRegister = Array.isArray(dailyRegister)
+          ? dailyRegister
+          : (dailyRegister as any)?.results || [];
+
+        console.warn('📁📁📁 Daily Register entries loaded:', rawDailyRegister.length, 'from API');
+
+        // Debug: Log raw entries for matching analysis
+        if (rawDailyRegister.length > 0) {
+          console.warn('🔍🔍🔍 DEBUG SAMPLE SAVED ENTRY:', JSON.stringify(rawDailyRegister[0]));
+        }
+
+        rawDailyRegister.forEach((entry: any) => {
+          const refNo = (entry.reference_no || entry.referenceNo || '').trim();
+          if (refNo) {
+            // Use normalized key for matching (case-insensitive)
+            const normalizedKey = refNo.toUpperCase();
+            if (!savedEntriesMap.has(normalizedKey)) {
+              savedEntriesMap.set(normalizedKey, []);
+            }
+            savedEntriesMap.get(normalizedKey)!.push(entry);
+          }
+        });
+
+        console.warn('✅ SAVED ENTRIES MAP KEYS:', Array.from(savedEntriesMap.keys()));
+
+        // 3. Map Requests to RegisterEntry, enriching with Procurement Map data
         // CRITICAL FIX: Only show requests that have been ALLOCATED (IN_USE, APPROVED, COMPLETED)
         // This prevents "Submitted" requests from appearing before allocation
         const allocatedRequests = requests.filter((req: any) => {
-            const s = (req.status || '').toUpperCase().replace(/\s+/g, '_');
-            // We include APPROVED for legacy compatibility, but new flow uses IN_USE
-            return ['IN_USE', 'APPROVED', 'COMPLETED'].includes(s);
+          const s = (req.status || '').toUpperCase().replace(/\s+/g, '_');
+          // We include APPROVED for legacy compatibility, but new flow uses IN_USE
+          return ['IN_USE', 'APPROVED', 'COMPLETED'].includes(s);
         });
 
         console.log(`✅ FILTERED REQUESTS: ${allocatedRequests.length} requests passed status filter`);
@@ -230,43 +268,43 @@ export class OicdailyhologramregisterComponent implements OnInit {
           // Map available_cartons from procurement to allocatedRanges format
           // PRIMARY: Use map enrichment for accurate ranges if available
           let allocatedRanges = (req.available_cartons || []).map((carton: any) => {
-             const cNo = carton.cartoonNumber || carton.cartoon_number || '';
-             const procDetail = procurementMap.get(cNo);
-             
-             return {
-                cartoonNumber: cNo,
-                fromSerial: carton.fromSerial || carton.from_serial || (procDetail ? procDetail.fromSerial : ''),
-                toSerial: carton.toSerial || carton.to_serial || (procDetail ? procDetail.toSerial : ''),
-                quantity: carton.quantity || carton.totalCount || 0,
-                procurementRef: carton.procurement_ref || ''
-             };
+            const cNo = carton.cartoonNumber || carton.cartoon_number || '';
+            const procDetail = procurementMap.get(cNo);
+
+            return {
+              cartoonNumber: cNo,
+              fromSerial: carton.fromSerial || carton.from_serial || (procDetail ? procDetail.fromSerial : ''),
+              toSerial: carton.toSerial || carton.to_serial || (procDetail ? procDetail.toSerial : ''),
+              quantity: carton.quantity || carton.totalCount || 0,
+              procurementRef: carton.procurement_ref || ''
+            };
           });
 
           // PREDICTIVE FIX: If allocatedRanges is empty, try to match Procurement by Reference Number
           if (!allocatedRanges || allocatedRanges.length === 0) {
-              const reqRef = req.ref_no || req.refNo || req.referenceNo;
-              if (reqRef) {
-                  const matchingProc = rawProcurements.find(p => {
-                      const pRef = p.ref_no || p.refNo || p.referenceNo;
-                      return pRef === reqRef;
-                  });
-                  
-                  if (matchingProc) {
-                      console.log(`✅ Found matching procurement for ${reqRef} via Reference No match`);
-                      const details = matchingProc.carton_details || matchingProc.cartonDetails || matchingProc.cartoons || matchingProc.cartoon_details || [];
-                      
-                      if (Array.isArray(details) && details.length > 0) {
-                          allocatedRanges = details.map((c: any) => ({
-                              cartoonNumber: c.cartoonNumber || c.cartoon_number || c.carton_number || '',
-                              fromSerial: c.fromSerial || c.from_serial || '',
-                              toSerial: c.toSerial || c.to_serial || '',
-                              quantity: c.quantity || c.totalCount || 0,
-                              procurementRef: ''
-                          }));
-                          console.log(`📦 Populated allocatedRanges from matching procurement: ${allocatedRanges.length} items`);
-                      }
-                  }
+            const reqRef = req.ref_no || req.refNo || req.referenceNo;
+            if (reqRef) {
+              const matchingProc = rawProcurements.find(p => {
+                const pRef = p.ref_no || p.refNo || p.referenceNo;
+                return pRef === reqRef;
+              });
+
+              if (matchingProc) {
+                console.log(`✅ Found matching procurement for ${reqRef} via Reference No match`);
+                const details = matchingProc.carton_details || matchingProc.cartonDetails || matchingProc.cartoons || matchingProc.cartoon_details || [];
+
+                if (Array.isArray(details) && details.length > 0) {
+                  allocatedRanges = details.map((c: any) => ({
+                    cartoonNumber: c.cartoonNumber || c.cartoon_number || c.carton_number || '',
+                    fromSerial: c.fromSerial || c.from_serial || '',
+                    toSerial: c.toSerial || c.to_serial || '',
+                    quantity: c.quantity || c.totalCount || 0,
+                    procurementRef: ''
+                  }));
+                  console.log(`📦 Populated allocatedRanges from matching procurement: ${allocatedRanges.length} items`);
+                }
               }
+            }
           }
 
           // CRITICAL FIX: Use rolls_assigned instead of issued_assets (HTTP interceptor safe)
@@ -277,27 +315,211 @@ export class OicdailyhologramregisterComponent implements OnInit {
             quantity: asset.quantity || 0
           }));
 
+          // CRITICAL FIX: Check if this request has saved daily register entries
+          const reqRef = (req.ref_no || req.refNo || req.reference_no || req.referenceNo || '').trim();
+          const normalizedReqRef = reqRef.toUpperCase();
+
+          // Debug: Log matching attempt
+          console.warn(`🔎 MATCHING: reqRef='${reqRef}', normalized='${normalizedReqRef}'`);
+          console.warn(`🔎 Available keys in savedEntriesMap:`, Array.from(savedEntriesMap.keys()));
+
+          const savedForRequest = savedEntriesMap.get(normalizedReqRef) || [];
+          const hasSavedEntries = savedForRequest.length > 0;
+          
+          // FIX: If there are ANY saved entries in the database, mark as saved
+          // The presence of saved entries means data has been saved to the database
+          // This is the key fix: having saved entries = entry is fixed/saved, regardless of is_fixed field value
+          const isSaved = hasSavedEntries;
+
+          console.warn(`   → RESULT: ${savedForRequest.length} matches, isSaved=${isSaved}`);
+
+          // Build lockedRolls from saved entries to restore state after refresh
+          const lockedRolls = savedForRequest.map((saved: any, index: number) => {
+            // Debug: Log first saved entry to see actual field names
+            if (index === 0) {
+              console.warn('🔍 DEBUG: First saved entry from database:', saved);
+              console.warn('🔍 Available keys in saved entry:', Object.keys(saved));
+            }
+            
+            // Handle both snake_case (backend) and camelCase (frontend) field names
+            const savedRollRange = saved.roll_range || saved.rollRange || '';
+            const brandDetails = saved.brand_details || saved.brandDetails || '';
+            const bottleSize = saved.bottle_size || saved.bottleSize || '';
+            const hologramQty = saved.hologram_qty || saved.hologramQty || 0;
+            const issuedFrom = saved.issued_from || saved.issuedFrom || '';
+            const issuedTo = saved.issued_to || saved.issuedTo || '';
+            const issuedQty = saved.issued_qty || saved.issuedQty || 0;
+            const wastageFrom = saved.wastage_from || saved.wastageFrom || '';
+            const wastageTo = saved.wastage_to || saved.wastageTo || '';
+            const wastageQty = saved.wastage_qty || saved.wastageQty || 0;
+            const damageReason = saved.damage_reason || saved.damageReason || '';
+            const issuedRangesField = saved.issued_ranges || saved.issuedRanges;
+            const wastageRangesField = saved.wastage_ranges || saved.wastageRanges;
+            
+            // Find the allocated range for this roll from allocatedRanges
+            const allocatedRange = allocatedRanges.find((ar: any) => 
+              (ar.cartoonNumber && savedRollRange && 
+               (ar.cartoonNumber === savedRollRange || 
+                ar.cartoonNumber?.toUpperCase() === savedRollRange.toUpperCase()))
+            );
+            
+            // Use allocated range for serialRange display, fallback to issued range if not found
+            const allocatedFromSerial = allocatedRange?.fromSerial || '';
+            const allocatedToSerial = allocatedRange?.toSerial || '';
+            const displaySerialRange = (allocatedFromSerial && allocatedToSerial) 
+              ? `${allocatedFromSerial} - ${allocatedToSerial}`
+              : (issuedFrom && issuedTo 
+                ? `${issuedFrom} - ${issuedTo}` 
+                : '-');
+            
+            // Parse issued_ranges and wastage_ranges - handle both JSON strings and arrays
+            let issuedRanges: any[] = [];
+            let wastageRanges: any[] = [];
+            
+            if (issuedRangesField) {
+              if (typeof issuedRangesField === 'string') {
+                try {
+                  issuedRanges = JSON.parse(issuedRangesField);
+                } catch (e) {
+                  console.warn('Failed to parse issued_ranges:', e);
+                  issuedRanges = [];
+                }
+              } else if (Array.isArray(issuedRangesField)) {
+                issuedRanges = issuedRangesField;
+              }
+            }
+            
+            // If issued_ranges is empty but we have issued_from/issued_to, create a range entry
+            if (issuedRanges.length === 0 && issuedFrom && issuedTo && issuedQty) {
+              issuedRanges = [{
+                fromSerial: issuedFrom,
+                toSerial: issuedTo,
+                quantity: issuedQty || 0
+              }];
+            }
+            
+            if (wastageRangesField) {
+              if (typeof wastageRangesField === 'string') {
+                try {
+                  wastageRanges = JSON.parse(wastageRangesField);
+                } catch (e) {
+                  console.warn('Failed to parse wastage_ranges:', e);
+                  wastageRanges = [];
+                }
+              } else if (Array.isArray(wastageRangesField)) {
+                wastageRanges = wastageRangesField;
+              }
+            }
+            
+            // If wastage_ranges is empty but we have wastage_from/wastage_to, create a range entry
+            if (wastageRanges.length === 0 && wastageFrom && wastageTo && wastageQty) {
+              wastageRanges = [{
+                fromSerial: wastageFrom,
+                toSerial: wastageTo,
+                quantity: wastageQty || 0
+              }];
+            }
+            
+            // Create unique ID for tracking (use saved entry ID if available, otherwise use index)
+            const uniqueId = saved.id || saved.Id || `${reqRef}_${index}_${Date.now()}`;
+            
+            return {
+              id: uniqueId, // Add unique ID for tracking
+              cartoonNumber: savedRollRange || `ROLL_${index}`, // Fallback to prevent empty string
+              rangeId: savedRollRange || uniqueId,
+              displayName: savedRollRange || `Roll ${index + 1}`,
+              brandDetails: brandDetails,
+              bottleSize: bottleSize,
+              availableCount: hologramQty,
+              serialRange: displaySerialRange, // Use allocated range for display
+              allocatedFromSerial: allocatedFromSerial, // Store allocated range
+              allocatedToSerial: allocatedToSerial,
+              fromSerial: issuedFrom, // Issued from (what was actually used)
+              toSerial: issuedTo, // Issued to (what was actually used)
+              issuedQty: issuedQty,
+              wastageQty: wastageQty,
+              leftOver: hologramQty - issuedQty - wastageQty,
+              issuedRanges: issuedRanges, // Properly parsed issued ranges
+              wastageRanges: wastageRanges, // Properly parsed wastage ranges
+              damageReason: damageReason,
+              isLocked: true
+            };
+          });
+
+          // Calculate total issued/wastage from all locked rolls
+          const totalIssuedQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.issuedQty || 0), 0);
+          const totalWastageQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.wastageQty || 0), 0);
+          
+          // Get aggregated display values from all saved entries
+          // Handle both snake_case (backend) and camelCase (frontend) field names
+          const allIssuedFroms = savedForRequest.map((s: any) => s.issued_from || s.issuedFrom).filter(Boolean);
+          const allIssuedTos = savedForRequest.map((s: any) => s.issued_to || s.issuedTo).filter(Boolean);
+          const allWastageFroms = savedForRequest.map((s: any) => s.wastage_from || s.wastageFrom).filter(Boolean);
+          const allWastageTos = savedForRequest.map((s: any) => s.wastage_to || s.wastageTo).filter(Boolean);
+          
+          const aggregatedIssuedFrom = allIssuedFroms.length > 0 ? allIssuedFroms[0] : '';
+          const aggregatedIssuedTo = allIssuedTos.length > 0 ? allIssuedTos[allIssuedTos.length - 1] : '';
+          const aggregatedWastageFrom = allWastageFroms.length > 0 ? allWastageFroms[0] : '';
+          const aggregatedWastageTo = allWastageTos.length > 0 ? allWastageTos[allWastageTos.length - 1] : '';
+          
+          // Get the first saved entry for other fields
+          const firstSavedEntry = savedForRequest.length > 0 ? savedForRequest[0] : null;
+          const aggregatedDamageReason = firstSavedEntry?.damage_reason || firstSavedEntry?.damageReason || '';
+
+          if (hasSavedEntries) {
+            const hologramType = (req.hologram_type || req.hologramType || 'LOCAL').toString().toUpperCase();
+            console.log(`✅ Found ${savedForRequest.length} saved entries for ${reqRef}, isFixed=${isSaved}, Type=${hologramType}`);
+            console.log(`📦 Restored ${lockedRolls.length} locked rolls with data:`, lockedRolls.map(r => ({
+              cartoonNumber: r.cartoonNumber,
+              brandDetails: r.brandDetails,
+              bottleSize: r.bottleSize,
+              serialRange: r.serialRange,
+              issuedQty: r.issuedQty,
+              wastageQty: r.wastageQty,
+              issuedRangesCount: r.issuedRanges?.length || 0,
+              wastageRangesCount: r.wastageRanges?.length || 0
+            })));
+          }
+          
+          // Debug: Log hologram type for all entries
+          const hologramType = (req.hologram_type || req.hologramType || 'LOCAL').toString().toUpperCase();
+          console.log(`🔍 Entry ${reqRef}: hologram_type=${req.hologram_type}, hologramType=${req.hologramType}, finalType=${hologramType}`);
+
           return {
             id: req.id,
             requestId: req.id, // CRITICAL: Populate requestId for backend linking
             // Robust mapping for Reference Number: try all common variations
-            referenceNo: req.ref_no || req.refNo || req.reference_no || req.referenceNo || `REQ-${req.id}` || 'N/A',
+            referenceNo: reqRef || `REQ-${req.id}` || 'N/A',
             rollRange: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
             dates: {
-              submission: req.submission_date || new Date().toISOString().split('T')[0],
-              usage: req.usage_date || req.submission_date || new Date().toISOString().split('T')[0]
+              submission: req.submission_date || firstSavedEntry?.submission_date || firstSavedEntry?.submissionDate || new Date().toISOString().split('T')[0],
+              usage: req.usage_date || firstSavedEntry?.usage_date || firstSavedEntry?.usageDate || req.submission_date || new Date().toISOString().split('T')[0]
             },
-            brandDetails: req.brand_id || 'N/A',
-            bottleSize: req.bottle_size || '750ml',
+            brandDetails: hasSavedEntries && (firstSavedEntry?.brand_details || firstSavedEntry?.brandDetails)
+              ? (firstSavedEntry.brand_details || firstSavedEntry.brandDetails)
+              : (req.brand_id || req.brandId || 'N/A'),
+            bottleSize: hasSavedEntries && (firstSavedEntry?.bottle_size || firstSavedEntry?.bottleSize)
+              ? (firstSavedEntry.bottle_size || firstSavedEntry.bottleSize)
+              : (req.bottle_size || req.bottleSize || '750ml'),
             hologramQty: req.quantity || 0,
-            hologramType: 'LOCAL', // Default, can be determined by procurement type
-            isFixed: false, // Will be determined by available quantity
+            // CRITICAL: Get hologram type from request - handle both snake_case and camelCase
+            // Also check if saved entry has type info (via related hologram_request)
+            hologramType: (req.hologram_type || req.hologramType || 'LOCAL').toString().toUpperCase() as 'LOCAL' | 'EXPORT' | 'DEFENCE',
+            isFixed: isSaved, // CRITICAL: Restore saved status from database - if saved entries exist, mark as saved
             allocatedRanges: allocatedRanges,
             rollsAssigned: rollsAssigned,
-            total: 0,
-            damageReason: '',
+            lockedRolls: lockedRolls, // Restore locked rolls from database
+            issuedFrom: hasSavedEntries ? aggregatedIssuedFrom : '',
+            issuedTo: hasSavedEntries ? aggregatedIssuedTo : '',
+            issuedQty: totalIssuedQty,
+            wastageFrom: hasSavedEntries ? aggregatedWastageFrom : '',
+            wastageTo: hasSavedEntries ? aggregatedWastageTo : '',
+            wastageQty: totalWastageQty,
+            leftOver: (req.quantity || 0) - totalIssuedQty - totalWastageQty,
+            total: totalIssuedQty + totalWastageQty + ((req.quantity || 0) - totalIssuedQty - totalWastageQty),
+            damageReason: hasSavedEntries ? aggregatedDamageReason : '',
             cartoonNumber: allocatedRanges.map((r: any) => r.cartoonNumber).join(', '),
-            utilizedQuantity: 0,
+            utilizedQuantity: totalIssuedQty,
             originalHologramQty: req.quantity || 0,
             status: req.status || ''
           };
@@ -309,7 +531,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // Use only API entries
         const allEntries = apiEntries;
         console.log('✅ Total entries after merge:', allEntries.length);
-        
+
         this.entries = allEntries.map((entry: any) => ({
           id: entry.id,
           referenceNo: entry.referenceNo || 'N/A',
@@ -318,7 +540,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           brandDetails: entry.brandDetails || 'N/A',
           bottleSize: entry.bottleSize || '750ml',
           hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
-          hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
+          hologramType: (entry.hologramType || 'LOCAL').toString().toUpperCase() as 'LOCAL' | 'EXPORT' | 'DEFENCE',
           issuedFrom: entry.issuedFrom || '',
           issuedTo: entry.issuedTo || '',
           issuedQty: entry.issuedQty || 0,
@@ -337,17 +559,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
           allocatedRanges: entry.allocatedRanges || [],
           rollsAssigned: entry.rollsAssigned || [] // CRITICAL FIX: Use rolls_assigned from database
         }));
-        
+
         console.log('✅ Final entries:', this.entries.length);
-        
+
         // Refresh filtering
         this.loadFilteredData();
         this.cdr.detectChanges();
       },
       error: (err) => {
-         console.error('❌ Error fetching requests/procurements:', err);
-         // Fallback to local storage only
-         this.loadApprovedEntriesLegacy();
+        console.error('❌ Error fetching requests/procurements:', err);
+        // Fallback to local storage only
+        this.loadApprovedEntriesLegacy();
       }
     });
   }
@@ -356,7 +578,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   loadApprovedEntriesLegacy(): void {
     const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
     const savedEntries = JSON.parse(localStorage.getItem('oicDailyRegisterEntries') || '[]');
-    
+
     // (Existing logic copied for fallback)
     const savedReferenceNos = new Set<string>();
     savedEntries.forEach((entry: any) => {
@@ -368,35 +590,35 @@ export class OicdailyhologramregisterComponent implements OnInit {
     });
 
     const allEntries = [...savedEntries, ...filteredApprovedEntries];
-    
+
     this.entries = allEntries.map((entry: any) => ({
-          id: entry.id,
-          referenceNo: entry.referenceNo || 'N/A',
-          rollRange: entry.rollRange || '',
-          dates: {
-            submission: entry.submissionDate || entry.dates?.submission || entry.date,
-            usage: entry.dates?.usage || entry.date || new Date().toISOString().split('T')[0]
-          },
-          brandDetails: entry.brandDetails?.brandName || entry.brandDetails || 'N/A',
-          bottleSize: entry.bottleSize || '750ml',
-          rollsAssigned: entry.rollsAssigned || [],
-          hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
-          hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
-          issuedFrom: entry.issuedFromSerial || entry.issuedFrom || '',
-          issuedTo: entry.issuedToSerial || entry.issuedTo || '',
-          issuedQty: entry.issuedQty || entry.issuedQuantity || 0,
-          wastageFrom: entry.wastageFromSerial || entry.wastageFrom || '',
-          wastageTo: entry.wastageToSerial || entry.wastageTo || '',
-          wastageQty: entry.wastageQty || entry.wastageQuantity || 0,
-          leftOver: entry.leftOver || entry.leftOverQuantity || 0,
-          total: entry.total || entry.utilizedQuantity || entry.hologramQty || 0,
-          damageReason: entry.damageReason || '',
-          isFixed: entry.isFixed || false,
-          cartoonNumber: entry.cartoonNumber,
-          utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
-          originalHologramQty: entry.originalHologramQty || entry.utilizedQuantity || entry.hologramQty || 0,
-          currentRollSelection: entry.currentRollSelection,
-          lockedRolls: entry.lockedRolls || []
+      id: entry.id,
+      referenceNo: entry.referenceNo || 'N/A',
+      rollRange: entry.rollRange || '',
+      dates: {
+        submission: entry.submissionDate || entry.dates?.submission || entry.date,
+        usage: entry.dates?.usage || entry.date || new Date().toISOString().split('T')[0]
+      },
+      brandDetails: entry.brandDetails?.brandName || entry.brandDetails || 'N/A',
+      bottleSize: entry.bottleSize || '750ml',
+      rollsAssigned: entry.rollsAssigned || [],
+      hologramQty: entry.hologramQty || entry.utilizedQuantity || 0,
+      hologramType: (entry.hologramType || 'LOCAL').toUpperCase(),
+      issuedFrom: entry.issuedFromSerial || entry.issuedFrom || '',
+      issuedTo: entry.issuedToSerial || entry.issuedTo || '',
+      issuedQty: entry.issuedQty || entry.issuedQuantity || 0,
+      wastageFrom: entry.wastageFromSerial || entry.wastageFrom || '',
+      wastageTo: entry.wastageToSerial || entry.wastageTo || '',
+      wastageQty: entry.wastageQty || entry.wastageQuantity || 0,
+      leftOver: entry.leftOver || entry.leftOverQuantity || 0,
+      total: entry.total || entry.utilizedQuantity || entry.hologramQty || 0,
+      damageReason: entry.damageReason || '',
+      isFixed: entry.isFixed || false,
+      cartoonNumber: entry.cartoonNumber,
+      utilizedQuantity: entry.utilizedQuantity || entry.hologramQty || 0,
+      originalHologramQty: entry.originalHologramQty || entry.utilizedQuantity || entry.hologramQty || 0,
+      currentRollSelection: entry.currentRollSelection,
+      lockedRolls: entry.lockedRolls || []
     }));
     this.loadFilteredData();
     this.cdr.detectChanges();
@@ -405,45 +627,53 @@ export class OicdailyhologramregisterComponent implements OnInit {
   loadFilteredData(): void {
     const monthNumber = this.getMonthNumber(this.selectedMonth);
     const datePrefix = `${this.selectedYear}-${monthNumber}`;
-    
+
     console.log(`🔍 Filtering Data: Month=${this.selectedMonth} (${monthNumber}), Year=${this.selectedYear}, Type=${this.selectedHologramType}`);
+    console.log(`📊 Total entries before filtering: ${this.entries.length}`);
+    console.log(`📊 Entry types breakdown:`, this.entries.map(e => ({ ref: e.referenceNo, type: e.hologramType })));
 
     this.filteredEntries = this.entries.filter(entry => {
       // Ensure dates exists
       const usageDate = entry.dates?.usage;
       const submissionDate = entry.dates?.submission;
-      
+
       // CRITICAL: Filter by hologram type (LOCAL, EXPORT, DEFENCE)
-      const typeMatch = entry.hologramType === this.selectedHologramType;
-      
-      if (!typeMatch) return false;
+      // Normalize both to uppercase for comparison to handle any case variations
+      const entryType = (entry.hologramType || 'LOCAL').toString().toUpperCase();
+      const selectedType = this.selectedHologramType.toString().toUpperCase();
+      const typeMatch = entryType === selectedType;
+
+      if (!typeMatch) {
+        console.log(`  ❌ Type mismatch: Entry ${entry.referenceNo} has type "${entryType}" but selected is "${selectedType}"`);
+        return false;
+      }
 
       // Filter by date
       let dateMatch = false;
 
       if (!entry.isFixed) {
-          // PENDING ENTRIES LOGIC:
-          // ALWAYS SHOW pending entries for the selected type, regardless of date filter.
-          // This ensures the Officer never misses a task (Action Queue behavior).
-          dateMatch = true;
-          
-          // Debugging Pending Entries
-          // console.log(`  Keeping Pending Entry: ${entry.referenceNo} (Always Visible)`);
+        // PENDING ENTRIES LOGIC:
+        // ALWAYS SHOW pending entries for the selected type, regardless of date filter.
+        // This ensures the Officer never misses a task (Action Queue behavior).
+        dateMatch = true;
+
+        // Debugging Pending Entries
+        // console.log(`  Keeping Pending Entry: ${entry.referenceNo} (Always Visible)`);
       } else {
-          // FIXED (Saved) ENTRIES LOGIC:
-          // Strict matching on usage date
-          if (!usageDate) {
-              dateMatch = false;
-          } else if (this.selectedDate) {
-              dateMatch = usageDate === this.selectedDate;
-          } else {
-              dateMatch = usageDate.startsWith(datePrefix);
-          }
+        // FIXED (Saved) ENTRIES LOGIC:
+        // Strict matching on usage date
+        if (!usageDate) {
+          dateMatch = false;
+        } else if (this.selectedDate) {
+          dateMatch = usageDate === this.selectedDate;
+        } else {
+          dateMatch = usageDate.startsWith(datePrefix);
+        }
       }
-      
+
       return dateMatch;
     });
-    
+
     // CRITICAL: Sort entries so new entries (not fixed) appear at the top
     // This ensures pending entries are always visible first
     this.filteredEntries.sort((a, b) => {
@@ -451,14 +681,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
       if (a.isFixed !== b.isFixed) {
         return a.isFixed ? 1 : -1; // Not fixed (false) comes first
       }
-      
+
       // If both have same fixed status, sort by date (newest first)
       const dateA = new Date(a.dates.usage || '1970-01-01').getTime();
       const dateB = new Date(b.dates.usage || '1970-01-01').getTime();
       return dateB - dateA; // Descending order (newest first)
     });
-    
+
     console.log(`✅ Filtered entries for ${this.selectedHologramType}: ${this.filteredEntries.length} (from ${this.entries.length} total)`);
+    if (this.filteredEntries.length > 0) {
+      console.log(`📋 Filtered entries:`, this.filteredEntries.map(e => ({ ref: e.referenceNo, type: e.hologramType, isFixed: e.isFixed })));
+    }
   }
 
   getMonthNumber(month: string): string {
@@ -509,10 +742,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
     console.log('📦 Locked rolls:', this.getLockedRollsForEntry(entry));
     console.log('📦 Current selected roll:', this.getCurrentSelectedRoll(entry));
     console.log('📦 Available rolls:', this.getAvailableRollsForEntry(entry));
-    
+
     this.selectedEntryForRollsView = entry;
     this.cdr.detectChanges();
-    
+
     // Scroll to the rolls section
     setTimeout(() => {
       const rollsSection = document.querySelector('.rolls-assigned-section');
@@ -521,7 +754,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       }
     }, 100);
   }
-  
+
   /**
    * Update rolls view when roll selection changes
    */
@@ -602,52 +835,52 @@ export class OicdailyhologramregisterComponent implements OnInit {
   //   - "test1 - Range 2 (010001-010003): 3 units"
   getAvailableRollsForEntry(entry: RegisterEntry): any[] {
     console.log('🎯 Getting available rolls for entry:', entry.id);
-    
+
     const availableRolls: any[] = [];
-    
+
     // CRITICAL FIX: Use rollsAssigned from entry (loaded from database via rolls_assigned column)
     // This bypasses HTTP interceptor issues with issued_assets field
     const rollsAssigned = (entry as any).rollsAssigned || [];
     const allocatedRanges = (entry as any).allocatedRanges || [];
-    
+
     // Combine both sources
     const allAllocations = [...rollsAssigned, ...allocatedRanges];
-    
+
     console.log('📦 API allocated rolls:', allAllocations);
-    
+
     // Track added cartons to avoid duplicates from pool
     const addedCartons = new Set<string>();
 
     if (allAllocations && allAllocations.length > 0) {
       console.log('✅ Using API allocation data (NOT localStorage):', allAllocations);
-      
+
       // CRITICAL FIX: Create SEPARATE dropdown entries for each range
       // Instead of grouping multiple ranges into one roll, each range gets its own entry
       const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
-      
+
       allAllocations.forEach((allocation: any) => {
         const cartoonNumber = allocation.cartoonNumber || allocation.cartoon_number || '';
         const quantity = allocation.quantity || allocation.count || 0;
         const fromSerial = allocation.fromSerial || allocation.from_serial || allocation.from || '';
         const toSerial = allocation.toSerial || allocation.to_serial || allocation.to || '';
         const serialRange = allocation.serialRange || allocation.range || `${fromSerial} - ${toSerial}`;
-        
+
         if (!cartoonNumber) return;
-        
+
         // Increment range count for this roll
         const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
         rangeCountPerRoll.set(cartoonNumber, currentRangeCount + 1);
         const rangeIndex = currentRangeCount + 1;
-        
+
         // Create a unique identifier for this specific range
         const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
-        
+
         // Check if this roll has leftover ranges from locked rolls
         const lockedRolls = this.getLockedRollsForEntry(entry);
-        const lockedRoll = lockedRolls.find((lr: RollInput) => 
+        const lockedRoll = lockedRolls.find((lr: RollInput) =>
           (lr.cartoonNumber === cartoonNumber || lr.rangeId === rangeId) && lr.leftOver > 0
         );
-        
+
         let leftoverInfo = '';
         if (lockedRoll) {
           const leftoverRanges = this.getLeftoverRanges(entry, lockedRoll);
@@ -657,7 +890,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
             leftoverInfo = ` [Leftover: ${totalLeftover} units (${rangesStr})]`;
           }
         }
-        
+
         // Create separate entry for this range
         availableRolls.push({
           cartoonNumber: cartoonNumber, // Original cartoon number (for grouping if needed)
@@ -676,96 +909,96 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
         addedCartons.add(cartoonNumber);
       });
-      
+
       console.log('✅ Separate range entries (each range is independent):', availableRolls);
       console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
     }
-    
-    
+
+
     // CRITICAL FIX: ONLY add stock pool if NO allocations were found
     // If rolls are explicitly assigned (allAllocations > 0), show ONLY those rolls
     if (allAllocations.length === 0 && this.procurementCache && this.procurementCache.length > 0) {
-        console.log(`🏊 NO ALLOCATIONS FOUND - Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
-        
-        this.procurementCache.forEach(proc => {
-             // 1. Check Matching Type
-             let pType = (proc.type || '').toUpperCase();
-             if (!pType) {
-                 // Infer type if missing
-                 if (proc.localQty > 0 || proc.local_qty > 0) pType = 'LOCAL';
-                 else if (proc.exportQty > 0 || proc.export_qty > 0) pType = 'EXPORT';
-                 else if (proc.defenceQty > 0 || proc.defence_qty > 0) pType = 'DEFENCE';
-                 else pType = 'LOCAL'; 
-             }
-             
-             if (pType !== entry.hologramType) return;
+      console.log(`🏊 NO ALLOCATIONS FOUND - Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
 
-
-             // 2. Extract Cartons
-             const cartons = proc.carton_details || proc.cartonDetails || proc.cartoons || proc.cartoon_details || [];
-             
-             cartons.forEach((c: any) => {
-                 const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number;
-                 
-                 // 3. Skip if already added via strict allocation
-                 if (addedCartons.has(cNo)) return;
-                 
-                 // 4. Add to availableRolls
-                 let qty = c.quantity || c.totalCount || 0;
-                 const fromSerial = c.fromSerial || c.from_serial || '';
-                 const toSerial = c.toSerial || c.to_serial || '';
-                 const serialRange = c.serialRange || (fromSerial && toSerial ? `${fromSerial} - ${toSerial}` : 'N/A');
-
-                 if (!qty && fromSerial && toSerial) {
-                     // Recalculate quantity if missing
-                      const start = parseInt(fromSerial, 10);
-                      const end = parseInt(toSerial, 10);
-                      if (!isNaN(start) && !isNaN(end)) qty = end - start + 1;
-                 }
-
-                 if (cNo && qty > 0) {
-                     availableRolls.push({
-                         cartoonNumber: cNo,
-                         rangeId: cNo, // Use carton number as ID for full rolls
-                         rangeIndex: 1,
-                         displayName: `${cNo} - ${serialRange} (${qty} units)`, // Format for pool items
-                         allocatedQuantity: qty,
-                         availableCount: qty,
-                         serialRange: serialRange,
-                         fromSerial: fromSerial,
-                         toSerial: toSerial,
-                         isSingleRange: true,
-                         originalCartoonNumber: cNo,
-                         leftoverInfo: ''
-                     });
-                     addedCartons.add(cNo); // Prevent duplicates from other procurements
-                 }
-             });
-        });
-        console.log(`✅ Final available rolls count (Allocated + Pool): ${availableRolls.length}`);
-    } else {
-        // Fallback to localStorage ONLY if cache is empty (legacy support)
-        const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-        const fallbackRolls = allOverviewRolls.filter((r: any) => r.type === entry.hologramType && r.availableCount > 0 && !addedCartons.has(r.cartoonNumber));
-        
-        if (fallbackRolls.length > 0) {
-             console.log(`⚠️ Using localStorage fallback, found ${fallbackRolls.length} rolls`);
-             availableRolls.push(...fallbackRolls.map((r: any) => ({
-                cartoonNumber: r.cartoonNumber,
-                rangeId: r.cartoonNumber,
-                displayName: `${r.cartoonNumber} - ${r.serialRange || r.fromSerial + '-' + r.toSerial} (${r.availableCount} units)`,
-                availableCount: r.availableCount,
-                serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
-                fromSerial: r.fromSerial,
-                toSerial: r.toSerial,
-             })));
+      this.procurementCache.forEach(proc => {
+        // 1. Check Matching Type
+        let pType = (proc.type || '').toUpperCase();
+        if (!pType) {
+          // Infer type if missing
+          if (proc.localQty > 0 || proc.local_qty > 0) pType = 'LOCAL';
+          else if (proc.exportQty > 0 || proc.export_qty > 0) pType = 'EXPORT';
+          else if (proc.defenceQty > 0 || proc.defence_qty > 0) pType = 'DEFENCE';
+          else pType = 'LOCAL';
         }
+
+        if (pType !== entry.hologramType) return;
+
+
+        // 2. Extract Cartons
+        const cartons = proc.carton_details || proc.cartonDetails || proc.cartoons || proc.cartoon_details || [];
+
+        cartons.forEach((c: any) => {
+          const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number;
+
+          // 3. Skip if already added via strict allocation
+          if (addedCartons.has(cNo)) return;
+
+          // 4. Add to availableRolls
+          let qty = c.quantity || c.totalCount || 0;
+          const fromSerial = c.fromSerial || c.from_serial || '';
+          const toSerial = c.toSerial || c.to_serial || '';
+          const serialRange = c.serialRange || (fromSerial && toSerial ? `${fromSerial} - ${toSerial}` : 'N/A');
+
+          if (!qty && fromSerial && toSerial) {
+            // Recalculate quantity if missing
+            const start = parseInt(fromSerial, 10);
+            const end = parseInt(toSerial, 10);
+            if (!isNaN(start) && !isNaN(end)) qty = end - start + 1;
+          }
+
+          if (cNo && qty > 0) {
+            availableRolls.push({
+              cartoonNumber: cNo,
+              rangeId: cNo, // Use carton number as ID for full rolls
+              rangeIndex: 1,
+              displayName: `${cNo} - ${serialRange} (${qty} units)`, // Format for pool items
+              allocatedQuantity: qty,
+              availableCount: qty,
+              serialRange: serialRange,
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              isSingleRange: true,
+              originalCartoonNumber: cNo,
+              leftoverInfo: ''
+            });
+            addedCartons.add(cNo); // Prevent duplicates from other procurements
+          }
+        });
+      });
+      console.log(`✅ Final available rolls count (Allocated + Pool): ${availableRolls.length}`);
+    } else {
+      // Fallback to localStorage ONLY if cache is empty (legacy support)
+      const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+      const fallbackRolls = allOverviewRolls.filter((r: any) => r.type === entry.hologramType && r.availableCount > 0 && !addedCartons.has(r.cartoonNumber));
+
+      if (fallbackRolls.length > 0) {
+        console.log(`⚠️ Using localStorage fallback, found ${fallbackRolls.length} rolls`);
+        availableRolls.push(...fallbackRolls.map((r: any) => ({
+          cartoonNumber: r.cartoonNumber,
+          rangeId: r.cartoonNumber,
+          displayName: `${r.cartoonNumber} - ${r.serialRange || r.fromSerial + '-' + r.toSerial} (${r.availableCount} units)`,
+          availableCount: r.availableCount,
+          serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+          fromSerial: r.fromSerial,
+          toSerial: r.toSerial,
+        })));
+      }
     }
-    
+
     // NOTE: We no longer add leftover ranges as separate dropdown entries
     // Leftover ranges are only shown in the Usage section with "Use" buttons
     // The dropdown only shows originally assigned rolls with leftover info appended
-    
+
     return availableRolls;
   }
 
@@ -773,7 +1006,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     if (!cartoonNumberOrRangeId) return;
 
     // Find the roll details (could be a rangeId like "test1_RANGE_1" or just cartoon number)
-    const roll = this.getAvailableRollsForEntry(entry).find(r => 
+    const roll = this.getAvailableRollsForEntry(entry).find(r =>
       r.rangeId === cartoonNumberOrRangeId || r.cartoonNumber === cartoonNumberOrRangeId
     );
     if (!roll) return;
@@ -782,43 +1015,43 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const lockedRolls = this.getLockedRollsForEntry(entry);
     const rangeIdToCheck = roll.rangeId || roll.cartoonNumber;
     const lockedRoll = lockedRolls.find((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck);
-    
+
     if (lockedRoll) {
       // Instead of showing alert, display the locked roll in read-only mode
       console.log('📌 Viewing locked roll in read-only mode:', lockedRoll);
       console.log('📝 Usage history:', lockedRoll.leftoverUsageHistory);
-      
+
       // CRITICAL FIX: Create a COPY of the locked roll to avoid modifying the original
       // This ensures each entry shows only its own usage without affecting other entries
       const rollCopy = { ...lockedRoll };
-      
+
       // CRITICAL FIX: Recalculate leftOver from actual leftover ranges
       // This ensures the displayed leftOver matches the sum of available ranges
       const leftoverRanges = this.getLeftoverRanges(entry, rollCopy);
       const calculatedLeftOver = leftoverRanges.reduce((sum, r) => sum + r.quantity, 0);
-      
+
       console.log('🔄 Recalculating leftOver for locked roll:');
       console.log('  - Old leftOver:', rollCopy.leftOver);
       console.log('  - Calculated from ranges:', calculatedLeftOver);
       console.log('  - Leftover ranges:', leftoverRanges);
-      
+
       // Update the copy's leftOver to match the calculated value
       rollCopy.leftOver = calculatedLeftOver;
-      
+
       // CRITICAL FIX: Recalculate issuedQty and wastageQty to include leftover reuses
       // The original issuedQty/wastageQty only includes the first lock, not subsequent leftover uses
       let totalIssuedQty = 0;
       let totalWastageQty = 0;
-      
+
       // Add original issued and wastage quantities
       if (rollCopy.issuedRanges && Array.isArray(rollCopy.issuedRanges)) {
         totalIssuedQty += rollCopy.issuedRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
       }
-      
+
       if (rollCopy.wastageRanges && Array.isArray(rollCopy.wastageRanges)) {
         totalWastageQty += rollCopy.wastageRanges.reduce((sum: number, range: any) => sum + (range.quantity || 0), 0);
       }
-      
+
       // Add quantities from leftover usage history
       if (rollCopy.leftoverUsageHistory && rollCopy.leftoverUsageHistory.length > 0) {
         rollCopy.leftoverUsageHistory.forEach((history: LeftoverUsageHistory) => {
@@ -826,17 +1059,17 @@ export class OicdailyhologramregisterComponent implements OnInit {
           totalWastageQty += history.damagedQty || 0;
         });
       }
-      
+
       console.log('🔄 Recalculating usage quantities for locked roll:');
       console.log('  - Old issuedQty:', rollCopy.issuedQty);
       console.log('  - New issuedQty (including leftover reuses):', totalIssuedQty);
       console.log('  - Old wastageQty:', rollCopy.wastageQty);
       console.log('  - New wastageQty (including leftover reuses):', totalWastageQty);
-      
+
       // Update the copy's quantities (NOT the original locked roll)
       rollCopy.issuedQty = totalIssuedQty;
       rollCopy.wastageQty = totalWastageQty;
-      
+
       // CRITICAL: Use the COPY so we don't modify the original locked roll
       // This ensures each entry shows only its own usage
       entry.currentRollSelection = {
@@ -844,14 +1077,14 @@ export class OicdailyhologramregisterComponent implements OnInit {
         rollInput: rollCopy, // Use the copy with recalculated values
         isLocked: true // Mark as locked (read-only)
       };
-      
+
       this.cdr.detectChanges();
       return;
     }
 
     // Store the rangeId (or cartoonNumber if no rangeId) as the selectedRoll
     const selectedRollId = roll.rangeId || roll.cartoonNumber;
-    
+
     entry.currentRollSelection = {
       selectedRoll: selectedRollId, // Use rangeId for specific range tracking
       rollInput: {
@@ -876,7 +1109,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     };
 
     this.cdr.detectChanges();
-    
+
     console.log(`🎯 Selected range ${roll.displayName} (${selectedRollId}), serial range: ${roll.serialRange}`);
   }
 
@@ -930,7 +1163,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const rangesStr = allocatedRanges.map(r => `${r.fromSerial}-${r.toSerial}`).join(', ');
     return {
       isValid: false,
-      errorMessage: `Serial range must be entirely within ONE of the allocated ranges: ${rangesStr}` 
+      errorMessage: `Serial range must be entirely within ONE of the allocated ranges: ${rangesStr}`
     };
   }
 
@@ -1054,7 +1287,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         console.log(`⏭️ Skipping current roll ${currentRollCartoonNumber} from cross-roll validation`);
         return; // Skip this roll
       }
-      
+
       // Collect issued ranges from locked roll
       if (roll.issuedRanges && Array.isArray(roll.issuedRanges)) {
         roll.issuedRanges.forEach((range: any) => {
@@ -1125,11 +1358,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
     if (!rollInput) return;
 
     const cartoonNumber = rollInput.cartoonNumber;
-    
+
     // CRITICAL FIX: If a specific range was selected (rangeId exists), validate against ONLY that range
     // Otherwise, validate against all ranges for backward compatibility
     let allocatedRanges: Array<{ fromSerial: string; toSerial: string }>;
-    
+
     if (rollInput.fromSerial && rollInput.toSerial) {
       // Use the SPECIFIC range that was selected (stored in rollInput)
       allocatedRanges = [{
@@ -1149,7 +1382,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // Validate and calculate issued ranges
     rollInput.issuedQty = rollInput.issuedRanges.reduce((sum, range) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
-      
+
       // Validate range against the allocated range(s)
       if (allocatedRanges.length > 0) {
         const validation = this.validateSerialRangeInAllocatedRanges(
@@ -1163,14 +1396,14 @@ export class OicdailyhologramregisterComponent implements OnInit {
         range.isValid = true; // No allocated ranges found, skip validation
         range.errorMessage = '';
       }
-      
+
       return sum + range.quantity;
     }, 0);
 
     // Validate and calculate wastage ranges
     rollInput.wastageQty = rollInput.wastageRanges.reduce((sum, range) => {
       range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
-      
+
       // Validate range against the allocated range(s)
       if (allocatedRanges.length > 0) {
         const validation = this.validateSerialRangeInAllocatedRanges(
@@ -1184,7 +1417,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         range.isValid = true; // No allocated ranges found, skip validation
         range.errorMessage = '';
       }
-      
+
       return sum + range.quantity;
     }, 0);
 
@@ -1217,15 +1450,15 @@ export class OicdailyhologramregisterComponent implements OnInit {
       rollInput.issuedRanges,
       rollInput.wastageRanges
     );
-    
+
     if (!crossOverlapCheck.isValid) {
       // Mark overlapping ranges as invalid
       rollInput.issuedRanges.forEach((issued) => {
         if (!issued.fromSerial || !issued.toSerial) return;
-        
+
         rollInput.wastageRanges.forEach((wastage) => {
           if (!wastage.fromSerial || !wastage.toSerial) return;
-          
+
           if (this.checkRangeOverlap(
             issued.fromSerial,
             issued.toSerial,
@@ -1258,7 +1491,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // For original ranges, availableCount represents the full allocated quantity
     // The formula should always be: leftOver = availableCount - (issuedQty + wastageQty)
     rollInput.leftOver = rollInput.availableCount - (rollInput.issuedQty + rollInput.wastageQty);
-    
+
     // Ensure leftOver is never negative
     if (rollInput.leftOver < 0) {
       rollInput.leftOver = 0;
@@ -1272,7 +1505,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   addIssuedRange(entry: RegisterEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
-    
+
     rollInput.issuedRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
     this.cdr.detectChanges();
   }
@@ -1280,7 +1513,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   removeIssuedRange(entry: RegisterEntry, index: number): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput || rollInput.issuedRanges.length <= 1) return;
-    
+
     rollInput.issuedRanges.splice(index, 1);
     this.onRollInputChange(entry);
   }
@@ -1288,7 +1521,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   addWastageRange(entry: RegisterEntry): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput) return;
-    
+
     rollInput.wastageRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
     this.cdr.detectChanges();
   }
@@ -1296,7 +1529,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   removeWastageRange(entry: RegisterEntry, index: number): void {
     const rollInput = this.getCurrentRollInput(entry);
     if (!rollInput || rollInput.wastageRanges.length <= 1) return;
-    
+
     rollInput.wastageRanges.splice(index, 1);
     this.onRollInputChange(entry);
   }
@@ -1328,7 +1561,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // If either FROM or TO is filled, both must be filled
         return (hasFrom && !hasTo) || (!hasFrom && hasTo);
       });
-      
+
       if (hasIncompleteIssuedRange) return false;
 
       // Check if there's at least one complete issued range with valid serials
@@ -1348,7 +1581,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           // If range is complete, check if it's valid
           return range.isValid !== false;
         });
-        
+
         if (!allIssuedRangesValid) return false;
       }
     }
@@ -1362,7 +1595,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // If either FROM or TO is filled, both must be filled
         return (hasFrom && !hasTo) || (!hasFrom && hasTo);
       });
-      
+
       if (hasIncompleteWastageRange) return false;
 
       // Check if there's at least one complete wastage range with valid serials
@@ -1382,7 +1615,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           // If range is complete, check if it's valid
           return range.isValid !== false;
         });
-        
+
         if (!allWastageRangesValid) return false;
       }
     }
@@ -1416,7 +1649,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
     const lockedRolls = entry.lockedRolls || [];
     const rangeIdToCheck = rollInput.rangeId || rollInput.cartoonNumber;
     const alreadyLocked = lockedRolls.some((lr: any) => (lr.rangeId || lr.cartoonNumber) === rangeIdToCheck);
-    
+
     if (alreadyLocked) {
       alert('This roll has already been locked.\n\nPlease select a different roll.');
       return;
@@ -1432,45 +1665,45 @@ export class OicdailyhologramregisterComponent implements OnInit {
       // Check for validation errors
       const invalidIssuedRanges = rollInput.issuedRanges?.filter((r) => r.isValid === false && r.errorMessage);
       const invalidWastageRanges = rollInput.wastageRanges?.filter((r) => r.isValid === false && r.errorMessage);
-      
+
       // Check for incomplete ranges
       const incompleteIssuedRanges = rollInput.issuedRanges?.filter((r) => {
         const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
         const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
         return (hasFrom && !hasTo) || (!hasFrom && hasTo);
       });
-      
+
       const incompleteWastageRanges = rollInput.wastageRanges?.filter((r) => {
         const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
         const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
         return (hasFrom && !hasTo) || (!hasFrom && hasTo);
       });
-      
+
       let errorMessage = 'Cannot lock roll. Please fix the following errors:\n\n';
-      
+
       // Check for brand details and bottle size
       if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') {
         errorMessage += 'Brand Details - Required:\n';
         errorMessage += 'Please enter brand details for this roll.\n\n';
       }
-      
+
       if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') {
         errorMessage += 'Bottle Size - Required:\n';
         errorMessage += 'Please enter bottle size for this roll (e.g., 750ml).\n\n';
       }
-      
+
       if (incompleteIssuedRanges && incompleteIssuedRanges.length > 0) {
         errorMessage += 'Issued Ranges - Incomplete:\n';
         errorMessage += 'Both "ISSUED FROM" and "ISSUED TO" must be filled for each range.\n';
         errorMessage += 'Please complete all started ranges or remove them.\n\n';
       }
-      
+
       if (incompleteWastageRanges && incompleteWastageRanges.length > 0) {
         errorMessage += 'Wastage Ranges - Incomplete:\n';
         errorMessage += 'Both "WASTAGE FROM" and "WASTAGE TO" must be filled for each range.\n';
         errorMessage += 'Please complete all started ranges or remove them.\n\n';
       }
-      
+
       if (invalidIssuedRanges && invalidIssuedRanges.length > 0) {
         errorMessage += 'Issued Ranges - Validation Errors:\n';
         invalidIssuedRanges.forEach((r, i) => {
@@ -1478,7 +1711,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         });
         errorMessage += '\n';
       }
-      
+
       if (invalidWastageRanges && invalidWastageRanges.length > 0) {
         errorMessage += 'Wastage Ranges - Validation Errors:\n';
         invalidWastageRanges.forEach((r, i) => {
@@ -1486,31 +1719,31 @@ export class OicdailyhologramregisterComponent implements OnInit {
         });
         errorMessage += '\n';
       }
-      
+
       if (rollInput.leftOver < 0) {
         errorMessage += `Left Over is negative: ${rollInput.leftOver}. Please adjust quantities.\n`;
       }
-      
+
       // Check if at least one range (issued OR wastage) is filled
       const hasValidIssuedRange = rollInput.issuedRanges?.some((r) => {
         const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
         const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
         return hasFrom && hasTo && r.quantity > 0;
       });
-      
+
       const hasValidWastageRange = rollInput.wastageRanges?.some((r) => {
         const hasFrom = !!r.fromSerial && r.fromSerial.trim() !== '';
         const hasTo = !!r.toSerial && r.toSerial.trim() !== '';
         return hasFrom && hasTo && r.quantity > 0;
       });
-      
+
       if (!hasValidIssuedRange && !hasValidWastageRange) {
         errorMessage += 'Please enter at least one complete range:\n';
         errorMessage += '- Either ISSUED (FROM and TO), OR\n';
         errorMessage += '- WASTAGE (FROM and TO), OR\n';
         errorMessage += '- Both ISSUED and WASTAGE\n';
       }
-      
+
       alert(errorMessage);
       return;
     }
@@ -1521,16 +1754,16 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
     // Store the roll input with all its data
     entry.lockedRolls.push({ ...rollInput });
-    
+
     // Clear current selection to allow selecting next roll
     entry.currentRollSelection = undefined;
 
     // Recalculate totals from all locked rolls
     this.recalculateEntryFromLockedRolls(entry);
-    
+
     // Update the rolls view if this entry is currently being viewed
     this.updateRollsView(entry);
-    
+
     // Force change detection to update the UI (including usage box)
     this.cdr.detectChanges();
 
@@ -1568,7 +1801,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       totalIssued += roll.issuedQty || 0;
       totalWastage += roll.wastageQty || 0;
       totalLeftOver += roll.leftOver || 0;
-      
+
       // CRITICAL FIX: Only add availableCount to totalAllocated if this is NOT a leftover reuse
       // Leftover reuses are already counted in their parent roll's allocation
       if (!roll.isLeftoverReuse) {
@@ -1582,7 +1815,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       totalIssued += currentRoll.issuedQty || 0;
       totalWastage += currentRoll.wastageQty || 0;
       totalLeftOver += currentRoll.leftOver || 0;
-      
+
       // CRITICAL FIX: Only add availableCount if this is NOT a leftover reuse
       if (!currentRoll.isLeftoverReuse) {
         totalAllocated += currentRoll.availableCount || 0;
@@ -1608,37 +1841,37 @@ export class OicdailyhologramregisterComponent implements OnInit {
   // Check if all ranges are locked and entry can be saved
   canSaveEntry(entry: RegisterEntry): boolean {
     if (entry.isFixed) return false; // Already saved
-    
+
     // Must have at least one locked roll
     const lockedRolls = entry.lockedRolls || [];
     if (lockedRolls.length === 0) return false;
-    
+
     // CRITICAL FIX: Cannot have an ACTIVE (unlocked) current roll selection
     // If the current roll selection is locked (read-only mode), it's OK to save
     // This allows saving when user is just viewing a locked roll without editing
     if (entry.currentRollSelection && !entry.currentRollSelection.isLocked) {
       return false; // There's an active roll being edited, can't save yet
     }
-    
+
     // Check if all allocated ranges are locked
     const allocationData = this.getHologramAllocationForEntry(entry);
     if (allocationData && allocationData.allocatedCartoons) {
       const totalAllocatedRanges = allocationData.allocatedCartoons.length;
-      
+
       // CRITICAL FIX: Count only NON-leftover-reuse locked rolls
       // Leftover reuses don't count toward the total allocated ranges
       const nonLeftoverLockedRolls = lockedRolls.filter((roll: RollInput) => !roll.isLeftoverReuse);
       const lockedRangesCount = nonLeftoverLockedRolls.length;
-      
+
       // All ranges must be locked
       if (lockedRangesCount < totalAllocatedRanges) {
         return false;
       }
     }
-    
+
     // Validate quantities
     if (entry.leftOver < 0) return false;
-    
+
     return true;
   }
 
@@ -1657,7 +1890,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       let brandName = '';
       const rollBrand = roll.brandDetails;
       const entryBrand = entry.brandDetails;
-      
+
       if (rollBrand && typeof rollBrand === 'object') {
         brandName = rollBrand.brandName || '';
       } else if (rollBrand) {
@@ -1674,22 +1907,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
         roll_range: roll.displayName || roll.cartoonNumber,
         submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
         usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
-        
+
         brand_details: brandName,
         bottle_size: roll.bottleSize || entry.bottleSize || '',
-        
+
         hologram_qty: roll.availableCount || 0, // Total allocated for this roll
-        
+
         issued_from: roll.issuedRanges?.[0]?.fromSerial || '',
         issued_to: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
         issued_qty: roll.issuedQty || 0,
         issued_ranges: roll.issuedRanges || [],
-        
+
         wastage_from: roll.wastageRanges?.[0]?.fromSerial || '',
         wastage_to: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
         wastage_qty: roll.wastageQty || 0,
         wastage_ranges: roll.wastageRanges || [],
-        
+
         damage_reason: roll.damageReason || '',
         is_fixed: true
       };
@@ -1700,19 +1933,19 @@ export class OicdailyhologramregisterComponent implements OnInit {
     // Save all rolls concurrently
     // We use forkJoin if we decide to save multiple, but here we iterate or promise.all
     // Since we need to update UI after ALL are done, let's use a counter or forkJoin
-    
+
     // Using forkJoin to save all rolls
-    const saveObservables = payloads.map((payload: any) => 
+    const saveObservables = payloads.map((payload: any) =>
       this.hologramService.saveDailyRegisterEntry(payload)
     );
 
     // Import forkJoin at top if not present, but for now we can assume it might be available or use subscribe loop
     // Better to use forkJoin. I will use a simple loop for now if imports are tricky, but wait... 
     // I restored forkJoin earlier! So I can use it.
-    
+
     // NOTE: accessing forkJoin from rxjs
     // If imports are messy, I will use a simple Promise.all behavior via subscribe
-    
+
     let completed = 0;
     const total = payloads.length;
     let errors = 0;
@@ -1739,7 +1972,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         // All successful
         entry.isFixed = true;
         entry.rollsAssigned = (entry.lockedRolls || []).map((r: any) => r.cartoonNumber);
-        
+
         // Update local stats for immediate display
         // Update local stats for immediate display
         this.cdr.detectChanges();
@@ -1781,23 +2014,23 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
   getRollColor(indexOrCartoonNumber: number | string): string {
     const colors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
-    
+
     if (typeof indexOrCartoonNumber === 'string') {
       // Get consistent color index for cartoon number
       return colors[this.getRollColorIndex(indexOrCartoonNumber) % colors.length];
     }
-    
+
     return colors[indexOrCartoonNumber % colors.length];
   }
 
   getRollBackgroundColor(indexOrCartoonNumber: number | string): string {
     const bgColors = ['#e7f3ff', '#e7f5e7', '#fff8e1', '#ffe7e7', '#e0f7fa', '#f3e5f5', '#fff3e0', '#e0f2f1'];
-    
+
     if (typeof indexOrCartoonNumber === 'string') {
       // Get consistent color index for cartoon number
       return bgColors[this.getRollColorIndex(indexOrCartoonNumber) % bgColors.length];
     }
-    
+
     return bgColors[indexOrCartoonNumber % bgColors.length];
   }
 
@@ -1822,12 +2055,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
   getCurrentRollIndex(entry: RegisterEntry): number {
     const currentRoll = this.getCurrentSelectedRoll(entry);
     if (!currentRoll) return 0;
-    
+
     // Extract cartoon number from rangeId if needed
-    const cartoonNumber = currentRoll.includes('_RANGE_') 
-      ? currentRoll.split('_RANGE_')[0] 
+    const cartoonNumber = currentRoll.includes('_RANGE_')
+      ? currentRoll.split('_RANGE_')[0]
       : currentRoll;
-    
+
     return this.getRollColorIndex(cartoonNumber);
   }
 
@@ -1912,7 +2145,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       // CRITICAL: Also add serials used in leftover reuses (from usage history)
       if (rollInput.leftoverUsageHistory && rollInput.leftoverUsageHistory.length > 0) {
         console.log('📝 Processing leftover usage history to exclude used serials');
-        
+
         rollInput.leftoverUsageHistory.forEach((history: LeftoverUsageHistory) => {
           // Add used serials from history
           if (history.usedRange) {
@@ -1926,7 +2159,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
               console.log(`  ✓ Excluded used range: ${history.usedRange}`);
             }
           }
-          
+
           // Add damaged serials from history
           if (history.damagedRange) {
             const rangeMatch = history.damagedRange.match(/^([A-Z]*)(\d+)\s*-\s*([A-Z]*)(\d+)$/);
@@ -1988,7 +2221,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
    */
   useLeftoverRange(entry: RegisterEntry, currentRollInput: RollInput, leftoverRange: { fromSerial: string; toSerial: string; quantity: number }): void {
     console.log('🔄 Using leftover range:', leftoverRange);
-    
+
     // CRITICAL: Check if this range has already been used
     // This can happen if the user clicks "Use" on a range that's already in progress
     const lockedRolls = entry.lockedRolls || [];
@@ -2000,12 +2233,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
       }
       return false;
     });
-    
+
     if (rangeAlreadyUsed) {
       alert('This leftover range has already been used.\n\nPlease select a different range or refresh the page to see updated available ranges.');
       return;
     }
-    
+
     // Check if there's a current roll that needs to be locked first
     if (entry.currentRollSelection && !this.isCurrentRollLocked(entry)) {
       // Check if the current roll can be locked
@@ -2013,26 +2246,26 @@ export class OicdailyhologramregisterComponent implements OnInit {
         alert('Please complete the current roll entry before using leftover ranges.\n\nMake sure:\n- Brand details and bottle size are filled\n- At least one range (issued or wastage) is entered\n- All ranges are valid');
         return;
       }
-      
+
       // Lock the current roll
       this.lockRollForEntry(entry);
     }
-    
+
     // Generate a unique range ID for this leftover range
     // Use the original cartoon number + a unique suffix
     const originalCartoonNumber = currentRollInput.cartoonNumber;
-    
+
     // Count how many times this cartoon number has been used (including the original)
     const usageCount = lockedRolls.filter(r => r.cartoonNumber.startsWith(originalCartoonNumber)).length + 1;
     const newRangeId = `${originalCartoonNumber}_LEFTOVER_${usageCount}`;
     const displayName = `${originalCartoonNumber} - Leftover ${usageCount} (${leftoverRange.fromSerial}-${leftoverRange.toSerial})`;
-    
+
     console.log('📦 Creating new roll entry for leftover range:', {
       rangeId: newRangeId,
       displayName: displayName,
       range: leftoverRange
     });
-    
+
     // Create a new roll input for this leftover range
     const newRollInput: RollInput = {
       cartoonNumber: originalCartoonNumber,
@@ -2054,7 +2287,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
       isLeftoverReuse: true, // Mark as leftover reuse
       parentRollId: currentRollInput.rangeId || currentRollInput.cartoonNumber // Store parent roll ID for history tracking
     };
-    
+
     // Set this as the current roll selection
     // Note: The dropdown will still show the original roll, but the Usage section will show this leftover range
     entry.currentRollSelection = {
@@ -2062,11 +2295,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
       rollInput: newRollInput,
       isLocked: false
     };
-    
+
     // Update the rolls view
     this.updateRollsView(entry);
     this.cdr.detectChanges();
-    
+
     // Scroll to the top to show the new roll input
     setTimeout(() => {
       const rollSelectionPanel = document.querySelector('.roll-selection-panel');
@@ -2074,7 +2307,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         rollSelectionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
-    
+
     alert(`✅ Leftover range ready for use!\n\nRange: ${leftoverRange.fromSerial} - ${leftoverRange.toSerial}\nQuantity: ${leftoverRange.quantity} units\n\nPlease enter:\n- Brand details\n- Bottle size\n- Usage and/or wastage details\n\nThen lock this entry to continue.`);
   }
 
@@ -2098,22 +2331,22 @@ export class OicdailyhologramregisterComponent implements OnInit {
    */
   recordLeftoverUsageHistory(entry: RegisterEntry, leftoverRollInput: RollInput): void {
     console.log('📝 Recording leftover usage history for:', leftoverRollInput.rangeId);
-    
+
     // Find the parent roll in locked rolls
     const lockedRolls = entry.lockedRolls || [];
     const parentRollId = leftoverRollInput.parentRollId;
-    const parentRoll = lockedRolls.find((lr: RollInput) => 
+    const parentRoll = lockedRolls.find((lr: RollInput) =>
       (lr.rangeId || lr.cartoonNumber) === parentRollId
     );
-    
+
     if (!parentRoll) {
       console.warn('⚠️ Parent roll not found:', parentRollId);
       return;
     }
-    
+
     // Calculate what was used from the leftover range
     const originalRange = leftoverRollInput.serialRange;
-    
+
     // Get used range (issued)
     let usedRange = '';
     let usedQty = 0;
@@ -2125,7 +2358,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         usedQty = leftoverRollInput.issuedQty;
       }
     }
-    
+
     // Get damaged range (wastage)
     let damagedRange = '';
     let damagedQty = 0;
@@ -2137,7 +2370,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         damagedQty = leftoverRollInput.wastageQty;
       }
     }
-    
+
     // Calculate remaining range
     let remainingRange = '';
     let remainingQty = leftoverRollInput.leftOver;
@@ -2148,10 +2381,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
         remainingRange = rangesStr;
       }
     }
-    
+
     // Create usage history entry
-    const brandNameStr = typeof leftoverRollInput.brandDetails === 'string' 
-      ? leftoverRollInput.brandDetails 
+    const brandNameStr = typeof leftoverRollInput.brandDetails === 'string'
+      ? leftoverRollInput.brandDetails
       : (leftoverRollInput.brandDetails?.brandName || 'Unknown Brand');
 
     const usageHistory: LeftoverUsageHistory = {
@@ -2166,13 +2399,13 @@ export class OicdailyhologramregisterComponent implements OnInit {
       remainingQty: remainingQty || undefined,
       timestamp: new Date().toISOString()
     };
-    
+
     // Add to parent roll's usage history
     if (!parentRoll.leftoverUsageHistory) {
       parentRoll.leftoverUsageHistory = [];
     }
     parentRoll.leftoverUsageHistory.push(usageHistory);
-    
+
     console.log('✅ Leftover usage history recorded:', usageHistory);
   }
 
@@ -2196,7 +2429,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   groupIssuedEntriesByRoll(entry: RegisterEntry): Array<{ rollIndex: number; rollName: string; entries: any[] }> {
     const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
     const lockedRolls = this.getLockedRollsForEntry(entry);
-    
+
     lockedRolls.forEach((roll: any) => {
       const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
       const entries = (roll.issuedRanges || []).map((range: any) => ({
@@ -2204,7 +2437,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         toSerial: range.toSerial,
         quantity: range.quantity
       }));
-      
+
       if (entries.length > 0) {
         groups.push({
           rollIndex,
@@ -2213,7 +2446,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         });
       }
     });
-    
+
     return groups;
   }
 
@@ -2223,7 +2456,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
   groupWastageEntriesByRoll(entry: RegisterEntry): Array<{ rollIndex: number; rollName: string; entries: any[] }> {
     const groups: Array<{ rollIndex: number; rollName: string; entries: any[] }> = [];
     const lockedRolls = this.getLockedRollsForEntry(entry);
-    
+
     lockedRolls.forEach((roll: any) => {
       const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
       const entries = (roll.wastageRanges || []).map((range: any) => ({
@@ -2231,7 +2464,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         toSerial: range.toSerial,
         quantity: range.quantity
       }));
-      
+
       if (entries.length > 0) {
         groups.push({
           rollIndex,
@@ -2240,7 +2473,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
         });
       }
     });
-    
+
     return groups;
   }
 
@@ -2252,16 +2485,16 @@ export class OicdailyhologramregisterComponent implements OnInit {
    * Get currently selected roll
    */
   getCurrentSelectedRoll(entry: RegisterEntry): string | null {
-     return entry.currentRollSelection?.selectedRoll || null;
+    return entry.currentRollSelection?.selectedRoll || null;
   }
 
   /**
    * Get current roll input data
    */
   getCurrentRollInput(entry: RegisterEntry): RollInput | null {
-     return entry.currentRollSelection?.rollInput || null;
+    return entry.currentRollSelection?.rollInput || null;
   }
-  
+
 
 
   /**
@@ -2275,11 +2508,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
   // IMPORTANT: This should return ONLY the specific range that was selected, not all ranges for the roll
   getAllocatedRangesForRoll(entry: RegisterEntry, cartoonNumberOrRangeId: string): Array<{ fromSerial: string; toSerial: string; quantity: number }> {
     console.log('🔍 Getting allocated ranges for:', cartoonNumberOrRangeId);
-    
+
     // Check if this is a rangeId (e.g., "test1_RANGE_1") - if so, return ONLY that specific range
     if (cartoonNumberOrRangeId.includes('_RANGE_')) {
       console.log('📌 This is a specific range selection, returning only that range');
-      
+
       // Get the current roll input which has the specific range data
       const rollInput = this.getCurrentRollInput(entry);
       if (rollInput && rollInput.rangeId === cartoonNumberOrRangeId) {
@@ -2292,7 +2525,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
             quantity: rollInput.availableCount
           }];
         }
-        
+
         // 2. Try parsing serialRange
         if (rollInput.serialRange) {
           const parts = rollInput.serialRange.split('-').map((s: string) => s.trim());
@@ -2305,7 +2538,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           }
         }
       }
-      
+
       // If not in current roll input, check locked rolls
       const lockedRolls = this.getLockedRollsForEntry(entry);
       const lockedRoll = lockedRolls.find((r: any) => r.rangeId === cartoonNumberOrRangeId);
@@ -2318,7 +2551,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
             quantity: lockedRoll.availableCount
           }];
         }
-        
+
         if (lockedRoll.serialRange) {
           const parts = lockedRoll.serialRange.split('-').map((s: string) => s.trim());
           if (parts.length === 2) {
@@ -2331,12 +2564,12 @@ export class OicdailyhologramregisterComponent implements OnInit {
         }
       }
     }
-    
+
     // CRITICAL FIX: Also check current roll input even if it doesn't have _RANGE_ in the ID
     const rollInput = this.getCurrentRollInput(entry);
     if (rollInput && (rollInput.cartoonNumber === cartoonNumberOrRangeId || rollInput.rangeId === cartoonNumberOrRangeId)) {
       console.log('📦 Found current roll input:', rollInput);
-      
+
       // Try fromSerial/toSerial
       if (rollInput.fromSerial && rollInput.toSerial) {
         console.log('✅ Using fromSerial/toSerial from rollInput');
@@ -2346,7 +2579,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           quantity: rollInput.availableCount
         }];
       }
-      
+
       // Try serialRange
       if (rollInput.serialRange) {
         console.log('✅ Parsing serialRange from rollInput:', rollInput.serialRange);
@@ -2360,50 +2593,50 @@ export class OicdailyhologramregisterComponent implements OnInit {
         }
       }
     }
-    
+
     // For backward compatibility: if no rangeId, try to get from allocation data
     // But this should ideally not be used anymore since we want specific range selection
     const allocationData = this.getHologramAllocationForEntry(entry);
-    
+
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Found allocation data:', allocationData);
-      
+
       // Filter cartoons that match the cartoon number
       const matchingCartoons = allocationData.allocatedCartoons.filter((cartoon: any) => {
         return cartoon.cartoonNumber === cartoonNumberOrRangeId;
       });
-      
+
       console.log('📦 Matching cartoons:', matchingCartoons);
-      
+
       // Convert to range format
       const ranges = matchingCartoons.map((cartoon: any) => ({
         fromSerial: cartoon.fromSerial || '',
         toSerial: cartoon.toSerial || '',
         quantity: cartoon.quantity || 0
       }));
-      
+
       console.log('✅ Allocated ranges:', ranges);
       return ranges;
     }
-    
+
     // PRIORITY 2: Check if entry has allocatedRanges stored directly
     const allocatedRanges = (entry as any).allocatedRanges || [];
-    
+
     if (allocatedRanges.length > 0) {
       console.log('📋 Using stored allocatedRanges:', allocatedRanges);
-      
+
       // Filter ranges for this specific cartoon number
-      const rollRanges = allocatedRanges.filter((range: any) => 
+      const rollRanges = allocatedRanges.filter((range: any) =>
         range.cartoonNumber === cartoonNumberOrRangeId
       );
-      
+
       return rollRanges.map((range: any) => ({
         fromSerial: range.fromSerial,
         toSerial: range.toSerial,
         quantity: range.quantity
       }));
     }
-    
+
     console.log('⚠️ No allocated ranges found');
     return [];
   }
@@ -2412,18 +2645,18 @@ export class OicdailyhologramregisterComponent implements OnInit {
   getHologramAllocationForEntry(entry: RegisterEntry): any {
     try {
       const referenceNo = entry.referenceNo;
-      
+
       console.log('🔍 Looking for allocation data for reference:', referenceNo);
-      
+
       if (!referenceNo) {
         console.warn('⚠️ No reference number found in entry');
         return null;
       }
-      
+
       // Try multiple localStorage keys where allocation data might be stored
       const possibleKeys = [
         'hologramAllocations',
-        'hologramRequests', 
+        'hologramRequests',
         'hologramApplications',
         'approvedHologramEntries'
       ];
@@ -2435,35 +2668,67 @@ export class OicdailyhologramregisterComponent implements OnInit {
           referenceNo: referenceNo,
           totalAllocated: entry.allocatedRanges.reduce((sum, r) => sum + r.quantity, 0),
           allocatedCartoons: entry.allocatedRanges.map(r => ({
-             cartoonNumber: r.cartoonNumber,
-             quantity: r.quantity,
-             fromSerial: r.fromSerial,
-             toSerial: r.toSerial,
-             serialRange: `${r.fromSerial} - ${r.toSerial}`
+            cartoonNumber: r.cartoonNumber,
+            quantity: r.quantity,
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            serialRange: `${r.fromSerial} - ${r.toSerial}`
           }))
         };
       }
-      
+
+      // PRIORITY 2: Check rollsAssigned (from Backend API - rolls_assigned field)
+      if (entry.rollsAssigned && entry.rollsAssigned.length > 0) {
+        console.log('✅ Found rollsAssigned in entry:', entry.rollsAssigned);
+        return {
+          referenceNo: referenceNo,
+          totalAllocated: entry.rollsAssigned.reduce((sum: number, r: any) => sum + (r.quantity || 0), 0),
+          allocatedCartoons: entry.rollsAssigned.map((r: any) => ({
+            cartoonNumber: r.cartoonNumber || r.cartoon_number || '',
+            quantity: r.quantity || 0,
+            fromSerial: r.fromSerial || r.from_serial || '',
+            toSerial: r.toSerial || r.to_serial || '',
+            serialRange: `${r.fromSerial || r.from_serial || ''} - ${r.toSerial || r.to_serial || ''}`
+          }))
+        };
+      }
+
+      // PRIORITY 3: Check lockedRolls (from restored saved entries)
+      if (entry.lockedRolls && entry.lockedRolls.length > 0) {
+        console.log('✅ Found lockedRolls in entry (restored from DB):', entry.lockedRolls);
+        return {
+          referenceNo: referenceNo,
+          totalAllocated: entry.lockedRolls.reduce((sum: number, r: any) => sum + (r.availableCount || r.issuedQty || 0), 0),
+          allocatedCartoons: entry.lockedRolls.map((r: any) => ({
+            cartoonNumber: r.cartoonNumber || '',
+            quantity: r.availableCount || r.issuedQty || 0,
+            fromSerial: r.fromSerial || '',
+            toSerial: r.toSerial || '',
+            serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`
+          }))
+        };
+      }
+
       for (const key of possibleKeys) {
         const data = JSON.parse(localStorage.getItem(key) || '[]');
         console.log(`📦 Checking ${key}:`, data.length, 'items');
-        
+
         // Find matching allocations
-        const matchingAllocations = data.filter((a: any) => 
-          a.referenceNo === referenceNo || 
-          a.ourRefNo === referenceNo || 
-          a.id === referenceNo || 
+        const matchingAllocations = data.filter((a: any) =>
+          a.referenceNo === referenceNo ||
+          a.ourRefNo === referenceNo ||
+          a.id === referenceNo ||
           a.refNumber === referenceNo
         );
-        
+
         if (matchingAllocations.length > 0) {
           console.log('✅ Found allocations in', key, ':', matchingAllocations);
-          
+
           // Check if the request has an 'allocations' array directly (from Officer approval)
-          const requestWithAllocations = matchingAllocations.find((a: any) => 
+          const requestWithAllocations = matchingAllocations.find((a: any) =>
             a.allocations && Array.isArray(a.allocations) && a.allocations.length > 0
           );
-          
+
           if (requestWithAllocations) {
             console.log('✅ Found request with allocations array:', requestWithAllocations.allocations);
             const cartoons = requestWithAllocations.allocations.map((a: any) => ({
@@ -2474,25 +2739,25 @@ export class OicdailyhologramregisterComponent implements OnInit {
               serialRange: `${a.fromSerial} - ${a.toSerial}`,
               remainingInCartoon: a.remainingInCartoon || 0
             }));
-            
+
             const totalQty = cartoons.reduce((sum: number, c: any) => sum + c.quantity, 0);
-            
+
             return {
               referenceNo: referenceNo,
               totalAllocated: totalQty,
               allocatedCartoons: cartoons
             };
           }
-          
+
           // Otherwise, normalize the allocation data
           const allocation = matchingAllocations[0];
           let allocatedCartoons = allocation.allocatedCartoons || allocation.cartoons || allocation.cartoonsUsed || [];
-          
+
           if (Array.isArray(allocatedCartoons) && allocatedCartoons.length > 0) {
             allocatedCartoons = allocatedCartoons.map((c: any) => {
               let fromSerial = c.fromSerial || c.serialFrom || '';
               let toSerial = c.toSerial || c.serialTo || '';
-              
+
               // If serialRange exists but fromSerial/toSerial don't, try to parse it
               if ((!fromSerial || !toSerial) && c.serialRange) {
                 const rangeMatch = c.serialRange.match(/(\d+)\s*-\s*(\d+)/);
@@ -2501,7 +2766,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
                   toSerial = rangeMatch[2].padStart(6, '0');
                 }
               }
-              
+
               return {
                 ...c,
                 cartoonNumber: c.cartoonNumber || c.number || c.id || '',
@@ -2512,7 +2777,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
               };
             });
           }
-          
+
           return {
             referenceNo: referenceNo,
             totalAllocated: allocation.totalAllocated || allocation.requestedQuantity || 0,
@@ -2520,7 +2785,7 @@ export class OicdailyhologramregisterComponent implements OnInit {
           };
         }
       }
-      
+
       console.warn('❌ No allocation found for:', referenceNo);
       return null;
     } catch (error) {
@@ -2533,24 +2798,43 @@ export class OicdailyhologramregisterComponent implements OnInit {
   getSerialRangeForRoll(entry: RegisterEntry, cartoonNumber: string): string {
     const ranges = this.getAllocatedRangesForRoll(entry, cartoonNumber);
     if (ranges.length === 0) return '-';
-    
+
     // If multiple ranges, show first one with indicator
     if (ranges.length > 1) {
       return `${ranges[0].fromSerial} - ${ranges[0].toSerial} (+${ranges.length - 1} more)`;
     }
-    
+
     return `${ranges[0].fromSerial} - ${ranges[0].toSerial}`;
   }
 
+  // View state management methods
+  private saveViewState(): void {
+    try {
+      localStorage.setItem(this.VIEW_STATE_KEY, JSON.stringify(this.viewDetailsState));
+    } catch (e) {
+      console.error('Error saving view state:', e);
+    }
+  }
 
+  private loadViewState(): void {
+    try {
+      const savedState = localStorage.getItem(this.VIEW_STATE_KEY);
+      if (savedState) {
+        this.viewDetailsState = JSON.parse(savedState);
+      }
+    } catch (e) {
+      console.error('Error loading view state:', e);
+      this.viewDetailsState = {};
+    }
+  }
 
   /**
    * View usage details for a saved entry
    */
   viewEntryDetails(entry: RegisterEntry): void {
-    console.log('📋 Viewing details for entry:', entry);
     this.selectedEntryForDetails = entry;
-    this.selectedRollTabIndex = 0; // Reset to first tab
+    this.viewDetailsState[entry.id] = true;
+    this.saveViewState();
     this.cdr.detectChanges();
   }
 
@@ -2558,8 +2842,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
    * Close the usage details modal
    */
   closeDetailsModal(): void {
+    if (this.selectedEntryForDetails) {
+      this.viewDetailsState[this.selectedEntryForDetails.id] = false;
+      this.saveViewState();
+    }
     this.selectedEntryForDetails = null;
-    this.selectedRollTabIndex = 0;
     this.cdr.detectChanges();
   }
 
