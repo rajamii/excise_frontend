@@ -224,6 +224,33 @@ export class HologramprocurementComponent implements OnInit {
     }
   }
 
+  // Returns array of all procurement types present in the request
+  getProcurementTypes(row: HologramRow): Array<'Local' | 'Export' | 'Defence'> {
+    const types: Array<'Local' | 'Export' | 'Defence'> = [];
+
+    // Check all quantity fields (both naming conventions)
+    const localQty = (row.localQtyLakh || (row as any).localQty || 0);
+    const exportQty = (row.exportQtyLakh || (row as any).exportQty || 0);
+    const defenceQty = (row.defenceQtyLakh || (row as any).defenceQty || 0);
+
+    if (localQty > 0) {
+      types.push('Local');
+    }
+    if (exportQty > 0) {
+      types.push('Export');
+    }
+    if (defenceQty > 0) {
+      types.push('Defence');
+    }
+
+    // Fallback to procurementType if no quantities set
+    if (types.length === 0 && row.procurementType) {
+      types.push(row.procurementType);
+    }
+
+    return types.length > 0 ? types : ['Local']; // Default to Local if nothing found
+  }
+
   // Pagination methods
   getTotalPages(): number {
     return Math.max(1, Math.ceil(this.filteredHologramData.length / this.pageSize));

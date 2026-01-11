@@ -7,7 +7,7 @@
                     <i class="bi bi-file-earmark-text me-2"></i>
                     Hologram Request Register
                 </h4>
-               
+
             </div>
             <div class="header-actions">
                 <button class="btn btn-outline-secondary me-2" (click)="refreshData()">
@@ -173,9 +173,13 @@
                                 <span class="cartoon-number">{{ record.cartoonNumber || '-' }}</span>
                             </td>
                             <td class="type-col">
-                                <span class="badge" [class]="getHologramTypeClass(getHologramType(record))">
-                                    {{ getHologramType(record) }}
-                                </span>
+                                <div class="d-flex flex-wrap gap-1">
+                                    @for (type of getHologramTypes(record); track type) {
+                                    <span class="badge" [class]="getHologramTypeClass(type)">
+                                        {{ type }}
+                                    </span>
+                                    }
+                                </div>
                             </td>
                             <td class="serial-from">
                                 <span class="serial-number">{{ record.fromSerial || '-' }}</span>
@@ -196,8 +200,7 @@
                                 <div class="d-flex gap-1 align-items-center flex-wrap">
                                     <!-- Update Arrival Button - Only for PENDING_ARRIVAL status with payment slip uploaded -->
                                     @if (canUpdateRecord(record)) {
-                                    <button class="btn btn-success btn-sm"
-                                        (click)="updateArrivalDetails(record)"
+                                    <button class="btn btn-success btn-sm" (click)="updateArrivalDetails(record)"
                                         title="Update Arrival Details - Ready for Physical Arrival">
                                         <i class="bi bi-box-seam me-1"></i>
                                         <span class="d-none d-lg-inline">Update Arrival</span>
@@ -229,7 +232,8 @@
                                     <span class="badge ms-1" [class]="getStatusClass(record.status)">
                                         <i [class]="getStatusIcon(record.status)" class="me-1"></i>
                                         <span class="d-none d-md-inline">{{ getStatusLabel(record.status) }}</span>
-                                        <span class="d-md-none">{{ getStatusLabel(record.status).substring(0, 3) }}</span>
+                                        <span class="d-md-none">{{ getStatusLabel(record.status).substring(0, 3)
+                                            }}</span>
                                     </span>
                                 </div>
                             </td>
@@ -298,7 +302,8 @@
                     <i class="bi bi-info-circle me-2"></i>
                     <strong>Reference:</strong> {{ selectedRecordForUpdate?.ourRefNo }}
                     <br>
-                    <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }} holograms
+                    <strong>Expected Quantity:</strong> {{ selectedRecordForUpdate?.numberOfHolograms | number }}
+                    holograms
                     <br>
                     <strong>Status:</strong> Ready for physical arrival update
                 </div>
@@ -324,16 +329,30 @@
                                     <div class="form-text">Enter the carton/box number from physical delivery</div>
                                 </div>
 
+                                <!-- Hologram Type Selector - only show when multiple types are requested -->
+                                @if (getAvailableHologramTypes().length > 1) {
+                                <div class="form-group mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-tags me-1"></i>
+                                        Hologram Type <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" [(ngModel)]="currentCarton.type">
+                                        <option value="">-- Select Type --</option>
+                                        @for (type of getAvailableHologramTypes(); track type) {
+                                        <option [value]="type">{{ type }}</option>
+                                        }
+                                    </select>
+                                    <div class="form-text">Select the hologram type for this carton</div>
+                                </div>
+                                }
+
                                 <div class="form-group mb-3">
                                     <label class="form-label fw-bold">
                                         <i class="bi bi-arrow-right me-1"></i>
                                         From Serial Number <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" 
-                                        class="form-control font-monospace"
-                                        placeholder="e.g., 1" 
-                                        [(ngModel)]="currentCarton.fromSerial"
-                                        (input)="calculateCurrentCartonCount()">
+                                    <input type="text" class="form-control font-monospace" placeholder="e.g., 1"
+                                        [(ngModel)]="currentCarton.fromSerial" (input)="calculateCurrentCartonCount()">
                                     <div class="form-text">Starting serial number from hologram roll</div>
                                 </div>
 
@@ -342,11 +361,8 @@
                                         <i class="bi bi-arrow-left me-1"></i>
                                         To Serial Number <span class="text-danger">*</span>
                                     </label>
-                                    <input type="text" 
-                                        class="form-control font-monospace"
-                                        placeholder="e.g., 5000" 
-                                        [(ngModel)]="currentCarton.toSerial"
-                                        (input)="calculateCurrentCartonCount()">
+                                    <input type="text" class="form-control font-monospace" placeholder="e.g., 5000"
+                                        [(ngModel)]="currentCarton.toSerial" (input)="calculateCurrentCartonCount()">
                                     <div class="form-text">Ending serial number from hologram roll</div>
                                 </div>
 
@@ -372,12 +388,12 @@
                                 @if (currentCarton.numberOfHolograms > 0 && !serialRangeValidationError) {
                                 <div class="alert alert-success">
                                     <i class="bi bi-check-circle-fill me-2"></i>
-                                    ✅ This carton will contain <strong>{{ currentCarton.numberOfHolograms | number }}</strong> holograms. Click "Save Carton" to add it.
+                                    ✅ This carton will contain <strong>{{ currentCarton.numberOfHolograms | number
+                                        }}</strong> holograms. Click "Save Carton" to add it.
                                 </div>
                                 }
 
-                                <button type="button" class="btn btn-success w-100" 
-                                    (click)="saveCurrentCarton()"
+                                <button type="button" class="btn btn-success w-100" (click)="saveCurrentCarton()"
                                     [disabled]="!canSaveCurrentCarton()">
                                     <i class="bi bi-check-circle me-2"></i>
                                     Save Carton
@@ -414,12 +430,12 @@
                                                     Serial: {{ carton.fromSerial }} to {{ carton.toSerial }}
                                                 </div>
                                                 <div class="small">
-                                                    <span class="badge bg-info">{{ carton.numberOfHolograms | number }} holograms</span>
+                                                    <span class="badge bg-info">{{ carton.numberOfHolograms | number }}
+                                                        holograms</span>
                                                 </div>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                (click)="removeSavedCarton(i)"
-                                                title="Remove this carton">
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                (click)="removeSavedCarton(i)" title="Remove this carton">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -438,7 +454,7 @@
                                         <small class="text-muted">Cartons</small>
                                     </div>
                                     <div class="col-4">
-                                        <h5 class="mb-0" 
+                                        <h5 class="mb-0"
                                             [class.text-success]="selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms"
                                             [class.text-warning]="selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms"
                                             [class.text-danger]="selectedRecordForUpdate && totalCalculatedHolograms > selectedRecordForUpdate.numberOfHolograms">
@@ -447,59 +463,68 @@
                                         <small class="text-muted">Current</small>
                                     </div>
                                     <div class="col-4">
-                                        <h5 class="text-info mb-0">{{ selectedRecordForUpdate?.numberOfHolograms | number }}</h5>
+                                        <h5 class="text-info mb-0">{{ selectedRecordForUpdate?.numberOfHolograms |
+                                            number }}</h5>
                                         <small class="text-muted">Expected</small>
                                     </div>
                                 </div>
-                                
-                                @if (selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
-                                <div class="mt-2 text-center">
+
+                                @if (selectedRecordForUpdate && totalCalculatedHolograms > 0 && totalCalculatedHolograms
+                                < selectedRecordForUpdate.numberOfHolograms) { <div class="mt-2 text-center">
                                     <small class="text-info">
                                         <i class="bi bi-arrow-right-circle me-1"></i>
-                                        Need {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) | number }} more holograms
+                                        Need {{ (selectedRecordForUpdate.numberOfHolograms - totalCalculatedHolograms) |
+                                        number }} more holograms
                                     </small>
-                                </div>
-                                }
-                                
-                                @if (selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms && totalCalculatedHolograms > 0) {
-                                <div class="mt-2 text-center">
-                                    <small class="text-success">
-                                        <i class="bi bi-check-circle-fill me-1"></i>
-                                        Complete! Ready to confirm arrival
-                                    </small>
-                                </div>
-                                }
                             </div>
+                            }
+
+                            @if (selectedRecordForUpdate && totalCalculatedHolograms ===
+                            selectedRecordForUpdate.numberOfHolograms && totalCalculatedHolograms > 0) {
+                            <div class="mt-2 text-center">
+                                <small class="text-success">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    Complete! Ready to confirm arrival
+                                </small>
+                            </div>
+                            }
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Progress Messages -->
-                @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms === selectedRecordForUpdate.numberOfHolograms) {
-                <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{ totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm the arrival.</div>
-                </div>
-                }
-                
-                @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms < selectedRecordForUpdate.numberOfHolograms) {
-                <div class="alert alert-info d-flex align-items-center mt-3" role="alert">
-                    <i class="bi bi-info-circle-fill me-2"></i>
-                    <div>📦 You have entered {{ savedCartons.length }} carton(s) with {{ totalCalculatedHolograms | number }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number }} holograms.</div>
-                </div>
-                }
+            <!-- Progress Messages -->
+            @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms ===
+            selectedRecordForUpdate.numberOfHolograms) {
+            <div class="alert alert-success d-flex align-items-center mt-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <div>✅ Perfect! All {{ savedCartons.length }} carton(s) have been entered with a total of {{
+                    totalCalculatedHolograms | number }} holograms matching the expected quantity. You can now confirm
+                    the arrival.</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
-                    <i class="bi bi-x-lg me-2"></i>
-                    Cancel
-                </button>
-                <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
-                    [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
-                    <i class="bi bi-check-circle me-2"></i>
-                    Confirm Arrival ({{ savedCartons.length }} Carton{{ savedCartons.length > 1 ? 's' : '' }})
-                </button>
-            </div>
+            }
+
+            @if (savedCartons.length > 0 && selectedRecordForUpdate && totalCalculatedHolograms <
+                selectedRecordForUpdate.numberOfHolograms) { <div
+                class="alert alert-info d-flex align-items-center mt-3" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <div>📦 You have entered {{ savedCartons.length }} carton(s) with {{ totalCalculatedHolograms | number
+                    }} holograms. Continue adding cartons to reach {{ selectedRecordForUpdate.numberOfHolograms | number
+                    }} holograms.</div>
         </div>
+        }
     </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeUpdateModal()">
+            <i class="bi bi-x-lg me-2"></i>
+            Cancel
+        </button>
+        <button type="button" class="btn btn-success btn-lg" (click)="saveArrivalUpdate()"
+            [disabled]="savedCartons.length === 0 || totalCalculatedHolograms !== selectedRecordForUpdate?.numberOfHolograms">
+            <i class="bi bi-check-circle me-2"></i>
+            Confirm Arrival ({{ savedCartons.length }} Carton{{ savedCartons.length > 1 ? 's' : '' }})
+        </button>
+    </div>
+</div>
+</div>
 </div>

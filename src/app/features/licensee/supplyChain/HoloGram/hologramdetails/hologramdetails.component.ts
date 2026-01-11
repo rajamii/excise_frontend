@@ -56,23 +56,31 @@ export class HologramdetailsComponent implements OnInit {
   // Update arrival properties
   showUpdateModal: boolean = false;
   selectedRecordForUpdate: HologramRecord | null = null;
-  
+
   // Saved cartons list
   savedCartons: Array<{
     cartoonNumber: string;
     fromSerial: string;
     toSerial: string;
     numberOfHolograms: number;
+    type?: string;  // Hologram type (LOCAL, EXPORT, DEFENCE)
   }> = [];
-  
+
   // Current carton being entered
-  currentCarton = {
-    cartoonNumber: '',
-    fromSerial: '',
-    toSerial: '',
-    numberOfHolograms: 0
-  };
-  
+  currentCarton: {
+    cartoonNumber: string;
+    fromSerial: string;
+    toSerial: string;
+    numberOfHolograms: number;
+    type: string;  // Hologram type (LOCAL, EXPORT, DEFENCE)
+  } = {
+      cartoonNumber: '',
+      fromSerial: '',
+      toSerial: '',
+      numberOfHolograms: 0,
+      type: ''
+    };
+
   serialRangeValidationError: string = '';
   totalCalculatedHolograms: number = 0;
 
@@ -110,13 +118,13 @@ export class HologramdetailsComponent implements OnInit {
         // Filter for OIC relevant items:
         // 1. Payment Completed (New/Pending Assignment)
         // 2. Cartoon Assigned / Arrived (Already in register)
-        
+
         // We might also want to include 'Approved by Commissioner' if that implies payment is next/done?
         // But user said "When payment is completed".
-        
-        const relevantRecords = procurements.filter(p => 
-          p.status === 'Payment Completed' || 
-          p.status === 'Cartoon Assigned' || 
+
+        const relevantRecords = procurements.filter(p =>
+          p.status === 'Payment Completed' ||
+          p.status === 'Cartoon Assigned' ||
           p.status === 'ARRIVED' ||
           p.paymentStatus === 'Success' // Fallback check
         );
@@ -137,16 +145,16 @@ export class HologramdetailsComponent implements OnInit {
           // Backend might send `carton_details` as a list of assigned cartons.
           // For the main table, we show summary or specific fields.
           // If status is ARRIVED, we might want to show details.
-          
-            // Ensure we capture carton details regardless of naming variation
-             const rawDetails = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
-             if (rawDetails.length > 0) {
-                 console.log(`Debug Mapping [${p.refNo}]: Found details. Length=${rawDetails.length}`, rawDetails);
-             } else {
-                 console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
-             }
 
-             return {
+          // Ensure we capture carton details regardless of naming variation
+          const rawDetails = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
+          if (rawDetails.length > 0) {
+            console.log(`Debug Mapping [${p.refNo}]: Found details. Length=${rawDetails.length}`, rawDetails);
+          } else {
+            console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
+          }
+
+          return {
             id: p.id!,
             date: p.date!,
             ourRefNo: p.refNo!,
@@ -157,17 +165,17 @@ export class HologramdetailsComponent implements OnInit {
             numberOfHolograms: (p as any).total_available_holograms !== undefined ? (p as any).total_available_holograms : (Number(p.localQty) + Number(p.exportQty) + Number(p.defenceQty)),
             remarks: p.remarks || `Hologram procurement (${pType})`,
             status: internalStatus,
-            approvedDate: p.date, 
+            approvedDate: p.date,
             arrivedDate: (p as any).updated_at,
             procurementType: pType,
-            carton_details: rawDetails, 
+            carton_details: rawDetails,
             supplyChainData: {
-                ...p,
-                paymentCompleted: true 
+              ...p,
+              paymentCompleted: true
             }
           };
         });
-        
+
         this.applyFilters();
         console.log('Loaded hologram records from backend:', this.hologramRecords);
       },
@@ -320,33 +328,33 @@ export class HologramdetailsComponent implements OnInit {
     // 2. Payment has been COMPLETED (not just slip uploaded)
     // 3. Status is NOT 'ARRIVED', 'Cartoon Assigned' or 'Completed' (already processed)
     //    UNLESS data is missing (cartonNumber is empty/null/-)
-    
+
     const status = record.status;
     if (status === 'ARRIVED' || status === 'Cartoon Assigned' || status === 'Completed') {
-        const hasDetails = record.carton_details && record.carton_details.length > 0;
-        console.log(`Debug Button [${record.ourRefNo}]: Status=${status}, HasDetails=${hasDetails}, Len=${record.carton_details?.length}`);
-        
-        // Fix for missing data: If arrived but NO carton details are present in the list
-        // stricter check than just cartoonNumber string
-        if (!hasDetails) {
-            return true;
-        }
-        return false; 
+      const hasDetails = record.carton_details && record.carton_details.length > 0;
+      console.log(`Debug Button [${record.ourRefNo}]: Status=${status}, HasDetails=${hasDetails}, Len=${record.carton_details?.length}`);
+
+      // Fix for missing data: If arrived but NO carton details are present in the list
+      // stricter check than just cartoonNumber string
+      if (!hasDetails) {
+        return true;
+      }
+      return false;
     }
 
     if (status !== 'PENDING_ARRIVAL') {
       return false;
     }
-    
+
     // Check if payment has been completed for this record
     return this.isPaymentCompleted(record);
   }
-  
+
   // Check if payment has been COMPLETED for this hologram record
   // This is different from paymentSlipUploaded - payment must be actually made
   private isPaymentCompleted(record: HologramRecord): boolean {
     // console.log(`🔍 Checking payment completion for ${record.ourRefNo} (${record.procurementType})`);
-    
+
     // Check in supply chain data if payment is completed
     if (record.supplyChainData) {
       // console.log(`  - supplyChainData.paymentCompleted:`, record.supplyChainData.paymentCompleted);
@@ -356,37 +364,37 @@ export class HologramdetailsComponent implements OnInit {
         return true;
       }
     }
-    
+
     // Check local storage if available (browser only)
     if (typeof localStorage !== 'undefined') {
       // Also check in hologramApplications storage
       const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-      const matchingApp = applications.find((app: any) => 
-        app.refNo === record.ourRefNo && 
+      const matchingApp = applications.find((app: any) =>
+        app.refNo === record.ourRefNo &&
         app.procurementType === record.procurementType
       );
-      
+
       // console.log(`  - hologramApplications match:`, matchingApp ? 'found' : 'not found');
-      
+
       // ONLY check paymentCompleted flag (not paymentSlipUploaded)
       if (matchingApp && matchingApp.paymentCompleted === true) {
         // console.log(`  ✅ Payment completed (from hologramApplications)`);
         return true;
       }
-      
+
       // Check in hologramRequests storage
       const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
-      
+
       // console.log(`  - hologramRequests match:`, matchingReq ? 'found' : 'not found');
-      
+
       // ONLY check paymentCompleted flag (not paymentSlipUploaded)
       if (matchingReq && matchingReq.paymentCompleted === true) {
         // console.log(`  ✅ Payment completed (from hologramRequests)`);
         return true;
       }
     }
-    
+
     // console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
   }
@@ -399,7 +407,8 @@ export class HologramdetailsComponent implements OnInit {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: ''
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
@@ -409,19 +418,19 @@ export class HologramdetailsComponent implements OnInit {
   // Calculate hologram count for current carton being entered
   calculateCurrentCartonCount() {
     this.serialRangeValidationError = '';
-    
+
     if (this.currentCarton.fromSerial && this.currentCarton.toSerial) {
       const fromNum = this.extractSerialNumber(this.currentCarton.fromSerial);
       const toNum = this.extractSerialNumber(this.currentCarton.toSerial);
 
       if (fromNum && toNum && toNum >= fromNum) {
         this.currentCarton.numberOfHolograms = toNum - fromNum + 1;
-        
+
         // Real-time validation: Check if this would exceed the expected quantity
         if (this.selectedRecordForUpdate) {
           const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
           const newTotal = this.totalCalculatedHolograms + this.currentCarton.numberOfHolograms;
-          
+
           if (newTotal > expectedQuantity) {
             const remaining = expectedQuantity - this.totalCalculatedHolograms;
             this.serialRangeValidationError = `❌ This carton has ${this.currentCarton.numberOfHolograms.toLocaleString()} holograms, but only ${remaining.toLocaleString()} remaining! Total would be ${newTotal.toLocaleString()} which exceeds expected ${expectedQuantity.toLocaleString()}.`;
@@ -462,19 +471,20 @@ export class HologramdetailsComponent implements OnInit {
     if (this.selectedRecordForUpdate) {
       const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
       const newTotal = this.totalCalculatedHolograms + this.currentCarton.numberOfHolograms;
-      
+
       if (newTotal > expectedQuantity) {
         alert(`Cannot add this carton. Total would be ${newTotal.toLocaleString()} which exceeds expected ${expectedQuantity.toLocaleString()} holograms.`);
         return;
       }
     }
 
-    // Add to saved cartons
+    // Add to saved cartons (include type)
     this.savedCartons.push({
       cartoonNumber: this.currentCarton.cartoonNumber,
       fromSerial: this.currentCarton.fromSerial,
       toSerial: this.currentCarton.toSerial,
-      numberOfHolograms: this.currentCarton.numberOfHolograms
+      numberOfHolograms: this.currentCarton.numberOfHolograms,
+      type: this.currentCarton.type || this.getDefaultHologramType()
     });
 
     // Update total
@@ -485,7 +495,8 @@ export class HologramdetailsComponent implements OnInit {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: ''
     };
 
     // Show success message
@@ -517,11 +528,16 @@ export class HologramdetailsComponent implements OnInit {
 
   // Check if can save current carton
   canSaveCurrentCarton(): boolean {
+    const types = this.getAvailableHologramTypes();
+    // Only require type selection if multiple types are available
+    const typeValid = types.length <= 1 || this.currentCarton.type.trim() !== '';
+
     return this.currentCarton.cartoonNumber.trim() !== '' &&
-           this.currentCarton.fromSerial.trim() !== '' &&
-           this.currentCarton.toSerial.trim() !== '' &&
-           this.currentCarton.numberOfHolograms > 0 &&
-           this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
+      this.currentCarton.fromSerial.trim() !== '' &&
+      this.currentCarton.toSerial.trim() !== '' &&
+      this.currentCarton.numberOfHolograms > 0 &&
+      typeValid &&
+      this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -534,15 +550,17 @@ export class HologramdetailsComponent implements OnInit {
       // Prepare payload for backend
       // We need to send 'carton_details' which seems to be what we want to save
       // The backend expects 'carton_details' JSON.
+      // IMPORTANT: Include type for each carton to support multi-type procurements
 
       const cartonDetails = this.savedCartons.map(carton => ({
         cartoonNumber: carton.cartoonNumber,
         fromSerial: carton.fromSerial,
         toSerial: carton.toSerial,
+        type: carton.type || this.getDefaultHologramType(),  // Include type for backend
       }));
 
       // We use 'assign_cartons' action as per views.py update or 'carton_assigned'
-      const action = 'assign_cartons'; 
+      const action = 'assign_cartons';
       const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons.`;
 
       this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { carton_details: cartonDetails })
@@ -583,18 +601,18 @@ export class HologramdetailsComponent implements OnInit {
     const allocationData = JSON.parse(
       localStorage.getItem(`hologramAllocation_${record.ourRefNo}`) || '{}'
     );
-    
+
     console.log('📦 Loading allocation data for', record.ourRefNo, ':', allocationData);
-    
+
     // Find allocated ranges for this cartoon
     const cartoonAllocation = allocationData.allocatedCartoons?.find(
       (c: any) => c.cartoonNumber === record.cartoonNumber
     );
-    
+
     let allocatedRanges = cartoonAllocation?.allocatedRanges || [];
-    
+
     console.log('🎯 Found allocated ranges for', record.cartoonNumber, ':', allocatedRanges);
-    
+
     // If no allocated ranges found, create from fromSerial/toSerial (backward compatibility)
     if (allocatedRanges.length === 0) {
       allocatedRanges = [{
@@ -622,7 +640,7 @@ export class HologramdetailsComponent implements OnInit {
       isNew: true, // Flag to highlight as new
       newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
     };
-    
+
     console.log('✅ Created roll with allocated ranges:', newRoll);
 
     // Create new available entry for Available Hologram Data tab
@@ -693,10 +711,53 @@ export class HologramdetailsComponent implements OnInit {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: ''
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
+  }
+
+  // Get available hologram types from the selected record for multi-type procurements
+  getAvailableHologramTypes(): string[] {
+    const types: string[] = [];
+
+    if (!this.selectedRecordForUpdate) {
+      return types;
+    }
+
+    // Check supplyChainData for quantities (this contains the original procurement data)
+    const data = this.selectedRecordForUpdate.supplyChainData;
+    if (data) {
+      // Check all possible field name variations
+      const localQty = Number(data.localQty || data.localQtyLakh || data.local_qty || 0);
+      const exportQty = Number(data.exportQty || data.exportQtyLakh || data.export_qty || 0);
+      const defenceQty = Number(data.defenceQty || data.defenceQtyLakh || data.defence_qty || 0);
+
+      if (localQty > 0) {
+        types.push('LOCAL');
+      }
+      if (exportQty > 0) {
+        types.push('EXPORT');
+      }
+      if (defenceQty > 0) {
+        types.push('DEFENCE');
+      }
+    }
+
+    // If nothing found, return single type based on procurementType
+    if (types.length === 0 && this.selectedRecordForUpdate.procurementType) {
+      types.push(this.selectedRecordForUpdate.procurementType.toUpperCase());
+    }
+
+    // Final fallback to LOCAL
+    return types.length > 0 ? types : ['LOCAL'];
+  }
+
+  // Get default hologram type for single-type procurements
+  getDefaultHologramType(): string {
+    const types = this.getAvailableHologramTypes();
+    return types.length > 0 ? types[0] : 'LOCAL';
   }
 
   // Status related methods
@@ -808,6 +869,36 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  // Returns array of all hologram types present in the record
+  getHologramTypes(record: HologramRecord): string[] {
+    const types: string[] = [];
+
+    // Check supply chain data for quantities
+    if (record.supplyChainData) {
+      const localQty = record.supplyChainData.localQtyLakh || record.supplyChainData.localQty || 0;
+      const exportQty = record.supplyChainData.exportQtyLakh || record.supplyChainData.exportQty || 0;
+      const defenceQty = record.supplyChainData.defenceQtyLakh || record.supplyChainData.defenceQty || 0;
+
+      if (Number(localQty) > 0) {
+        types.push('LOCAL');
+      }
+      if (Number(exportQty) > 0) {
+        types.push('EXPORT');
+      }
+      if (Number(defenceQty) > 0) {
+        types.push('DEFENCE');
+      }
+    }
+
+    // Fallback to procurementType if no quantities found
+    if (types.length === 0 && record.procurementType) {
+      types.push(record.procurementType.toUpperCase());
+    }
+
+    // Default to LOCAL if nothing found
+    return types.length > 0 ? types : ['LOCAL'];
+  }
+
 
 
 
@@ -899,12 +990,12 @@ export class HologramdetailsComponent implements OnInit {
   addTestDataForArrivalTesting(): void {
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const testExists = applications.some((app: any) => app.refNo === 'YB/TEST/2025');
-    
+
     // Only create if doesn't exist
     if (testExists) {
       return;
     }
-    
+
     // Create ONE simple test record with 30 holograms for easy testing
     const testRecord = {
       refNo: 'YB/TEST/2025',
@@ -921,10 +1012,10 @@ export class HologramdetailsComponent implements OnInit {
       approvedDate: new Date().toISOString().split('T')[0],
       paymentDate: new Date().toISOString().split('T')[0]
     };
-    
+
     applications.push(testRecord);
     localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    
+
     console.log('✅ Test record created: YB/TEST/2025 (30 holograms, Payment Completed)');
   }
 
@@ -934,29 +1025,29 @@ export class HologramdetailsComponent implements OnInit {
   markPaymentCompleted(refNo: string, procurementType: string): void {
     // Update in hologramApplications
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const appIndex = applications.findIndex((app: any) => 
+    const appIndex = applications.findIndex((app: any) =>
       app.refNo === refNo && app.procurementType === procurementType
     );
-    
+
     if (appIndex !== -1) {
       applications[appIndex].paymentCompleted = true;
       applications[appIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
     }
-    
+
     // Update in hologramRequests
     const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const reqIndex = requests.findIndex((req: any) => req.refNo === refNo);
-    
+
     if (reqIndex !== -1) {
       requests[reqIndex].paymentCompleted = true;
       requests[reqIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramRequests', JSON.stringify(requests));
     }
-    
+
     // Reload data to reflect changes
     this.loadHologramRecords();
-    
+
     console.log(`✅ Payment marked as completed for ${refNo} (${procurementType})`);
   }
 
