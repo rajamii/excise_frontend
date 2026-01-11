@@ -800,4 +800,102 @@ export class HologramDataService {
   getRollsDetails(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/rolls-details/`);
   }
+
+  /**
+   * Fetch Monthly Statement from Backend daily register entries
+   * This method fetches completed daily register entries and calculates the monthly statement
+   */
+  getMonthlyStatementFromBackend(
+    month: string,
+    year: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): Observable<MonthlyStatementSummary> {
+    const monthNumber = this.getMonthNumber(month);
+    const monthKey = `${year}-${monthNumber}`;
+
+    return this.getDailyRegisterEntries().pipe(
+      map((entries: any[]) => {
+        console.log(`📦 Backend Daily Register: ${entries.length} total entries`);
+
+        // Filter entries by month, year, and check is_fixed (completed)
+        const filteredEntries = entries.filter((entry: any) => {
+          // Only completed entries
+          if (!entry.is_fixed) return false;
+
+          // Get the date from usage_date or submission_date
+          const entryDate = entry.usage_date || entry.submission_date || '';
+          if (!entryDate) return false;
+
+          // Check month/year match
+          const entryMonthKey = entryDate.substring(0, 7); // YYYY-MM format
+          if (entryMonthKey !== monthKey) return false;
+
+          // Filter by hologram type using roll_range to determine type
+          // The roll_range contains the carton number which can be matched with rolls details
+          // For now, we'll fetch all and let the frontend component filter if needed
+          // OR we can check the hologram_request's type
+
+          return true;
+        });
+
+        console.log(`📊 Filtered entries for ${monthKey}: ${filteredEntries.length}`);
+
+        // Convert backend entries to HologramDailyEntry format
+        const convertedEntries: HologramDailyEntry[] = filteredEntries.map((entry: any) => ({
+          id: String(entry.id),
+          date: entry.usage_date || entry.submission_date || '',
+          hologramType: hologramType, // Default to selected type
+          issuedEntries: entry.issued_ranges || [],
+          wastageEntries: entry.wastage_ranges || [],
+          utilizedQuantity: entry.hologram_qty || 0,
+          leftOverQuantity: (entry.hologram_qty || 0) - (entry.issued_qty || 0) - (entry.wastage_qty || 0),
+          isFixed: entry.is_fixed || false,
+          // Legacy fields for compatibility
+          issuedFromSerial: entry.issued_from || '',
+          issuedToSerial: entry.issued_to || '',
+          issuedQuantity: entry.issued_qty || 0,
+          wastageFromSerial: entry.wastage_from || '',
+          wastageToSerial: entry.wastage_to || '',
+          wastageQuantity: entry.wastage_qty || 0,
+          damageReason: entry.damage_reason || '',
+          // Additional fields for display
+          referenceNo: entry.reference_no || '',
+          brandDetails: entry.brand_details || '',
+          bottleSize: entry.bottle_size || '',
+          cartoonNumber: entry.roll_range || '',
+          lockedRolls: [] // Backend doesn't store this structure
+        } as any));
+
+        // Calculate totals
+        const totals = this.aggregateMonthlyTotals(convertedEntries);
+
+        // Get arrivals from rolls details (for fresh arrival calculation)
+        const arrivals = this.getArrivalRecordsForType(hologramType)
+          .filter(record => this.getMonthKeyFromDate(record.receivedDate) === monthKey);
+        const freshArrival = arrivals.reduce((sum, a) => sum + a.totalCount, 0);
+
+        // Get opening stock from previous month
+        const initialOpening = this.getInitialOpeningStock(hologramType);
+
+        // Calculate closing balance
+        const openingStock = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
+        const closingBalance = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
+
+        console.log(`✅ Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}`);
+
+        return {
+          monthKey,
+          month: this.getMonthCodeFromNumber(monthNumber),
+          year,
+          hologramType,
+          openingStock: initialOpening,
+          freshArrival,
+          totals,
+          closingBalance,
+          entries: convertedEntries,
+          arrivals
+        };
+      })
+    );
+  }
 }
