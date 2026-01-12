@@ -128,7 +128,7 @@
 // ========================================
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr); // ✅ 5 columns for 5 cards
     gap: 25px;
 
     .stat-card {
@@ -161,6 +161,14 @@
                 width: 28px;
                 height: 28px;
             }
+            
+            // ✅ Payment icon styling
+            .payment-icon {
+                font-size: 32px;
+                width: 32px;
+                height: 32px;
+                color: #ff6f00; // Deep orange
+            }
         }
 
         .blue-bg {
@@ -178,6 +186,11 @@
         .yellow-bg {
             background-color: rgba(231, 184, 0, 0.17);
         }
+        
+        // ✅ Orange background for payment card
+        .orange-bg {
+            background-color: rgba(255, 152, 0, 0.17);
+        }
 
         .value {
             font-size: 28px;
@@ -192,6 +205,18 @@
             color: #666;
             font-weight: 500;
             text-align: center;
+        }
+        
+        // ✅ Special hover effect for payment card
+        &.payment {
+            &:hover {
+                .circle-icon {
+                    background-color: rgba(255, 152, 0, 0.25);
+                }
+                .value {
+                    color: #ff6f00;
+                }
+            }
         }
     }
 }
@@ -255,9 +280,16 @@ mat-card {
 // ========================================
 // RESPONSIVE STYLES
 // ========================================
+@media (max-width: 1200px) {
+    .stats-container {
+        grid-template-columns: repeat(3, 1fr); // 3 columns on medium screens
+        gap: 20px;
+    }
+}
+
 @media (max-width: 768px) {
     .stats-container {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr); // 2 columns on tablets
         gap: 16px;
     }
 
@@ -277,9 +309,10 @@ mat-card {
     }
 }
 
-@media(max-width: 674px) {
+@media(max-width: 480px) {
     .stats-container {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr; // 1 column on mobile
+        gap: 12px;
     }
 
     mat-card-content {

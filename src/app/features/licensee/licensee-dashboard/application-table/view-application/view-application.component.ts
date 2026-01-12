@@ -25,7 +25,7 @@ export interface FieldDisplay {
   templateUrl: './view-application.component.html',
   styleUrl: './view-application.component.scss'
 })
-export class ViewApplicationComponent extends BaseComponent implements OnInit{
+export class ViewApplicationComponent extends BaseComponent implements OnInit {
   resolveObjectionForm!: FormGroup;
   application: any;
   tableType: string = '';
@@ -33,7 +33,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   photoUrl: string | null = null;
 
   isObjectionLoaded = false;
-  
+
   objections: Objection[] = [];
 
   // Data arrays for display sections
@@ -294,7 +294,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
       }
     });
   }
-  
+
   // Initializes the form used to resolve objections
   initializeResolveForm(): void {
     const group: { [key: string]: FormControl } = {};
@@ -338,8 +338,8 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   // Determines if there is at least one unresolved objection
   hasAnyObjections(): boolean {
     return this.objections.some(obj => this.hasObjection(obj.fieldName));
-  } 
-  
+  }
+
   // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
     return this.objections.find(obj => obj.fieldName === field && !obj.isResolved)?.remarks || '';
@@ -349,7 +349,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   get unresolvedObjections(): Objection[] {
     return this.objections.filter(obj => !obj.isResolved);
   }
-  
+
   // Handles photo file selection and sets it into the form
   onPhotoSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -428,7 +428,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
       icon: 'info',
       confirmButtonText: 'OK'
     });
-    
+
     // Alternative: If you want to process payment through advanceApplication:
     /*
     this.licenseAppService.advanceApplication(
@@ -468,7 +468,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
           next: () => {
             Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
           },
-          error: (err) => {
+          error: (err: any) => {
             Swal.fire('Error', err?.error?.detail, 'error');
           }
         });

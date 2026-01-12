@@ -1,3 +1,8 @@
+<!-- ================================================================================================
+     FILE: features/licensee/licensee-dashboard/licensee-dashboard.component.html
+     FIXED VERSION - With refresh event binding
+     ================================================================================================ -->
+
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   
@@ -32,8 +37,9 @@
     </div>
   }
 
-  <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
+  <!-- Stats Container: This section displays the applied, pending, approved, rejected, and payment stats -->
   <div class="stats-container" [class.loading]="isLoading">
+    
     <!-- Applied Stat Card -->
     <mat-card class="stat-card applied" (click)="showTable('applied')">
       <div class="circle-icon blue-bg">
@@ -50,6 +56,15 @@
       </div>
       <div class="value">{{ dashboardCounts.pending }}</div>
       <div class="label">Pending</div>
+    </mat-card>
+
+    <!-- ✅ Awaiting Payment Stat Card -->
+    <mat-card class="stat-card payment" (click)="showTable('awaitingPayment')">
+      <div class="circle-icon orange-bg">
+        <mat-icon class="payment-icon">payment</mat-icon>
+      </div>
+      <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
+      <div class="label">Awaiting Payment</div>
     </mat-card>
 
     <!-- Approved Stat Card -->
@@ -98,7 +113,8 @@
           <app-application-table
             [dataSource]="appliedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'applied'">
+            [tableType]="'applied'"
+            (refreshData)="refreshDashboard()">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -117,7 +133,28 @@
           <app-application-table
             [dataSource]="pendingDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'pending'">
+            [tableType]="'pending'"
+            (refreshData)="refreshDashboard()">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    <!-- ✅ Awaiting Payment Table Card - WITH REFRESH BINDING -->
+    @if (activeTable === 'awaitingPayment') {
+      <mat-card>
+        <button mat-icon-button (click)="goBack()">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <mat-card-header>
+          Awaiting Payment - {{ getApplicationTypeLabel() }}
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table
+            [dataSource]="awaitingPaymentDataSource"
+            [displayedColumns]="displayedColumns"
+            [tableType]="'awaitingPayment'"
+            (refreshData)="refreshDashboard()">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -136,7 +173,8 @@
           <app-application-table
             [dataSource]="approvedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'approved'">
+            [tableType]="'approved'"
+            (refreshData)="refreshDashboard()">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -155,7 +193,8 @@
           <app-application-table
             [dataSource]="rejectedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'rejected'">
+            [tableType]="'rejected'"
+            (refreshData)="refreshDashboard()">
           </app-application-table>
         </mat-card-content>
       </mat-card>
