@@ -169,11 +169,11 @@
                       <button class="btn btn-outline-primary" (click)="viewDetails(record)" title="View Details">
                         <i class="bi bi-eye"></i>
                       </button>
-                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-success"
+                      <button *ngIf="record.allowedActions?.includes('APPROVE')" class="btn btn-outline-success"
                         (click)="approveApplication(record)" title="Approve Application">
                         <i class="bi bi-check-circle"></i>
                       </button>
-                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-danger"
+                      <button *ngIf="record.allowedActions?.includes('REJECT')" class="btn btn-outline-danger"
                         (click)="terminateApplication(record)" title="Terminate Application">
                         <i class="bi bi-x-circle"></i>
                       </button>

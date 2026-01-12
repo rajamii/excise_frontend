@@ -9,6 +9,7 @@ import { HologramDataService, HologramProcurement } from '../../services/hologra
 type HologramRow = HologramProcurement & {
   // UI specific fields mapped from API response
   procurementType?: 'Local' | 'Export' | 'Defence';
+  // FIXED: These display the ORIGINAL requested quantities (never change)
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
@@ -72,6 +73,12 @@ export class HologramprocurementComponent implements OnInit {
         console.log('📦 Loading hologram data from API:', data.length, 'items');
 
         let mapped: HologramRow[] = data.map(item => {
+          // FIXED: Use requested_* quantities for display (these never change)
+          // Fallback to regular qty for existing records without requested_* fields
+          const requestedLocal = Number((item as any).requested_local_qty || item.localQty);
+          const requestedExport = Number((item as any).requested_export_qty || item.exportQty);
+          const requestedDefence = Number((item as any).requested_defence_qty || item.defenceQty);
+
           return {
             ...item,
             // Ensure numeric values (API returns strings for Decimals)
@@ -79,10 +86,10 @@ export class HologramprocurementComponent implements OnInit {
             exportQty: Number(item.exportQty),
             defenceQty: Number(item.defenceQty),
 
-            // UI compatibility mapping
-            localQtyLakh: Number(item.localQty), // Template uses localQtyLakh
-            exportQtyLakh: Number(item.exportQty),
-            defenceQtyLakh: Number(item.defenceQty),
+            // CRITICAL: UI displays ORIGINAL REQUESTED quantities (never change after submission)
+            localQtyLakh: requestedLocal,  // FIXED: Original requested quantity
+            exportQtyLakh: requestedExport, // FIXED: Original requested quantity
+            defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
             paymentCompleted: item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
             editedByCommissioner: false, // Not yet supported in backend
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName

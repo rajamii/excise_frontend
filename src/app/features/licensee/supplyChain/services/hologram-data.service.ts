@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, map } from 'rxjs';
+import { Observable, BehaviorSubject, map, forkJoin } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
@@ -28,6 +28,11 @@ export interface HologramProcurement {
   localQty: number;
   exportQty: number;
   defenceQty: number;
+  // FIXED: Original requested quantities that never change after submission
+  requested_local_qty?: number;
+  requested_export_qty?: number;
+  requested_defence_qty?: number;
+  total_requested_quantity?: number;  // Sum of all requested quantities (from backend)
   paymentStatus?: string;
   paymentDetails?: any;
   remarks?: string;
@@ -121,6 +126,10 @@ export class HologramDataService {
   private dailyEntriesSubject = new BehaviorSubject<any[]>([]);
   public dailyEntries$ = this.dailyEntriesSubject.asObservable();
 
+  // Subject for notifying when hologram arrivals are updated
+  private arrivalUpdateSubject = new BehaviorSubject<void>(undefined);
+  public arrivalUpdate$ = this.arrivalUpdateSubject.asObservable();
+
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
 
@@ -196,6 +205,13 @@ export class HologramDataService {
   performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
     const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
     return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data });
+  }
+
+  // Notify that hologram arrivals have been updated
+  // Components can call this after successfully updating arrival details
+  notifyArrivalUpdate(): void {
+    this.arrivalUpdateSubject.next(undefined);
+    console.log('📢 Arrival update notification sent');
   }
 
   private loadFromStorage(): void {
@@ -802,8 +818,8 @@ export class HologramDataService {
   }
 
   /**
-   * Fetch Monthly Statement from Backend daily register entries
-   * This method fetches completed daily register entries and calculates the monthly statement
+   * Fetch Monthly Statement from Backend daily register entries AND rolls details
+   * This method fetches completed daily register entries and arrivals from backend
    */
   getMonthlyStatementFromBackend(
     month: string,
@@ -813,44 +829,55 @@ export class HologramDataService {
     const monthNumber = this.getMonthNumber(month);
     const monthKey = `${year}-${monthNumber}`;
 
-    return this.getDailyRegisterEntries().pipe(
-      map((entries: any[]) => {
-        console.log(`📦 Backend Daily Register: ${entries.length} total entries`);
+    // Fetch BOTH daily register entries AND rolls details from backend
+    return forkJoin({
+      dailyEntries: this.getDailyRegisterEntries(),
+      rollsDetails: this.getRollsDetails()
+    }).pipe(
+      map(({ dailyEntries, rollsDetails }) => {
+        // Handle pagination/response structure for rollsDetails - cast to any to avoid type issues
+        const rollsArray: any[] = Array.isArray(rollsDetails) ? rollsDetails : ((rollsDetails as any)?.results || []);
 
-        // Filter entries by month, year, and check is_fixed (completed)
-        const filteredEntries = entries.filter((entry: any) => {
-          // Only completed entries
+        console.log(`📦 Backend Daily Register: ${dailyEntries.length} total entries`);
+        console.log(`📦 Backend Rolls Details: ${rollsArray.length} total rolls`);
+
+        // Log first roll structure for debugging
+        if (rollsArray.length > 0) {
+          console.log('📋 Sample roll structure:', {
+            id: rollsArray[0].id,
+            carton_number: rollsArray[0].carton_number,
+            cartonNumber: rollsArray[0].cartonNumber,
+            received_date: rollsArray[0].received_date,
+            receivedDate: rollsArray[0].receivedDate,
+            type: rollsArray[0].type,
+            keys: Object.keys(rollsArray[0])
+          });
+        }
+
+        // Filter daily entries by month, year, hologram type, and check is_fixed (completed)
+        const filteredEntries = dailyEntries.filter((entry: any) => {
           if (!entry.is_fixed) return false;
-
-          // Get the date from usage_date or submission_date
           const entryDate = entry.usage_date || entry.submission_date || '';
           if (!entryDate) return false;
-
-          // Check month/year match
-          const entryMonthKey = entryDate.substring(0, 7); // YYYY-MM format
+          const entryMonthKey = entryDate.substring(0, 7);
           if (entryMonthKey !== monthKey) return false;
-
-          // Filter by hologram type using roll_range to determine type
-          // The roll_range contains the carton number which can be matched with rolls details
-          // For now, we'll fetch all and let the frontend component filter if needed
-          // OR we can check the hologram_request's type
-
+          const entryType = (entry.hologram_type || 'LOCAL').toUpperCase();
+          if (entryType !== hologramType) return false;
           return true;
         });
 
-        console.log(`📊 Filtered entries for ${monthKey}: ${filteredEntries.length}`);
+        console.log(`📊 Filtered daily entries for ${monthKey}: ${filteredEntries.length}`);
 
         // Convert backend entries to HologramDailyEntry format
         const convertedEntries: HologramDailyEntry[] = filteredEntries.map((entry: any) => ({
           id: String(entry.id),
           date: entry.usage_date || entry.submission_date || '',
-          hologramType: hologramType, // Default to selected type
+          hologramType: hologramType,
           issuedEntries: entry.issued_ranges || [],
           wastageEntries: entry.wastage_ranges || [],
           utilizedQuantity: entry.hologram_qty || 0,
           leftOverQuantity: (entry.hologram_qty || 0) - (entry.issued_qty || 0) - (entry.wastage_qty || 0),
           isFixed: entry.is_fixed || false,
-          // Legacy fields for compatibility
           issuedFromSerial: entry.issued_from || '',
           issuedToSerial: entry.issued_to || '',
           issuedQuantity: entry.issued_qty || 0,
@@ -858,30 +885,62 @@ export class HologramDataService {
           wastageToSerial: entry.wastage_to || '',
           wastageQuantity: entry.wastage_qty || 0,
           damageReason: entry.damage_reason || '',
-          // Additional fields for display
           referenceNo: entry.reference_no || '',
           brandDetails: entry.brand_details || '',
           bottleSize: entry.bottle_size || '',
           cartoonNumber: entry.roll_range || '',
-          lockedRolls: [] // Backend doesn't store this structure
+          lockedRolls: []
         } as any));
 
-        // Calculate totals
+        // Calculate totals from daily entries
         const totals = this.aggregateMonthlyTotals(convertedEntries);
 
-        // Get arrivals from rolls details (for fresh arrival calculation)
-        const arrivals = this.getArrivalRecordsForType(hologramType)
-          .filter(record => this.getMonthKeyFromDate(record.receivedDate) === monthKey);
+        // *** CRITICAL: Get arrivals from backend rolls details ***
+        // Filter rolls by type and received_date month
+        const arrivals: HologramArrivalRecord[] = rollsArray
+          .filter((roll: any) => {
+            // Handle both camelCase and snake_case field names
+            const cartonNumber = roll.carton_number || roll.cartonNumber || '';
+            const rollType = (roll.type || 'LOCAL').toString().toUpperCase().trim();
+            const typeMatch = rollType === hologramType;
+
+            // Check received_date matches the month
+            // Handle both date formats: "YYYY-MM-DD" and ISO "YYYY-MM-DDTHH:MM:SS"
+            // Also handle camelCase: receivedDate
+            const receivedDate = roll.received_date || roll.receivedDate || '';
+            if (!receivedDate) {
+              console.log(`⚠️ Roll ${cartonNumber || roll.id || 'unknown'}: No received_date`);
+              return false;
+            }
+
+            // Extract YYYY-MM from the date (works for both formats)
+            const rollMonthKey = receivedDate.substring(0, 7);
+            const dateMatch = rollMonthKey === monthKey;
+
+            console.log(`🔍 Roll ${cartonNumber}: type=${rollType}(match=${typeMatch}), date=${receivedDate}, monthKey=${rollMonthKey}(match=${dateMatch})`);
+
+            return typeMatch && dateMatch;
+          })
+          .map((roll: any) => ({
+            id: roll.id,
+            type: (roll.type || 'LOCAL').toString().toUpperCase().trim() as 'LOCAL' | 'EXPORT' | 'DEFENCE',
+            totalCount: roll.total_count || roll.totalCount || 0,
+            receivedDate: roll.received_date || roll.receivedDate || '',
+            cartoonNumber: roll.carton_number || roll.cartonNumber || '',
+            fromSerial: roll.from_serial || roll.fromSerial || '',
+            toSerial: roll.to_serial || roll.toSerial || ''
+          }));
+
         const freshArrival = arrivals.reduce((sum, a) => sum + a.totalCount, 0);
+        console.log(`📊 Fresh Arrivals for ${monthKey} (${hologramType}): ${freshArrival} from ${arrivals.length} rolls`);
 
         // Get opening stock from previous month
         const initialOpening = this.getInitialOpeningStock(hologramType);
 
-        // Calculate closing balance
-        const openingStock = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
+        // Calculate closing balance: Opening + Fresh Arrival - Utilized - Wastage
         const closingBalance = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
 
-        console.log(`✅ Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}`);
+        console.log(`✅ Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}, Closing=${closingBalance}`);
 
         return {
           monthKey,

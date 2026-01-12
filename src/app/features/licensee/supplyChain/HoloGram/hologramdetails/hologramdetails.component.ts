@@ -569,6 +569,12 @@ export class HologramdetailsComponent implements OnInit {
             alert(`Hologram ${this.selectedRecordForUpdate?.ourRefNo} marked as arrived successfully with ${this.savedCartons.length} carton(s)!`);
             this.closeUpdateModal();
             this.loadHologramRecords(); // Refresh from backend
+            
+            // Notify monthly statement component to refresh after a short delay
+            // This ensures backend has finished processing the request
+            setTimeout(() => {
+              this.hologramService.notifyArrivalUpdate();
+            }, 500);
           },
           error: (err) => {
             console.error('Error assigning cartons:', err);

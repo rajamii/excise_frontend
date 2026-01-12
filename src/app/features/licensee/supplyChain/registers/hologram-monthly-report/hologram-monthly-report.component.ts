@@ -2,6 +2,7 @@ import { Component, ChangeDetectorRef, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   HologramArrivalRecord,
   HologramDataService,
@@ -114,6 +115,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
   statementRows: MonthlyReportRow[] = [];
   overviewSummary: MonthlyOverviewSummary | null = null;
 
+  private arrivalUpdateSubscription?: Subscription;
+
   private storageListener = (event: StorageEvent) => {
     if (!event.key) {
       return;
@@ -141,6 +144,12 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     });
 
     window.addEventListener('storage', this.storageListener);
+
+    // Subscribe to arrival updates to automatically refresh monthly statement
+    this.arrivalUpdateSubscription = this.hologramDataService.arrivalUpdate$.subscribe(() => {
+      console.log('🔄 Arrival update received, refreshing monthly statement...');
+      this.refreshMonthlyData();
+    });
 
     // CRITICAL FIX: Migrate old entries to mark them as pending if they have no actual usage
     this.migrateOldEntriesToPending();
@@ -202,6 +211,9 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('storage', this.storageListener);
+    if (this.arrivalUpdateSubscription) {
+      this.arrivalUpdateSubscription.unsubscribe();
+    }
   }
 
   onMonthYearChange(): void {
