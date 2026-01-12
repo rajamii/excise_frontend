@@ -1,45 +1,8 @@
-<!-- ================================================================================================
-     FILE: features/licensee/licensee-dashboard/licensee-dashboard.component.html
-     FIXED VERSION - With refresh event binding
-     ================================================================================================ -->
-
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   
-  <!-- APPLICATION TYPE FILTER DROPDOWN -->
-  <div class="filter-container">
-    <mat-form-field appearance="outline" class="application-type-filter">
-      <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
-      <mat-label>Application Type</mat-label>
-      <mat-select 
-        [(value)]="selectedApplicationType" 
-        (selectionChange)="onApplicationTypeChange()">
-        @for (type of applicationTypes; track type.value) {
-          <mat-option [value]="type.value">
-            {{ type.label }}
-          </mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-  </div>
-
-  <!-- LOADING SPINNER -->
-  @if (isLoading) {
-    <div class="loading-overlay">
-      <div class="simple-spinner" aria-hidden="true">
-        <svg width="50" height="50" viewBox="0 0 50 50" role="img" aria-label="Loading">
-          <circle cx="25" cy="25" r="20" fill="none" stroke="#1C2B78" stroke-width="4" stroke-linecap="round" stroke-dasharray="31.4 31.4" transform="rotate(-90 25 25)">
-            <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
-          </circle>
-        </svg>
-      </div>
-      <p class="loading-text">Loading {{ getApplicationTypeLabel() }} data...</p>
-    </div>
-  }
-
-  <!-- Stats Container: This section displays the applied, pending, approved, rejected, and payment stats -->
+  <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
   <div class="stats-container" [class.loading]="isLoading">
-    
     <!-- Applied Stat Card -->
     <mat-card class="stat-card applied" (click)="showTable('applied')">
       <div class="circle-icon blue-bg">
@@ -56,15 +19,6 @@
       </div>
       <div class="value">{{ dashboardCounts.pending }}</div>
       <div class="label">Pending</div>
-    </mat-card>
-
-    <!-- ✅ Awaiting Payment Stat Card -->
-    <mat-card class="stat-card payment" (click)="showTable('awaitingPayment')">
-      <div class="circle-icon orange-bg">
-        <mat-icon class="payment-icon">payment</mat-icon>
-      </div>
-      <div class="value">{{ dashboardCounts.awaitingPayment }}</div>
-      <div class="label">Awaiting Payment</div>
     </mat-card>
 
     <!-- Approved Stat Card -->
@@ -92,7 +46,7 @@
     @if (activeTable === 'default') {
       <mat-card>
         <mat-card-header>
-          Statistics - {{ getApplicationTypeLabel() }}
+          Statistics
         </mat-card-header>
         <mat-card-content>
           <!-- Content for default table -->
@@ -107,14 +61,13 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Applied - {{ getApplicationTypeLabel() }}
+          Applied
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="appliedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'applied'"
-            (refreshData)="refreshDashboard()">
+            [tableType]="'applied'">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -127,34 +80,13 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Pending - {{ getApplicationTypeLabel() }}
+          Pending
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="pendingDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'pending'"
-            (refreshData)="refreshDashboard()">
-          </app-application-table>
-        </mat-card-content>
-      </mat-card>
-    }
-
-    <!-- ✅ Awaiting Payment Table Card - WITH REFRESH BINDING -->
-    @if (activeTable === 'awaitingPayment') {
-      <mat-card>
-        <button mat-icon-button (click)="goBack()">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <mat-card-header>
-          Awaiting Payment - {{ getApplicationTypeLabel() }}
-        </mat-card-header>
-        <mat-card-content>
-          <app-application-table
-            [dataSource]="awaitingPaymentDataSource"
-            [displayedColumns]="displayedColumns"
-            [tableType]="'awaitingPayment'"
-            (refreshData)="refreshDashboard()">
+            [tableType]="'pending'">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -167,14 +99,13 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Approved - {{ getApplicationTypeLabel() }}
+          Approved
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="approvedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'approved'"
-            (refreshData)="refreshDashboard()">
+            [tableType]="'approved'">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -187,14 +118,13 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Rejected - {{ getApplicationTypeLabel() }}
+          Rejected
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="rejectedDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'rejected'"
-            (refreshData)="refreshDashboard()">
+            [tableType]="'rejected'">
           </app-application-table>
         </mat-card-content>
       </mat-card>
