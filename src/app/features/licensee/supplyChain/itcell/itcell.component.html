@@ -1,0 +1,659 @@
+<div class="bg-light">
+  <!-- Header Section -->
+  <div class="header-section text-black">
+    <div class="container-fluid">
+      <div class="row align-items-center py-3">
+        <div class="col">
+          <h1 class="h3 mb-1 fw-bold">IT Cell Dashboard</h1>
+          <p class="mb-0 small opacity-75">
+            IT Cell: Hologram Management System
+          </p>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-success btn-sm px-3 py-2">
+            <i class="bi bi-laptop me-1"></i> IT Cell
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Tabs Section -->
+  <div class="bg-white border-bottom">
+    <div class="container-fluid">
+      <ul class="nav nav-tabs border-0">
+        <li class="nav-item">
+          <button class="nav-link" [class.active]="selectedTabIndex === 0"
+                  (click)="selectedTabIndex = 0">
+            <i class="bi bi-table me-2"></i> HOLOGRAM MANAGEMENT
+          </button>
+        </li>
+        <li class="nav-item">
+          <button class="nav-link" [class.active]="selectedTabIndex === 1"
+                  (click)="selectedTabIndex = 1">
+            <i class="bi bi-diagram-3 me-2"></i> PROCESS FLOW
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="container-fluid p-0">
+    <!-- Hologram Management Tab -->
+    @if (selectedTabIndex === 0) {
+      <!-- Hologram Register Header -->
+      <div class="hologram-register-header">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div class="header-info">
+            <h4 class="register-title">
+              <i class="bi bi-qr-code me-2"></i>
+              Hologram Management Register
+            </h4>
+            <p class="register-subtitle">Track and manage all hologram applications</p>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="summary-card total-requests">
+              <div class="card-icon">
+                <i class="bi bi-list-ul"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ filteredHologramData.length }}</h3>
+                <p class="card-label">Total Applications</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card pending-requests">
+              <div class="card-icon">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getStatusCount('Under Review') }}</h3>
+                <p class="card-label">Under Review</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card approved-requests">
+              <div class="card-icon">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getStatusCount('Forwarded to Commissioner') }}</h3>
+                <p class="card-label">Forwarded</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-card total-quantity">
+              <div class="card-icon">
+                <i class="bi bi-boxes"></i>
+              </div>
+              <div class="card-content">
+                <h3 class="card-value">{{ getTotalQuantity() | number:'1.0-0' }}</h3>
+                <p class="card-label">Total Quantity (Lakh)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact Filter Section -->
+      <div class="compact-filter-section mb-3 mx-4">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <div class="filter-label-text">
+            <i class="bi bi-funnel me-1"></i>
+            <small class="text-muted">Filters:</small>
+          </div>
+          
+          <!-- Date Filter -->
+          <div class="compact-filter">
+            <input 
+              type="date" 
+              class="form-control form-control-sm" 
+              [(ngModel)]="selectedDate"
+              (change)="applyFilters()"
+              placeholder="Date"
+              title="Filter by date">
+          </div>
+          
+          <!-- Month Filter -->
+          <div class="compact-filter">
+            <select 
+              class="form-select form-select-sm" 
+              [(ngModel)]="selectedMonth"
+              (change)="applyFilters()"
+              title="Filter by month">
+              <option value="">All Months</option>
+              @for (month of months; track month.value) {
+                <option [value]="month.value">{{ month.label }}</option>
+              }
+            </select>
+          </div>
+          
+          <!-- Year Filter -->
+          <div class="compact-filter">
+            <select 
+              class="form-select form-select-sm" 
+              [(ngModel)]="selectedYear"
+              (change)="applyFilters()"
+              title="Filter by year">
+              <option value="">All Years</option>
+              @for (year of years; track year) {
+                <option [value]="year">{{ year }}</option>
+              }
+            </select>
+          </div>
+          
+          <!-- Status Filter -->
+          <div class="compact-filter">
+            <select 
+              class="form-select form-select-sm" 
+              [(ngModel)]="statusFilter"
+              (change)="applyFilters()"
+              title="Filter by status">
+              @for (status of statusOptions; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Company Filter -->
+          <div class="compact-filter">
+            <input 
+              type="text" 
+              class="form-control form-control-sm" 
+              [(ngModel)]="companyFilter"
+              (input)="applyFilters()"
+              placeholder="Search company..."
+              title="Filter by company">
+          </div>
+          
+          <!-- Clear Button -->
+          @if (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) {
+            <button 
+              class="btn btn-outline-danger btn-sm" 
+              (click)="clearFilters()"
+              title="Clear all filters">
+              <i class="bi bi-x-circle"></i>
+              Clear
+            </button>
+          }
+        </div>
+        
+        <!-- Filter Results Summary -->
+        @if (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) {
+          <div class="filter-results-compact mt-2">
+            <small class="text-info">
+              <i class="bi bi-info-circle me-1"></i>
+              Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramData.length }}</strong> applications
+            </small>
+          </div>
+        }
+      </div>
+
+      <!-- Hologram Register Table -->
+      <div class="hologram-register-table mx-4 mb-4">
+        <div class="register-container">
+          <div class="register-header-bar">
+            <h5 class="register-table-title">
+              <i class="bi bi-table me-2"></i>
+              Hologram Register Entries
+            </h5>
+            <div class="register-info">
+              <span class="entries-count">{{ filteredHologramData.length }} Entries</span>
+            </div>
+          </div>
+
+          @if (filteredHologramData.length > 0) {
+            <div class="table-responsive">
+              <table class="table register-table">
+                <thead>
+                  <tr>
+                    <th class="sl-no">Sl. No.</th>
+                    <th class="ref-number">Ref. No</th>
+                    <th class="date">Date</th>
+                    <th class="company">Company</th>
+                    <th class="total-qty">Total Qty (Lakh)</th>
+                    <th class="status">Status</th>
+                    <th class="actions">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (hologram of filteredHologramData; track hologram.refNo; let i = $index) {
+                    <tr class="register-row" [class.edited-row]="hologram.editedByCommissioner">
+                      <td class="sl-no">{{ i + 1 }}</td>
+                      <td class="ref-number">
+                        <div class="d-flex align-items-center gap-2">
+                          <span class="ref-text">{{ hologram.refNo }}</span>
+                          @if (hologram.editedByCommissioner) {
+                            <span class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
+                              <i class="bi bi-pencil-fill me-1"></i>EDITED
+                            </span>
+                          }
+                        </div>
+                      </td>
+                      <td class="date">
+                        <span class="date-text">{{ hologram.date | date: "dd-MMM-yyyy" }}</span>
+                      </td>
+                      <td class="company">
+                        <span class="company-name">{{ hologram.companyName }}</span>
+                      </td>
+                      <td class="total-qty">
+                        <div class="qty-display">
+                          <span class="qty-number">{{ getTotalHolograms(hologram) | number:'1.0-0' }}</span>
+                          <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="viewHologramDetails(hologram)" title="View Details">
+                            <i class="bi bi-eye me-1"></i>
+                            <span class="d-none d-lg-inline">Details</span>
+                          </button>
+                        </div>
+                      </td>
+                      <td class="status">
+                        <span class="status-badge" [ngClass]="getStatusClass(hologram.status)">
+                          {{ hologram.status }}
+                        </span>
+                      </td>
+                      <td class="actions">
+                        <div class="action-buttons d-flex gap-1 flex-wrap">
+                          <button class="btn btn-primary btn-sm" (click)="viewApplication(hologram)" title="View Application">
+                            <i class="bi bi-eye me-1"></i>
+                            <span class="d-none d-md-inline">View</span>
+                          </button>
+                          @if (hologram.status !== 'Forwarded to Commissioner' && hologram.status !== 'Approved by Commissioner - Ready for Payment' && hologram.status !== 'Approved' && hologram.status !== 'Payment Completed') {
+                            <button class="btn btn-success btn-sm" (click)="forwardToCommissioner(hologram)" title="Forward to Commissioner">
+                              <i class="bi bi-arrow-right-circle me-1"></i>
+                              <span class="d-none d-md-inline">Forward</span>
+                            </button>
+                          }
+                          @if (isPaymentCompleted(hologram)) {
+                            <button class="btn btn-info btn-sm" (click)="viewPaymentSlip(hologram)" title="View Payment Slip">
+                              <i class="bi bi-receipt me-1"></i>
+                              <span class="d-none d-md-inline">Slip</span>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Register Summary Footer -->
+            <div class="register-footer">
+              <div class="summary-row">
+                <div class="summary-item">
+                  <span class="summary-label">Total Applications:</span>
+                  <span class="summary-value">{{ filteredHologramData.length }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Total Quantity:</span>
+                  <span class="summary-value">{{ getTotalQuantity() | number:'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <!-- Empty State -->
+            <div class="empty-state">
+              <div class="empty-icon">
+                <i class="bi bi-journal-x"></i>
+              </div>
+              <h5 class="empty-title">No Applications Found</h5>
+              <p class="empty-message">
+                {{ (selectedDate || selectedMonth || selectedYear || statusFilter !== 'All' || companyFilter) ? 
+                   'No applications match your current filter criteria. Try adjusting your filters or clear them to see all applications.' : 
+                   'No hologram applications have been submitted yet.' }}
+              </p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Process Flow Tab -->
+    <div *ngIf="selectedTabIndex === 1" class="bg-white mx-4 my-4 rounded shadow-sm overflow-hidden">
+      <div class="p-4">
+        <div class="text-center mb-4 pb-3 border-bottom">
+          <h4 class="h5 mb-2 fw-semibold text-dark">IT Cell Process Flow</h4>
+          <p class="mb-0 text-muted small">Document processing workflow</p>
+        </div>
+
+        <div class="d-flex flex-column align-items-center gap-4">
+          <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width: 50px; height: 50px;">
+              <i class="bi bi-file-earmark fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-2 fw-semibold text-dark fs-6">1. Document Review</h5>
+              <p class="mb-0 text-muted small lh-sm">Documents are reviewed by the IT Cell system</p>
+            </div>
+          </div>
+
+          <div class="text-primary fs-4">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width: 50px; height: 50px;">
+              <i class="bi bi-laptop fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-2 fw-semibold text-dark fs-6">2. IT Cell Processing</h5>
+              <p class="mb-0 text-muted small lh-sm">IT Cell puts up the file and forwards it for processing</p>
+            </div>
+          </div>
+
+          <div class="text-primary fs-4">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width: 50px; height: 50px;">
+              <i class="bi bi-send fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-2 fw-semibold text-dark fs-6">3. Forward for Review</h5>
+              <p class="mb-0 text-muted small lh-sm">Files are forwarded to the appropriate authority for review</p>
+            </div>
+          </div>
+
+          <div class="text-primary fs-4">
+            <i class="bi bi-arrow-down"></i>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 bg-light p-4 rounded w-100" style="max-width: 500px;">
+            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width: 50px; height: 50px;">
+              <i class="bi bi-check-circle fs-5"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="mb-2 fw-semibold text-dark fs-6">4. Final Processing</h5>
+              <p class="mb-0 text-muted small lh-sm">Documents are processed and approved by the concerned authority</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hologram Details Modal -->
+  <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0,0,0,.35);" *ngIf="showHologramModal">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content shadow-lg border-0">
+        <div class="modal-header bg-primary text-white">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-eye me-2"></i>
+            <h5 class="modal-title mb-0">Hologram Request Details</h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="closeHologramDetails()"></button>
+        </div>
+        <div class="modal-body bg-light">
+          <div class="mb-3">
+            <span class="badge bg-secondary-subtle text-secondary me-2">Ref: {{ selectedHologram?.refNo }}</span>
+            <span class="badge bg-info-subtle text-info me-2">Date: {{ selectedHologram?.date | date:'dd-MMM-yyyy' }}</span>
+            <span class="badge bg-success-subtle text-success">{{ selectedHologram?.companyName }}</span>
+          </div>
+
+          <!-- Quantity Breakdown Table -->
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-bordered mb-0 bg-white">
+              <thead class="table-success">
+                <tr>
+                  <th>Series</th>
+                  <th class="text-end">Quantity (Lakh)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @if (selectedHologram && selectedHologram.localQtyLakh && selectedHologram.localQtyLakh > 0) {
+                <tr>
+                  <td>Local</td>
+                  <td class="text-end">{{ selectedHologram.localQtyLakh | number:'1.0-0' }}</td>
+                </tr>
+                }
+                @if (selectedHologram && selectedHologram.exportQtyLakh && selectedHologram.exportQtyLakh > 0) {
+                <tr>
+                  <td>Export</td>
+                  <td class="text-end">{{ selectedHologram.exportQtyLakh | number:'1.0-0' }}</td>
+                </tr>
+                }
+                @if (selectedHologram && selectedHologram.defenceQtyLakh && selectedHologram.defenceQtyLakh > 0) {
+                <tr>
+                  <td>Defence</td>
+                  <td class="text-end">{{ selectedHologram.defenceQtyLakh | number:'1.0-0' }}</td>
+                </tr>
+                }
+                <tr class="table-light">
+                  <th>Total</th>
+                  <th class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Payment Calculation Details -->
+          <div class="card border-warning bg-warning-subtle mb-3">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0 fw-bold">
+                <i class="bi bi-currency-rupee me-2"></i>
+                Payment Calculation
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-sm table-bordered mb-0 bg-white">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Payment Type</th>
+                      <th class="text-end">Rate per Hologram</th>
+                      <th class="text-end">Total Quantity</th>
+                      <th class="text-end">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <strong>Wallet Payment</strong>
+                        <br><small class="text-muted">(Online Payment - After Commissioner Approval)</small>
+                      </td>
+                      <td class="text-end">₹0.15</td>
+                      <td class="text-end">{{ getTotalHolograms(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.0-0' }}</td>
+                      <td class="text-end fw-bold text-success">₹{{ calculateWalletPayment(selectedHologram || {refNo:'',date:'',companyName:'',status:'Draft',localQtyLakh:0,exportQtyLakh:0,defenceQtyLakh:0}) | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div class="alert alert-info mt-3 mb-0">
+                <small>
+                  <i class="bi bi-info-circle me-1"></i>
+                  <strong>Payment Process:</strong>
+                  <ol class="mb-0 ps-3 mt-2">
+                    <li>IT Cell forwards application to Commissioner</li>
+                    <li>Commissioner reviews and approves the application</li>
+                    <li>Wallet payment (₹0.15/hologram) will be processed online after Commissioner approval</li>
+                  </ol>
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit History Section (if edited by Commissioner) -->
+          <div class="card border-warning bg-warning-subtle mb-3" *ngIf="selectedHologram?.editedByCommissioner && selectedHologram?.editHistory">
+            <div class="card-header bg-warning text-dark">
+              <h6 class="mb-0 fw-bold">
+                <i class="bi bi-pencil-square me-2"></i>
+                Quantity Edited by Commissioner
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-warning mb-3">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Note:</strong> The quantities for this hologram request have been modified by the Commissioner.
+              </div>
+
+              <!-- Merged Comparison Table -->
+              <div class="table-responsive">
+                <table class="table table-bordered bg-white mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 25%;">Series</th>
+                      <th class="text-center" style="width: 37.5%;">
+                        <i class="bi bi-arrow-left-circle text-danger me-1"></i>
+                        <span class="text-danger">Original Quantities</span>
+                      </th>
+                      <th class="text-center" style="width: 37.5%;">
+                        <i class="bi bi-arrow-right-circle text-success me-1"></i>
+                        <span class="text-success">Updated Quantities</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                      <tr>
+                        <td><strong>Local</strong></td>
+                        <td class="text-end">{{ selectedHologram?.editHistory?.originalQuantities?.local | number:'1.0-0' }} pieces</td>
+                        <td class="text-end text-success fw-bold">{{ selectedHologram?.editHistory?.updatedQuantities?.local | number:'1.0-0' }} pieces</td>
+                      </tr>
+                    }
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                      <tr>
+                        <td><strong>Export</strong></td>
+                        <td class="text-end">{{ selectedHologram?.editHistory?.originalQuantities?.export | number:'1.0-0' }} pieces</td>
+                        <td class="text-end text-success fw-bold">{{ selectedHologram?.editHistory?.updatedQuantities?.export | number:'1.0-0' }} pieces</td>
+                      </tr>
+                    }
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                      <tr>
+                        <td><strong>Defence</strong></td>
+                        <td class="text-end">{{ selectedHologram?.editHistory?.originalQuantities?.defence | number:'1.0-0' }} pieces</td>
+                        <td class="text-end text-success fw-bold">{{ selectedHologram?.editHistory?.updatedQuantities?.defence | number:'1.0-0' }} pieces</td>
+                      </tr>
+                    }
+                    <tr class="table-active">
+                      <td><strong>Total:</strong></td>
+                      <td class="text-end fw-bold">{{ selectedHologram?.editHistory?.originalQuantities?.total | number:'1.0-0' }} pieces</td>
+                      <td class="text-end fw-bold text-success">{{ selectedHologram?.editHistory?.updatedQuantities?.total | number:'1.0-0' }} pieces</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Amount Comparison Table -->
+              <div class="table-responsive mt-3">
+                <table class="table table-bordered bg-white mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th style="width: 25%;">Amount</th>
+                      <th class="text-center" style="width: 37.5%;">
+                        <i class="bi bi-currency-rupee text-danger me-1"></i>
+                        <span class="text-danger">Original Amount</span>
+                      </th>
+                      <th class="text-center" style="width: 37.5%;">
+                        <i class="bi bi-currency-rupee text-success me-1"></i>
+                        <span class="text-success">Updated Amount</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.local || 0) > 0) {
+                      <tr>
+                        <td><strong>Local</strong></td>
+                        <td class="text-end">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                        <td class="text-end text-success fw-bold">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                      </tr>
+                    }
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.export || 0) > 0) {
+                      <tr>
+                        <td><strong>Export</strong></td>
+                        <td class="text-end">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                        <td class="text-end text-success fw-bold">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                      </tr>
+                    }
+                    @if ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) > 0) {
+                      <tr>
+                        <td><strong>Defence</strong></td>
+                        <td class="text-end">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                        <td class="text-end text-success fw-bold">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                      </tr>
+                    }
+                    <tr class="table-active">
+                      <td><strong>Total:</strong></td>
+                      <td class="text-end fw-bold">₹{{ ((selectedHologram?.editHistory?.originalQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                      <td class="text-end fw-bold text-success">₹{{ ((selectedHologram?.editHistory?.updatedQuantities?.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-3 pt-3 border-top">
+                <small class="text-muted">
+                  <i class="bi bi-person-badge me-1"></i>
+                  <strong>Edited by:</strong> {{ selectedHologram?.editHistory?.editedBy }} on {{ selectedHologram?.editHistory?.editedDate | date:'dd-MMM-yyyy' }}
+                </small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status and Review Information -->
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card border-0 bg-white shadow-sm">
+                <div class="card-body p-3">
+                  <h6 class="card-title text-primary mb-2">
+                    <i class="bi bi-info-circle me-1"></i>Status Information
+                  </h6>
+                  <p class="mb-1"><strong>Current Status:</strong>
+                    <span class="badge bg-primary ms-1">{{ selectedHologram?.status }}</span>
+                  </p>
+                  <p class="mb-1"><strong>Submitted Date:</strong> {{ selectedHologram?.submittedDate || selectedHologram?.date | date:'dd-MMM-yyyy' }}</p>
+                  <p class="mb-0" *ngIf="selectedHologram?.reviewedBy">
+                    <strong>Reviewed By:</strong> {{ selectedHologram?.reviewedBy }}
+                  </p>
+                  <p class="mb-0" *ngIf="selectedHologram?.reviewedDate">
+                    <strong>Reviewed Date:</strong> {{ selectedHologram?.reviewedDate | date:'dd-MMM-yyyy' }}
+                  </p>
+                  <p class="mb-0 mt-2" *ngIf="selectedHologram?.editedByCommissioner">
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-pencil-fill me-1"></i>
+                      Edited by Commissioner
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card border-0 bg-white shadow-sm">
+                <div class="card-body p-3">
+                  <h6 class="card-title text-success mb-2">
+                    <i class="bi bi-clipboard-check me-1"></i>Additional Information
+                  </h6>
+                  <p class="mb-0" *ngIf="selectedHologram?.remarks">
+                    <strong>Remarks:</strong> {{ selectedHologram?.remarks }}
+                  </p>
+                  <p class="mb-0" *ngIf="!selectedHologram?.remarks">
+                    <span class="text-muted">No additional remarks</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeHologramDetails()">
+            <i class="bi bi-x-circle me-1"></i>Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

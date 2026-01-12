@@ -1,0 +1,607 @@
+<div class="container-fluid p-0">
+  <!-- Header Section -->
+  <div class="text-black p-3">
+    <div class="container-fluid">
+      <div class="row align-items-center">
+        <div class="col">
+          <h4 class="mb-0">
+            <i class="bi bi-person-badge me-2"></i>
+            {{ currentOfficer.distilleryName }} - Officer in Charge
+          </h4>
+          <small class="text-muted">Review and approve transit permit applications for {{ currentOfficer.distilleryName
+            }}</small>
+        </div>
+        <div class="col-auto">
+          <div class="badge bg-light text-dark fs-6">
+            <i class="bi bi-clock me-1"></i>
+            {{ getCurrentDateTime() }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs Section -->
+  <div class="bg-white border-bottom">
+    <div class="container-fluid">
+      <ul class="nav nav-tabs border-0" id="officerTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'applications'"
+            [class.text-danger]="activeTab === 'applications'" (click)="setActiveTab('applications')" type="button">
+            <i class="bi bi-file-text me-2"></i> TRANSIT PERMIT APPLICATIONS
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'brands'"
+            [class.text-danger]="activeTab === 'brands'" (click)="setActiveTab('brands')" type="button">
+            <i class="bi bi-tags me-2"></i> BRANDS DETAILS
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'holograms'"
+            [class.text-danger]="activeTab === 'holograms'" (click)="setActiveTab('holograms')" type="button">
+            <i class="bi bi-shield-check me-2"></i>Daily Hologram Manufacturing Register
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-register'"
+            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')" type="button">
+            <i class="bi bi-shield-plus me-2"></i> HOLOGRAM REGISTER
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-daily-entry'"
+            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')" type="button">
+            <i class="bi bi-calendar-check me-2"></i> HOLOGRAM DAILY ENTRY
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'register'"
+            [class.text-danger]="activeTab === 'register'" (click)="setActiveTab('register')" type="button">
+            <i class="bi bi-journal-text me-2"></i> OFFICER REGISTER
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <!-- Applications Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'applications'"
+      [class.active]="activeTab === 'applications'">
+      <!-- Filter Section -->
+      <div class="bg-light border-bottom p-2">
+        <div class="container-fluid">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3 col-sm-6">
+              <label class="form-label small text-muted mb-1">Reference Number</label>
+              <input type="text" class="form-control form-control-sm" placeholder="Enter reference number"
+                [(ngModel)]="filters.referenceNumber" (input)="applyFilters()">
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Status</label>
+              <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
+                <option value="">All Status</option>
+                <option value="PENDING_APPROVAL">Pending Approval</option>
+                <option value="APPROVED">Approved</option>
+                <option value="TERMINATED">Terminated</option>
+              </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Date From</label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateFrom"
+                (change)="applyFilters()">
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Date To</label>
+              <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateTo"
+                (change)="applyFilters()">
+            </div>
+            <div class="col-md-3">
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>
+                  Clear
+                </button>
+                <button class="btn btn-outline-primary btn-sm" (click)="exportData()">
+                  <i class="bi bi-download me-1"></i>
+                  Export
+                </button>
+                <div class="ms-auto d-flex align-items-center">
+                  <span class="small text-muted me-1">Records:</span>
+                  <span class="badge bg-info">{{ filteredData.length }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped">
+              <thead>
+                <tr>
+                  <th scope="col">Reference No.</th>
+                  <th scope="col">Submission Date</th>
+                  <th scope="col">Payment Status</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let record of paginatedData">
+                  <td>
+                    <span class="fw-semibold text-primary">{{ record.referenceNo }}</span>
+                  </td>
+                  <td>{{ record.submissionDate }}</td>
+                  <td>
+                    <span [class]="getPaymentStatusClass(record.paymentStatus)" class="badge">
+                      <i [class]="getPaymentStatusIcon(record.paymentStatus)" class="me-1"></i>
+                      {{ record.paymentStatus }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="fw-semibold text-success">₹{{ record.amount }}</span>
+                  </td>
+                  <td>
+                    <span [class]="getStatusClass(record.status)" class="badge">
+                      <i [class]="getStatusIcon(record.status)" class="me-1"></i>
+                      {{ record.status }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button class="btn btn-outline-primary" (click)="viewDetails(record)" title="View Details">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-success"
+                        (click)="approveApplication(record)" title="Approve Application">
+                        <i class="bi bi-check-circle"></i>
+                      </button>
+                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-danger"
+                        (click)="terminateApplication(record)" title="Terminate Application">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+
+          <!-- Pagination -->
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+              <span class="text-muted">
+                Showing {{ (currentPage - 1) * pageSize + 1 }} to
+                {{ Math.min(currentPage * pageSize, filteredData.length) }} of
+                {{ filteredData.length }} entries
+              </span>
+            </div>
+            <nav>
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" [class.disabled]="currentPage === 1">
+                  <button class="page-link" (click)="goToPage(currentPage - 1)">
+                    <i class="bi bi-chevron-left"></i>
+                  </button>
+                </li>
+                <li *ngFor="let page of getPageNumbers()" class="page-item" [class.active]="page === currentPage">
+                  <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage === totalPages">
+                  <button class="page-link" (click)="goToPage(currentPage + 1)">
+                    <i class="bi bi-chevron-right"></i>
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Brands Details Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'brands'" [class.active]="activeTab === 'brands'">
+      <div class="bg-white">
+        <div class="container-fluid p-3">
+          <!-- Month/Year/Date & Brand Switch -->
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Month</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedMonth" (change)="applyBrandFilters()">
+                <option *ngFor="let m of months" [value]="m.value">{{ m.label }}</option>
+              </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Year</label>
+              <select class="form-select form-select-sm" [(ngModel)]="selectedYear" (change)="applyBrandFilters()">
+                <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <label class="form-label small text-muted mb-1">Date</label>
+              <input class="form-control form-control-sm" type="date" [(ngModel)]="selectedDate"
+                (ngModelChange)="onBrandDateChange($event || '')">
+            </div>
+            <div class="col-md-5 col-sm-6">
+              <div class="btn-group btn-group-sm" role="group">
+                <button class="btn" [class.btn-primary]="activeBrand==='SDL'"
+                  [class.btn-outline-primary]="activeBrand!=='SDL'" (click)="setBrand('SDL')">SDL Brands</button>
+                <button class="btn" [class.btn-primary]="activeBrand==='JAGATJIT'"
+                  [class.btn-outline-primary]="activeBrand!=='JAGATJIT'" (click)="setBrand('JAGATJIT')">JAGATJIT
+                  Brands</button>
+              </div>
+            </div>
+          </div>
+          <!-- Brand Filters -->
+          <div class="row g-2 align-items-end mb-2">
+            <div class="col-md-4 col-sm-6">
+              <label class="form-label small text-muted mb-1">Search</label>
+              <input class="form-control form-control-sm" placeholder="Name, Category, Pack size, Strength"
+                [(ngModel)]="brandFilters.search" (input)="applyBrandFilters()">
+            </div>
+            <div class="col-md-2 col-sm-6">
+              <label class="form-label small text-muted mb-1">Status</label>
+              <select class="form-select form-select-sm" [(ngModel)]="brandFilters.status"
+                (change)="applyBrandFilters()">
+                <option [ngValue]="''">All</option>
+                <option [ngValue]="'PENDING'">Pending</option>
+                <option [ngValue]="'APPROVED'">Approved</option>
+                <option [ngValue]="'REJECTED'">Rejected</option>
+              </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+              <button class="btn btn-outline-secondary btn-sm me-2"
+                (click)="brandFilters = {search:'',status:''}; selectedDate=''; applyBrandFilters();">Clear</button>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0"><i class="bi bi-tags me-2"></i>Brands Details</h6>
+            <div class="d-flex align-items-center gap-2">
+              <span class="small text-muted">Pending:</span>
+              <span class="badge bg-warning text-dark">{{ getBrandCount('PENDING') }}</span>
+              <span class="small text-muted">Approved:</span>
+              <span class="badge bg-success">{{ getBrandCount('APPROVED') }}</span>
+              <span class="small text-muted">Rejected:</span>
+              <span class="badge bg-danger">{{ getBrandCount('REJECTED') }}</span>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle">
+              <thead>
+                <tr>
+                  <th scope="col" rowspan="2" class="align-middle">BRANDS</th>
+                  <th scope="col" rowspan="2" class="align-middle">LIQUOR TYPE</th>
+                  <th scope="col" rowspan="2" class="align-middle">ALCOHOL%<br>(v/v)</th>
+                  <th scope="col" rowspan="2" class="align-middle">SIZE<br>(ML)</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY IN HAND</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY PRODUCED</th>
+                  <th scope="col" colspan="2" class="text-center">QUANTITY ISSUED</th>
+                  <th scope="col" colspan="2" class="text-center">CLOSING BALANCE</th>
+                  <th scope="col" rowspan="2" class="align-middle text-end">ACTIONS</th>
+                </tr>
+                <tr>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                  <th class="text-center">LOCAL</th>
+                  <th class="text-center">EXPORT</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let brand of brandRows">
+                  <td [class.edited-cell]="brand.changes?.brandName" class="fw-semibold">
+                    <ng-container *ngIf="brand.editing; else nameView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.brandName"
+                        (ngModelChange)="onBrandFieldChange(brand, 'brandName', $event)">
+                    </ng-container>
+                    <ng-template #nameView>{{ brand.brandName }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.liquorType">
+                    <ng-container *ngIf="brand.editing; else liquorView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.liquorType"
+                        (ngModelChange)="onBrandFieldChange(brand, 'liquorType', $event)">
+                    </ng-container>
+                    <ng-template #liquorView>{{ brand.liquorType || '-' }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.alcoholPercent">
+                    <ng-container *ngIf="brand.editing; else alcView">
+                      <input class="form-control form-control-sm" [ngModel]="brand.alcoholPercent"
+                        (ngModelChange)="onBrandFieldChange(brand, 'alcoholPercent', $event)">
+                    </ng-container>
+                    <ng-template #alcView>{{ brand.alcoholPercent }}</ng-template>
+                  </td>
+                  <td [class.edited-cell]="brand.changes?.sizeMl">
+                    <ng-container *ngIf="brand.editing; else sizeView">
+                      <input class="form-control form-control-sm" type="number" [ngModel]="brand.sizeMl"
+                        (ngModelChange)="onBrandFieldChange(brand, 'sizeMl', $event)">
+                    </ng-container>
+                    <ng-template #sizeView>{{ brand.sizeMl }}</ng-template>
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyInHandLocal"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyInHandLocal', $event)"
+                      [class.edited-cell]="brand.changes?.qtyInHandLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyInHandExport"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyInHandExport', $event)"
+                      [class.edited-cell]="brand.changes?.qtyInHandExport" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyProducedLocal"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyProducedLocal', $event)"
+                      [class.edited-cell]="brand.changes?.qtyProducedLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyProducedExport"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyProducedExport', $event)"
+                      [class.edited-cell]="brand.changes?.qtyProducedExport" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyIssuedLocal"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyIssuedLocal', $event)"
+                      [class.edited-cell]="brand.changes?.qtyIssuedLocal" [disabled]="!brand.editing">
+                  </td>
+                  <td>
+                    <input class="form-control form-control-sm" type="number" [ngModel]="brand.qtyIssuedExport"
+                      (ngModelChange)="onBrandFieldChange(brand, 'qtyIssuedExport', $event)"
+                      [class.edited-cell]="brand.changes?.qtyIssuedExport" [disabled]="!brand.editing">
+                  </td>
+                  <td class="fw-semibold">{{ brand.closingLocal }}</td>
+                  <td class="fw-semibold">{{ brand.closingExport }}</td>
+                  <td class="text-end">
+                    <div class="btn-group btn-group-sm" role="group">
+                      <button class="btn btn-outline-primary" (click)="viewBrand(brand)" *ngIf="!brand.editing">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-secondary" (click)="startEditBrand(brand)" *ngIf="!brand.editing">
+                        <i class="bi bi-pencil-square"></i>
+                      </button>
+                      <button class="btn btn-success" (click)="saveEditBrand(brand)" *ngIf="brand.editing">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                      <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                        <i class="bi bi-check-circle"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                        <i class="bi bi-x-circle"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hologram Register Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'" [class.active]="activeTab === 'hologram-register'">
+      <div class="bg-white">
+        <!-- Show Hologram Requests Component if activated -->
+        <div *ngIf="showHologramRequests">
+          <app-officerinchargehologramreq (backToRegister)="closeHologramRequests()"></app-officerinchargehologramreq>
+        </div>
+        
+        <!-- Show Hologram Details Component by default -->
+        <div *ngIf="!showHologramRequests">
+          <app-hologramdetails (hologramRequestsClicked)="openHologramRequests()"></app-hologramdetails>
+        </div>
+      </div>
+    </div>
+
+    <!-- Register Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'register'" [class.active]="activeTab === 'register'">
+      <div class="bg-white p-3">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header bg-secondary text-white">
+                  <h5 class="mb-0">
+                    <i class="bi bi-journal-text me-2"></i>
+                    Officer Activity Register
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                      <thead>
+                        <tr>
+                          <th scope="col">Date & Time</th>
+                          <th scope="col">Action</th>
+                          <th scope="col">Reference No.</th>
+                          <th scope="col">Amount</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Comments</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let activity of officerActivities">
+                          <td>{{ activity.dateTime }}</td>
+                          <td>
+                            <span [class]="getActivityClass(activity.action)" class="badge">
+                              <i [class]="getActivityIcon(activity.action)" class="me-1"></i>
+                              {{ activity.action }}
+                            </span>
+                          </td>
+                          <td>
+                            <span class="fw-semibold text-primary">{{ activity.referenceNo }}</span>
+                          </td>
+                          <td>
+                            <span class="fw-semibold text-success">₹{{ activity.amount }}</span>
+                          </td>
+                          <td>
+                            <span [class]="getStatusClass(activity.status)" class="badge">
+                              <i [class]="getStatusIcon(activity.status)" class="me-1"></i>
+                              {{ activity.status }}
+                            </span>
+                          </td>
+                          <td>
+                            <small class="text-muted">{{ activity.comments }}</small>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Empty state -->
+                  <div *ngIf="officerActivities.length === 0" class="text-center py-5">
+                    <i class="bi bi-journal-x display-4 text-muted"></i>
+                    <h5 class="mt-3 text-muted">No Activities Recorded</h5>
+                    <p class="text-muted">Officer activities will appear here once actions are taken on applications.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Daily Hologram Manufacturing Register Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'holograms'" [class.active]="activeTab === 'holograms'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-info mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-info-circle me-2"></i>
+              Daily Hologram Manufacturing Register - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Manually enter production details for approved hologram requests. 
+              Record which brands were manufactured, quantities produced, and any wastage/damage.
+              This register tracks the actual usage of allocated holograms in production.
+            </p>
+          </div>
+        </div>
+      </div>
+      <app-hologram-manufacturing-register></app-hologram-manufacturing-register>
+    </div>
+
+    <!-- Hologram Daily Entry Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'" [class.active]="activeTab === 'hologram-daily-entry'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-primary mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-calendar-check me-2"></i>
+              Hologram Daily Entry Register - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Daily entry register for hologram usage tracking. 
+              Record daily hologram consumption, production details, and maintain accurate records 
+              of hologram utilization in the manufacturing process.
+            </p>
+          </div>
+        </div>
+      </div>
+      <app-oicdailyhologramregister></app-oicdailyhologramregister>
+    </div>
+  </div>
+</div>
+
+<!-- Approval Modal -->
+<div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="approvalModalLabel">
+          <i class="bi bi-check-circle me-2"></i>
+          Approve Transit Permit Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="selectedRecord">
+          <div class="alert alert-info">
+            <strong>Application Details:</strong>
+            <ul class="mb-0 mt-2">
+              <li><strong>Reference No:</strong> {{ selectedRecord.referenceNo }}</li>
+              <li><strong>Distillery:</strong> {{ currentOfficer.distilleryName }}</li>
+              <li><strong>Amount:</strong> ₹{{ selectedRecord.amount }}</li>
+              <li><strong>Submission Date:</strong> {{ selectedRecord.submissionDate }}</li>
+            </ul>
+          </div>
+          <div class="form-group">
+            <label for="approvalComments" class="form-label">Approval Comments (Optional)</label>
+            <textarea class="form-control" id="approvalComments" rows="3"
+              placeholder="Enter any comments for approval..." [(ngModel)]="approvalComments"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" (click)="confirmApproval()">
+          <i class="bi bi-check-circle me-1"></i>
+          Approve Application
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Termination Modal -->
+<div class="modal fade" id="terminationModal" tabindex="-1" aria-labelledby="terminationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="terminationModalLabel">
+          <i class="bi bi-x-circle me-2"></i>
+          Terminate Transit Permit Application
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="selectedRecord">
+          <div class="alert alert-warning">
+            <strong>Warning:</strong> Terminating this application will:
+            <ul class="mb-0 mt-2">
+              <li>Deduct ₹{{ selectedRecord.amount }} from the payment</li>
+              <li>Credit the amount to distillery wallet</li>
+              <li>Cancel the transit permit application</li>
+            </ul>
+          </div>
+          <div class="alert alert-info">
+            <strong>Application Details:</strong>
+            <ul class="mb-0 mt-2">
+              <li><strong>Reference No:</strong> {{ selectedRecord.referenceNo }}</li>
+              <li><strong>Distillery:</strong> {{ currentOfficer.distilleryName }}</li>
+              <li><strong>Amount to be refunded:</strong> ₹{{ selectedRecord.amount }}</li>
+            </ul>
+          </div>
+          <div class="form-group">
+            <label for="terminationReason" class="form-label">Termination Reason <span
+                class="text-danger">*</span></label>
+            <textarea class="form-control" id="terminationReason" rows="3"
+              placeholder="Please provide a reason for termination..." [(ngModel)]="terminationReason"
+              required></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" (click)="confirmTermination()" [disabled]="!terminationReason">
+          <i class="bi bi-x-circle me-1"></i>
+          Terminate Application
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

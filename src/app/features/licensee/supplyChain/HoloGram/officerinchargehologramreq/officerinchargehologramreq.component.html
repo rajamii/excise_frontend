@@ -1,0 +1,678 @@
+<!-- Hologram Request Register - Matching Supply Chain Design -->
+<div class="bg-white">
+    <div class="container-fluid p-3">
+        <!-- Hologram Request Register Header -->
+        <div class="hologram-request-register-header">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="header-info">
+                    <h4 class="register-title">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Hologram Request Register
+                    </h4>
+                    <p class="register-subtitle">Track and manage all hologram requests from supply chain users</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline-primary me-2" (click)="refreshRequests()" title="Refresh to load latest requests">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Refresh Requests
+                    </button>
+                    <button class="btn btn-outline-info me-2" (click)="addTestRequest()" title="Add test request">
+                        <i class="bi bi-plus-square me-2"></i>
+                        Add Test Request
+                    </button>
+                    <button class="btn btn-outline-warning me-2" (click)="showStorageContents()" title="Show localStorage contents">
+                        <i class="bi bi-database me-2"></i>
+                        Debug Storage
+                    </button>
+                    <button class="btn btn-outline-danger me-2" (click)="clearTestData()" title="Clear all test data">
+                        <i class="bi bi-trash me-2"></i>
+                        Clear Test Data
+                    </button>
+                    <button class="btn btn-outline-success me-2" (click)="addSampleInventory()" title="Add sample inventory for testing">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Add Sample Inventory
+                    </button>
+                    <button class="btn btn-outline-secondary me-2" (click)="backToHologramRegister()">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Back to Hologram Register
+                    </button>
+                    <button class="btn btn-success">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        New Request
+                    </button>
+                </div>
+            </div>
+            <!-- Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-2">
+                    <div class="summary-card pending-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('PENDING') }}</h3>
+                            <p class="card-label">Pending Review</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card approved-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('UNDER_PROCESS') }}</h3>
+                            <p class="card-label">Under Process</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card completed-requests">
+                        <div class="card-icon">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getRequestCount('APPROVED') + getRequestCount('COMPLETED') }}</h3>
+                            <p class="card-label">Approved/Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card local-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getAvailableHologramsByType('LOCAL') | number }}</h3>
+                            <p class="card-label">Local Holograms</p>
+                            <small class="card-change">Available</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card export-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getAvailableHologramsByType('EXPORT') | number }}</h3>
+                            <p class="card-label">Export Holograms</p>
+                            <small class="card-change">Available</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="summary-card defence-holograms">
+                        <div class="card-icon">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <div class="card-content">
+                            <h3 class="card-value">{{ getAvailableHologramsByType('DEFENCE') | number }}</h3>
+                            <p class="card-label">Defence Holograms</p>
+                            <small class="card-change">Available</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Filter Section -->
+        <div class="compact-filter-section mb-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="filter-label-text">
+                    <i class="bi bi-funnel me-1"></i>
+                    <small class="text-muted">Filters:</small>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="compact-filter">
+                    <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateFrom"
+                        (change)="applyFilters()" placeholder="Date" title="Filter by date">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()"
+                        title="Filter by status">
+                        <option value="">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="UNDER_PROCESS">Under Process</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+
+                <!-- Request Type Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.requestType"
+                        (change)="applyFilters()" title="Filter by request type">
+                        <option value="">All Types</option>
+                        <option value="NEW_ALLOCATION">New Allocation</option>
+                        <option value="ADDITIONAL_STOCK">Additional Stock</option>
+                        <option value="REPLACEMENT">Replacement</option>
+                    </select>
+                </div>
+
+                <!-- Hologram Type Filter -->
+                <div class="compact-filter">
+                    <select class="form-select form-select-sm" [(ngModel)]="filters.hologramType"
+                        (change)="applyFilters()" title="Filter by hologram type">
+                        <option value="">All Types</option>
+                        <option value="LOCAL">Local</option>
+                        <option value="EXPORT">Export</option>
+                        <option value="DEFENCE">Defence</option>
+                    </select>
+                </div>
+
+                <!-- Clear Button -->
+                <button class="btn btn-outline-danger btn-sm" (click)="clearFilters()"
+                    *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType"
+                    title="Clear all filters">
+                    <i class="bi bi-x-circle"></i>
+                    Clear
+                </button>
+            </div>
+
+            <!-- Filter Results Summary -->
+            <div class="filter-results-compact mt-2"
+                *ngIf="filters.dateFrom || filters.status || filters.requestType || filters.hologramType">
+                <small class="text-info">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Showing <strong>{{ filteredRequests.length }}</strong> of <strong>{{ hologramRequests.length
+                        }}</strong> requests
+                    <span *ngIf="filters.dateFrom" class="filter-tag">Date: {{ filters.dateFrom | date:'dd MMM yyyy'
+                        }}</span>
+                    <span *ngIf="filters.status" class="filter-tag">Status: {{ filters.status }}</span>
+                    <span *ngIf="filters.requestType" class="filter-tag">Type: {{ filters.requestType }}</span>
+                    <span *ngIf="filters.hologramType" class="filter-tag">Hologram: {{ filters.hologramType }}</span>
+                </small>
+            </div>
+        </div>
+
+        <!-- Hologram Request Register Table -->
+        <div class="hologram-request-register-table">
+            <div class="register-container">
+                <div class="register-header-bar">
+                    <h5 class="register-table-title">
+                        <i class="bi bi-table me-2"></i>
+                        Request Register Entries
+                    </h5>
+                    <div class="register-info">
+                        <span class="entries-count">{{ filteredRequests.length }} Entries</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive" *ngIf="filteredRequests.length > 0">
+                    <table class="table register-table">
+                        <thead>
+                            <tr>
+                                <th class="sl-no">SL. NO.</th>
+                                <th class="ref-number">REFERENCE NO.</th>
+                                <th class="submission-date">SUBMISSION DATE</th>
+                                <th class="usage-date">USAGE DATE</th>
+                                <th class="type">TYPE</th>
+                                <th class="hologram-qty">HOLOGRAM QTY</th>
+                                <th class="status">STATUS</th>
+                                <th class="actions">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let request of paginatedRequests; let i = index" class="register-row">
+                                <td class="sl-no">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
+                                <td class="ref-number">
+                                    <div class="ref-display">
+                                        <span class="ref-text">{{ request.referenceNo }}</span>
+                                        <span class="ref-type">{{ request.requestType.replace('_', ' ') }}</span>
+                                    </div>
+                                </td>
+                                <td class="submission-date">
+                                    <div class="date-display">
+                                        <span class="date-main">{{ request.submissionDate | date:'dd/MM/yyyy' }}</span>
+                                        <span class="date-time">{{ request.submissionDate | date:'HH:mm' }}</span>
+                                    </div>
+                                </td>
+                                <td class="usage-date">
+                                    <div class="date-display">
+                                        <span class="date-main">{{ request.usageDate | date:'dd/MM/yyyy' }}</span>
+                                        <span class="date-day">{{ request.usageDate | date:'EEE' }}</span>
+                                    </div>
+                                </td>
+                                <td class="type">
+                                    <span class="badge" 
+                                        [class.bg-success]="request.hologramType === 'LOCAL'"
+                                        [class.bg-primary]="request.hologramType === 'EXPORT'"
+                                        [class.bg-warning]="request.hologramType === 'DEFENCE'"
+                                        [class.text-white]="request.hologramType === 'LOCAL' || request.hologramType === 'EXPORT'"
+                                        [class.text-dark]="request.hologramType === 'DEFENCE'">
+                                        {{ request.hologramType }}
+                                    </span>
+                                </td>
+                                <td class="hologram-qty">
+                                    <div class="qty-display">
+                                        <span class="qty-number">{{ request.requestedQuantity | number }}</span>
+                                        <span class="qty-label">units</span>
+                                    </div>
+                                </td>
+                                <td class="status">
+                                    <span class="status-badge" 
+                                        [class.bg-warning-subtle]="request.status === 'PENDING'"
+                                        [class.bg-info-subtle]="request.status === 'UNDER_PROCESS'"
+                                        [class.bg-success-subtle]="request.status === 'APPROVED' || request.status === 'COMPLETED'"
+                                        [class.bg-danger-subtle]="request.status === 'REJECTED'">
+                                        <i [class]="getStatusIcon(request.status)"></i>
+                                        {{ request.status === 'UNDER_PROCESS' ? 'UNDER PROCESS' : request.status }}
+                                    </span>
+                                </td>
+                                <td class="actions">
+                                    <div class="action-buttons">
+                                        <!-- Show view details button only for APPROVED requests (has allocation data) -->
+                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view" (click)="viewRequestDetails(request)"
+                                            title="View Allocation Details">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <!-- Show approve/reject buttons only for PENDING status -->
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action approve"
+                                            (click)="approveRequest(request)" title="Approve Request">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                        <button *ngIf="request.status === 'PENDING'" class="btn-action reject"
+                                            (click)="rejectRequest(request)" title="Reject Request">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                        <!-- Show status badge for APPROVED -->
+                                        <span *ngIf="request.status === 'APPROVED'" class="badge bg-success text-white">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Approved
+                                        </span>
+                                        <!-- Show status badge for UNDER_PROCESS -->
+                                        <span *ngIf="request.status === 'UNDER_PROCESS'" class="badge bg-info text-white">
+                                            <i class="bi bi-hourglass-split me-1"></i>
+                                            Under Process
+                                        </span>
+                                        <!-- Show status badge for COMPLETED -->
+                                        <span *ngIf="request.status === 'COMPLETED'" class="badge bg-success text-white">
+                                            <i class="bi bi-check-circle-fill me-1"></i>
+                                            Completed
+                                        </span>
+                                        <!-- Show status badge for REJECTED -->
+                                        <span *ngIf="request.status === 'REJECTED'" class="badge bg-danger text-white">
+                                            <i class="bi bi-x-circle-fill me-1"></i>
+                                            Rejected
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" *ngIf="filteredRequests.length === 0">
+                    <div class="empty-icon">
+                        <i class="bi bi-file-earmark-x"></i>
+                    </div>
+                    <h5 class="empty-title">
+                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        'No Matching Requests Found' : 'No Hologram Requests Found' }}
+                    </h5>
+                    <p class="empty-message">
+                        {{ (filters.dateFrom || filters.status || filters.requestType || filters.hologramType) ?
+                        'No requests match your current filter criteria. Try adjusting your filters or clear them to see
+                        all requests.' :
+                        'No hologram requests have been submitted yet.' }}
+                    </p>
+                    <button class="btn btn-primary"
+                        *ngIf="filteredRequests.length === 0 && !filters.dateFrom && !filters.status && !filters.requestType && !filters.hologramType">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        Create New Request
+                    </button>
+                </div>
+
+                <!-- Register Summary Footer -->
+                <div class="register-footer" *ngIf="filteredRequests.length > 0">
+                    <div class="summary-row">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Requests:</span>
+                            <span class="summary-value">{{ filteredRequests.length }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Pending Review:</span>
+                            <span class="summary-value">{{ getRequestCount('PENDING') }}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Holograms:</span>
+                            <span class="summary-value highlight">{{ getTotalRequestedHolograms() | number }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="register-pagination" *ngIf="filteredRequests.length > 0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="pagination-info">
+                    <span class="info-text">
+                        Showing {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize,
+                        filteredRequests.length) }}
+                        of {{ filteredRequests.length }} entries
+                    </span>
+                </div>
+                <div class="pagination-controls">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="page-size-selector">
+                            <label class="selector-label">Show:</label>
+                            <select class="form-select form-select-sm" [(ngModel)]="pageSize"
+                                (ngModelChange)="updatePagination()">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
+                        <div class="btn-group btn-group-sm pagination-buttons">
+                            <button class="btn btn-outline-secondary" (click)="goToPage(1)"
+                                [disabled]="currentPage === 1">«</button>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)"
+                                [disabled]="currentPage === 1">‹</button>
+                            <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
+                                [disabled]="currentPage === totalPages">›</button>
+                            <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)"
+                                [disabled]="currentPage === totalPages">»</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Allocation Details Modal (Only for Approved Requests) -->
+<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
+    <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="z-index: 1052;">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-list-check me-2"></i>
+                    Hologram Allocation Details - {{ selectedRequest.referenceNo }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="closeRequestDetailsModal()"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Allocation Details Table -->
+                <div *ngIf="selectedRequest.allocations && selectedRequest.allocations.length > 0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 35%;">Cartoon Number</th>
+                                    <th style="width: 45%;">Serial Range</th>
+                                    <th style="width: 15%;" class="text-end">Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let allocation of selectedRequest.allocations; let i = index">
+                                    <td>{{ i + 1 }}</td>
+                                    <td>
+                                        <span class="fw-bold text-primary">{{ allocation.cartoonNumber }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="font-monospace small">
+                                            {{ allocation.fromSerial }} - {{ allocation.toSerial }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-bold text-success">{{ allocation.quantity | number }}</span>
+                                        <span class="text-muted small ms-1">units</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Total Allocated:</td>
+                                    <td class="text-end fw-bold text-success">
+                                        {{ getTotalAllocatedQuantityFromAllocations(selectedRequest.allocations) | number }}
+                                        <span class="text-muted small ms-1">units</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                <div *ngIf="!selectedRequest.allocations || selectedRequest.allocations.length === 0" class="text-center py-4">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-3">No allocation details available for this request.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeRequestDetailsModal()">
+                    <i class="bi bi-x-lg me-1"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hologram Allocation Modal -->
+<div class="modal fade show" *ngIf="showAllocationModal" style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeAllocationModal()">
+    <div class="modal-dialog modal-xl" style="z-index: 1051;" (click)="$event.stopPropagation()">
+        <div class="modal-content" style="z-index: 1052;">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-qr-code me-2"></i>
+                    Hologram Allocation - {{ selectedRequest?.referenceNo }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="closeAllocationModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div *ngIf="allocationResult">
+                    <!-- Prominent Availability Status Banner -->
+                    <div class="alert mb-4" [class.alert-success]="allocationResult.canAllocate" [class.alert-danger]="!allocationResult.canAllocate">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <i class="bi me-3" [class.bi-check-circle-fill]="allocationResult.canAllocate" [class.bi-x-circle-fill]="!allocationResult.canAllocate" style="font-size: 2rem;"></i>
+                            <div class="text-center">
+                                <h4 class="mb-1" [class.text-success]="allocationResult.canAllocate" [class.text-danger]="!allocationResult.canAllocate">
+                                    <strong *ngIf="allocationResult.canAllocate">✓ INVENTORY AVAILABLE</strong>
+                                    <strong *ngIf="!allocationResult.canAllocate">✗ INSUFFICIENT INVENTORY</strong>
+                                </h4>
+                                <p class="mb-0">
+                                    <span *ngIf="allocationResult.canAllocate">
+                                        Ready to allocate {{ getTotalAllocatedQuantity() | number }} holograms from {{ allocationResult.allocations.length }} cartoon(s)
+                                    </span>
+                                    <span *ngIf="!allocationResult.canAllocate">
+                                        <strong>{{ selectedRequest?.hologramType }}</strong> type: Only {{ allocationResult.totalAvailable | number }} holograms available. 
+                                        You need <strong class="text-danger">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} more</strong> {{ selectedRequest?.hologramType }} holograms.
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Summary -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-info">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Request Details
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <strong>Brand:</strong><br>
+                                            <span class="text-muted">{{ selectedRequest?.brandDetails?.brandName }}</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Type:</strong><br>
+                                            <span class="badge bg-primary">{{ selectedRequest?.hologramType }}</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Requested:</strong><br>
+                                            <span class="text-primary fw-bold">{{ selectedRequest?.requestedQuantity | number }}</span>
+                                        </div>
+                                        <div class="col-6">
+                                            <strong>Available:</strong><br>
+                                            <span class="text-success fw-bold">{{ allocationResult.totalAvailable | number }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card" [class.border-success]="allocationResult.canAllocate" [class.border-danger]="!allocationResult.canAllocate">
+                                <div class="card-header" [class.bg-success]="allocationResult.canAllocate" [class.bg-danger]="!allocationResult.canAllocate" class="text-white">
+                                    <h6 class="mb-0">
+                                        <i class="bi" [class.bi-check-circle]="allocationResult.canAllocate" [class.bi-x-circle]="!allocationResult.canAllocate" class="me-2"></i>
+                                        Inventory Status
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <!-- Clear Availability Status -->
+                                    <div class="alert" [class.alert-success]="allocationResult.canAllocate" [class.alert-danger]="!allocationResult.canAllocate" class="mb-3"></div>
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi" [class.bi-check-circle-fill]="allocationResult.canAllocate" [class.bi-x-circle-fill]="!allocationResult.canAllocate" class="me-2 fs-4"></i>
+                                            <div>
+                                                <strong *ngIf="allocationResult.canAllocate" class="text-success">✓ AVAILABLE</strong>
+                                                <strong *ngIf="!allocationResult.canAllocate" class="text-danger">✗ NOT AVAILABLE</strong>
+                                                <br>
+                                                <small>{{ allocationResult.message }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div *ngIf="allocationResult.canAllocate">
+                                        <strong>Cartoons Used:</strong> {{ allocationResult.allocations.length }}<br>
+                                        <strong>Total Allocated:</strong> <span class="text-success fw-bold">{{ getTotalAllocatedQuantity() | number }}</span>
+                                    </div>
+                                    <div *ngIf="!allocationResult.canAllocate">
+                                        <strong>{{ selectedRequest?.hologramType }} Available:</strong> <span class="text-warning">{{ allocationResult.totalAvailable | number }}</span><br>
+                                        <strong>{{ selectedRequest?.hologramType }} Shortage:</strong> <span class="text-danger fw-bold">{{ (selectedRequest?.requestedQuantity || 0) - allocationResult.totalAvailable | number }} holograms</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Allocation Details -->
+                    <div *ngIf="allocationResult?.canAllocate">
+                        <h6 class="mb-3">
+                            <i class="bi bi-list-check me-2"></i>
+                            Hologram Allocation Details (FIFO - Oldest First)
+                        </h6>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>Cartoon Number</th>
+                                        <th>Serial Range</th>
+                                        <th>Quantity</th>
+                                        <th>Remaining in Cartoon</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let allocation of allocationResult?.allocations || []; let i = index">
+                                        <td>
+                                            <span class="fw-bold text-primary">{{ allocation.cartoonNumber }}</span>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock me-1"></i>
+                                                Oldest Available
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="font-monospace small">
+                                                {{ allocation.fromSerial }} - {{ allocation.toSerial }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm" style="width: 120px;">
+                                                <input type="number" class="form-control" 
+                                                       [value]="allocation.quantity"
+                                                       (input)="onAllocationQuantityChange(allocation, $event)"
+                                                       min="1" 
+                                                       [max]="allocation.quantity + allocation.remainingInCartoon">
+                                                <span class="input-group-text">units</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="text-muted">{{ allocation.remainingInCartoon | number }}</span>
+                                            <div class="progress mt-1" style="height: 8px;">
+                                                <div class="progress-bar bg-warning" 
+                                                     [style.width.%]="(allocation.quantity / (allocation.quantity + allocation.remainingInCartoon)) * 100">
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-outline-info btn-sm" 
+                                                    title="View cartoon details">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="2" class="fw-bold">Total Allocation:</td>
+                                        <td class="fw-bold text-success">
+                                            {{ getTotalAllocatedQuantity() | number }} units
+                                        </td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Comments Section -->
+                        <div class="mt-4">
+                            <label class="form-label fw-bold">Approval Comments (Optional)</label>
+                            <textarea class="form-control" rows="3" 
+                                      [(ngModel)]="approvalComments"
+                                      placeholder="Enter any comments for this hologram allocation..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Insufficient Inventory Message -->
+                    <div *ngIf="!allocationResult?.canAllocate" class="alert alert-danger"></div>
+                        <h6 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Insufficient Hologram Inventory
+                        </h6>
+                        <p class="mb-2">{{ allocationResult?.message }}</p>
+                        <hr>
+                        <div class="mb-0">
+                            <strong>Suggestions:</strong>
+                            <ul class="mb-0">
+                                <li>Reduce the requested quantity to {{ allocationResult?.totalAvailable | number }} or less</li>
+                                <li>Wait for new hologram arrivals</li>
+                                <li>Check if holograms are available in other types</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-secondary me-2" (click)="closeAllocationModal()">
+                    <i class="bi bi-x-lg me-1"></i>
+                    Cancel
+                </button>
+                <button *ngIf="allocationResult?.canAllocate" type="button" class="btn btn-success" 
+                        (click)="confirmHologramAllocation()">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Confirm Allocation & Approve Request
+                </button>
+                <button *ngIf="!allocationResult?.canAllocate" type="button" class="btn btn-warning" 
+                        (click)="forceApproveWithoutInventory()">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Force Approve (Test Mode)
+                </button>
+            </div>
+        </div>

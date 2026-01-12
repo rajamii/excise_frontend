@@ -7,8 +7,9 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class LicenseApplicationService {
-  private oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
-  private newLicenseUrl = `${environment.apiBaseUrl}/transactional/new-license-application`;
+
+  private readonly oldLicenseUrl = `${environment.apiBaseUrl}/transactional/license_application`;
+  private readonly newLicenseUrl = `${environment.apiBaseUrl}/transactional/new_license_application`;
 
   private passPhotoSubject = new BehaviorSubject<File | null>(null);
   private siteDocumentsSubject = new BehaviorSubject<Map<string, File>>(new Map());
@@ -152,7 +153,7 @@ export class LicenseApplicationService {
       const subdivisions = JSON.parse(sessionStorage.getItem('subdivisions') || '[]');
       const policeStations = JSON.parse(sessionStorage.getItem('policeStations') || '[]');
       const roads = JSON.parse(sessionStorage.getItem('roads') || '[]');
-      
+
       if (siteDetailsData.district) {
         const district = districts.find((d: any) => d.id === Number(siteDetailsData.district));
         if (district) {
@@ -162,7 +163,7 @@ export class LicenseApplicationService {
           console.error('❌ District not found for ID:', siteDetailsData.district);
         }
       }
-      
+
       if (siteDetailsData.subdivision) {
         const subdivision = subdivisions.find((s: any) => s.id === Number(siteDetailsData.subdivision));
         if (subdivision) {
@@ -172,7 +173,7 @@ export class LicenseApplicationService {
           console.error('❌ Subdivision not found for ID:', siteDetailsData.subdivision);
         }
       }
-      
+
       if (siteDetailsData.police_station) {
         const policeStation = policeStations.find((p: any) => p.id === Number(siteDetailsData.police_station));
         if (policeStation) {
@@ -182,7 +183,7 @@ export class LicenseApplicationService {
           console.error('❌ Police Station not found for ID:', siteDetailsData.police_station);
         }
       }
-      
+
       if (siteDetailsData.road) {
         const road = roads.find((r: any) => r.id === Number(siteDetailsData.road));
         if (road) {
@@ -192,7 +193,7 @@ export class LicenseApplicationService {
           console.error('❌ Road not found for ID:', siteDetailsData.road);
         }
       }
-      
+
       if (siteDetailsData.location_category) {
         djangoFields['location_category'] = siteDetailsData.location_category;
       }
@@ -220,13 +221,13 @@ export class LicenseApplicationService {
       if (siteDetailsData.site_owned) {
         djangoFields['site_owned'] = siteDetailsData.site_owned;
       }
-      
+
       if (siteDetailsData.site_owned === 'No' && siteDetailsData.noc_obtained) {
         djangoFields['noc_obtained'] = siteDetailsData.noc_obtained;
       } else if (siteDetailsData.site_owned === 'Yes') {
         djangoFields['noc_obtained'] = 'No';
       }
-      
+
       if (siteDetailsData.trade_license_covered) {
         djangoFields['trade_license_covered'] = siteDetailsData.trade_license_covered;
       }
@@ -258,7 +259,7 @@ export class LicenseApplicationService {
     }
 
     console.log('✅ Django Model Fields:', djangoFields);
-    
+
     console.group('📋 Adding fields to FormData:');
     Object.entries(djangoFields).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
@@ -423,7 +424,7 @@ export class LicenseApplicationService {
       if (addressData.business_address) {
         formFields['business_address'] = addressData.business_address;
       }
-      
+
       // road_name: CharField expects STRING
       if (addressData.road_name) {
         // Check if it's already a string (road name) or an ID
@@ -504,7 +505,7 @@ export class LicenseApplicationService {
     }
 
     console.log('✅ Old License Form Fields:', formFields);
-    
+
     // Add all fields to formData
     Object.entries(formFields).forEach(([key, value]) => {
       if (value !== null && value !== undefined && value !== '') {
@@ -567,7 +568,7 @@ export class LicenseApplicationService {
   // ============================================================
   // OLD LICENSE APPLICATION METHODS
   // ============================================================
-  
+
   advanceApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
     return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });

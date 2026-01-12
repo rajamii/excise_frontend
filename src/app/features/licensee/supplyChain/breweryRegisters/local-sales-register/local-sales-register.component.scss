@@ -1,0 +1,471 @@
+.sticky-header thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.print-header {
+  display: block;
+}
+
+/* Header styles */
+.print-header .company-name,
+.company-name {
+  font-size: 1.6rem;
+}
+.print-header .company-address,
+.company-address {
+  font-size: 1.1rem;
+}
+.print-header .register-title,
+.register-title {
+  font-size: 1.3rem;
+}
+.month-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-header {
+    display: block;
+  }
+  /* Fit content neatly when printing */
+  html, body {
+    height: auto;
+    overflow: visible !important;
+  }
+  #localSalesPrintSection {
+    overflow: visible !important;
+  }
+  /* Remove sticky headers for print to avoid gaps */
+  .sticky-header thead th {
+    position: static !important;
+  }
+  /* Hide screen-only wrappers and show print-only table */
+  .screen-only { display: none !important; }
+  .print-only { display: block !important; }
+}
+
+/* Hide print-only table on screen */
+.print-only { display: none; }
+
+/* Brand management styles */
+.brand-input-section {
+  position: relative;
+}
+
+.brands-summary-overlay {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(2px);
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  margin-top: 0.125rem;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  .btn-link {
+    text-decoration: none;
+    color: #0d6efd;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+/* Professional Brands Modal Styling */
+.brands-modal {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  overflow: hidden;
+  min-width: 400px;
+  max-width: 800px; /* allow content up to 800px */
+}
+.brands-manage-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 800px !important;
+}
+
+/* Custom modal dialog width */
+.modal-dialog.modal-md {
+  max-width: 450px;
+  margin: 1.75rem auto;
+}
+
+/* Brand details modal width */
+.view-details-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 800px !important;
+}
+
+/* Ensure brand summary dialog width overrides generic modal-md rules */
+.brands-summary-dialog.modal-dialog {
+  max-width: 800px !important;
+  width: 800px !important;
+}
+
+/* Professional View Details Modal Styling */
+.view-details-modal {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  overflow: hidden;
+  min-width: 400px;
+  max-width: 800px;
+}
+
+.view-details-modal-header {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+  border-bottom: none;
+  padding: 1rem 1.25rem;
+  
+  .modal-title {
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  
+  .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+    
+    &:hover {
+      opacity: 1;
+    }
+  }
+  
+  .bi-eye {
+    font-size: 1.2rem;
+  }
+}
+
+.view-details-modal-body {
+  padding: 1.25rem;
+  background-color: #f8f9fa;
+}
+
+.brands-details-list {
+  .brand-detail-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: #dee2e6;
+    }
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .brand-detail-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      .brand-detail-name {
+        font-weight: 600;
+        color: #495057;
+        font-size: 1rem;
+        min-width: 120px;
+      }
+      
+      .brand-detail-cases {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: #f8f9fa;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        border: 1px solid #e9ecef;
+      }
+    }
+  }
+}
+
+.view-details-modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+  
+  .btn-primary {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+    }
+    
+    .bi-check-lg {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+.brands-modal-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-bottom: none;
+  padding: 1rem 1.25rem;
+  
+  .modal-title {
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+  
+  .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+    
+    &:hover {
+      opacity: 1;
+    }
+  }
+  
+  .bi-tags {
+    font-size: 1.2rem;
+  }
+}
+
+.brands-modal-body {
+  padding: 1.25rem;
+  background-color: #f8f9fa;
+}
+
+.brands-list {
+  .brand-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border-color: #dee2e6;
+    }
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .brand-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      .brand-name {
+        font-weight: 600;
+        color: #495057;
+        font-size: 1rem;
+        min-width: 120px;
+      }
+      
+      .brand-cases {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        background: #f8f9fa;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        border: 1px solid #e9ecef;
+      }
+    }
+    
+    .brand-remove-btn {
+      border: none;
+      background: #dc3545;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      margin-left: 1rem;
+      
+      &:hover {
+        background: #c82333;
+        transform: scale(1.1);
+        color: white;
+      }
+      
+      .bi-x {
+        font-size: 1rem;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.total-summary {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid #e9ecef;
+  
+  .total-cases {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    
+    .total-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .total-value {
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  
+  .bi-inbox {
+    opacity: 0.5;
+  }
+  
+  p {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  small {
+    font-size: 0.85rem;
+  }
+}
+
+.brands-modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+  
+  .btn-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border: none;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+    
+    .bi-check-lg {
+      font-size: 0.9rem;
+    }
+  }
+}
+
+/* Compact left-aligned filter controls */
+.filter-controls {
+  gap: 0.5rem !important;
+}
+
+.filter-control {
+  min-width: 140px;
+}
+
+.filter-control input.form-control.form-control-sm {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  height: calc(1.5em + 0.5rem + 2px);
+}
+
+.filter-control .form-label.small {
+  margin-bottom: 0.1rem !important;
+}
+
+/* Brands summary modal styles */
+.brands-summary-modal {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+  overflow: hidden;
+  width: 100%;
+  max-width: none;
+}
+.brands-summary-dialog {
+  width: 800px;
+  max-width: 800px;
+  margin: 0.75rem auto;
+}
+
+
+.brands-summary-modal-header {
+  background: linear-gradient(135deg, #0069d9 0%, #0053ad 100%);
+  color: white;
+  border-bottom: none;
+  padding: 1rem 1.25rem;
+  .modal-title { color: white; font-weight: 600; font-size: 1.1rem; }
+  .btn-close { filter: invert(1); opacity: 0.8; &:hover { opacity: 1; } }
+}
+
+.brands-summary-modal-body {
+  padding: 1.25rem;
+  background-color: #f8f9fa;
+}
+
+.brands-summary-list {
+  .brands-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    .brands-summary-name { font-weight: 600; color: #495057; }
+    .brands-summary-cases { color: #6c757d; font-weight: 600; }
+  }
+}
+
+.brands-summary-modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  padding: 1rem 1.25rem;
+}
+
