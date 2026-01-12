@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { ReceiptNumberService } from '../../services/receipt-number.service';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { SupplyChainService } from '../../services/supplychain.service';
 
 interface PaymentItem {
   id: string;
@@ -94,6 +95,7 @@ export class PaymentConfirmationComponent implements OnInit {
   transitAdditionalExcise = 0;
   transitItemCount = 0;
   transitBillStatus = 'Ready for Payment';
+  transitId: string = '';
 
   // Sample Data
   requisitionData: PaymentItem[] = [
@@ -212,7 +214,8 @@ export class PaymentConfirmationComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private receiptNumberService: ReceiptNumberService,
-    private hologramService: HologramDataService
+    private hologramService: HologramDataService,
+    private supplyChainService: SupplyChainService
   ) { }
 
   ngOnInit(): void {
@@ -482,16 +485,7 @@ export class PaymentConfirmationComponent implements OnInit {
     console.warn("updateHologramPaymentStatus called but implementation removed for API transition.");
   }
 
-  payAllTransit(): void {
-    if (this.transitTotalAmount > this.getTotalWalletBalance()) {
-      this.showInsufficientBalanceAlert();
-      return;
-    }
 
-    // Process all transit payments
-    console.log('Processing all transit payments');
-    this.showSuccessMessage('All transit payments processed successfully!');
-  }
 
   getTotalWalletBalance(): number {
     return this.educationCessBalance +
@@ -520,13 +514,90 @@ export class PaymentConfirmationComponent implements OnInit {
   }
 
   loadTransitData(): void {
-    // Load transit-specific data based on bill number
     this.showTransitPayment = true;
-    this.transitTotalAmount = 1500.00;
-    this.transitEducationCess = 500.00;
-    this.transitExciseDuty = 700.00;
-    this.transitAdditionalExcise = 300.00;
-    this.transitItemCount = 5;
+    
+    // Fetch from backend to get the ID and current status
+    this.supplyChainService.getTransitPermits(this.transitBillNo).subscribe({
+      next: (permits) => {
+        console.log('Fetching Transit Permits. Looking for:', this.transitBillNo);
+        console.log('Permits received:', permits);
+
+        // Check for both snake_case and camelCase
+        const found = permits.find(p => (p.bill_no === this.transitBillNo) || (p.billNo === this.transitBillNo));
+        
+        if (found) {
+            console.log('Transit Permit Found:', found);
+            this.transitId = found.id;
+            this.transitBillStatus = found.status;
+            // Map backend fields to frontend model
+            this.transitData = [{
+              id: found.id,
+              billNumber: found.bill_no || found.billNo,
+              serialNo: found.bill_no || found.billNo, 
+              quantity: found.cases || 0, 
+              portions: 0,
+              nips: (found.size_ml || found.size) + 'ml',
+              licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
+              status: found.status,
+              paymentDate: null,
+              totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
+            }];
+            this.transitTotalAmount = parseFloat(found.total_amount || found.totalAmount || 0);
+            this.transitEducationCess = parseFloat(found.total_education_cess || found.totalEducationCess || found.educationCess || 0);
+            this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
+            this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
+            this.transitItemCount = 1; 
+        } else {
+             console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
+             alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
+             
+             // Fallback to sample/params if not found (e.g. before backend sync) or handle error
+             this.transitTotalAmount = 1500.00; // Default dummy
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching transit permits:', err);
+        alert('Failed to load transit permit details. Please try again.');
+      }
+    });
+
+  }
+
+  payAllTransit(): void {
+    if (this.transitTotalAmount > this.getTotalWalletBalance()) {
+      this.showInsufficientBalanceAlert();
+      return;
+    }
+
+    if (!this.transitId) {
+        // Use alert to make sure user sees it
+        alert("Transit Permit ID not found. Cannot proceed with payment.");
+        this.showErrorMessage("Transit Permit ID not found. Cannot proceed.");
+        return;
+    }
+
+    // Process payment via API
+    this.supplyChainService.performTransitPermitAction(this.transitId, 'PAY', 'licensee').subscribe({
+        next: (response) => {
+             console.log('Payment successful', response);
+             this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
+             alert('Payment successful! Forwarded to Officer in Charge.'); // Immediate feedback
+             this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
+             
+             // Update wallet balance locally for display
+             this.educationCessBalance -= this.transitEducationCess;
+             this.exciseWalletBalance -= (this.transitExciseDuty + this.transitAdditionalExcise);
+
+             // Refresh data
+             this.loadTransitData();
+        },
+        error: (err) => {
+            console.error('Payment failed', err);
+            const msg = err.error?.message || err.message || 'Unknown error';
+            this.showErrorMessage(`Payment failed: ${msg}`);
+            alert(`Payment failed: ${msg}`);
+        }
+    });
   }
 
   showInsufficientBalanceAlert(): void {

@@ -6,6 +6,7 @@ import { OfficerinchargehologramreqComponent } from '../HoloGram/officerincharge
 import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
 import { OicdailyhologramregisterComponent } from '../registers/oicdailyhologramregister/oicdailyhologramregister.component';
 import { HologramDataService } from '../services/hologram-data.service';
+import { SupplyChainService } from '../services/supplychain.service';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -223,88 +224,7 @@ export class OfficerInChargeComponent implements OnInit {
   private originalBrandById: Record<string, BrandRow> = {};
 
   // Sample data for development - only applications for current officer's distillery
-  allData: TransitPermitRecord[] = [
-    {
-      referenceNo: 'TP001/2024',
-      submissionDate: '2024-01-15',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '15000.00',
-      status: 'PENDING_APPROVAL'
-    },
-    {
-      referenceNo: 'TP002/2024',
-      submissionDate: '2024-01-14',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '12000.00',
-      status: 'PENDING_APPROVAL'
-    },
-    {
-      referenceNo: 'TP003/2024',
-      submissionDate: '2024-01-13',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '18000.00',
-      status: 'APPROVED'
-    },
-    {
-      referenceNo: 'TP004/2024',
-      submissionDate: '2024-01-12',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '9500.00',
-      status: 'TERMINATED'
-    },
-    {
-      referenceNo: 'TP005/2024',
-      submissionDate: '2024-01-11',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '22000.00',
-      status: 'PENDING_APPROVAL'
-    },
-    {
-      referenceNo: 'TP006/2024',
-      submissionDate: '2024-01-10',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '13500.00',
-      status: 'APPROVED'
-    },
-    {
-      referenceNo: 'TP007/2024',
-      submissionDate: '2024-01-09',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '16800.00',
-      status: 'PENDING_APPROVAL'
-    },
-    {
-      referenceNo: 'TP008/2024',
-      submissionDate: '2024-01-08',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '14200.00',
-      status: 'TERMINATED'
-    },
-    {
-      referenceNo: 'TP009/2024',
-      submissionDate: '2024-01-07',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '19800.00',
-      status: 'PENDING_APPROVAL'
-    },
-    {
-      referenceNo: 'TP010/2024',
-      submissionDate: '2024-01-06',
-      distilleryName: 'Sikkim Distilleries Ltd',
-      paymentStatus: 'PAID',
-      amount: '11200.00',
-      status: 'APPROVED'
-    }
-  ];
+  allData: TransitPermitRecord[] = [];
 
   filteredData: TransitPermitRecord[] = [];
   paginatedData: TransitPermitRecord[] = [];
@@ -329,14 +249,51 @@ export class OfficerInChargeComponent implements OnInit {
   // Hologram data
   hologramProcurements: OICHologramProcurement[] = [];
   private hologramService = inject(HologramDataService);
+  private supplyChainService = inject(SupplyChainService);
 
   ngOnInit() {
-    this.filteredData = [...this.allData];
-    this.updatePagination();
+    this.loadTransitPermitApplications();
     this.applyBrandFilters();
     this.loadHologramProcurements();
   }
 
+  loadTransitPermitApplications() {
+    this.supplyChainService.getTransitPermits().subscribe({
+      next: (data) => {
+        // Map backend data to TransitPermitRecord interface
+        this.allData = data.map((item: any) => ({
+          referenceNo: item.bill_no,
+          submissionDate: item.date,
+          distilleryName: item.manufacturing_unit_name || item.sole_distributor_name || 'Unknown Distillery', 
+          paymentStatus: this.derivePaymentStatus(item.status),
+          amount: item.total_amount,
+          status: this.deriveDisplayStatus(item.status),
+          applicationDetails: item
+        }));
+
+        this.filteredData = [...this.allData];
+        this.updatePagination();
+      },
+      error: (err) => {
+        console.error('Error fetching transit permits:', err);
+      }
+    });
+  }
+
+  derivePaymentStatus(backendStatus: string): string {
+    if (backendStatus === 'Ready for Payment') return 'PENDING';
+    if (backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge') return 'PAID';
+    if (['TransitPermitSucessfulyApproved', 'Cancelled by Officer In-Charge - Refund Initiated Successfully'].includes(backendStatus)) return 'PAID';
+    return 'UNKNOWN';
+  }
+
+  deriveDisplayStatus(backendStatus: string): string {
+    if (backendStatus === 'Ready for Payment') return 'PENDING_APPROVAL'; // Or 'WAITING_FOR_PAYMENT'
+    if (backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge') return 'PENDING_APPROVAL';
+    if (backendStatus === 'TransitPermitSucessfulyApproved') return 'APPROVED';
+    if (backendStatus === 'Cancelled by Officer In-Charge - Refund Initiated Successfully') return 'TERMINATED';
+    return backendStatus; 
+  }
   loadHologramProcurements() {
     this.hologramService.getProcurements().subscribe({
       next: (data) => {

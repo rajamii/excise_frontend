@@ -221,10 +221,12 @@ export class SupplyChainService {
     );
   }
 
-
-
-  getTransitPermits(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`).pipe(
+  getTransitPermits(billNo?: string): Observable<any[]> {
+    let url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;
+    if (billNo) {
+      url += `?bill_no=${encodeURIComponent(billNo)}`;
+    }
+    return this.http.get<any[]>(url).pipe(
       map((response: any) => {
         if (Array.isArray(response)) return response;
         if (response?.results) return response.results;
@@ -242,6 +244,18 @@ export class SupplyChainService {
     return this.http.post<any>(url, payload).pipe(
       catchError((error) => {
         console.error('submitTransitPermit error', error);
+        throw error;
+      })
+    );
+  }
+
+  performTransitPermitAction(id: string | number, action: 'PAY' | 'APPROVE' | 'REJECT', role: string = 'licensee'): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/action/${id}/`,
+      { action, role }
+    ).pipe(
+      catchError((error) => {
+        console.error('performTransitPermitAction error', error);
         throw error;
       })
     );
