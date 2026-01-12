@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { SalesmanBarman, SalesmanBarmanDocuments } from '../models/salesman-barman.model';
 import { DashboardCount } from '../models/dashboard.model';
-import { UnifiedApplication } from '../models/shared-application.model';
+import { UnifiedApplication } from '../models/unified-application.model';
 
 @Injectable({
   providedIn: 'root'
@@ -64,6 +64,6 @@ export class SalesmanBarmanRegistrationService {
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
   }> {
-    return this.http.get<any>(`${this.baseUrl}/applications-by-status/`);
+    return this.http.get<any>(`${this.baseUrl}/list-by-status/`);
   }
 }

@@ -1,138 +1,362 @@
 <mat-horizontal-stepper #stepper>
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading application details...</p>
+    </div>
+  }
   <!-- Step 1: Show Application Data -->
   <mat-step label="Application Data">
     <div class="step-header">
-      Application Id: {{application.applicationId}}
+      Application Id: {{application.application_id || application.applicationId}}
     </div>
     <div class="application-details">
-      <!-- Section: License Info -->
-      <ng-container>
-        <h6>License</h6>
-        <div class="section-table">
-          @for (item of licenseData; track item) {
-            <div
-              class="row"
-              [class.objection]="hasObjection(item.field)">
-              <div class="key">
-                {{ item.key }}
-              </div>
-              <div class="value">
-                {{ item.value }}
-                <!-- Objection icon with tooltip if objection exists -->
-                @if (hasObjection(item.field)) {
-                  <mat-icon
-                    matTooltip="{{ getObjectionRemarks(item.field) }}">
-                    error
-                  </mat-icon>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </ng-container>
-
-      <!-- Section: Key Info -->
-      <ng-container>
-        <h6>Key Info</h6>
-        <div class="section-table">
-          @for (item of keyInfoData; track item) {
-            <div
-              class="row"
-              [class.objection]="hasObjection(item.field)">
-              <div class="key">
-                {{ item.key }}
-              </div>
-              <div class="value">
-                {{ item.value }}
-                @if (hasObjection(item.field)) {
-                  <mat-icon
-                    matTooltip="{{ getObjectionRemarks(item.field) }}">
-                    error
-                  </mat-icon>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </ng-container>
-
-      <!-- Section: Address -->
-      <ng-container>
-        <h6>Address</h6>
-        <div class="section-table">
-          @for (item of addressData; track item) {
-            <div
-              class="row"
-              [class.objection]="hasObjection(item.field)">
-              <div class="key">
-                {{ item.key }}
-              </div>
-              <div class="value">
-                {{ item.value }}
-                @if (hasObjection(item.field)) {
-                  <mat-icon
-                    matTooltip="{{ getObjectionRemarks(item.field) }}">
-                    error
-                  </mat-icon>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </ng-container>
-
-      <!-- Section: Unit Details (only if license type is Company)-->
-      @if (application.licenseType === 'Company') {
-        <h6>Unit Details</h6>
-        <div class="section-table">
-          @for (item of unitDetailsData; track item) {
-            <div
-              class="row"
-              [class.objection]="hasObjection(item.field)">
-              <div class="key">{{ item.key }}</div>
-              <div class="value">
-                {{ item.value }}
-                @if (hasObjection(item.field)) {
-                  <mat-icon
-                    matTooltip="{{ getObjectionRemarks(item.field) }}">
-                    error
-                  </mat-icon>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      }
-
-      <!-- Section: Member Details (includes photo rendering) -->
-      <ng-container>
-        <h6>Member Details</h6>
-        <div class="section-table">
-          @for (item of memberDetailsData; track item) {
-            <div
-              class="row"
-              [class.objection]="hasObjection(item.field)">
-              <div class="key">
-                {{ item.key }}
-              </div>
-              <div class="value">
-                <!-- Conditionally display photo if field is 'photo' -->
-                @if (item.field === 'photo' && photoUrl) {
-                  <img [src]="photoUrl" alt="Photo" class="photo-preview" />
-                } @else {
+      <!-- Type: License Renewal -->
+      <ng-container *ngIf="application.type === 'license-renewal'">
+        <!-- Section: License Info -->
+        <ng-container>
+          <h6>License</h6>
+          <div class="section-table">
+            @for (item of licenseData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
                   {{ item.value }}
-                }
-                <!-- Objection icon -->
-                @if (hasObjection(item.field)) {
-                  <mat-icon
-                    matTooltip="{{ getObjectionRemarks(item.field) }}">
-                    error
-                  </mat-icon>
-                }
+                  <!-- Objection icon with tooltip if objection exists -->
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
               </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Key Info -->
+        <ng-container>
+          <h6>Key Info</h6>
+          <div class="section-table">
+            @for (item of keyInfoData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Address -->
+        <ng-container>
+          <h6>Address</h6>
+          <div class="section-table">
+            @for (item of addressData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Unit Details (only if license type is Company)-->
+        @if (application.licenseType === 'Company') {
+          <h6>Unit Details</h6>
+          <div class="section-table">
+            @for (item of unitDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">{{ item.key }}</div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Section: Member Details (includes photo rendering) -->
+        <ng-container>
+          <h6>Member Details</h6>
+          <div class="section-table">
+            @for (item of memberDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  <!-- Conditionally display photo if field is 'photo' -->
+                  @if (item.field === 'photo' && photoUrl) {
+                    <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                  } @else {
+                    {{ item.value }}
+                  }
+                  <!-- Objection icon -->
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Type: New License -->
+      <ng-container *ngIf="application.type === 'new-license'">
+        <!-- Section: Basic Information -->
+        <ng-container>
+          <h6>Basic Information</h6>
+          <div class="section-table">
+            @for (item of basicInfoData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Applicant Details -->
+        <ng-container>
+          <h6>Applicant Details</h6>
+          <div class="section-table">
+            @for (item of applicantDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Site Details -->
+        <ng-container>
+          <h6>Site Details</h6>
+          <div class="section-table">
+            @for (item of siteDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Company Details (if applicable) -->
+        @if (application.licenseCategory === 'Company' || application.license_category === 'Company') {
+          <h6>Company Details</h6>
+          <div class="section-table">
+            @for (item of companyDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">{{ item.key }}</div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Section: Documents (includes photo rendering) -->
+        <ng-container>
+          <h6>Documents</h6>
+          <div class="section-table">
+            @for (item of documentsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  <!-- Display image if available -->
+                  @if (item.value && item.value.startsWith('http')) {
+                    <img [src]="item.value" alt="{{ item.key }}" class="photo-preview" />
+                  } @else {
+                    {{ item.value || 'N/A' }}
+                  }
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- Type: Salesman/Barman -->
+      <ng-container *ngIf="application.type === 'salesman-barman'">
+        <!-- Section: License Details -->
+        <ng-container>
+          <h6>License Details</h6>
+          <div class="section-table">
+            @for (item of licenseDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Personal Details -->
+        <ng-container>
+          <h6>Personal Details</h6>
+          <div class="section-table">
+            @for (item of personalDetailsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  {{ item.value }}
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
+
+        <!-- Section: Documents (includes photo rendering) -->
+        <ng-container>
+          <h6>Documents</h6>
+          <div class="section-table">
+            @for (item of documentsData; track item) {
+              <div
+                class="row"
+                [class.objection]="hasObjection(item.field)">
+                <div class="key">
+                  {{ item.key }}
+                </div>
+                <div class="value">
+                  <!-- Display image if available -->
+                  @if (item.value && item.value.startsWith('http')) {
+                    <img [src]="item.value" alt="{{ item.key }}" class="photo-preview" />
+                  } @else {
+                    {{ item.value || 'N/A' }}
+                  }
+                  @if (hasObjection(item.field)) {
+                    <mat-icon
+                      matTooltip="{{ getObjectionRemarks(item.field) }}">
+                      error
+                    </mat-icon>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </ng-container>
       </ng-container>
     </div>
 
@@ -140,7 +364,7 @@
     <div class="step-buttons">
       <!-- Edit Application -->
       @if (tableType === 'applied') {
-        <button matButton="filled" color="primary" (click)="onEdit(stepper)">
+        <button matButton="filled" color="primary" (click)="onEdit(stepper)" [disabled]="isLoading">
           <mat-icon>edit</mat-icon>
           Edit
         </button>
@@ -149,25 +373,17 @@
       <!-- Resolve Objection -->
       @if (tableType === 'pending') {
         @if (hasAnyObjections()) {
-          <button matButton class="bg-warning" (click)="stepper.next()">
+          <button matButton class="bg-warning" (click)="stepper.next()" [disabled]="isLoading">
             <mat-icon>build</mat-icon>
             Resolve Objections
           </button> 
         }
         @if (!application.isLicenseFeePaid && application.currentStage === 'awaiting_payment') {
-          <button matButton="filled" color="primary" (click)="stepper.next()">
+          <button matButton="filled" color="primary" (click)="stepper.next()" [disabled]="isLoading">
             <mat-icon>payment</mat-icon>
             Pay Fees
           </button>
         }
-      }
-
-      <!-- Delete Application --> 
-      @if (tableType === 'applied') {
-        <button matButton="filled" color="warn" (click)="onDelete(stepper)" >
-          <mat-icon>delete</mat-icon>
-          Delete
-        </button>
       }
     </div>
   </mat-step>
@@ -177,7 +393,7 @@
     <mat-step label="Resolve Objections">
       <form [formGroup]="resolveObjectionForm">
         <div class="step-header">
-          <h5>{{ application.applicationId }}</h5>
+          <h5>{{ application.application_id || application.applicationId }}</h5>
         </div>
 
         @if (unresolvedObjections.length) {
@@ -290,18 +506,20 @@
     </mat-step>
   }
 
-  <!-- Fee Payment -->
-  <mat-step label="Confirm Payment">
-    <div class="step-content confirmation-step">
-      <h5 class="text-success">
-        Confirm Payment
-      </h5>
-      <mat-card appearance="outlined">
-        <p><strong>Fee Amount:</strong> ₹{{ application.yearlyLicenseFee }}</p>
-      </mat-card>
-      <button mat-raised-button color="primary" (click)="payLicenseFee()">
-        Pay
-      </button>
-    </div>
-  </mat-step>
+  <!-- Fee Payment (only if relevant for type) -->
+  @if (application.yearlyLicenseFee || application.yearly_license_fee) {
+    <mat-step label="Confirm Payment">
+      <div class="step-content confirmation-step">
+        <h5 class="text-success">
+          Confirm Payment
+        </h5>
+        <mat-card appearance="outlined">
+          <p><strong>Fee Amount:</strong> ₹{{ application.yearlyLicenseFee || application.yearly_license_fee }}</p>
+        </mat-card>
+        <button mat-raised-button color="primary" (click)="payLicenseFee()">
+          Pay
+        </button>
+      </div>
+    </mat-step>
+  }
 </mat-horizontal-stepper>

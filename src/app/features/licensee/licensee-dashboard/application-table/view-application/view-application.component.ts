@@ -11,6 +11,9 @@ import { PatternConstants } from '../../../../../shared/constants/pattern.consta
 import { forkJoin, Observable } from 'rxjs';
 import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { environment } from '../../../../../../environments/environment';
+import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service'; // NEW: For unified fetch
+import { UnifiedApplication } from '../../../../../core/models/unified-application.model';
+import { MatProgressSpinner } from "@angular/material/progress-spinner"; // NEW: For unified app
 
 // Interface to describe how a field will be displayed in the UI
 export interface FieldDisplay {
@@ -21,29 +24,44 @@ export interface FieldDisplay {
 
 @Component({
   selector: 'app-view-application',
-  imports: [MaterialModule],
+  imports: [MaterialModule, MatProgressSpinner],
   templateUrl: './view-application.component.html',
   styleUrl: './view-application.component.scss'
 })
-export class ViewApplicationComponent extends BaseComponent implements OnInit{
+export class ViewApplicationComponent extends BaseComponent implements OnInit {
   resolveObjectionForm!: FormGroup;
   application: any;
+  unifiedApp!: UnifiedApplication; // NEW: From dialog data
   tableType: string = '';
 
   photoUrl: string | null = null;
 
   isObjectionLoaded = false;
-  
+
   objections: Objection[] = [];
 
-  // Data arrays for display sections
+  // Data arrays for display sections (common + type-specific)
   licenseData: FieldDisplay[] = [];
   keyInfoData: FieldDisplay[] = [];
   addressData: FieldDisplay[] = [];
   unitDetailsData: FieldDisplay[] = [];
   memberDetailsData: FieldDisplay[] = [];
 
+  // NEW: For new-license
+  basicInfoData: FieldDisplay[] = [];
+  applicantDetailsData: FieldDisplay[] = [];
+  siteDetailsData: FieldDisplay[] = [];
+  companyDetailsData: FieldDisplay[] = [];
+
+  // NEW: For salesman-barman
+  licenseDetailsData: FieldDisplay[] = [];
+  personalDetailsData: FieldDisplay[] = [];
+
+  // NEW: General documents for all types
+  documentsData: FieldDisplay[] = [];
+
   fieldMetaMap: { [key: string]: any } = {
+    // Existing (license-renewal)
     // API-based dropdowns (send id or code)
     exciseDistrict: { type: 'dropdown', source: 'exciseDistrict', submitKey: 'districtCode' },
     licenseCategory: { type: 'dropdown', source: 'licenseCategory', submitKey: 'id' },
@@ -99,18 +117,57 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     // Strings
     companyName: { type: 'text' },
     memberName: { type: 'text' },
-    fatherHusbandName: { type: 'text' }
+    fatherHusbandName: { type: 'text' },
+
+    // NEW: For new-license
+    licenseSubCategory: { type: 'dropdown', source: 'licenseSubCategory', submitKey: 'id' },
+    siteType: { type: 'dropdown', source: 'siteType' },
+    applicantName: { type: 'text' },
+    dob: { type: 'date' },
+    residentialStatus: { type: 'dropdown', source: 'residentialStatus' },
+    presentAddress: { type: 'textarea' },
+    permanentAddress: { type: 'textarea' },
+    hasSikkimCertificate: { type: 'dropdown', source: 'booleanOptions' },
+    hasExciseLicense: { type: 'dropdown', source: 'booleanOptions' },
+    familyExciseLicense: { type: 'dropdown', source: 'booleanOptions' },
+    criminalConviction: { type: 'dropdown', source: 'booleanOptions' },
+    siteDistrict: { type: 'dropdown', source: 'siteDistrict', submitKey: 'districtCode' },
+    ConstructionType: { type: 'dropdown', source: 'constructionType' },
+    length: { type: 'number' },
+    breadth: { type: 'number' },
+    siteOwned: { type: 'dropdown', source: 'booleanOptions' },
+    nocObtained: { type: 'dropdown', source: 'booleanOptions' },
+    passPhoto: { type: 'file' },
+    panCard: { type: 'file' },
+    sikkimCertificate: { type: 'file' },
+    dobProof: { type: 'file' },
+    nocLandlord: { type: 'file' },
+
+    // NEW: For salesman-barman
+    role: { type: 'dropdown', source: 'role' },
+    firstName: { type: 'text' },
+    middleName: { type: 'text' },
+    lastName: { type: 'text' },
+    aadhaar: { type: 'text', pattern: PatternConstants.AADHAR }, // Assume pattern exists or add
+    emailId: { type: 'text', pattern: PatternConstants.EMAIL },
+    sikkimSubject: { type: 'dropdown', source: 'booleanOptions' },
+    address: { type: 'textarea' },
+    applicationYear: { type: 'text' },
+    applicationDate: { type: 'date' },
+    district: { type: 'dropdown', source: 'district' },
+    aadhaarCard: { type: 'file' },
+    residentialCertificate: { type: 'file' },
+    dateofBirthProof: { type: 'file' }
   };
 
   // Field label mapping for display and objections
   fieldLabelMap: { [key: string]: string } = {
-    // License details
+    // Existing (license-renewal)
     exciseDistrict: 'Excise District',
     licenseCategory: 'License Category',
     exciseSubdivision: 'Excise Sub-Division',
     license: 'License',
 
-    // Key Info
     licenseType: 'License Type',
     establishmentName: 'Establishment Name',
     mobileNumber: 'Mobile Number',
@@ -124,7 +181,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     functioningStatus: 'Functioning Status',
     modeOfOperation: 'Mode of Operation',
 
-    // Address
     siteSubdivision: 'Site Sub-Division',
     policeStation: 'Police Station',
     locationCategory: 'Location Category',
@@ -136,7 +192,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     latitude: 'Latitude',
     longitude: 'Longitude',
 
-    // Unit Details
     companyName: 'Company Name',
     companyAddress: 'Company Address',
     companyPan: 'Company PAN',
@@ -145,7 +200,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     companyPhoneNumber: 'Company Phone Number',
     companyEmail: 'Company Email ID',
 
-    // Member Details
     status: 'Status',
     memberName: 'Member Name',
     fatherHusbandName: 'Father/Husband Name',
@@ -155,7 +209,47 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     memberMobileNumber: 'Member Mobile Number',
     memberEmail: 'Member Email ID',
 
-    photo: 'Photo'
+    photo: 'Photo',
+
+    // NEW: For new-license
+    licenseSubCategory: 'License Sub-Category',
+    siteType: 'Site Type',
+    applicantName: 'Applicant Name',
+    dob: 'Date of Birth',
+    residentialStatus: 'Residential Status',
+    presentAddress: 'Present Address',
+    permanentAddress: 'Permanent Address',
+    hasSikkimCertificate: 'Has Sikkim Certificate',
+    hasExciseLicense: 'Has Excise License',
+    familyExciseLicense: 'Family Has Excise License',
+    criminalConviction: 'Criminal Conviction',
+    siteDistrict: 'Site District',
+    ConstructionType: 'Construction Type',
+    length: 'Length',
+    breadth: 'Breadth',
+    siteOwned: 'Site Owned',
+    nocObtained: 'NOC Obtained',
+    passPhoto: 'Passport Photo',
+    panCard: 'PAN Card',
+    sikkimCertificate: 'Sikkim Certificate',
+    dobProof: 'DOB Proof',
+    nocLandlord: 'NOC from Landlord',
+
+    // NEW: For salesman-barman
+    role: 'Role',
+    firstName: 'First Name',
+    middleName: 'Middle Name',
+    lastName: 'Last Name',
+    aadhaar: 'Aadhaar',
+    emailId: 'Email ID',
+    sikkimSubject: 'Sikkim Subject',
+    address: 'Address',
+    applicationYear: 'Application Year',
+    applicationDate: 'Application Date',
+    district: 'District',
+    aadhaarCard: 'Aadhaar Card',
+    residentialCertificate: 'Residential Certificate',
+    dateofBirthProof: 'Date of Birth Proof'
   };
 
   dropdownFields: { [key: string]: any[] } = {
@@ -166,7 +260,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     licenseType: [],
     licenseNature: ['Regular', 'Temporary', 'Seasonal', 'Special Event'],
     functioningStatus: ['Yes', 'No'],
-    modeofOperation: ['Self', 'Salesman', 'Barman'],
+    modeOfOperation: ['Self', 'Salesman', 'Barman'],
     siteSubdivision: [],
     policeStation: [],
     locationCategory: ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'],
@@ -176,80 +270,167 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
     status: ['Single', 'Married', 'Divorced'],
     nationality: ['Indian', 'Foreign'],
     gender: ['Male', 'Female'],
+
+    // NEW: For all types
+    booleanOptions: [true, false], // For yes/no fields
+
+    // NEW: For new-license
+    licenseSubCategory: [], // Load dynamically if needed
+    siteType: ['New', 'Existing'],
+    residentialStatus: ['Resident', 'Non-Resident'],
+    constructionType: ['Permanent', 'Temporary', 'Semi-Permanent'], // Assume options
+
+    // NEW: For salesman-barman
+    role: ['Salesman', 'Barman']
   };
 
+  isLoading = true;
+
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: any,
+    @Inject(MAT_DIALOG_DATA) public data: { unifiedApp: UnifiedApplication, tableType: string },
     deps: BaseDependency,
     private dialogRef: MatDialogRef<MaterialModule>,
     private fb: FormBuilder,
     private dialog: MatDialog,
+    private unifiedService: UnifiedDashboardService  // NEW: Inject for unified fetch
   ) {
-    super(deps)
-    this.application = data.application;
+    super(deps);
+    this.unifiedApp = data.unifiedApp;
     this.tableType = data.tableType;
   }
 
   ngOnInit(): void {
-    // Set photo URL if photo exists
-    this.photoUrl = this.application.photo ? `${environment.apiBaseUrl}/${this.application.photo}` : null;
+    this.isLoading = true;
 
-    // First load dropdowns
-    this.loadDropdownOptions().subscribe(dropdowns => {
-      this.dropdownFields['exciseDistrict'] = dropdowns.exciseDistrict;
-      this.dropdownFields['licenseCategory'] = dropdowns.licenseCategory;
-      this.dropdownFields['exciseSubdivision'] = dropdowns.subdivision;
-      this.dropdownFields['siteSubdivision'] = dropdowns.subdivision;
-      this.dropdownFields['policeStation'] = dropdowns.policeStation;
-      this.dropdownFields['licenseType'] = dropdowns.licenseType;
+    this.unifiedService.getApplicationDetail(this.unifiedApp.applicationId, this.unifiedApp.type).subscribe({
+      next: (fullApp) => {
+        this.application = fullApp;
+        this.application.type = this.unifiedApp.type; // Set type for conditioning
 
-      // Then fetch objections and initialize form
-      this.fetchObjections();
+        // Set photo/document URLs if exist (generalized)
+        this.photoUrl = this.application.photo || this.application.passPhoto || this.application.pass_photo
+          ? `${environment.apiBaseUrl}/${this.application.photo || this.application.passPhoto || this.application.pass_photo}`
+          : null;
+
+        // Load dropdowns (existing)
+        this.loadDropdownOptions().subscribe(dropdowns => {
+          this.dropdownFields['exciseDistrict'] = dropdowns.exciseDistrict;
+          this.dropdownFields['licenseCategory'] = dropdowns.licenseCategory;
+          this.dropdownFields['exciseSubdivision'] = dropdowns.subdivision;
+          this.dropdownFields['siteSubdivision'] = dropdowns.subdivision;
+          this.dropdownFields['policeStation'] = dropdowns.policeStation;
+          this.dropdownFields['licenseType'] = dropdowns.licenseType;
+
+          // NEW: Load additional if needed for other types (e.g., licenseSubCategory)
+          if (this.application.type === 'new-license') {
+            this.masterService.getLicenseSubcategories().subscribe(subcats => {
+              this.dropdownFields['licenseSubCategory'] = subcats;
+            });
+          }
+          // Build display sections based on type
+          this.buildDisplaySections();
+          // Then fetch objections and initialize form
+          this.fetchObjections();
+        });
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Failed to fetch application details', err);
+        Swal.fire('Error', 'Failed to load application details.', 'error');
+        this.isLoading = false;
+        this.dialogRef.close(); // Close dialog on error
+      }
     });
+  }
 
-    // Group application data into sections for display
-    this.licenseData = this.getFieldDisplayList([
-      'exciseDistrict', 'licenseCategory', 'exciseSubdivision', 'license'
-    ]);
-    this.keyInfoData = this.getFieldDisplayList([
-      'licenseType', 'establishmentName', 'mobileNumber', 'email', 'licenseNo',
-      'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
-      'licenseNature', 'functioningStatus', 'modeOfOperation'
-    ]);
-    this.addressData = this.getFieldDisplayList([
-      'siteSubdivision', 'policeStation', 'locationCategory', 'locationName',
-      'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
-    ]);
-    this.unitDetailsData = this.getFieldDisplayList([
-      'companyName', 'companyAddress', 'companyPan', 'companyCin',
-      'incorporationDate', 'companyPhoneNumber', 'companyEmail'
-    ]);
-    this.memberDetailsData = this.getFieldDisplayList([
-      'status', 'memberName', 'fatherHusbandName', 'nationality',
-      'gender', 'pan', 'memberMobileNumber', 'memberEmail'
-    ]);
-    this.memberDetailsData.push({
-      key: 'Photo',
-      field: 'photo',
-      value: this.photoUrl || 'N/A'
-    });
+  // NEW: Build display sections based on application type
+  private buildDisplaySections(): void {
+    if (this.application.type === 'license-renewal') {
+      this.licenseData = this.getFieldDisplayList([
+        'excise_district', 'license_category', 'excise_subdivision', 'license'
+      ]);
+      this.keyInfoData = this.getFieldDisplayList([
+        'license_type', 'establishment_name', 'mobile_number', 'email', 'license_no',
+        'initial_grant_date', 'renewed_from', 'valid_up_to', 'yearly_license_fee',
+        'license_nature', 'functioning_status', 'mode_of_operation'
+      ]);
+      this.addressData = this.getFieldDisplayList([
+        'site_subdivision', 'police_station', 'location_category', 'location_name',
+        'ward_name', 'business_address', 'road_name', 'pin_code', 'latitude', 'longitude'
+      ]);
+      this.unitDetailsData = this.getFieldDisplayList([
+        'company_name', 'company_address', 'company_pan', 'company_cin',
+        'incorporation_date', 'company_phone_number', 'company_email'
+      ]);
+      this.memberDetailsData = this.getFieldDisplayList([
+        'status', 'member_name', 'father_husband_name', 'nationality',
+        'gender', 'pan', 'member_mobile_number', 'member_email'
+      ]);
+      this.memberDetailsData.push({
+        key: 'Photo',
+        field: 'photo',
+        value: this.photoUrl || 'N/A'
+      });
+    } else if (this.application.type === 'new-license') {
+      this.basicInfoData = this.getFieldDisplayList([
+        'license_type', 'license_category', 'license_sub_category', 'establishment_name', 'site_type'
+      ]);
+      this.applicantDetailsData = this.getFieldDisplayList([
+        'applicant_name', 'father_husband_name', 'dob', 'gender', 'nationality', 'residential_status',
+        'present_address', 'permanent_address', 'pan', 'email', 'mobile_number', 'mode_of_operation',
+        'has_sikkim_certificate', 'has_excise_license', 'family_excise_license', 'criminal_conviction'
+      ]);
+      this.siteDetailsData = this.getFieldDisplayList([
+        'site_district', 'site_subdivision', 'police_station', 'location_category', 'location_name',
+        'ward_name', 'business_address', 'road_name', 'pin_code', 'construction_type', 'length',
+        'breadth', 'site_owned', 'noc_obtained'
+      ]);
+      this.companyDetailsData = this.getFieldDisplayList([
+        'company_name', 'company_address', 'company_pan', 'company_cin',
+        'incorporation_date', 'company_phone_number', 'company_email'
+      ]);
+      this.documentsData = this.getFieldDisplayList([
+        'pass_photo', 'pan_card', 'sikkim_certificate', 'dob_proof', 'noc_landlord'
+      ]).map(item => ({
+        ...item,
+        value: item.value ? `${environment.apiBaseUrl}/${item.value}` : 'N/A'
+      }));
+    } else if (this.application.type === 'salesman-barman') {
+      this.licenseDetailsData = this.getFieldDisplayList([
+        'excise_district', 'license_category', 'license'
+      ]);
+      this.personalDetailsData = this.getFieldDisplayList([
+        'role', 'first_name', 'middle_name', 'last_name', 'father_husband_name', 'gender', 'dob',
+        'nationality', 'address', 'pan', 'aadhaar', 'mobile_number', 'email_id', 'sikkim_subject'
+      ]);
+      this.documentsData = this.getFieldDisplayList([
+        'pass_photo', 'aadhaar_card', 'residential_certificate', 'dateof_birth_proof'
+      ]).map(item => ({
+        ...item,
+        value: item.value ? `${environment.apiBaseUrl}/${item.value}` : 'N/A'
+      }));
+    }
   }
 
   getOptionLabel(field: string, option: any): string {
     switch (field) {
       case 'licenseCategory':
-        return option.licenseCategory;
+        return option.licenseCategory || option.license_category || option.name;
       case 'licenseType':
-        return option.licenseType;
+        return option.licenseType || option.license_type || option.name;
       case 'exciseDistrict':
-        return option.district;
+      case 'siteDistrict':
+        return option.district || option.site_district || option.name;
       case 'exciseSubdivision':
       case 'siteSubdivision':
-        return option.subdivision;
+        return option.subdivision || option.site_subdivision || option.name;
       case 'policeStation':
-        return option.policeStation;
+        return option.policeStation || option.police_station || option.name;
+      // NEW: For new-license
+      case 'licenseSubCategory':
+        return option.licenseSubCategory || option.license_sub_category || option.name;
       default:
-        return option.toString(); // for hardcoded strings
+        return typeof option === 'object' ? option.name || option.toString() : option.toString();
     }
   }
 
@@ -264,24 +445,27 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
 
   getFieldDisplayList(fields: string[]): FieldDisplay[] {
     return fields.map(field => {
-      const displayValueKey = field + 'Name';
+      const displayValueKey = field.replace(/_/g, '') + 'Name'; // Handle snake_case
       const value =
         this.application[displayValueKey] !== undefined
           ? this.application[displayValueKey]
-          : this.application[field];
+          : this.application[field.replace(/([A-Z])/g, '_$1').toLowerCase()] || this.application[field]; // Handle camel/snake
 
       return {
-        key: this.fieldLabelMap[field] || field,
-        field, // retain original field for objection tracking
+        key: this.fieldLabelMap[field] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        field, // retain original for objection tracking
         value: value || '-'
       };
     });
   }
 
   fetchObjections() {
-    // ✅ FIXED: Changed applicationId to application_id
-    // Fetch objections related to the application from backend
-    this.licenseAppService.getObjections(this.application.application_id).subscribe({
+    if (!this.application || !this.application.application_id) {
+      console.warn('Application not loaded yet, skipping objection fetch');
+      return;
+    }
+    // Unified fetch based on type
+    this.unifiedService.getObjections(this.application.applicationId, this.application.type).subscribe({
       next: (data) => {
         this.objections = data;
         // Initialize the form for resolving objections
@@ -294,7 +478,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
       }
     });
   }
-  
+
   // Initializes the form used to resolve objections
   initializeResolveForm(): void {
     const group: { [key: string]: FormControl } = {};
@@ -307,9 +491,9 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
         validators.push(Validators.pattern(meta.pattern));
       }
 
-      let initialValue = this.application[obj.fieldName];
+      let initialValue = this.application[obj.fieldName] || this.application[obj.fieldName.toLowerCase().replace(/_/g, '')];
 
-      // ✅ If dropdown
+      // If dropdown
       if (meta.type === 'dropdown' && meta.source) {
         const dropdownList = this.dropdownFields[meta.source] || [];
 
@@ -338,8 +522,8 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   // Determines if there is at least one unresolved objection
   hasAnyObjections(): boolean {
     return this.objections.some(obj => this.hasObjection(obj.fieldName));
-  } 
-  
+  }
+
   // Returns remarks for the unresolved objection for a given field, if any
   getObjectionRemarks(field: string): string {
     return this.objections.find(obj => obj.fieldName === field && !obj.isResolved)?.remarks || '';
@@ -349,13 +533,13 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   get unresolvedObjections(): Objection[] {
     return this.objections.filter(obj => !obj.isResolved);
   }
-  
+
   // Handles photo file selection and sets it into the form
   onPhotoSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (file) {
-      this.resolveObjectionForm.get('photo')?.setValue(file);
+      this.resolveObjectionForm.get('photo')?.setValue(file); // Or 'passPhoto' etc., but kept as is
     }
   }
 
@@ -371,6 +555,10 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   }
 
   submitResolvedData() {
+    if (!this.application || !this.application.application_id) {
+      Swal.fire('Error', 'Application data not loaded yet.', 'error');
+      return;
+    }
     Swal.fire({
       title: 'Are you sure?',
       text: 'You are about to submit corrected information to resolve objections.',
@@ -407,8 +595,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
         const formData = FormDataUtil.buildFormData(transformed);
         console.log('Submitting resolved form:', formValue);
 
-        // ✅ FIXED: Changed applicationId to application_id
-        this.licenseAppService.resolveObjections(this.application.application_id, formData).subscribe({
+        this.unifiedService.resolveObjections(this.application.applicationId, this.application.type, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => location.reload());
           },
@@ -422,13 +609,17 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
   // The payLicenseFee endpoint doesn't exist in the service
   // Payment should be handled through advanceApplication or shown as info
   payLicenseFee() {
+    if (!this.application) {
+      Swal.fire('Error', 'Application not loaded.', 'error');
+      return;
+    }
     Swal.fire({
       title: 'Payment Processing',
       text: 'Payment feature is being processed. Please contact administrator.',
       icon: 'info',
       confirmButtonText: 'OK'
     });
-    
+
     // Alternative: If you want to process payment through advanceApplication:
     /*
     this.licenseAppService.advanceApplication(
@@ -448,31 +639,43 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit{
 
   // Method to handle application updation
   onEdit(application: any): void {
-    this.dialog.open(ApplyLicenseComponent, {
-      data: { applicationData: application }
-    });
+    if (this.application.type === 'license-renewal' || this.application.type === 'new-license') {
+      this.dialog.open(ApplyLicenseComponent, {
+        data: { applicationData: application }
+      });
+    } else if (this.application.type === 'salesman-barman') {
+      // TODO: Open Salesman/Barman edit component if available
+      console.log('Edit for salesman-barman not implemented yet.');
+      Swal.fire('Info', 'Edit functionality for Salesman/Barman is coming soon.', 'info');
+    }
   }
 
-  // Deletes the current application
-  onDelete(application: any): void {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!',
-    }).then(result => {
-      if (result.isConfirmed) {
-        // ✅ FIXED: Changed applicationId to application_id
-        this.licenseAppService.deleteApplication(this.application.application_id).subscribe({
-          next: () => {
-            Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
-          },
-          error: (err) => {
-            Swal.fire('Error', err?.error?.detail, 'error');
-          }
-        });
+  /*
+    // Deletes the current application
+    onDelete(application: any): void {
+      if (!this.application || !this.application.application_id) {
+        Swal.fire('Error', 'Application not loaded yet.', 'error');
+        return;
       }
-    });
-  }
+      Swal.fire({
+        title: 'Are you sure?',
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!',
+      }).then(result => {
+        if (result.isConfirmed) {
+          this.unifiedService.deleteApplication(this.application.application_id, this.application.type).subscribe({
+            next: () => {
+              Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
+            },
+            error: (err) => {
+              Swal.fire('Error', err?.error?.detail, 'error');
+            }
+          });
+        }
+      });
+    }
+  */
+
 }

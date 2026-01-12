@@ -14,6 +14,16 @@
     }
 }
 
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  gap: 20px;
+  color: #666;
+}
+
 .step-header{
     display: flex;
     justify-content: center;

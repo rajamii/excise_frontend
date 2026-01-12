@@ -1,12 +1,15 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ViewApplicationComponent } from './view-application/view-application.component';
 import { PrintApplicationComponent } from './print-application/print-application.component';
 import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
+import { UnifiedApplication } from '../../../../core/models/unified-application.model';
 
 @Component({
   selector: 'app-application-table',
@@ -15,9 +18,9 @@ import { LicenseApplication, Objection } from '../../../../core/models/license-a
   styleUrl: './application-table.component.scss'
 })
 export class ApplicationTableComponent implements OnChanges {
-  @Input() title!: string;
+  @Input() dataSource!: MatTableDataSource<any>
   @Input() displayedColumns!: string[];
-  @Input() dataSource!: MatTableDataSource<LicenseApplication>;
+  
   @Input() tableType!: string;
 
   objections: Objection[] = [];
@@ -27,6 +30,14 @@ export class ApplicationTableComponent implements OnChanges {
   @Output() print = new EventEmitter<any>();
   @Output() payment = new EventEmitter<any>();
   @Output() movement = new EventEmitter<any>();
+
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
+
+  ngAfterViewInit() {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
 
   stageDisplayMapping: { [key: string]: string } = {
     level_1: 'Under Review by Level 1',
@@ -78,6 +89,15 @@ export class ApplicationTableComponent implements OnChanges {
     });
   }
 
+  getTypeLabel(type: string): string {
+    switch (type) {
+      case 'license-renewal': return 'License Renewal';
+      case 'new-license': return 'New License';
+      case 'salesman-barman': return 'Salesman/Barman';
+      default: return type;
+    }
+  }
+
   onPrint(application: any) {
     this.dialog.open(PrintApplicationComponent, {
       width: '450px',
@@ -85,7 +105,7 @@ export class ApplicationTableComponent implements OnChanges {
     });
   }
   
-  onView(application: any) {
+  onView(application: UnifiedApplication) {
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
