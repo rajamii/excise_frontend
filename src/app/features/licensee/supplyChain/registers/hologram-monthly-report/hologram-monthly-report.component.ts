@@ -483,6 +483,9 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           }
         });
       } else if (event.rowType === 'UTILIZATION') {
+        // CRITICAL: Calculate opening balance BEFORE we subtract utilization
+        const openingBalanceBeforeUtilization = runningBalance;
+        
         runningBalance -= event.quantity;
         runningBalance -= event.totalWastage || 0;
 
@@ -510,7 +513,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
           // Calculate totals for this reference group
           const totalUtilizationForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.utilizationRanges), 0);
           const totalWastageForRef = validRollDetails.reduce((sum, rd) => sum + this.sumRanges(rd.wastageRanges), 0);
-          const openingBalanceForRef = runningBalance + totalUtilizationForRef + totalWastageForRef;
+          const openingBalanceForRef = openingBalanceBeforeUtilization;
 
           validRollDetails.forEach((rollDetail: any, index: number) => {
             const rollName = rollDetail.rollName;
@@ -645,7 +648,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       events.push({
         rowType: 'ARRIVAL',
         date: arrival.receivedDate,
-        timestamp: this.getTimestamp(arrival.receivedDate),
+        // Use createdAt if available, otherwise fallback to receivedDate
+        timestamp: this.getTimestamp((arrival as any).createdAt || (arrival as any).created_at || arrival.receivedDate),
         quantity: arrival.totalCount,
         fromSerial: arrival.fromSerial || '',
         toSerial: arrival.toSerial || '',
@@ -657,7 +661,9 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     console.log(`📋 Processing ${entries.length} entries for utilization/wastage`);
     entries.forEach(entry => {
       const entryDate = entry.date || (entry as any).entryDate || '';
-      const timestamp = this.getTimestamp(entryDate);
+      // Use createdAt/created_at if available for precise sorting
+      const sortDate = (entry as any).createdAt || (entry as any).created_at || entryDate;
+      const timestamp = this.getTimestamp(sortDate);
       const referenceNo = (entry as any).referenceNo || (entry as any).ourRefNo || entry.id;
       const rollDetails = this.buildRollDetails(entry);
       const totalUtilized = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.utilizationRanges), 0);
@@ -680,7 +686,29 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       }
     });
 
-    events.sort((a, b) => a.timestamp - b.timestamp);
+    events.sort((a, b) => {
+      // Extract date-only portion for primary sorting
+      const dateA = a.date.split('T')[0]; // Get YYYY-MM-DD
+      const dateB = b.date.split('T')[0];
+      
+      // Primary sort: Date (day only)
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
+      }
+      
+      // Secondary sort: Type (ARRIVAL must come before UTILIZATION on same day)
+      // This ensures ALL arrivals on a day provide opening balance for ALL utilizations that day
+      const typePriority = { 'ARRIVAL': 1, 'UTILIZATION': 2, 'WASTAGE': 3 };
+      const pA = typePriority[a.rowType] || 99;
+      const pB = typePriority[b.rowType] || 99;
+      
+      if (pA !== pB) {
+        return pA - pB;
+      }
+      
+      // Tertiary sort: Timestamp (for ordering within same type on same day)
+      return a.timestamp - b.timestamp;
+    });
 
     return events;
   }
@@ -731,8 +759,10 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
   }
 
   private getTimestamp(date: string): number {
-    const parsed = Date.parse(date);
-    return Number.isNaN(parsed) ? 0 : parsed;
+    // Return full timestamp (including time) for granular sorting as requested
+    if (!date) return 0;
+    const d = new Date(date);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
   }
 
   private formatDate(date: string): string {
@@ -797,6 +827,47 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
         }
         if (roll.toSerial) {
           rollDetail.toSerial = roll.toSerial;
+        }
+        
+        // CRITICAL FIX: Calculate allocated quantity for 'Un-Used Qty'
+        if (roll.totalCount) {
+          rollDetail.allocatedQuantity = Number(roll.totalCount);
+        } else if (roll.fromSerial && roll.toSerial) {
+            // Try explicit fields
+          try {
+            const f = parseInt(roll.fromSerial.toString());
+            const t = parseInt(roll.toSerial.toString());
+            if (!isNaN(f) && !isNaN(t)) {
+              rollDetail.allocatedQuantity = (t - f) + 1;
+            } else {
+              rollDetail.allocatedQuantity = 0;
+            }
+          } catch (e) {
+            rollDetail.allocatedQuantity = 0;
+          }
+        } else {
+            // Fallback: Parse from rollName (e.g. "a1 - 000001 - 000040")
+            try {
+                // Robust regex: Number - Separator - Number
+                // Robust regex: Number (4+ digits) - Separator - Number (4+ digits)
+                // This avoids matching "a1 - ..." as 1 to ...
+                const matches = rollName.match(/(\d{4,})[^0-9]+(\d{4,})/);
+                if (matches && matches.length >= 3) {
+                    const f = parseInt(matches[1]);
+                    const t = parseInt(matches[2]);
+                    if (!isNaN(f) && !isNaN(t)) {
+                        rollDetail.allocatedQuantity = (t - f) + 1;
+                        if (!rollDetail.fromSerial) rollDetail.fromSerial = matches[1];
+                        if (!rollDetail.toSerial) rollDetail.toSerial = matches[2];
+                    } else {
+                        rollDetail.allocatedQuantity = 0;
+                    }
+                } else {
+                    rollDetail.allocatedQuantity = 0;
+                }
+            } catch (e) {
+                rollDetail.allocatedQuantity = 0;
+            }
         }
 
         // Preserve allocated quantity and damage reason for leftover calculation
