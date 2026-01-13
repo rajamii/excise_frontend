@@ -1,4 +1,4 @@
-import { Component, inject, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
@@ -9,13 +9,12 @@ import { BaseComponent } from '../../../../../base/base.components';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { forkJoin, Observable } from 'rxjs';
-import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
 import { environment } from '../../../../../../environments/environment';
-import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service'; // NEW: For unified fetch
+import { UnifiedDashboardService } from '../../../../../core/services/unified-dashboard.service';
 import { UnifiedApplication } from '../../../../../core/models/unified-application.model';
-import { MatProgressSpinner } from "@angular/material/progress-spinner"; // NEW: For unified app
+import { MatProgressSpinner } from "@angular/material/progress-spinner";
 
-// Interface to describe how a field will be displayed in the UI
+
 export interface FieldDisplay {
   key: string;
   field: string;
@@ -30,9 +29,10 @@ export interface FieldDisplay {
 })
 export class ViewApplicationComponent extends BaseComponent implements OnInit {
   resolveObjectionForm!: FormGroup;
-  application: any;
-  unifiedApp!: UnifiedApplication; // NEW: From dialog data
+  application: UnifiedApplication | any;
+  unifiedApp!: UnifiedApplication;
   tableType: string = '';
+  isLoading = true;
 
   photoUrl: string | null = null;
 
@@ -284,10 +284,10 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     role: ['Salesman', 'Barman']
   };
 
-  isLoading = true;
-
   constructor(
-    @Inject(MAT_DIALOG_DATA) public data: { unifiedApp: UnifiedApplication, tableType: string },
+    @Inject(MAT_DIALOG_DATA) public data: {
+      application: any; unifiedApp: UnifiedApplication, tableType: string 
+},
     deps: BaseDependency,
     private dialogRef: MatDialogRef<MaterialModule>,
     private fb: FormBuilder,
@@ -295,12 +295,18 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     private unifiedService: UnifiedDashboardService  // NEW: Inject for unified fetch
   ) {
     super(deps);
+    this.application = data?.application;
     this.unifiedApp = data.unifiedApp;
     this.tableType = data.tableType;
   }
 
   ngOnInit(): void {
     this.isLoading = true;
+
+    if(!this.application?.applicationId && !this.application?.application_id) {
+      console.error('No application ID found', this.application);
+      return;
+    }
 
     this.unifiedService.getApplicationDetail(this.unifiedApp.applicationId, this.unifiedApp.type).subscribe({
       next: (fullApp) => {
@@ -426,7 +432,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
         return option.subdivision || option.site_subdivision || option.name;
       case 'policeStation':
         return option.policeStation || option.police_station || option.name;
-      // NEW: For new-license
       case 'licenseSubCategory':
         return option.licenseSubCategory || option.license_sub_category || option.name;
       default:
@@ -465,7 +470,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       return;
     }
     // Unified fetch based on type
-    this.unifiedService.getObjections(this.application.applicationId, this.application.type).subscribe({
+    this.unifiedService.getObjections(this.application.applicationId).subscribe({
       next: (data) => {
         this.objections = data;
         // Initialize the form for resolving objections
@@ -554,46 +559,54 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     });
   }
 
+  // Submits the resolved objection data along with updated fields
   submitResolvedData() {
-    if (!this.application || !this.application.application_id) {
-      Swal.fire('Error', 'Application data not loaded yet.', 'error');
-      return;
-    }
+    if (this.resolveObjectionForm.invalid) return;
+
     Swal.fire({
-      title: 'Are you sure?',
-      text: 'You are about to submit corrected information to resolve objections.',
-      icon: 'warning',
+      title: 'Confirm Submission',
+      text: 'Submit corrections for objections?',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes, submit',
-      cancelButtonText: 'Cancel'
+      confirmButtonText: 'Yes',
     }).then(result => {
       if (result.isConfirmed) {
         const formValue = this.resolveObjectionForm.value;
-        const transformed: any = {};
+        const remarks = formValue.remarks;
+        const objection_ids = this.unresolvedObjections.map(obj => obj.id); // All unresolved
+
+        const updated_fields: any = {};
+        const formData = new FormData();
 
         for (const key in formValue) {
-          if (formValue.hasOwnProperty(key)) {
-            const meta = this.fieldMetaMap[key];
-            const selected = formValue[key];
+          if (key === 'remarks') continue;
 
-            if (meta?.type === 'file') {
-              transformed[key] = selected;
-            }
-            else if (meta?.type === 'dropdown') {
-              if (meta.submitKey && typeof selected === 'object') {
-                transformed[key] = selected[meta.submitKey];
-              } else {
-                transformed[key] = selected;
-              }
-            }
-            else {
-              transformed[key] = selected;
-            }
+          let selected = formValue[key];
+          const meta = this.fieldMetaMap[key];
+
+          if (selected instanceof File) {
+            formData.append(key, selected); // Append file directly
+            continue; // Skip from updated_fields
           }
+
+          // Transform value based on meta (e.g., dropdown to ID)
+          if (meta?.type === 'dropdown') {
+            if (meta.submitKey && typeof selected === 'object' && selected !== null) {
+              selected = selected[meta.submitKey];
+            }
+          } else if (meta?.type === 'date') {
+            selected = selected ? new Date(selected).toISOString().split('T')[0] : null;
+          } // Add other transforms if needed
+
+          updated_fields[key] = selected;
         }
 
-        const formData = FormDataUtil.buildFormData(transformed);
-        console.log('Submitting resolved form:', formValue);
+        // Append JSON-structured data
+        formData.append('updated_fields', JSON.stringify(updated_fields));
+        formData.append('remarks', remarks);
+        if (objection_ids.length > 0) {
+          formData.append('objection_ids', JSON.stringify(objection_ids));
+        }
 
         this.unifiedService.resolveObjections(this.application.applicationId, this.application.type, formData).subscribe({
           next: () => {
@@ -605,36 +618,31 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     });
   }
 
-  // ✅ FIXED: Line 421 - Removed payLicenseFee() call since method doesn't exist
-  // The payLicenseFee endpoint doesn't exist in the service
-  // Payment should be handled through advanceApplication or shown as info
+  // Method to handle license fee payment
   payLicenseFee() {
-    if (!this.application) {
+    if (!this.application?.applicationId) {
       Swal.fire('Error', 'Application not loaded.', 'error');
       return;
     }
-    Swal.fire({
-      title: 'Payment Processing',
-      text: 'Payment feature is being processed. Please contact administrator.',
-      icon: 'info',
-      confirmButtonText: 'OK'
-    });
 
-    // Alternative: If you want to process payment through advanceApplication:
-    /*
-    this.licenseAppService.advanceApplication(
-      this.application.application_id,
-      'approve' as 'approve' | 'reject' | 'raise_objection',
-      undefined,
-      'Payment processed',
-      this.application.yearly_license_fee ? Number(this.application.yearly_license_fee) : undefined
-    ).subscribe({
-      next: () => {
-        Swal.fire('Success', 'Payment processed successfully.', 'success').then(() => location.reload());
-      },
-      error: () => Swal.fire('Error', 'Payment processing failed.', 'error')
+    Swal.fire({
+      title: 'Confirm Payment',
+      text: `Pay ₹${this.application.yearlyLicenseFee || this.application.yearly_license_fee}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Pay Now'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.unifiedService.payLicenseFee(this.application.applicationId).subscribe({
+          next: (response) => {
+            Swal.fire('Success', response.message || 'Payment successful. License issued.', 'success').then(() => location.reload());
+          },
+          error: (err) => {
+            Swal.fire('Error', err?.error?.error || 'Payment failed.', 'error');
+          }
+        });
+      }
     });
-    */
   }
 
   // Method to handle application updation
@@ -649,33 +657,5 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       Swal.fire('Info', 'Edit functionality for Salesman/Barman is coming soon.', 'info');
     }
   }
-
-  /*
-    // Deletes the current application
-    onDelete(application: any): void {
-      if (!this.application || !this.application.application_id) {
-        Swal.fire('Error', 'Application not loaded yet.', 'error');
-        return;
-      }
-      Swal.fire({
-        title: 'Are you sure?',
-        text: 'This action cannot be undone.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, delete it!',
-      }).then(result => {
-        if (result.isConfirmed) {
-          this.unifiedService.deleteApplication(this.application.application_id, this.application.type).subscribe({
-            next: () => {
-              Swal.fire('Deleted!', 'Application has been deleted.', 'success').then(() => location.reload());
-            },
-            error: (err) => {
-              Swal.fire('Error', err?.error?.detail, 'error');
-            }
-          });
-        }
-      });
-    }
-  */
 
 }

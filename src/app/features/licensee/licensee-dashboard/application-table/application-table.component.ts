@@ -8,8 +8,10 @@ import { MatSort } from '@angular/material/sort';
 import { ApplicationMovementComponent } from './application-movement/application-movement.component';
 import { ViewApplicationComponent } from './view-application/view-application.component';
 import { PrintApplicationComponent } from './print-application/print-application.component';
-import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
+import { Objection } from '../../../../core/models/license-application.model';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
+import { UnifiedDashboardService } from '../../../../core/services/unified-dashboard.service';
+import { forkJoin, map } from 'rxjs';
 
 @Component({
   selector: 'app-application-table',
@@ -71,24 +73,46 @@ export class ApplicationTableComponent implements OnChanges {
 
   constructor(
     protected licenseAppService: LicenseApplicationService,
+    protected unifiedService: UnifiedDashboardService,
     private dialog: MatDialog
   ) { }
 
   ngOnChanges() {
     this.unresolvedObjectionAppIds.clear();
 
-    this.dataSource?.data?.forEach(app => {
-      // ✅ FIXED Line 79: Use application_id
-      this.licenseAppService.getObjections(app.application_id!).subscribe((objections) => {
-        const hasUnresolved = objections?.some(obj => obj.isResolved === false);
-        if (hasUnresolved) {
-          // ✅ FIXED Line 82: Use application_id
-          this.unresolvedObjectionAppIds.add(app.application_id!);
-        }
+    // FIXED: Batch objection checks with forkJoin to avoid multiple subs if many apps
+    const objectionRequests = this.dataSource?.data?.map(app => 
+      this.unifiedService.getObjections(app.applicationId!).pipe(
+        map((objections: any[]) => ({
+          appId: app.applicationId,
+          hasUnresolved: objections.some(obj => !obj.isResolved)
+        }))
+      )
+    ) || [];
+
+    if (objectionRequests.length) {
+      forkJoin(objectionRequests).subscribe(results => {
+        results.forEach(result => {
+          if (result.hasUnresolved) {
+            this.unresolvedObjectionAppIds.add(result.appId);
+          }
+        });
       });
+    }
+
+    // NEW: Set latestTransaction for each app (most recent by timestamp)
+    this.dataSource.data.forEach(app => {
+      if (app.transactions && app.transactions.length) {
+        app.latestTransaction = [...app.transactions].sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )[0];
+      } else {
+        app.latestTransaction = null;
+      }
     });
   }
 
+  // FIXED: Updated labels
   getTypeLabel(type: string): string {
     switch (type) {
       case 'license-renewal': return 'License Renewal';
@@ -106,6 +130,12 @@ export class ApplicationTableComponent implements OnChanges {
   }
   
   onView(application: UnifiedApplication) {
+
+    if(!application || (!application.applicationId)) {
+      console.error('No application data provided to view.');
+      return;
+    }
+
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',

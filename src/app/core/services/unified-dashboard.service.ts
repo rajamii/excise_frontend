@@ -10,6 +10,7 @@ import { Objection } from '../models/license-application.model';
 @Injectable({ providedIn: 'root' })
 export class UnifiedDashboardService {
   private baseUrl = `${environment.apiBaseUrl}/transactional`;
+  private workflowUrl = `${environment.apiBaseUrl}/auth/`;
 
   private endpoints = {
     renewal: `${this.baseUrl}/license_application`,
@@ -122,14 +123,17 @@ export class UnifiedDashboardService {
     return this.http.get<any>(url);
   }
 
-  getObjections(applicationId: string, type: UnifiedApplication['type']): Observable<Objection[]> {
-
-    return this.http.get<Objection[]>(`${this.baseUrl}/auth/objections/${applicationId}/`); // Assume endpoint exists for all
+  getObjections(applicationId: string): Observable<Objection[]> {
+    return this.http.get<Objection[]>(`${this.workflowUrl}${applicationId}/objections/`); // Assume endpoint exists for all
   }
 
+  // FIXED: Correct endpoint to /resolve-objections/ as per backend urls.py and sample
   resolveObjections(applicationId: string, type: UnifiedApplication['type'], formData: FormData): Observable<any> {
-
-    return this.http.post<any>(`${this.baseUrl}/auth/objections/${applicationId}/`, formData);
+    return this.http.post<any>(`${this.workflowUrl}${applicationId}/resolve-objections/`, formData);
   }
 
+  // NEW: Added for payment as per backend views.py and urls.py
+  payLicenseFee(applicationId: string): Observable<any> {
+    return this.http.post<any>(`${this.workflowUrl}${applicationId}/pay-license-fee/`, {});
+  }
 }

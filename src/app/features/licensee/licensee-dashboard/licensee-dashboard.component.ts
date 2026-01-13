@@ -50,8 +50,8 @@ export class LicenseeDashboardComponent implements OnInit {
   approvedDataSource = new MatTableDataSource<UnifiedApplication>();
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
-  // Columns to be displayed in the tables
-  displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
+  // FIXED: Added 'applicationType' to columns
+  displayedColumns: string[] = ['slNo', 'id', 'applicationType', 'currentStage', 'remarks', 'performedBy', 'actions'];
 
   // Active table to display
   activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';

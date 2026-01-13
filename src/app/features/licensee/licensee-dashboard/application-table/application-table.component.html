@@ -29,15 +29,17 @@
   <ng-container matColumnDef="applicationType">
     <mat-header-cell *matHeaderCellDef> Type </mat-header-cell>
     <mat-cell *matCellDef="let element">
-      <mat-chip [color]="element.applicationType === 'new' ? 'primary' : 'accent'" selected>
-        {{ element.applicationType === 'new' ? 'New License' : 'License' }}
+      <!-- FIXED: Use element.type and getTypeLabel -->
+      <mat-chip [color]="element.type === 'new-license' ? 'primary' : 'accent'" selected>
+        {{ getTypeLabel(element.type) }}
       </mat-chip>
     </mat-cell>
   </ng-container>
   <!-- Current workflow stage of the application -->
   <ng-container matColumnDef="currentStage">
     <mat-header-cell *matHeaderCellDef> Current Stage </mat-header-cell>
-    <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.currentStage] || 'N/A' }} </mat-cell>
+    <!-- FIXED: Use currentStageName for mapping -->
+    <mat-cell *matCellDef="let element"> {{ stageDisplayMapping[element.currentStageName] || 'N/A' }} </mat-cell>
   </ng-container>
   <!-- Most recent remarks on the application -->
   <ng-container matColumnDef="remarks">
