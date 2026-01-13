@@ -854,42 +854,72 @@ export class HologramDataService {
           });
         }
 
-        // Filter daily entries by month, year, hologram type, and check is_fixed (completed)
+        console.log(`📦 Total daily entries from backend: ${dailyEntries.length}`);
+
+        // Filter daily entries by month, year, hologram type
+        // Handle both camelCase (from DRF serializer) and snake_case field names
         const filteredEntries = dailyEntries.filter((entry: any) => {
-          if (!entry.is_fixed) return false;
-          const entryDate = entry.usage_date || entry.submission_date || '';
+          const entryDate = entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '';
+          const entryMonthKey = entryDate ? entryDate.substring(0, 7) : '';
+          const entryType = (entry.hologramType || entry.hologram_type || 'LOCAL').toString().toUpperCase().trim();
+
           if (!entryDate) return false;
-          const entryMonthKey = entryDate.substring(0, 7);
           if (entryMonthKey !== monthKey) return false;
-          const entryType = (entry.hologram_type || 'LOCAL').toUpperCase();
           if (entryType !== hologramType) return false;
+
           return true;
         });
 
         console.log(`📊 Filtered daily entries for ${monthKey}: ${filteredEntries.length}`);
 
+        // Debug: Log sample entry structure
+        if (filteredEntries.length > 0) {
+          console.log('📋 Sample daily register entry:', {
+            id: filteredEntries[0].id,
+            reference_no: filteredEntries[0].reference_no,
+            issued_qty: filteredEntries[0].issued_qty,
+            wastage_qty: filteredEntries[0].wastage_qty,
+            issued_from: filteredEntries[0].issued_from,
+            issued_to: filteredEntries[0].issued_to,
+            wastage_from: filteredEntries[0].wastage_from,
+            wastage_to: filteredEntries[0].wastage_to,
+            issued_ranges: filteredEntries[0].issued_ranges,
+            wastage_ranges: filteredEntries[0].wastage_ranges,
+            brand_details: filteredEntries[0].brand_details,
+            bottle_size: filteredEntries[0].bottle_size
+          });
+        }
+
         // Convert backend entries to HologramDailyEntry format
+        // Handle both camelCase (from DRF serializer) and snake_case field names
         const convertedEntries: HologramDailyEntry[] = filteredEntries.map((entry: any) => ({
           id: String(entry.id),
-          date: entry.usage_date || entry.submission_date || '',
+          date: entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '',
           hologramType: hologramType,
-          issuedEntries: entry.issued_ranges || [],
-          wastageEntries: entry.wastage_ranges || [],
-          utilizedQuantity: entry.hologram_qty || 0,
-          leftOverQuantity: (entry.hologram_qty || 0) - (entry.issued_qty || 0) - (entry.wastage_qty || 0),
-          isFixed: entry.is_fixed || false,
-          issuedFromSerial: entry.issued_from || '',
-          issuedToSerial: entry.issued_to || '',
-          issuedQuantity: entry.issued_qty || 0,
-          wastageFromSerial: entry.wastage_from || '',
-          wastageToSerial: entry.wastage_to || '',
-          wastageQuantity: entry.wastage_qty || 0,
-          damageReason: entry.damage_reason || '',
-          referenceNo: entry.reference_no || '',
-          brandDetails: entry.brand_details || '',
-          bottleSize: entry.bottle_size || '',
-          cartoonNumber: entry.roll_range || '',
-          lockedRolls: []
+          issuedEntries: entry.issuedRanges || entry.issued_ranges || [],
+          wastageEntries: entry.wastageRanges || entry.wastage_ranges || [],
+          utilizedQuantity: entry.hologramQty || entry.hologram_qty || 0,
+          leftOverQuantity: (entry.hologramQty || entry.hologram_qty || 0) - (entry.issuedQty || entry.issued_qty || 0) - (entry.wastageQty || entry.wastage_qty || 0),
+          isFixed: entry.isFixed ?? entry.is_fixed ?? false,
+          issuedFromSerial: entry.issuedFrom || entry.issued_from || '',
+          issuedToSerial: entry.issuedTo || entry.issued_to || '',
+          issuedQuantity: entry.issuedQty || entry.issued_qty || 0,
+          wastageFromSerial: entry.wastageFrom || entry.wastage_from || '',
+          wastageToSerial: entry.wastageTo || entry.wastage_to || '',
+          wastageQuantity: entry.wastageQty || entry.wastage_qty || 0,
+          damageReason: entry.damageReason || entry.damage_reason || '',
+          referenceNo: entry.referenceNo || entry.reference_no || '',
+          brandDetails: entry.brandDetails || entry.brand_details || '',
+          bottleSize: entry.bottleSize || entry.bottle_size || '',
+          cartoonNumber: entry.rollRange || entry.roll_range || '',
+          lockedRolls: [],
+          // Preserve original backend fields for fallback processing (both camelCase and snake_case)
+          issued_ranges: entry.issuedRanges || entry.issued_ranges,
+          wastage_ranges: entry.wastageRanges || entry.wastage_ranges,
+          issued_qty: entry.issuedQty || entry.issued_qty,
+          wastage_qty: entry.wastageQty || entry.wastage_qty,
+          brand_details: entry.brandDetails || entry.brand_details,
+          bottle_size: entry.bottleSize || entry.bottle_size
         } as any));
 
         // Calculate totals from daily entries

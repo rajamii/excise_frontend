@@ -654,6 +654,7 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
     });
 
     const entries = this.monthlyStatement.entries || [];
+    console.log(`📋 Processing ${entries.length} entries for utilization/wastage`);
     entries.forEach(entry => {
       const entryDate = entry.date || (entry as any).entryDate || '';
       const timestamp = this.getTimestamp(entryDate);
@@ -661,6 +662,8 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
       const rollDetails = this.buildRollDetails(entry);
       const totalUtilized = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.utilizationRanges), 0);
       const totalWastage = rollDetails.reduce((sum, detail) => sum + this.sumRanges(detail.wastageRanges), 0);
+
+      console.log(`🔍 Entry ${referenceNo}: utilized=${totalUtilized}, wastage=${totalWastage}, rollDetails=${rollDetails.length}`);
 
       if (totalUtilized > 0 || totalWastage > 0) {
         this.addOrUpdateUtilizationEvent(
@@ -826,40 +829,60 @@ export class HologramMonthlyReportComponent implements OnInit, OnDestroy {
 
     if (details.length === 0) {
       const rollName = entry.cartoonNumber || entry.referenceNo || entry.ourRefNo || entry.id || 'Roll';
+      
+      // Handle both camelCase (from frontend) and snake_case (from backend conversion)
       const issuedEntries = entry.issuedEntries && entry.issuedEntries.length > 0
         ? entry.issuedEntries
+        : (entry.issued_ranges && entry.issued_ranges.length > 0)
+        ? entry.issued_ranges
         : (entry.issuedFromSerial && entry.issuedToSerial
           ? [{
             fromSerial: entry.issuedFromSerial,
             toSerial: entry.issuedToSerial,
-            quantity: entry.issuedQuantity || entry.utilizedQuantity || 0
+            quantity: entry.issuedQuantity || entry.utilizedQuantity || entry.issued_qty || 0
           }]
           : []);
+      
       const wastageEntries = entry.wastageEntries && entry.wastageEntries.length > 0
         ? entry.wastageEntries
+        : (entry.wastage_ranges && entry.wastage_ranges.length > 0)
+        ? entry.wastage_ranges
         : (entry.wastageFromSerial && entry.wastageToSerial
           ? [{
             fromSerial: entry.wastageFromSerial,
             toSerial: entry.wastageToSerial,
-            quantity: entry.wastageQuantity || 0,
-            damageReason: entry.damageReason
+            quantity: entry.wastageQuantity || entry.wastage_qty || 0,
+            damageReason: entry.damageReason || entry.damage_reason
           }]
           : []);
 
-      details.push({
-        rollName,
-        utilizationRanges: issuedEntries.map((range: any) => ({
-          fromSerial: range.fromSerial || '',
-          toSerial: range.toSerial || '',
-          quantity: range.quantity || 0
-        })),
-        wastageRanges: wastageEntries.map((range: any) => ({
-          fromSerial: range.fromSerial || '',
-          toSerial: range.toSerial || '',
-          quantity: range.quantity || 0,
-          damageReason: range.damageReason || entry.damageReason
-        }))
-      });
+      // Only create detail if there's actual data
+      if (issuedEntries.length > 0 || wastageEntries.length > 0) {
+        const rollDetail: any = {
+          rollName,
+          utilizationRanges: issuedEntries.map((range: any) => ({
+            fromSerial: range.fromSerial || range.from_serial || '',
+            toSerial: range.toSerial || range.to_serial || '',
+            quantity: range.quantity || range.qty || 0
+          })),
+          wastageRanges: wastageEntries.map((range: any) => ({
+            fromSerial: range.fromSerial || range.from_serial || '',
+            toSerial: range.toSerial || range.to_serial || '',
+            quantity: range.quantity || range.qty || 0,
+            damageReason: range.damageReason || range.damage_reason || entry.damageReason || entry.damage_reason
+          }))
+        };
+        
+        // Preserve brand details and bottle size from entry for display
+        if (entry.brandDetails || entry.brand_details) {
+          rollDetail.brandDetails = entry.brandDetails || entry.brand_details;
+        }
+        if (entry.bottleSize || entry.bottle_size) {
+          rollDetail.bottleSize = entry.bottleSize || entry.bottle_size;
+        }
+        
+        details.push(rollDetail);
+      }
     }
 
     return details;
