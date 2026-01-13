@@ -1,3 +1,5 @@
+/* licensee-dashboard.component.scss */
+
 .dashboard-container {
     display: flex;
     flex-direction: column;
@@ -124,11 +126,11 @@
 }
 
 // ========================================
-// STATS CONTAINER STYLES
+// STATS CONTAINER STYLES - NOW 4 COLUMNS
 // ========================================
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); // ✅ 5 columns for 5 cards
+    grid-template-columns: repeat(4, 1fr); // ✅ Changed to 4 columns for 4 cards
     gap: 25px;
 
     .stat-card {
@@ -161,14 +163,6 @@
                 width: 28px;
                 height: 28px;
             }
-            
-            // ✅ Payment icon styling
-            .payment-icon {
-                font-size: 32px;
-                width: 32px;
-                height: 32px;
-                color: #ff6f00; // Deep orange
-            }
         }
 
         .blue-bg {
@@ -186,11 +180,6 @@
         .yellow-bg {
             background-color: rgba(231, 184, 0, 0.17);
         }
-        
-        // ✅ Orange background for payment card
-        .orange-bg {
-            background-color: rgba(255, 152, 0, 0.17);
-        }
 
         .value {
             font-size: 28px;
@@ -207,14 +196,29 @@
             text-align: center;
         }
         
-        // ✅ Special hover effect for payment card
-        &.payment {
+        // ✅ NEW: Sub-label for showing awaiting payment count
+        .sub-label {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #ff9800;
+            font-weight: 500;
+            text-align: center;
+            
+            .payment-count {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 2px 8px;
+                background-color: rgba(255, 152, 0, 0.1);
+                border-radius: 12px;
+            }
+        }
+        
+        // ✅ Special styling for pending card when it contains payment items
+        &.pending {
             &:hover {
                 .circle-icon {
-                    background-color: rgba(255, 152, 0, 0.25);
-                }
-                .value {
-                    color: #ff6f00;
+                    background-color: rgba(231, 184, 0, 0.25);
                 }
             }
         }
@@ -282,7 +286,7 @@ mat-card {
 // ========================================
 @media (max-width: 1200px) {
     .stats-container {
-        grid-template-columns: repeat(3, 1fr); // 3 columns on medium screens
+        grid-template-columns: repeat(2, 1fr); // 2 columns on medium screens
         gap: 20px;
     }
 }

@@ -1,8 +1,4 @@
-<!-- ================================================================================================
-     FILE: features/licensee/licensee-dashboard/application-table/application-table.component.html
-     COMPLETE VERSION - With Payment Button
-     ================================================================================================ -->
-
+<!-- application-table.component.html -->
 @if (hasData()) {
   <mat-table [dataSource]="dataSource">
     <!-- Serial Number Column -->
@@ -80,8 +76,8 @@
           <mat-icon>visibility</mat-icon>
         </button>
         
-        <!-- ✅ Payment Button - ALWAYS show in awaitingPayment table for debugging -->
-        @if (tableType === 'awaitingPayment') {
+        <!-- ✅ Payment Button - Show ONLY for applications in awaiting_payment stage within pending table -->
+        @if (tableType === 'pending' && isAwaitingPayment(element)) {
           <button 
             mat-icon-button 
             color="accent"

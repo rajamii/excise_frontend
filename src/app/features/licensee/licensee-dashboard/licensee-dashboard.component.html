@@ -1,7 +1,22 @@
+<!-- licensee-dashboard.component.html -->
 <!-- Dashboard Container: This contains the entire dashboard layout -->
 <div class="dashboard-container">
   
-  <!-- Stats Container: This section displays the pending, approved, and rejected stats -->
+  <!-- Filter Container: Application Type Filter -->
+  <div class="filter-container">
+    <mat-form-field appearance="outline" class="application-type-filter">
+      <mat-label>Filter by Application Type</mat-label>
+      <mat-icon matPrefix>filter_list</mat-icon>
+      <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
+        <mat-option value="all">All Applications</mat-option>
+        <mat-option value="license-renewal">License Application</mat-option>
+        <mat-option value="new-license">New License</mat-option>
+        <mat-option value="salesman-barman">Salesman/Barman</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+  
+  <!-- Stats Container: This section displays all application stats (NOW 4 CARDS) -->
   <div class="stats-container" [class.loading]="isLoading">
     <!-- Applied Stat Card -->
     <mat-card class="stat-card applied" (click)="showTable('applied')">
@@ -12,13 +27,19 @@
       <div class="label">Applied</div>
     </mat-card>
 
-    <!-- Pending Stat Card -->
+    <!-- Pending Stat Card - NOW INCLUDES AWAITING PAYMENT -->
     <mat-card class="stat-card pending" (click)="showTable('pending')">
       <div class="circle-icon yellow-bg">
         <img src="assets/images/dashboard/pending.png" alt="Pending Icon">
       </div>
-      <div class="value">{{ dashboardCounts.pending }}</div>
+      <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
       <div class="label">Pending</div>
+      <!-- Show breakdown if there are awaiting payment items -->
+      @if (dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0) {
+        <div class="sub-label">
+          <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+        </div>
+      }
     </mat-card>
 
     <!-- Approved Stat Card -->
@@ -40,7 +61,7 @@
     </mat-card>
   </div>
 
-  <!-- Dashboard for Permit Section -->
+  <!-- Dashboard Tables Section -->
   <ng-container>
     <!-- Default Table Card -->
     @if (activeTable === 'default') {
@@ -49,7 +70,7 @@
           Statistics
         </mat-card-header>
         <mat-card-content>
-          <!-- Content for default table -->
+          <p class="text-center text-muted p-4">Select a category above to view applications</p>
         </mat-card-content>
       </mat-card>
     }
@@ -61,7 +82,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Applied
+          Applied Applications
         </mat-card-header>
         <mat-card-content>
           <app-application-table
@@ -73,20 +94,21 @@
       </mat-card>
     }
 
-    <!-- Pending Table Card -->
+    <!-- Pending Table Card - NOW INCLUDES BOTH PENDING AND AWAITING PAYMENT -->
     @if (activeTable === 'pending') {
       <mat-card>
         <button mat-icon-button (click)="goBack()">
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Pending
+          Pending Applications
         </mat-card-header>
         <mat-card-content>
           <app-application-table
             [dataSource]="pendingDataSource"
             [displayedColumns]="displayedColumns"
-            [tableType]="'pending'">
+            [tableType]="'pending'"
+            (payment)="onPaymentConfirmed($event)">
           </app-application-table>
         </mat-card-content>
       </mat-card>
@@ -99,7 +121,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Approved
+          Approved Applications
         </mat-card-header>
         <mat-card-content>
           <app-application-table
@@ -118,7 +140,7 @@
           <mat-icon>arrow_back</mat-icon>
         </button>
         <mat-card-header>
-          Rejected
+          Rejected Applications
         </mat-card-header>
         <mat-card-content>
           <app-application-table

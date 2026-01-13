@@ -193,7 +193,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const nocDoc = this.documents.find(d => d.name === 'noc_landlord');
 
     if (siteOwnedValue === 'Yes') {
-      nocObtainedCtrl?.setValue(null);
+      nocObtainedCtrl?.setValue('No');
       nocObtainedCtrl?.clearValidators();
       if (nocDoc) {
         nocDoc.required = false;
@@ -211,14 +211,17 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     nocObtainedCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
+  // ✅ CRITICAL FIX: Save master data to sessionStorage
   private loadMasterData(): void {
     this.masterService.getDistrict().subscribe({
       next: (districts) => {
         this.districts = districts;
-        console.log('✅ Districts loaded:', districts);
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('districts', JSON.stringify(districts));
+        console.log('✅ Districts loaded and saved:', districts.length);
+        
         const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
         if (storedDistrictId) {
-          console.log('🔄 District already selected in form:', storedDistrictId);
           this.onDistrictChange(storedDistrictId);
         }
       },
@@ -228,10 +231,12 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getSubdivision().subscribe({
       next: (subdivisions) => {
         this.allSubdivisions = subdivisions;
-        console.log('✅ Subdivisions loaded:', subdivisions);
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
+        console.log('✅ Subdivisions loaded and saved:', subdivisions.length);
+        
         const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
         if (storedDistrictId && this.districts.length > 0) {
-          console.log('🔄 Re-filtering subdivisions for stored district:', storedDistrictId);
           this.filterSubdivisions(storedDistrictId);
         }
       },
@@ -241,7 +246,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getPoliceStations().subscribe({
       next: (stations) => {
         this.allPoliceStations = stations;
-        console.log('✅ Police Stations loaded:', stations);
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('policeStations', JSON.stringify(stations));
+        console.log('✅ Police Stations loaded and saved:', stations.length);
+        
         const storedSubdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
         if (storedSubdivisionId && this.allSubdivisions.length > 0) {
           this.filterPoliceStations(storedSubdivisionId);
@@ -252,11 +260,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
     this.masterService.getRoads().subscribe({
       next: (roads) => {
-        console.log('✅ Roads API Response:', roads);
         this.allRoads = roads;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('roads', JSON.stringify(roads));
+        console.log('✅ Roads loaded and saved:', roads.length);
+        
         const currentDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
         if (currentDistrictId) {
-          console.log('🔄 Re-filtering roads for already selected district:', currentDistrictId);
           this.filterRoads(currentDistrictId);
         }
       },
@@ -416,21 +426,14 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     return JSON.parse(storedData);
   }
 
-  /**
-   * ✅ FINAL FIX: Backend expects IDs (integers) not codes!
-   * Save IDs for both frontend AND backend use
-   */
   private saveToSessionStorage() {
     const formData: any = this.siteDetailsForm.getRawValue();
     
     const backendData: any = {
-      // ✅ Backend expects INTEGERS (IDs) for all ForeignKey fields
       district: formData.siteDistrict || null,
       subdivision: formData.siteSubdivision || null,
       police_station: formData.policeStation || null,
       road: formData.roadName || null,
-      
-      // Other fields
       address: formData.businessAddress || null,
       location_category: formData.locationCategory || null,
       location_name: formData.locationName || null,
@@ -440,11 +443,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       length: formData.length || null,
       breadth: formData.breadth || null,
       site_owned: formData.siteOwned || null,
-      noc_obtained: formData.nocObtained || null,
-      trade_license_covered: formData.tradeLicenseCovered || null
+      trade_license_covered: formData.tradeLicenseCovered || null,
+      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.nocObtained || null)
     };
     
-    console.log('💾 Saving Site Details (BACKEND IDS):', backendData);
+    console.log('💾 Saving Site Details:', backendData);
     sessionStorage.setItem('siteDetailsData', JSON.stringify(backendData));
   }
 

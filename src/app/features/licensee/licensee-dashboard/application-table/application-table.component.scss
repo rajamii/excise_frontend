@@ -28,26 +28,26 @@ mat-cell{
     }
     
     .objection-text {
-        color: #ffb700 !important; // Material yellow 700
+        color: #ffb700 !important;
     }
 }
 
-// ✅ NEW: Payment button styling
+// ✅ Payment button styling
 .payment-btn {
     mat-icon {
-        color: #ff6f00 !important; // Deep orange color for payment
+        color: #ff6f00 !important;
     }
     
     &:hover {
         background-color: rgba(255, 111, 0, 0.1);
         
         mat-icon {
-            color: #e65100 !important; // Darker orange on hover
+            color: #e65100 !important;
         }
     }
 }
 
-// ✅ NEW: Add some spacing between action buttons
+// ✅ Add spacing between action buttons
 mat-cell {
     button[mat-icon-button] {
         margin: 0 2px;
@@ -62,7 +62,6 @@ mat-cell {
     }
 }
 
-// Ensure proper text color for secondary text
 .text-secondary {
     color: #666;
     font-size: 13px;

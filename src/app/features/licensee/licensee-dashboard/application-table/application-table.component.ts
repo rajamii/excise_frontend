@@ -1,7 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit } from '@angular/core';
+// application-table.component.ts
+import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit, SimpleChanges } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
+import { UnifiedDashboardService } from '../../../../core/services/unified-dashboard.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
@@ -17,10 +19,9 @@ import { UnifiedApplication } from '../../../../core/models/unified-application.
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-export class ApplicationTableComponent implements OnChanges {
+export class ApplicationTableComponent implements OnChanges, AfterViewInit {
   @Input() dataSource!: MatTableDataSource<any>
   @Input() displayedColumns!: string[];
-  
   @Input() tableType!: string;
 
   objections: Objection[] = [];
@@ -35,8 +36,10 @@ export class ApplicationTableComponent implements OnChanges {
   @ViewChild(MatSort) sort!: MatSort;
 
   ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    if (this.dataSource) {
+      this.dataSource.paginator = this.paginator;
+      this.dataSource.sort = this.sort;
+    }
   }
 
   stageDisplayMapping: { [key: string]: string } = {
@@ -71,22 +74,207 @@ export class ApplicationTableComponent implements OnChanges {
 
   constructor(
     protected licenseAppService: LicenseApplicationService,
+    private unifiedDashboardService: UnifiedDashboardService,
     private dialog: MatDialog
   ) { }
 
-  ngOnChanges() {
-    this.unresolvedObjectionAppIds.clear();
+  ngOnChanges(changes: SimpleChanges) {
+    console.log('📋 ngOnChanges called');
+    console.log('📊 Changes:', changes);
+    
+    if (changes['dataSource']) {
+      console.log('📊 DataSource changed');
+      console.log('📊 DataSource value:', this.dataSource);
+      console.log('📊 DataSource.data:', this.dataSource?.data);
+      console.log('📊 DataSource.data length:', this.dataSource?.data?.length);
+      
+      // Clear existing objections
+      this.unresolvedObjectionAppIds.clear();
 
-    this.dataSource?.data?.forEach(app => {
-      // ✅ FIXED Line 79: Use application_id
-      this.licenseAppService.getObjections(app.application_id!).subscribe((objections) => {
-        const hasUnresolved = objections?.some(obj => obj.isResolved === false);
-        if (hasUnresolved) {
-          // ✅ FIXED Line 82: Use application_id
-          this.unresolvedObjectionAppIds.add(app.application_id!);
-        }
-      });
+      // Fetch objections for each application
+      if (this.dataSource?.data) {
+        console.log(`📋 Processing ${this.dataSource.data.length} applications`);
+        
+        this.dataSource.data.forEach((app, index) => {
+          console.log(`📋 Processing app ${index}:`, app);
+          const appId = this.getApplicationId(app);
+          const appType = app.type || 'license-renewal';
+          console.log(`🆔 Application ID for app ${index}:`, appId);
+          console.log(`📦 Application Type for app ${index}:`, appType);
+          
+          if (appId) {
+            // ✅ FIXED: Use unified service with correct /auth/ endpoint
+            this.unifiedDashboardService.getObjections(appId, appType).subscribe({
+              next: (objections) => {
+                const hasUnresolved = objections?.some((obj: Objection) => obj.isResolved === false);
+                if (hasUnresolved) {
+                  this.unresolvedObjectionAppIds.add(appId);
+                  console.log(`⚠️ Found unresolved objections for ${appId}`);
+                }
+              },
+              error: (err) => {
+                // ✅ Silently handle 404 - means no objections exist (which is fine)
+                if (err.status !== 404) {
+                  console.error(`❌ Error fetching objections for ${appId}:`, err);
+                }
+              }
+            });
+          } else {
+            console.warn(`⚠️ No applicationId found for app ${index}:`, app);
+          }
+        });
+      } else {
+        console.log('⚠️ No data in dataSource');
+      }
+    }
+    
+    if (changes['tableType']) {
+      console.log('📊 Table Type changed to:', this.tableType);
+    }
+  }
+
+  hasData(): boolean {
+    const hasData = this.dataSource && 
+                    this.dataSource.data && 
+                    Array.isArray(this.dataSource.data) && 
+                    this.dataSource.data.length > 0;
+    
+    console.log('✅ hasData check:', hasData);
+    console.log('📊 Data count:', this.dataSource?.data?.length || 0);
+    
+    if (hasData) {
+      console.log('📋 First item:', this.dataSource.data[0]);
+      console.log('📋 Sample item structure:', JSON.stringify(this.dataSource.data[0], null, 2));
+    }
+    
+    return hasData;
+  }
+
+  /**
+   * ✅ COMPREHENSIVE APPLICATION ID EXTRACTION
+   * This method tries multiple possible field names and nested paths
+   * to extract the application ID from any application object structure
+   */
+  getApplicationId(element: any): string {
+    if (!element) {
+      console.warn('⚠️ getApplicationId - element is null/undefined');
+      return '';
+    }
+    
+    // Log the complete element structure for debugging
+    console.log('🔍 Extracting ID from element:', element);
+    console.log('🔑 Element keys:', Object.keys(element));
+    
+    // Try all possible direct property names (camelCase and snake_case)
+    const directProperties = [
+      element.applicationId,
+      element.application_id,
+      element.id,
+      element.app_id,
+      element.applicationID,
+      element.application_ID
+    ];
+    
+    console.log('🔍 Direct properties found:', directProperties.filter(id => id));
+    
+    // Try nested paths in the raw object
+    const nestedProperties = [
+      element.raw?.application_id,
+      element.raw?.applicationId,
+      element.raw?.id,
+      element.data?.application_id,
+      element.data?.applicationId,
+      element.data?.id
+    ];
+    
+    console.log('🔍 Nested properties found:', nestedProperties.filter(id => id));
+    
+    // Combine all possible IDs
+    const possibleIds = [...directProperties, ...nestedProperties];
+    
+    console.log('🔍 All possible IDs:', possibleIds);
+    
+    // Find the first non-empty value
+    const appId = possibleIds.find(id => {
+      return id !== null && id !== undefined && id !== '' && String(id).trim() !== '';
     });
+    
+    if (appId) {
+      const finalId = String(appId);
+      console.log('✅ Found application ID:', finalId);
+      return finalId;
+    }
+    
+    // If still not found, log detailed error
+    console.error('❌ CRITICAL: Could not find application ID in element');
+    console.error('❌ Element type:', element.type);
+    console.error('❌ Element keys:', Object.keys(element));
+    console.error('❌ Full element:', JSON.stringify(element, null, 2));
+    
+    return '';
+  }
+
+  getCurrentStage(element: any): string {
+    const stage = element?.currentStage || 
+                  element?.current_stage || 
+                  element?.raw?.current_stage || 
+                  '';
+    console.log('🔍 Current stage:', stage, 'for element:', element);
+    return stage;
+  }
+
+  // ✅ NEW METHOD: Check if application is awaiting payment
+  isAwaitingPayment(element: any): boolean {
+    const stage = this.getCurrentStage(element);
+    const isAwaiting = stage === 'awaiting_payment';
+    
+    if (isAwaiting) {
+      console.log('💳 Application is awaiting payment:', this.getApplicationId(element));
+    }
+    
+    return isAwaiting;
+  }
+
+  getLatestRemarks(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.remarks || '-';
+    }
+    return '-';
+  }
+
+  getPerformedByUsername(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.performed_by_username || transactions[0]?.performedByUsername || 'Unknown';
+    }
+    return 'Unknown';
+  }
+
+  getPerformedByRole(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.performed_by_role || transactions[0]?.performedByRole || 'unknown';
+    }
+    return 'unknown';
+  }
+
+  getLatestTimestamp(element: any): string | null {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.timestamp || null;
+    }
+    return null;
+  }
+
+  onPayment(application: any): void {
+    console.log('💳 Payment clicked for application:', application);
+    console.log('💳 Application ID:', this.getApplicationId(application));
+    console.log('💳 Table Type:', this.tableType);
+    console.log('💳 Current Stage:', this.getCurrentStage(application));
+    
+    // Emit the payment event
+    this.payment.emit(application);
   }
 
   getTypeLabel(type: string): string {
@@ -105,21 +293,84 @@ export class ApplicationTableComponent implements OnChanges {
     });
   }
   
-  onView(application: UnifiedApplication) {
+  onView(application: any) {
+    console.log('👁️ View clicked for application:', application);
+    console.log('📊 Application structure:', JSON.stringify(application, null, 2));
+    
+    // Get the application ID
+    const applicationId = this.getApplicationId(application);
+    
+    if (!applicationId) {
+      console.error('❌ CRITICAL: No applicationId found, cannot open view dialog');
+      console.error('❌ Full application object:', application);
+      return;
+    }
+    
+    console.log('✅ Opening view dialog with ID:', applicationId);
+    
+    // ✅ Create UnifiedApplication with proper fallbacks
+    const unifiedApp: UnifiedApplication = {
+      type: application.type || 'license-renewal',
+      applicationId: applicationId,
+      currentStage: this.getCurrentStage(application),
+      currentStageName: application.currentStageName || 
+                       application.current_stage_name || 
+                       application.raw?.current_stage_name || 
+                       'Unknown',
+      isApproved: application.isApproved ?? 
+                  application.is_approved ?? 
+                  application.raw?.is_approved ?? 
+                  false,
+      establishmentName: application.establishmentName || 
+                        application.establishment_name || 
+                        application.raw?.establishment_name || 
+                        null,
+      applicantFullName: application.applicantFullName || 
+                        application.applicant_name || 
+                        application.raw?.applicant_name ||
+                        application.member_name ||
+                        application.raw?.member_name ||
+                        'N/A',
+      mobileNumber: application.mobileNumber || 
+                   application.mobile_number || 
+                   application.raw?.mobile_number || 
+                   '',
+      email: application.email || 
+            application.emailId || 
+            application.email_id || 
+            application.raw?.email ||
+            '',
+      licenseCategoryName: application.licenseCategoryName || 
+                          application.license_category_name || 
+                          application.raw?.license_category_name ||
+                          'N/A',
+      siteDistrictName: application.siteDistrictName || 
+                       application.site_district_name || 
+                       application.raw?.site_district_name ||
+                       'N/A',
+      transactions: application.transactions || application.raw?.transactions || [],
+      raw: application.raw || application
+    };
+    
+    console.log('✅ Created UnifiedApplication:', unifiedApp);
+    
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
-      data: { application, tableType: this.tableType }
+      data: { unifiedApp: unifiedApp, tableType: this.tableType }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
+        console.log('🔄 Reloading page after dialog close');
         location.reload();
       }
     });
   }
   
   viewMovement(application: any): void {
+    console.log('📊 Movement clicked for application:', application);
+    
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',        
       maxWidth: '100%',

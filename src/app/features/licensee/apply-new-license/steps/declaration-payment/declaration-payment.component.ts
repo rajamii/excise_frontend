@@ -50,7 +50,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     this.photoSub?.unsubscribe();
   }
 
-  // Field labels for display
   readonly licenseApplicationLabels: Record<string, string> = {
     licensetype: 'License Type',
     license_type: 'License Type',
@@ -327,74 +326,105 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * ✅ CRITICAL FIX: Match validation field names with what's actually saved in sessionStorage
+   * ✅ FIXED: Validation now checks ACTUAL field names saved in sessionStorage
    */
   private validateRequiredData(): { valid: boolean; missingFields: string[] } {
     const missingFields: string[] = [];
 
     console.group('🔍 VALIDATING REQUIRED DATA');
 
-    // Check license type
+    // ✅ 1. Check license type (saved as both licenseType AND license_type)
     const selectData = this.getParsedSession('selectLicenseData');
     console.log('📋 Select License Data:', selectData);
     if (!selectData?.licenseType && !selectData?.license_type) {
       console.error('❌ Missing: License Type');
       missingFields.push('License Type');
+    } else {
+      console.log('✅ License Type OK');
     }
 
-    // Check key info
+    // ✅ 2. Check key info (saved with snake_case backend names)
     const keyData = this.getParsedSession('keyInfoData');
     console.log('📋 Key Info Data:', keyData);
+    
     if (!keyData?.license_category) {
       console.error('❌ Missing: License Category');
       missingFields.push('License Category');
+    } else {
+      console.log('✅ License Category OK:', keyData.license_category);
     }
+    
     if (!keyData?.license_sub_category) {
       console.error('❌ Missing: License Sub Category');
       missingFields.push('License Sub Category');
+    } else {
+      console.log('✅ License Sub Category OK:', keyData.license_sub_category);
     }
+    
     if (!keyData?.establishment_name) {
       console.error('❌ Missing: Establishment Name');
       missingFields.push('Establishment Name');
+    } else {
+      console.log('✅ Establishment Name OK');
     }
+    
     if (!keyData?.site_type) {
       console.error('❌ Missing: Site Type');
       missingFields.push('Site Type');
+    } else {
+      console.log('✅ Site Type OK');
     }
 
-    // Check applicant details
+    // ✅ 3. Check applicant details (saved with snake_case backend names)
     const applicantData = this.getParsedSession('applicantDetailsData');
     console.log('📋 Applicant Data:', applicantData);
+    
     if (!applicantData?.applicant_name) {
       console.error('❌ Missing: Applicant Name');
       missingFields.push('Applicant Name');
+    } else {
+      console.log('✅ Applicant Name OK');
     }
+    
     if (!applicantData?.father_husband_name) {
       console.error('❌ Missing: Father/Husband Name');
       missingFields.push('Father/Husband Name');
+    } else {
+      console.log('✅ Father/Husband Name OK');
     }
+    
     if (!applicantData?.dob) {
       console.error('❌ Missing: Date of Birth');
       missingFields.push('Date of Birth');
+    } else {
+      console.log('✅ DOB OK');
     }
+    
     if (!applicantData?.gender) {
       console.error('❌ Missing: Gender');
       missingFields.push('Gender');
+    } else {
+      console.log('✅ Gender OK');
     }
+    
     if (!applicantData?.email) {
       console.error('❌ Missing: Email');
       missingFields.push('Email');
+    } else {
+      console.log('✅ Email OK');
     }
+    
     if (!applicantData?.mobile_number) {
       console.error('❌ Missing: Mobile Number');
       missingFields.push('Mobile Number');
+    } else {
+      console.log('✅ Mobile Number OK');
     }
 
-    // ✅ CRITICAL FIX: Check exact field names saved in sessionStorage
+    // ✅ 4. Check site details (saved with snake_case backend names)
     const siteData = this.getParsedSession('siteDetailsData');
     console.log('📋 Site Details Data:', siteData);
     
-    // District - saved as 'district'
     if (!siteData?.district) {
       console.error('❌ Missing: Site District');
       missingFields.push('Site District');
@@ -402,7 +432,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ Site District OK:', siteData.district);
     }
     
-    // Subdivision - saved as 'subdivision'
     if (!siteData?.subdivision) {
       console.error('❌ Missing: Site Subdivision');
       missingFields.push('Site Subdivision');
@@ -410,7 +439,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ Site Subdivision OK:', siteData.subdivision);
     }
     
-    // Police Station - saved as 'police_station'
     if (!siteData?.police_station) {
       console.error('❌ Missing: Police Station');
       missingFields.push('Police Station');
@@ -418,7 +446,6 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
       console.log('✅ Police Station OK:', siteData.police_station);
     }
     
-    // Road - saved as 'road'
     if (!siteData?.road) {
       console.error('❌ Missing: Road Name');
       missingFields.push('Road Name');
@@ -429,43 +456,60 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     if (!siteData?.location_category) {
       console.error('❌ Missing: Location Category');
       missingFields.push('Location Category');
+    } else {
+      console.log('✅ Location Category OK');
     }
+    
     if (!siteData?.location_name) {
       console.error('❌ Missing: Location Name');
       missingFields.push('Location Name');
+    } else {
+      console.log('✅ Location Name OK');
     }
+    
     if (!siteData?.ward_name) {
       console.error('❌ Missing: Ward Name');
       missingFields.push('Ward Name');
+    } else {
+      console.log('✅ Ward Name OK');
     }
     
-    // Business Address - saved as 'address'
     if (!siteData?.address) {
       console.error('❌ Missing: Business Address');
       missingFields.push('Business Address');
+    } else {
+      console.log('✅ Business Address OK');
     }
     
     if (!siteData?.pin_code) {
       console.error('❌ Missing: PIN Code');
       missingFields.push('PIN Code');
+    } else {
+      console.log('✅ PIN Code OK');
     }
     
     if (!siteData?.construction_type) {
       console.error('❌ Missing: Construction Type');
       missingFields.push('Construction Type');
+    } else {
+      console.log('✅ Construction Type OK');
     }
     
     if (!siteData?.site_owned) {
       console.error('❌ Missing: Site Ownership');
       missingFields.push('Site Ownership');
+    } else {
+      console.log('✅ Site Ownership OK');
     }
     
     if (!siteData?.trade_license_covered) {
       console.error('❌ Missing: Trade License Covered');
       missingFields.push('Trade License Covered');
+    } else {
+      console.log('✅ Trade License Covered OK');
     }
 
-    // Check documents
+    // ✅ 5. Check documents
     const passPhoto = this.licenseAppService.getPassPhoto();
     if (!passPhoto) {
       console.error('❌ Missing: Passport Photo');
@@ -480,14 +524,22 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
     if (!docs.get('pan_card')) {
       console.error('❌ Missing: PAN Card');
       missingFields.push('PAN Card');
+    } else {
+      console.log('✅ PAN Card OK');
     }
+    
     if (!docs.get('sikkim_certificate')) {
       console.error('❌ Missing: Sikkim Certificate');
       missingFields.push('Sikkim Certificate');
+    } else {
+      console.log('✅ Sikkim Certificate OK');
     }
+    
     if (!docs.get('dob_proof')) {
       console.error('❌ Missing: Date of Birth Proof');
       missingFields.push('Date of Birth Proof');
+    } else {
+      console.log('✅ DOB Proof OK');
     }
 
     console.log('🔍 Validation Result:', { valid: missingFields.length === 0, missingFields });

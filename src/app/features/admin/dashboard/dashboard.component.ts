@@ -331,14 +331,22 @@ export class DashboardComponent extends BaseComponent {
       next: (result) => {
         console.log('✅ Dashboard data loaded:', result);
         
-        this.dashboardCounts = {
-          applied: result.counts.applied || 0,
-          pending: result.counts.pending || 0,
-          approved: result.counts.approved || 0,
-          rejected: result.counts.rejected || 0
+        // ✅ FIX: Derive counts from actual applications instead of trusting counts endpoint
+        // The counts endpoint may not be filtering correctly, but the applications endpoint is reliable
+        const actualCounts = {
+          applied: (result.applications.applied || []).length,
+          pending: (result.applications.pending || []).length,
+          approved: (result.applications.approved || []).length,
+          rejected: (result.applications.rejected || []).length
         };
         
-        console.log('📊 Dashboard counts:', this.dashboardCounts);
+        console.log('📊 Raw counts from backend counts endpoint:', result.counts);
+        console.log('📊 Actual counts derived from applications:', actualCounts);
+        
+        // Use the derived counts instead of the counts endpoint
+        this.dashboardCounts = actualCounts;
+        
+        console.log('📊 Dashboard counts after assignment:', this.dashboardCounts);
         this.updateDataSources(result.applications);
         this.updateChartData();
         console.log('✅ Dashboard updated successfully');
@@ -436,26 +444,34 @@ export class DashboardComponent extends BaseComponent {
   }
 
   private filterCountsByUserRole(counts: any): DashboardCount {
+    console.log('🔍 filterCountsByUserRole - Input counts:', counts);
+    console.log('🔍 Current user roles:', this.getUserRoles());
+    
+    // ✅ For licensees, hide pending count (they can't see pending applications)
     if (this.accountService.hasAnyRole(['licensee'])) {
-      return {
+      const filtered = {
         applied: counts.applied || 0,
         pending: 0,
         approved: counts.approved || 0,
         rejected: counts.rejected || 0
       };
+      console.log('🔍 Filtered counts for licensee:', filtered);
+      return filtered;
     }
     
-    return {
+    // ✅ For all other roles (level officers, site_admin), show all counts as-is
+    // The backend already filters these correctly based on user permissions
+    const passthrough = {
       applied: counts.applied || 0,
       pending: counts.pending || 0,
       approved: counts.approved || 0,
       rejected: counts.rejected || 0
     };
+    console.log('🔍 Passthrough counts for level officer:', passthrough);
+    return passthrough;
   }
 
-  // ============================================================
-  // ✅ FIXED: Enhanced Application Filtering with Detailed Debugging
-  // ============================================================
+  // ✅ COMPLETELY FIXED: Application Filtering with Universal Logic
   private filterApplicationsByUserRole(applications: any): any {
     const userRoles = this.getUserRoles();
     console.log('👤 Filtering applications for roles:', userRoles);
@@ -465,21 +481,20 @@ export class DashboardComponent extends BaseComponent {
       return applications;
     }
     
+    // ✅ If licensee, show only their own applications
     if (userRoles.includes('licensee')) {
       return applications;
     }
     
-    if (userRoles.includes('site_admin')) {
-      console.log('🔓 Site admin detected - showing all applications');
+    // ✅ If site_admin, show everything
+    if (userRoles.includes('site_admin') || userRoles.includes('single_window')) {
+      console.log('🔓 Site admin/single window detected - showing all applications');
       return applications;
     }
     
-    const filtered: any = {
-      applied: [],
-      pending: [],
-      approved: [],
-      rejected: []
-    };
+    // ✅ For level officers, trust the backend filtering
+    // The backend already knows which applications should be pending/approved/rejected for each user
+    // We only need to do additional filtering if there's a specific business requirement
     
     const getUserStageName = (roles: string[]): string | null => {
       for (const role of roles) {
@@ -495,94 +510,156 @@ export class DashboardComponent extends BaseComponent {
     
     if (!userStage) {
       console.warn('⚠️ Could not determine user stage from roles:', userRoles);
-      return filtered;
+      // Return all if we can't determine the stage
+      return applications;
     }
     
-    // ✅ PENDING - Applications at officer's current level
-    if (Array.isArray(applications.pending)) {
-      console.log('📋 Total pending before filter:', applications.pending.length);
-      console.log('🎯 Filtering for user stage:', userStage);
-      
-      const userStageId = this.getStageIdFromStageName(userStage);
-      console.log('🆔 User stage ID:', userStageId);
-      
-      filtered.pending = applications.pending.filter((app: any) => {
-        const appId = app.application_id || app.applicationId;
-        console.log('🔍 Examining app:', appId);
-        
-        const currentStageRaw = app.current_stage ?? app.currentStage;
-        const currentStageNameRaw = app.current_stage_name ?? app.currentStageName;
-        
-        console.log('  - currentStage (raw):', currentStageRaw, 'type:', typeof currentStageRaw);
-        console.log('  - currentStageName (raw):', currentStageNameRaw);
-        
-        let matchesById = false;
-        if (typeof currentStageRaw === 'number' && userStageId !== null) {
-          matchesById = currentStageRaw === userStageId;
-          console.log(`  - Stage ID match: ${currentStageRaw} === ${userStageId}? ${matchesById}`);
-        }
-        
-        const currentStageName = this.safeToLowerCase(currentStageNameRaw);
-        const currentStageStr = this.safeToLowerCase(currentStageRaw);
-        
-        const matchesByName = currentStageName === userStage || 
-                             currentStageName.includes(userStage) ||
-                             currentStageStr === userStage ||
-                             currentStageStr.includes(userStage);
-        
-        console.log(`  - Stage name match: ${matchesByName}`);
-        
-        const matches = matchesById || matchesByName;
-        
-        if (matches) {
-          console.log(`✅ MATCHED pending app: ${appId}`);
-        } else {
-          console.log(`❌ NOT matched: ${appId}`);
-        }
-        
-        return matches;
-      });
-      
-      console.log(`✅ Filtered ${filtered.pending.length} pending applications for ${userStage}`);
-    }
+    const filtered: any = {
+      applied: applications.applied || [],
+      pending: applications.pending || [],
+      approved: [],
+      rejected: []
+    };
     
-    // ✅ APPROVED: Applications officer personally approved
+    console.log('📋 Backend provided applications:', {
+      applied: filtered.applied.length,
+      pending: filtered.pending.length,
+      approved: (applications.approved || []).length,
+      rejected: (applications.rejected || []).length
+    });
+    
+    // ✅ APPROVED: Filter to show only applications this user's role approved
     if (Array.isArray(applications.approved)) {
-      console.log('📋 Total approved before filter:', applications.approved.length);
+      console.log('📋 Filtering approved applications...');
       
       filtered.approved = applications.approved.filter((app: any) => {
         const appId = app.application_id || app.applicationId;
-        const wasApproved = this.wasApprovedByCurrentUserRole(app, userRoles, userStage);
+        const wasApprovedByUser = this.didUserApproveOrReject(app, userRoles, 'approve');
         
-        if (wasApproved) {
+        if (wasApprovedByUser) {
           console.log(`✅ User approved app: ${appId}`);
         }
         
-        return wasApproved;
+        return wasApprovedByUser;
       });
       
       console.log(`✅ Filtered ${filtered.approved.length} approved applications for ${userStage}`);
     }
     
-    // ✅ REJECTED: Applications officer personally rejected
+    // ✅ REJECTED: Filter to show only applications this user's role rejected
     if (Array.isArray(applications.rejected)) {
-      console.log('📋 Total rejected before filter:', applications.rejected.length);
+      console.log('📋 Filtering rejected applications...');
       
       filtered.rejected = applications.rejected.filter((app: any) => {
         const appId = app.application_id || app.applicationId;
-        const wasRejected = this.wasRejectedByCurrentUserRole(app, userRoles, userStage);
+        const wasRejectedByUser = this.didUserApproveOrReject(app, userRoles, 'reject');
         
-        if (wasRejected) {
+        if (wasRejectedByUser) {
           console.log(`✅ User rejected app: ${appId}`);
         }
         
-        return wasRejected;
+        return wasRejectedByUser;
       });
       
       console.log(`✅ Filtered ${filtered.rejected.length} rejected applications for ${userStage}`);
     }
     
     return filtered;
+  }
+
+  // ✅ NEW UNIVERSAL METHOD: Check if user approved or rejected an application
+  private didUserApproveOrReject(app: any, userRoles: string[], action: 'approve' | 'reject'): boolean {
+    const transactions = app.transactions || [];
+    
+    if (transactions.length === 0) {
+      return false;
+    }
+    
+    // Look for any transaction where the user's role performed the specified action
+    return transactions.some((txn: any) => {
+      // Extract role from all possible nested structures
+      const performedByRole = this.extractRoleFromTransaction(txn);
+      
+      if (!performedByRole) {
+        return false;
+      }
+      
+      // Check if this transaction was performed by any of the user's roles
+      const isUserRole = userRoles.some(role => 
+        role.toLowerCase() === performedByRole.toLowerCase()
+      );
+      
+      if (!isUserRole) {
+        return false;
+      }
+      
+      // Check the action type based on remarks and context
+      const remarks = this.safeToLowerCase(txn.remarks || '');
+      const context = txn.context || {};
+      const contextAction = this.safeToLowerCase(context.action || '');
+      
+      if (action === 'approve') {
+        // ✅ Approval indicators
+        const isApproval = 
+          contextAction === 'approve' ||
+          contextAction.includes('approv') ||
+          remarks.includes('approv') ||
+          remarks.includes('forward') ||
+          remarks.includes('advanced') ||
+          (!remarks.includes('reject') && !remarks.includes('objection'));
+        
+        console.log(`🔍 Checking approval for role ${performedByRole}:`, {
+          isUserRole,
+          isApproval,
+          remarks,
+          contextAction
+        });
+        
+        return isApproval;
+      } else {
+        // ✅ Rejection indicators
+        const isRejection = 
+          contextAction === 'reject' ||
+          contextAction.includes('reject') ||
+          remarks.includes('reject');
+        
+        console.log(`🔍 Checking rejection for role ${performedByRole}:`, {
+          isUserRole,
+          isRejection,
+          remarks,
+          contextAction
+        });
+        
+        return isRejection;
+      }
+    });
+  }
+
+  // ✅ NEW HELPER: Extract role from transaction (handles all structures)
+  private extractRoleFromTransaction(txn: any): string {
+    // Try all possible nested structures
+    const possiblePaths = [
+      txn.performedBy?.role?.name,
+      txn.performedBy?.roleName,
+      txn.performedBy?.role_name,
+      txn.performed_by?.role?.name,
+      txn.performed_by?.roleName,
+      txn.performed_by?.role_name,
+      txn.forwardedBy?.role?.name,
+      txn.forwardedBy?.roleName,
+      txn.forwardedBy?.role_name,
+      txn.forwarded_by?.role?.name,
+      txn.forwarded_by?.roleName,
+      txn.forwarded_by?.role_name,
+    ];
+    
+    for (const path of possiblePaths) {
+      if (path && typeof path === 'string') {
+        return path;
+      }
+    }
+    
+    return '';
   }
 
   // ✅ Enhanced: Safe string conversion helper
@@ -598,9 +675,10 @@ export class DashboardComponent extends BaseComponent {
     return String(value).toLowerCase();
   }
 
-  // ✅ Map stage name to stage ID
+  // ✅ Enhanced: Map stage name to stage ID (supports all application types)
   private getStageIdFromStageName(stageName: string): number | null {
-    const stageMapping: Record<string, number> = {
+    // License Application stages (IDs 1-13)
+    const licenseStageMapping: Record<string, number> = {
       'applicant_applied': 1,
       'level_1': 2,
       'level_2': 3,
@@ -616,12 +694,35 @@ export class DashboardComponent extends BaseComponent {
       'level_5_objection': 13,
     };
     
-    return stageMapping[stageName.toLowerCase()] ?? null;
+    // Salesman/Barman Application stages (IDs 14-26)
+    const salesmanBarmanStageMapping: Record<string, number> = {
+      'applicant_applied': 14,
+      'level_1': 15,
+      'level_2': 16,
+      'level_3': 17,
+      'level_4': 18,
+      'level_5': 19,
+      'approved': 20,
+      'rejected': 21,
+      'level_1_objection': 22,
+      'level_2_objection': 23,
+      'level_3_objection': 24,
+      'level_4_objection': 25,
+      'level_5_objection': 26,
+    };
+    
+    // Determine which mapping to use based on current application type
+    const mapping = this.selectedApplicationType === 'salesman_barman' 
+      ? salesmanBarmanStageMapping 
+      : licenseStageMapping;
+    
+    return mapping[stageName.toLowerCase()] ?? null;
   }
 
-  // ✅ NEW: Map stage ID to stage name (reverse mapping)
-  private getStageNameFromId(stageId: number): string {
-    const stageMapping: Record<number, string> = {
+  // ✅ NEW: Reverse lookup - Map stage ID to stage name
+  private getStageNameFromId(stageId: number): string | null {
+    // License Application stages (IDs 1-13)
+    const licenseIdToStageMapping: Record<number, string> = {
       1: 'applicant_applied',
       2: 'level_1',
       3: 'level_2',
@@ -637,98 +738,27 @@ export class DashboardComponent extends BaseComponent {
       13: 'level_5_objection',
     };
     
-    return stageMapping[stageId] ?? '';
-  }
-
-  // ✅ FIXED: Check if application was approved by current user's role
-  private wasApprovedByCurrentUserRole(app: any, userRoles: string[], userStage: string): boolean {
-    const transactions = app.transactions || [];
+    // Salesman/Barman Application stages (IDs 14-26)
+    const salesmanBarmanIdToStageMapping: Record<number, string> = {
+      14: 'applicant_applied',
+      15: 'level_1',
+      16: 'level_2',
+      17: 'level_3',
+      18: 'level_4',
+      19: 'level_5',
+      20: 'approved',
+      21: 'rejected',
+      22: 'level_1_objection',
+      23: 'level_2_objection',
+      24: 'level_3_objection',
+      25: 'level_4_objection',
+      26: 'level_5_objection',
+    };
     
-    if (transactions.length === 0) {
-      return false;
-    }
-    
-    // Check if ANY transaction shows this user's role approved it
-    return transactions.some((txn: any) => {
-      // ✅ FIXED: Extract role name from nested structure
-      const performedByRole = txn.performedBy?.role?.name ||
-                             txn.performedBy?.roleName || 
-                             txn.performedBy?.role_name ||
-                             txn.performed_by?.role?.name ||
-                             txn.performed_by?.roleName ||
-                             txn.performed_by?.role_name ||
-                             txn.forwardedBy?.role?.name ||
-                             txn.forwardedBy?.roleName ||
-                             txn.forwardedBy?.role_name ||
-                             '';
-      
-      const remarks = this.safeToLowerCase(txn.remarks);
-      
-      // Check if this transaction was performed by the user's role
-      const isUserRole = userRoles.includes(performedByRole);
-      
-      // Check if this was an approval action
-      const isApproval = !remarks.includes('reject') && 
-                        !remarks.includes('objection') &&
-                        (remarks.includes('approv') || 
-                         remarks.includes('forward') ||
-                         remarks.includes('advanced'));
-      
-      // ✅ KEY INSIGHT: If the performedBy role matches the user's role,
-      // and it's an approval, then the user approved it at their level
-      // We don't need to check the stage because the role already tells us who did it
-      
-      console.log(`📋 Checking transaction:`, {
-        performedByRole,
-        isUserRole,
-        isApproval,
-        remarks,
-        userRoles,
-        userStage
-      });
-      
-      // ✅ SIMPLIFIED: Just check if user's role performed an approval
-      return isUserRole && isApproval;
-    });
-  }
-
-  // ✅ FIXED: Check if application was rejected by current user's role
-  private wasRejectedByCurrentUserRole(app: any, userRoles: string[], userStage: string): boolean {
-    const transactions = app.transactions || [];
-    
-    if (transactions.length === 0) {
-      return false;
-    }
-    
-    return transactions.some((txn: any) => {
-      // ✅ FIXED: Extract role name from nested structure
-      const performedByRole = txn.performedBy?.role?.name ||
-                             txn.performedBy?.roleName || 
-                             txn.performedBy?.role_name ||
-                             txn.performed_by?.role?.name ||
-                             txn.performed_by?.roleName ||
-                             txn.performed_by?.role_name ||
-                             txn.forwardedBy?.role?.name ||
-                             txn.forwardedBy?.roleName ||
-                             txn.forwardedBy?.role_name ||
-                             '';
-      
-      const remarks = this.safeToLowerCase(txn.remarks);
-      
-      const isUserRole = userRoles.includes(performedByRole);
-      
-      const isRejection = remarks.includes('reject');
-      
-      console.log(`📋 Checking rejection transaction:`, {
-        performedByRole,
-        isUserRole,
-        isRejection,
-        remarks
-      });
-      
-      // ✅ SIMPLIFIED: Just check if user's role performed a rejection
-      return isUserRole && isRejection;
-    });
+    // Try both mappings since we may not always know the application type
+    return salesmanBarmanIdToStageMapping[stageId] ?? 
+           licenseIdToStageMapping[stageId] ?? 
+           null;
   }
 
   private userRoles: string[] = [];
