@@ -1,13 +1,10 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
 import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
 import { OicdailyhologramregisterComponent } from '../registers/oicdailyhologramregister/oicdailyhologramregister.component';
-import { HologramDataService } from '../services/hologram-data.service';
-import { SupplyChainService } from '../services/supplychain.service';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -16,9 +13,14 @@ interface TransitPermitRecord {
   paymentStatus: string;
   amount: string;
   status: string;
-  allowedActions?: string[];
   applicationDetails?: any;
-  ids?: number[]; // To store all IDs for bulk actions
+}
+
+interface FilterOptions {
+  referenceNumber: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
 }
 
 interface OfficerInfo {
@@ -61,38 +63,18 @@ interface BrandRow {
   changes?: Partial<Record<keyof BrandRow, boolean>>;
 }
 
-// Hologram Procurement Interface for OIC
-interface OICHologramProcurement {
-  id: number;
-  refNo: string;
-  date: string;
-  localQty: number;
-  exportQty: number;
-  defenceQty: number;
-  status: string; // Backend Stage Name
-  paymentStatus: string;
-  allowedActions: string[];
-}
-
-interface FilterOptions {
-  referenceNumber: string;
-  status: string;
-  dateFrom: string;
-  dateTo: string;
-}
-
-
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
   imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent, OicdailyhologramregisterComponent],
   templateUrl: './officer-in-charge.component.html',
-  styleUrls: ['./officer-in-charge.component.scss']
+  styleUrl: './officer-in-charge.component.scss'
 })
 export class OfficerInChargeComponent implements OnInit {
   Math = Math;
   activeTab = 'applications';
   activeBrand: 'SDL' | 'JAGATJIT' = 'SDL';
+  showHologramRequests = false;
 
   // Current officer information - in real app, this would come from authentication
   currentOfficer: OfficerInfo = {
@@ -227,7 +209,88 @@ export class OfficerInChargeComponent implements OnInit {
   private originalBrandById: Record<string, BrandRow> = {};
 
   // Sample data for development - only applications for current officer's distillery
-  allData: TransitPermitRecord[] = [];
+  allData: TransitPermitRecord[] = [
+    {
+      referenceNo: 'TP001/2024',
+      submissionDate: '2024-01-15',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '15000.00',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      referenceNo: 'TP002/2024',
+      submissionDate: '2024-01-14',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '12000.00',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      referenceNo: 'TP003/2024',
+      submissionDate: '2024-01-13',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '18000.00',
+      status: 'APPROVED'
+    },
+    {
+      referenceNo: 'TP004/2024',
+      submissionDate: '2024-01-12',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '9500.00',
+      status: 'TERMINATED'
+    },
+    {
+      referenceNo: 'TP005/2024',
+      submissionDate: '2024-01-11',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '22000.00',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      referenceNo: 'TP006/2024',
+      submissionDate: '2024-01-10',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '13500.00',
+      status: 'APPROVED'
+    },
+    {
+      referenceNo: 'TP007/2024',
+      submissionDate: '2024-01-09',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '16800.00',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      referenceNo: 'TP008/2024',
+      submissionDate: '2024-01-08',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '14200.00',
+      status: 'TERMINATED'
+    },
+    {
+      referenceNo: 'TP009/2024',
+      submissionDate: '2024-01-07',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '19800.00',
+      status: 'PENDING_APPROVAL'
+    },
+    {
+      referenceNo: 'TP010/2024',
+      submissionDate: '2024-01-06',
+      distilleryName: 'Sikkim Distilleries Ltd',
+      paymentStatus: 'PAID',
+      amount: '11200.00',
+      status: 'APPROVED'
+    }
+  ];
 
   filteredData: TransitPermitRecord[] = [];
   paginatedData: TransitPermitRecord[] = [];
@@ -249,142 +312,12 @@ export class OfficerInChargeComponent implements OnInit {
   approvalComments = '';
   terminationReason = '';
 
-  // Hologram data
-  hologramProcurements: OICHologramProcurement[] = [];
-  private hologramService = inject(HologramDataService);
-  private supplyChainService = inject(SupplyChainService);
+  // Hologram data - removed, will be added later
 
   ngOnInit() {
-    this.loadTransitPermitApplications();
+    this.filteredData = [...this.allData];
+    this.updatePagination();
     this.applyBrandFilters();
-    this.loadHologramProcurements();
-  }
-
-  loadTransitPermitApplications() {
-    this.supplyChainService.getTransitPermits().subscribe({
-      next: (data) => {
-        console.log('Transit Permit Data from backend:', data); // Debug log
-
-        // Group by bill_no/billNo (similar to licensee transit component)
-        const grouped = new Map<string, any>();
-
-        data.forEach((item: any) => {
-          // Support both snake_case and camelCase
-          const billNo = item.bill_no || item.billNo;
-          const date = item.date || 'N/A';
-          const manufacturingUnit = item.manufacturing_unit_name || item.manufacturingUnitName ||
-            item.sole_distributor_name || item.soleDistributorName || 'Unknown Distillery';
-          const status = item.status || '';
-          const totalAmount = parseFloat(item.total_amount || item.totalAmount || '0');
-          // Get allowed actions from backend (workflow-based)
-          const allowedActions = item.allowed_actions || item.allowedActions || [];
-
-          if (billNo && !grouped.has(billNo)) {
-            grouped.set(billNo, {
-              id: item.id,
-              ids: [item.id], // Initialize with first ID
-              referenceNo: billNo,
-              submissionDate: date,
-              distilleryName: manufacturingUnit,
-              paymentStatus: this.derivePaymentStatus(status),
-              amount: totalAmount,
-              status: this.deriveDisplayStatus(status),
-              allowedActions: allowedActions,
-              applicationDetails: item
-            });
-          } else if (billNo) {
-            // Accumulate amount for existing bill
-            const existing = grouped.get(billNo);
-            existing.amount += totalAmount;
-            existing.ids.push(item.id); // Add subsequent IDs
-          }
-        });
-
-        // Convert to array and format amounts
-        this.allData = Array.from(grouped.values()).map(item => ({
-          ...item,
-          amount: item.amount.toFixed(2)
-        }));
-
-        this.filteredData = [...this.allData];
-        this.updatePagination();
-      },
-      error: (err) => {
-        console.error('Error fetching transit permits:', err);
-      }
-    });
-  }
-
-  derivePaymentStatus(backendStatus: string): string {
-    if (!backendStatus) return 'UNKNOWN';
-    const statusLower = backendStatus.toLowerCase();
-
-    if (statusLower.includes('ready for payment')) return 'PENDING';
-    if (statusLower.includes('paymentsuccessful') || statusLower.includes('approved')) return 'PAID';
-    if (statusLower.includes('cancelled') || statusLower.includes('terminated') || statusLower.includes('refund')) return 'REFUNDED';
-    return 'UNKNOWN';
-  }
-
-  deriveDisplayStatus(backendStatus: string): string {
-    // Return the actual backend status for display (like requisition/licensee components)
-    return backendStatus || 'Pending';
-  }
-  loadHologramProcurements() {
-    this.hologramService.getProcurements().subscribe({
-      next: (data) => {
-        // Backend filters for OIC role (e.g., 'Payment Completed')
-        // We map it to our interface
-        this.hologramProcurements = data.map((p: any) => ({
-          id: p.id,
-          refNo: p.refNo,
-          date: p.date,
-          localQty: p.localQty,
-          exportQty: p.exportQty,
-          defenceQty: p.defenceQty,
-          status: p.current_stage_name || p.status, // Use stage name if available
-          paymentStatus: p.paymentStatus,
-          allowedActions: p.allowed_actions || []
-        }));
-      },
-      error: (err) => {
-        console.error('Error loading hologram procurements:', err);
-      }
-    });
-  }
-
-  assignCartons(procurement: OICHologramProcurement) {
-    if (!confirm(`Assign cartons for ${procurement.refNo}?`)) return;
-
-    // In a real scenario, this would open a modal to enter start/end serials and cartoon numbers.
-    // For now, we simulate the action 'assign_cartons' or similar.
-    // Based on backend, we need to check the exact action name.
-    // Usually 'assign' or 'complete' if it's the final step.
-
-    // We'll use 'complete' as a placeholder or 'assign_cartons' if defined.
-    // If we look at OIC role in procurement, they usually "Assign Cartons" and likely "Complete" the process.
-
-    const action = 'assign_cartons'; // Placeholder action name
-
-    this.hologramService.performAction('procurement', procurement.id, action, 'Cartons Assigned by OIC').subscribe({
-      next: () => {
-        alert('Cartons assigned successfully.');
-        this.loadHologramProcurements();
-      },
-      error: (err) => {
-        console.error('Error assigning cartons:', err);
-        // Fallback if action name is wrong (e.g. maybe it's just 'verify' or 'approve')
-        // alert('Failed to assign cartons. Please check backend configuration.');
-
-        // Try 'approve' as fallback
-        this.hologramService.performAction('procurement', procurement.id, 'approve', 'Cartons Assigned (Approve fallback)').subscribe({
-          next: () => {
-            alert('Cartons assigned (via approve action).');
-            this.loadHologramProcurements();
-          },
-          error: (e) => alert('Failed to assign cartons.')
-        });
-      }
-    });
   }
 
   getCurrentDateTime(): string {
@@ -393,6 +326,18 @@ export class OfficerInChargeComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+    // Reset hologram requests view when switching tabs
+    if (tab !== 'hologram-register') {
+      this.showHologramRequests = false;
+    }
+  }
+
+  openHologramRequests() {
+    this.showHologramRequests = true;
+  }
+
+  closeHologramRequests() {
+    this.showHologramRequests = false;
   }
 
   // Brands helpers
@@ -628,35 +573,21 @@ export class OfficerInChargeComponent implements OnInit {
   }
 
   getStatusClass(status: string): string {
-    if (!status) return 'bg-secondary';
-    const statusLower = status.toLowerCase();
-
-    // Ready for Payment
-    if (statusLower.includes('ready for payment')) return 'bg-info text-dark';
-    // Forwarded to OIC (waiting for approval)
-    if (statusLower.includes('forwardedtoofficer') || statusLower.includes('paymentsuccessful')) return 'bg-warning text-dark';
-    // Approved
-    if (statusLower.includes('approved') && !statusLower.includes('cancelled')) return 'bg-success';
-    // Cancelled / Terminated / Refund
-    if (statusLower.includes('cancelled') || statusLower.includes('terminated') || statusLower.includes('refund')) return 'bg-danger';
-
-    return 'bg-secondary';
+    switch (status) {
+      case 'PENDING_APPROVAL': return 'bg-warning text-dark';
+      case 'APPROVED': return 'bg-success';
+      case 'TERMINATED': return 'bg-danger';
+      default: return 'bg-secondary';
+    }
   }
 
   getStatusIcon(status: string): string {
-    if (!status) return 'bi bi-question-circle';
-    const statusLower = status.toLowerCase();
-
-    // Ready for Payment
-    if (statusLower.includes('ready for payment')) return 'bi bi-wallet2';
-    // Forwarded to OIC
-    if (statusLower.includes('forwardedtoofficer') || statusLower.includes('paymentsuccessful')) return 'bi bi-clock';
-    // Approved
-    if (statusLower.includes('approved') && !statusLower.includes('cancelled')) return 'bi bi-check-circle';
-    // Cancelled / Terminated / Refund
-    if (statusLower.includes('cancelled') || statusLower.includes('terminated') || statusLower.includes('refund')) return 'bi bi-x-circle';
-
-    return 'bi bi-question-circle';
+    switch (status) {
+      case 'PENDING_APPROVAL': return 'bi bi-clock';
+      case 'APPROVED': return 'bi bi-check-circle';
+      case 'TERMINATED': return 'bi bi-x-circle';
+      default: return 'bi bi-question-circle';
+    }
   }
 
   getActivityClass(action: string): string {
@@ -706,76 +637,61 @@ export class OfficerInChargeComponent implements OnInit {
   }
 
   confirmApproval() {
-    if (this.selectedRecord && this.selectedRecord.ids && this.selectedRecord.ids.length > 0) {
-      // Call API for each ID
-      const observables = this.selectedRecord.ids.map(id =>
-        this.supplyChainService.performTransitPermitAction(id, 'APPROVE', 'officer')
-      );
+    if (this.selectedRecord) {
+      // Update the record status
+      const recordIndex = this.allData.findIndex(r => r.referenceNo === this.selectedRecord!.referenceNo);
+      if (recordIndex !== -1) {
+        this.allData[recordIndex].status = 'APPROVED';
+        this.applyFilters();
+      }
 
-      forkJoin(observables).subscribe({
-        next: () => {
-          // Add activity to register (optional, or rely on backend logs)
-          const newActivity: OfficerActivity = {
-            dateTime: new Date().toLocaleString(),
-            action: 'APPROVED',
-            referenceNo: this.selectedRecord!.referenceNo,
-            amount: this.selectedRecord!.amount,
-            status: 'APPROVED',
-            comments: this.approvalComments || 'Application approved'
-          };
-          this.officerActivities.unshift(newActivity);
+      // Add activity to register
+      const newActivity: OfficerActivity = {
+        dateTime: new Date().toLocaleString(),
+        action: 'APPROVED',
+        referenceNo: this.selectedRecord.referenceNo,
+        amount: this.selectedRecord.amount,
+        status: 'APPROVED',
+        comments: this.approvalComments || 'Application approved'
+      };
+      this.officerActivities.unshift(newActivity);
 
-          console.log('Application approved:', this.selectedRecord!.referenceNo);
-          alert(`Application ${this.selectedRecord!.referenceNo} has been approved!`);
+      console.log('Application approved:', this.selectedRecord.referenceNo);
+      console.log('Comments:', this.approvalComments);
+      alert(`Application ${this.selectedRecord.referenceNo} has been approved!`);
 
-          this.selectedRecord = null;
-          this.approvalComments = '';
-          // Reload data from backend to reflect changes
-          this.loadTransitPermitApplications();
-        },
-        error: (err) => {
-          console.error('Approval failed', err);
-          alert('Approval failed: ' + (err.message || 'Unknown error'));
-        }
-      });
-    } else {
-      alert('No record selected or missing IDs');
+      this.selectedRecord = null;
+      this.approvalComments = '';
     }
   }
 
   confirmTermination() {
-    if (this.selectedRecord && this.terminationReason.trim() && this.selectedRecord.ids && this.selectedRecord.ids.length > 0) {
+    if (this.selectedRecord && this.terminationReason.trim()) {
+      // Update the record status
+      const recordIndex = this.allData.findIndex(r => r.referenceNo === this.selectedRecord!.referenceNo);
+      if (recordIndex !== -1) {
+        this.allData[recordIndex].status = 'TERMINATED';
+        this.applyFilters();
+      }
 
-      const observables = this.selectedRecord.ids.map(id =>
-        this.supplyChainService.performTransitPermitAction(id, 'REJECT', 'officer')
-      );
+      // Add activity to register
+      const newActivity: OfficerActivity = {
+        dateTime: new Date().toLocaleString(),
+        action: 'TERMINATED',
+        referenceNo: this.selectedRecord.referenceNo,
+        amount: this.selectedRecord.amount,
+        status: 'TERMINATED',
+        comments: this.terminationReason
+      };
+      this.officerActivities.unshift(newActivity);
 
-      forkJoin(observables).subscribe({
-        next: () => {
-          // Add activity to register
-          const newActivity: OfficerActivity = {
-            dateTime: new Date().toLocaleString(),
-            action: 'TERMINATED',
-            referenceNo: this.selectedRecord!.referenceNo,
-            amount: this.selectedRecord!.amount,
-            status: 'TERMINATED',
-            comments: this.terminationReason
-          };
-          this.officerActivities.unshift(newActivity);
+      console.log('Application terminated:', this.selectedRecord.referenceNo);
+      console.log('Reason:', this.terminationReason);
+      console.log('Amount to be refunded:', this.selectedRecord.amount);
+      alert(`Application ${this.selectedRecord.referenceNo} has been terminated. Amount ₹${this.selectedRecord.amount} will be credited to distillery wallet.`);
 
-          console.log('Application terminated:', this.selectedRecord!.referenceNo);
-          alert(`Application ${this.selectedRecord!.referenceNo} has been terminated. Amount ₹${this.selectedRecord!.amount} will be credited to distillery wallet.`);
-
-          this.selectedRecord = null;
-          this.terminationReason = '';
-          // Reload data
-          this.loadTransitPermitApplications();
-        },
-        error: (err) => {
-          console.error('Termination failed', err);
-          alert('Termination failed: ' + (err.message || 'Unknown error'));
-        }
-      });
+      this.selectedRecord = null;
+      this.terminationReason = '';
     }
   }
 
