@@ -594,26 +594,72 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   loadHologramInventory(): void {
     console.log('=== LOADING HOLOGRAM INVENTORY FROM SINGLE SOURCE OF TRUTH (ROLLS DETAILS) ===');
 
-    forkJoin({
-      // Get the LIVE inventory status from the dedicated table
-      rolls: this.hologramService.getRollsDetails(),
-      // We still need requests just to double check pending allocations if needed, 
-      // but primarily we trust rolls for availability
-      requests: this.hologramService.getRequests()
-    }).subscribe({
-      next: ({ rolls, requests }) => {
-        console.log(`Fetched ${rolls.length} rolls details and ${requests.length} requests`);
+    this.hologramService.getRollsDetails().subscribe({
+      next: (rolls: any[]) => {
+        console.log(`Fetched ${rolls.length} rolls details`);
 
         const inventoryItems: HologramInventory[] = [];
 
-        // 1. Build Inventory DIRECTLY from HologramRollsDetails
-        // This table (hologram_rolls_details) is the single source of truth for availability
-        rolls.forEach((roll: any) => {
+        for (const roll of rolls) {
           // Basic validation
-          if (!roll.carton_number && !roll.cartonNumber) return;
+          if (!roll.carton_number && !roll.cartonNumber) continue;
 
           const uniqueId = roll.id || Math.random();
           const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
+          
+          // Use the available_range field from backend (already calculated)
+          let actualAvailableRanges: any[] = [];
+          
+          console.log(`🔥 CHECKING ROLL ${roll.carton_number}:`, {
+            available_range: roll.available_range,
+            from_serial: roll.from_serial,
+            to_serial: roll.to_serial,
+            available: availableQty
+          });
+          
+          if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
+            console.log(`📊 Using available_range from backend for ${roll.carton_number}: ${roll.available_range}`);
+            
+            // Parse the available_range string (e.g., "101-1000" or "101-500, 600-1000")
+            const rangeStrings = roll.available_range.split(',').map((s: string) => s.trim());
+            
+            for (const rangeStr of rangeStrings) {
+              if (rangeStr.includes('-')) {
+                const [from, to] = rangeStr.split('-');
+                const fromNum = parseInt(from);
+                const toNum = parseInt(to);
+                const count = toNum - fromNum + 1;
+                
+                console.log(`  🎯 Parsing range "${rangeStr}": from=${from}, to=${to}, count=${count}`);
+                
+                // Don't pad - use the numbers as-is from the backend
+                actualAvailableRanges.push({
+                  fromSerial: from,
+                  toSerial: to,
+                  count
+                });
+              }
+            }
+            
+            console.log(`✅ Parsed ${actualAvailableRanges.length} ranges from available_range field:`, actualAvailableRanges);
+          }
+          
+          // Fallback: if no ranges parsed and available > 0, use the roll's original range
+          if (actualAvailableRanges.length === 0 && availableQty > 0) {
+            console.warn(`⚠️ No available_range from backend for ${roll.carton_number || roll.cartonNumber}, using fallback`);
+            console.warn(`⚠️ FALLBACK DATA:`, {
+              from_serial: roll.from_serial,
+              to_serial: roll.to_serial,
+              fromSerial: roll.fromSerial,
+              toSerial: roll.toSerial
+            });
+            actualAvailableRanges = [{
+              fromSerial: roll.from_serial || roll.fromSerial || '',
+              toSerial: roll.to_serial || roll.toSerial || '',
+              count: availableQty
+            }];
+            console.warn(`⚠️ FALLBACK RANGE CREATED:`, actualAvailableRanges);
+          }
 
           const item: HologramInventory = {
             id: uniqueId,
@@ -622,27 +668,34 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             fromSerial: roll.from_serial || roll.fromSerial || '',
             toSerial: roll.to_serial || roll.toSerial || '',
             totalCount: roll.total_count || roll.totalCount || 0,
-            availableCount: availableQty, // TRUST THE DB
+            availableCount: availableQty,
             usedCount: roll.used || roll.usedCount || 0,
             damagedCount: roll.damaged || roll.damagedCount || 0,
             status: (roll.status || 'AVAILABLE').toUpperCase() as any,
-            receivedDate: roll.received_date || new Date().toISOString(),
-            actualAvailableRanges: [{
-              fromSerial: roll.from_serial || roll.fromSerial || '',
-              toSerial: roll.to_serial || roll.toSerial || '',
-              count: availableQty
-            }]
+            receivedDate: roll.received_date || roll.receivedDate || new Date().toISOString(),
+            actualAvailableRanges: actualAvailableRanges
           };
+          
+          console.log(`📦 Roll ${item.cartoonNumber}: receivedDate=${item.receivedDate}, available=${item.availableCount}, ranges=${actualAvailableRanges.length}`);
+          
           inventoryItems.push(item);
-        });
+        }
 
         console.log(`✅ Built ${inventoryItems.length} inventory items from DB`);
-
-        // 2. (Optional) Adjust for "Pending" allocations if your workflow requires it.
-        // If DB updates 'available' only on 'Confirm', then we might need to subtract 'Pending' requests locally.
-        // However, usually we only subtract PROCESSED usage. 
-        // For OIC, we want to see what is physically available to assign.
-        // So we strictly trust the DB 'available' column.
+        
+        // CRITICAL: Sort inventory by receivedDate for FIFO (oldest first)
+        inventoryItems.sort((a, b) => {
+          const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+          const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+          return dateA - dateB;
+        });
+        
+        console.log('📊 Inventory sorted by receivedDate (FIFO):', inventoryItems.map(i => ({
+          cartoonNumber: i.cartoonNumber,
+          receivedDate: i.receivedDate,
+          availableCount: i.availableCount,
+          availableRange: i.actualAvailableRanges
+        })));
 
         // Populate component state
         this.hologramInventory = inventoryItems;
@@ -653,6 +706,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
         // Update summaries
         this.updateInventorySummary();
+      },
+      error: (err) => {
+        console.error('❌ Error loading rolls:', err);
       }
     });
   }
@@ -666,30 +722,96 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       }).subscribe({
         next: ({ rolls, requests }) => {
           const inventoryItems: HologramInventory[] = [];
-          rolls.forEach((roll: any) => {
-            if (!roll.carton_number && !roll.cartonNumber) return;
+          
+          for (const roll of rolls) {
+            if (!roll.carton_number && !roll.cartonNumber) continue;
+            
             const uniqueId = roll.id || Math.random();
             const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
+            
+            // Use the available_range field from backend (already calculated)
+            let actualAvailableRanges: any[] = [];
+            
+            // Handle both snake_case and camelCase
+            const availableRange = roll.available_range || roll.availableRange;
+            const fromSerial = roll.from_serial || roll.fromSerial;
+            const toSerial = roll.to_serial || roll.toSerial;
+            const cartonNumber = roll.carton_number || roll.cartonNumber;
+            
+            console.log(`🔥 ASYNC CHECKING ROLL ${cartonNumber}:`, {
+              available_range: roll.available_range,
+              availableRange: roll.availableRange,
+              from_serial: roll.from_serial,
+              fromSerial: roll.fromSerial,
+              to_serial: roll.to_serial,
+              toSerial: roll.toSerial,
+              available: availableQty,
+              rawRoll: roll
+            });
+            
+            if (availableRange && availableRange !== 'None' && availableRange !== 'N/A') {
+              console.log(`📊 Using available_range from backend for ${cartonNumber}: ${availableRange}`);
+              
+              // Parse the available_range string (e.g., "101-1000" or "101-500, 600-1000")
+              const rangeStrings = availableRange.split(',').map((s: string) => s.trim());
+              
+              for (const rangeStr of rangeStrings) {
+                if (rangeStr.includes('-')) {
+                  const [from, to] = rangeStr.split('-');
+                  const fromNum = parseInt(from);
+                  const toNum = parseInt(to);
+                  const count = toNum - fromNum + 1;
+                  
+                  console.log(`  🎯 ASYNC Parsing range "${rangeStr}": from=${from}, to=${to}, count=${count}`);
+                  
+                  // Don't pad - use the numbers as-is from the backend
+                  actualAvailableRanges.push({
+                    fromSerial: from,
+                    toSerial: to,
+                    count
+                  });
+                }
+              }
+              
+              console.log(`✅ ASYNC Parsed ${actualAvailableRanges.length} ranges from available_range field:`, actualAvailableRanges);
+            }
+            
+            // Fallback: if no ranges parsed and available > 0, use the roll's original range
+            if (actualAvailableRanges.length === 0 && availableQty > 0) {
+              console.warn(`⚠️ No available_range from backend for ${cartonNumber}, using fallback`);
+              actualAvailableRanges = [{
+                fromSerial: fromSerial || '',
+                toSerial: toSerial || '',
+                count: availableQty
+              }];
+              console.warn(`⚠️ FALLBACK RANGE CREATED:`, actualAvailableRanges);
+            }
+            
             const item: HologramInventory = {
               id: uniqueId,
-              cartoonNumber: roll.carton_number || roll.cartonNumber,
+              cartoonNumber: cartonNumber,
               type: (roll.type || 'LOCAL').toUpperCase() as any,
-              fromSerial: roll.from_serial || roll.fromSerial || '',
-              toSerial: roll.to_serial || roll.toSerial || '',
+              fromSerial: fromSerial || '',
+              toSerial: toSerial || '',
               totalCount: roll.total_count || roll.totalCount || 0,
               availableCount: availableQty,
               usedCount: roll.used || roll.usedCount || 0,
               damagedCount: roll.damaged || roll.damagedCount || 0,
               status: (roll.status || 'AVAILABLE').toUpperCase() as any,
-              receivedDate: roll.received_date || new Date().toISOString(),
-              actualAvailableRanges: [{
-                fromSerial: roll.from_serial || roll.fromSerial || '',
-                toSerial: roll.to_serial || roll.toSerial || '',
-                count: availableQty
-              }]
+              receivedDate: roll.received_date || roll.receivedDate || new Date().toISOString(),
+              actualAvailableRanges: actualAvailableRanges
             };
+            
             inventoryItems.push(item);
+          }
+          
+          // CRITICAL: Sort inventory by receivedDate for FIFO (oldest first)
+          inventoryItems.sort((a, b) => {
+            const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+            const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+            return dateA - dateB;
           });
+          
           this.hologramInventory = inventoryItems;
           this.filteredInventory = [...this.hologramInventory];
           this.updateInventorySummary();
@@ -706,8 +828,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   updateInventorySummary(): void {
     // Simply refresh the filtered list, can be extended for filtering logic later
     this.filteredInventory = [...this.hologramInventory];
-    // Sort by received date default
-    this.filteredInventory.sort((a, b) => new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime());
+    // Sort by received date default (FIFO - oldest first)
+    this.filteredInventory.sort((a, b) => new Date(a.receivedDate || '1970-01-01').getTime() - new Date(b.receivedDate || '1970-01-01').getTime());
   }
 
 
@@ -896,15 +1018,28 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         status: item.status,
         statusMatch,
         availableCount: item.availableCount,
-        actualRange: item.actualAvailableRange ? `${item.actualAvailableRange.fromSerial}-${item.actualAvailableRange.toSerial}` : 'N/A',
+        actualAvailableRanges: item.actualAvailableRanges,
+        rangesCount: item.actualAvailableRanges?.length || 0,
         hasAvailable,
+        receivedDate: item.receivedDate,
         passes: typeMatch && statusMatch && hasAvailable
       });
 
       return typeMatch && statusMatch && hasAvailable;
     });
+    
+    // CRITICAL: Sort by receivedDate for FIFO (First In, First Out) - oldest first
+    availableInventory.sort((a, b) => {
+      const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+      const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+      return dateA - dateB; // Ascending order - oldest first
+    });
 
-    console.log('Available Inventory After Filter:', availableInventory);
+    console.log('Available Inventory After Filter (FIFO sorted):', availableInventory.map(i => ({
+      cartoonNumber: i.cartoonNumber,
+      receivedDate: i.receivedDate,
+      availableCount: i.availableCount
+    })));
 
     const totalAvailable = availableInventory.reduce((sum, item) => sum + item.availableCount, 0);
 
@@ -940,25 +1075,19 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       if (availableFromThisCartoon <= 0) continue; // Skip if no more available from this cartoon
 
       // Get all available ranges for this cartoon
-      const availableRanges = item.actualAvailableRanges || (item.actualAvailableRange ? [item.actualAvailableRange] : []);
+      const availableRanges = item.actualAvailableRanges || [];
+      
+      console.log(`📦 Processing ${item.cartoonNumber}:`, {
+        availableCount: item.availableCount,
+        rangesCount: availableRanges.length,
+        ranges: availableRanges,
+        fromSerial: item.fromSerial,
+        toSerial: item.toSerial
+      });
 
       if (availableRanges.length === 0) {
-        // Fallback: calculate from item data
-        const quantityFromThisCartoon = Math.min(remainingQuantity, availableFromThisCartoon);
-        const startSerial = this.getNextAvailableSerial(item, alreadyAllocated);
-        const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
-
-        allocations.push({
-          cartoonNumber: item.cartoonNumber,
-          fromSerial: startSerial,
-          toSerial: endSerial,
-          quantity: quantityFromThisCartoon,
-          remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromThisCartoon // What's left after this allocation
-        });
-
-        cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + quantityFromThisCartoon);
-        remainingQuantity -= quantityFromThisCartoon;
-        continue;
+        console.warn(`⚠️ No available ranges for ${item.cartoonNumber}, skipping...`);
+        continue; // Skip this cartoon if no ranges available
       }
 
       // Allocate from all available ranges in order
@@ -967,10 +1096,14 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       for (const range of availableRanges) {
         if (remainingQuantity <= 0) break;
 
+        console.log(`  🔍 Checking range:`, range);
+
         // Check how much has been used from this specific range
         const rangeKey = `${item.cartoonNumber}_${range.fromSerial}_${range.toSerial}`;
         const usedFromRange = cartoonRangeUsage.get(rangeKey) || 0;
         const availableInRange = range.count - usedFromRange;
+
+        console.log(`    Available in range: ${availableInRange}, Used from range: ${usedFromRange}`);
 
         if (availableInRange <= 0) continue; // This range is fully used
 
@@ -987,12 +1120,13 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           // Taking the entire range - use original range boundaries
           startSerial = range.fromSerial;
           endSerial = range.toSerial;
+          console.log(`    ✅ Taking ENTIRE range: ${startSerial} - ${endSerial}`);
         } else {
           // Taking a partial range - calculate the specific portion
-          const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
-          const prefix = range.fromSerial.replace(/\d+$/, '');
-          startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
-          endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+          const rangeStart = parseInt(range.fromSerial);
+          startSerial = String(rangeStart + usedFromRange);
+          endSerial = String(rangeStart + usedFromRange + quantityFromRange - 1);
+          console.log(`    ✅ Taking PARTIAL range: ${startSerial} - ${endSerial} (from ${range.fromSerial})`);
         }
 
         allocations.push({

@@ -991,4 +991,22 @@ export class HologramDataService {
       })
     );
   }
+
+  /**
+   * Get Monthly Report from Backend API
+   * This uses the new monthly report endpoint that aggregates data automatically
+   */
+  getMonthlyReport(
+    month: string,
+    year: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): Observable<any> {
+    const params = {
+      month: month.toLowerCase(),
+      year: year,
+      hologram_type: hologramType
+    };
+    
+    return this.http.get(`${this.apiUrl}/monthly-report/generate_report/`, { params });
+  }
 }
