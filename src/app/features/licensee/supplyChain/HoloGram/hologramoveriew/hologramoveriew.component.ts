@@ -19,6 +19,7 @@ interface HologramRoll {
   isNew?: boolean;
   newUntil?: number;
   usageHistory?: any[]; // Add usage history for Rolls tab
+  available_range?: string; // Available serial ranges (e.g., "1-49, 101-300")
 }
 
 interface SerialNumber {
@@ -1611,24 +1612,57 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
       console.log('⚠️ No usage history found in roll data');
     }
     
-    // Add AVAILABLE range if there are available holograms
+    // Add AVAILABLE range(s) if there are available holograms
     if (availableCount > 0 && roll) {
-      // Calculate next available serial
-      const fromNum = this.extractSerialNumber(roll.fromSerial);
-      const nextNum = fromNum + usedCount + damagedCount;
-      const prefix = roll.fromSerial.replace(/\d+$/, '');
-      
-      const nextSerial = prefix + nextNum.toString().padStart(6, '0');
-      
-      ranges.push({
-        fromSerial: nextSerial,
-        toSerial: roll.toSerial,
-        count: availableCount,
-        status: 'AVAILABLE',
-        description: 'Ready for production use'
-      });
-      
-      console.log('✅ Added AVAILABLE range:', nextSerial, '-', roll.toSerial, 'quantity:', availableCount);
+      // Use the available_range field from backend if available
+      if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
+        console.log('✅ Using available_range from backend:', roll.available_range);
+        
+        // Parse comma-separated ranges (e.g., "1-49, 101-300")
+        const rangeStrings = roll.available_range.split(',').map((s: string) => s.trim());
+        
+        for (const rangeStr of rangeStrings) {
+          if (rangeStr.includes('-')) {
+            const [from, to] = rangeStr.split('-');
+            const fromNum = parseInt(from);
+            const toNum = parseInt(to);
+            const count = toNum - fromNum + 1;
+            
+            // Get prefix from roll's fromSerial
+            const prefix = roll.fromSerial.replace(/\d+$/, '');
+            const fromSerial = prefix + from.padStart(6, '0');
+            const toSerial = prefix + to.padStart(6, '0');
+            
+            ranges.push({
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              count: count,
+              status: 'AVAILABLE',
+              description: 'Ready for production use'
+            });
+            
+            console.log(`✅ Added AVAILABLE range: ${fromSerial} - ${toSerial} (${count} units)`);
+          }
+        }
+      } else {
+        // Fallback: Calculate next available serial manually
+        console.log('⚠️ No available_range from backend, using fallback calculation');
+        const fromNum = this.extractSerialNumber(roll.fromSerial);
+        const nextNum = fromNum + usedCount + damagedCount;
+        const prefix = roll.fromSerial.replace(/\d+$/, '');
+        
+        const nextSerial = prefix + nextNum.toString().padStart(6, '0');
+        
+        ranges.push({
+          fromSerial: nextSerial,
+          toSerial: roll.toSerial,
+          count: availableCount,
+          status: 'AVAILABLE',
+          description: 'Ready for production use'
+        });
+        
+        console.log('✅ Added AVAILABLE range (fallback):', nextSerial, '-', roll.toSerial, 'quantity:', availableCount);
+      }
     }
     
     // Sort ranges by from_serial
