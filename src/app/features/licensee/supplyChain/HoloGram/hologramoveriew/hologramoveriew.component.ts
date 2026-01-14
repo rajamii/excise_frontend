@@ -286,7 +286,8 @@ export class HologramoveriewComponent implements OnInit {
           receivedDate: roll.receivedDate || roll.received_date,
           isNew: roll.isNew || roll.is_new || false,
           newUntil: roll.newUntil || roll.new_until,
-          usageHistory: roll.usageHistory || roll.usage_history || []
+          usageHistory: roll.usageHistory || roll.usage_history || [],
+          available_range: roll.available_range || roll.availableRange // Add this field!
         }));
         
         // Sort by received date (newest first) and then by ID (newest first)
@@ -344,17 +345,33 @@ export class HologramoveriewComponent implements OnInit {
     this.availableData = this.rollsData
       .filter(roll => roll.availableCount > 0) // Only show rolls with available holograms
       .map(roll => {
-        // Calculate available range based on used count
-        const fromSerialNum = this.extractSerialNumber(roll.fromSerial);
-        const toSerialNum = this.extractSerialNumber(roll.toSerial);
-        const prefix = roll.fromSerial.replace(/\d+$/, '');
+        // Use available_range from backend if available
+        let availableRange: string;
+        let nextSerial: string;
         
-        // Calculate next available serial (after used ones)
-        const nextSerialNum = fromSerialNum + roll.usedCount + roll.damagedCount;
-        const nextSerial = prefix + nextSerialNum.toString().padStart(6, '0');
-        
-        // Available range is from next serial to end serial
-        const availableRange = `${nextSerial} - ${roll.toSerial}`;
+        if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
+          // Use the available_range from backend (e.g., "101-1000" or "1-49, 101-300")
+          availableRange = roll.available_range.replace(',', ' -'); // Format for display
+          
+          // Get the first available serial from the range
+          const firstRange = roll.available_range.split(',')[0].trim();
+          if (firstRange.includes('-')) {
+            nextSerial = firstRange.split('-')[0].trim();
+          } else {
+            nextSerial = firstRange;
+          }
+        } else {
+          // Fallback: Calculate manually
+          const fromSerialNum = this.extractSerialNumber(roll.fromSerial);
+          const prefix = roll.fromSerial.replace(/\d+$/, '');
+          
+          // Calculate next available serial (after used ones)
+          const nextSerialNum = fromSerialNum + roll.usedCount + roll.damagedCount;
+          nextSerial = prefix + nextSerialNum.toString().padStart(6, '0');
+          
+          // Available range is from next serial to end serial
+          availableRange = `${nextSerial} - ${roll.toSerial}`;
+        }
         
         // Calculate percentage of available
         const percentage = roll.totalCount > 0 
@@ -1628,20 +1645,16 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
             const toNum = parseInt(to);
             const count = toNum - fromNum + 1;
             
-            // Get prefix from roll's fromSerial
-            const prefix = roll.fromSerial.replace(/\d+$/, '');
-            const fromSerial = prefix + from.padStart(6, '0');
-            const toSerial = prefix + to.padStart(6, '0');
-            
+            // Don't pad - use the numbers as-is from backend
             ranges.push({
-              fromSerial: fromSerial,
-              toSerial: toSerial,
+              fromSerial: from,
+              toSerial: to,
               count: count,
               status: 'AVAILABLE',
               description: 'Ready for production use'
             });
             
-            console.log(`✅ Added AVAILABLE range: ${fromSerial} - ${toSerial} (${count} units)`);
+            console.log(`✅ Added AVAILABLE range: ${from} - ${to} (${count} units)`);
           }
         }
       } else {
