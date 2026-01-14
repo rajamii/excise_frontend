@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 interface HologramRoll {
   id: number;
@@ -240,15 +241,16 @@ export class HologramoveriewComponent implements OnInit {
     { value: '2022', label: '2022' }
   ];
 
-  constructor(private route: ActivatedRoute, private router: Router) { }
+  constructor(private route: ActivatedRoute, private router: Router, private hologramService: HologramDataService) { }
 
   ngOnInit() {
     this.loadAllData();
   }
 
   loadAllData() {
+    // Load rolls data first (from API), then generate available/issued/history from it
     this.loadRollsData();
-    this.loadAvailableData();
+    // Note: loadAvailableData() is now called inside loadRollsData() after data is loaded
     this.loadIssuedData();
     this.loadHistoryData();
     
@@ -263,40 +265,126 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadRollsData() {
-    // Load data from localStorage (saved by arrival process)
-    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-
-    // Sort saved data by received date (newest first) and then by ID (newest first)
-    const sortedSavedRolls = savedRolls.sort((a: any, b: any) => {
-      // First sort by date
-      const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
-      const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
-      
-      if (dateB !== dateA) {
-        return dateB - dateA; // Newer date first
+    // Load data from API (database) first
+    this.hologramService.getRollsDetails().subscribe({
+      next: (apiRolls) => {
+        console.log('✅ Loaded rolls from API:', apiRolls);
+        
+        // Transform API data to component format
+        this.rollsData = apiRolls.map((roll: any) => ({
+          id: roll.id,
+          cartoonNumber: roll.cartonNumber || roll.carton_number,
+          type: roll.type as 'LOCAL' | 'EXPORT' | 'DEFENCE',
+          fromSerial: roll.fromSerial || roll.from_serial,
+          toSerial: roll.toSerial || roll.to_serial,
+          totalCount: roll.totalCount || roll.total_count || 0,
+          availableCount: roll.available || 0,
+          usedCount: roll.used || 0,
+          damagedCount: roll.damaged || 0,
+          status: roll.status as 'AVAILABLE' | 'IN_USE' | 'COMPLETED' | 'DAMAGED',
+          receivedDate: roll.receivedDate || roll.received_date,
+          isNew: roll.isNew || roll.is_new || false,
+          newUntil: roll.newUntil || roll.new_until,
+          usageHistory: roll.usageHistory || roll.usage_history || []
+        }));
+        
+        // Sort by received date (newest first) and then by ID (newest first)
+        this.rollsData.sort((a: any, b: any) => {
+          const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
+          const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
+          
+          if (dateB !== dateA) {
+            return dateB - dateA; // Newer date first
+          }
+          
+          return (b.id || 0) - (a.id || 0); // Newer ID first
+        });
+        
+        // Also sync to localStorage for offline capability
+        localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.rollsData));
+        
+        // Apply filters after loading
+        this.applyRollsFilters();
+        
+        // Generate available data from rolls
+        this.loadAvailableData();
+        
+        console.log('📊 Rolls data loaded:', this.rollsData.length, 'rolls');
+      },
+      error: (error) => {
+        console.error('❌ Error loading rolls from API:', error);
+        
+        // Fallback to localStorage if API fails
+        const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        this.rollsData = savedRolls.sort((a: any, b: any) => {
+          const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
+          const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
+          
+          if (dateB !== dateA) {
+            return dateB - dateA;
+          }
+          
+          return (b.id || 0) - (a.id || 0);
+        });
+        
+        this.applyRollsFilters();
+        
+        // Generate available data from rolls (even in fallback mode)
+        this.loadAvailableData();
+        
+        console.log('⚠️ Using localStorage fallback:', this.rollsData.length, 'rolls');
       }
-      
-      // If dates are same, sort by ID (newer ID first)
-      return (b.id || 0) - (a.id || 0);
     });
-
-    // Use only saved data (no sample data for clean testing)
-    this.rollsData = sortedSavedRolls;
-    // Apply filters after loading
-    this.applyRollsFilters();
   }
 
   loadAvailableData() {
-    // Load data from localStorage (saved by arrival process)
-    const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
-
-    // Sort saved data by ID (newest first, since ID is timestamp-based)
-    const sortedSavedAvailable = savedAvailable.sort((a: any, b: any) => {
-      return b.id - a.id; // Higher ID (newer timestamp) first
-    });
-
-    // Use only saved data (no sample data for clean testing)
-    this.availableData = sortedSavedAvailable;
+    // Generate available data from rolls data (which is now loaded from API)
+    // This ensures Available tab always reflects the current state from database
+    this.availableData = this.rollsData
+      .filter(roll => roll.availableCount > 0) // Only show rolls with available holograms
+      .map(roll => {
+        // Calculate available range based on used count
+        const fromSerialNum = this.extractSerialNumber(roll.fromSerial);
+        const toSerialNum = this.extractSerialNumber(roll.toSerial);
+        const prefix = roll.fromSerial.replace(/\d+$/, '');
+        
+        // Calculate next available serial (after used ones)
+        const nextSerialNum = fromSerialNum + roll.usedCount + roll.damagedCount;
+        const nextSerial = prefix + nextSerialNum.toString().padStart(6, '0');
+        
+        // Available range is from next serial to end serial
+        const availableRange = `${nextSerial} - ${roll.toSerial}`;
+        
+        // Calculate percentage of available
+        const percentage = roll.totalCount > 0 
+          ? (roll.availableCount / roll.totalCount) * 100 
+          : 0;
+        
+        return {
+          id: roll.id,
+          cartoonNumber: roll.cartoonNumber,
+          type: roll.type,
+          availableRange: availableRange,
+          availableCount: roll.availableCount,
+          nextSerial: nextSerial,
+          percentage: Math.round(percentage),
+          status: roll.availableCount === roll.totalCount ? 'AVAILABLE' : 'IN_USE',
+          isNew: roll.isNew,
+          newUntil: roll.newUntil
+        } as AvailableHologram;
+      })
+      .sort((a, b) => b.id - a.id); // Sort by ID (newest first)
+    
+    // Also sync to localStorage for offline capability
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
+    
+    console.log('📊 Available data generated from rolls:', this.availableData.length, 'available');
+  }
+  
+  // Helper method to extract serial number from serial string
+  private extractSerialNumber(serial: string): number {
+    const match = serial.match(/\d+$/);
+    return match ? parseInt(match[0], 10) : 0;
   }
 
   loadIssuedData(): void {

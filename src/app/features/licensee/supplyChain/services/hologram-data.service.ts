@@ -816,6 +816,10 @@ export class HologramDataService {
   getRollsDetails(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/rolls-details/`);
   }
+  
+  getSerialRanges(rollId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/rolls-details/${rollId}/serial_ranges/`);
+  }
 
   /**
    * Fetch Monthly Statement from Backend daily register entries AND rolls details
