@@ -378,6 +378,25 @@ export class HologramoveriewComponent implements OnInit {
           ? (roll.availableCount / roll.totalCount) * 100 
           : 0;
         
+        // Determine display status dynamically based on database status
+        // AVAILABLE: Roll has holograms available and is not assigned to any request
+        // IN_USE: Roll is assigned to a request (after allocation, before/during Daily Register)
+        // COMPLETED: Roll has no holograms left (availableCount = 0)
+        let displayStatus: 'AVAILABLE' | 'IN_USE' = 'AVAILABLE';
+        
+        // Use the status from database (backend manages this)
+        if (roll.status === 'COMPLETED' || roll.availableCount === 0) {
+          // Don't show COMPLETED rolls in Available tab (they're filtered out)
+          // But if somehow they appear, treat as IN_USE
+          displayStatus = 'IN_USE';
+        } else if (roll.status === 'IN_USE') {
+          // Roll is assigned to a request
+          displayStatus = 'IN_USE';
+        } else {
+          // Roll is AVAILABLE (has holograms and not assigned)
+          displayStatus = 'AVAILABLE';
+        }
+        
         return {
           id: roll.id,
           cartoonNumber: roll.cartoonNumber,
@@ -386,7 +405,7 @@ export class HologramoveriewComponent implements OnInit {
           availableCount: roll.availableCount,
           nextSerial: nextSerial,
           percentage: Math.round(percentage),
-          status: roll.availableCount === roll.totalCount ? 'AVAILABLE' : 'IN_USE',
+          status: displayStatus,
           isNew: roll.isNew,
           newUntil: roll.newUntil
         } as AvailableHologram;
@@ -406,29 +425,63 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadIssuedData(): void {
-    // Load issued holograms from localStorage (created by officer approval)
-    const savedIssued = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
-
-    // Sort saved data by issue date (newest first)
-    const sortedSavedIssued = savedIssued.sort((a: any, b: any) => {
-      return new Date(b.issueDate || b.issuedDate || 0).getTime() - new Date(a.issueDate || a.issuedDate || 0).getTime();
-    });
-
-    // Use only saved data (no sample data for clean testing)
-    this.issuedData = sortedSavedIssued;
+    // Load issued holograms from database (usage_history with IN_PROGRESS status)
+    // Currently, the system doesn't track IN_PROGRESS separately in usage_history JSON
+    // This will be populated when Daily Register entries are saved but not yet approved
+    
+    // For now, this tab will show entries that are pending approval
+    // We'll need to query DailyHologramRegister with approval_status=PENDING
+    
+    // TODO: Implement API call to get pending Daily Register entries
+    // For now, keep empty until backend integration is complete
+    
+    this.issuedData = [];
+    
+    console.log('📊 Issued data (IN_PROGRESS): Currently empty - needs Daily Register integration');
   }
 
   loadHistoryData(): void {
-    // Load history data from localStorage (created by officer approval)
-    const savedHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+    // Load history data from database (usage_history with COMPLETED status)
+    // These are holograms that have been used and approved in Daily Register
     
-    // Sort saved data by issue date (newest first)
-    const sortedSavedHistory = savedHistory.sort((a: any, b: any) => {
-      return new Date(b.issueDate || b.date || 0).getTime() - new Date(a.issueDate || a.date || 0).getTime();
+    const historyFromDatabase: HistoryHologram[] = [];
+    
+    // Extract ISSUED entries from rolls' usage_history (all approved entries are COMPLETED)
+    this.rollsData.forEach(roll => {
+      if (roll.usageHistory && Array.isArray(roll.usageHistory)) {
+        roll.usageHistory.forEach((entry: any) => {
+          // Include ISSUED entries (these are approved/completed)
+          if (entry.type === 'ISSUED') {
+            const fromSerial = entry.issuedFromSerial || entry.fromSerial || '';
+            const toSerial = entry.issuedToSerial || entry.toSerial || '';
+            const quantity = entry.issuedQuantity || entry.quantity || 0;
+            
+            historyFromDatabase.push({
+              id: entry.id || Math.random(),
+              issueDate: entry.date || entry.approvedAt || new Date().toISOString(),
+              referenceNo: entry.referenceNo || 'N/A',
+              brandName: entry.brandDetails || entry.brandName || 'N/A',
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              quantity: quantity,
+              status: 'COMPLETED',
+              completionDate: entry.approvedAt || entry.date || new Date().toISOString(),
+              officer: entry.approvedBy || 'System',
+              requestReference: entry.referenceNo
+            });
+          }
+        });
+      }
     });
     
-    // Use only saved data (no sample data for clean testing)
-    this.historyData = sortedSavedHistory;
+    // Sort by issue date (newest first)
+    historyFromDatabase.sort((a, b) => {
+      return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+    });
+    
+    this.historyData = historyFromDatabase;
+    
+    console.log('📊 History data loaded from database:', this.historyData.length, 'entries');
   }
 
 
