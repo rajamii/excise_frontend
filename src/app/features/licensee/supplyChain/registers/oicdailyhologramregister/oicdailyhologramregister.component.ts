@@ -917,82 +917,91 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
     // CRITICAL FIX: ONLY add stock pool if NO allocations were found
     // If rolls are explicitly assigned (allAllocations > 0), show ONLY those rolls
-    if (allAllocations.length === 0 && this.procurementCache && this.procurementCache.length > 0) {
-      console.log(`🏊 NO ALLOCATIONS FOUND - Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
+    if (allAllocations.length === 0) {
+      console.log(`🏊 NO ALLOCATIONS FOUND - Checking Stock Pool and localStorage fallback`);
+      
+      // Try procurement cache first
+      if (this.procurementCache && this.procurementCache.length > 0) {
+        console.log(`📦 Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
 
-      this.procurementCache.forEach(proc => {
-        // 1. Check Matching Type
-        let pType = (proc.type || '').toUpperCase();
-        if (!pType) {
-          // Infer type if missing
-          if (proc.localQty > 0 || proc.local_qty > 0) pType = 'LOCAL';
-          else if (proc.exportQty > 0 || proc.export_qty > 0) pType = 'EXPORT';
-          else if (proc.defenceQty > 0 || proc.defence_qty > 0) pType = 'DEFENCE';
-          else pType = 'LOCAL';
-        }
-
-        if (pType !== entry.hologramType) return;
-
-
-        // 2. Extract Cartons
-        const cartons = proc.carton_details || proc.cartonDetails || proc.cartoons || proc.cartoon_details || [];
-
-        cartons.forEach((c: any) => {
-          const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number;
-
-          // 3. Skip if already added via strict allocation
-          if (addedCartons.has(cNo)) return;
-
-          // 4. Add to availableRolls
-          let qty = c.quantity || c.totalCount || 0;
-          const fromSerial = c.fromSerial || c.from_serial || '';
-          const toSerial = c.toSerial || c.to_serial || '';
-          const serialRange = c.serialRange || (fromSerial && toSerial ? `${fromSerial} - ${toSerial}` : 'N/A');
-
-          if (!qty && fromSerial && toSerial) {
-            // Recalculate quantity if missing
-            const start = parseInt(fromSerial, 10);
-            const end = parseInt(toSerial, 10);
-            if (!isNaN(start) && !isNaN(end)) qty = end - start + 1;
+        this.procurementCache.forEach(proc => {
+          // 1. Check Matching Type
+          let pType = (proc.type || '').toUpperCase();
+          if (!pType) {
+            // Infer type if missing
+            if (proc.localQty > 0 || proc.local_qty > 0) pType = 'LOCAL';
+            else if (proc.exportQty > 0 || proc.export_qty > 0) pType = 'EXPORT';
+            else if (proc.defenceQty > 0 || proc.defence_qty > 0) pType = 'DEFENCE';
+            else pType = 'LOCAL';
           }
 
-          if (cNo && qty > 0) {
-            availableRolls.push({
-              cartoonNumber: cNo,
-              rangeId: cNo, // Use carton number as ID for full rolls
-              rangeIndex: 1,
-              displayName: `${cNo} - ${serialRange} (${qty} units)`, // Format for pool items
-              allocatedQuantity: qty,
-              availableCount: qty,
-              serialRange: serialRange,
-              fromSerial: fromSerial,
-              toSerial: toSerial,
-              isSingleRange: true,
-              originalCartoonNumber: cNo,
-              leftoverInfo: ''
-            });
-            addedCartons.add(cNo); // Prevent duplicates from other procurements
-          }
+          if (pType !== entry.hologramType) return;
+
+          // 2. Extract Cartons
+          const cartons = proc.carton_details || proc.cartonDetails || proc.cartoons || proc.cartoon_details || [];
+
+          cartons.forEach((c: any) => {
+            const cNo = c.cartoonNumber || c.cartoon_number || c.carton_number;
+
+            // 3. Skip if already added via strict allocation
+            if (addedCartons.has(cNo)) return;
+
+            // 4. Add to availableRolls
+            let qty = c.quantity || c.totalCount || 0;
+            const fromSerial = c.fromSerial || c.from_serial || '';
+            const toSerial = c.toSerial || c.to_serial || '';
+            const serialRange = c.serialRange || (fromSerial && toSerial ? `${fromSerial} - ${toSerial}` : 'N/A');
+
+            if (!qty && fromSerial && toSerial) {
+              // Recalculate quantity if missing
+              const start = parseInt(fromSerial, 10);
+              const end = parseInt(toSerial, 10);
+              if (!isNaN(start) && !isNaN(end)) qty = end - start + 1;
+            }
+
+            if (cNo && qty > 0) {
+              availableRolls.push({
+                cartoonNumber: cNo,
+                rangeId: cNo, // Use carton number as ID for full rolls
+                rangeIndex: 1,
+                displayName: `${cNo} - ${serialRange} (${qty} units)`, // Format for pool items
+                allocatedQuantity: qty,
+                availableCount: qty,
+                serialRange: serialRange,
+                fromSerial: fromSerial,
+                toSerial: toSerial,
+                isSingleRange: true,
+                originalCartoonNumber: cNo,
+                leftoverInfo: ''
+              });
+              addedCartons.add(cNo); // Prevent duplicates from other procurements
+            }
+          });
         });
-      });
-      console.log(`✅ Final available rolls count (Allocated + Pool): ${availableRolls.length}`);
-    } else {
-      // Fallback to localStorage ONLY if cache is empty (legacy support)
-      const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-      const fallbackRolls = allOverviewRolls.filter((r: any) => r.type === entry.hologramType && r.availableCount > 0 && !addedCartons.has(r.cartoonNumber));
-
-      if (fallbackRolls.length > 0) {
-        console.log(`⚠️ Using localStorage fallback, found ${fallbackRolls.length} rolls`);
-        availableRolls.push(...fallbackRolls.map((r: any) => ({
-          cartoonNumber: r.cartoonNumber,
-          rangeId: r.cartoonNumber,
-          displayName: `${r.cartoonNumber} - ${r.serialRange || r.fromSerial + '-' + r.toSerial} (${r.availableCount} units)`,
-          availableCount: r.availableCount,
-          serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
-          fromSerial: r.fromSerial,
-          toSerial: r.toSerial,
-        })));
+        console.log(`✅ Final available rolls count from Stock Pool: ${availableRolls.length}`);
       }
+      
+      // Fallback to localStorage ONLY if no rolls found yet
+      if (availableRolls.length === 0) {
+        console.log(`⚠️ No rolls from cache, trying localStorage fallback`);
+        const allOverviewRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
+        const fallbackRolls = allOverviewRolls.filter((r: any) => r.type === entry.hologramType && r.availableCount > 0 && !addedCartons.has(r.cartoonNumber));
+
+        if (fallbackRolls.length > 0) {
+          console.log(`✅ Using localStorage fallback, found ${fallbackRolls.length} rolls`);
+          availableRolls.push(...fallbackRolls.map((r: any) => ({
+            cartoonNumber: r.cartoonNumber,
+            rangeId: r.cartoonNumber,
+            displayName: `${r.cartoonNumber} - ${r.serialRange || r.fromSerial + '-' + r.toSerial} (${r.availableCount} units)`,
+            availableCount: r.availableCount,
+            serialRange: r.serialRange || `${r.fromSerial} - ${r.toSerial}`,
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+          })));
+        }
+      }
+    } else {
+      console.log(`✅ Using ONLY allocated rolls (${allAllocations.length}), skipping stock pool and localStorage`);
     }
 
     // NOTE: We no longer add leftover ranges as separate dropdown entries
