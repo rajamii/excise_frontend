@@ -1,9 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HologramDataService } from '../../services/hologram-data.service';
-import { forkJoin } from 'rxjs';
 
 interface HologramRoll {
   id: number;
@@ -242,8 +240,6 @@ export class HologramoveriewComponent implements OnInit {
     { value: '2022', label: '2022' }
   ];
 
-  private hologramService = inject(HologramDataService);
-
   constructor(private route: ActivatedRoute, private router: Router) { }
 
   ngOnInit() {
@@ -267,151 +263,66 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadRollsData() {
-    this.hologramService.getRollsDetails().subscribe({
-        next: (response: any) => {
-            // Handle Pagination / Response Structure
-            const entries = Array.isArray(response) ? response : (response.results || []);
-            console.log(`📦 Rolls Details Loaded via New API: ${entries.length}`);
-            
-            this.rollsData = [];
-            this.availableData = [];
+    // Load data from localStorage (saved by arrival process)
+    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
 
-            entries.forEach((entry: any) => {
-                 const roll: HologramRoll = {
-                    id: entry.id,
-                    cartoonNumber: entry.cartonNumber, // camelCase from backend
-                    type: (entry.type || 'LOCAL').toUpperCase() as any,
-                    fromSerial: entry.fromSerial,
-                    toSerial: entry.toSerial,
-                    totalCount: Number(entry.totalCount),
-                    availableCount: Number(entry.available),
-                    usedCount: Number(entry.used),
-                    damagedCount: Number(entry.damaged),
-                    status: (entry.status || 'AVAILABLE').toUpperCase() as any,
-                    receivedDate: entry.receivedDate,
-                    isNew: false
-                 };
-                 
-                 this.rollsData.push(roll);
-
-                 // Also populate availableData
-                 if (roll.availableCount > 0) {
-                     const available: AvailableHologram = {
-                        id: roll.id,
-                        cartoonNumber: roll.cartoonNumber,
-                        type: roll.type,
-                        availableRange: `${roll.fromSerial} - ${roll.toSerial}`,
-                        availableCount: roll.availableCount,
-                        nextSerial: String(Number(roll.fromSerial || 0) + roll.usedCount + roll.damagedCount),
-                        percentage: roll.totalCount > 0 ? Math.round((roll.availableCount / roll.totalCount) * 100) : 0,
-                        status: roll.availableCount < roll.totalCount ? 'IN_USE' : 'AVAILABLE',
-                        isNew: false
-                     };
-                     this.availableData.push(available);
-                 }
-            });
-
-            this.rollsData.sort((a: any, b: any) => new Date(b.receivedDate).getTime() - new Date(a.receivedDate).getTime());
-            this.applyRollsFilters();
-        },
-        error: (err: any) => console.error('Error loading rolls data from new API', err)
+    // Sort saved data by received date (newest first) and then by ID (newest first)
+    const sortedSavedRolls = savedRolls.sort((a: any, b: any) => {
+      // First sort by date
+      const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
+      const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
+      
+      if (dateB !== dateA) {
+        return dateB - dateA; // Newer date first
+      }
+      
+      // If dates are same, sort by ID (newer ID first)
+      return (b.id || 0) - (a.id || 0);
     });
+
+    // Use only saved data (no sample data for clean testing)
+    this.rollsData = sortedSavedRolls;
+    // Apply filters after loading
+    this.applyRollsFilters();
   }
 
   loadAvailableData() {
-     // Managed by loadRollsData for efficiency as they come from same source
+    // Load data from localStorage (saved by arrival process)
+    const savedAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+
+    // Sort saved data by ID (newest first, since ID is timestamp-based)
+    const sortedSavedAvailable = savedAvailable.sort((a: any, b: any) => {
+      return b.id - a.id; // Higher ID (newer timestamp) first
+    });
+
+    // Use only saved data (no sample data for clean testing)
+    this.availableData = sortedSavedAvailable;
   }
 
   loadIssuedData(): void {
-    // Load issued holograms from Backend API (Requests with APPROVED status)
-    this.hologramService.getRequests().subscribe({
-      next: (requests) => {
-        console.log('📦 Loaded Requests for Issued Tab:', requests.length);
-        
-        // Filter for APPROVED requests (assuming these are "Issued" but not yet "Completed" in Daily Register)
-        // Adjust status check based on actual backend status flow
-        this.issuedData = requests
-          .filter((req: any) => (req.status || '').toUpperCase() === 'APPROVED')
-          .map((req: any) => ({
-            id: req.id,
-            referenceNo: req.refNo || req.referenceNo || `REQ-${req.id}`,
-            brandName: req.brandDetails?.brandName || req.brand_id || 'N/A', // Adjust based on populated fields
-            fromSerial: req.from_serial || '', // Requests might not have ranges yet if not allocated? 
-                                             // Actually, Officer Approval allocates ranges. 
-                                             // Check if 'issued_assets' or 'allocations' exist
-            toSerial: req.to_serial || '',
-            quantity: req.quantity || 0,
-            issueDate: req.submissionDate || req.submission_date || '',
-            status: 'IN_PROGRESS' as 'IN_PROGRESS',
-            officer: 'Officer In Charge', // Placeholder or from API
-            requestReference: req.refNo,
-            hologramType: (req.hologram_type || 'LOCAL').toUpperCase() as 'LOCAL' | 'EXPORT' | 'DEFENCE'
-          }))
-          // Sort by issue date (newest first)
-          .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
-          
-        console.log('✅ Processed Issued Data:', this.issuedData.length);
-      },
-      error: (err) => console.error('❌ Error loading issued data:', err)
+    // Load issued holograms from localStorage (created by officer approval)
+    const savedIssued = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
+
+    // Sort saved data by issue date (newest first)
+    const sortedSavedIssued = savedIssued.sort((a: any, b: any) => {
+      return new Date(b.issueDate || b.issuedDate || 0).getTime() - new Date(a.issueDate || a.issuedDate || 0).getTime();
     });
+
+    // Use only saved data (no sample data for clean testing)
+    this.issuedData = sortedSavedIssued;
   }
 
   loadHistoryData(): void {
-    // Load history data from Backend API (Daily Register Entries)
-    this.hologramService.getDailyRegisterEntries().subscribe({
-      next: (entries) => {
-        console.log('📦 Loaded Daily Entries for History Tab:', entries.length);
-        
-        let processedHistory: HistoryHologram[] = [];
-        
-        entries.forEach((entry: any) => {
-            // Each daily entry might contain multiple issued/wastage blocks
-            // We map them to History items
-            
-            // 1. Issued Entries
-            if (entry.issued_entries && Array.isArray(entry.issued_entries)) {
-                entry.issued_entries.forEach((ie: any) => {
-                    processedHistory.push({
-                        id: Number(ie.id) || 0,
-                        issueDate: entry.submission_date || entry.date || '',
-                        referenceNo: entry.reference_no || '',
-                        brandName: entry.brand_details || '',
-                        fromSerial: ie.from_serial || '',
-                        toSerial: ie.to_serial || '',
-                        quantity: ie.quantity || 0,
-                        status: 'COMPLETED',
-                        completionDate: entry.usage_date || '', // Date of usage/completion
-                        officer: 'Officer In Charge',
-                        requestReference: entry.hologram_request
-                    });
-                });
-            } else if (entry.issued_qty > 0) {
-                 // Fallback for flat structure
-                 processedHistory.push({
-                    id: entry.id,
-                    issueDate: entry.submission_date || entry.date || '',
-                    referenceNo: entry.reference_no || '',
-                    brandName: entry.brand_details || '',
-                    fromSerial: entry.issued_from || '',
-                    toSerial: entry.issued_to || '',
-                    quantity: entry.issued_qty || 0,
-                    status: 'COMPLETED',
-                    completionDate: entry.usage_date || '',
-                    officer: 'Officer In Charge',
-                    requestReference: entry.hologram_request
-                 });
-            }
-        });
-        
-        // Sort by issue date (newest first)
-        this.historyData = processedHistory.sort((a, b) => 
-            new Date(b.issueDate || 0).getTime() - new Date(a.issueDate || 0).getTime()
-        );
-        
-        console.log('✅ Processed History Data:', this.historyData.length);
-      },
-      error: (err) => console.error('❌ Error loading history data:', err)
+    // Load history data from localStorage (created by officer approval)
+    const savedHistory = JSON.parse(localStorage.getItem('hologramOverviewHistory') || '[]');
+    
+    // Sort saved data by issue date (newest first)
+    const sortedSavedHistory = savedHistory.sort((a: any, b: any) => {
+      return new Date(b.issueDate || b.date || 0).getTime() - new Date(a.issueDate || a.date || 0).getTime();
     });
+    
+    // Use only saved data (no sample data for clean testing)
+    this.historyData = sortedSavedHistory;
   }
 
 
@@ -1413,7 +1324,39 @@ export class HologramoveriewComponent implements OnInit {
     alert('Rolls data export functionality will be implemented with backend integration');
   }
 
-
+  // Method to clear test data (for debugging)
+  clearTestData(): void {
+    if (confirm('⚠️ Clear ALL hologram data? This will remove everything and start fresh.\n\nThis includes:\n- All Rolls\n- Available Hologram Data\n- Serial Numbers Data\n- Issued Holograms\n- Issued History\n- Daily Register Entries\n\nAre you sure?')) {
+      // Clear all hologram overview data
+      localStorage.removeItem('hologramOverviewRolls');
+      localStorage.removeItem('hologramOverviewAvailable');
+      localStorage.removeItem('hologramOverviewSerialData');
+      localStorage.removeItem('hologramOverviewIssued');
+      localStorage.removeItem('hologramOverviewHistory');
+      
+      // Clear daily register and approval data
+      localStorage.removeItem('dailyRegisterEntries');
+      localStorage.removeItem('approvedHologramEntries');
+      
+      // Clear legacy keys
+      localStorage.removeItem('issuedHolograms');
+      localStorage.removeItem('hologramDailyEntries');
+      
+      // Clear all arrays to show empty state
+      this.rollsData = [];
+      this.availableData = [];
+      this.issuedData = [];
+      this.historyData = [];
+      
+      alert('✅ All hologram data cleared successfully!\n\nYou now have a fresh start. All tabs are empty.');
+      
+      console.log('=== ALL HOLOGRAM DATA CLEARED ===');
+      console.log('Rolls:', this.rollsData.length);
+      console.log('Available:', this.availableData.length);
+      console.log('Issued:', this.issuedData.length);
+      console.log('History:', this.historyData.length);
+    }
+  }
 
   // Helper method to check if an issued hologram is new (within last hour)
   isNewIssued(issued: IssuedHologram): boolean {
