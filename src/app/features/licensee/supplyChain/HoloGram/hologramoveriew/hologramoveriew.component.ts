@@ -94,7 +94,7 @@ interface AvailableHologram {
   availableCount: number;
   nextSerial: string;
   percentage: number;
-  status: 'AVAILABLE' | 'IN_USE';
+  status: 'AVAILABLE' | 'IN_USE' | 'COMPLETED';
   isNew?: boolean;
   newUntil?: number;
 }
@@ -375,14 +375,19 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   loadAvailableData() {
     // Generate available data from rolls data (which is now loaded from API)
     // This ensures Available tab always reflects the current state from database
+    // CRITICAL FIX: Show ALL rolls (including fully used ones) so users can see usage history
     this.availableData = this.rollsData
-      .filter(roll => roll.availableCount > 0) // Only show rolls with available holograms
       .map(roll => {
         // Use available_range from backend if available
         let availableRange: string;
         let nextSerial: string;
         
-        if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
+        // CRITICAL FIX: Handle completed rolls (availableCount = 0)
+        if (roll.availableCount === 0 || roll.status === 'COMPLETED') {
+          // Roll is fully used - show "None" for available range
+          availableRange = 'None (Fully Used)';
+          nextSerial = '-';
+        } else if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
           // Use the available_range from backend (e.g., "101-1000" or "1-49, 101-300")
           availableRange = roll.available_range.replace(',', ' -'); // Format for display
           
@@ -415,13 +420,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         // AVAILABLE: Roll has holograms available and is not assigned to any request
         // IN_USE: Roll is assigned to a request (after allocation, before/during Daily Register)
         // COMPLETED: Roll has no holograms left (availableCount = 0)
-        let displayStatus: 'AVAILABLE' | 'IN_USE' = 'AVAILABLE';
+        let displayStatus: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' = 'AVAILABLE';
         
         // Use the status from database (backend manages this)
         if (roll.status === 'COMPLETED' || roll.availableCount === 0) {
-          // Don't show COMPLETED rolls in Available tab (they're filtered out)
-          // But if somehow they appear, treat as IN_USE
-          displayStatus = 'IN_USE';
+          // Roll is fully used - show as COMPLETED so users can see usage history
+          displayStatus = 'COMPLETED';
         } else if (roll.status === 'IN_USE') {
           // Roll is assigned to a request
           displayStatus = 'IN_USE';
