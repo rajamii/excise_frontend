@@ -117,15 +117,19 @@ interface IssuedHologram {
 interface HistoryHologram {
   id: number;
   issueDate: string;
-  referenceNo: string; // Changed from batchNumber to referenceNo
-  brandName: string;
-  fromSerial: string;
-  toSerial: string;
-  quantity: number;
+  requestReference: string; // Request reference number
+  cartoonNumber: string; // Carton number
+  totalRollsAssigned: number; // Total quantity allocated
+  serialRange: string; // Serial range (e.g., "1-200")
+  brandName: string; // Brand details
+  bottleSize: string; // Bottle size in ML (e.g., "750ml")
+  qtyUsed: number; // Quantity used in production
+  qtyDamaged: number; // Quantity damaged/wasted
+  qtyLeftover: number; // Quantity left over (available - used - damaged)
   status: 'COMPLETED' | 'CANCELLED';
-  completionDate: string;
-  officer: string;
-  requestReference?: string; // For backward compatibility
+  completionDate: string; // When the daily register was approved
+  officer?: string; // Officer who approved
+  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE';
 }
 
 interface ChartFilters {
@@ -161,6 +165,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Subscription management
   private requestUpdateSubscription?: Subscription;
+  private dailyRegisterUpdateSubscription?: Subscription;
 
 
   // Serial Details Modal
@@ -257,12 +262,22 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       this.loadIssuedData();
       this.loadRollsData(); // Also reload rolls to update available counts
     });
+    
+    // Subscribe to daily register updates from other components
+    this.dailyRegisterUpdateSubscription = this.hologramService.dailyRegisterUpdate$.subscribe(() => {
+      console.log('📢 Received daily register update notification - reloading history data');
+      this.loadHistoryData();
+      this.loadRollsData(); // Also reload rolls to update available counts
+    });
   }
 
   ngOnDestroy() {
-    // Clean up subscription
+    // Clean up subscriptions
     if (this.requestUpdateSubscription) {
       this.requestUpdateSubscription.unsubscribe();
+    }
+    if (this.dailyRegisterUpdateSubscription) {
+      this.dailyRegisterUpdateSubscription.unsubscribe();
     }
   }
 
@@ -538,6 +553,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           
           console.log(`  Status: ${stageName} → ${status}`);
           
+          // Skip COMPLETED and CANCELLED requests - they should be in History tab
+          if (status === 'COMPLETED' || status === 'CANCELLED') {
+            console.log(`  ⏭️ Skipping ${status} request - belongs in History tab`);
+            return;
+          }
+          
           // Create one entry per request with comma-separated values
           const entry = {
             id: request.id,
@@ -581,47 +602,192 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   loadHistoryData(): void {
-    // Load history data from database (usage_history with COMPLETED status)
-    // These are holograms that have been used and approved in Daily Register
+    // Load history data from backend (saved daily register entries)
+    // These are entries that have been saved (is_fixed=True)
+    // They appear immediately after "Save Entry" is clicked
     
-    const historyFromDatabase: HistoryHologram[] = [];
+    console.log('🔍 Loading history data from API...');
     
-    // Extract ISSUED entries from rolls' usage_history (all approved entries are COMPLETED)
-    this.rollsData.forEach(roll => {
-      if (roll.usageHistory && Array.isArray(roll.usageHistory)) {
-        roll.usageHistory.forEach((entry: any) => {
-          // Include ISSUED entries (these are approved/completed)
-          if (entry.type === 'ISSUED') {
-            const fromSerial = entry.issuedFromSerial || entry.fromSerial || '';
-            const toSerial = entry.issuedToSerial || entry.toSerial || '';
-            const quantity = entry.issuedQuantity || entry.quantity || 0;
-            
-            historyFromDatabase.push({
-              id: entry.id || Math.random(),
-              issueDate: entry.date || entry.approvedAt || new Date().toISOString(),
-              referenceNo: entry.referenceNo || 'N/A',
-              brandName: entry.brandDetails || entry.brandName || 'N/A',
-              fromSerial: fromSerial,
-              toSerial: toSerial,
-              quantity: quantity,
-              status: 'COMPLETED',
-              completionDate: entry.approvedAt || entry.date || new Date().toISOString(),
-              officer: entry.approvedBy || 'System',
-              requestReference: entry.referenceNo
-            });
+    this.hologramService.getDailyRegisterEntries().subscribe({
+      next: (entries) => {
+        console.log('✅ Loaded daily register entries:', entries);
+        console.log('📊 Total entries received:', entries.length);
+        
+        // Filter for SAVED entries (is_fixed=True)
+        // Show entries immediately after "Save Entry" is clicked
+        const savedEntries = entries.filter((entry: any) => 
+          (entry.is_fixed === true || entry.isFixed === true)
+        );
+        
+        console.log('📊 Saved entries (is_fixed=true):', savedEntries.length);
+        
+        // Group entries by request reference (multiple rolls per request)
+        const groupedByRequest = new Map<string, any[]>();
+        
+        savedEntries.forEach((entry: any) => {
+          const refNo = entry.reference_no || entry.referenceNo || 'N/A';
+          if (!groupedByRequest.has(refNo)) {
+            groupedByRequest.set(refNo, []);
           }
+          groupedByRequest.get(refNo)!.push(entry);
         });
+        
+        console.log('📊 Grouped by request:', groupedByRequest.size, 'requests');
+        
+        // Transform to HistoryHologram format (one row per request)
+        this.historyData = Array.from(groupedByRequest.entries()).map(([refNo, requestEntries]) => {
+          // Collect data from all entries for this request
+          const cartoonNumbers: string[] = [];
+          const serialRanges: string[] = [];
+          let totalQty = 0;
+          let totalUsed = 0;
+          let totalDamaged = 0;
+          let brandName = 'N/A';
+          let bottleSize = 'N/A';
+          let usageDate = '';
+          let approvalStatus = 'PENDING';
+          let approvedAt = '';
+          let approvedBy = 'Pending';
+          let hologramType = 'LOCAL';
+          
+          requestEntries.forEach((entry: any) => {
+            // Carton number from roll_range or cartoon_number
+            const cartoonNumber = entry.cartoon_number || entry.cartoonNumber || 
+                                 entry.roll_range || entry.rollRange || 'N/A';
+            if (cartoonNumber && cartoonNumber !== 'N/A' && !cartoonNumbers.includes(cartoonNumber)) {
+              cartoonNumbers.push(cartoonNumber);
+            }
+            
+            // Serial ranges from issued_ranges (JSON array)
+            const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              issuedRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || range.from || '';
+                const toSerial = range.toSerial || range.to_serial || range.to || '';
+                if (fromSerial && toSerial) {
+                  serialRanges.push(`${fromSerial}-${toSerial}`);
+                }
+              });
+            } else {
+              // Fallback to issued_from and issued_to
+              const issuedFrom = entry.issued_from || entry.issuedFrom || '';
+              const issuedTo = entry.issued_to || entry.issuedTo || '';
+              if (issuedFrom && issuedTo) {
+                serialRanges.push(`${issuedFrom}-${issuedTo}`);
+              }
+            }
+            
+            // Also add wastage ranges if they exist
+            const wastageRanges = entry.wastage_ranges || entry.wastageRanges || [];
+            if (Array.isArray(wastageRanges) && wastageRanges.length > 0) {
+              wastageRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || range.from || '';
+                const toSerial = range.toSerial || range.to_serial || range.to || '';
+                if (fromSerial && toSerial) {
+                  const rangeStr = `${fromSerial}-${toSerial}`;
+                  if (!serialRanges.includes(rangeStr)) {
+                    serialRanges.push(rangeStr);
+                  }
+                }
+              });
+            }
+            
+            // Accumulate quantities
+            totalQty += entry.hologram_qty || entry.hologramQty || 0;
+            totalUsed += entry.issued_qty || entry.issuedQty || 0;
+            totalDamaged += entry.wastage_qty || entry.wastageQty || 0;
+            
+            // Take first non-empty brand name
+            if (brandName === 'N/A') {
+              brandName = entry.brand_details || entry.brandDetails || 'N/A';
+            }
+            
+            // Take first non-empty bottle size
+            if (bottleSize === 'N/A') {
+              bottleSize = entry.bottle_size || entry.bottleSize || 'N/A';
+            }
+            
+            // Take first usage date
+            if (!usageDate) {
+              usageDate = entry.usage_date || entry.usageDate || new Date().toISOString();
+            }
+            
+            // Take approval info from first entry
+            if (!approvedAt) {
+              approvalStatus = entry.approval_status || entry.approvalStatus || 'PENDING';
+              approvedAt = entry.approved_at || entry.approvedAt || new Date().toISOString();
+              approvedBy = entry.approved_by_name || entry.approvedByName || 'Pending';
+              hologramType = entry.hologram_type || entry.hologramType || 'LOCAL';
+            }
+          });
+          
+          // Calculate leftover: total allocated - used - damaged
+          const qtyLeftover = totalQty - totalUsed - totalDamaged;
+          
+          // Build comma-separated strings
+          const cartoonNumberStr = cartoonNumbers.length > 0 ? cartoonNumbers.join(', ') : 'N/A';
+          const serialRangeStr = serialRanges.length > 0 ? serialRanges.join(', ') : 'N/A';
+          
+          console.log(`📋 Request ${refNo}:`, {
+            cartoonNumbers,
+            serialRanges,
+            cartoonNumberStr,
+            serialRangeStr,
+            totalQty,
+            totalUsed,
+            totalDamaged,
+            qtyLeftover
+          });
+          
+          // Determine status based on approval
+          let status: 'COMPLETED' | 'CANCELLED' = 'COMPLETED';
+          if (approvalStatus === 'APPROVED') {
+            status = 'COMPLETED';
+          } else if (approvalStatus === 'REJECTED') {
+            status = 'CANCELLED';
+          } else {
+            // PENDING - still show as COMPLETED but with "Pending" officer
+            status = 'COMPLETED';
+          }
+          
+          return {
+            id: requestEntries[0].id,
+            issueDate: usageDate,
+            requestReference: refNo,
+            cartoonNumber: cartoonNumberStr,
+            totalRollsAssigned: totalQty,
+            serialRange: serialRangeStr,
+            brandName: brandName,
+            bottleSize: bottleSize,
+            qtyUsed: totalUsed,
+            qtyDamaged: totalDamaged,
+            qtyLeftover: qtyLeftover,
+            status: status,
+            completionDate: approvedAt,
+            officer: approvedBy,
+            hologramType: hologramType as 'LOCAL' | 'EXPORT' | 'DEFENCE'
+          };
+        });
+        
+        // Sort by usage date (newest first)
+        this.historyData.sort((a, b) => {
+          return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+        });
+        
+        console.log('📊 History data loaded:', this.historyData.length, 'entries');
+        console.log('📋 Final historyData:', this.historyData);
+      },
+      error: (error) => {
+        console.error('❌ Error loading history data:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url
+        });
+        this.historyData = [];
       }
     });
-    
-    // Sort by issue date (newest first)
-    historyFromDatabase.sort((a, b) => {
-      return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
-    });
-    
-    this.historyData = historyFromDatabase;
-    
-    console.log('📊 History data loaded from database:', this.historyData.length, 'entries');
   }
 
 

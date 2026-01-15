@@ -1983,8 +1983,15 @@ export class OicdailyhologramregisterComponent implements OnInit {
         entry.rollsAssigned = (entry.lockedRolls || []).map((r: any) => r.cartoonNumber);
 
         // Update local stats for immediate display
-        // Update local stats for immediate display
         this.cdr.detectChanges();
+        
+        // Notify other components that daily register has been updated
+        this.hologramService.notifyDailyRegisterUpdate();
+        
+        // Also notify request update to refresh "Currently Issued Holograms" tab
+        // (to remove the request from there since it's now completed)
+        this.hologramService.notifyRequestUpdate();
+        
         alert('✅ All entries saved to database successfully!');
       } else {
         alert(`⚠️ Completed with ${errors} errors. Please check console.`);

@@ -753,6 +753,7 @@
                   <i class="bi bi-clock-history me-2"></i>
                   Hologram Issue History
                 </h5>
+                <small class="text-muted">Completed daily register entries (approved by officer)</small>
               </div>
               <div class="card-body">
                 <div class="table-responsive">
@@ -761,28 +762,81 @@
                       <tr>
                         <th>Date</th>
                         <th>Request Reference</th>
-                        <th>Brand Name</th>
+                        <th>Carton Number</th>
+                        <th>Total Rolls Assigned</th>
                         <th>Serial Range</th>
-                        <th>Quantity</th>
+                        <th>Brand Name</th>
+                        <th>Qty in ML</th>
+                        <th>Qty Used</th>
+                        <th>Qty Damaged</th>
+                        <th>Qty Leftover</th>
                         <th>Status</th>
                         <th>Completion Date</th>
-                        <th>Officer</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (history of historyData; track history.id) {
                       <tr>
-                        <td>{{ history.issueDate | date:'dd-MMM-yyyy' }}</td>
-                        <td><span class="fw-bold text-primary">{{ history.referenceNo || history.requestReference }}</span></td>
-                        <td>{{ history.brandName }}</td>
-                        <td><span class="font-monospace small">{{ history.fromSerial }} - {{ history.toSerial }}</span>
-                        </td>
-                        <td class="text-end">{{ history.quantity | number }}</td>
                         <td>
-                          <span class="badge" [class]="getStatusClass(history.status)">{{ history.status }}</span>
+                          {{ history.issueDate | date:'dd-MMM-yyyy' }}
+                          <br>
+                          <small class="text-muted">{{ history.issueDate | date:'EEEE' }}</small>
                         </td>
-                        <td>{{ history.completionDate | date:'dd-MMM-yyyy' }}</td>
-                        <td>{{ history.officer }}</td>
+                        <td>
+                          <span class="fw-bold text-primary">{{ history.requestReference }}</span>
+                          @if (history.hologramType) {
+                          <br>
+                          <span class="badge" [class]="getTypeClass(history.hologramType)">
+                            {{ history.hologramType }}
+                          </span>
+                          }
+                        </td>
+                        <td>
+                          <span class="font-monospace small fw-bold">{{ history.cartoonNumber }}</span>
+                        </td>
+                        <td class="text-center">
+                          <span class="badge bg-primary">{{ history.totalRollsAssigned | number }}</span>
+                        </td>
+                        <td>
+                          <span class="font-monospace small">{{ history.serialRange }}</span>
+                        </td>
+                        <td>{{ history.brandName }}</td>
+                        <td class="text-center">
+                          <span class="badge bg-info">{{ history.bottleSize }}</span>
+                        </td>
+                        <td class="text-end">
+                          <span class="text-success fw-bold">{{ history.qtyUsed | number }}</span>
+                        </td>
+                        <td class="text-end">
+                          <span class="text-danger fw-bold">{{ history.qtyDamaged | number }}</span>
+                        </td>
+                        <td class="text-end">
+                          <span class="text-info fw-bold">{{ history.qtyLeftover | number }}</span>
+                        </td>
+                        <td>
+                          <span class="badge bg-success">
+                            <i class="bi bi-check-circle me-1"></i>{{ history.status }}
+                          </span>
+                        </td>
+                        <td>
+                          {{ history.completionDate | date:'dd-MMM-yyyy' }}
+                          <br>
+                          <small class="text-muted">{{ history.completionDate | date:'HH:mm' }}</small>
+                          @if (history.officer) {
+                          <br>
+                          <small class="text-muted">by {{ history.officer }}</small>
+                          }
+                        </td>
+                      </tr>
+                      } @empty {
+                      <tr>
+                        <td colspan="12" class="text-center text-muted py-4">
+                          <i class="bi bi-inbox display-4"></i>
+                          <br>
+                          No completed entries yet.
+                          <br>
+                          <small>Entries will appear here after the officer approves the daily register.</small>
+                        </td>
                       </tr>
                       }
                     </tbody>

@@ -134,6 +134,10 @@ export class HologramDataService {
   private requestUpdateSubject = new BehaviorSubject<void>(undefined);
   public requestUpdate$ = this.requestUpdateSubject.asObservable();
 
+  // Subject for notifying when daily register entries are updated (save, approve, etc.)
+  private dailyRegisterUpdateSubject = new BehaviorSubject<void>(undefined);
+  public dailyRegisterUpdate$ = this.dailyRegisterUpdateSubject.asObservable();
+
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
 
@@ -222,6 +226,12 @@ export class HologramDataService {
   notifyRequestUpdate(): void {
     this.requestUpdateSubject.next(undefined);
     console.log('📢 Request update notification sent');
+  }
+
+  // Components can call this after successfully updating daily register entries (save, approve, etc.)
+  notifyDailyRegisterUpdate(): void {
+    this.dailyRegisterUpdateSubject.next(undefined);
+    console.log('📢 Daily register update notification sent');
   }
 
   private loadFromStorage(): void {
