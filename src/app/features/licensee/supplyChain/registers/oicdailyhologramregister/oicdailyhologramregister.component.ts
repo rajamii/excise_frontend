@@ -591,9 +591,125 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
         console.log('✅ Mapped API entries:', apiEntries.length);
 
-        // Merge with saved entries, avoiding duplicates
-        // Use only API entries
-        const allEntries = apiEntries;
+        // CRITICAL FIX: Also include standalone saved daily register entries
+        // These are entries that were saved but may not have a matching request in the filtered list
+        const standaloneEntries: any[] = [];
+        const processedRefs = new Set(apiEntries.map((e: any) => e.referenceNo?.toUpperCase()));
+        
+        // Process saved entries that don't have a matching request entry
+        savedEntriesMap.forEach((savedEntries, refKey) => {
+          if (!processedRefs.has(refKey)) {
+            console.log(`📋 Found standalone saved entries for ${refKey} (no matching request in filtered list)`);
+            
+            // Group saved entries by reference_no to create a single display entry
+            const firstSaved = savedEntries[0];
+            
+            // Build lockedRolls from all saved entries for this reference
+            const lockedRolls = savedEntries.map((saved: any) => {
+              const savedRollRange = saved.roll_range || saved.rollRange || '';
+              const brandDetails = saved.brand_details || saved.brandDetails || '';
+              const bottleSize = saved.bottle_size || saved.bottleSize || '';
+              const hologramQty = saved.hologram_qty || saved.hologramQty || 0;
+              const issuedFrom = saved.issued_from || saved.issuedFrom || '';
+              const issuedTo = saved.issued_to || saved.issuedTo || '';
+              const issuedQty = saved.issued_qty || saved.issuedQty || 0;
+              const wastageFrom = saved.wastage_from || saved.wastageFrom || '';
+              const wastageTo = saved.wastage_to || saved.wastageTo || '';
+              const wastageQty = saved.wastage_qty || saved.wastageQty || 0;
+              const damageReason = saved.damage_reason || saved.damageReason || '';
+              
+              // Parse ranges
+              let issuedRanges: any[] = [];
+              let wastageRanges: any[] = [];
+              
+              const issuedRangesField = saved.issued_ranges || saved.issuedRanges;
+              if (issuedRangesField) {
+                if (typeof issuedRangesField === 'string') {
+                  try { issuedRanges = JSON.parse(issuedRangesField); } catch (e) { }
+                } else if (Array.isArray(issuedRangesField)) {
+                  issuedRanges = issuedRangesField;
+                }
+              }
+              if (issuedRanges.length === 0 && issuedFrom && issuedTo && issuedQty) {
+                issuedRanges = [{ fromSerial: issuedFrom, toSerial: issuedTo, quantity: issuedQty }];
+              }
+              
+              const wastageRangesField = saved.wastage_ranges || saved.wastageRanges;
+              if (wastageRangesField) {
+                if (typeof wastageRangesField === 'string') {
+                  try { wastageRanges = JSON.parse(wastageRangesField); } catch (e) { }
+                } else if (Array.isArray(wastageRangesField)) {
+                  wastageRanges = wastageRangesField;
+                }
+              }
+              if (wastageRanges.length === 0 && wastageFrom && wastageTo && wastageQty) {
+                wastageRanges = [{ fromSerial: wastageFrom, toSerial: wastageTo, quantity: wastageQty }];
+              }
+              
+              return {
+                cartoonNumber: savedRollRange,
+                displayName: savedRollRange,
+                brandDetails: brandDetails,
+                bottleSize: bottleSize,
+                availableCount: hologramQty,
+                serialRange: issuedFrom && issuedTo ? `${issuedFrom} - ${issuedTo}` : '-',
+                fromSerial: issuedFrom,
+                toSerial: issuedTo,
+                issuedQty: issuedQty,
+                wastageQty: wastageQty,
+                leftOver: hologramQty - issuedQty - wastageQty,
+                issuedRanges: issuedRanges,
+                wastageRanges: wastageRanges,
+                damageReason: damageReason,
+                isLocked: true
+              };
+            });
+            
+            // Calculate totals
+            const totalIssuedQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.issuedQty || 0), 0);
+            const totalWastageQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.wastageQty || 0), 0);
+            const totalHologramQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.availableCount || 0), 0);
+            
+            // Get hologram type from saved entry or default to LOCAL
+            const hologramType = (firstSaved.hologram_type || 'LOCAL').toString().toUpperCase();
+            
+            standaloneEntries.push({
+              id: firstSaved.id || `standalone_${refKey}`,
+              requestId: firstSaved.hologram_request || null,
+              referenceNo: firstSaved.reference_no || firstSaved.referenceNo || refKey,
+              rollRange: lockedRolls.map((r: any) => r.cartoonNumber).join(', '),
+              dates: {
+                submission: firstSaved.submission_date || firstSaved.submissionDate || new Date().toISOString().split('T')[0],
+                usage: firstSaved.usage_date || firstSaved.usageDate || new Date().toISOString().split('T')[0]
+              },
+              brandDetails: firstSaved.brand_details || firstSaved.brandDetails || 'N/A',
+              bottleSize: firstSaved.bottle_size || firstSaved.bottleSize || '750ml',
+              hologramQty: totalHologramQty,
+              hologramType: hologramType as 'LOCAL' | 'EXPORT' | 'DEFENCE',
+              isFixed: true, // Saved entries are always fixed
+              lockedRolls: lockedRolls,
+              issuedFrom: lockedRolls.length > 0 ? lockedRolls[0].fromSerial : '',
+              issuedTo: lockedRolls.length > 0 ? lockedRolls[lockedRolls.length - 1].toSerial : '',
+              issuedQty: totalIssuedQty,
+              wastageFrom: lockedRolls.length > 0 && lockedRolls[0].wastageRanges?.length > 0 ? lockedRolls[0].wastageRanges[0].fromSerial : '',
+              wastageTo: lockedRolls.length > 0 && lockedRolls[lockedRolls.length - 1].wastageRanges?.length > 0 ? lockedRolls[lockedRolls.length - 1].wastageRanges[lockedRolls[lockedRolls.length - 1].wastageRanges.length - 1].toSerial : '',
+              wastageQty: totalWastageQty,
+              leftOver: totalHologramQty - totalIssuedQty - totalWastageQty,
+              total: totalHologramQty,
+              damageReason: firstSaved.damage_reason || firstSaved.damageReason || '',
+              cartoonNumber: lockedRolls.map((r: any) => r.cartoonNumber).join(', '),
+              utilizedQuantity: totalIssuedQty,
+              originalHologramQty: totalHologramQty,
+              allocatedRanges: [],
+              rollsAssigned: []
+            });
+          }
+        });
+        
+        console.log(`✅ Found ${standaloneEntries.length} standalone saved entries`);
+        
+        // Merge API entries with standalone saved entries
+        const allEntries = [...apiEntries, ...standaloneEntries];
         console.log('✅ Total entries after merge:', allEntries.length);
 
         this.entries = allEntries.map((entry: any) => ({
@@ -2055,6 +2171,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         // Also notify request update to refresh "Currently Issued Holograms" tab
         // (to remove the request from there since it's now completed)
         this.hologramService.notifyRequestUpdate();
+        
+        // CRITICAL FIX: Reload data from backend to show saved entries
+        console.log('🔄 Reloading data from backend after successful save...');
+        this.loadApprovedEntries();
         
         alert('✅ All entries saved to database successfully!');
       } else {
