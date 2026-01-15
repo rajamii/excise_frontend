@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
+import { Subscription } from 'rxjs';
 
 interface HologramRoll {
   id: number;
@@ -149,7 +150,7 @@ interface ChartFilters {
   templateUrl: './hologramoveriew.component.html',
   styleUrl: './hologramoveriew.component.scss'
 })
-export class HologramoveriewComponent implements OnInit {
+export class HologramoveriewComponent implements OnInit, OnDestroy {
   activeTab: string = 'rolls';
 
   rollsData: HologramRoll[] = [];
@@ -157,6 +158,9 @@ export class HologramoveriewComponent implements OnInit {
   availableData: AvailableHologram[] = [];
   issuedData: IssuedHologram[] = [];
   historyData: HistoryHologram[] = [];
+
+  // Subscription management
+  private requestUpdateSubscription?: Subscription;
 
 
   // Serial Details Modal
@@ -246,6 +250,20 @@ export class HologramoveriewComponent implements OnInit {
 
   ngOnInit() {
     this.loadAllData();
+    
+    // Subscribe to request updates from other components
+    this.requestUpdateSubscription = this.hologramService.requestUpdate$.subscribe(() => {
+      console.log('📢 Received request update notification - reloading issued data');
+      this.loadIssuedData();
+      this.loadRollsData(); // Also reload rolls to update available counts
+    });
+  }
+
+  ngOnDestroy() {
+    // Clean up subscription
+    if (this.requestUpdateSubscription) {
+      this.requestUpdateSubscription.unsubscribe();
+    }
   }
 
   loadAllData() {
@@ -425,19 +443,141 @@ export class HologramoveriewComponent implements OnInit {
   }
 
   loadIssuedData(): void {
-    // Load issued holograms from database (usage_history with IN_PROGRESS status)
-    // Currently, the system doesn't track IN_PROGRESS separately in usage_history JSON
-    // This will be populated when Daily Register entries are saved but not yet approved
+    // Load issued holograms from database (requests with rolls_assigned populated)
+    // These are requests in "In Use" status (after allocation, before daily register completion)
     
-    // For now, this tab will show entries that are pending approval
-    // We'll need to query DailyHologramRegister with approval_status=PENDING
+    console.log('🔍 Loading issued data...');
+    console.log('🔍 Current issuedData length:', this.issuedData.length);
+    console.log('🔍 Calling hologramService.getRequestsWithAllocatedRolls()...');
     
-    // TODO: Implement API call to get pending Daily Register entries
-    // For now, keep empty until backend integration is complete
-    
-    this.issuedData = [];
-    
-    console.log('📊 Issued data (IN_PROGRESS): Currently empty - needs Daily Register integration');
+    this.hologramService.getRequestsWithAllocatedRolls().subscribe({
+      next: (requests) => {
+        console.log('✅ Loaded requests with allocated rolls:', requests);
+        console.log('📊 Total requests received:', requests.length);
+        
+        // Log each request for debugging
+        requests.forEach((req: any, index: number) => {
+          console.log(`Request ${index + 1}:`, {
+            id: req.id,
+            ref_no: req.ref_no || req.refNo,
+            status: req.status,
+            current_stage: req.current_stage,
+            issued_assets: req.issued_assets,
+            rolls_assigned: req.rolls_assigned,
+            issued_assets_length: req.issued_assets?.length || 0,
+            rolls_assigned_length: req.rolls_assigned?.length || 0
+          });
+        });
+        
+        // Transform API data to IssuedHologram format
+        // Group multiple rolls by reference number (one row per request)
+        this.issuedData = [];
+        
+        requests.forEach((request: any) => {
+          // Try rolls_assigned first, then rollsAssigned, then fall back to issued_assets/issuedAssets
+          const rollsAssigned = request.rolls_assigned || request.rollsAssigned || request.issued_assets || request.issuedAssets || [];
+          
+          console.log(`Processing request ${request.ref_no || request.refNo}:`, {
+            rollsAssignedCount: rollsAssigned.length,
+            rollsAssigned: rollsAssigned,
+            source: request.rolls_assigned ? 'rolls_assigned' : 
+                    (request.rollsAssigned ? 'rollsAssigned' : 
+                    (request.issued_assets ? 'issued_assets' : 
+                    (request.issuedAssets ? 'issuedAssets' : 'none')))
+          });
+          
+          if (rollsAssigned.length === 0) {
+            console.warn(`⚠️ Request ${request.ref_no || request.refNo} has no rolls assigned`);
+            return;
+          }
+          
+          // Collect all carton numbers and serial ranges for this request
+          const cartoonNumbers: string[] = [];
+          const serialRanges: string[] = [];
+          let totalQuantity = 0;
+          
+          rollsAssigned.forEach((roll: any) => {
+            const cartoonNumber = roll.cartoonNumber || roll.cartoon_number || roll.cartonNumber || '';
+            const fromSerial = roll.fromSerial || roll.from_serial || '';
+            const toSerial = roll.toSerial || roll.to_serial || '';
+            const quantity = roll.count || roll.quantity || 0;
+            
+            console.log(`  Roll:`, {
+              cartoonNumber,
+              fromSerial,
+              toSerial,
+              quantity
+            });
+            
+            if (cartoonNumber) {
+              cartoonNumbers.push(cartoonNumber);
+            }
+            
+            if (fromSerial && toSerial) {
+              serialRanges.push(`${fromSerial}-${toSerial}`);
+            }
+            
+            totalQuantity += quantity;
+          });
+          
+          console.log(`  Collected:`, {
+            cartoonNumbers,
+            serialRanges,
+            totalQuantity
+          });
+          
+          // Determine status based on request stage
+          const stageName = request.status || request.current_stage?.name || '';
+          let status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' = 'IN_PROGRESS';
+          
+          if (stageName.includes('Production Completed') || stageName.includes('Completed')) {
+            status = 'COMPLETED';
+          } else if (stageName.includes('Cancelled') || stageName.includes('Rejected')) {
+            status = 'CANCELLED';
+          }
+          
+          console.log(`  Status: ${stageName} → ${status}`);
+          
+          // Create one entry per request with comma-separated values
+          const entry = {
+            id: request.id,
+            referenceNo: request.ref_no || request.refNo || '',
+            brandName: 'N/A', // Not needed for this view
+            fromSerial: serialRanges.join(', '), // Comma-separated ranges
+            toSerial: '', // Not used when showing multiple ranges
+            quantity: totalQuantity,
+            issueDate: request.submission_date || request.submissionDate || new Date().toISOString(),
+            status: status,
+            officer: '', // Removed
+            requestReference: request.ref_no || request.refNo || '',
+            hologramType: request.hologram_type || request.hologramType || 'LOCAL',
+            cartoonNumber: cartoonNumbers.join(', ') // Comma-separated carton numbers
+          };
+          
+          console.log(`  Created entry:`, entry);
+          
+          this.issuedData.push(entry);
+        });
+        
+        // Sort by issue date (newest first)
+        this.issuedData.sort((a, b) => {
+          return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
+        });
+        
+        console.log('📊 Issued data loaded:', this.issuedData.length, 'entries (grouped by reference)');
+        console.log('📋 Final issuedData:', this.issuedData);
+      },
+      error: (error) => {
+        console.error('❌ Error loading issued data:', error);
+        console.error('Error details:', {
+          message: error.message,
+          status: error.status,
+          statusText: error.statusText,
+          url: error.url
+        });
+        this.issuedData = [];
+      }
+    });
   }
 
   loadHistoryData(): void {

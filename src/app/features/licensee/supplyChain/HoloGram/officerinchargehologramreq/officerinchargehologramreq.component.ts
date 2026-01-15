@@ -470,6 +470,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         this.approvalComments = '';
         this.loadHologramRequests();
         this.loadHologramInventory(); // Reload inventory to see updated Available counts
+        
+        // Notify other components that request data has been updated
+        this.hologramService.notifyRequestUpdate();
       },
       error: (err) => {
         console.error('Error approving request:', err);

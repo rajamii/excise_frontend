@@ -130,6 +130,10 @@ export class HologramDataService {
   private arrivalUpdateSubject = new BehaviorSubject<void>(undefined);
   public arrivalUpdate$ = this.arrivalUpdateSubject.asObservable();
 
+  // Subject for notifying when hologram requests are updated (allocation, approval, etc.)
+  private requestUpdateSubject = new BehaviorSubject<void>(undefined);
+  public requestUpdate$ = this.requestUpdateSubject.asObservable();
+
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
 
@@ -212,6 +216,12 @@ export class HologramDataService {
   notifyArrivalUpdate(): void {
     this.arrivalUpdateSubject.next(undefined);
     console.log('📢 Arrival update notification sent');
+  }
+
+  // Components can call this after successfully updating request details (allocation, approval, etc.)
+  notifyRequestUpdate(): void {
+    this.requestUpdateSubject.next(undefined);
+    console.log('📢 Request update notification sent');
   }
 
   private loadFromStorage(): void {
@@ -819,6 +829,68 @@ export class HologramDataService {
   
   getSerialRanges(rollId: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/rolls-details/${rollId}/serial_ranges/`);
+  }
+
+  /**
+   * Get requests with allocated rolls (Currently Issued Holograms)
+   * These are requests that have rolls_assigned populated (In Use status)
+   */
+  getRequestsWithAllocatedRolls(): Observable<any[]> {
+    const t = new Date().getTime();
+    console.log('🔍 Fetching requests from API...');
+    console.log('API URL:', `${this.apiUrl}/request/?_t=${t}`);
+    
+    return this.http.get<any[]>(`${this.apiUrl}/request/?_t=${t}`).pipe(
+      map((requests: any[]) => {
+        console.log('📦 Received requests from API:', requests.length);
+        console.log('📦 Full API Response:', JSON.stringify(requests, null, 2));
+        
+        // Log all requests for debugging
+        requests.forEach((req: any, index: number) => {
+          console.log(`API Request ${index + 1}:`, {
+            id: req.id,
+            ref_no: req.ref_no || req.refNo,
+            issued_assets: req.issued_assets,
+            rolls_assigned: req.rolls_assigned,
+            issuedAssets: req.issuedAssets,
+            rollsAssigned: req.rollsAssigned,
+            issued_assets_type: typeof req.issued_assets,
+            rolls_assigned_type: typeof req.rolls_assigned,
+            issuedAssets_type: typeof req.issuedAssets,
+            rollsAssigned_type: typeof req.rollsAssigned,
+            issued_assets_length: req.issued_assets?.length,
+            rolls_assigned_length: req.rolls_assigned?.length,
+            issuedAssets_length: req.issuedAssets?.length,
+            rollsAssigned_length: req.rollsAssigned?.length,
+            has_issued_assets: !!(req.issued_assets && Array.isArray(req.issued_assets) && req.issued_assets.length > 0),
+            has_rolls_assigned: !!(req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0),
+            has_issuedAssets: !!(req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0),
+            has_rollsAssigned: !!(req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
+          });
+        });
+        
+        // Try filtering by BOTH snake_case AND camelCase (API might return either format)
+        const filteredByRollsAssigned = requests.filter(req => 
+          (req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0) ||
+          (req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
+        );
+        
+        const filteredByIssuedAssets = requests.filter(req => 
+          (req.issued_assets && Array.isArray(req.issued_assets) && req.issued_assets.length > 0) ||
+          (req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0)
+        );
+        
+        console.log('✅ Filtered by rolls_assigned/rollsAssigned:', filteredByRollsAssigned.length);
+        console.log('✅ Filtered by issued_assets/issuedAssets:', filteredByIssuedAssets.length);
+        
+        // Use rolls_assigned if available, otherwise fall back to issued_assets
+        const filtered = filteredByRollsAssigned.length > 0 ? filteredByRollsAssigned : filteredByIssuedAssets;
+        
+        console.log('✅ Final filtered requests:', filtered.length);
+        
+        return filtered;
+      })
+    );
   }
 
   /**

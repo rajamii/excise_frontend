@@ -645,6 +645,7 @@
                   <i class="bi bi-arrow-up-circle me-2"></i>
                   Currently Issued Holograms
                 </h5>
+                <small class="text-muted">Rolls assigned to production requests (In Process)</small>
               </div>
               <div class="card-body">
                 <!-- Summary Cards for Issued Holograms -->
@@ -681,19 +682,17 @@
                       <tr>
                         <th>Issue Date</th>
                         <th>Request Reference</th>
-                        <th>Brand Name</th>
-                        <th>Serial Range</th>
-                        <th>Quantity</th>
-                        <th>Status</th>
-                        <th>Officer</th>
                         <th>Carton Number</th>
+                        <th>Total Rolls Assigned</th>
+                        <th>Serial Range</th>
+                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       @for (issued of issuedData; track issued.id) {
                       <tr [class.table-warning]="issued.status === 'IN_PROGRESS'" [class.table-success]="issued.status === 'COMPLETED'">
                         <td>
-                          {{ issued.issueDate | date:'dd-MMM-yyyy HH:mm' }}
+                          {{ issued.issueDate | date:'dd-MMM-yyyy' }}
                           <br>
                           <small class="text-muted">{{ issued.issueDate | date:'EEEE' }}</small>
                         </td>
@@ -707,19 +706,19 @@
                           }
                         </td>
                         <td>
-                          {{ issued.brandName }}
-                          @if (issued.hologramType) {
-                          <br>
-                          <span class="badge" [class]="getTypeClass(issued.hologramType)">{{ issued.hologramType }}</span>
+                          @if (issued.cartoonNumber) {
+                          <span class="font-monospace small fw-bold">{{ issued.cartoonNumber }}</span>
+                          } @else {
+                          <span class="text-muted">-</span>
                           }
                         </td>
-                        <td>
-                          <span class="font-monospace small">{{ issued.fromSerial }} - {{ issued.toSerial }}</span>
+                        <td class="text-center">
+                          <span class="badge bg-primary">{{ issued.quantity | number }}</span>
                         </td>
-                        <td class="text-end">
-                          <span class="fw-bold">{{ issued.quantity | number }}</span>
+                        <td>
+                          <span class="font-monospace small">{{ issued.fromSerial }}</span>
                           <br>
-                          <small class="text-muted">units</small>
+                          <small class="text-muted">({{ issued.quantity | number }} units total)</small>
                         </td>
                         <td>
                           <span class="badge" [class]="getStatusClass(issued.status)">
@@ -727,18 +726,10 @@
                             {{ issued.status === 'IN_PROGRESS' ? 'IN PROCESS' : issued.status }}
                           </span>
                         </td>
-                        <td>{{ issued.officer }}</td>
-                        <td>
-                          @if (issued.cartoonNumber) {
-                          <span class="font-monospace small">{{ issued.cartoonNumber }}</span>
-                          } @else {
-                          <span class="text-muted">-</span>
-                          }
-                        </td>
                       </tr>
                       } @empty {
                       <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                           <i class="bi bi-inbox display-4"></i>
                           <br>
                           No holograms have been issued yet.
