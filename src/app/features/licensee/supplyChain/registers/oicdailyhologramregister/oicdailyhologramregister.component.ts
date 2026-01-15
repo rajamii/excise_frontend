@@ -2176,6 +2176,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         console.log('🔄 Reloading data from backend after successful save...');
         this.loadApprovedEntries();
         
+        // CRITICAL FIX: Close the rolls view panel after successful save
+        console.log('🔒 Closing rolls view panel after successful save...');
+        this.clearRollsView();
+        
         alert('✅ All entries saved to database successfully!');
       } else {
         alert(`⚠️ Completed with ${errors} errors. Please check console.`);
