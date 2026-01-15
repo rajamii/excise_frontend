@@ -1275,6 +1275,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           console.log('Backend updated successfully:', response);
           // Reload inventory to show updated available counts
           this.loadHologramInventory();
+          // CRITICAL FIX: Notify Daily Register component to reload data
+          // This ensures text boxes appear immediately without page refresh
+          this.hologramService.notifyRequestUpdate();
+          console.log('📢 Notified Daily Register to reload after allocation');
           // We can rely on loadHologramRequests() to refresh the UI
         },
         error: (err) => {

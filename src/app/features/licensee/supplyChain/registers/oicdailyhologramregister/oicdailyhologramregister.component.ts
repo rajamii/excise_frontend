@@ -1,9 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { HologramDataService } from '../../services/hologram-data.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 
 interface RollRange {
@@ -99,7 +100,7 @@ interface RegisterEntry {
   templateUrl: './oicdailyhologramregister.component.html',
   styleUrl: './oicdailyhologramregister.component.scss'
 })
-export class OicdailyhologramregisterComponent implements OnInit {
+export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   Math = Math;
   selectedMonth = 'nov';
   selectedYear = '2025';
@@ -122,6 +123,11 @@ export class OicdailyhologramregisterComponent implements OnInit {
   // View state management
   private viewDetailsState: { [key: string]: boolean } = {};
   private readonly VIEW_STATE_KEY = 'hologramViewState';
+  
+  // Subscription management
+  private requestUpdateSubscription?: Subscription;
+  private routerSubscription?: Subscription;
+  private lastLoadTime: number = 0;
 
   constructor(
     private router: Router,
@@ -130,8 +136,39 @@ export class OicdailyhologramregisterComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    console.log('🔵 Daily Register Component: ngOnInit called');
     this.loadViewState();
     this.loadApprovedEntries();
+
+    // Subscribe to request updates from other components (e.g., when officer approves a request)
+    this.requestUpdateSubscription = this.hologramService.requestUpdate$.subscribe(() => {
+      console.log('📢 Daily Register: Received request update notification - reloading entries');
+      this.loadApprovedEntries();
+      // Force change detection
+      this.cdr.detectChanges();
+    });
+    
+    // CRITICAL: Also reload when navigating to this component
+    // This ensures fresh data when user switches tabs/pages
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        // Check if we're navigating to this component's route
+        if (event.url.includes('daily-hologram-register') || event.url.includes('oicdailyhologramregister')) {
+          const now = Date.now();
+          // Only reload if more than 2 seconds have passed since last load (prevent duplicate loads)
+          if (now - this.lastLoadTime > 2000) {
+            console.log('🔄 Daily Register: Navigation detected, reloading entries');
+            this.loadApprovedEntries();
+          }
+        }
+      });
+    
+    // CRITICAL: Reload when page becomes visible (user switches back to this tab)
+    // This catches the case where approval happens in another tab/window
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    
+    console.log('✅ Daily Register: Subscribed to requestUpdate$, router events, and visibility changes');
 
     // CRITICAL FIX: Recalculate Available Hologram Data from Rolls data
     // This fixes any existing data that was calculated with the old (wrong) logic
@@ -139,6 +176,29 @@ export class OicdailyhologramregisterComponent implements OnInit {
 
     // Listen for storage changes to auto-refresh
 
+  }
+
+  private handleVisibilityChange = () => {
+    if (!document.hidden) {
+      const now = Date.now();
+      // Only reload if more than 3 seconds have passed since last load
+      if (now - this.lastLoadTime > 3000) {
+        console.log('👁️ Daily Register: Page became visible, reloading entries');
+        this.loadApprovedEntries();
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscriptions
+    if (this.requestUpdateSubscription) {
+      this.requestUpdateSubscription.unsubscribe();
+    }
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+    // Remove visibility change listener
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
   }
 
   /**
@@ -152,6 +212,10 @@ export class OicdailyhologramregisterComponent implements OnInit {
   private procurementCache: any[] = [];
 
   loadApprovedEntries(): void {
+    // Track load time to prevent duplicate loads
+    this.lastLoadTime = Date.now();
+    console.log('🔄 Loading approved entries at:', new Date().toLocaleTimeString());
+    
     // Load from Backend API - Fetch all hologram_request entries AND procurements
     // Requests have basic info, Procurements have the source of truth for Carton Ranges
 
