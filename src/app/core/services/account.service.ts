@@ -10,12 +10,6 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class AccountService {
-  getCurrentUser() {
-    throw new Error('Method not implemented.');
-  }
-  getCurrentUserRoles() {
-    throw new Error('Method not implemented.');
-  }
   private baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private userIdentity: Account | null = null;
   private authenticationState = new ReplaySubject<Account | null>(1);
@@ -28,14 +22,41 @@ export class AccountService {
     return this.http.get<Account>(`${this.baseUrl}/me/`);
   }
 
+  /**
+   * ✅ Get current user (for backward compatibility)
+   */
+  getCurrentUser(): Observable<Account | null> {
+    return this.identity();
+  }
+
+  /**
+   * ✅ Get current user roles
+   */
+  getCurrentUserRoles(): string[] {
+    if (!this.userIdentity?.role) return [];
+    return [this.userIdentity.role.name];
+  }
+
+  /**
+   * ✅ Get user profile synchronously from memory
+   */
+  getUserProfileSync(): Account | null {
+    return this.userIdentity;
+  }
+
   identity(force = false): Observable<Account | null> {
     if (!this.accountCache$ || force) {
       this.accountCache$ = this.getUserDetails().pipe(
         tap(account => {
+          console.log('✅ User profile loaded:', account);
+          
           localStorage.setItem('username', account?.username ?? '');
           localStorage.setItem('role', account.role!.name);
           localStorage.setItem('firstName', account.firstName);
           localStorage.setItem('lastName', account.lastName);
+          
+          // ✅ Store complete user profile for auto-fill
+          localStorage.setItem('currentUser', JSON.stringify(account));
 
           this.authenticate(account);
 
@@ -43,14 +64,13 @@ export class AccountService {
           const access = localStorage.getItem('access');
           const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
           if (expiry) {
-            const timeout = Math.max(0, expiry - Date.now());  // Ensure non-negative
-            if (timeout > 0) {  // Only set if there's actual time left
+            const timeout = Math.max(0, expiry - Date.now());
+            if (timeout > 0) {
               this.logoutTimer = setTimeout(() => {
                 this.clearAppData();
                 this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
               }, timeout);
             } else {
-              // Token already expired -> logout immediately (graceful)
               this.clearAppData();
               this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
             }

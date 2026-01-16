@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -8,6 +8,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { SalesmanBarman, SalesmanBarmanDocuments } from '../../../../../core/models/salesman-barman.model';
 import { DatePipe } from '@angular/common';
 import { SalesmanBarmanRegistrationService } from '../../../../../core/services/salesman-barman-registration.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
   selector: 'app-details',
@@ -53,7 +54,9 @@ export class DetailsComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
-    private datePipe: DatePipe
+    private accountService: AccountService,
+    private datePipe: DatePipe,
+    private cdr: ChangeDetectorRef
   ) {
     const storedValues = this.getFromSessionStorage();
 
@@ -64,7 +67,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
       fatherHusbandName: new FormControl(storedValues.fatherHusbandName, [Validators.required, Validators.pattern(PatternConstants.NAME)]),
       gender: new FormControl(storedValues.gender, [Validators.required]),
       dob: new FormControl(storedValues.dob, [Validators.required]),
-      nationality: new FormControl(storedValues.nationality, [Validators.required]),
+      nationality: new FormControl(storedValues.nationality ?? 'Indian', [Validators.required]),
       address: new FormControl(storedValues.address, [Validators.required]),
       pan: new FormControl(storedValues.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]),
       aadhaar: new FormControl(storedValues.aadhaar, [Validators.required, Validators.pattern(PatternConstants.AADHAAR_NUMBER)]),
@@ -82,12 +85,114 @@ export class DetailsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     FormUtils.capitalize(this.detailsForm.get('pan')!, this.destroy$);
     this.loadSavedDocuments();
+    
+    // ✅ AUTO-FILL from user profile
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy() {
     this.clearFileUrls();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * ✅ Auto-fill salesman/barman details from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    // Check if form already has data from session storage
+    const sessionData = sessionStorage.getItem('personalDetails');
+    if (sessionData) {
+      console.log('📋 Salesman/Barman details already in session, skipping auto-fill');
+      return;
+    }
+
+    // Try to get user profile from memory first
+    let userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+          console.log('✅ User profile loaded from localStorage for salesman/barman');
+        } catch (e) {
+          console.error('❌ Failed to parse stored user profile:', e);
+          return;
+        }
+      }
+    }
+
+    if (userProfile) {
+      console.log('✅ Auto-filling salesman/barman details with profile:', userProfile);
+      this.fillFormWithProfile(userProfile);
+    } else {
+      // Fetch from backend as last resort
+      console.log('⚠️ No user profile in memory or localStorage, fetching from backend...');
+      this.accountService.identity(true).subscribe({
+        next: (profile) => {
+          if (profile) {
+            console.log('✅ User profile fetched from backend');
+            this.fillFormWithProfile(profile);
+          }
+        },
+        error: (err) => {
+          console.error('❌ Failed to fetch user profile:', err);
+        }
+      });
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    console.log('🔍 Filling salesman/barman details form with profile data:', profile);
+    
+    const fillData: any = {};
+
+    // Map firstName
+    if (profile.firstName || profile.first_name) {
+      fillData.firstName = profile.firstName || profile.first_name;
+    }
+
+    // Map middleName
+    if (profile.middleName || profile.middle_name) {
+      fillData.middleName = profile.middleName || profile.middle_name;
+    }
+
+    // Map lastName
+    if (profile.lastName || profile.last_name) {
+      fillData.lastName = profile.lastName || profile.last_name;
+    }
+
+    // Map phone number
+    if (profile.phoneNumber || profile.phone_number) {
+      fillData.mobileNumber = profile.phoneNumber || profile.phone_number;
+    }
+
+    // Map email
+    if (profile.email) {
+      fillData.emailId = profile.email;
+    }
+
+    // Map address
+    if (profile.address) {
+      fillData.address = profile.address;
+    }
+
+    // Default nationality to Indian
+    fillData.nationality = 'Indian';
+
+    console.log('📝 Salesman/Barman details data to be filled:', fillData);
+
+    // Patch the form with the data
+    this.detailsForm.patchValue(fillData, { emitEvent: true });
+
+    console.log('✅ Salesman/Barman details auto-filled from user profile');
+    
+    // Trigger change detection
+    this.cdr.detectChanges();
   }
 
   get modeofOperation() {
@@ -133,14 +238,11 @@ export class DetailsComponent implements OnInit, OnDestroy {
   private loadSavedDocuments() {
     const savedDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
 
-    // console.log('Loading saved documents:', savedDocs);
-
     this.documents.forEach(doc => {
       const savedFile = savedDocs[doc.key as keyof SalesmanBarmanDocuments];
       if (savedFile) {
         doc.file = savedFile;
         doc.fileUrl = URL.createObjectURL(savedFile);
-        // console.log(`Loaded ${doc.key}:`, savedFile.name);
       }
     });
   }
@@ -148,8 +250,6 @@ export class DetailsComponent implements OnInit, OnDestroy {
   onFileSelect(event: any, document: any) {
     const file = event.target.files[0];
     if (file) {
-      // console.log(`File selected for ${document.key}:`, file.name);
-
       // Clear old URL if exists
       if (document.fileUrl) {
         URL.revokeObjectURL(document.fileUrl);
@@ -159,8 +259,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
       document.file = file;
       document.fileUrl = URL.createObjectURL(file);
 
-      // CRITICAL FIX: Get existing documents first, then add the new one
-      // This preserves all previously uploaded documents
+      // Get existing documents first, then add the new one
       const currentDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
 
       // Create updated documents object with the new file
@@ -171,11 +270,6 @@ export class DetailsComponent implements OnInit, OnDestroy {
 
       // Set all documents back to service
       this.salesmanBarmanService.setSalesmanBarmanDocuments(updatedDocs);
-
-      // Log the current state
-      // console.log('Document uploaded:', document.key);
-      // const uploadedCount = Object.keys(this.salesmanBarmanService.getSalesmanBarmanDocuments()).length;
-      // console.log('Current document count:', uploadedCount);
     }
   }
 
@@ -186,15 +280,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
   }
 
   areDocumentsUploaded(): boolean {
-    const allUploaded = this.documents.every(doc => !doc.required || !!doc.file);
-    // console.log('All documents uploaded?', allUploaded);
-
-    // Also verify with service
-    const serviceDocs = this.salesmanBarmanService.getSalesmanBarmanDocuments();
-    // const serviceCount = Object.keys(serviceDocs).filter(key => serviceDocs[key as keyof SalesmanBarmanDocuments]).length;
-    // console.log('Documents in service:', serviceCount);
-
-    return allUploaded;
+    return this.documents.every(doc => !doc.required || !!doc.file);
   }
 
   clearFileUrls() {
@@ -226,13 +312,16 @@ export class DetailsComponent implements OnInit, OnDestroy {
   }
 
   proceedToNext() {
-  if (this.detailsForm.valid && this.areDocumentsUploaded()) {
-    const raw = this.detailsForm.getRawValue();
-    raw.dob = this.datePipe.transform(raw.dob, 'yyyy-MM-dd'); // ← CRITICAL
-    sessionStorage.setItem('personalDetails', JSON.stringify(raw));
-    this.next.emit();
-  } else {
-    this.detailsForm.markAllAsTouched();
+    if (this.detailsForm.valid && this.areDocumentsUploaded()) {
+      const raw = this.detailsForm.getRawValue();
+      raw.dob = this.datePipe.transform(raw.dob, 'yyyy-MM-dd');
+      sessionStorage.setItem('personalDetails', JSON.stringify(raw));
+      this.next.emit();
+    } else {
+      this.detailsForm.markAllAsTouched();
+      if (!this.areDocumentsUploaded()) {
+        alert('Please upload all required documents before proceeding.');
+      }
+    }
   }
-}
 }

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, OnDestroy, signal, inject, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { Subject, takeUntil } from 'rxjs';
@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { District } from '../../../../../core/models/district.model';
 import { LicenseCategory } from '../../../../../core/models/license-category.model';
 import { MasterService } from '../../../../../core/services/master.service';
+import { AccountService } from '../../../../../core/services/account.service';
 import { SalesmanBarman } from '../../../../../core/models/salesman-barman.model';
 import { Licensee } from '../../../../../core/models/license.model';
 import { LicenseService } from '../../../../../core/services/license.service';
@@ -27,6 +28,8 @@ export class LicenseComponent implements OnInit, OnDestroy {
   private fb = inject(FormBuilder);
   private masterService = inject(MasterService);
   private licenseService = inject(LicenseService);
+  private accountService = inject(AccountService);
+  private cdr = inject(ChangeDetectorRef);
 
   applicationForm: FormGroup;
 
@@ -72,11 +75,84 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.loadDropdownData();
     this.setupFormSubscriptions();
     this.loadSavedData();
+    
+    // ✅ AUTO-FILL district from user profile
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * ✅ Auto-fill district from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    // Check if form already has data from session storage
+    const sessionData = sessionStorage.getItem('licenseDetails');
+    if (sessionData) {
+      console.log('📋 License details already in session, skipping auto-fill');
+      return;
+    }
+
+    // Try to get user profile from memory first
+    let userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+          console.log('✅ User profile loaded from localStorage for license selection');
+        } catch (e) {
+          console.error('❌ Failed to parse stored user profile:', e);
+          return;
+        }
+      }
+    }
+
+    if (userProfile) {
+      console.log('✅ Auto-filling license selection with profile:', userProfile);
+      
+      // Wait for districts to load before trying to auto-fill
+      setTimeout(() => {
+        this.fillFormWithProfile(userProfile);
+      }, 500);
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    console.log('🔍 Filling license form with profile data:', profile);
+    
+    const fillData: any = {};
+
+    // Map district (handle both object and direct value)
+    if (profile.district) {
+      if (typeof profile.district === 'object' && profile.district.code) {
+        // Find district by code
+        const district = this.districts.find(d => d.districtCode === profile.district.code);
+        if (district) {
+          fillData.district = district.id;
+          console.log('✅ Mapped district:', district.district, '(ID:', district.id, ')');
+        } else {
+          console.warn('⚠️ District not found for code:', profile.district.code);
+          console.log('Available districts:', this.districts.map(d => ({ id: d.id, code: d.districtCode, name: d.district })));
+        }
+      }
+    }
+
+    if (Object.keys(fillData).length > 0) {
+      console.log('📝 License selection data to be filled:', fillData);
+      this.applicationForm.patchValue(fillData, { emitEvent: true });
+      console.log('✅ License district auto-filled from user profile');
+      this.cdr.detectChanges();
+    } else {
+      console.log('ℹ️ No district to auto-fill from profile');
+    }
   }
 
   private getCurrentFinancialYear(): string {
@@ -91,19 +167,33 @@ export class LicenseComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.districts = data;
         console.log('🏛️ Loaded districts:', data);
+        
+        // Try auto-fill after districts are loaded
+        const storedLicense = sessionStorage.getItem('licenseDetails');
+        if (!storedLicense) {
+          // Give a moment for component to settle, then try auto-fill
+          setTimeout(() => {
+            const profile = this.accountService.getUserProfileSync();
+            if (profile) {
+              this.fillFormWithProfile(profile);
+            }
+          }, 100);
+        }
       },
       error: (e) => console.error('Districts error', e)
     });
 
     this.masterService.getLicenseCategories().subscribe({
-      next: (data) => (this.licenseCategories = data),
+      next: (data) => {
+        this.licenseCategories = data;
+        console.log('📋 Loaded license categories:', data);
+      },
       error: (e) => console.error('Categories error', e)
     });
   }
 
   private setupFormSubscriptions(): void {
-    // ✅ FIX: Only filter licensees by district and category
-    // Mode of operation is NOT a licensee property
+    // Filter licensees by district and category
     this.applicationForm.get('district')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchLicensees());
@@ -111,9 +201,6 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.applicationForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchLicensees());
-    
-    // Mode of operation doesn't affect licensee filtering
-    // It's only used for the salesman/barman registration itself
   }
 
   private fetchLicensees(): void {
@@ -144,10 +231,9 @@ export class LicenseComponent implements OnInit, OnDestroy {
       return;
     }
 
-    console.log('📍 District Code:', districtCode, 'District Name:', selectedDistrict?.district);
+    console.log('🔍 District Code:', districtCode, 'District Name:', selectedDistrict?.district);
     console.log('📋 License Category ID:', licenseCategory);
 
-    // ✅ FIX: Pass districtCode (not districtId) to the API
     this.licenseService
       .getActiveLicensees(districtCode.toString(), licenseCategory)
       .subscribe({

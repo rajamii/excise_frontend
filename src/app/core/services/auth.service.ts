@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
+import { catchError, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
 import { AccountService } from './account.service';
@@ -11,7 +11,7 @@ import { AccountService } from './account.service';
 })
 export class AuthService {
 
-  private baseUrl = `${environment.apiBaseUrl}/auth/users`;  // ✅ Changed from /user to /auth/users
+  private baseUrl = `${environment.apiBaseUrl}/auth/users`;
 
   constructor(private http: HttpClient, private accountService: AccountService) { }
 
@@ -29,30 +29,61 @@ export class AuthService {
         if (response.success && response.tokens) {
           localStorage.setItem('access', response.tokens.access);
           localStorage.setItem('refresh', response.tokens.refresh);
-          localStorage.setItem('currentUser', JSON.stringify(response.user));
+          if (response.user) {
+            localStorage.setItem('currentUser', JSON.stringify(response.user));
+          }
         }
+      }),
+      // ✅ Load user profile after registration
+      switchMap((response: any) => {
+        console.log('✅ Registration successful, loading user profile...');
+        return this.accountService.identity(true).pipe(
+          tap(() => console.log('✅ User profile loaded after registration')),
+          catchError(err => {
+            console.warn('⚠️ Registration successful but failed to load profile:', err);
+            // Don't fail the entire registration if profile load fails
+            return throwError(() => err);
+          }),
+          switchMap(() => [response])
+        );
       })
     );
   }
 
-  // Licensee signup
   licenseeSignup(data: any) {
     return this.http.post(`${environment.apiBaseUrl}/auth/users/register/licensee/`, data);
   }
 
-  // Standard login using JSON body
+  /**
+   * ✅ Login and load user profile
+   */
   login(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/login/`, data, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
+      tap((response: any) => {
+        if (response?.authenticated_user?.access) {
+          localStorage.setItem('access', response.authenticated_user.access);
+          localStorage.setItem('refresh', response.authenticated_user.refresh);
+          console.log('✅ Login successful, tokens saved');
+        }
+      }),
+      // ✅ Load user profile after login
+      switchMap((response: any) => {
+        console.log('✅ Login successful, loading user profile...');
+        return this.accountService.identity(true).pipe(
+          tap(() => console.log('✅ User profile loaded after login')),
+          catchError(err => {
+            console.warn('⚠️ Login successful but failed to load profile:', err);
+            return throwError(() => err);
+          }),
+          switchMap(() => [response])
+        );
+      }),
       catchError(error => throwError(() => error))
     );
   }
 
-  /**
-   * Logout user by sending refresh token and Authorization header.
-   * Returns error if either token is missing.
-   */
   logout(): Observable<any> {
     const refresh = localStorage.getItem('refresh');
     const access = localStorage.getItem('access');
@@ -66,17 +97,13 @@ export class AuthService {
 
     return this.http.post(`${this.baseUrl}/logout/`, { refresh }, { headers }).pipe(
       tap(() => {
-        // Clear data and emit auth state change
+        console.log('✅ Logout successful, clearing app data');
         this.accountService.clearAppData();
       }),
       catchError(error => throwError(() => error))
     );
   }
 
-  /**
-   * Requests a new access token using the refresh token.
-   * Logs success in console for debug.
-   */
   refreshToken(): Observable<any> {
     const refreshToken = localStorage.getItem('refresh');
     if (!refreshToken) return throwError(() => new Error('Missing refresh token'));
@@ -84,19 +111,17 @@ export class AuthService {
     return this.http.post(`${this.baseUrl}/token/refresh/`, { refresh: refreshToken }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
-      tap(response => console.log('Refresh success:', response)), // Debug log
+      tap(response => console.log('✅ Token refresh success:', response)),
       catchError(error => throwError(() => error))
     );
   }
 
-  // Gets a CAPTCHA image or challenge for the login form
   getCaptcha(): Observable<any> {
     return this.http.get(`${this.baseUrl}/get_captcha/`).pipe(
       catchError(error => throwError(() => error))
     );
   }
 
-  // Sends OTP request with multipart form data (e.g., for phone verification)
   sendOtp(formData: FormData): Observable<any> {
     return this.http.post(`${this.baseUrl}/otp/`, formData).pipe(
       catchError(error => throwError(() => error))
@@ -104,12 +129,30 @@ export class AuthService {
   }
 
   /**
-   * Verifies OTP using form-data format, built using utility service.
-   * Used for login after OTP is sent.
+   * ✅ Verify OTP and load user profile
    */
   verifyOtp(data: { phoneNumber: string; otp: string; otpId: string }): Observable<any> {
     const formData = FormDataUtil.buildFormData(data);
     return this.http.post(`${this.baseUrl}/otp/login/`, formData).pipe(
+      tap((response: any) => {
+        if (response?.authenticated_user?.access) {
+          localStorage.setItem('access', response.authenticated_user.access);
+          localStorage.setItem('refresh', response.authenticated_user.refresh);
+          console.log('✅ OTP login successful, tokens saved');
+        }
+      }),
+      // ✅ Load user profile after OTP login
+      switchMap((response: any) => {
+        console.log('✅ OTP login successful, loading user profile...');
+        return this.accountService.identity(true).pipe(
+          tap(() => console.log('✅ User profile loaded after OTP login')),
+          catchError(err => {
+            console.warn('⚠️ OTP login successful but failed to load profile:', err);
+            return throwError(() => err);
+          }),
+          switchMap(() => [response])
+        );
+      }),
       catchError(error => throwError(() => error))
     );
   }

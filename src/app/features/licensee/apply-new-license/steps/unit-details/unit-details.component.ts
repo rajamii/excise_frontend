@@ -5,6 +5,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { FormUtils } from '../../../../../shared/utils/capitalize.util';
+import { AccountService } from '../../../../../core/services/account.service';
 import { DatePipe } from '@angular/common';
 
 @Component({
@@ -34,7 +35,11 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     companyEmail: signal(''),
   };
 
-  constructor(private fb: FormBuilder, private datePipe: DatePipe) {
+  constructor(
+    private fb: FormBuilder, 
+    private datePipe: DatePipe,
+    private accountService: AccountService
+  ) {
     const storedValues: any = this.getFromSessionStorage();
     
     this.unitDetailsForm = this.fb.group({
@@ -55,11 +60,78 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     FormUtils.capitalize(this.unitDetailsForm.get('companyPan')!, this.destroy$);
     FormUtils.capitalize(this.unitDetailsForm.get('companyCin')!, this.destroy$);
+    
+    // ✅ AUTO-FILL from user profile (optional - company details might not be in user profile)
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * ✅ Auto-fill company details from user profile (if available)
+   * Note: This is optional since company details are typically separate
+   */
+  private autoFillFromUserProfile(): void {
+    const sessionData = sessionStorage.getItem('unitDetailsData');
+    if (sessionData) {
+      console.log('📋 Unit details already in session, skipping auto-fill');
+      return;
+    }
+
+    let userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+        } catch (e) {
+          console.error('❌ Failed to parse stored user profile:', e);
+          return;
+        }
+      }
+    }
+
+    if (userProfile) {
+      console.log('✅ Checking for company details in profile:', userProfile);
+      this.fillFormWithProfile(userProfile);
+    }
+  }
+
+  /**
+   * Fill form with user profile data (if company info exists)
+   */
+  private fillFormWithProfile(profile: any): void {
+    const fillData: any = {};
+
+    // Map phone number as company phone (user's contact)
+    if (profile.phoneNumber || profile.phone_number) {
+      fillData.companyPhoneNumber = profile.phoneNumber || profile.phone_number;
+      console.log('✅ Mapped company phone from user phone');
+    }
+
+    // Map email as company email (user's email)
+    if (profile.email) {
+      fillData.companyEmail = profile.email;
+      console.log('✅ Mapped company email from user email');
+    }
+
+    // Map address as company address (user's address)
+    if (profile.address) {
+      fillData.companyAddress = profile.address;
+      console.log('✅ Mapped company address from user address');
+    }
+
+    if (Object.keys(fillData).length > 0) {
+      console.log('📝 Company details data to be filled:', fillData);
+      this.unitDetailsForm.patchValue(fillData, { emitEvent: true });
+      console.log('✅ Company contact details auto-filled from user profile');
+    } else {
+      console.log('ℹ️ No company details to auto-fill from profile');
+    }
   }
 
   private getFromSessionStorage(): any {
@@ -90,7 +162,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       }
     }
     
-    console.log('Saving Unit Details:', formData);
+    console.log('💾 Saving Unit Details:', formData);
     sessionStorage.setItem('unitDetailsData', JSON.stringify(formData));
   }
 

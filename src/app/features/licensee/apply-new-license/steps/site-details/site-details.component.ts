@@ -6,6 +6,7 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { MasterService } from '../../../../../core/services/master.service';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { AccountService } from '../../../../../core/services/account.service';
 import { District } from '../../../../../core/models/district.model';
 import { Road } from '../../../../../core/models/road.model';
 import { Subdivision } from '../../../../../core/models/subdivision.model';
@@ -82,6 +83,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     private fb: FormBuilder,
     private masterService: MasterService,
     private licenseApplicationService: LicenseApplicationService,
+    private accountService: AccountService,
     private cdr: ChangeDetectorRef
   ) {
     const storedValues: any = this.getFromSessionStorage();
@@ -155,6 +157,9 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
           this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
         }
       });
+
+    // ✅ AUTO-FILL from user profile
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy() {
@@ -177,6 +182,89 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
         this.siteDetailsForm.patchValue({ siteSubdivision: selectedExciseSubdivision }, { emitEvent: false });
       }
     }
+  }
+
+  /**
+   * ✅ Auto-fill site details from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    // Check if form already has data from session storage
+    const sessionData = sessionStorage.getItem('siteDetailsData');
+    if (sessionData) {
+      console.log('📋 Site details already in session, skipping auto-fill');
+      return;
+    }
+
+    // Try to get user profile from memory first
+    let userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+          console.log('✅ User profile loaded from localStorage for site details');
+        } catch (e) {
+          console.error('❌ Failed to parse stored user profile:', e);
+          return;
+        }
+      }
+    }
+
+    if (userProfile) {
+      console.log('✅ Auto-filling site details with profile:', userProfile);
+      this.fillFormWithProfile(userProfile);
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    console.log('🔍 Filling site details form with profile data:', profile);
+    
+    const fillData: any = {};
+
+    // Map district (handle both object and direct value)
+    if (profile.district) {
+      if (typeof profile.district === 'object' && profile.district.code) {
+        // Find district by code
+        const district = this.districts.find(d => d.districtCode === profile.district.code);
+        if (district) {
+          fillData.siteDistrict = district.id;
+          console.log('✅ Mapped district:', district.district, '(ID:', district.id, ')');
+        }
+      }
+    }
+
+    // Map subdivision (handle both object and direct value)
+    if (profile.subdivision) {
+      if (typeof profile.subdivision === 'object' && profile.subdivision.code) {
+        // Find subdivision by code (will be filtered after district selection)
+        const subdivision = this.allSubdivisions.find(s => s.subdivisionCode === profile.subdivision.code);
+        if (subdivision) {
+          fillData.siteSubdivision = subdivision.id;
+          console.log('✅ Mapped subdivision:', subdivision.subdivision, '(ID:', subdivision.id, ')');
+        }
+      }
+    }
+
+    // Map address
+    if (profile.address) {
+      fillData.businessAddress = profile.address;
+      console.log('✅ Mapped address:', profile.address);
+    }
+
+    console.log('📝 Site details data to be filled:', fillData);
+
+    // Wait a bit for districts to load, then patch
+    setTimeout(() => {
+      if (Object.keys(fillData).length > 0) {
+        this.siteDetailsForm.patchValue(fillData, { emitEvent: true });
+        console.log('✅ Site details auto-filled from user profile');
+        this.cdr.detectChanges();
+      }
+    }, 500);
   }
 
   private setupConditionalValidation(): void {
@@ -211,12 +299,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     nocObtainedCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
-  // ✅ CRITICAL FIX: Save master data to sessionStorage
   private loadMasterData(): void {
     this.masterService.getDistrict().subscribe({
       next: (districts) => {
         this.districts = districts;
-        // ✅ SAVE TO SESSION STORAGE
         sessionStorage.setItem('districts', JSON.stringify(districts));
         console.log('✅ Districts loaded and saved:', districts.length);
         
@@ -231,7 +317,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getSubdivision().subscribe({
       next: (subdivisions) => {
         this.allSubdivisions = subdivisions;
-        // ✅ SAVE TO SESSION STORAGE
         sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
         console.log('✅ Subdivisions loaded and saved:', subdivisions.length);
         
@@ -246,7 +331,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getPoliceStations().subscribe({
       next: (stations) => {
         this.allPoliceStations = stations;
-        // ✅ SAVE TO SESSION STORAGE
         sessionStorage.setItem('policeStations', JSON.stringify(stations));
         console.log('✅ Police Stations loaded and saved:', stations.length);
         
@@ -261,7 +345,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.masterService.getRoads().subscribe({
       next: (roads) => {
         this.allRoads = roads;
-        // ✅ SAVE TO SESSION STORAGE
         sessionStorage.setItem('roads', JSON.stringify(roads));
         console.log('✅ Roads loaded and saved:', roads.length);
         

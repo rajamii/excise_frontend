@@ -5,6 +5,7 @@ import { takeUntil } from 'rxjs/operators';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { LicenseType } from '../../../../../core/models/license-type.model';
 import { MasterService } from '../../../../../core/services/master.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
   selector: 'app-select-license',
@@ -28,7 +29,8 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   constructor(
     private fb: FormBuilder, 
-    private masterService: MasterService
+    private masterService: MasterService,
+    private accountService: AccountService
   ) {
     const storedValues: any = this.getFromSessionStorage();
 
@@ -53,14 +55,18 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   }
 
   private loadData(): void {
-    this.masterService.getLicenseTypes().subscribe(
-      (data: LicenseType[]) => {
+    this.masterService.getLicenseTypes().subscribe({
+      next: (data: LicenseType[]) => {
         this.licenseTypes = data;
+        
+        // ✅ Save to sessionStorage for later use
+        sessionStorage.setItem('licenseTypes', JSON.stringify(data));
+        console.log('✅ License types loaded and saved:', data.length);
       },
-      error => {
-        console.error('Failed to load license types.', error);
+      error: (error) => {
+        console.error('❌ Failed to load license types:', error);
       }
-    );
+    });
   }
 
   private getFromSessionStorage(): any {
@@ -73,10 +79,9 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   private saveToSessionStorage() {
     const formData = this.selectLicenseForm.getRawValue();
     
-    // ✅ CRITICAL FIX: Save with BOTH field names for compatibility
     const dataToSave = {
-      licenseType: formData.licenseType,      // For frontend restoration
-      license_type: formData.licenseType      // For backend submission
+      licenseType: formData.licenseType,
+      license_type: formData.licenseType
     };
     
     console.log('💾 Saving Select License Data:', dataToSave);

@@ -9,6 +9,7 @@ import { Subject, takeUntil } from 'rxjs';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface DocumentUpload {
   name: string;
@@ -31,7 +32,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   applicantDetailsForm!: FormGroup;
   f!: any;
 
-  // ---------- Dropdowns ----------
   nationalities = ['Indian', 'Foreign'];
   residentialStatuses = ['Resident', 'Non-Resident'];
   maritalStatuses = ['Single', 'Married', 'Divorced'];
@@ -41,7 +41,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     { value: 'Barman', label: 'Barman' }
   ];
 
-  // ---------- Documents (matching backend field names) ----------
   documents: DocumentUpload[] = [
     { name: 'passportPhoto', label: 'Passport Size Photo', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png' },
     { name: 'pan_card', label: 'PAN Card', file: null, fileUrl: '', required: true, formats: '.jpg,.jpeg,.png,.pdf' },
@@ -56,7 +55,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  // ---------- Error messages (signal based) ----------
   private errorMessages = {
     firstName: signal(''), lastName: signal(''), fatherHusbandName: signal(''),
     dob: signal(''), gender: signal(''), nationality: signal(''), 
@@ -72,12 +70,12 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private licenseSrv: LicenseApplicationService,
+    private accountService: AccountService,
     private cdr: ChangeDetectorRef
   ) {
     const stored = this.getFromSessionStorage();
 
     this.applicantDetailsForm = this.fb.group({
-      // Personal
       firstName: [stored.firstName, [Validators.required, Validators.pattern(PatternConstants.NAME)]],
       middleName: [stored.middleName],
       lastName: [stored.lastName, [Validators.required, Validators.pattern(PatternConstants.NAME)]],
@@ -88,24 +86,14 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
       maritalStatus: [stored.maritalStatus ?? 'Single', Validators.required],
       residentialStatus: [stored.residentialStatus ?? 'Resident', Validators.required],
       email: [stored.email, [Validators.required, Validators.pattern(PatternConstants.EMAIL)]],
-      
-      // Mobile number (backend expects CharField with numeric validation)
       applicantMobileNumber: [stored.applicantMobileNumber, [
         Validators.required,
         Validators.pattern(PatternConstants.MOBILE)
       ]],
-
-      // Address
       presentAddress: [stored.presentAddress, Validators.required],
       permanentAddress: [stored.permanentAddress, Validators.required],
-
-      // ID
       pan: [stored.pan, [Validators.required, Validators.pattern(PatternConstants.PAN)]],
-
-      // Mode
       modeOfOperation: [stored.modeOfOperation],
-
-      // Radio questions (backend expects "Yes"/"No" strings)
       hasSikkimCertificate: [stored.hasSikkimCertificate, Validators.required],
       hasExciseLicense: [stored.hasExciseLicense, Validators.required],
       familyExciseLicense: [stored.familyExciseLicense, Validators.required],
@@ -114,12 +102,10 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
 
     this.f = this.applicantDetailsForm.controls;
 
-    // ---- AGE VALIDATION (≥21) ----
     this.applicantDetailsForm.get('dob')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.validateAge());
 
-    // ---- SAVE ON EVERY CHANGE ----
     this.applicantDetailsForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
@@ -130,6 +116,9 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.restoreDocuments();
     this.validateAge();
+    
+    // ✅ AUTO-FILL from user profile
+    this.autoFillFromUserProfile();
   }
 
   ngOnDestroy(): void {
@@ -138,9 +127,106 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- STORAGE ---------------------------- */
-  /* --------------------------------------------------------------- */
+  /**
+   * ✅ Auto-fill applicant details from logged-in user profile
+   */
+  private autoFillFromUserProfile(): void {
+    // Check if form already has data from session storage
+    const sessionData = sessionStorage.getItem('applicantDetailsData');
+    if (sessionData) {
+      console.log('📋 Applicant details already in session, skipping auto-fill');
+      return;
+    }
+
+    // Try to get user profile from memory first (synchronous)
+    let userProfile = this.accountService.getUserProfileSync();
+    
+    if (!userProfile) {
+      // Try to get from localStorage as backup
+      const storedUser = localStorage.getItem('currentUser');
+      if (storedUser) {
+        try {
+          userProfile = JSON.parse(storedUser);
+          console.log('✅ User profile loaded from localStorage');
+        } catch (e) {
+          console.error('❌ Failed to parse stored user profile:', e);
+        }
+      }
+    }
+
+    if (userProfile) {
+      console.log('✅ Auto-filling applicant details with profile:', userProfile);
+      this.fillFormWithProfile(userProfile);
+    } else {
+      // Fetch from backend as last resort
+      console.log('⚠️ No user profile in memory or localStorage, fetching from backend...');
+      this.accountService.identity(true).subscribe({
+        next: (profile) => {
+          if (profile) {
+            console.log('✅ User profile fetched from backend');
+            this.fillFormWithProfile(profile);
+          }
+        },
+        error: (err) => {
+          console.error('❌ Failed to fetch user profile:', err);
+        }
+      });
+    }
+  }
+
+  /**
+   * Fill form with user profile data
+   */
+  private fillFormWithProfile(profile: any): void {
+    console.log('🔍 Filling form with profile data:', profile);
+    
+    // Prepare the data to fill
+    const fillData: any = {};
+
+    // Map firstName (handle both camelCase and snake_case)
+    if (profile.firstName || profile.first_name) {
+      fillData.firstName = profile.firstName || profile.first_name;
+    }
+
+    // Map middleName
+    if (profile.middleName || profile.middle_name) {
+      fillData.middleName = profile.middleName || profile.middle_name;
+    }
+
+    // Map lastName
+    if (profile.lastName || profile.last_name) {
+      fillData.lastName = profile.lastName || profile.last_name;
+    }
+
+    // Map phone number
+    if (profile.phoneNumber || profile.phone_number) {
+      fillData.applicantMobileNumber = profile.phoneNumber || profile.phone_number;
+    }
+
+    // Map email
+    if (profile.email) {
+      fillData.email = profile.email;
+    }
+
+    // Map address
+    if (profile.address) {
+      fillData.presentAddress = profile.address;
+    }
+
+    // Default nationality to Indian
+    fillData.nationality = 'Indian';
+
+    console.log('📝 Data to be filled:', fillData);
+
+    // Patch the form with the data
+    this.applicantDetailsForm.patchValue(fillData, { emitEvent: true });
+
+    console.log('✅ Applicant details auto-filled from user profile');
+    
+    // Trigger change detection
+    this.cdr.detectChanges();
+  }
+
   private getFromSessionStorage(): any {
     const raw = sessionStorage.getItem('applicantDetailsData');
     return raw ? JSON.parse(raw) : {};
@@ -149,60 +235,47 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const raw = this.applicantDetailsForm.getRawValue();
 
-    // Build applicant_name (required by backend)
     const parts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
     raw.applicant_name = parts.join(' ');
-
-    // father_husband_name (backend field name)
     raw.father_husband_name = raw.fatherHusbandName;
 
-    // Clean mobile number (CharField but numeric)
     if (raw.applicantMobileNumber) {
       raw.mobile_number = String(raw.applicantMobileNumber).replace(/\D/g, '');
     }
 
-    // Email field
     if (raw.email) {
       raw.email = raw.email;
     }
 
     if (raw.dob) {
-    const dobDate = new Date(raw.dob);
-    raw.dob = dobDate.toISOString().split('T')[0];
-  }
+      const dobDate = new Date(raw.dob);
+      raw.dob = dobDate.toISOString().split('T')[0];
+    }
 
-    // Marital status
     if (raw.maritalStatus) {
       raw.marital_status = raw.maritalStatus;
     }
 
-    // Residential status
     if (raw.residentialStatus) {
       raw.residential_status = raw.residentialStatus;
     }
 
-    // Present and permanent addresses
     raw.present_address = raw.presentAddress;
     raw.permanent_address = raw.permanentAddress;
 
-    // Mode of operation
     if (raw.modeOfOperation) {
       raw.mode_of_operation = raw.modeOfOperation;
     }
 
-    // Yes/No fields (backend ChoiceFields expect "Yes"/"No" strings)
     raw.has_sikkim_certificate = raw.hasSikkimCertificate;
     raw.has_excise_license = raw.hasExciseLicense;
     raw.family_excise_license = raw.familyExciseLicense;
     raw.criminal_conviction = raw.criminalConviction;
 
-    console.log('Saving Applicant Details:', raw);
+    console.log('💾 Saving Applicant Details:', raw);
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- DOCUMENTS -------------------------- */
-  /* --------------------------------------------------------------- */
   private restoreDocuments(): void {
     this.documents.forEach(d => {
       if (d.name === 'passportPhoto') {
@@ -234,7 +307,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     const doc = this.documents.find(d => d.name === docName);
     if (!file || !doc) return;
 
-    // Size < 5 MB
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be < 5 MB');
       input.value = '';
@@ -269,9 +341,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     return this.documents.filter(d => d.required).every(d => d.file !== null);
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- HELPERS ---------------------------- */
-  /* --------------------------------------------------------------- */
   copyPresentToPermanent(checked: boolean): void {
     if (checked) {
       const present = this.applicantDetailsForm.get('presentAddress')?.value ?? '';
@@ -299,9 +368,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- VALIDATION ------------------------- */
-  /* --------------------------------------------------------------- */
   private updateErrorMessage(field: keyof typeof this.errorMessages): void {
     const ctrl = this.applicantDetailsForm.get(field);
     if (!ctrl) return;
@@ -329,9 +395,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     return this.errorMessages[field]();
   }
 
-  /* --------------------------------------------------------------- */
-  /* -------------------------- NAVIGATION ------------------------- */
-  /* --------------------------------------------------------------- */
   proceedToNext(): void {
     if (this.applicantDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
       this.saveToSessionStorage();

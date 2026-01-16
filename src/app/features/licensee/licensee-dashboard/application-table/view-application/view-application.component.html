@@ -369,14 +369,8 @@
 
     <!-- Action Buttons -->
     <div class="step-buttons">
-      <!-- Edit Application -->
-      @if (tableType === 'applied') {
-        <button matButton="filled" color="primary" (click)="onEdit(stepper)" [disabled]="isLoading">
-          <mat-icon>edit</mat-icon>
-          Edit
-        </button>
-      }
-
+      <!-- ❌ REMOVED: Edit button no longer shows for 'applied' table -->
+      
       <!-- Resolve Objection -->
       @if (tableType === 'pending') {
         @if (hasAnyObjections()) {
