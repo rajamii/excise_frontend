@@ -72,10 +72,15 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
 
   private saveToSessionStorage() {
     const formData = this.selectLicenseForm.getRawValue();
-       
-    formData.license_type = formData.license_type,
-    console.log('Saving Select License Data:', formData); // Debug log
-    sessionStorage.setItem('selectLicenseData', JSON.stringify(formData));
+    
+    // ✅ CRITICAL FIX: Save with BOTH field names for compatibility
+    const dataToSave = {
+      licenseType: formData.licenseType,      // For frontend restoration
+      license_type: formData.licenseType      // For backend submission
+    };
+    
+    console.log('💾 Saving Select License Data:', dataToSave);
+    sessionStorage.setItem('selectLicenseData', JSON.stringify(dataToSave));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {

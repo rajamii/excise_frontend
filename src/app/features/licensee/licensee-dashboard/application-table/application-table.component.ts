@@ -1,7 +1,9 @@
-import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit } from '@angular/core';
+// application-table.component.ts - FIXED VERSION
+import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit, SimpleChanges } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { LicenseApplicationService } from '../../../../core/services/license-application.service';
+import { UnifiedDashboardService } from '../../../../core/services/unified-dashboard.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
@@ -10,8 +12,7 @@ import { ViewApplicationComponent } from './view-application/view-application.co
 import { PrintApplicationComponent } from './print-application/print-application.component';
 import { Objection } from '../../../../core/models/license-application.model';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
-import { UnifiedDashboardService } from '../../../../core/services/unified-dashboard.service';
-import { forkJoin, map } from 'rxjs';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-application-table',
@@ -19,10 +20,9 @@ import { forkJoin, map } from 'rxjs';
   templateUrl: './application-table.component.html',
   styleUrl: './application-table.component.scss'
 })
-export class ApplicationTableComponent implements OnChanges {
+export class ApplicationTableComponent implements OnChanges, AfterViewInit {
   @Input() dataSource!: MatTableDataSource<any>
   @Input() displayedColumns!: string[];
-  
   @Input() tableType!: string;
 
   objections: Objection[] = [];
@@ -37,8 +37,10 @@ export class ApplicationTableComponent implements OnChanges {
   @ViewChild(MatSort) sort!: MatSort;
 
   ngAfterViewInit() {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
+    if (this.dataSource) {
+      this.dataSource.paginator = this.paginator;
+      this.dataSource.sort = this.sort;
+    }
   }
 
   stageDisplayMapping: { [key: string]: string } = {
@@ -73,43 +75,190 @@ export class ApplicationTableComponent implements OnChanges {
 
   constructor(
     protected licenseAppService: LicenseApplicationService,
-    protected unifiedService: UnifiedDashboardService,
+    private unifiedDashboardService: UnifiedDashboardService,
     private dialog: MatDialog
   ) { }
 
-  ngOnChanges() {
-    this.unresolvedObjectionAppIds.clear();
+  ngOnChanges(changes: SimpleChanges) {
+    console.log('📋 ngOnChanges called');
+    console.log('📊 Changes:', changes);
+    
+    if (changes['dataSource']) {
+      console.log('📊 DataSource changed');
+      console.log('📊 DataSource value:', this.dataSource);
+      console.log('📊 DataSource.data:', this.dataSource?.data);
+      console.log('📊 DataSource.data length:', this.dataSource?.data?.length);
+      
+      this.unresolvedObjectionAppIds.clear();
 
-    // FIXED: Batch objection checks with forkJoin to avoid multiple subs if many apps
-    const objectionRequests = this.dataSource?.data?.map(app => 
-      this.unifiedService.getObjections(app.applicationId!).pipe(
-        map((objections: any[]) => ({
-          appId: app.applicationId,
-          hasUnresolved: objections.some(obj => !obj.isResolved)
-        }))
-      )
-    ) || [];
-
-    if (objectionRequests.length) {
-      forkJoin(objectionRequests).subscribe(results => {
-        results.forEach(result => {
-          if (result.hasUnresolved) {
-            this.unresolvedObjectionAppIds.add(result.appId);
+      if (this.dataSource?.data) {
+        console.log(`📋 Processing ${this.dataSource.data.length} applications`);
+        
+        this.dataSource.data.forEach((app, index) => {
+          console.log(`📋 Processing app ${index}:`, app);
+          const appId = this.getApplicationId(app);
+          const appType = app.type || 'license-renewal';
+          console.log(`🆔 Application ID for app ${index}:`, appId);
+          console.log(`📦 Application Type for app ${index}:`, appType);
+          
+          if (appId) {
+            this.unifiedDashboardService.getObjections(appId).subscribe({
+              next: (objections) => {
+                const hasUnresolved = objections?.some((obj: Objection) => obj.isResolved === false);
+                if (hasUnresolved) {
+                  this.unresolvedObjectionAppIds.add(appId);
+                  console.log(`⚠️ Found unresolved objections for ${appId}`);
+                }
+              },
+              error: (err) => {
+                if (err.status !== 404) {
+                  console.error(`❌ Error fetching objections for ${appId}:`, err);
+                }
+              }
+            });
+          } else {
+            console.warn(`⚠️ No applicationId found for app ${index}:`, app);
           }
         });
-      });
-    }
-
-    // NEW: Set latestTransaction for each app (most recent by timestamp)
-    this.dataSource.data.forEach(app => {
-      if (app.transactions && app.transactions.length) {
-        app.latestTransaction = [...app.transactions].sort((a, b) => 
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        )[0];
       } else {
-        app.latestTransaction = null;
+        console.log('⚠️ No data in dataSource');
       }
+    }
+    
+    if (changes['tableType']) {
+      console.log('📊 Table Type changed to:', this.tableType);
+    }
+  }
+
+  hasData(): boolean {
+    const hasData = this.dataSource && 
+                    this.dataSource.data && 
+                    Array.isArray(this.dataSource.data) && 
+                    this.dataSource.data.length > 0;
+    
+    console.log('✅ hasData check:', hasData);
+    console.log('📊 Data count:', this.dataSource?.data?.length || 0);
+    
+    if (hasData) {
+      console.log('📋 First item:', this.dataSource.data[0]);
+      console.log('📋 Sample item structure:', JSON.stringify(this.dataSource.data[0], null, 2));
+    }
+    
+    return hasData;
+  }
+
+  getApplicationId(element: any): string {
+    if (!element) {
+      console.warn('⚠️ getApplicationId - element is null/undefined');
+      return '';
+    }
+    
+    console.log('🔍 Extracting ID from element:', element);
+    console.log('🔑 Element keys:', Object.keys(element));
+    
+    const directProperties = [
+      element.applicationId,
+      element.application_id,
+      element.id,
+      element.app_id,
+      element.applicationID,
+      element.application_ID
+    ];
+    
+    console.log('🔍 Direct properties found:', directProperties.filter(id => id));
+    
+    const nestedProperties = [
+      element.raw?.application_id,
+      element.raw?.applicationId,
+      element.raw?.id,
+      element.data?.application_id,
+      element.data?.applicationId,
+      element.data?.id
+    ];
+    
+    console.log('🔍 Nested properties found:', nestedProperties.filter(id => id));
+    
+    const possibleIds = [...directProperties, ...nestedProperties];
+    
+    console.log('🔍 All possible IDs:', possibleIds);
+    
+    const appId = possibleIds.find(id => {
+      return id !== null && id !== undefined && id !== '' && String(id).trim() !== '';
     });
+    
+    if (appId) {
+      const finalId = String(appId);
+      console.log('✅ Found application ID:', finalId);
+      return finalId;
+    }
+    
+    console.error('❌ CRITICAL: Could not find application ID in element');
+    console.error('❌ Element type:', element.type);
+    console.error('❌ Element keys:', Object.keys(element));
+    console.error('❌ Full element:', JSON.stringify(element, null, 2));
+    
+    return '';
+  }
+
+  getCurrentStage(element: any): string {
+    const stage = element?.currentStage || 
+                  element?.current_stage || 
+                  element?.raw?.current_stage || 
+                  '';
+    console.log('🔍 Current stage:', stage, 'for element:', element);
+    return stage;
+  }
+
+  isAwaitingPayment(element: any): boolean {
+    const stage = this.getCurrentStage(element);
+    const isAwaiting = stage === 'awaiting_payment';
+    
+    if (isAwaiting) {
+      console.log('💳 Application is awaiting payment:', this.getApplicationId(element));
+    }
+    
+    return isAwaiting;
+  }
+
+  getLatestRemarks(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.remarks || '-';
+    }
+    return '-';
+  }
+
+  getPerformedByUsername(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.performed_by_username || transactions[0]?.performedByUsername || 'Unknown';
+    }
+    return 'Unknown';
+  }
+
+  getPerformedByRole(element: any): string {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.performed_by_role || transactions[0]?.performedByRole || 'unknown';
+    }
+    return 'unknown';
+  }
+
+  getLatestTimestamp(element: any): string | null {
+    const transactions = element?.transactions || element?.raw?.transactions || [];
+    if (transactions.length > 0) {
+      return transactions[0]?.timestamp || null;
+    }
+    return null;
+  }
+
+  onPayment(application: any): void {
+    console.log('💳 Payment clicked for application:', application);
+    console.log('💳 Application ID:', this.getApplicationId(application));
+    console.log('💳 Table Type:', this.tableType);
+    console.log('💳 Current Stage:', this.getCurrentStage(application));
+    
+    this.payment.emit(application);
   }
 
   // FIXED: Updated labels
@@ -122,34 +271,123 @@ export class ApplicationTableComponent implements OnChanges {
     }
   }
 
+  // ✅ CRITICAL FIX: Pass tableType to print dialog
   onPrint(application: any) {
-    this.dialog.open(PrintApplicationComponent, {
-      width: '450px',
-      data: { application }
+    console.log('🖨️ Print clicked for application:', application);
+    
+    const appId = this.getApplicationId(application);
+    const appType = application.type || 'license-renewal';
+    
+    if (!appId) {
+      console.error('❌ No application ID found');
+      Swal.fire('Error', 'Could not find application ID', 'error');
+      return;
+    }
+    
+    console.log('🔍 Fetching full application details for printing...');
+    console.log('📦 App ID:', appId);
+    console.log('📦 App Type:', appType);
+    console.log('📊 Table Type:', this.tableType); // ✅ NEW LOG
+    
+    // Fetch the full application details before opening print dialog
+    this.unifiedDashboardService.getApplicationDetail(appId, appType).subscribe({
+      next: (fullApp) => {
+        console.log('✅ Full application loaded:', fullApp);
+        console.log('✅ Full app current_stage:', fullApp.current_stage);
+        console.log('✅ Full app is_approved:', fullApp.is_approved);
+        
+        // ✅ CRITICAL FIX: Pass tableType to print dialog
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { 
+            application: fullApp,
+            tableType: this.tableType  // ✅ PASS TABLE TYPE HERE!
+          }
+        });
+      },
+      error: (err) => {
+        console.error('❌ Error fetching application details:', err);
+        Swal.fire('Error', 'Failed to load application details for printing', 'error');
+      }
     });
   }
   
-  onView(application: UnifiedApplication) {
-
-    if(!application || (!application.applicationId)) {
-      console.error('No application data provided to view.');
+  onView(application: any) {
+    console.log('👁️ View clicked for application:', application);
+    console.log('📊 Application structure:', JSON.stringify(application, null, 2));
+    
+    const applicationId = this.getApplicationId(application);
+    
+    if (!applicationId) {
+      console.error('❌ CRITICAL: No applicationId found, cannot open view dialog');
+      console.error('❌ Full application object:', application);
       return;
     }
-
+    
+    console.log('✅ Opening view dialog with ID:', applicationId);
+    
+    const unifiedApp: UnifiedApplication = {
+      type: application.type || 'license-renewal',
+      applicationId: applicationId,
+      currentStage: this.getCurrentStage(application),
+      currentStageName: application.currentStageName || 
+                       application.current_stage_name || 
+                       application.raw?.current_stage_name || 
+                       'Unknown',
+      isApproved: application.isApproved ?? 
+                  application.is_approved ?? 
+                  application.raw?.is_approved ?? 
+                  false,
+      establishmentName: application.establishmentName || 
+                        application.establishment_name || 
+                        application.raw?.establishment_name || 
+                        null,
+      applicantFullName: application.applicantFullName || 
+                        application.applicant_name || 
+                        application.raw?.applicant_name ||
+                        application.member_name ||
+                        application.raw?.member_name ||
+                        'N/A',
+      mobileNumber: application.mobileNumber || 
+                   application.mobile_number || 
+                   application.raw?.mobile_number || 
+                   '',
+      email: application.email || 
+            application.emailId || 
+            application.email_id || 
+            application.raw?.email ||
+            '',
+      licenseCategoryName: application.licenseCategoryName || 
+                          application.license_category_name || 
+                          application.raw?.license_category_name ||
+                          'N/A',
+      siteDistrictName: application.siteDistrictName || 
+                       application.site_district_name || 
+                       application.raw?.site_district_name ||
+                       'N/A',
+      transactions: application.transactions || application.raw?.transactions || [],
+      raw: application.raw || application
+    };
+    
+    console.log('✅ Created UnifiedApplication:', unifiedApp);
+    
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
-      data: { application, tableType: this.tableType }
+      data: { unifiedApp: unifiedApp, tableType: this.tableType }
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
+        console.log('🔄 Reloading page after dialog close');
         location.reload();
       }
     });
   }
   
   viewMovement(application: any): void {
+    console.log('📊 Movement clicked for application:', application);
+    
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',        
       maxWidth: '100%',

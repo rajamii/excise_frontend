@@ -151,14 +151,15 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
       const formData = new FormData();
 
       // 🔴 MASTER / REFERENCE FIELDS (Backend expects specific format)
-      // excise_district: Backend expects DISTRICT CODE as string "101"
+      // excise_district: Backend CodeRelatedField expects DISTRICT CODE as string "101"
       formData.append('excise_district', String(licenseDetails.district || ''));
       
       // license_category: Backend expects Category ID as integer
       formData.append('license_category', String(licenseDetails.licenseCategory || ''));
       
-      // license: Backend expects License ID as integer
-      formData.append('license', String(licenseDetails.licensee || licenseDetails.license || ''));
+      // 🔴 CRITICAL FIX: Backend expects License ID (integer pk) from License model
+      // licenseDetails.licensee now contains the correct license_id (database primary key)
+      formData.append('license', String(licenseDetails.licensee || ''));
 
       // 🔴 ROLE & BASIC DETAILS
       formData.append('role', licenseDetails.role); // "Salesman" or "Barman"
@@ -228,11 +229,13 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
+  // ✅ FIXED: Navigate to the correct licensee dashboard route
   goToDashboard() {
     sessionStorage.clear();
     this.salesmanBarmanService.clearSalesmanBarmanDocuments();
     this.revokeFileUrls();
-    this.router.navigate(['/site-admin/dashboard']);
+    // Changed from '/site-admin/dashboard' to '/licensee/dashboard'
+    this.router.navigate(['/licensee/dashboard']);
   }
 
   goBack() {

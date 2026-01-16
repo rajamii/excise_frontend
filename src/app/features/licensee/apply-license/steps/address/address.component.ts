@@ -25,7 +25,6 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
   private policeStations: PoliceStation[] = [];
   sitePoliceStations: PoliceStation[] = [];
   
-  // ✅ FIXED: Load roads from backend
   roads: Road[] = [];
 
   locationCategories: string[] = ['Gyalshing', 'Namchi', 'Gangtok', 'Mangan', 'Rangpo', 'Jorethang', 'Singtam', 'Pakyong', 'Soreng', 'Chungthang'];
@@ -102,7 +101,7 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   /**
-   * ✅ Load subdivisions, police stations, and roads
+   * ✅ Load subdivisions, police stations, and roads AND save to sessionStorage
    */
   private loadDropdownData(): void {
     forkJoin({
@@ -116,10 +115,13 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
         this.roads = roads;
         this.dataLoaded = true;
         
-        console.log('✅ All master data loaded');
-        console.log('  Subdivisions:', subdivisions);
-        console.log('  Police Stations:', policeStations);
-        console.log('  Roads:', roads);
+        // ✅ CRITICAL: Save to sessionStorage
+        sessionStorage.setItem('policeStations', JSON.stringify(policeStations));
+        sessionStorage.setItem('roads', JSON.stringify(roads));
+        
+        console.log('✅ Address master data loaded and saved');
+        console.log('  Police Stations:', policeStations.length);
+        console.log('  Roads:', roads.length);
         
         const storedSubdivision = this.addressForm.get('site_subdivision')?.value;
         if (storedSubdivision) {
@@ -127,7 +129,7 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
         }
       },
       error: (error) => {
-        console.error('❌ Failed to load master data:', error);
+        console.error('❌ Failed to load address master data:', error);
       }
     });
   }
@@ -169,7 +171,6 @@ export class AddressComponent implements OnInit, OnDestroy, DoCheck {
       longitude: formData.longitude ? Number(formData.longitude) : null,
     };
 
-    // ✅ Store both ID and CODE
     const enrichedData: any = {
       ...formData,
       ...parsedNumbers

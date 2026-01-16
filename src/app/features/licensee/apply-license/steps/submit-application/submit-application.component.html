@@ -1,55 +1,184 @@
 <mat-card>
   <mat-card-header>
     <div class="heading">Submit Application</div>
+    @if (!applicationId) {
+      <div class="validation">
+        Review all details before final submission
+      </div>
+    }
   </mat-card-header>
 
   <mat-card-content>
-    <!-- Dynamically render grouped data sections -->
-    @for (section of displaySections; track section.title) {
-      @if (!section.condition || section.condition()) {
-        <div class="section-title">{{ section.title }}</div>
-      }
-
-      @if (!section.condition || section.condition()) {
-        <div class="section-table">
-          @for (item of section.data; track item.key) {
-            @if (item.value) {
-              <div class="row">
-                <div class="key">{{ item.key }}</div>
-                <div class="value">{{ item.value }}</div>
-              </div>
+    <!-- FORM VIEW - Show only when NOT submitted -->
+    @if (!applicationId) {
+      
+      <!-- License Details Section -->
+      @if (selectLicenseData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>assignment</mat-icon>
+            <h3>License Details</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of selectLicenseData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
             }
-          }
+          </div>
         </div>
       }
+
+      <!-- Key Info Section -->
+      @if (keyInfoData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>info</mat-icon>
+            <h3>Key Information</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of keyInfoData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Company Details Section (only for Company type) -->
+      @if (isCompanyType && unitDetailsData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>business</mat-icon>
+            <h3>Company Details</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of unitDetailsData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item" [class.full-width]="item.key.includes('Address')">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Address Details Section -->
+      @if (addressData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>location_on</mat-icon>
+            <h3>Address Details</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of addressData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item" [class.full-width]="item.key.includes('Address')">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Member Details Section -->
+      @if (memberDetailsData.length > 0) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>person</mat-icon>
+            <h3>Member Details</h3>
+          </div>
+          <div class="details-grid">
+            @for (item of memberDetailsData; track item.key) {
+              @if (item.value) {
+                <div class="detail-item">
+                  <span class="label">{{ item.key }}:</span>
+                  <span class="value">{{ item.value }}</span>
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Applicant Photo -->
+      @if (passPhotoUrl) {
+        <div class="info-section">
+          <div class="section-header">
+            <mat-icon>photo_camera</mat-icon>
+            <h3>Applicant Photo</h3>
+          </div>
+          <div class="photo-display">
+            <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
+          </div>
+        </div>
+      }
+
+      <!-- Terms and Conditions -->
+      <div class="terms-section">
+        <mat-checkbox [(ngModel)]="acceptTerms" required>
+          <span class="terms-text">
+            I hereby declare that all the information provided above is true and correct to the best of my knowledge. 
+            I agree to the terms and conditions for this application.
+          </span>
+        </mat-checkbox>
+      </div>
     }
 
-    <!-- Member Details section with photo display -->
-    <div class="section-title">Member Details</div>
-    <div class="details-with-photo">
-      <div class="left-section">
-        @for (item of memberDetailsData; track item.key) {
-          @if (item.value) {
-            <div class="row">
-              <div class="key">{{ item.key }}</div>
-              <div class="value">{{ item.value }}</div>
-            </div>
-          }
-        }
-      </div>
-
-      <!-- Photo display (if photo URL is available) -->
-      @if (passPhotoUrl) {
-        <div class="photo-section">
-          <img class="profile-photo" [src]="passPhotoUrl" alt="Applicant Photo" />
+    <!-- SUCCESS VIEW - Show only when submitted -->
+    @if (applicationId) {
+      <div class="success-section">
+        <div class="success-header">
+          <mat-icon>check_circle</mat-icon>
+          <h3>Application Submitted Successfully!</h3>
         </div>
-      }
-    </div>
+        <div class="application-id">
+          <span class="label">Application ID:</span>
+          <span class="value">{{ applicationId }}</span>
+        </div>
+        <div class="next-steps">
+          <h4>Next Steps:</h4>
+          <ul>
+            <li>Your application will be reviewed by the licensing authority</li>
+            <li>You will receive updates via email and SMS</li>
+            <li>Processing time: 7-15 working days</li>
+            <li>Application receipt will be sent to your registered email</li>
+          </ul>
+        </div>
+      </div>
+    }
   </mat-card-content>
 
   <!-- Action buttons -->
   <mat-card-actions>
-    <button matButton="outlined" (click)="goBack()">Back</button>
-    <button matButton="filled" color="primary" (click)="submit()">Submit</button>
+    @if (!applicationId) {
+      <button mat-stroked-button (click)="goBack()">Back</button>
+      <button 
+        mat-flat-button 
+        color="primary" 
+        (click)="submit()" 
+        [disabled]="!acceptTerms || isSubmitting">
+        @if (isSubmitting) {
+          <span>Submitting...</span>
+        } @else {
+          <span>Submit Application</span>
+        }
+      </button>
+    } @else {
+      <button mat-flat-button color="primary" (click)="goToDashboard()">
+        Go to Dashboard
+      </button>
+    }
   </mat-card-actions>
 </mat-card>

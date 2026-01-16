@@ -51,30 +51,6 @@
           }
         </mat-form-field>
 
-        <!-- Select Licensee -->
-        <mat-form-field appearance="outline">
-          <mat-label>Select Licensee</mat-label>
-          <mat-select formControlName="licensee">
-            <mat-option value="">-- Select Licensee --</mat-option>
-            @for (licensee of filteredLicensees; track licensee.id) {
-            <mat-option [value]="licensee.id">
-              <div class="licensee-option">
-                <div class="licensee-name">{{ licensee.establishment_name }}</div>
-                <div class="licensee-details">{{ licensee.id }}</div>
-              </div>
-            </mat-option>
-            }
-          </mat-select>
-          @if (isFieldInvalid('licensee')) {
-          <mat-error>{{ getFieldError('licensee') }}</mat-error>
-          }
-          @if (!applicationForm.get('district')?.value || !applicationForm.get('licenseCategory')?.value) {
-          <mat-hint>Please select district and license category first</mat-hint>
-          } @else if (filteredLicensees.length === 0) {
-          <mat-hint>No active licensees found for selected criteria</mat-hint>
-          }
-        </mat-form-field>
-
         <!-- Mode of Operation -->
         <mat-form-field appearance="outline">
           <mat-label>Select Mode of Operation</mat-label>
@@ -99,6 +75,32 @@
           </mat-select>
           @if (isFieldInvalid('modeOfOperation')) {
           <mat-error>{{ getFieldError('modeOfOperation') }}</mat-error>
+          }
+        </mat-form-field>
+
+        <!-- Select Licensee -->
+        <mat-form-field appearance="outline" style="grid-column: span 2;">
+          <mat-label>Select Licensee</mat-label>
+          <mat-select formControlName="licensee">
+            <mat-option value="">-- Select Licensee --</mat-option>
+            @for (licensee of filteredLicensees; track licensee.licenseeId) {
+            <mat-option [value]="licensee.licenseeId">
+              <div class="licensee-option">
+                <div class="licensee-name">{{ licensee.establishmentName }}</div>
+                <div class="licensee-details">{{ licensee.id }}</div>
+              </div>
+            </mat-option>
+            }
+          </mat-select>
+          @if (isFieldInvalid('licensee')) {
+          <mat-error>{{ getFieldError('licensee') }}</mat-error>
+          }
+          @if (!applicationForm.get('district')?.value || !applicationForm.get('licenseCategory')?.value) {
+          <mat-hint>Please select district and license category first</mat-hint>
+          } @else if (filteredLicensees.length === 0 && applicationForm.get('district')?.value && applicationForm.get('licenseCategory')?.value) {
+          <mat-hint style="color: #f44336;">No active licensees found for selected criteria. Please check console for details.</mat-hint>
+          } @else if (filteredLicensees.length > 0) {
+          <mat-hint style="color: #4caf50;">{{ filteredLicensees.length }} licensee(s) found</mat-hint>
           }
         </mat-form-field>
 

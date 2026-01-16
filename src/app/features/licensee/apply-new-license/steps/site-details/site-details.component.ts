@@ -30,26 +30,20 @@ interface DocumentUpload {
 export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   siteDetailsForm: FormGroup;
 
-  // Master data
   districts: District[] = [];
-  // Filtered data shown in dropdowns
+  private allSubdivisions: Subdivision[] = [];
+  private allPoliceStations: PoliceStation[] = [];
+  private allRoads: Road[] = [];
+
   siteSubdivisions: Subdivision[] = [];
   sitePoliceStations: PoliceStation[] = [];
   roadNames: Road[] = [];
 
-  // Loading indicators
-  loadingDistricts = false;
-  loadingSubdivisions = false;
-  loadingPoliceStations = false;
-  loadingRoads = false;
-
-  // Static dropdown values
   locationCategories: string[] = ['Municipal Corporation', 'Municipal Council', 'Nagar Panchayat', 'Block'];
   locationNames: string[] = ['Location 1', 'Location 2', 'Location 3', 'Location 4'];
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
   constructionTypes: string[] = ['RCC', 'Wooden Structure'];
 
-  // Document upload configuration (backend field name: noc_landlord)
   documents: DocumentUpload[] = [
     {
       name: 'noc_landlord',
@@ -91,58 +85,76 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     private cdr: ChangeDetectorRef
   ) {
     const storedValues: any = this.getFromSessionStorage();
-    const hasDistrict = !!storedValues.siteDistrict;
-    const hasSubdivision = !!storedValues.siteSubdivision;
+    const hasDistrict = !!storedValues.district;
+    const hasSubdivision = !!storedValues.subdivision;
 
     this.siteDetailsForm = this.fb.group({
-      siteDistrict: new FormControl(storedValues.siteDistrict ?? null, [Validators.required]),
-      siteSubdivision: new FormControl({ value: storedValues.siteSubdivision ?? null, disabled: !hasDistrict }, [Validators.required]),
-      policeStation: new FormControl({ value: storedValues.policeStation ?? null, disabled: !hasSubdivision }, [Validators.required]),
-      locationCategory: new FormControl(storedValues.locationCategory ?? null, [Validators.required]),
-      locationName: new FormControl(storedValues.locationName ?? null, [Validators.required]),
-      wardName: new FormControl(storedValues.wardName ?? null, [Validators.required]),
-      businessAddress: new FormControl(storedValues.businessAddress ?? null, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl({ value: storedValues.roadName ?? null, disabled: !hasDistrict }, [Validators.required]),
+      siteDistrict: new FormControl(storedValues.district ?? null, [Validators.required]),
+      siteSubdivision: new FormControl({value: storedValues.subdivision ?? null, disabled: !hasDistrict}, [Validators.required]),
+      policeStation: new FormControl({value: storedValues.police_station ?? null, disabled: !hasSubdivision}, [Validators.required]),
+      locationCategory: new FormControl(storedValues.location_category ?? null, [Validators.required]),
+      locationName: new FormControl(storedValues.location_name ?? null, [Validators.required]),
+      wardName: new FormControl(storedValues.ward_name ?? null, [Validators.required]),
+      businessAddress: new FormControl(storedValues.address ?? null, [Validators.required, Validators.maxLength(500)]),
+      roadName: new FormControl({value: storedValues.road ?? null, disabled: !hasDistrict}, [Validators.required]),
       pinCode: new FormControl(storedValues.pin_code, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)
       ]),
-
-      // Site construction details
-      constructionType: new FormControl(storedValues.constructionType, [Validators.required]),
+      constructionType: new FormControl(storedValues.construction_type, [Validators.required]),
       length: new FormControl(storedValues.length, [
         Validators.pattern(/^\d+(\.\d{1,2})?$/)
       ]),
       breadth: new FormControl(storedValues.breadth, [
         Validators.pattern(/^\d+(\.\d{1,2})?$/)
       ]),
-
-      // Radio button fields (Backend expects "Yes"/"No" strings for ChoiceFields)
-      siteOwned: new FormControl(storedValues.siteOwned, [Validators.required]),
-      nocObtained: new FormControl(storedValues.nocObtained),
-      tradeLicenseCovered: new FormControl(storedValues.tradeLicenseCovered, [Validators.required]),
+      siteOwned: new FormControl(storedValues.site_owned, [Validators.required]),
+      nocObtained: new FormControl(storedValues.noc_obtained),
+      tradeLicenseCovered: new FormControl(storedValues.trade_license_covered, [Validators.required]),
     });
 
     this.setupConditionalValidation();
 
     this.siteDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.saveToSessionStorage();
       this.updateAllErrorMessages();
     });
   }
 
   ngOnInit() {
+    console.log('🚀 SiteDetailsComponent initialized');
+    this.loadMasterData();
     this.restoreDocuments();
-    this.loadingDistricts = true;
-    this.masterService.getDistrict().subscribe({
-      next: (districts) => {
-        this.districts = districts;
-        this.loadingDistricts = false;
-      },
-      error: (err) => {
-        console.error('Failed to load districts', err);
-        this.loadingDistricts = false;
-      }
-    });
+
+    this.siteDetailsForm.get('siteDistrict')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(districtId => {
+        console.log('🏛️ District changed to:', districtId);
+        this.onDistrictChange(districtId);
+        const siteSubdivisionCtrl = this.siteDetailsForm.get('siteSubdivision');
+        const roadNameCtrl = this.siteDetailsForm.get('roadName');
+        if (districtId) {
+          siteSubdivisionCtrl?.enable();
+          roadNameCtrl?.enable();
+        } else {
+          siteSubdivisionCtrl?.disable();
+          roadNameCtrl?.disable();
+        }
+      });
+
+    this.siteDetailsForm.get('siteSubdivision')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(subdivisionId => {
+        const policeStationCtrl = this.siteDetailsForm.get('policeStation');
+        if (subdivisionId) {
+          policeStationCtrl?.enable();
+          this.filterPoliceStations(subdivisionId);
+        } else {
+          policeStationCtrl?.disable();
+          this.sitePoliceStations = [];
+          this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
+        }
+      });
   }
 
   ngOnDestroy() {
@@ -167,22 +179,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     }
   }
 
-  trackById(index: number, item: any): number { return item.id; }
-
-  // === Conditional Validators ===
   private setupConditionalValidation(): void {
     const siteOwnedCtrl = this.siteDetailsForm.get('siteOwned');
-
-    // Initial state
     this.updateNocRequirements(siteOwnedCtrl?.value);
-
-    // React to changes
-    siteOwnedCtrl?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(value => {
-        this.updateNocRequirements(value);
-        this.cdr.detectChanges();
-      });
+    siteOwnedCtrl?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(value => {
+      this.updateNocRequirements(value);
+      this.cdr.detectChanges();
+    });
   }
 
   private updateNocRequirements(siteOwnedValue: 'Yes' | 'No' | null): void {
@@ -190,9 +193,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const nocDoc = this.documents.find(d => d.name === 'noc_landlord');
 
     if (siteOwnedValue === 'Yes') {
-      nocObtainedCtrl?.setValue(null);
+      nocObtainedCtrl?.setValue('No');
       nocObtainedCtrl?.clearValidators();
-
       if (nocDoc) {
         nocDoc.required = false;
         if (nocDoc.file) {
@@ -204,97 +206,173 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       }
     } else if (siteOwnedValue === 'No') {
       nocObtainedCtrl?.setValidators(Validators.required);
-      if (nocDoc) {
-        nocDoc.required = true;
-      }
+      if (nocDoc) nocDoc.required = true;
     }
-
     nocObtainedCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
-  // === Dropdown Change Handlers ===
-  onSubdivisionChange(subdivisionCode: number): void {
-    if (!subdivisionCode) {
-      this.sitePoliceStations = [];
-      this.siteDetailsForm.get('policeStation')?.reset();
-      return;
-    }
-
-    this.loadingPoliceStations = true;
-    this.masterService.getPoliceStationBySubDivision(subdivisionCode).subscribe({
-      next: (policeStations) => {
-        this.sitePoliceStations = policeStations;
-        this.loadingPoliceStations = false;
-        this.siteDetailsForm.get('policeStation')?.reset();  // Reset if needed
+  // ✅ CRITICAL FIX: Save master data to sessionStorage
+  private loadMasterData(): void {
+    this.masterService.getDistrict().subscribe({
+      next: (districts) => {
+        this.districts = districts;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('districts', JSON.stringify(districts));
+        console.log('✅ Districts loaded and saved:', districts.length);
+        
+        const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (storedDistrictId) {
+          this.onDistrictChange(storedDistrictId);
+        }
       },
-      error: (err) => {
-        console.error('Failed to load police stations', err);
-        this.sitePoliceStations = [];
-        this.loadingPoliceStations = false;
-      }
+      error: (err) => console.error('Failed to load districts', err)
+    });
+
+    this.masterService.getSubdivision().subscribe({
+      next: (subdivisions) => {
+        this.allSubdivisions = subdivisions;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
+        console.log('✅ Subdivisions loaded and saved:', subdivisions.length);
+        
+        const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (storedDistrictId && this.districts.length > 0) {
+          this.filterSubdivisions(storedDistrictId);
+        }
+      },
+      error: (err) => console.error('Failed to load subdivisions', err)
+    });
+
+    this.masterService.getPoliceStations().subscribe({
+      next: (stations) => {
+        this.allPoliceStations = stations;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('policeStations', JSON.stringify(stations));
+        console.log('✅ Police Stations loaded and saved:', stations.length);
+        
+        const storedSubdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
+        if (storedSubdivisionId && this.allSubdivisions.length > 0) {
+          this.filterPoliceStations(storedSubdivisionId);
+        }
+      },
+      error: (err) => console.error('Failed to load police stations', err)
+    });
+
+    this.masterService.getRoads().subscribe({
+      next: (roads) => {
+        this.allRoads = roads;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('roads', JSON.stringify(roads));
+        console.log('✅ Roads loaded and saved:', roads.length);
+        
+        const currentDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (currentDistrictId) {
+          this.filterRoads(currentDistrictId);
+        }
+      },
+      error: (err) => console.error('❌ Failed to load roads', err)
     });
   }
 
-  // Update onDistrictChange to fetch BOTH subdivisions and roads
-  onDistrictChange(districtCode: number): void {
-    if (!districtCode) {
+  onDistrictChange(districtId: number) {
+    console.log('🔄 onDistrictChange called with:', districtId);
+    if (districtId) {
+      this.filterSubdivisions(districtId);
+      this.filterRoads(districtId);
+      this.siteDetailsForm.patchValue({
+        siteSubdivision: null,
+        policeStation: null,
+        roadName: null
+      }, { emitEvent: false });
+    } else {
       this.siteSubdivisions = [];
-      this.sitePoliceStations = [];
       this.roadNames = [];
-      this.siteDetailsForm.get('siteSubdivision')?.reset();
-      this.siteDetailsForm.get('policeStation')?.reset();
-      this.siteDetailsForm.get('roadName')?.reset();
+      this.sitePoliceStations = [];
+      this.siteDetailsForm.patchValue({
+        siteSubdivision: null,
+        policeStation: null,
+        roadName: null
+      }, { emitEvent: false });
+    }
+  }
+
+  private filterSubdivisions(districtId: number): void {
+    console.log('🔍 filterSubdivisions called with districtId:', districtId);
+    const district = this.districts.find(d => d.id === districtId);
+    if (!district) {
+      console.warn('⚠️ District not found for ID:', districtId);
+      this.siteSubdivisions = [];
       return;
     }
 
-    // Fetch subdivisions
-    this.loadingSubdivisions = true;
-    this.masterService.getSubdivisionsByDistrict(districtCode).subscribe({
-      next: (subdivisions) => {
-        this.siteSubdivisions = subdivisions;
-        this.loadingSubdivisions = false;
-        this.siteDetailsForm.get('siteSubdivision')?.reset();
-        this.sitePoliceStations = [];
-        this.siteDetailsForm.get('policeStation')?.reset();
-      },
-      error: (err) => {
-        console.error('Failed to load subdivisions', err);
-        this.siteSubdivisions = [];
-        this.loadingSubdivisions = false;
-      }
-    });
+    console.log('✅ Found district:', district);
+    this.siteSubdivisions = this.allSubdivisions.filter(s => s.districtCode === district.districtCode);
+    console.log('✅ Filtered subdivisions:', this.siteSubdivisions);
 
-    // Fetch roads (populate roadNames)
-    this.loadingRoads = true;
-    this.masterService.getRoadsByDistrict(districtCode).subscribe({
-      next: (roads) => {
-        this.roadNames = roads;
-        this.loadingRoads = false;
-        this.siteDetailsForm.get('roadName')?.reset();
-      },
-      error: (err) => {
-        console.error('Failed to load roads', err);
-        this.roadNames = [];
-        this.loadingRoads = false;
+    const current = this.siteDetailsForm.get('siteSubdivision')?.value;
+    if (current && !this.siteSubdivisions.some(s => s.id === current)) {
+      console.log('⚠️ Current subdivision not in filtered list, resetting');
+      this.siteDetailsForm.patchValue({ siteSubdivision: null }, { emitEvent: false });
+    }
+    this.cdr.detectChanges();
+  }
+
+  private filterRoads(districtId: number): void {
+    if (!districtId) {
+      this.roadNames = [];
+      return;
+    }
+    const selectedDistrict = this.districts.find(d => d.id === districtId);
+    if (!selectedDistrict) {
+      this.roadNames = [];
+      return;
+    }
+    this.roadNames = this.allRoads.filter(road => {
+      let roadDistrictId: number | undefined;
+      if ((road as any).districtId !== undefined) {
+        roadDistrictId = (road as any).districtId;
+      } else if (typeof road.district === 'number') {
+        roadDistrictId = road.district;
+      } else if (road.district && typeof road.district === 'object') {
+        roadDistrictId = (road.district as District).id;
+      } else if ((road as any).district_id !== undefined) {
+        roadDistrictId = (road as any).district_id;
       }
+      return roadDistrictId === districtId;
     });
+    const current = this.siteDetailsForm.get('roadName')?.value;
+    if (current && !this.roadNames.some(r => r.id === current)) {
+      this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
+    }
+    this.cdr.detectChanges();
+  }
+
+  private filterPoliceStations(subdivisionId: number): void {
+    const subdivision = this.allSubdivisions.find(s => s.id === subdivisionId);
+    if (!subdivision) {
+      this.sitePoliceStations = [];
+      return;
+    }
+    this.sitePoliceStations = this.allPoliceStations.filter(ps =>
+      ps.subdivisionCode === subdivision.subdivisionCode
+    );
+    const current = this.siteDetailsForm.get('policeStation')?.value;
+    if (current && !this.sitePoliceStations.some(p => p.id === current)) {
+      this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
+    }
+    this.cdr.detectChanges();
   }
 
   onDocumentSelect(event: any, docName: string) {
     const file: File = event.target.files[0];
     if (!file) return;
-
     const doc = this.documents.find(d => d.name === docName);
     if (!doc) return;
-
-    // File size validation (< 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5 MB');
       event.target.value = '';
       return;
     }
-
-    // Format validation
     const allowed = doc.formats.split(',').map(f => f.trim());
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowed.includes(ext)) {
@@ -302,16 +380,14 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       event.target.value = '';
       return;
     }
-
     if (doc.fileUrl) {
       URL.revokeObjectURL(doc.fileUrl);
       doc.fileUrl = '';
     }
-
     doc.file = file;
     doc.fileUrl = URL.createObjectURL(file);
     this.licenseApplicationService.setSiteDocument(docName, file);
-    console.log(`Document ${docName} uploaded:`, file.name);
+    console.log(`✅ Document ${docName} uploaded:`, file.name);
     this.cdr.detectChanges();
   }
 
@@ -341,69 +417,42 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   areRequiredDocumentsUploaded(): boolean {
-    return this.documents
-      .filter(doc => doc.required)
-      .every(doc => !!doc.file);
+    return this.documents.filter(doc => doc.required).every(doc => !!doc.file);
   }
 
   private getFromSessionStorage(): any {
     const storedData = sessionStorage.getItem('siteDetailsData');
     if (!storedData) return {};
-
-    const parsed = JSON.parse(storedData);
-
-    // Fix corrupted siteDistrict if it's an object
-    if (parsed.siteDistrict && typeof parsed.siteDistrict !== 'number') {
-      parsed.siteDistrict = parsed.siteDistrict.id ?? null;
-      sessionStorage.setItem('siteDetailsData', JSON.stringify(parsed));
-    }
-
-    return parsed;
+    return JSON.parse(storedData);
   }
 
   private saveToSessionStorage() {
     const formData: any = this.siteDetailsForm.getRawValue();
-
-
-    if (formData.siteDistrict) {
-      const district = this.districts.find(d => d.id === formData.siteDistrict);
-      if (district) {
-        formData.site_district = district.districtCode;
-      }
-    }
-
-    if (formData.siteSubdivision) {
-      const subdivision = this.siteSubdivisions.find(s => s.id === formData.siteSubdivision);
-      if (subdivision) {
-        formData.site_subdivision = subdivision.subdivisionCode;
-      }
-    }
-
-    if (formData.policeStation) {
-      const policeStation = this.sitePoliceStations.find(p => p.id === formData.policeStation);
-      if (policeStation) {
-        formData.police_station = policeStation.policeStationCode;
-      }
-    }
-
-    formData.location_category = formData.locationCategory;
-    formData.location_name = formData.locationName;
-    formData.ward_name = formData.wardName;
-    formData.business_address = formData.businessAddress;
-    formData.road_name = formData.roadName;
-    formData.pin_code = formData.pinCode;
-    formData.construction_type = formData.constructionType;
-    formData.site_owned = formData.siteOwned; 
-    formData.noc_obtained = formData.nocObtained || 'No';
-    formData.trade_license_covered = formData.tradeLicenseCovered;
-
-    console.log('Saving Site Details:', formData);
-    sessionStorage.setItem('siteDetailsData', JSON.stringify(formData));
+    
+    const backendData: any = {
+      district: formData.siteDistrict || null,
+      subdivision: formData.siteSubdivision || null,
+      police_station: formData.policeStation || null,
+      road: formData.roadName || null,
+      address: formData.businessAddress || null,
+      location_category: formData.locationCategory || null,
+      location_name: formData.locationName || null,
+      ward_name: formData.wardName || null,
+      pin_code: formData.pinCode ? String(formData.pinCode) : null,
+      construction_type: formData.constructionType || null,
+      length: formData.length || null,
+      breadth: formData.breadth || null,
+      site_owned: formData.siteOwned || null,
+      trade_license_covered: formData.tradeLicenseCovered || null,
+      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.nocObtained || null)
+    };
+    
+    console.log('💾 Saving Site Details:', backendData);
+    sessionStorage.setItem('siteDetailsData', JSON.stringify(backendData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.siteDetailsForm.get(field);
-
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
@@ -433,13 +482,11 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
 
   proceedToNext() {
     if (this.siteDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
-      this.saveToSessionStorage();
       this.next.emit();
     } else {
       Object.keys(this.siteDetailsForm.controls).forEach(key => {
         this.siteDetailsForm.get(key)?.markAsTouched();
       });
-
       if (!this.areRequiredDocumentsUploaded()) {
         alert('Please upload all required documents before proceeding.');
       }
@@ -449,9 +496,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   resetForm() {
     this.siteDetailsForm.reset();
     this.documents.forEach(doc => {
-      if (doc.fileUrl) {
-        URL.revokeObjectURL(doc.fileUrl);
-      }
+      if (doc.fileUrl) URL.revokeObjectURL(doc.fileUrl);
       doc.file = null;
       doc.fileUrl = '';
       doc.required = false;
