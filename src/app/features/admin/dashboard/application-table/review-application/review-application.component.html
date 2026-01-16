@@ -237,8 +237,8 @@
     </mat-step>
   }
 
-  <!-- Calculate Fee (Level 1 only) -->
-  @if (accountService.hasAnyRole('level_1') && isApproveFlow) {
+  <!-- ✅ Calculate Fee (Level 1 only) - HIDDEN FOR SALESMAN/BARMAN -->
+  @if (accountService.hasAnyRole('level_1') && isApproveFlow && !isSalesmanBarmanApplication) {
     <mat-step [stepControl]="feeForm" label="Calculate Fee">
       <form [formGroup]="feeForm">
         <div class="step-header">
@@ -269,8 +269,8 @@
     </mat-step>
   }
 
-  <!-- Site Enquiry (Level 2 only) -->
-  @if (accountService.hasAnyRole('level_2') && isApproveFlow) {
+  <!-- ✅ Site Enquiry (Level 2 only) - HIDDEN FOR SALESMAN/BARMAN -->
+  @if (accountService.hasAnyRole('level_2') && isApproveFlow && !isSalesmanBarmanApplication) {
     <mat-step label="Site Enquiry">
       <div class="step-body">
         <div class="step-header justify-content-between px-4">
@@ -288,8 +288,8 @@
     </mat-step>
   }
 
-  <!-- License Category Selection (Level 2 only) -->
-  @if (accountService.hasAnyRole('level_2') && isApproveFlow && !isRejected) {
+  <!-- ✅ License Category Selection (Level 2 only) - HIDDEN FOR SALESMAN/BARMAN -->
+  @if (accountService.hasAnyRole('level_2') && isApproveFlow && !isRejected && !isSalesmanBarmanApplication) {
     <mat-step [stepControl]="licenseCategoryForm" label="License Category">
       <form [formGroup]="licenseCategoryForm">
         <div class="step-header">
@@ -358,12 +358,13 @@
         </h5>
         <mat-card appearance="outlined">
           <p><strong>Remarks:</strong> {{ remarksForm.value.remarks }}</p>
-          @if (accountService.hasAnyRole('level_1') && selectedLocation?.feeAmount) {
+          <!-- ✅ Only show fee for non-Salesman/Barman applications -->
+          @if (accountService.hasAnyRole('level_1') && !isSalesmanBarmanApplication && selectedLocation?.feeAmount) {
             <p>
               <strong>Fee Amount:</strong> ₹{{ selectedLocation?.feeAmount }}
             </p>
           }
-          @if (accountService.hasAnyRole('level_2') && selectedCategory) {
+          @if (accountService.hasAnyRole('level_2') && selectedCategory && !isSalesmanBarmanApplication) {
             <p>
               <strong>License Category:</strong> {{ selectedCategory.licenseCategory }}
             </p>
@@ -414,3 +415,56 @@
   </mat-step>
 
 </mat-horizontal-stepper>
+
+<!-- Approval Success Dialog Template -->
+<ng-template #approvalSuccessDialog>
+  <div class="approval-dialog">
+    <div class="approval-header">
+      <mat-icon class="success-icon">check_circle</mat-icon>
+      <h2 mat-dialog-title>Application Approved Successfully!</h2>
+    </div>
+    <mat-dialog-content>
+      <div class="approval-details">
+        <p class="application-id">
+          <strong>Application ID:</strong> {{ application.applicationId }}
+        </p>
+        <p class="approval-message">{{ approvalDialogData.message }}</p>
+        
+        @if (approvalDialogData.level) {
+          <div class="level-info">
+            <mat-icon>verified</mat-icon>
+            <span>Approved by {{ approvalDialogData.level }}</span>
+          </div>
+        }
+        
+        <!-- ✅ Only show fee for non-Salesman/Barman applications -->
+        @if (approvalDialogData.feeAmount && !isSalesmanBarmanApplication) {
+          <div class="fee-info">
+            <mat-icon>payments</mat-icon>
+            <span>Fee Amount: ₹{{ approvalDialogData.feeAmount }}</span>
+          </div>
+        }
+        
+        @if (approvalDialogData.licenseCategory && !isSalesmanBarmanApplication) {
+          <div class="category-info">
+            <mat-icon>category</mat-icon>
+            <span>License Category: {{ approvalDialogData.licenseCategory }}</span>
+          </div>
+        }
+        
+        @if (approvalDialogData.nextStep) {
+          <div class="next-step">
+            <mat-icon>arrow_forward</mat-icon>
+            <span>{{ approvalDialogData.nextStep }}</span>
+          </div>
+        }
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-raised-button color="primary" (click)="closeApprovalDialog()">
+        <mat-icon>done</mat-icon>
+        OK
+      </button>
+    </mat-dialog-actions>
+  </div>
+</ng-template>

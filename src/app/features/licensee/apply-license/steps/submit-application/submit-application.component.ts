@@ -5,11 +5,12 @@ import { LicenseApplication } from '../../../../../core/models/license-applicati
 import Swal from 'sweetalert2';
 import { Subscription } from 'rxjs';
 import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-submit-application',
   standalone: true,
-  imports: [MaterialModule, RouterModule],
+  imports: [MaterialModule, RouterModule, FormsModule],
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
 })
@@ -18,6 +19,11 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   passPhotoUrl: string | null = null;
   private photoSub?: Subscription;
+
+  // Properties for success page and form control
+  acceptTerms: boolean = false;
+  isSubmitting: boolean = false;
+  applicationId: string | null = null;
 
   constructor(
     private licenseAppService: LicenseApplicationService,
@@ -93,6 +99,10 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     return data?.license_type ? Number(data.license_type) : null;
   }
 
+  get isCompanyType(): boolean {
+    return this.licenseType === 2;
+  }
+
   get selectLicenseData(): { key: string; value: any }[] {
     return this.getDataForView('selectLicenseData');
   }
@@ -111,24 +121,6 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
 
   get memberDetailsData(): { key: string; value: any }[] {
     return this.getDataForView('memberDetailsData');
-  }
-
-  get displaySections(): Array<{
-    title: string;
-    data: { key: string; value: any }[];
-    condition?: () => boolean;
-  }> {
-    return [
-      { title: 'License Details', data: this.selectLicenseData },
-      { title: 'Key Info', data: this.keyInfoData },
-      {
-        title: 'Unit Details',
-        data: this.unitDetailsData,
-        condition: () => this.licenseType === 2
-      },
-      { title: 'Address Details', data: this.addressData },
-      { title: 'Member Details', data: this.memberDetailsData }
-    ];
   }
 
   private getParsedSession<T>(key: string): T | null {
@@ -212,6 +204,12 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
     this.back.emit();
   }
 
+  goToDashboard(): void {
+    sessionStorage.clear();
+    this.licenseAppService.clearAllDocuments();
+    this.router.navigate(['/licensee/dashboard']);
+  }
+
   /**
    * 🔍 DEBUG: Check sessionStorage before submission
    */
@@ -269,99 +267,126 @@ export class SubmitApplicationComponent implements OnInit, OnDestroy {
   /**
    * ✅ FINAL SUBMIT
    */
-  async submit(): Promise<void> {
-    const confirm = await Swal.fire({
+  submit(): void {
+    console.log('🔵 Submit button clicked!');
+    console.log('isSubmitting:', this.isSubmitting);
+    console.log('acceptTerms:', this.acceptTerms);
+    
+    if (!this.acceptTerms) {
+      Swal.fire('Warning', 'Please accept the terms and conditions to proceed.', 'warning');
+      return;
+    }
+
+    if (this.isSubmitting) {
+      console.log('⚠️ Already submitting, ignoring click');
+      return;
+    }
+
+    Swal.fire({
       title: 'Are you sure?',
       text: 'Do you want to submit this application?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Submit',
       cancelButtonText: 'Cancel',
-    });
-
-    if (!confirm.isConfirmed) return;
-
-    try {
-      // 🔍 DEBUG: Show what we have
-      this.debugSessionStorage();
-
-      // Check photo
-      const photoFile = this.licenseAppService.getPassPhoto();
-      if (!photoFile) {
-        Swal.fire('Error', 'Please upload a photo to continue.', 'error');
+    }).then((confirm) => {
+      if (!confirm.isConfirmed) {
+        console.log('❌ User cancelled submission');
         return;
       }
 
-      // ✅ Prepare FormData
-      const formData = this.licenseAppService.prepareOldLicenseFormData();
+      console.log('✅ User confirmed, proceeding with submission');
+      this.isSubmitting = true;
 
-      // 📋 Log what's being sent
-      console.group('📦 FINAL FORMDATA BEING SENT');
-      const formDataArray: any[] = [];
-      formData.forEach((value: FormDataEntryValue, key: string) => {
-        formDataArray.push([
-          key, 
-          value instanceof File ? `[File: ${value.name}, ${value.size} bytes]` : value
-        ]);
-      });
-      console.table(formDataArray);
-      console.groupEnd();
+      try {
+        // 🔍 DEBUG: Show what we have
+        this.debugSessionStorage();
 
-      // ✅ Submit
-      this.licenseAppService.submitOldLicenseApplication(formData).subscribe({
-        next: (response: any) => {
-          console.log('✅ Application submitted successfully:', response);
-          Swal.fire({
-            icon: 'success',
-            title: 'Submitted!',
-            text: 'Application submitted successfully!',
-            confirmButtonText: 'OK'
-          }).then(() => {
-            sessionStorage.clear();
-            this.licenseAppService.clearAllDocuments();
-            this.router.navigate(['/licensee/dashboard']);
-          });
-        },
-
-        error: (err: any) => {
-          console.error('❌ Submission error:', err);
-          console.log('Full error object:', err);
-
-          let errorMessage = 'Failed to submit application.';
-
-          if (err?.error) {
-            if (typeof err.error === 'object') {
-              const errors = Object.entries(err.error)
-                .map(([key, value]) => {
-                  if (Array.isArray(value)) {
-                    return `${key}: ${value.join(', ')}`;
-                  } else if (typeof value === 'object') {
-                    return `${key}: ${JSON.stringify(value, null, 2)}`;
-                  }
-                  return `${key}: ${value}`;
-                })
-                .join('\n');
-              errorMessage = errors || errorMessage;
-            } else if (typeof err.error === 'string') {
-              errorMessage = err.error;
-            }
-          } else if (err?.statusText) {
-            errorMessage = err.statusText;
-          }
-
-          Swal.fire({
-            icon: 'error',
-            title: 'Submission Failed',
-            html: `<pre style="text-align: left; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">${errorMessage}</pre>`,
-            confirmButtonText: 'OK',
-            width: 600
-          });
+        // Check photo
+        const photoFile = this.licenseAppService.getPassPhoto();
+        if (!photoFile) {
+          Swal.fire('Error', 'Please upload a photo to continue.', 'error');
+          this.isSubmitting = false;
+          return;
         }
-      });
 
-    } catch (error) {
-      console.error('❌ Unexpected error:', error);
-      Swal.fire('Error', 'An unexpected error occurred.', 'error');
-    }
+        // ✅ Prepare FormData
+        const formData = this.licenseAppService.prepareOldLicenseFormData();
+
+        // 📋 Log what's being sent
+        console.group('📦 FINAL FORMDATA BEING SENT');
+        const formDataArray: any[] = [];
+        formData.forEach((value: FormDataEntryValue, key: string) => {
+          formDataArray.push([
+            key, 
+            value instanceof File ? `[File: ${value.name}, ${value.size} bytes]` : value
+          ]);
+        });
+        console.table(formDataArray);
+        console.groupEnd();
+
+        // ✅ Submit
+        this.licenseAppService.submitOldLicenseApplication(formData).subscribe({
+          next: (response: any) => {
+            console.log('✅ Application submitted successfully:', response);
+            
+            // Set the application ID from response
+            this.applicationId = response.applicationId || response.application_id || 'LA/XXX/XXXX-XX/XXXX';
+            
+            // Show success popup similar to salesman/barman
+            Swal.fire({
+              icon: 'success',
+              title: 'Success!',
+              text: `Application ID: ${this.applicationId}`,
+              confirmButtonText: 'OK'
+            });
+            
+            this.isSubmitting = false;
+          },
+
+          error: (err: any) => {
+            console.error('❌ Submission error:', err);
+            console.log('Full error object:', err);
+
+            let errorMessage = 'Failed to submit application.';
+
+            if (err?.error) {
+              if (typeof err.error === 'object') {
+                const errors = Object.entries(err.error)
+                  .map(([key, value]) => {
+                    if (Array.isArray(value)) {
+                      return `${key}: ${value.join(', ')}`;
+                    } else if (typeof value === 'object') {
+                      return `${key}: ${JSON.stringify(value, null, 2)}`;
+                    }
+                    return `${key}: ${value}`;
+                  })
+                  .join('\n');
+                errorMessage = errors || errorMessage;
+              } else if (typeof err.error === 'string') {
+                errorMessage = err.error;
+              }
+            } else if (err?.statusText) {
+              errorMessage = err.statusText;
+            }
+
+            Swal.fire({
+              icon: 'error',
+              title: 'Submission Failed',
+              html: `<pre style="text-align: left; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">${errorMessage}</pre>`,
+              confirmButtonText: 'OK',
+              width: 600
+            });
+
+            this.isSubmitting = false;
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ Unexpected error:', error);
+        Swal.fire('Error', 'An unexpected error occurred.', 'error');
+        this.isSubmitting = false;
+      }
+    });
   }
 }

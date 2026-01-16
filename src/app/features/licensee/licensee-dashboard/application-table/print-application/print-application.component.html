@@ -7,23 +7,21 @@
       The printing of license is limited to 5 nos, if lost a duplicate copy can be printed only after payment of Rs. 500/- per copy.
     </p>
 
-    <!-- ✅ FIXED: Removed optional chaining on application, kept ?? for print_count -->
     <p class="print-count">
       No. of times license printed by licensee:
-      <strong [ngClass]="{ 'over-limit': (application.print_count ?? 0) >= 5 }">
-        {{ application.print_count ?? 0 }}
+      <strong [ngClass]="{ 'over-limit': getPrintCount() >= 5 }">
+        {{ getPrintCount() }}
       </strong>
     </p>
   </mat-dialog-content>
 
   <mat-dialog-actions align="center">
-    <!-- ✅ FIXED: Removed optional chaining on application, kept ?? for print_count -->
-    <button matButton="filled" color="primary" [disabled]="(application.print_count ?? 0) >= 5" (click)="onPrint()">
+    <!-- ✅ SIMPLIFIED: Only check print count, not approval status -->
+    <button matButton="filled" color="primary" [disabled]="getPrintCount() >= 5" (click)="onPrint()">
       Print License
     </button>
 
-    <!-- ✅ FIXED: Removed optional chaining on application, kept ?? for print_count -->
-    <button matButton="outlined" (click)="onPay()" *ngIf="(application.print_count ?? 0) >= 5">
+    <button matButton="outlined" (click)="onPay()" *ngIf="getPrintCount() >= 5">
       Pay
     </button>
 
@@ -45,36 +43,34 @@
 
   <div class="license-details-container">
     <table>
-      <!-- Application details displayed in key-value format -->
       <tr>
         <td class="key">License Number</td>
         <td class="colon">:</td>
-        <td class="value">{{ application.application_id }}</td>
+        <td class="value">{{ getApplicationId() }}</td>
       </tr>
       <tr>
         <td class="key">Name of the Licensee</td>
         <td class="colon">:</td>
-        <td class="value">{{ application.establishment_name }}</td>
+        <td class="value">{{ application.establishment_name || application.establishmentName || 'N/A' }}</td>
       </tr>
       <tr>
         <td class="key">Nature of the License</td>
         <td class="colon">:</td>
-        <td class="value">{{ application.license_nature }}</td>
+        <td class="value">{{ application.license_nature || application.licenseNature || 'N/A' }}</td>
       </tr>
       <tr>
         <td class="key">License Premises</td>
         <td class="colon">:</td>
-        <td class="value">{{ application.business_address }}</td>
+        <td class="value">{{ application.business_address || application.businessAddress || 'N/A' }}</td>
       </tr>
       <tr>
         <td class="key">License Fee</td>
         <td class="colon">:</td>
-        <td class="value">₹{{ application.yearly_license_fee }}</td>
+        <td class="value">₹{{ application.yearly_license_fee || application.yearlyLicenseFee || '0' }}</td>
       </tr>
       <tr>
         <td class="key">License Validity</td>
         <td class="colon">:</td>
-        <!-- Static date used – consider dynamic binding if this varies -->
         <td class="value">From 12/03/2022 to 20/03/2022</td>
       </tr>
     </table>
@@ -91,15 +87,14 @@
       </thead>
       <tbody>
         <tr>
-          <td>{{ application.business_address }}</td>
-          <td>{{ application.location_name }}, {{ application.ward_name }}, {{ application.site_subdivision }}</td>
+          <td>{{ application.business_address || application.businessAddress || 'N/A' }}</td>
+          <td>{{ application.location_name || application.locationName || 'N/A' }}, {{ application.ward_name || application.wardName || 'N/A' }}, {{ application.site_subdivision || application.siteSubdivision || 'N/A' }}</td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <div class="terms">
-    <!-- Terms and conditions of license -->
     <p>The aforesaid license has been granted as per the following terms and conditions: -</p>
     <ol type="I">
       <li>The licensee shall purchase foreign liquor (excluding draught 

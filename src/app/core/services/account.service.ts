@@ -10,6 +10,12 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class AccountService {
+  getCurrentUser() {
+    throw new Error('Method not implemented.');
+  }
+  getCurrentUserRoles() {
+    throw new Error('Method not implemented.');
+  }
   private baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private userIdentity: Account | null = null;
   private authenticationState = new ReplaySubject<Account | null>(1);

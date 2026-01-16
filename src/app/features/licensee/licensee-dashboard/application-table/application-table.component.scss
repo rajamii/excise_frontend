@@ -47,6 +47,21 @@ mat-cell{
     }
 }
 
+// ✅ Print button styling
+.print-btn {
+    mat-icon {
+        color: #4caf50 !important;
+    }
+    
+    &:hover {
+        background-color: rgba(76, 175, 80, 0.1);
+        
+        mat-icon {
+            color: #388e3c !important;
+        }
+    }
+}
+
 // ✅ Add spacing between action buttons
 mat-cell {
     button[mat-icon-button] {

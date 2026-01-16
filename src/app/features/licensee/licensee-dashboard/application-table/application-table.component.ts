@@ -1,4 +1,4 @@
-// application-table.component.ts
+// application-table.component.ts - FIXED VERSION
 import { Component, Input, Output, EventEmitter, OnChanges, ViewChild, AfterViewInit, SimpleChanges } from '@angular/core';
 import { MaterialModule } from '../../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
@@ -12,6 +12,7 @@ import { ViewApplicationComponent } from './view-application/view-application.co
 import { PrintApplicationComponent } from './print-application/print-application.component';
 import { LicenseApplication, Objection } from '../../../../core/models/license-application.model';
 import { UnifiedApplication } from '../../../../core/models/unified-application.model';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-application-table',
@@ -88,10 +89,8 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
       console.log('📊 DataSource.data:', this.dataSource?.data);
       console.log('📊 DataSource.data length:', this.dataSource?.data?.length);
       
-      // Clear existing objections
       this.unresolvedObjectionAppIds.clear();
 
-      // Fetch objections for each application
       if (this.dataSource?.data) {
         console.log(`📋 Processing ${this.dataSource.data.length} applications`);
         
@@ -103,7 +102,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
           console.log(`📦 Application Type for app ${index}:`, appType);
           
           if (appId) {
-            // ✅ FIXED: Use unified service with correct /auth/ endpoint
             this.unifiedDashboardService.getObjections(appId, appType).subscribe({
               next: (objections) => {
                 const hasUnresolved = objections?.some((obj: Objection) => obj.isResolved === false);
@@ -113,7 +111,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
                 }
               },
               error: (err) => {
-                // ✅ Silently handle 404 - means no objections exist (which is fine)
                 if (err.status !== 404) {
                   console.error(`❌ Error fetching objections for ${appId}:`, err);
                 }
@@ -150,22 +147,15 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     return hasData;
   }
 
-  /**
-   * ✅ COMPREHENSIVE APPLICATION ID EXTRACTION
-   * This method tries multiple possible field names and nested paths
-   * to extract the application ID from any application object structure
-   */
   getApplicationId(element: any): string {
     if (!element) {
       console.warn('⚠️ getApplicationId - element is null/undefined');
       return '';
     }
     
-    // Log the complete element structure for debugging
     console.log('🔍 Extracting ID from element:', element);
     console.log('🔑 Element keys:', Object.keys(element));
     
-    // Try all possible direct property names (camelCase and snake_case)
     const directProperties = [
       element.applicationId,
       element.application_id,
@@ -177,7 +167,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     
     console.log('🔍 Direct properties found:', directProperties.filter(id => id));
     
-    // Try nested paths in the raw object
     const nestedProperties = [
       element.raw?.application_id,
       element.raw?.applicationId,
@@ -189,12 +178,10 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     
     console.log('🔍 Nested properties found:', nestedProperties.filter(id => id));
     
-    // Combine all possible IDs
     const possibleIds = [...directProperties, ...nestedProperties];
     
     console.log('🔍 All possible IDs:', possibleIds);
     
-    // Find the first non-empty value
     const appId = possibleIds.find(id => {
       return id !== null && id !== undefined && id !== '' && String(id).trim() !== '';
     });
@@ -205,7 +192,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
       return finalId;
     }
     
-    // If still not found, log detailed error
     console.error('❌ CRITICAL: Could not find application ID in element');
     console.error('❌ Element type:', element.type);
     console.error('❌ Element keys:', Object.keys(element));
@@ -223,7 +209,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     return stage;
   }
 
-  // ✅ NEW METHOD: Check if application is awaiting payment
   isAwaitingPayment(element: any): boolean {
     const stage = this.getCurrentStage(element);
     const isAwaiting = stage === 'awaiting_payment';
@@ -273,7 +258,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     console.log('💳 Table Type:', this.tableType);
     console.log('💳 Current Stage:', this.getCurrentStage(application));
     
-    // Emit the payment event
     this.payment.emit(application);
   }
 
@@ -286,10 +270,44 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     }
   }
 
+  // ✅ CRITICAL FIX: Pass tableType to print dialog
   onPrint(application: any) {
-    this.dialog.open(PrintApplicationComponent, {
-      width: '450px',
-      data: { application }
+    console.log('🖨️ Print clicked for application:', application);
+    
+    const appId = this.getApplicationId(application);
+    const appType = application.type || 'license-renewal';
+    
+    if (!appId) {
+      console.error('❌ No application ID found');
+      Swal.fire('Error', 'Could not find application ID', 'error');
+      return;
+    }
+    
+    console.log('🔍 Fetching full application details for printing...');
+    console.log('📦 App ID:', appId);
+    console.log('📦 App Type:', appType);
+    console.log('📊 Table Type:', this.tableType); // ✅ NEW LOG
+    
+    // Fetch the full application details before opening print dialog
+    this.unifiedDashboardService.getApplicationDetail(appId, appType).subscribe({
+      next: (fullApp) => {
+        console.log('✅ Full application loaded:', fullApp);
+        console.log('✅ Full app current_stage:', fullApp.current_stage);
+        console.log('✅ Full app is_approved:', fullApp.is_approved);
+        
+        // ✅ CRITICAL FIX: Pass tableType to print dialog
+        this.dialog.open(PrintApplicationComponent, {
+          width: '450px',
+          data: { 
+            application: fullApp,
+            tableType: this.tableType  // ✅ PASS TABLE TYPE HERE!
+          }
+        });
+      },
+      error: (err) => {
+        console.error('❌ Error fetching application details:', err);
+        Swal.fire('Error', 'Failed to load application details for printing', 'error');
+      }
     });
   }
   
@@ -297,7 +315,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     console.log('👁️ View clicked for application:', application);
     console.log('📊 Application structure:', JSON.stringify(application, null, 2));
     
-    // Get the application ID
     const applicationId = this.getApplicationId(application);
     
     if (!applicationId) {
@@ -308,7 +325,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     
     console.log('✅ Opening view dialog with ID:', applicationId);
     
-    // ✅ Create UnifiedApplication with proper fallbacks
     const unifiedApp: UnifiedApplication = {
       type: application.type || 'license-renewal',
       applicationId: applicationId,

@@ -10,10 +10,7 @@ import { UnifiedApplication } from '../models/unified-application.model';
   providedIn: 'root'
 })
 export class SalesmanBarmanRegistrationService {
-  // Base URL for Salesman/Barman endpoints
   private baseUrl = `${environment.apiBaseUrl}/transactional/salesman_barman`;
-  
-  // ✅ CRITICAL FIX: Workflow endpoints are at /auth/ not /transactional/
   private workflowBaseUrl = `${environment.apiBaseUrl}/auth`;
 
   private documents: Partial<Record<keyof SalesmanBarmanDocuments, File>> = {};
@@ -36,9 +33,6 @@ export class SalesmanBarmanRegistrationService {
     return this.http.get<SalesmanBarman>(`${this.baseUrl}/detail/${encodedId}/`);
   }
 
-  // ✅ FINAL FIX: Workflow endpoints are at /auth/{application_id}/...
-  // Pattern: auth/ <everything:application_id>/next-stages/
-
   // === ADVANCE STAGE ===
   advanceStage(applicationId: string, stageId: number, context?: any): Observable<SalesmanBarman> {
     console.log('🚀 advanceStage called:', { applicationId, stageId, context });
@@ -50,7 +44,7 @@ export class SalesmanBarmanRegistrationService {
 
   // === NEXT STAGES ===
   getNextStages(applicationId: string): Observable<Array<{id: number, name: string, description: string}>> {
-    console.log('🔍 getNextStages called for:', applicationId);
+    console.log('📋 getNextStages called for:', applicationId);
     const encodedId = encodeURIComponent(applicationId);
     const url = `${this.workflowBaseUrl}/${encodedId}/next-stages/`;
     console.log('📍 Fetching next stages from URL:', url);
@@ -96,6 +90,15 @@ export class SalesmanBarmanRegistrationService {
       updated_fields: updatedFields || {},
       remarks: remarks || 'Objections resolved'
     });
+  }
+
+  // === ✅ PRINT REGISTRATION ===
+  printRegistration(applicationId: string): Observable<any> {
+    console.log('🖨️ printRegistration called for:', applicationId);
+    const encodedId = encodeURIComponent(applicationId);
+    const url = `${this.baseUrl}/${encodedId}/print/`;
+    console.log('📍 Printing from URL:', url);
+    return this.http.post(url, {});
   }
 
   // === DOCUMENT HANDLING ===

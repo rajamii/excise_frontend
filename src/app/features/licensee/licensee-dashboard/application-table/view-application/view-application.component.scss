@@ -78,6 +78,35 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+    
+    // Document link styling
+    .document-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #1976d2;
+      text-decoration: none;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+      
+      &:hover {
+        background-color: rgba(25, 118, 210, 0.08);
+        text-decoration: underline;
+      }
+      
+      &:active {
+        background-color: rgba(25, 118, 210, 0.12);
+      }
+    }
+    
     .objection {
       background-color: #fff8e1;
       border-left: 4px solid #ff1100;
@@ -98,7 +127,6 @@ mat-hint{
 .photo-upload-container {
   border: 1px solid #ccc;
   padding: 20px;
-  //text-align: center;
   border-radius: 6px;
   cursor: pointer;
   transition: border-color 0.3s ease;

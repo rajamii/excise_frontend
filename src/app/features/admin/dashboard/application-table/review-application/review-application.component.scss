@@ -220,3 +220,122 @@ h6 {
     background-color: #e0a800 !important;
   }
 }
+
+// Approval Dialog Styles
+.approval-dialog {
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.approval-header {
+  text-align: center;
+  padding: 20px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  margin: -24px -24px 20px -24px;
+  border-radius: 4px 4px 0 0;
+  
+  .success-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+    color: #4caf50;
+    animation: scaleIn 0.5s ease-out;
+  }
+  
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+mat-dialog-content {
+  .approval-details {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px 0;
+  }
+  
+  .application-id {
+    font-size: 16px;
+    padding: 12px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    text-align: center;
+    margin: 0;
+  }
+  
+  .approval-message {
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    margin: 0;
+  }
+  
+  .level-info, .fee-info, .category-info, .next-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background-color: #e8f5e9;
+    border-radius: 4px;
+    border-left: 4px solid #4caf50;
+    font-size: 14px;
+    
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: #4caf50;
+    }
+  }
+  
+  .fee-info {
+    background-color: #fff3e0;
+    border-left-color: #ff9800;
+    
+    mat-icon {
+      color: #ff9800;
+    }
+  }
+  
+  .category-info {
+    background-color: #e3f2fd;
+    border-left-color: #2196f3;
+    
+    mat-icon {
+      color: #2196f3;
+    }
+  }
+  
+  .next-step {
+    background-color: #f3e5f5;
+    border-left-color: #9c27b0;
+    
+    mat-icon {
+      color: #9c27b0;
+    }
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  margin: 0;
+  
+  button {
+    min-width: 100px;
+    
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}

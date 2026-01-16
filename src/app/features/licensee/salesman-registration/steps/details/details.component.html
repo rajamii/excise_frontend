@@ -159,58 +159,42 @@
         </div>
       </div>
 
-      <div class="upload-documents">
-        <div class="heading">
-          Upload Documents
-        </div>
-        <div class="table-container">
-          <table mat-table [dataSource]="documents" class="mat-elevation-z8">
+      <!-- ==================== NEW UPLOAD DOCUMENTS SECTION ==================== -->
+      <h5 class="section-title">Upload Documents</h5>
+      <div class="documents-upload-container">
+        @for (doc of documents; track doc.key) {
+          <div class="document-upload-row">
+            <div class="document-info">
+              <span class="document-label">
+                {{ doc.name }}
+                @if (doc.required) { <span class="required">*</span> }
+              </span>
+              <span class="document-formats">Supported File Formats: {{ doc.format }}</span>
+            </div>
+            <div class="document-actions">
+              <input type="file"
+                     [id]="doc.key"
+                     (change)="onFileSelect($event, doc)"
+                     [accept]="doc.accept"
+                     style="display:none"/>
+              <label [for]="doc.key" mat-raised-button color="primary"
+                     style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
+                <mat-icon style="margin-right:4px;">upload_file</mat-icon>
+                Choose File
+              </label>
 
-            <!-- Serial Number Column -->
-            <ng-container matColumnDef="serialNo">
-              <th mat-header-cell *matHeaderCellDef> Sl. No </th>
-              <td mat-cell *matCellDef="let element; let i = index"> {{ i + 1 }} </td>
-            </ng-container>
-
-            <!-- Document Type Column -->
-            <ng-container matColumnDef="docType">
-              <th mat-header-cell *matHeaderCellDef> Document Type Description </th>
-              <td mat-cell *matCellDef="let element">
-                {{ element.name }}
-                @if (element.required) {
-                  <span class="required">*</span>
-                }
-                @if (element.format) {
-                  <a class="format"> ({{ element.format }}) </a>
-                }
-              </td>
-            </ng-container>
-
-            <!-- File Upload Column -->
-            <ng-container matColumnDef="upload">
-              <th mat-header-cell *matHeaderCellDef> Browse File </th>
-              <td mat-cell *matCellDef="let element">
-                <input type="file" (change)="onFileSelect($event, element)" [accept]="element.accept">
-              </td>
-            </ng-container>
-
-            <!-- View File Column -->
-            <ng-container matColumnDef="view">
-              <th mat-header-cell *matHeaderCellDef> Click to View </th>
-              <td mat-cell *matCellDef="let element">
-                @if (element.file) {
-                  <button mat-icon-button (click)="viewFile(element)">
-                    <mat-icon>visibility</mat-icon>
-                  </button>
-                }
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-
-          </table>
-        </div>
+              @if (doc.fileUrl) {
+                <button mat-icon-button color="accent"
+                        (click)="viewFile(doc)" type="button">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+              }
+              @if (doc.file) {
+                <span class="file-name">{{ doc.file.name }}</span>
+              }
+            </div>
+          </div>
+        }
       </div>
     </mat-card-content>
 

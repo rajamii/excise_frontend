@@ -27,7 +27,6 @@
                 </div>
                 <div class="value">
                   {{ item.value }}
-                  <!-- Objection icon with tooltip if objection exists -->
                   @if (hasObjection(item.field)) {
                     <mat-icon
                       matTooltip="{{ getObjectionRemarks(item.field) }}">
@@ -113,7 +112,7 @@
           </div>
         }
 
-        <!-- Section: Member Details (includes photo rendering) -->
+        <!-- Section: Member Details -->
         <ng-container>
           <h6>Member Details</h6>
           <div class="section-table">
@@ -125,13 +124,15 @@
                   {{ item.key }}
                 </div>
                 <div class="value">
-                  <!-- Conditionally display photo if field is 'photo' -->
+                  <!-- Show photo as link -->
                   @if (item.field === 'photo' && photoUrl) {
-                    <img [src]="photoUrl" alt="Photo" class="photo-preview" />
+                    <a [href]="photoUrl" target="_blank" class="document-link">
+                      <mat-icon>insert_drive_file</mat-icon>
+                      View Photo
+                    </a>
                   } @else {
                     {{ item.value }}
                   }
-                  <!-- Objection icon -->
                   @if (hasObjection(item.field)) {
                     <mat-icon
                       matTooltip="{{ getObjectionRemarks(item.field) }}">
@@ -245,7 +246,7 @@
           </div>
         }
 
-        <!-- Section: Documents (includes photo rendering) -->
+        <!-- Section: Documents -->
         <ng-container>
           <h6>Documents</h6>
           <div class="section-table">
@@ -257,11 +258,14 @@
                   {{ item.key }}
                 </div>
                 <div class="value">
-                  <!-- Display image if available -->
-                  @if (item.value && item.value.startsWith('http')) {
-                    <img [src]="item.value" alt="{{ item.key }}" class="photo-preview" />
+                  <!-- Display as clickable link -->
+                  @if (item.value) {
+                    <a [href]="item.value" target="_blank" class="document-link">
+                      <mat-icon>insert_drive_file</mat-icon>
+                      View Document
+                    </a>
                   } @else {
-                    {{ item.value || 'N/A' }}
+                    N/A
                   }
                   @if (hasObjection(item.field)) {
                     <mat-icon
@@ -328,7 +332,7 @@
           </div>
         </ng-container>
 
-        <!-- Section: Documents (includes photo rendering) -->
+        <!-- Section: Documents -->
         <ng-container>
           <h6>Documents</h6>
           <div class="section-table">
@@ -340,11 +344,14 @@
                   {{ item.key }}
                 </div>
                 <div class="value">
-                  <!-- Display image if available -->
-                  @if (item.value && item.value.startsWith('http')) {
-                    <img [src]="item.value" alt="{{ item.key }}" class="photo-preview" />
+                  <!-- Display as clickable link -->
+                  @if (item.value) {
+                    <a [href]="item.value" target="_blank" class="document-link">
+                      <mat-icon>insert_drive_file</mat-icon>
+                      View Document
+                    </a>
                   } @else {
-                    {{ item.value || 'N/A' }}
+                    N/A
                   }
                   @if (hasObjection(item.field)) {
                     <mat-icon

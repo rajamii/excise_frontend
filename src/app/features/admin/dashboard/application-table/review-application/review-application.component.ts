@@ -1,5 +1,5 @@
-import { Component, Inject, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { Component, Inject, OnInit, ViewChild, TemplateRef } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
@@ -52,10 +52,14 @@ interface ServiceMethods {
 })
 export class ReviewApplicationComponent extends BaseComponent implements OnInit {
   @ViewChild(SiteEnquiryFormComponent) siteEnquiryComponent?: SiteEnquiryFormComponent;
+  @ViewChild('approvalSuccessDialog') approvalSuccessDialogTemplate!: TemplateRef<any>;
 
   application: any;
   applicationId: string = '';
   tableType: string = '';
+
+  // ✅ Flag to identify application type
+  isSalesmanBarmanApplication: boolean = false;
 
   // Data arrays for display
   licenseData: DataRow[] = [];
@@ -110,11 +114,23 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   rejectStageId: number | null = null;
   objectionStageId: number | null = null;
 
+  // Approval dialog data
+  approvalDialogData: any = {
+    message: '',
+    level: '',
+    feeAmount: null,
+    licenseCategory: '',
+    nextStep: ''
+  };
+  
+  private approvalDialogRef: any = null;
+
   constructor(
     public baseDeps: BaseDependency,
     private fb: FormBuilder,
     private snackBar: MatSnackBar,
     private http: HttpClient,
+    private dialog: MatDialog,
     public dialogRef: MatDialogRef<ReviewApplicationComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
@@ -147,28 +163,32 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     this.applicationId = this.getAppId(this.application);
     console.log('Application ID:', this.applicationId);
 
+    // ✅ Detect if this is a Salesman/Barman application
+    this.isSalesmanBarmanApplication = this.applicationId.startsWith('SBM/');
+    console.log('🎯 Is Salesman/Barman Application:', this.isSalesmanBarmanApplication);
+
     this.loadApplicationData();
     this.loadObjections();
     this.buildObjectionFields();
     this.loadNextStages();
 
-    // Load additional data if needed
-    if (this.accountService.hasAnyRole('level_1')) {
+    // ✅ Only load location fees for Level 1 non-Salesman/Barman applications
+    if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication) {
       this.loadLocationFees();
     }
-    if (this.accountService.hasAnyRole('level_2')) {
+    
+    // ✅ Only load license categories for Level 2 non-Salesman/Barman applications
+    if (this.accountService.hasAnyRole('level_2') && !this.isSalesmanBarmanApplication) {
       this.loadLicenseCategories();
     }
   }
 
-  // ✅ CRITICAL FIX: All workflow endpoints are now under /auth/ for ALL application types
   private getApplicationServiceMethods(): ServiceMethods {
     const appId = this.applicationId;
 
     if (appId.startsWith('SBM/')) {
       console.log('🎯 Detected: Salesman/Barman Application - Using Workflow Service');
       return {
-        // ✅ Workflow endpoints under /auth/
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
         ),
@@ -188,7 +208,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     } else if (appId.startsWith('NLI/') || appId.startsWith('NEW/')) {
       console.log('🎯 Detected: New License Application');
       return {
-        // ✅ FIXED: New License workflow endpoints are under /auth/
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
         ),
@@ -208,7 +227,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     } else if (appId.startsWith('LIC/')) {
       console.log('🎯 Detected: License Application');
       return {
-        // ✅ CRITICAL FIX: License Application workflow endpoints are ALSO under /auth/
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
         ),
@@ -228,7 +246,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     } else {
       console.warn('⚠️ Unknown application type, defaulting to license');
       return {
-        // ✅ Default: Use /auth/ endpoints
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
         ),
@@ -555,7 +572,8 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     console.log('🎯 Approve Stage ID:', this.approveStageId);
     console.log('📋 All Available Next Stages:', this.nextStages);
 
-    if (this.accountService.hasAnyRole('level_1')) {
+    // ✅ Validation only for non-Salesman/Barman applications
+    if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication) {
       if (!this.feeForm.valid || !this.selectedLocation) {
         this.showError('Please select a location before approving');
         return;
@@ -576,13 +594,15 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       remarks: this.remarksForm.value.remarks
     };
 
-    if (this.accountService.hasAnyRole('level_1') && this.selectedLocation) {
+    // ✅ Only add location data for non-Salesman/Barman applications
+    if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication && this.selectedLocation) {
       contextData.location_id = this.selectedLocation.id;
       contextData.location_name = this.selectedLocation.locationName;
       contextData.fee_amount = this.selectedLocation.feeAmount;
     }
 
-    if (this.accountService.hasAnyRole('level_2')) {
+    // ✅ Only add license category and site enquiry for Level 2 non-Salesman/Barman applications
+    if (this.accountService.hasAnyRole('level_2') && !this.isSalesmanBarmanApplication) {
       if (this.licenseCategoryForm.value.licenseCategory) {
         contextData.license_category_id = this.licenseCategoryForm.value.licenseCategory;
         const category = this.licenseCategories.find(c => c.id === contextData.license_category_id);
@@ -612,15 +632,15 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
-          console.log('✔ API call finished');
+          console.log('✓ API call finished');
         })
       )
       .subscribe({
         next: (response: any) => {
           console.log('✅ ============ APPROVAL SUCCESS ============');
           console.log('Response:', response);
-          this.showSuccess('Application approved successfully');
-          this.dialogRef.close({ success: true, action: 'approved' });
+          
+          this.showApprovalDialog(response);
         },
         error: (error: any) => {
           console.error('❌ ============ APPROVAL FAILED ============');
@@ -636,6 +656,44 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
           this.showError(errorMessage);
         }
       });
+  }
+
+  private showApprovalDialog(response: any): void {
+    this.approvalDialogData.message = 'The application has been successfully approved and moved to the next stage.';
+    
+    if (this.accountService.hasAnyRole('level_1')) {
+      this.approvalDialogData.level = 'Level 1';
+      // ✅ Only show fee amount for non-Salesman/Barman applications
+      if (!this.isSalesmanBarmanApplication && this.selectedLocation?.feeAmount) {
+        this.approvalDialogData.feeAmount = this.selectedLocation.feeAmount;
+      }
+      this.approvalDialogData.nextStep = 'Application will proceed to Level 2 review';
+    } else if (this.accountService.hasAnyRole('level_2')) {
+      this.approvalDialogData.level = 'Level 2';
+      if (!this.isSalesmanBarmanApplication && this.selectedCategory) {
+        this.approvalDialogData.licenseCategory = this.selectedCategory.licenseCategory;
+      }
+      this.approvalDialogData.nextStep = this.isSalesmanBarmanApplication 
+        ? 'Application will proceed to next level'
+        : 'Application is now pending payment';
+    } else if (this.accountService.hasAnyRole('level_3')) {
+      this.approvalDialogData.level = 'Level 3';
+      this.approvalDialogData.nextStep = 'Application processing completed';
+    }
+
+    this.approvalDialogRef = this.dialog.open(this.approvalSuccessDialogTemplate, {
+      width: '500px',
+      disableClose: true,
+      panelClass: 'approval-dialog-container'
+    });
+  }
+
+  closeApprovalDialog(): void {
+    if (this.approvalDialogRef) {
+      this.approvalDialogRef.close();
+    }
+    
+    this.dialogRef.close({ success: true, action: 'approved' });
   }
 
   private submitRejection(): void {
