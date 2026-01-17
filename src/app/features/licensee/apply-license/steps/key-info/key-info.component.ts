@@ -102,7 +102,11 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
     this.masterService.getLicenseTypes().subscribe({
       next: (data: LicenseType[]) => {
         this.licenseTypes = data;
-        console.log('✅ License types loaded:', data);
+        
+        // ✅ CRITICAL: Save to sessionStorage
+        sessionStorage.setItem('licenseTypes', JSON.stringify(data));
+        
+        console.log('✅ License types loaded and saved:', data.length);
       },
       error: (error) => {
         console.error('❌ Failed to load license types:', error);
@@ -125,33 +129,19 @@ export class KeyInfoComponent implements OnInit, OnDestroy {
       valid_up_to: this.transformValidDate(formData.valid_up_to),
     };
 
-    // ✅ CRITICAL: Convert to proper types - integers for IDs, numbers for numeric fields
+    // ✅ CRITICAL: Convert to proper types
     const enrichedData: any = {
       license_type: formData.license_type ? parseInt(String(formData.license_type)) : null,
       establishment_name: formData.establishment_name,
       mobile_number: formData.mobile_number ? Number(formData.mobile_number) : null,
       email: formData.email,
-      license_no: formData.license_no ? Number(formData.license_no) : null,
+      license_no: formData.license_no || null,
       ...parsedDates,
       yearly_license_fee: formData.yearly_license_fee ? String(formData.yearly_license_fee) : null,
       license_nature: formData.license_nature,
       functioning_status: formData.functioning_status,
       mode_of_operation: formData.mode_of_operation
     };
-
-    // Validate conversions
-    if (enrichedData.license_type && isNaN(enrichedData.license_type)) {
-      console.error('❌ Invalid license_type ID:', formData.license_type);
-      enrichedData.license_type = null;
-    }
-    if (enrichedData.mobile_number && isNaN(enrichedData.mobile_number)) {
-      console.error('❌ Invalid mobile_number:', formData.mobile_number);
-      enrichedData.mobile_number = null;
-    }
-    if (enrichedData.license_no && isNaN(enrichedData.license_no)) {
-      console.error('❌ Invalid license_no:', formData.license_no);
-      enrichedData.license_no = null;
-    }
 
     console.log('💾 Saving key info to sessionStorage:', enrichedData);
     sessionStorage.setItem('keyInfoData', JSON.stringify(enrichedData));

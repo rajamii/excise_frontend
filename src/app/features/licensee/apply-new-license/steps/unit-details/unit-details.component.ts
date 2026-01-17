@@ -48,7 +48,6 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
     });
 
     this.unitDetailsForm.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.saveToSessionStorage();
       this.updateAllErrorMessages();
     });
   }
@@ -71,19 +70,19 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage() {
     const formData: any = this.unitDetailsForm.getRawValue(); 
     
-    // ✅ Map to backend field names (CharField)
+    // Map to backend field names (CharField)
     formData.company_name = formData.companyName;
     formData.company_address = formData.companyAddress;
     formData.company_pan = formData.companyPan?.toUpperCase();
     formData.company_cin = formData.companyCin?.toUpperCase();
     formData.company_email = formData.companyEmail;
     
-    // ✅ Clean phone number (CharField but numeric)
+    // Clean phone number (CharField but numeric)
     if (formData.companyPhoneNumber) {
       formData.company_phone_number = String(formData.companyPhoneNumber).replace(/\D/g, '');
     }
     
-    // ✅ Date field (ISO format YYYY-MM-DD)
+    // Date field (ISO format YYYY-MM-DD)
     if (formData.incorporationDate) {
       const date = new Date(formData.incorporationDate);
       if (!isNaN(date.getTime())) {
@@ -91,7 +90,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
       }
     }
     
-    console.log('💾 Saving Unit Details:', formData);
+    console.log('Saving Unit Details:', formData);
     sessionStorage.setItem('unitDetailsData', JSON.stringify(formData));
   }
 
@@ -128,6 +127,7 @@ export class UnitDetailsComponent implements OnInit, OnDestroy {
 
   proceedToNext() {
     if (this.unitDetailsForm.valid) {
+      this.saveToSessionStorage();
       this.next.emit();
     } else {
       // Mark all fields as touched to show validation errors

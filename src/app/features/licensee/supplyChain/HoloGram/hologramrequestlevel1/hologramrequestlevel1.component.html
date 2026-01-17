@@ -1,0 +1,164 @@
+<div class="hologram-request-container">
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h2 class="page-title">
+                        <i class="bi bi-qr-code me-3"></i>
+                        Hologram Request Application
+                    </h2>
+                    <p class="page-subtitle">Request hologram rolls/quantity - Officer In-Charge will record production details</p>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-secondary" (click)="goBack()">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Form Section -->
+    <div class="form-section">
+        <div class="container-fluid">
+            <div class="form-card">
+                <div class="form-header">
+                    <h4 class="form-title">
+                        <i class="bi bi-clipboard-data me-2"></i>
+                        Hologram Request Details
+                    </h4>
+                    <p class="form-description">Request hologram quantity only - Production details will be recorded by Officer In-Charge</p>
+                </div>
+
+                <div class="form-body">
+                    <form #hologramForm="ngForm" (ngSubmit)="onSubmit()">
+                        <div class="row g-4">
+                            <!-- Hologram Type -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required">
+                                        <i class="bi bi-diagram-3 me-2"></i>
+                                        Hologram Type
+                                    </label>
+                                    <select class="form-select" [(ngModel)]="requestData.hologramType" name="hologramType"
+                                        required>
+                                        <option value="LOCAL">Local</option>
+                                        <option value="EXPORT">Export</option>
+                                        <option value="DEFENCE">Defence</option>
+                                    </select>
+                                    <small class="form-text">Select the type of hologram required</small>
+                                </div>
+                            </div>
+
+                            <!-- Total Numbers of Hologram -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required">
+                                        <i class="bi bi-hash me-2"></i>
+                                        Total Number of Holograms (Rolls/Quantity)
+                                    </label>
+                                    <input type="number" class="form-control" [(ngModel)]="requestData.totalHolograms"
+                                        name="totalHolograms" required min="1"
+                                        placeholder="Enter total number">
+                                    <small class="form-text">Enter the total number of hologram rolls/quantity required</small>
+                                </div>
+                            </div>
+
+                            <!-- Usage Date -->
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label required">
+                                        <i class="bi bi-calendar-event me-2"></i>
+                                        Date to Use Hologram in Factory
+                                    </label>
+                                    <input type="date" class="form-control" [(ngModel)]="requestData.usageDate"
+                                        name="usageDate" required>
+                                    <small class="form-text">Select the date when hologram will be used in factory</small>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="form-info">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        All fields marked with * are required
+                                    </small>
+                                </div>
+                                <div class="action-buttons">
+                                    <button type="button" class="btn btn-outline-secondary me-3" (click)="resetForm()">
+                                        <i class="bi bi-arrow-clockwise me-2"></i>
+                                        Reset Form
+                                    </button>
+                                    <button type="submit" class="btn btn-primary"
+                                        [disabled]="!hologramForm.valid || isSubmitting">
+                                        <i class="bi bi-check-circle me-2" *ngIf="!isSubmitting"></i>
+                                        <i class="bi bi-hourglass-split me-2" *ngIf="isSubmitting"></i>
+                                        {{ isSubmitting ? 'Processing...' : 'Submit Request' }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5);"
+        *ngIf="showSuccessModal">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Request Submitted Successfully
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="success-content">
+                        <div class="success-icon">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                        <h4 class="success-title">Hologram Request Submitted!</h4>
+                        <p class="success-message">
+                            Your hologram request has been successfully submitted with reference number:
+                            <strong class="ref-number">{{ generatedRefNumber }}</strong>
+                        </p>
+
+                        <div class="request-summary">
+                            <h6>Request Summary:</h6>
+                            <ul class="summary-list">
+                                <li><strong>Hologram Type:</strong> {{ requestData.hologramType }}</li>
+                                <li><strong>Total Holograms:</strong> {{ requestData.totalHolograms | number }}</li>
+                                <li><strong>Usage Date:</strong> {{ requestData.usageDate | date:'dd MMM yyyy' }}</li>
+                            </ul>
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Note:</strong> After approval by Officer In-Charge, you will receive the allocated holograms. 
+                                The Officer In-Charge will manually record the production details (brand, quantity made, wastage) 
+                                in the Daily Hologram Manufacturing Register.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success me-2" (click)="downloadApplication()">
+                        <i class="bi bi-download me-2"></i>
+                        Download Application
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

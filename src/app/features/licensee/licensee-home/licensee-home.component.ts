@@ -15,23 +15,26 @@ import Swal from 'sweetalert2';
   selector: 'app-licensee-home', // Component selector used in HTML
   imports: [RouterModule, RouterOutlet, MaterialModule, MatMenuModule], // Modules needed for this component
   templateUrl: './licensee-home.component.html', // Path to the component’s HTML template
-  styleUrl: './licensee-home.component.scss' // Path to the component’s SCSS styles
+  styleUrl: './licensee-home.component.scss', // Path to the component’s SCSS styles
 })
-export class LicenseeHomeComponent extends BaseComponent{
+export class LicenseeHomeComponent extends BaseComponent {
   account: any; // Raw account object (can be removed if not used)
   user?: Account | null; // Strongly-typed account model
   subscription?: Subscription; // For managing any active subscriptions
   loaded = true; // Flag to track when data has loaded
   userName!: string; // Holds the display name of the user
 
-  constructor(public baseDependancy: BaseDependency, private dialog: MatDialog) {
-     // Call parent constructor to initialize services from BaseComponent
-     super(baseDependancy);
+  constructor(
+    public baseDependancy: BaseDependency,
+    private dialog: MatDialog
+  ) {
+    // Call parent constructor to initialize services from BaseComponent
+    super(baseDependancy);
   }
 
   ngOnInit(): void {
     // Subscribe to authentication state from AccountService
-    this.accountService.getAuthenticationState().subscribe(acc => {
+    this.accountService.getAuthenticationState().subscribe((acc) => {
       if (acc !== null) {
         this.user = acc;
 
@@ -76,11 +79,47 @@ export class LicenseeHomeComponent extends BaseComponent{
     });
 
     // Optional: Log when the dialog is closed
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe((result) => {
       console.log('Dialog closed', result);
     });
   }
 
+  navigateTo(route: string): void {
+    switch (route) {
+      case 'transit-permit-register':
+        this.router.navigate(['/dev-transit-permit-register']);
+        break;
+      case 'daily-record-register':
+        this.router.navigate(['/dev-daily-record-register']);
+        break;
+      case 'daily-production-register':
+        this.router.navigate(['/dev-daily-production-register']);
+        break;
+      case 'brands-details':
+        this.router.navigate(['/dev-brands-details']);
+        break;
+      case 'yuksom-local-sales-register':
+        this.router.navigate(['/dev-local-sales-register']);
+        break;
+      case 'beer-production-register':
+        this.router.navigate(['/dev-beer-production-register']);
+        break;
+      case 'hologram-monthly-report':
+        this.router.navigate(['/dev-hologram-monthly-report']);
+        break;
+      case 'dashboard':
+        this.router.navigate(['/dev-supply-chain']);
+        break;
+      case 'payments':
+        this.router.navigate(['/dev-payment-confirmation']);
+        break;
+      case 'payment-receipt':
+        this.router.navigate(['/dev-payment-receipt']);
+        break;
+      default:
+        this.router.navigate(['/dev-supply-chain']);
+    }
+  }
   openLicenseInfo(): void {
     Swal.fire({
       title: 'Apply for License',
@@ -110,9 +149,9 @@ export class LicenseeHomeComponent extends BaseComponent{
       width: 700,
       padding: '1rem',
       customClass: {
-        popup: 'swal-wide'
-      }
-    }).then(result => {
+        popup: 'swal-wide',
+      },
+    }).then((result) => {
       if (result.isConfirmed) {
         this.router.navigate(['/licensee/apply-license']);
       }
@@ -148,9 +187,9 @@ export class LicenseeHomeComponent extends BaseComponent{
       width: 700,
       padding: '1rem',
       customClass: {
-        popup: 'swal-wide'
-      }
-    }).then(result => {
+        popup: 'swal-wide',
+      },
+    }).then((result) => {
       if (result.isConfirmed) {
         this.router.navigate(['/licensee/apply-new-license']);
       }

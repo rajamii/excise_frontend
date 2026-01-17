@@ -1,0 +1,357 @@
+<div class="main-container">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Back to Supply Chain
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transit Permit Form Section -->
+  <div class="container">
+    <div class="form-section mb-4">
+      <h5 class="text-primary fw-bold mb-3 border-bottom border-primary pb-2 text-center">TRANSIT PERMIT FORM123</h5>
+      <div class="row">
+        <!-- Bill No -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Bill No:</label>
+          <input type="text" class="form-control" [(ngModel)]="formData.billNo" readonly placeholder="TRP/2/EXCISE">
+        </div>
+
+        <!-- Sole Distributor Name -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Sole Distributor Name:</label>
+          <input type="text" class="form-control" [(ngModel)]="formData.soleDistributor" readonly
+            placeholder="M/s Karma Chopel Bhutia">
+        </div>
+
+        <!-- Date -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Date:</label>
+          <input type="date" class="form-control" [(ngModel)]="formData.date">
+        </div>
+
+        <!-- Depot Address -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Depot Address:</label>
+          <select class="form-control" [(ngModel)]="formData.depotAddress">
+            <option value="">-- Select Depot Address --</option>
+            <option value="gangtok">Gangtok</option>
+            <option value="namchi">Namchi</option>
+            <option value="gyalshing">Gyalshing</option>
+            <option value="mangan">Mangan</option>
+          </select>
+        </div>
+
+        <!-- Brand -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Brand:</label>
+          <select class="form-control" [(ngModel)]="formData.brand" (change)="onBrandChange()">
+            <option value="">-- Select Brand --</option>
+            <option value="royal-stag">Royal Stag</option>
+            <option value="blenders-pride">Blenders Pride</option>
+            <option value="officers-choice">Officers Choice</option>
+            <option value="imperial-blue">Imperial Blue</option>
+          </select>
+        </div>
+
+        <!-- Size -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Size (ml):</label>
+          <select class="form-control" [(ngModel)]="formData.size">
+            <option value="">-- Select Size --</option>
+            <option value="180">180ml</option>
+            <option value="375">375ml</option>
+            <option value="750">750ml</option>
+          </select>
+        </div>
+
+        <!-- Cases -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Cases:</label>
+          <input type="number" class="form-control" [(ngModel)]="formData.cases" placeholder="Enter number of cases"
+            min="0">
+        </div>
+
+        <!-- Vehicle Number -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Vehicle Number:</label>
+          <select class="form-control" [(ngModel)]="formData.vehicleNumber">
+            <option value="">-- Select Vehicle --</option>
+            <option *ngFor="let v of vehicleNumbers" [value]="v">{{ v }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="text-center mt-4">
+        <button class="btn btn-primary me-3" (click)="addProduct()">
+          Add Product
+        </button>
+        <button class="btn btn-success me-3" (click)="submitApplication()" *ngIf="products.length > 0">
+          Submit Application
+        </button>
+        <button class="btn btn-outline-secondary me-3" (click)="clearForm()">
+          Clear Form
+        </button>
+      </div>
+
+      <!-- Validation Messages -->
+      <div class="mt-3" *ngIf="validationErrors.length > 0">
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle me-2"></i>Please correct the following errors:
+          <ul class="mb-0 mt-2">
+            <li *ngFor="let error of validationErrors">{{ error }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Products Table -->
+      <div class="products-section mb-4" *ngIf="products.length > 0">
+        <h6 class="text-info fw-bold mb-3 border-bottom border-info pb-2">PRODUCT DETAILS</h6>
+        <div class="table-responsive">
+          <table class="table table-bordered border-info">
+            <thead class="table-info">
+              <tr>
+                <th>Brand</th>
+                <th>Size</th>
+                <th>Cases</th>
+                <th>Education Cess<br><small>(₹ per case)</small></th>
+                <th>Excise Duty<br><small>(₹ per case)</small></th>
+                <th>Additional Excise<br><small>(₹ per case)</small></th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let product of products; let i = index">
+                <td>{{ product.brand }}</td>
+                <td>{{ product.size }}</td>
+                <td>{{ product.cases }}</td>
+                <td>{{ product.educationCess | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td>{{ product.exciseDuty | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td>{{ product.additionalExcise | currency:'₹':'symbol':'1.2-2' }}</td>
+                <td>
+                  <button class="btn btn-danger btn-sm" (click)="deleteProduct(i)" title="Delete Product">
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot class="table-secondary">
+              <tr>
+                <td class="fw-bold">Education Cess Total:</td>
+                <td colspan="6" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr>
+                <td class="fw-bold">Excise Duty Total:</td>
+                <td colspan="6" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
+              </tr>
+              <tr>
+                <td class="fw-bold">Additional Excise Total:</td>
+                <td colspan="6" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generated Bill Section (Only show after submission) -->
+  <div class="container" id="transitPermitPrintSection" *ngIf="isSubmitted">
+    <!-- Government Header -->
+    <div class="government-header text-center mb-4">
+      <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+        <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+          style="height: 60px; width: auto" />
+        <span class="fw-bold fs-5 text-dark">GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+      </div>
+      <div class="text-success fs-4 fw-bold mt-2">TRANSIT PERMIT APPLICATION</div>
+      <hr class="border-success border-2 w-100 mx-auto">
+    </div>
+
+    <!-- Transit Details and Status Section -->
+    <div class="row mb-4">
+      <!-- Transit Details -->
+      <div class="col-md-6">
+        <div class="details-card border-start border-success border-4 ps-3">
+          <h6 class="text-success fw-bold mb-3">TRANSIT DETAILS</h6>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Reference No:</span>
+            <span class="text-dark">{{ formData.billNo }}</span>
+          </div>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Submission Date:</span>
+            <span class="text-dark">{{ formData.date | date: 'dd-MM-yyyy' }}</span>
+          </div>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Distillery:</span>
+            <span class="text-dark">{{ formData.soleDistributor }}</span>
+          </div>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Permit Type:</span>
+            <span class="text-dark">Alcohol Transit Permit</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status & Validity -->
+      <div class="col-md-6">
+        <div class="details-card border-start border-success border-4 ps-3">
+          <h6 class="text-success fw-bold mb-3">STATUS & VALIDITY</h6>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Current Status:</span>
+          </div>
+          <div class="status-badge bg-success text-white px-3 py-2 rounded mb-3 text-center fw-bold">
+            TRANSIT PERMIT ISSUED
+          </div>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Permit Fee:</span>
+            <span class="text-dark">₹{{ getTotalEducationCess() }}</span>
+          </div>
+          <div class="detail-item mb-2">
+            <span class="fw-bold text-muted">Validity Status:</span>
+            <span class="badge bg-success">Active</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Route & Transport Information -->
+    <div class="route-section mb-4">
+      <h5 class="text-success fw-bold mb-3 border-bottom border-success pb-2">ROUTE & TRANSPORT INFORMATION</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered border-success">
+          <tbody>
+            <tr class="bg-light">
+              <td class="fw-bold text-muted" style="width: 25%;">From Location</td>
+              <td class="text-dark">Gangtok, Sikkim</td>
+            </tr>
+            <tr>
+              <td class="fw-bold text-muted bg-light">To Location</td>
+              <td class="text-dark">{{ getDepotDisplayName(formData.depotAddress) }}</td>
+            </tr>
+            <tr class="bg-light">
+              <td class="fw-bold text-muted">Route Details</td>
+              <td class="text-dark">Gangtok - Siliguri Highway via Rangpo</td>
+            </tr>
+            <tr>
+              <td class="fw-bold text-muted bg-light">Entry Checkpost</td>
+              <td class="text-dark">Rangpo Checkpost</td>
+            </tr>
+            <tr class="bg-light">
+              <td class="fw-bold text-muted">Exit Checkpost</td>
+              <td class="text-dark">Melli Checkpost</td>
+            </tr>
+            <tr>
+              <td class="fw-bold text-muted bg-light">Vehicle Number</td>
+              <td class="text-dark">{{ formData.vehicleNumber }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="products-section mb-4">
+      <h5 class="text-info fw-bold mb-3 border-bottom border-info pb-2">PRODUCT DETAILS</h5>
+      <div class="table-responsive">
+        <table class="table table-bordered border-info">
+          <thead class="table-info">
+            <tr>
+              <th>Brand</th>
+              <th>Size</th>
+              <th>Cases</th>
+              <th>Education Cess<br><small>(₹ per case)</small></th>
+              <th>Excise Duty<br><small>(₹ per case)</small></th>
+              <th>Additional Excise<br><small>(₹ per case)</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let product of products">
+              <td>{{ product.brand }}</td>
+              <td>{{ product.size }}</td>
+              <td>{{ product.cases }}</td>
+              <td>{{ product.educationCess | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td>{{ product.exciseDuty | currency:'₹':'symbol':'1.2-2' }}</td>
+              <td>{{ product.additionalExcise | currency:'₹':'symbol':'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot class="table-secondary">
+            <tr>
+              <td class="fw-bold">Education Cess Total:</td>
+              <td colspan="5" class="fw-bold">{{ getTotalEducationCess() | currency:'₹':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td class="fw-bold">Excise Duty Total:</td>
+              <td colspan="5" class="fw-bold">{{ getTotalExciseDuty() | currency:'₹':'symbol':'1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td class="fw-bold">Additional Excise Total:</td>
+              <td colspan="5" class="fw-bold">{{ getTotalAdditionalExcise() | currency:'₹':'symbol':'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Payment Section (Outside print area) -->
+  <div class="container no-print" *ngIf="isSubmitted">
+    <div class="payment-section mb-4">
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card border-success">
+            <div class="card-header bg-success text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-calculator me-2"></i>Payment Summary
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold">Total Amount:</span>
+                <span class="h4 text-success mb-0">{{ (getTotalEducationCess() + getTotalExciseDuty() +
+                  getTotalAdditionalExcise()) | currency:'₹':'symbol':'1.2-2' }}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold">Number of Items:</span>
+                <span class="h5 text-secondary mb-0">{{ products.length }}</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Status:</span>
+                <span class="badge bg-success">Ready for Payment</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+              <h6 class="mb-0">
+                <i class="fas fa-credit-card me-2"></i>Payment Action
+              </h6>
+            </div>
+            <div class="card-body text-center">
+              <p class="text-muted mb-3">This application is ready for payment processing</p>
+              <button class="btn btn-success btn-lg w-100" (click)="payAllItems()">
+                PROCEED TO PAYMENT
+              </button>
+              <small class="text-muted mt-2 d-block">Click to proceed with payment</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Print Button -->
+    <div class="d-flex justify-content-center mt-4">
+      <button class="btn btn-success btn-lg px-5" (click)="printApplication()">
+        <i class="bi bi-printer me-2"></i>Print Transit Permit Application
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,219 @@
+<!-- Cancellation Register Header -->
+<div class="cancellation-register-header">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="header-info">
+      <h4 class="register-title">
+        <i class="bi bi-x-circle me-2"></i>
+        Cancellation Applications Review
+      </h4>
+      <p class="register-subtitle">Review and process license cancellation requests from licensees</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-success">
+        <i class="bi bi-download me-2"></i>
+        Export Report
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="summary-card total-requests">
+        <div class="card-icon">
+          <i class="bi bi-list-ul"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ filteredCancellationData.length }}</h3>
+          <p class="card-label">Total Cancellations</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card urgent-requests">
+        <div class="card-icon">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getUrgentCancellationCount() }}</h3>
+          <p class="card-label">Urgent/Critical</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card pending-requests">
+        <div class="card-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getCancellationStatusCount('PENDING') }}</h3>
+          <p class="card-label">Pending Review</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="summary-card approved-requests">
+        <div class="card-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ getCancellationStatusCount('APPROVED') }}</h3>
+          <p class="card-label">Approved</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compact Filter Section for Cancellation -->
+<div class="compact-filter-section mb-3">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="filter-label-text">
+      <i class="bi bi-funnel me-1"></i>
+      <small class="text-muted">Filters:</small>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="compact-filter">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="cancellationDateFilter"
+        (change)="onCancellationDateFilterChange()" placeholder="Date" title="Filter by date">
+    </div>
+
+    <!-- Status Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationStatusFilter"
+        (change)="onCancellationStatusFilterChange()" title="Filter by status">
+        <option value="">All Status</option>
+        <option value="PENDING">Pending Review</option>
+        <option value="APPROVED">Approved</option>
+        <option value="REJECTED">Rejected</option>
+        <option value="PROCESSING">Processing</option>
+      </select>
+    </div>
+
+    <!-- Reason Filter -->
+    <div class="compact-filter">
+      <select class="form-select form-select-sm" [(ngModel)]="cancellationReasonFilter"
+        (change)="onCancellationReasonFilterChange()" title="Filter by reason">
+        <option value="">All Reasons</option>
+        <option value="Business Closure">Business Closure</option>
+        <option value="Voluntary Surrender">Voluntary Surrender</option>
+        <option value="Non-Compliance">Non-Compliance</option>
+        <option value="License Transfer">License Transfer</option>
+        <option value="Financial Issues">Financial Issues</option>
+        <option value="Regulatory Violation">Regulatory Violation</option>
+      </select>
+    </div>
+
+    <!-- Clear Button -->
+    <button class="btn btn-outline-danger btn-sm" (click)="clearCancellationFilters()"
+      *ngIf="cancellationDateFilter || cancellationStatusFilter || cancellationReasonFilter"
+      title="Clear all filters">
+      <i class="bi bi-x-circle"></i>
+      Clear
+    </button>
+  </div>
+</div>
+
+<!-- Cancellation Register Table -->
+<div class="cancellation-register-table">
+  <div class="register-container">
+    <div class="register-header-bar">
+      <h5 class="register-table-title">
+        <i class="bi bi-table me-2"></i>
+        Cancellation Applications
+      </h5>
+      <div class="register-info">
+        <span class="entries-count">{{ filteredCancellationData.length }} Applications</span>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="filteredCancellationData.length > 0">
+      <table class="table register-table">
+        <thead>
+          <tr>
+            <th class="sl-no">Sl. No.</th>
+            <th class="ref-number">Reference No</th>
+            <th class="submission-date">Request Date</th>
+            <th class="licensee-name">Licensee Name</th>
+            <th class="license-type">License Type</th>
+            <th class="cancellation-reason">Reason</th>
+            <th class="status">Status</th>
+            <th class="priority">Priority</th>
+            <th class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (
+          item of getPaged();
+          track item.referenceNo;
+          let i = $index
+          ) {
+          <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
+            <td class="sl-no">{{ (getCurrentPage() - 1) * getPageSize() + i + 1 }}</td>
+            <td class="ref-number">
+              <div class="d-flex align-items-center gap-2">
+                <span class="ref-text">{{ item.referenceNo }}</span>
+                @if (item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation') {
+                <span class="badge bg-warning text-dark">CRITICAL</span>
+                }
+              </div>
+            </td>
+            <td class="submission-date">
+              <span class="date-text">{{ item.requestDate }}</span>
+            </td>
+            <td class="licensee-name">
+              <span class="company-name">{{ item.distilleryName }}</span>
+            </td>
+            <td class="license-type">
+              <span class="license-badge">{{ item.licenseType }}</span>
+            </td>
+            <td class="cancellation-reason">
+              <span class="reason-badge" [class.text-danger]="item.cancellationReason === 'Non-Compliance' || item.cancellationReason === 'Regulatory Violation'">
+                {{ item.cancellationReason }}
+              </span>
+            </td>
+            <td class="status">
+              <span class="status-badge status-{{ getStatusClass(item.status) }}">
+                {{ item.status }}
+              </span>
+            </td>
+            <td class="priority">
+              <span class="priority-badge priority-{{ item.priority || 'normal' }}">
+                {{ (item.priority || 'normal') | titlecase }}
+              </span>
+            </td>
+            <td class="actions">
+              <div class="action-buttons">
+                <button class="btn btn-outline-primary btn-sm" (click)="reviewCancellation(item)"
+                  title="Review Application">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)"
+                  title="Approve" *ngIf="item.allowedActions?.includes('APPROVE')">
+                  <i class="bi bi-check"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)"
+                  title="Reject" *ngIf="item.allowedActions?.includes('REJECT')">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredCancellationData.length === 0">
+      <div class="empty-icon">
+        <i class="bi bi-journal-x"></i>
+      </div>
+      <h5 class="empty-title">No Cancellation Applications Found</h5>
+      <p class="empty-message">
+        No cancellation applications match your current filter criteria.
+      </p>
+    </div>
+  </div>
+</div>

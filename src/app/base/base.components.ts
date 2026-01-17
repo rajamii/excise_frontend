@@ -47,6 +47,9 @@ export class BaseComponent implements OnDestroy {
   // Admin service
   protected adminService: AdminService;
 
+  // ✅ ADDED: New License Application Service
+  protected newLicenseAppService: LicenseApplicationService;
+
   /**
    * Constructor injects a base dependency object that bundles all core services.
    * This allows shared services to be used by any component extending BaseComponent.
@@ -68,6 +71,9 @@ export class BaseComponent implements OnDestroy {
     this.companyRegistrationService = baseDependency.companyRegistrationService;
 
     this.adminService = baseDependency.adminService;
+    
+    // ✅ ADDED: Initialize New License Application Service
+    this.newLicenseAppService = baseDependency.newLicenseAppService;
   }
 
   /**

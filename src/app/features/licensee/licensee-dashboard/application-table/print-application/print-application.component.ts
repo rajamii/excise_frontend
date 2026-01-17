@@ -27,7 +27,7 @@ export class PrintApplicationComponent {
   onPrint(): void {
     // ✅ FIXED: Use application_id instead of applicationId
     this.licenseApplicationService.printLicense(this.application.application_id!).subscribe({
-      next: (res) => { 
+      next: (res: any) => {
         // ✅ FIXED: Use print_count instead of printCount
         this.application.print_count = res.print_count;
 
@@ -36,7 +36,7 @@ export class PrintApplicationComponent {
 
         Swal.fire('Printed', 'License printed successfully.', 'success');
       },
-      error: (err) => {
+      error: (err: any) => {
         // Show error message using SweetAlert if the print API call fails
         Swal.fire('Error', err?.error?.error || 'Failed to print license.', 'error');
       }

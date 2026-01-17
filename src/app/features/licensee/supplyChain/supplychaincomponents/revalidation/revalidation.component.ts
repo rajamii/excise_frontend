@@ -1,0 +1,368 @@
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { SupplyChainService } from '../../services/supplychain.service';
+import { environment } from '../../../../../../environments/environment';
+import { AccountService } from '../../../../../core/services/account.service';
+
+interface TableData {
+  id: string;
+  referenceNo: string;
+  submissionDate: string;
+  distilleryName: string;
+  status: string;
+  amount: string;
+  isLive?: boolean;
+  isInvalid?: boolean;
+  allowedActions?: string[]; // Dynamic actions from backend
+}
+
+@Component({
+  selector: 'app-revalidation',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './revalidation.component.html',
+  styleUrl: './revalidation.component.scss'
+})
+export class RevalidationComponent implements OnInit {
+  Math = Math;
+  private isBrowser = false;
+
+  // Filter properties for revalidation
+  revalidationDateFilter: string = '';
+  revalidationMonthFilter: string = '';
+  revalidationYearFilter: string = '';
+  revalidationStatusFilter: string = '';
+
+  filteredRevalidationData: TableData[] = [];
+
+  revlidationData: TableData[] = [];
+
+  // Pagination state
+  pageSizeOptions: number[] = [5, 10, 15];
+  pageSize: number = 5;
+  currentPage: number = 1;
+
+  constructor(
+    private router: Router,
+    private supplyChainService: SupplyChainService,
+    private http: HttpClient,
+    private accountService: AccountService,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+    console.log('DEBUG: RevalidationComponent Constructor');
+  }
+
+  ngOnInit(): void {
+    console.log('DEBUG: ngOnInit');
+    this.fetchRevalidationData();
+  }
+
+  async fetchRevalidationData() {
+    try {
+      console.log('DEBUG: Fetching data...');
+
+      let response: any;
+
+      if (this.supplyChainService) {
+        console.log('DEBUG: Using SupplyChainService');
+        response = await firstValueFrom(this.supplyChainService.getRevalidationData());
+      } else {
+        console.warn('DEBUG: Service undefined! Using direct Http as fallback.');
+        const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`;
+        response = await firstValueFrom(this.http.get<any[]>(url));
+
+        // Manual handling of results structure if direct call
+        if (response && !Array.isArray(response) && response.results) {
+          response = response.results;
+        }
+      }
+
+      console.log('DEBUG: Raw Response:', response);
+
+      this.revlidationData = (response || []).map((item: any) => ({
+        id: item.id, // Map ID
+        referenceNo: item.ourRefNo,
+        submissionDate: new Date(item.revalidationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        distilleryName: item.distilleryName,
+        status: item.status,
+        amount: item.revalidationBrAmount || '0.00',
+        isLive: !item.status.includes('INVALID') && !item.status.includes('EXPIRED'),
+        isInvalid: item.status.includes('INVALID') || item.status.includes('EXPIRED'),
+        allowedActions: item.allowedActions || item.allowed_actions || [] // Map allowed_actions from backend (snake_case or camelCase)
+      }));
+
+      // Freeze objects to prevent mutations
+      this.revlidationData.forEach(item => {
+        Object.freeze(item.allowedActions);
+      });
+
+      this.filteredRevalidationData = [...this.revlidationData];
+      console.log('DEBUG: Processed Data length:', this.filteredRevalidationData.length);
+      console.log('DEBUG: Each item allowedActions:');
+      this.filteredRevalidationData.forEach(item => {
+        console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
+      });
+      
+      console.log('DEBUG: revlidationData[0] reference check:');
+      console.log('  revlidationData[0]:', this.revlidationData[0]);
+      console.log('  filteredRevalidationData[0]:', this.filteredRevalidationData[0]);
+      console.log('  Same object?', this.revlidationData[0] === this.filteredRevalidationData[0]);
+
+    } catch (error) {
+      console.error('Error fetching revalidation data:', error);
+    }
+  }
+
+  // Revalidation filter methods
+  applyRevalidationFilters(): void {
+    console.log('applyRevalidationFilters called');
+    console.log('Source data (revlidationData) before filter:');
+    this.revlidationData.forEach(item => {
+      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
+    });
+    
+    console.log('Applying revalidation filters:', {
+      dateFilter: this.revalidationDateFilter,
+      monthFilter: this.revalidationMonthFilter,
+      yearFilter: this.revalidationYearFilter,
+      statusFilter: this.revalidationStatusFilter
+    });
+
+    this.filteredRevalidationData = this.revlidationData.filter(item => {
+      let matchesDate = true;
+      let matchesMonth = true;
+      let matchesYear = true;
+      let matchesStatus = true;
+
+      const dateParts = item.submissionDate.split('-');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const monthName = dateParts[1];
+        const year = parseInt(dateParts[2]);
+
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const month = monthNames.indexOf(monthName) + 1;
+
+        if (month > 0) {
+          const itemDate = new Date(year, month - 1, day);
+
+          if (this.revalidationDateFilter) {
+            const filterDate = new Date(this.revalidationDateFilter);
+            matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth() &&
+              itemDate.getDate() === filterDate.getDate();
+          }
+
+          if (this.revalidationMonthFilter) {
+            const filterDate = new Date(this.revalidationMonthFilter + '-01');
+            matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
+              itemDate.getMonth() === filterDate.getMonth();
+          }
+
+          if (this.revalidationYearFilter) {
+            const filterYear = parseInt(this.revalidationYearFilter);
+            matchesYear = itemDate.getFullYear() === filterYear;
+          }
+        }
+      }
+
+      if (this.revalidationStatusFilter) {
+        matchesStatus = item.status.toLowerCase().includes(this.revalidationStatusFilter.toLowerCase());
+      }
+
+      const finalMatch = matchesDate && matchesMonth && matchesYear && matchesStatus;
+
+      return finalMatch;
+    });
+
+    console.log('Filtered data after filter:');
+    this.filteredRevalidationData.forEach(item => {
+      console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
+    });
+
+    this.resetPagination();
+  }
+
+  clearRevalidationFilters(): void {
+    this.revalidationDateFilter = '';
+    this.revalidationMonthFilter = '';
+    this.revalidationYearFilter = '';
+    this.revalidationStatusFilter = '';
+    this.filteredRevalidationData = [...this.revlidationData];
+    this.resetPagination();
+  }
+
+  onRevalidationDateFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationMonthFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationYearFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  onRevalidationStatusFilterChange(): void {
+    this.applyRevalidationFilters();
+  }
+
+  getRevalidationStatusCount(status: string): number {
+    return this.revlidationData.filter(item =>
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  getLiveRevalidationCount(): number {
+    return this.revlidationData.filter(item => item.isLive).length;
+  }
+
+  getTotalRevalidationAmount(): number {
+    return this.revlidationData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
+  }
+
+  viewApplication(item: TableData, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    const refNo = item.referenceNo;
+    this.router.navigate(["/dev-supply-chain-revalidation-view"], {
+      queryParams: { ref: refNo },
+    });
+  }
+
+  requestRevlidation(item: TableData): void {
+    this.router.navigate(["/dev-supply-chain-revalidation-request"], {
+      queryParams: {
+        id: item.id,
+      },
+    });
+  }
+
+  getCurrentPage(): number {
+    return this.currentPage;
+  }
+
+  getPageSize(): number {
+    return this.pageSize;
+  }
+
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRevalidationData.length / this.pageSize));
+  }
+
+  getPaged(): TableData[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    const paged = this.filteredRevalidationData.slice(start, start + this.pageSize);
+    console.log('getPaged() returning:', paged.length, 'items');
+    console.log('CHECK SOURCE DATA - revlidationData[0]:', this.revlidationData[0]?.allowedActions);
+    console.log('CHECK FILTERED DATA - filteredRevalidationData[0]:', this.filteredRevalidationData[0]?.allowedActions);
+    paged.forEach(item => {
+      console.log(`  Paged ID ${item.id}: allowedActions =`, item.allowedActions);
+    });
+    return paged;
+  }
+
+  goToPage(page: number): void {
+    const total = this.getTotalPages();
+    if (page < 1 || page > total) return;
+    this.currentPage = page;
+  }
+
+  resetPagination(): void {
+    this.currentPage = 1;
+  }
+
+  changePageSize(size: string | number): void {
+    const s = typeof size === "string" ? parseInt(size, 10) : size;
+    if (!s) return;
+    this.pageSize = s;
+    this.currentPage = 1;
+  }
+
+  // Role detection methods
+  isCommissioner(): boolean {
+    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
+    return hasRole || isCommissionerRoute;
+  }
+
+  isPermitSection(): boolean {
+    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+  }
+
+  getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
+  }
+
+  // Workflow actions
+  approveRevalidation(item: TableData): void {
+    if (!item.id) {
+      console.error('Revalidation ID not found');
+      return;
+    }
+
+    const role = this.getUserType();
+    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', role).subscribe({
+      next: (response) => {
+        alert(`Action successful! Status updated to: ${response.status}`);
+        this.fetchRevalidationData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.error || error.error?.message || ''));
+      }
+    });
+  }
+
+  rejectRevalidation(item: TableData): void {
+    if (!item.id) {
+      console.error('Revalidation ID not found');
+      return;
+    }
+
+    const role = this.getUserType();
+    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', role).subscribe({
+      next: (response) => {
+        alert(`Action successful! Status updated to: ${response.status}`);
+        this.fetchRevalidationData(); // Reload data
+      },
+      error: (error) => {
+        console.error('Error performing action:', error);
+        alert('Failed to perform action. ' + (error.error?.error || error.error?.message || ''));
+      }
+    });
+  }
+
+  canPerformAction(item: TableData): boolean {
+    if (item.status?.includes('INVALID')) return false;
+    console.log(`[ID: ${item.id}] canPerformAction - allowedActions:`, item.allowedActions);
+    if (item.allowedActions && item.allowedActions.includes('APPROVE')) {
+      console.log(`[ID: ${item.id}] ✓ APPROVE button WILL SHOW`);
+      return true;
+    }
+    console.log(`[ID: ${item.id}] ✗ APPROVE button HIDDEN`);
+    return false;
+  }
+
+  canReject(item: TableData): boolean {
+    if (item.status?.includes('INVALID')) return false;
+    console.log(`[ID: ${item.id}] canReject - allowedActions:`, item.allowedActions);
+    if (item.allowedActions && item.allowedActions.includes('REJECT')) {
+      console.log(`[ID: ${item.id}] ✓ REJECT button WILL SHOW`);
+      return true;
+    }
+    console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
+    return false;
+  } 
+}

@@ -1,7 +1,6 @@
-import { Component, signal, Inject, Output, EventEmitter } from '@angular/core';
+import { Component, Output, EventEmitter, OnInit, AfterViewInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -10,72 +9,52 @@ import Swal from 'sweetalert2';
   templateUrl: './site-enquiry-form.component.html',
   styleUrl: './site-enquiry-form.component.scss'
 })
-export class SiteEnquiryFormComponent {
+export class SiteEnquiryFormComponent implements OnInit, AfterViewInit {
   @Output() formStatus = new EventEmitter<boolean>();
 
   siteEnquiryForm: FormGroup;
-  
-/*   readonly formControlNames = [
-    'hasTraditionalPlace', 'traditionalPlaceDistance', 'traditionalPlaceName', 'traditionalPlaceNature', 'traditionalPlaceConstruction',
-    'hasEducationalInstitution', 'educationalInstitutionDistance', 'educationalInstitutionName', 'educationalInstitutionNature',
-    'hasHospital', 'hospitalDistance', 'hospitalName',
-    'hasTaxiStand', 'taxiStandDistance', 'taxiStandName',
-    'isInterconnectedWithShops', 'interconnectivityRemarks',
-    'enquiryOfficerComments', 'shopConstructionType', 'hasExciseShopsNearby',
-    'nearbyExciseShopCount', 'nearbyExciseShopsRemarks',
-    'isOnHighway', 'highwayName', 'shopImageDocument',
-    'latitude', 'longitude', 'isShopSizeCorrect', 'shopSizeRemarks',
-    'additionalEnquiryOfficerComments',
-    'hasIdProof', 'idProofComments',
-    'hasAgeProof', 'ageProofComments',
-    'hasNocFromLandlord', 'nocComments',
-    'hasOwnershipProof', 'ownershipProofComments',
-    'hasTradeLicense', 'tradeLicenseComments',
-    'proposesBarmanOrSalesman', 'workerProposalComments',
-    'workerDocsValid', 'workerDocsComments',
-    'licenseRecommendation', 'recommendationComments',
-    'specialRemarks', 'reportingPlace'
-  ]; */
+  shopImageDocument = {
+    file: null as File | null,
+    fileUrl: ''
+  };
 
-  constructor(
-  private fb: FormBuilder,
-  @Inject(MAT_DIALOG_DATA) public data: any,
-  ) {
-    // Initialize reactive form with validation
+  constructor(private fb: FormBuilder) {
+    // Initialize reactive form with proper validation
     this.siteEnquiryForm = this.fb.group({
-      
+      // Location Restrictions
       hasTraditionalPlace: [null, Validators.required],
-      traditionalPlaceDistance: [{ value: null, disabled: true }],
-      traditionalPlaceName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
-      traditionalPlaceNature: [{ value: '', disabled: true }, Validators.maxLength(1000)],
-      traditionalPlaceConstruction: [{ value: null, disabled: true }],
+      traditionalPlaceDistance: [null],
+      traditionalPlaceName: ['', Validators.maxLength(1000)],
+      traditionalPlaceNature: ['', Validators.maxLength(1000)],
+      traditionalPlaceConstruction: [null],
 
       hasEducationalInstitution: [null, Validators.required],
-      educationalInstitutionDistance: [{ value: null, disabled: true }],
-      educationalInstitutionName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
-      educationalInstitutionNature: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      educationalInstitutionDistance: [null],
+      educationalInstitutionName: ['', Validators.maxLength(1000)],
+      educationalInstitutionNature: ['', Validators.maxLength(1000)],
 
       hasHospital: [null, Validators.required],
-      hospitalDistance: [{ value: null, disabled: true }],
-      hospitalName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
+      hospitalDistance: [null],
+      hospitalName: ['', Validators.maxLength(1000)],
 
       hasTaxiStand: [null, Validators.required],
-      taxiStandName: [{ value: '', disabled: true }, Validators.maxLength(1000)],
-      taxiStandDistance: [{ value: null, disabled: true }],
+      taxiStandName: ['', Validators.maxLength(1000)],
+      taxiStandDistance: [null],
 
       isInterconnectedWithShops: [null, Validators.required],
       interconnectivityRemarks: ['', Validators.maxLength(1000)],
 
       enquiryOfficerComments: ['', Validators.maxLength(2000)],
 
+      // Other Enquiry Points
       shopConstructionType: [null, Validators.required],
 
       hasExciseShopsNearby: [null, Validators.required],
-      nearbyExciseShopCount: [{ value: null, disabled: true }],
+      nearbyExciseShopCount: [null],
       nearbyExciseShopsRemarks: ['', Validators.maxLength(2000)],
 
       isOnHighway: [null, Validators.required],
-      highwayName: [{ value: '', disabled: true }, Validators.maxLength(2000)],
+      highwayName: ['', Validators.maxLength(2000)],
 
       shopImageDocument: [null, Validators.required],
 
@@ -87,6 +66,7 @@ export class SiteEnquiryFormComponent {
 
       additionalEnquiryOfficerComments: ['', Validators.maxLength(2000)],
 
+      // Document Verification
       hasIdProof: [null, Validators.required],
       idProofComments: ['', Validators.maxLength(1000)],
 
@@ -111,22 +91,37 @@ export class SiteEnquiryFormComponent {
       licenseRecommendation: [null, Validators.required],
       recommendationComments: ['', Validators.maxLength(1000)],
 
+      // Special Remarks
       specialRemarks: ['', Validators.maxLength(2000)],
       reportingPlace: ['', [Validators.required, Validators.maxLength(250)]],
     });
   }
 
   ngOnInit() {
-    // Emit on form status change
+    console.log('🔧 Site Enquiry Form Initialized');
+    
+    // Set up conditional field enabling/disabling
+    this.setupConditionalFields();
+    
+    // Emit form status on changes
     this.siteEnquiryForm.statusChanges.subscribe(() => {
-      this.formStatus.emit(this.siteEnquiryForm.valid);
-
-/*       for (const name of this.formControlNames) {
-        const error = this.getErrorMessage(name as keyof typeof this.errorMessages);
-        this.errorMessages[name].set(error);
-      } */
+      const isValid = this.siteEnquiryForm.valid;
+      console.log('📋 Form status changed. Valid:', isValid);
+      this.formStatus.emit(isValid);
     });
+  }
 
+  ngAfterViewInit() {
+    // Initial status emission after view init
+    setTimeout(() => {
+      const isValid = this.siteEnquiryForm.valid;
+      console.log('✅ Initial form status (AfterViewInit):', isValid);
+      this.formStatus.emit(isValid);
+    }, 0);
+  }
+
+  private setupConditionalFields() {
+    // Traditional Place
     this.bindConditionalEnabling('hasTraditionalPlace', [
       'traditionalPlaceDistance',
       'traditionalPlaceName',
@@ -134,33 +129,34 @@ export class SiteEnquiryFormComponent {
       'traditionalPlaceConstruction'
     ]);
 
+    // Educational Institution
     this.bindConditionalEnabling('hasEducationalInstitution', [
       'educationalInstitutionDistance',
       'educationalInstitutionName',
       'educationalInstitutionNature'
     ]);
 
+    // Hospital
     this.bindConditionalEnabling('hasHospital', [
       'hospitalDistance',
       'hospitalName'
     ]);
 
+    // Taxi Stand
     this.bindConditionalEnabling('hasTaxiStand', [
       'taxiStandDistance',
       'taxiStandName'
     ]);
 
+    // Excise Shops Nearby
     this.bindConditionalEnabling('hasExciseShopsNearby', [
       'nearbyExciseShopCount'
     ]);
 
+    // Highway
     this.bindConditionalEnabling('isOnHighway', [
       'highwayName'
     ]);
-  }
-
-  ngAfterViewInit() {
-    this.formStatus.emit(this.siteEnquiryForm.valid);
   }
 
   private bindConditionalEnabling(
@@ -168,79 +164,80 @@ export class SiteEnquiryFormComponent {
     dependentControlNames: string[]
   ) {
     const mainControl = this.siteEnquiryForm.get(mainControlName);
-    if (!mainControl) return;
+    if (!mainControl) {
+      console.warn(`⚠️ Control not found: ${mainControlName}`);
+      return;
+    }
 
-    mainControl.valueChanges.subscribe((value: boolean) => {
+    mainControl.valueChanges.subscribe((value: boolean | null) => {
+      console.log(`🔄 ${mainControlName} changed to:`, value);
+      
       dependentControlNames.forEach(controlName => {
         const control = this.siteEnquiryForm.get(controlName);
-        if (!control) return;
+        if (!control) {
+          console.warn(`⚠️ Dependent control not found: ${controlName}`);
+          return;
+        }
 
         if (value === true) {
           control.enable();
+          console.log(`✅ Enabled: ${controlName}`);
         } else {
           control.disable();
           control.reset();
+          console.log(`❌ Disabled: ${controlName}`);
         }
       });
+      
+      // Re-emit form status after enabling/disabling fields
+      setTimeout(() => {
+        this.formStatus.emit(this.siteEnquiryForm.valid);
+      }, 0);
     });
   }
-
-/*   errorMessages = Object.fromEntries(
-    this.formControlNames.map(name => [name, signal('')])
-  ) as Record<string, ReturnType<typeof signal>>;
- */
-  shopImageDocument = {
-    file: null as File | null,
-    fileUrl: ''
-  };
-
-  // Retrieve error message for a specific field
-/*   getErrorMessage(field: keyof typeof this.errorMessages): string {
-    const control = this.siteEnquiryForm.get(field as string);
-    if (!control || control.valid || !control.errors || !control.touched) {
-      return '';
-    }
-
-    if (control.errors['required']) return 'This field is required.';
-    if (control.errors['maxlength']) {
-      return `Maximum length is ${control.errors['maxlength'].requiredLength} characters.`;
-    }
-    if (control.errors['minlength']) {
-      return `Minimum length is ${control.errors['minlength'].requiredLength} characters.`;
-    }
-    if (control.errors['min']) return `Minimum value is ${control.errors['min'].min}.`;
-    if (control.errors['max']) return `Maximum value is ${control.errors['max'].max}.`;
-    if (control.errors['email']) return 'Please enter a valid email address.';
-
-    return 'Invalid field.';
-  } */
 
   onDocSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
-    if (file && file.type !== 'application/pdf') {
-      Swal.fire('Invalid File', 'Only PDF files are allowed.', 'warning');
+    if (!file) {
+      console.log('❌ No file selected');
       return;
     }
 
-    if (file) {
-      this.shopImageDocument.file = file;
-      this.shopImageDocument.fileUrl = URL.createObjectURL(file);
-
-      // ✅ THIS is what updates the control value to make the validator happy
-      this.siteEnquiryForm.get('shopImageDocument')?.setValue(file);
-      this.siteEnquiryForm.get('shopImageDocument')?.updateValueAndValidity();
+    if (file.type !== 'application/pdf') {
+      Swal.fire('Invalid File', 'Only PDF files are allowed.', 'warning');
+      input.value = ''; // Clear the input
+      return;
     }
+
+    console.log('✅ File selected:', file.name, 'Size:', file.size);
+
+    // Store file and create URL
+    this.shopImageDocument.file = file;
+    this.shopImageDocument.fileUrl = URL.createObjectURL(file);
+
+    // Update form control
+    this.siteEnquiryForm.get('shopImageDocument')?.setValue(file);
+    this.siteEnquiryForm.get('shopImageDocument')?.markAsTouched();
+    this.siteEnquiryForm.get('shopImageDocument')?.updateValueAndValidity();
+
+    console.log('📄 Form control updated. Valid:', this.siteEnquiryForm.get('shopImageDocument')?.valid);
+    
+    // Emit status after file upload
+    setTimeout(() => {
+      this.formStatus.emit(this.siteEnquiryForm.valid);
+    }, 0);
   }
 
   viewDoc() {
     if (this.shopImageDocument.fileUrl) {
       window.open(this.shopImageDocument.fileUrl, '_blank');
+    } else {
+      console.warn('⚠️ No document URL available');
     }
   }
 
-  // Check if required documents are uploaded
   isDocUploaded(): boolean {
     return !!this.shopImageDocument.file;
   }
@@ -252,19 +249,58 @@ export class SiteEnquiryFormComponent {
     }
   }
 
+  // ✅ CRITICAL: Get complete site enquiry data including disabled fields
   public getSiteEnquiryData(): any | null {
+    console.log('📊 Getting site enquiry data...');
+    console.log('Form valid:', this.siteEnquiryForm.valid);
+    console.log('Form status:', this.siteEnquiryForm.status);
+
     if (this.siteEnquiryForm.invalid) {
       this.siteEnquiryForm.markAllAsTouched();
+      console.error('❌ Site Enquiry Form is invalid');
+      
+      // Log all validation errors
+      const errors: any = {};
+      Object.keys(this.siteEnquiryForm.controls).forEach(key => {
+        const control = this.siteEnquiryForm.get(key);
+        if (control && control.invalid) {
+          errors[key] = {
+            enabled: control.enabled,
+            errors: control.errors,
+            value: control.value
+          };
+        }
+      });
+      
+      console.error('❌ Form validation errors:', errors);
       return null;
     }
 
-    const formData = this.siteEnquiryForm.value;
+    // ✅ Use getRawValue() to include disabled fields
+    const formData = this.siteEnquiryForm.getRawValue();
 
-    // Include photo
+    // Include the uploaded file
     if (this.shopImageDocument.file) {
       formData.shopImageDocument = this.shopImageDocument.file; 
+      console.log('✅ File included:', this.shopImageDocument.file.name);
     }
 
+    console.log('✅ Site Enquiry Data collected successfully');
+    console.log('📦 Data summary:', {
+      hasTraditionalPlace: formData.hasTraditionalPlace,
+      hasEducationalInstitution: formData.hasEducationalInstitution,
+      hasHospital: formData.hasHospital,
+      shopConstructionType: formData.shopConstructionType,
+      licenseRecommendation: formData.licenseRecommendation,
+      reportingPlace: formData.reportingPlace,
+      fileUploaded: !!formData.shopImageDocument
+    });
+
     return formData;
+  }
+
+  ngOnDestroy() {
+    // Clean up file URL
+    this.clearDocUrl();
   }
 }

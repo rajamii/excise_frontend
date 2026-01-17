@@ -1,0 +1,236 @@
+<!-- cancellation-request.component.html -->
+<div class="main-container">
+  <!-- Status Messages -->
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    {{ errorMessage }}
+  </div>
+
+  <div *ngIf="isLoading" class="text-center p-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading details...</p>
+  </div>
+
+  <div class="card p-4 mb-4">
+    <div class="section-title">
+      <i class="bi bi-list-check"></i>Select Permit(s) for Cancellation
+    </div>
+    <div class="dropdown mb-3">
+      <button
+        class="btn btn-outline-primary dropdown-toggle w-100"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        Select Permits
+      </button>
+      <div class="dropdown-menu p-2 w-100">
+        <div *ngFor="let permit of permits" class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [id]="'chkPermit_' + permit.number"
+            [value]="permit.number"
+            [checked]="permit.isCancelled"
+            [disabled]="permit.isCancelled"
+            (change)="togglePermit(permit, $event)"
+          />
+          <label class="form-check-label" [for]="'chkPermit_' + permit.number">
+            Permit {{ permit.number }} - ₹{{ permit.amount }}
+            <span *ngIf="permit.isCancelled">(Cancelled)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancellation Summary Table -->
+  <div class="card p-4" *ngIf="requisitionData">
+    <h5 class="mb-3 border-bottom pb-2">Cancellation Request Details</h5>
+    
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Parameter</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Requisition Reference No.</strong></td>
+            <td>{{ requisitionData.ourRefNo }}</td>
+          </tr>
+          <tr>
+            <td><strong>Dated</strong></td>
+            <td>{{ requisitionData.requisitionDate | date : "dd/MM/yyyy" }}</td>
+          </tr>
+          <tr>
+            <td><strong>Surrender of Import Permit No(s)</strong></td>
+            <td>
+              <span *ngIf="selectedPermits.length > 0; else noPermits">
+                {{ selectedPermits.join(", ") }}
+              </span>
+              <ng-template #noPermits><em class="text-muted">None selected</em></ng-template>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Requisition Details</strong></td>
+            <td>
+              Fresh Import Permit for <strong>{{ getTotalBalance() }}</strong>
+              (<i>{{ requisitionData.grainEnaNumber }} x {{ selectedPermits.length }}</i>)<br/>
+              Strength: {{ requisitionData.strength }}<br/>
+              From: {{ requisitionData.liftedFromDistilleryName }}
+            </td>
+          </tr>
+          <tr>
+             <td><strong>Route</strong></td>
+             <td>{{ requisitionData.viaRoute }}</td>
+          </tr>
+          <tr>
+             <td><strong>Cancellation Charges</strong></td>
+             <td class="text-danger fw-bold">₹{{ getCancellationCharges().toLocaleString() }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Additional info / Non-execution certificate note could go here -->
+    <div class="alert alert-light border mt-2">
+       <small>
+          <i class="bi bi-info-circle me-1"></i>
+          We are surrendering the above Import Permits along with the Non Execution Certificate due to non-availability of tankers / Export Permission not granted. We request a fresh Import Permit for the specified quantity.
+       </small>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="d-flex justify-content-end gap-3 mt-4">
+    <button class="btn btn-outline-secondary" (click)="goBack()">Cancel</button>
+    <button class="btn btn-danger" [disabled]="newlySelectedPermits.length === 0" (click)="showDeclaration()">
+      Submit Cancellation Request
+    </button>
+  </div>
+</div>
+
+<!-- Declaration Modal -->
+<div
+  class="modal fade"
+  [class.show]="showDeclarationModal"
+  [style.display]="showDeclarationModal ? 'block' : 'none'"
+  id="declarationModal"
+  tabindex="-1"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">
+          <i class="bi bi-exclamation-triangle me-2"></i>Important Declaration
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          (click)="showDeclarationModal = false"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div
+          class="alert alert-warning"
+          *ngIf="newlySelectedPermits.length > 0"
+        >
+          <strong>Note:</strong> By submitting this cancellation request, you
+          acknowledge that
+          <b
+            >₹{{ getCancellationCharges().toLocaleString() }} will be
+            deducted</b
+          >
+          from your account for cancellation charges ({{
+            newlySelectedPermits.length
+          }}
+          permit(s) ₹1,000 each).
+        </div>
+        <div
+          class="alert alert-info"
+          *ngIf="selectedPermits.length > newlySelectedPermits.length"
+        >
+          <strong>Info:</strong>
+          {{ selectedPermits.length - newlySelectedPermits.length }}
+          permit(s) are already cancelled and will not incur additional charges.
+        </div>
+        <div class="alert alert-info" *ngIf="newlySelectedPermits.length === 0">
+          <strong>Info:</strong> All selected permits are already cancelled. No
+          additional charges will be deducted.
+        </div>
+        <p class="mb-0">Do you wish to proceed?</p>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="showDeclarationModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-success"
+          (click)="confirmCancellation()"
+        >
+          Yes, Proceed
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div
+  class="modal fade"
+  [class.show]="showSuccessModal"
+  [style.display]="showSuccessModal ? 'block' : 'none'"
+  id="successModal"
+  tabindex="-1"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-check-circle me-2"></i>Success
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          (click)="showSuccessModal = false"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-success">
+          <strong>Cancellation request submitted successfully!</strong><br />
+          <span [innerHTML]="successMessage"></span>
+          <br />
+          <small class="text-muted"
+            >Refund will only be processed if it gets approved by the
+            Commissioner.</small
+          >
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-success"
+          (click)="redirectToDashboard()"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Backdrop for modals -->
+<div
+  class="modal-backdrop fade"
+  [class.show]="showDeclarationModal || showSuccessModal"
+  [style.display]="showDeclarationModal || showSuccessModal ? 'block' : 'none'"
+></div>

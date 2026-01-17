@@ -1,0 +1,132 @@
+<div class="min-vh-100 bg-light">
+    <!-- Excise Department Header -->
+  
+
+    <!-- Payment Confirmation Header -->
+    <div class="confirmation-bg text-white py-4">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h2 class="h3 text-black mb-1">Payment Confirmation</h2>
+                    <p class="mb-0 text-success-light d-flex align-items-center">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span class="fw-semibold text-black">{{ paymentStatus }}</span>
+                    </p>
+                </div>
+                <div class="col-auto text-end">
+                    <p class="mb-1 fw-semibold text-black">Date & Time:</p>
+                    <span class="small text-black">{{ paymentDateTime | date:'dd-MM-yyyy HH:mm:ss' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-4">
+        <!-- Transaction Selector (No Print) -->
+        <div class="row mb-4 no-print">
+            <div class="col-md-6">
+                <select class="form-select" [(ngModel)]="selectedTransactionId" (change)="onTransactionChange()">
+                    <option value="">-- Select a Transaction --</option>
+                    <option *ngFor="let transaction of transactions" [value]="transaction.id">
+                        {{ transaction.transactionId }} - ₹{{ transaction.amount | number:'1.2-2' }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Receipt Container -->
+        <div class="receipt-container bg-white rounded shadow p-4 mx-auto" style="max-width:auto">
+
+            <!-- Application Information Section -->
+            <div class="mb-4">
+                <h3 class="h5 fw-semibold text-dark mb-3 pb-2 border-bottom border-2 border-dark">
+                    Application Information
+                </h3>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Payer ID:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.payerId }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Transaction ID:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.transactionId }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Category:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.category }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Transaction Amount:</span>
+                            <span class="text-dark" style="width: 50%;">₹{{ receiptData.transactionAmount |
+                                number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Details Section -->
+            <div class="mb-4">
+                <h3 class="h5 fw-semibold text-dark mb-3 pb-2 border-bottom border-2 border-dark">
+                    Payment Details
+                </h3>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Response ID:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.responseId }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Payment Date:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.paymentDate | date:'dd-MM-yyyy
+                                HH:mm:ss' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Amount Paid:</span>
+                            <span class="text-dark fw-semibold" style="width: 50%;">₹{{ receiptData.amountPaid |
+                                number:'1.2-2' }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex">
+                            <span class="text-muted fw-medium" style="width: 50%;">Payment Method:</span>
+                            <span class="text-dark" style="width: 50%;">{{ receiptData.paymentMethod }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction Message -->
+            <div class="alert alert-info" *ngIf="transactionMessage">
+                <i class="bi bi-info-circle me-2"></i>
+                {{ transactionMessage }}
+            </div>
+
+            <!-- Action Buttons (No Print) -->
+            <div class="text-center mt-4 no-print">
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <button class="btn btn-primary px-4 py-2" (click)="printReceipt()">
+                        <i class="bi bi-printer me-2"></i>Print Receipt
+                    </button>
+                    <button class="btn btn-success px-4 py-2" (click)="downloadReceipt()">
+                        <i class="bi bi-download me-2"></i>Download Receipt
+                    </button>
+                    <button class="btn btn-secondary px-4 py-2" (click)="backToHome()">
+                        <i class="bi bi-house me-2"></i>Back to Home
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

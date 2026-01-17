@@ -63,6 +63,9 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  /**
+   * ✅ CRITICAL: Load master data AND save to sessionStorage
+   */
   private loadDropdownData(): void {
     forkJoin({
       districts: this.masterService.getDistrict(),
@@ -75,7 +78,15 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
         this.licenseCategories = licenseCategories;
         this.dataLoaded = true;
         
-        console.log('✅ Master data loaded');
+        // ✅ CRITICAL: Save master data to sessionStorage for later use
+        sessionStorage.setItem('districts', JSON.stringify(districts));
+        sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
+        sessionStorage.setItem('licenseCategories', JSON.stringify(licenseCategories));
+        
+        console.log('✅ Master data loaded and saved to sessionStorage');
+        console.log('  Districts:', districts.length);
+        console.log('  Subdivisions:', subdivisions.length);
+        console.log('  License Categories:', licenseCategories.length);
         
         const storedDistrict = this.selectLicenseForm.get('excise_district')?.value;
         if (storedDistrict) {
@@ -107,7 +118,7 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
       subdiv => subdiv.districtCode === district.districtCode
     );
     
-    console.log('✅ Filtered subdivisions:', this.filteredSubdivisions);
+    console.log('✅ Filtered subdivisions:', this.filteredSubdivisions.length);
   }
 
   private getFromSessionStorage(): Partial<LicenseApplication> {
@@ -118,27 +129,8 @@ export class SelectLicenseComponent implements OnInit, OnDestroy {
   private saveToSessionStorage() {
     const formData: Partial<LicenseApplication> = this.selectLicenseForm.getRawValue();
     
-    // ✅ CRITICAL: Store BOTH the ID and the CODE
-    const enrichedData: any = { ...formData };
-    
-    // Get district code
-    if (formData.excise_district) {
-      const district = this.districts.find(d => d.id === formData.excise_district);
-      if (district) {
-        enrichedData.excise_district_code = district.districtCode;
-      }
-    }
-    
-    // Get subdivision code
-    if (formData.excise_subdivision) {
-      const subdivision = this.subdivisions.find(s => s.id === formData.excise_subdivision);
-      if (subdivision) {
-        enrichedData.excise_subdivision_code = subdivision.subdivisionCode;
-      }
-    }
-    
-    console.log('💾 Saving to session:', enrichedData);
-    sessionStorage.setItem('selectLicenseData', JSON.stringify(enrichedData));
+    console.log('💾 Saving selectLicenseData to sessionStorage:', formData);
+    sessionStorage.setItem('selectLicenseData', JSON.stringify(formData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {

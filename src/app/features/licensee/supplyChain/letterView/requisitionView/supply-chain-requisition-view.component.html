@@ -1,0 +1,135 @@
+<div class="supply-chain-requisition-view">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">ENA Import Permit Requisition Details</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Content -->
+  <div class="application-container">
+    @if (requisitionData) {
+      <div id="requisitionPrintSection" class="card shadow-sm border-0 printable-content">
+        <div class="application-header text-center fw-bold mb-3 fs-5">
+          <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal" style="height: 60px; width: auto" />
+            <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+          </div>
+          <div class="text-primary fs-4 mt-2">ENA IMPORT PERMIT REQUISITION</div>
+        </div>
+
+        <div class="application-content p-4">
+          <!-- Basic Information -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="info-card">
+                <h6 class="text-primary mb-2">Application Details</h6>
+                <p><strong>Reference No:</strong> {{ requisitionData.referenceNo }}</p>
+                <p><strong>Submission Date:</strong> {{ requisitionData.submissionDate | date: "dd-MM-yyyy" }}</p>
+                <p><strong>Distillery:</strong> {{ requisitionData.distilleryName }}</p>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="info-card">
+                <h6 class="text-primary mb-2">Status Information</h6>
+                <p><strong>Current Status:</strong></p>
+                <span [ngClass]="getStatusBadgeClass(requisitionData.status)" class="d-block mt-1">
+                  {{ requisitionData.status }}
+                </span>
+                <p class="mt-2"><strong>Amount Paid:</strong> ₹{{ requisitionData.brAmount }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Import Permit Specifications -->
+          <div class="section-card mb-4">
+            <h5 class="section-title">Import Permit Specifications</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                    <td>{{ getBulkSpiritTypeName(requisitionData.bulkSpiritType || '') }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Quantity per Permit</td>
+                    <td>{{ requisitionData.quantity }} BL</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Number of Permits</td>
+                    <td>{{ requisitionData.numberOfPermits }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Total Quantity</td>
+                    <td class="text-success fw-bold">{{ (requisitionData.quantity || 0) * (requisitionData.numberOfPermits || 0) }} BL</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Strength</td>
+                    <td>{{ requisitionData.strengthTo }}°</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Purpose</td>
+                    <td>{{ getPurposeName(requisitionData.purpose || '') }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Amount Paid</td>
+                    <td class="text-primary fw-bold">₹{{ requisitionData.brAmount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Transport & Route Details -->
+          <div class="section-card mb-4">
+            <h5 class="section-title">Transport & Route Information</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <tbody>
+                  <tr>
+                    <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
+                    <td>{{ getDistilleryName(requisitionData.liftedFrom || '') }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Via Route</td>
+                    <td>{{ requisitionData.viaRoute }}</td>
+                  </tr>
+                  <tr>
+                    <td class="fw-semibold bg-light">Checkpost Entry</td>
+                    <td>{{ getCheckpostName(requisitionData.checkpostEntry || '') }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+     
+
+          <!-- Footer -->
+       
+          <!-- Print Button -->
+          <div class="no-print d-flex justify-content-center mt-4">
+            <button class="btn btn-primary btn-lg" (click)="printApplication()">
+              <i class="bi bi-printer me-2"></i>Print Requisition Application
+            </button>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="alert alert-warning text-center">
+        <h4>No Data Found</h4>
+        <p>The requested requisition application could not be found.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          Return to Supply Chain
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -30,24 +30,20 @@ interface DocumentUpload {
 export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   siteDetailsForm: FormGroup;
 
-  // Raw data from API for dropdowns
   districts: District[] = [];
   private allSubdivisions: Subdivision[] = [];
   private allPoliceStations: PoliceStation[] = [];
   private allRoads: Road[] = [];
 
-  // Filtered data shown in dropdowns
   siteSubdivisions: Subdivision[] = [];
   sitePoliceStations: PoliceStation[] = [];
-  roadNames: string[] = [];
+  roadNames: Road[] = [];
 
-  // Static dropdown values
   locationCategories: string[] = ['Municipal Corporation', 'Municipal Council', 'Nagar Panchayat', 'Block'];
   locationNames: string[] = ['Location 1', 'Location 2', 'Location 3', 'Location 4'];
   wardNames: string[] = ['Ward 1', 'Ward 2', 'Ward 3', 'Ward 4'];
   constructionTypes: string[] = ['RCC', 'Wooden Structure'];
 
-  // Document upload configuration (backend field name: noc_landlord)
   documents: DocumentUpload[] = [
     {
       name: 'noc_landlord',
@@ -89,36 +85,32 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     private cdr: ChangeDetectorRef
   ) {
     const storedValues: any = this.getFromSessionStorage();
-    const hasDistrict = !!storedValues.siteDistrict;
-    const hasSubdivision = !!storedValues.siteSubdivision;
+    const hasDistrict = !!storedValues.district;
+    const hasSubdivision = !!storedValues.subdivision;
 
     this.siteDetailsForm = this.fb.group({
-      siteDistrict: new FormControl(storedValues.siteDistrict ?? null, [Validators.required]),
-      siteSubdivision: new FormControl({value: storedValues.siteSubdivision ?? null, disabled: !hasDistrict}, [Validators.required]),
-      policeStation: new FormControl({value: storedValues.policeStation ?? null, disabled: !hasSubdivision}, [Validators.required]),
-      locationCategory: new FormControl(storedValues.locationCategory ?? null, [Validators.required]),
-      locationName: new FormControl(storedValues.locationName ?? null, [Validators.required]),
-      wardName: new FormControl(storedValues.wardName ?? null, [Validators.required]),
-      businessAddress: new FormControl(storedValues.businessAddress ?? null, [Validators.required, Validators.maxLength(500)]),
-      roadName: new FormControl({value: storedValues.roadName ?? null, disabled: !hasDistrict}, [Validators.required]),
-      pinCode: new FormControl(storedValues.pinCode, [
+      siteDistrict: new FormControl(storedValues.district ?? null, [Validators.required]),
+      siteSubdivision: new FormControl({value: storedValues.subdivision ?? null, disabled: !hasDistrict}, [Validators.required]),
+      policeStation: new FormControl({value: storedValues.police_station ?? null, disabled: !hasSubdivision}, [Validators.required]),
+      locationCategory: new FormControl(storedValues.location_category ?? null, [Validators.required]),
+      locationName: new FormControl(storedValues.location_name ?? null, [Validators.required]),
+      wardName: new FormControl(storedValues.ward_name ?? null, [Validators.required]),
+      businessAddress: new FormControl(storedValues.address ?? null, [Validators.required, Validators.maxLength(500)]),
+      roadName: new FormControl({value: storedValues.road ?? null, disabled: !hasDistrict}, [Validators.required]),
+      pinCode: new FormControl(storedValues.pin_code, [
         Validators.required,
         Validators.pattern(PatternConstants.PINCODE)
       ]),
-
-      // Site construction details
-      constructionType: new FormControl(storedValues.constructionType, [Validators.required]),
+      constructionType: new FormControl(storedValues.construction_type, [Validators.required]),
       length: new FormControl(storedValues.length, [
         Validators.pattern(/^\d+(\.\d{1,2})?$/)
       ]),
       breadth: new FormControl(storedValues.breadth, [
         Validators.pattern(/^\d+(\.\d{1,2})?$/)
       ]),
-
-      // Radio button fields (Backend expects "Yes"/"No" strings for ChoiceFields)
-      siteOwned: new FormControl(storedValues.siteOwned, [Validators.required]),
-      nocObtained: new FormControl(storedValues.nocObtained),
-      tradeLicenseCovered: new FormControl(storedValues.tradeLicenseCovered, [Validators.required]),
+      siteOwned: new FormControl(storedValues.site_owned, [Validators.required]),
+      nocObtained: new FormControl(storedValues.noc_obtained),
+      tradeLicenseCovered: new FormControl(storedValues.trade_license_covered, [Validators.required]),
     });
 
     this.setupConditionalValidation();
@@ -134,7 +126,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     this.loadMasterData();
     this.restoreDocuments();
 
-    // Watch district → subdivision → police station
     this.siteDetailsForm.get('siteDistrict')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(districtId => {
@@ -188,21 +179,13 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     }
   }
 
-  // === Conditional Validators ===
   private setupConditionalValidation(): void {
     const siteOwnedCtrl = this.siteDetailsForm.get('siteOwned');
-    const nocObtainedCtrl = this.siteDetailsForm.get('nocObtained');
-
-    // Initial state
     this.updateNocRequirements(siteOwnedCtrl?.value);
-
-    // React to changes
-    siteOwnedCtrl?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(value => {
-        this.updateNocRequirements(value);
-        this.cdr.detectChanges();
-      });
+    siteOwnedCtrl?.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(value => {
+      this.updateNocRequirements(value);
+      this.cdr.detectChanges();
+    });
   }
 
   private updateNocRequirements(siteOwnedValue: 'Yes' | 'No' | null): void {
@@ -210,9 +193,8 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     const nocDoc = this.documents.find(d => d.name === 'noc_landlord');
 
     if (siteOwnedValue === 'Yes') {
-      nocObtainedCtrl?.setValue(null);
+      nocObtainedCtrl?.setValue('No');
       nocObtainedCtrl?.clearValidators();
-
       if (nocDoc) {
         nocDoc.required = false;
         if (nocDoc.file) {
@@ -224,66 +206,76 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       }
     } else if (siteOwnedValue === 'No') {
       nocObtainedCtrl?.setValidators(Validators.required);
-      if (nocDoc) {
-        nocDoc.required = true;
-      }
+      if (nocDoc) nocDoc.required = true;
     }
-
     nocObtainedCtrl?.updateValueAndValidity({ emitEvent: false });
   }
 
+  // ✅ CRITICAL FIX: Save master data to sessionStorage
   private loadMasterData(): void {
-    // Districts
     this.masterService.getDistrict().subscribe({
       next: (districts) => {
         this.districts = districts;
-        console.log('✅ Districts loaded:', districts);
-        this.restoreDistrictIfNeeded();
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('districts', JSON.stringify(districts));
+        console.log('✅ Districts loaded and saved:', districts.length);
+        
+        const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (storedDistrictId) {
+          this.onDistrictChange(storedDistrictId);
+        }
       },
       error: (err) => console.error('Failed to load districts', err)
     });
 
-    // Subdivisions
     this.masterService.getSubdivision().subscribe({
       next: (subdivisions) => {
         this.allSubdivisions = subdivisions;
-        console.log('✅ Subdivisions loaded:', subdivisions);
-        this.restoreSubdivisionIfNeeded();
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('subdivisions', JSON.stringify(subdivisions));
+        console.log('✅ Subdivisions loaded and saved:', subdivisions.length);
+        
+        const storedDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
+        if (storedDistrictId && this.districts.length > 0) {
+          this.filterSubdivisions(storedDistrictId);
+        }
       },
       error: (err) => console.error('Failed to load subdivisions', err)
     });
 
-    // Police Stations
     this.masterService.getPoliceStations().subscribe({
       next: (stations) => {
         this.allPoliceStations = stations;
-        console.log('✅ Police Stations loaded:', stations);
-        this.restorePoliceStationIfNeeded();
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('policeStations', JSON.stringify(stations));
+        console.log('✅ Police Stations loaded and saved:', stations.length);
+        
+        const storedSubdivisionId = this.siteDetailsForm.get('siteSubdivision')?.value;
+        if (storedSubdivisionId && this.allSubdivisions.length > 0) {
+          this.filterPoliceStations(storedSubdivisionId);
+        }
       },
       error: (err) => console.error('Failed to load police stations', err)
     });
 
-    // Roads
     this.masterService.getRoads().subscribe({
       next: (roads) => {
-        console.log('✅ Roads API Response:', roads);
         this.allRoads = roads;
+        // ✅ SAVE TO SESSION STORAGE
+        sessionStorage.setItem('roads', JSON.stringify(roads));
+        console.log('✅ Roads loaded and saved:', roads.length);
         
         const currentDistrictId = this.siteDetailsForm.get('siteDistrict')?.value;
         if (currentDistrictId) {
-          console.log('🔄 Re-filtering roads for already selected district:', currentDistrictId);
           this.filterRoads(currentDistrictId);
         }
-        
-        this.restoreRoadIfNeeded();
       },
-      error: (err) => {
-        console.error('❌ Failed to load roads', err);
-      }
+      error: (err) => console.error('❌ Failed to load roads', err)
     });
   }
 
   onDistrictChange(districtId: number) {
+    console.log('🔄 onDistrictChange called with:', districtId);
     if (districtId) {
       this.filterSubdivisions(districtId);
       this.filterRoads(districtId);
@@ -305,19 +297,23 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   private filterSubdivisions(districtId: number): void {
+    console.log('🔍 filterSubdivisions called with districtId:', districtId);
     const district = this.districts.find(d => d.id === districtId);
     if (!district) {
+      console.warn('⚠️ District not found for ID:', districtId);
       this.siteSubdivisions = [];
       return;
     }
 
+    console.log('✅ Found district:', district);
     this.siteSubdivisions = this.allSubdivisions.filter(s => s.districtCode === district.districtCode);
+    console.log('✅ Filtered subdivisions:', this.siteSubdivisions);
 
     const current = this.siteDetailsForm.get('siteSubdivision')?.value;
     if (current && !this.siteSubdivisions.some(s => s.id === current)) {
+      console.log('⚠️ Current subdivision not in filtered list, resetting');
       this.siteDetailsForm.patchValue({ siteSubdivision: null }, { emitEvent: false });
     }
-
     this.cdr.detectChanges();
   }
 
@@ -326,44 +322,28 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.roadNames = [];
       return;
     }
-
     const selectedDistrict = this.districts.find(d => d.id === districtId);
     if (!selectedDistrict) {
       this.roadNames = [];
       return;
     }
-
-    console.log('🔍 Filtering roads for district:', selectedDistrict.district, '(id:', districtId, ')');
-    console.log('🔍 Total roads available:', this.allRoads.length);
-
-    this.roadNames = this.allRoads
-      .filter(road => {
-        let roadDistrictId: number | undefined;
-        
-        // Handle multiple possible data structures from the API
-        if ((road as any).districtId !== undefined) {
-          roadDistrictId = (road as any).districtId;
-        } else if (typeof road.district === 'number') {
-          roadDistrictId = road.district;
-        } else if (road.district && typeof road.district === 'object') {
-          roadDistrictId = (road.district as District).id;
-        } else if ((road as any).district_id !== undefined) {
-          roadDistrictId = (road as any).district_id;
-        }
-        
-        return roadDistrictId === districtId;
-      })
-      .map(road => road.roadName)
-      .filter((name): name is string => name !== undefined && name !== null && name.trim() !== '')
-      .sort();
-
-    console.log('✅ Filtered road names:', this.roadNames);
-
+    this.roadNames = this.allRoads.filter(road => {
+      let roadDistrictId: number | undefined;
+      if ((road as any).districtId !== undefined) {
+        roadDistrictId = (road as any).districtId;
+      } else if (typeof road.district === 'number') {
+        roadDistrictId = road.district;
+      } else if (road.district && typeof road.district === 'object') {
+        roadDistrictId = (road.district as District).id;
+      } else if ((road as any).district_id !== undefined) {
+        roadDistrictId = (road as any).district_id;
+      }
+      return roadDistrictId === districtId;
+    });
     const current = this.siteDetailsForm.get('roadName')?.value;
-    if (current && !this.roadNames.includes(current)) {
+    if (current && !this.roadNames.some(r => r.id === current)) {
       this.siteDetailsForm.patchValue({ roadName: null }, { emitEvent: false });
     }
-
     this.cdr.detectChanges();
   }
 
@@ -373,34 +353,26 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       this.sitePoliceStations = [];
       return;
     }
-
     this.sitePoliceStations = this.allPoliceStations.filter(ps =>
       ps.subdivisionCode === subdivision.subdivisionCode
     );
-
     const current = this.siteDetailsForm.get('policeStation')?.value;
     if (current && !this.sitePoliceStations.some(p => p.id === current)) {
       this.siteDetailsForm.patchValue({ policeStation: null }, { emitEvent: false });
     }
-
     this.cdr.detectChanges();
   }
 
   onDocumentSelect(event: any, docName: string) {
     const file: File = event.target.files[0];
     if (!file) return;
-
     const doc = this.documents.find(d => d.name === docName);
     if (!doc) return;
-
-    // File size validation (< 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('File size must be less than 5 MB');
       event.target.value = '';
       return;
     }
-
-    // Format validation
     const allowed = doc.formats.split(',').map(f => f.trim());
     const ext = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowed.includes(ext)) {
@@ -408,12 +380,10 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       event.target.value = '';
       return;
     }
-
     if (doc.fileUrl) {
       URL.revokeObjectURL(doc.fileUrl);
       doc.fileUrl = '';
     }
-
     doc.file = file;
     doc.fileUrl = URL.createObjectURL(file);
     this.licenseApplicationService.setSiteDocument(docName, file);
@@ -437,58 +407,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
     });
   }
 
-  private restoreDistrictIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    let districtId: number | undefined;
-
-    if (stored.siteDistrict != null) {
-      if (typeof stored.siteDistrict === 'number') {
-        districtId = stored.siteDistrict;
-      } else if (typeof (stored.siteDistrict as any).id === 'number') {
-        districtId = (stored.siteDistrict as any).id;
-      }
-    }
-
-    if (districtId != null && this.districts.some(d => d.id === districtId)) {
-      this.siteDetailsForm.patchValue(
-        { siteDistrict: districtId },
-        { emitEvent: false }
-      );
-
-      setTimeout(() => this.onDistrictChange(districtId!), 0);
-    }
-  }
-
-  private restoreSubdivisionIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.siteSubdivision && this.siteSubdivisions.length > 0) {
-      const valid = this.siteSubdivisions.some(s => s.id === stored.siteSubdivision);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ siteSubdivision: stored.siteSubdivision }, { emitEvent: false });
-      }
-    }
-  }
-
-  private restorePoliceStationIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.policeStation && this.sitePoliceStations.length > 0) {
-      const valid = this.sitePoliceStations.some(p => p.id === stored.policeStation);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ policeStation: stored.policeStation }, { emitEvent: false });
-      }
-    }
-  }
-
-  private restoreRoadIfNeeded(): void {
-    const stored: any = this.getFromSessionStorage();
-    if (stored.roadName && this.roadNames.length > 0) {
-      const valid = this.roadNames.includes(stored.roadName);
-      if (valid) {
-        this.siteDetailsForm.patchValue({ roadName: stored.roadName }, { emitEvent: false });
-      }
-    }
-  }
-
   private clearAllDocumentUrls() {
     this.documents.forEach(doc => {
       if (doc.fileUrl) {
@@ -499,75 +417,42 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   }
 
   areRequiredDocumentsUploaded(): boolean {
-    return this.documents
-      .filter(doc => doc.required)
-      .every(doc => !!doc.file);
+    return this.documents.filter(doc => doc.required).every(doc => !!doc.file);
   }
 
   private getFromSessionStorage(): any {
     const storedData = sessionStorage.getItem('siteDetailsData');
     if (!storedData) return {};
-
-    const parsed = JSON.parse(storedData);
-
-    // Fix corrupted siteDistrict if it's an object
-    if (parsed.siteDistrict && typeof parsed.siteDistrict !== 'number') {
-      parsed.siteDistrict = parsed.siteDistrict.id ?? null;
-      sessionStorage.setItem('siteDetailsData', JSON.stringify(parsed));
-    }
-
-    return parsed;
+    return JSON.parse(storedData);
   }
 
   private saveToSessionStorage() {
     const formData: any = this.siteDetailsForm.getRawValue();
     
-    // ✅ Store CODES for CodeRelatedField (backend expects codes, not IDs)
-    if (formData.siteDistrict) {
-      const district = this.districts.find(d => d.id === formData.siteDistrict);
-      if (district) {
-        formData.site_district_code = district.districtCode;
-      }
-    }
+    const backendData: any = {
+      district: formData.siteDistrict || null,
+      subdivision: formData.siteSubdivision || null,
+      police_station: formData.policeStation || null,
+      road: formData.roadName || null,
+      address: formData.businessAddress || null,
+      location_category: formData.locationCategory || null,
+      location_name: formData.locationName || null,
+      ward_name: formData.wardName || null,
+      pin_code: formData.pinCode ? String(formData.pinCode) : null,
+      construction_type: formData.constructionType || null,
+      length: formData.length || null,
+      breadth: formData.breadth || null,
+      site_owned: formData.siteOwned || null,
+      trade_license_covered: formData.tradeLicenseCovered || null,
+      noc_obtained: formData.siteOwned === 'Yes' ? 'No' : (formData.nocObtained || null)
+    };
     
-    if (formData.siteSubdivision) {
-      const subdivision = this.allSubdivisions.find(s => s.id === formData.siteSubdivision);
-      if (subdivision) {
-        formData.site_subdivision_code = subdivision.subdivisionCode;
-      }
-    }
-    
-    if (formData.policeStation) {
-      const policeStation = this.allPoliceStations.find(p => p.id === formData.policeStation);
-      if (policeStation) {
-        formData.police_station_code = policeStation.policeStationCode;
-      }
-    }
-    
-    // ✅ Map to backend field names (CharField)
-    formData.location_category = formData.locationCategory;
-    formData.location_name = formData.locationName;
-    formData.ward_name = formData.wardName;
-    formData.business_address = formData.businessAddress;
-    formData.road_name = formData.roadName;
-    formData.pin_code = formData.pinCode;
-    formData.construction_type = formData.constructionType;
-    
-    // ✅ CRITICAL FIX: site_owned must be "Yes" or "No", NOT "Owned" or "Rented"
-    // Store the raw "Yes"/"No" value directly - NO CONVERSION
-    formData.site_owned = formData.siteOwned;  // Keep as "Yes" or "No"
-    
-    // ✅ ChoiceField: "Yes"/"No"
-    formData.noc_obtained = formData.nocObtained;
-    formData.trade_license_covered = formData.tradeLicenseCovered;
-    
-    console.log('💾 Saving Site Details:', formData);
-    sessionStorage.setItem('siteDetailsData', JSON.stringify(formData));
+    console.log('💾 Saving Site Details:', backendData);
+    sessionStorage.setItem('siteDetailsData', JSON.stringify(backendData));
   }
 
   private updateErrorMessage(field: keyof typeof this.errorMessages) {
     const control = this.siteDetailsForm.get(field);
-
     if (control?.hasError('required')) {
       this.errorMessages[field].set('This field is required');
     } else if (control?.hasError('pattern')) {
@@ -602,7 +487,6 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
       Object.keys(this.siteDetailsForm.controls).forEach(key => {
         this.siteDetailsForm.get(key)?.markAsTouched();
       });
-
       if (!this.areRequiredDocumentsUploaded()) {
         alert('Please upload all required documents before proceeding.');
       }
@@ -612,9 +496,7 @@ export class SiteDetailsComponent implements OnInit, OnDestroy, DoCheck {
   resetForm() {
     this.siteDetailsForm.reset();
     this.documents.forEach(doc => {
-      if (doc.fileUrl) {
-        URL.revokeObjectURL(doc.fileUrl);
-      }
+      if (doc.fileUrl) URL.revokeObjectURL(doc.fileUrl);
       doc.file = null;
       doc.fileUrl = '';
       doc.required = false;

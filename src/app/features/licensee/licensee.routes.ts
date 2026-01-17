@@ -5,6 +5,7 @@ import { ApplyLicenseComponent } from './apply-license/apply-license.component';
 import { ApplyNewLicenseComponent } from './apply-new-license/apply-new-license.component';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
 import { Authority } from '../../shared/constants/authority.enum';
+import { SupplyChainComponent } from './supplyChain/supplychaincomponents/supply-chain.component';
 
 export const licenseeRoutes: Routes = [
   {
@@ -59,9 +60,41 @@ export const licenseeRoutes: Routes = [
             loadComponent: () => import('./salesman-registration/prepare-application.component').then(m => m.PrepareApplicationComponent),
             canActivate: [UserRouteAccessService],
             data: { authorities: [Authority.LICENSEE] },
-          }, 
+          }
         ]
       },
+      
+      // Supply Chain Management
+      {
+        path: 'supply-chain',
+        children: [
+          {
+            path: '',
+            loadComponent: () => import('./supplyChain/supplychaincomponents/supply-chain.component').then(m => m.SupplyChainComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'ena-import',
+            component:SupplyChainComponent,
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'payments',
+            loadComponent: () => import('./supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          },
+          {
+            path: 'cancellation-request',
+            loadComponent: () => import('./supplyChain/cancellation-request/cancellation-request.component').then(m => m.CancellationRequestComponent),
+            canActivate: [UserRouteAccessService],
+            data: { authorities: [Authority.LICENSEE] },
+          }
+        ]
+      },
+      
       // Default Redirect to Dashboard
       {
         path: '',

@@ -1,0 +1,358 @@
+<div class="container-fluid p-3">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="h5 m-0">Transit Permit Register</h2>
+  </div>
+
+  <!-- Filters -->
+  <div class="card mb-2">
+    <div class="card-body py-2">
+      <div class="filters d-flex align-items-end flex-wrap gap-2">
+        <div class="col-auto">
+          <label class="form-label small">Bill No</label>
+          <input type="text" class="form-control form-control-sm" placeholder="TRP/..." [(ngModel)]="filters.billNo" (ngModelChange)="applyFilters()" />
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.date" (ngModelChange)="applyFilters()" />
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Depot Address</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.depotAddress" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option value="gangtok">Gangtok</option>
+            <option value="namchi">Namchi</option>
+            <option value="gyalshing">Gyalshing</option>
+            <option value="mangan">Mangan</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Brand</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.brand" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>Royal Stag</option>
+            <option>Blenders Pride</option>
+            <option>Officers Choice</option>
+            <option>Imperial Blue</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Size (ml)</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.size" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>180ml</option>
+            <option>375ml</option>
+            <option>750ml</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <label class="form-label small">Vehicle Number</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filters.vehicleNumber" (ngModelChange)="applyFilters()">
+            <option value="">All</option>
+            <option>SK 01 AB 1234</option>
+            <option>SK 02 CD 5678</option>
+            <option>SK 03 EF 9012</option>
+          </select>
+        </div>
+        <div class="col-auto d-flex gap-2">
+          <button class="btn btn-primary btn-sm px-2" type="button" (click)="applyFilters()" title="Search" aria-label="Search">
+            <i class="bi bi-search"></i>
+          </button>
+          <button class="btn btn-outline-secondary btn-sm px-2" type="button" (click)="clearFilters()" title="Clear" aria-label="Clear">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          <button class="btn btn-outline-warning btn-sm px-2 no-print" type="button" (click)="printRegister()" title="Print filtered list" aria-label="Print">
+            <i class="bi bi-printer"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Table -->
+  <div id="registerPrintSection">
+    <div class="print-header text-center mb-2">
+      <h5 class="mb-1">Transit Permit Register</h5>
+      <small>Month: {{ getPrintMonthLabel() }}</small>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered table-hover table-striped align-middle sticky-header">
+          <thead class="header-gradient">
+            <tr>
+              <th>Bill No</th>
+              <th>Date</th>
+              <th>Distributor</th>
+              <th>Depot</th>
+                <th>Vehicle Number</th>
+                <th class="no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let r of getPaged()">
+              <td>{{ r.billNo }}</td>
+              <td>{{ r.date | date:'dd-MMM-yyyy' }}</td>
+              <td>{{ r.distributor }}</td>
+              <td class="text-capitalize">{{ r.depotAddress }}</td>
+              <td>{{ r.vehicleNumber }}</td>
+                <td class="no-print">
+                <button class="btn btn-outline-primary btn-sm" (click)="viewDetails(r)" title="View Details">
+                  <i class="bi bi-eye me-1"></i>View Details
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filtered.length === 0">
+              <td colspan="6" class="text-center text-muted py-4">
+                <i class="bi bi-inbox me-1"></i>No records found
+              </td>
+            </tr>
+          </tbody>
+          </table>
+        </div>
+        <!-- Pagination Controls -->
+        <div class="d-flex justify-content-between align-items-center mt-2">
+          <div class="small text-muted">Showing
+            {{ (currentPage - 1) * pageSize + 1 }}-
+            {{ Math.min(currentPage * pageSize, filtered.length) }} of {{ filtered.length }}
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <label class="small me-1">Rows:</label>
+            <select class="form-select form-select-sm w-auto" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+              <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
+            </select>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage===1">«</button>
+              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage-1)" [disabled]="currentPage===1">‹</button>
+              <span class="btn btn-light disabled">{{ currentPage }} / {{ totalPages }}</span>
+              <button class="btn btn-outline-secondary" (click)="goToPage(currentPage+1)" [disabled]="currentPage===totalPages">›</button>
+              <button class="btn btn-outline-secondary" (click)="goToPage(totalPages)" [disabled]="currentPage===totalPages">»</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Compact Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <!-- Compact Header with Gradient -->
+      <div class="modal-header bg-gradient text-white py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="d-flex align-items-center">
+          <div class="me-2">
+            <i class="fas fa-file-invoice fa-lg"></i>
+          </div>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">
+              <i class="fas fa-eye me-1"></i>Transit Permit Details
+            </h5>
+            <small class="opacity-75">Bill: {{ selectedRecord?.billNo }}</small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-3">
+        <!-- Single Row Bill Information -->
+        <div class="row mb-3">
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-receipt text-primary me-2"></i>
+              <div>
+                <small class="text-muted d-block">Bill Number</small>
+                <strong class="text-primary">{{ selectedRecord?.billNo }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-calendar-alt text-info me-2"></i>
+              <div>
+                <small class="text-muted d-block">Date</small>
+                <strong class="text-info">{{ selectedRecord?.date | date:'dd-MMM-yyyy' }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-building text-success me-2"></i>
+              <div>
+                <small class="text-muted d-block">Depot</small>
+                <strong class="text-success">{{ selectedRecord?.depotAddress | titlecase }}</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="d-flex align-items-center p-2 bg-light rounded">
+              <i class="fas fa-truck text-warning me-2"></i>
+              <div>
+                <small class="text-muted d-block">Vehicle</small>
+                <strong class="text-warning">{{ selectedRecord?.vehicleNumber }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact Distributor Information -->
+        <div class="d-flex align-items-center p-2 bg-primary bg-opacity-10 rounded mb-3">
+          <i class="fas fa-user-tie text-primary me-2"></i>
+          <div>
+            <small class="text-muted d-block">Sole Distributor</small>
+            <strong class="text-dark">{{ selectedRecord?.distributor }}</strong>
+          </div>
+        </div>
+        
+        <!-- Compact Product Details Section -->
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white py-2">
+            <h6 class="mb-0">
+              <i class="fas fa-boxes me-1"></i>Product Details
+              <span class="badge bg-light text-primary ms-2">{{ selectedRecord?.products?.length || 0 }} Items</span>
+            </h6>
+          </div>
+          <div class="card-body p-2">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="border-0 py-1">Brand</th>
+                    <th class="border-0 py-1">Size</th>
+                    <th class="border-0 py-1 text-center">Cases</th>
+                    <th class="border-0 py-1 text-end">Edu. Cess</th>
+                    <th class="border-0 py-1 text-end">Excise Duty</th>
+                    <th class="border-0 py-1 text-end">Addl. Excise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let product of selectedRecord?.products; let i = index" 
+                      [class]="i % 2 === 0 ? 'table-light' : ''">
+                    <td class="border-0 py-1">
+                      <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">
+                        {{ product.brand }}
+                      </span>
+                    </td>
+                    <td class="border-0 py-1 fw-bold">{{ product.size }}</td>
+                    <td class="border-0 py-1 text-center">
+                      <span class="badge bg-info bg-opacity-10 text-info px-2 py-1">
+                        {{ product.cases }}
+                      </span>
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-success">
+                      ₹{{ product.educationCess | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-primary">
+                      ₹{{ product.exciseDuty | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-warning">
+                      ₹{{ product.additionalExcise | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot class="table-dark">
+                  <tr>
+                    <td colspan="3" class="border-0 py-1 fw-bold">
+                      <i class="fas fa-calculator me-1"></i>Total
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-success">
+                      ₹{{ getTotalEducationCess() | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-primary">
+                      ₹{{ getTotalExciseDuty() | number:'1.2-2' }}
+                    </td>
+                    <td class="border-0 py-1 text-end fw-bold text-warning">
+                      ₹{{ getTotalAdditionalExcise() | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact Payment Status Section -->
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-success text-white py-2">
+                <h6 class="mb-0">
+                  <i class="fas fa-credit-card me-1"></i>Payment Status
+                </h6>
+              </div>
+              <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-bold">Status:</span>
+                  <span [class]="getPaymentStatusClass(selectedRecord?.payment?.status || '')">
+                    {{ selectedRecord?.payment?.status }}
+                  </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Total Amount:</span>
+                  <span class="fw-bold text-dark">₹{{ selectedRecord?.payment?.totalAmount | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Amount Utilized:</span>
+                  <span class="fw-bold text-success">₹{{ selectedRecord?.payment?.amountUtilized | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Amount Left:</span>
+                  <span class="fw-bold text-warning">₹{{ selectedRecord?.payment?.amountLeft | number:'1.2-2' }}</span>
+                </div>
+                <div *ngIf="selectedRecord?.payment?.paymentDate" class="mt-2 pt-2 border-top">
+                  <small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>
+                    {{ selectedRecord?.payment?.paymentDate | date:'dd-MMM-yyyy' }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-primary text-white py-2">
+                <h6 class="mb-0">
+                  <i class="fas fa-wallet me-1"></i>Wallet Details
+                </h6>
+              </div>
+              <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Excise Wallet:</span>
+                  <span class="fw-bold text-primary">₹{{ selectedRecord?.payment?.walletDeduction?.exciseWallet | number:'1.2-2' }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="text-muted">Education Cess:</span>
+                  <span class="fw-bold text-info">₹{{ selectedRecord?.payment?.walletDeduction?.educationCessWallet | number:'1.2-2' }}</span>
+                </div>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-dark">Total Deducted:</span>
+                  <span class="fw-bold text-danger">
+                    ₹{{ (selectedRecord?.payment?.walletDeduction?.exciseWallet || 0) + (selectedRecord?.payment?.walletDeduction?.educationCessWallet || 0) | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact Footer -->
+      <div class="modal-footer bg-light border-top-0 py-2 px-3">
+        <div class="d-flex justify-content-between w-100 align-items-center">
+          <div class="text-muted">
+            <small>
+              <i class="fas fa-info-circle me-1"></i>
+              Updated: {{ selectedRecord?.date | date:'dd-MMM-yyyy' }}
+            </small>
+          </div>
+          <button class="btn btn-primary btn-sm px-3" data-bs-dismiss="modal">
+            <i class="fas fa-times me-1"></i>Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+

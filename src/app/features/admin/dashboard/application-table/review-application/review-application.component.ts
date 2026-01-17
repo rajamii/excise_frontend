@@ -1,610 +1,746 @@
-import { Component, Inject, OnInit, ViewChild } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { Component, Inject, OnInit, Output, EventEmitter, ViewChild } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import { MatStepper } from '@angular/material/stepper';
-import Swal from 'sweetalert2';
-import { SiteEnquiryFormComponent } from '../site-enquiry-form/site-enquiry-form.component';
-import { LicenseCategory } from '../../../../../core/models/license-category.model';
-import { LocationFee } from '../../../../../core/models/location-fee.model';
 import { MaterialModule } from '../../../../../shared/material.module';
-import { Objection } from '../../../../../core/models/license-application.model';
-import { FormDataUtil } from '../../../../../shared/utils/form-data.util';
-import { SiteEnquiryFormModel } from '../../../../../core/models/site-enquiry.model';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
-import { LicenseApplicationService } from '../../../../../core/services/license-application.service';
-import { environment } from '../../../../../../environments/environment';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatStepper } from '@angular/material/stepper';
+import { HttpClient } from '@angular/common/http';
+import { finalize } from 'rxjs/operators';
+import { SiteEnquiryFormComponent } from '../site-enquiry-form/site-enquiry-form.component';
 
-// Interface to describe how a field will be displayed in the UI
-export interface FieldDisplay {
+interface DataRow {
   key: string;
+  value: any;
   field: string;
-  value: string;
 }
 
-// Added Stage interface for type safety
-interface Stage {
+interface Objection {
+  field: string;
+  remarks: string;
+}
+
+interface NextStage {
   id: number;
   name: string;
+  description: string;
+}
+
+interface ServiceMethods {
+  getNextStages: (id: string) => any;
+  advanceApplication: (id: string, stageId: number, context: any) => any;
+  raiseObjection: (id: string, targetStageId: number, objections: any[], remarks?: string) => any;
+  getLocationFee: () => any;
+  type: string;
 }
 
 @Component({
   selector: 'app-review-application',
-  imports: [MaterialModule, SiteEnquiryFormComponent],
+  standalone: true,
+  imports: [
+    MaterialModule,
+    CommonModule,
+    ReactiveFormsModule,
+    MatProgressSpinnerModule,
+    SiteEnquiryFormComponent
+  ],
   templateUrl: './review-application.component.html',
   styleUrls: ['./review-application.component.scss']
 })
-
 export class ReviewApplicationComponent extends BaseComponent implements OnInit {
-  @ViewChild(SiteEnquiryFormComponent) siteEnquiryFormComponent!: SiteEnquiryFormComponent;
-
-  remarksForm!: FormGroup;
-  feeForm!: FormGroup;
-  licenseCategoryForm!: FormGroup;
-  objectionForm!: FormGroup;
-  objectionResolveForm!: FormGroup;
+  @ViewChild(SiteEnquiryFormComponent) siteEnquiryComponent?: SiteEnquiryFormComponent;
 
   application: any;
+  applicationId: string = '';
   tableType: string = '';
 
-  objections: Objection[] = [];
-  isObjectionLoaded = false;
+  // Data arrays for display
+  licenseData: DataRow[] = [];
+  keyInfoData: DataRow[] = [];
+  addressData: DataRow[] = [];
+  unitDetailsData: DataRow[] = [];
+  memberDetailsData: DataRow[] = [];
+  siteDetailData: DataRow[] = [];
 
-  siteDetail: SiteEnquiryFormModel | null = null;
-  siteDetailData: { key: string; value: any; field: string }[] = [];
-  sitePdfUrl: string | null = null;
+  // URLs
+  photoUrl: string = '';
+  sitePdfUrl: string = '';
 
-  // UI state flags to control which workflow is active
+  // Site detail flag
+  siteDetail: any = null;
+
+  // Flow flags
   isApproveFlow = false;
   isRejectFlow = false;
-  isRejected = false;
   isObjection = false;
+  isRejected = false;
 
+  // Forms
+  remarksForm: FormGroup;
+  objectionForm: FormGroup;
+  feeForm: FormGroup;
+  licenseCategoryForm: FormGroup;
+
+  // Objection data
+  objectionFields: Array<{ key: string, label: string, field: string }> = [];
+  selectedObjections: Objection[] = [];
+  existingObjections: any[] = [];
+
+  // Fee data
+  locationFees: any[] = [];
+  selectedLocation: any = null;
+
+  // License category data
+  licenseCategories: any[] = [];
+  selectedCategory: any = null;
+
+  // Site enquiry
   siteEnquiryFormValid = false;
 
-  photoUrl: string | null = null;
+  // Loading states
+  isLoading = false;
+  isSubmitting = false;
 
-  // Dropdown and selection data
-  licenseCategories: LicenseCategory[] = [];
-  selectedCategory: LicenseCategory | null = null;
-  locationFees: LocationFee[] = [];
-  selectedLocation: LocationFee | null = null;
-
-  // Data arrays for display sections
-  licenseData: FieldDisplay[] = [];
-  keyInfoData: FieldDisplay[] = [];
-  addressData: FieldDisplay[] = [];
-  unitDetailsData: FieldDisplay[] = [];
-  memberDetailsData: FieldDisplay[] = [];
-
-  nextStages: Stage[] = [];
-  stageID: string | undefined;
-  approvalStageId: string | undefined;
-  objectionStageId: string | undefined;
-  rejectionStageId: string | undefined;
-
-  // Field label mapping for display and objections
-  fieldLabelMap: { [key: string]: string } = {
-    // License details
-    exciseDistrict: 'Excise District',
-    licenseCategory: 'License Category',
-    exciseSubdivision: 'Excise Sub-Division',
-    license: 'License',
-
-    // Key Info
-    licenseType: 'License Type',
-    establishmentName: 'Establishment Name',
-    mobileNumber: 'Mobile Number',
-    email: 'Email ID',
-    licenseNo: 'License Number',
-    initialGrantDate: 'Initial Grant Date',
-    renewedFrom: 'Renewed From',
-    validUpTo: 'Valid Up To',
-    yearlyLicenseFee: 'Yearly License Fee',
-    licenseNature: 'License Nature',
-    functioningStatus: 'Functioning Status',
-    modeOfOperation: 'Mode of Operation',
-
-    // Address
-    siteSubdivision: 'Site Sub-Division',
-    policeStation: 'Police Station',
-    locationCategory: 'Location Category',
-    locationName: 'Location Name',
-    wardName: 'Ward Name',
-    businessAddress: 'Business Address',
-    roadName: 'Road Name',
-    pinCode: 'PIN Code',
-    latitude: 'Latitude',
-    longitude: 'Longitude',
-
-    // Unit Details
-    companyName: 'Company Name',
-    companyAddress: 'Company Address',
-    companyPan: 'Company PAN',
-    companyCin: 'Company CIN',
-    incorporationDate: 'Incorporation Date',
-    companyPhoneNumber: 'Company Phone Number',
-    companyEmail: 'Company Email ID',
-
-    // Member Details
-    status: 'Status',
-    memberName: 'Member Name',
-    fatherHusbandName: 'Father/Husband Name',
-    nationality: 'Nationality',
-    gender: 'Gender',
-    pan: 'PAN',
-    memberMobileNumber: 'Member Mobile Number',
-    memberEmail: 'Member Email ID',
-
-    photo: 'Photo'
-  };
-
-  // Transformed field-label pairs used for objection checkboxes
-  objectionFields = Object.entries(this.fieldLabelMap).map(([key, label]) => ({
-    key,
-    label
-  }));
-
+  // Store next stages from backend
+  nextStages: NextStage[] = [];
+  approveStageId: number | null = null;
+  rejectStageId: number | null = null;
+  objectionStageId: number | null = null;
 
   constructor(
-    deps: BaseDependency,
-    @Inject(MAT_DIALOG_DATA) public data: any,
-    private dialogRef: MatDialogRef<ReviewApplicationComponent>,
+    public baseDeps: BaseDependency,
     private fb: FormBuilder,
+    private snackBar: MatSnackBar,
+    private http: HttpClient,
+    public dialogRef: MatDialogRef<ReviewApplicationComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: any
   ) {
-    super(deps);
+    super(baseDeps);
+
     this.application = data.application;
     this.tableType = data.tableType;
+
+    // Initialize forms
+    this.remarksForm = this.fb.group({
+      remarks: ['', [Validators.required, Validators.minLength(2)]]
+    });
+
+    this.objectionForm = this.fb.group({});
+
+    this.feeForm = this.fb.group({
+      location: ['', Validators.required]
+    });
+
+    this.licenseCategoryForm = this.fb.group({
+      licenseCategory: ['', Validators.required]
+    });
   }
 
   ngOnInit(): void {
+    console.log('=== REVIEW APPLICATION COMPONENT INIT ===');
+    console.log('Full application object:', this.application);
+    console.log('Table type:', this.tableType);
 
-    // Set photo URL if photo exists
-    this.photoUrl = this.application.photo ? `${environment.apiBaseUrl}/${this.application.photo}` : null;
+    this.applicationId = this.getAppId(this.application);
+    console.log('Application ID:', this.applicationId);
 
-    // Initialize all forms
-    this.remarksForm = this.fb.group({ remarks: ['', Validators.required] });
-    this.feeForm = this.fb.group({ location: [null, Validators.required] });
-    this.licenseCategoryForm = this.fb.group({ licenseCategory: [null] });
-
-    this.objectionForm = this.fb.group({});
-    
-    // Dynamically add a checkbox and remark control for each objectionable field
-    this.objectionFields.forEach(field => {
-      this.objectionForm.addControl(field.key, new FormControl(false));
-      this.objectionForm.addControl(field.key + '_remarks', new FormControl(''));
-    });
-
-    // Load dropdown options
-    this.loadDropdownData();
-
+    this.loadApplicationData();
+    this.loadObjections();
+    this.buildObjectionFields();
     this.loadNextStages();
 
-    this.licenseCategoryForm.get('licenseCategory')?.valueChanges.subscribe((id: number) => {
-      this.selectedCategory = this.licenseCategories.find(cat => cat.id === id) || null;
-    });
-
-    // Load existing objections if any
-    this.fetchObjections();
-
-    this.fetchSiteDetails();
-    
-    // Group application data into sections for display
-    this.licenseData = this.getFieldDisplayList([
-      'exciseDistrict', 'licenseCategory', 'exciseSubdivision', 'license'
-    ]);
-
-    this.keyInfoData = this.getFieldDisplayList([
-      'licenseType', 'establishment', 'mobileNumber', 'email', 'licenseNo',
-      'initialGrantDate', 'renewedFrom', 'validUpTo', 'yearlyLicenseFee',
-      'licenseNature', 'functioningStatus', 'modeOfOperation'
-    ]);
-
-    this.addressData = this.getFieldDisplayList([
-      'siteSubdivision', 'policeStationName', 'locationCategory', 'locationName',
-      'wardName', 'businessAddress', 'roadName', 'pinCode', 'latitude', 'longitude'
-    ]);
-
-    this.unitDetailsData = this.getFieldDisplayList([
-      'companyName', 'companyAddress', 'companyPan', 'companyCin',
-      'incorporationDate', 'companyPhoneNumber', 'companyEmail'
-    ]);
-
-    this.memberDetailsData = this.getFieldDisplayList([
-      'status', 'memberName', 'fatherHusbandName', 'nationality',
-      'gender', 'pan', 'memberMobileNumber', 'memberEmail'
-    ]);
-
-    // Manually append photo field to member details
-    this.memberDetailsData.push({
-      key: 'Photo',
-      field: 'photo',
-      value: this.photoUrl || '-'
-    });
+    // Load additional data if needed
+    if (this.accountService.hasAnyRole('level_1')) {
+      this.loadLocationFees();
+    }
+    if (this.accountService.hasAnyRole('level_2')) {
+      this.loadLicenseCategories();
+    }
   }
 
-  getFieldDisplayList(fields: string[]): FieldDisplay[] {
-    return fields.map(field => {
-      const displayValueKey = field + 'Name';
-      const value =
-        this.application[displayValueKey] !== undefined
-          ? this.application[displayValueKey]
-          : this.application[field];
+  // ✅ CRITICAL FIX: All workflow endpoints are now under /auth/ for ALL application types
+  private getApplicationServiceMethods(): ServiceMethods {
+    const appId = this.applicationId;
 
+    if (appId.startsWith('SBM/')) {
+      console.log('🎯 Detected: Salesman/Barman Application - Using Workflow Service');
       return {
-        key: this.fieldLabelMap[field] || field,
-        field, // retain original field for objection tracking
-        value: value || '-'
+        // ✅ Workflow endpoints under /auth/
+        getNextStages: (id: string) => this.http.get<NextStage[]>(
+          `http://localhost:8000/auth/${id}/next-stages/`
+        ),
+        advanceApplication: (id: string, stageId: number, context: any) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/advance/${stageId}/`,
+            { context_data: context }
+          ),
+        raiseObjection: (id: string, targetStageId: number, objections: any[], remarks?: string) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/raise-objection/`,
+            { objections, remarks: remarks || 'Objections raised' }
+          ),
+        getLocationFee: () => this.licenseAppService.getLocationFee(),
+        type: 'salesman_barman'
       };
-    });
+    } else if (appId.startsWith('NLI/') || appId.startsWith('NEW/')) {
+      console.log('🎯 Detected: New License Application');
+      return {
+        // ✅ FIXED: New License workflow endpoints are under /auth/
+        getNextStages: (id: string) => this.http.get<NextStage[]>(
+          `http://localhost:8000/auth/${id}/next-stages/`
+        ),
+        advanceApplication: (id: string, stageId: number, context: any) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/advance/${stageId}/`,
+            { context_data: context }
+          ),
+        raiseObjection: (id: string, targetStageId: number, objections: any[], remarks?: string) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/raise-objection/`,
+            { objections, remarks: remarks || 'Objections raised' }
+          ),
+        getLocationFee: () => this.licenseAppService.getLocationFee(),
+        type: 'new_license'
+      };
+    } else if (appId.startsWith('LIC/')) {
+      console.log('🎯 Detected: License Application');
+      return {
+        // ✅ CRITICAL FIX: License Application workflow endpoints are ALSO under /auth/
+        getNextStages: (id: string) => this.http.get<NextStage[]>(
+          `http://localhost:8000/auth/${id}/next-stages/`
+        ),
+        advanceApplication: (id: string, stageId: number, context: any) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/advance/${stageId}/`,
+            { context_data: context }
+          ),
+        raiseObjection: (id: string, targetStageId: number, objections: any[], remarks?: string) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/raise-objection/`,
+            { objections, remarks: remarks || 'Objections raised' }
+          ),
+        getLocationFee: () => this.licenseAppService.getLocationFee(),
+        type: 'license'
+      };
+    } else {
+      console.warn('⚠️ Unknown application type, defaulting to license');
+      return {
+        // ✅ Default: Use /auth/ endpoints
+        getNextStages: (id: string) => this.http.get<NextStage[]>(
+          `http://localhost:8000/auth/${id}/next-stages/`
+        ),
+        advanceApplication: (id: string, stageId: number, context: any) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/advance/${stageId}/`,
+            { context_data: context }
+          ),
+        raiseObjection: (id: string, targetStageId: number, objections: any[], remarks?: string) =>
+          this.http.post(
+            `http://localhost:8000/auth/${id}/raise-objection/`,
+            { objections, remarks: remarks || 'Objections raised' }
+          ),
+        getLocationFee: () => this.licenseAppService.getLocationFee(),
+        type: 'license'
+      };
+    }
   }
 
-  loadDropdownData() {
-    // Fetch location-based fee options (for Level 1)
-    this.licenseAppService.getLocationFee().subscribe({
-      next: data => this.locationFees = data, 
-      error: err => console.error('Location fee error', err)
-    });
-
-    // Fetch license categories (for Level 2)
-    this.masterService.getLicenseCategories().subscribe({
-      next: data => {
-        this.licenseCategories = data;
-
-        // Try to pre-select the category already associated with the application
-        const currentId = this.application.licenseCategory?.id;
-        this.selectedCategory = data.find(cat => cat.id === currentId) || null;
-
-        // Pre-fill the form control
-        this.licenseCategoryForm.patchValue({ licenseCategory: this.selectedCategory });
-      },
-      error: err => console.error('Category fetch error', err)
-    });
+  private getAppId(app: any): string {
+    return app?.application_id || app?.applicationId || app?.id || app?.app_id || '';
   }
 
-  loadNextStages() {
-    // Create mock stages based on current level since getNextStageDetails doesn't exist
-    const currentLevel = this.getCurrentLevel();
-    
-    if (!currentLevel) {
-      Swal.fire('Error', 'Unable to determine current user level.', 'error');
-      return;
+  private getPhotoUrl(photoPath: string): string {
+    if (!photoPath) return '';
+
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+      return photoPath;
     }
 
-    // Manually construct next stages based on current level
-    const nextStageNumber = currentLevel + 1;
-    
-    this.nextStages = [
-      { id: 1, name: currentLevel === 5 ? 'approved' : `level_${nextStageNumber}` },
-      { id: 2, name: `level_${currentLevel}_objection` },
-      { id: 3, name: `rejected_by_level_${currentLevel}` }
+    if (photoPath.startsWith('/media/')) {
+      const apiBase = 'http://localhost:8000';
+      return `${apiBase}${photoPath}`;
+    }
+
+    return photoPath;
+  }
+
+  private loadNextStages(): void {
+    console.log('📋 Loading next stages for:', this.applicationId);
+    const currentStageId = this.application.current_stage || this.application.currentStage;
+    console.log('🎯 Current stage ID:', currentStageId);
+
+    const serviceMethods = this.getApplicationServiceMethods();
+    const nextStagesObservable = serviceMethods.getNextStages(this.applicationId);
+
+    nextStagesObservable.subscribe({
+      next: (stages: NextStage[]) => {
+        console.log('✅ Next stages loaded:', stages);
+        this.nextStages = stages;
+
+        if (serviceMethods.type === 'salesman_barman') {
+          stages.forEach(stage => {
+            const stageName = stage.name.toLowerCase();
+            console.log('🔍 Checking Salesman/Barman stage:', stageName, 'ID:', stage.id);
+
+            if (stageName === 'approved' || stageName === 'awaiting_payment') {
+              this.approveStageId = stage.id;
+              console.log('✅ Found FINAL approve stage:', stage.name, stage.id);
+            }
+            else if (!this.approveStageId && stageName.match(/^level_\d+$/)) {
+              this.approveStageId = stage.id;
+              console.log('✅ Found NEXT LEVEL approve stage:', stage.name, stage.id);
+            }
+            else if (stageName === 'rejected' || stageName.includes('reject')) {
+              this.rejectStageId = stage.id;
+              console.log('✅ Found reject stage:', stage.name, stage.id);
+            }
+            else if (stageName === 'objection_raised' || stageName.includes('objection')) {
+              this.objectionStageId = stage.id;
+              console.log('✅ Found objection stage:', stage.name, stage.id);
+            }
+          });
+        } else {
+          stages.forEach(stage => {
+            const stageName = stage.name.toLowerCase();
+            console.log('🔍 Checking stage:', stageName, 'ID:', stage.id);
+
+            if (stageName === 'approved' || stageName === 'awaiting_payment' || stageName === 'payment_pending') {
+              this.approveStageId = stage.id;
+              console.log('✅ Found FINAL approve stage:', stage.name, stage.id);
+            }
+            else if (!this.approveStageId &&
+              stageName.match(/^level_\d+$/) &&
+              !stageName.includes('objection') &&
+              !stageName.includes('rejected')) {
+              this.approveStageId = stage.id;
+              console.log('✅ Found NEXT LEVEL approve stage:', stage.name, stage.id);
+            }
+            else if (stageName.includes('rejected')) {
+              this.rejectStageId = stage.id;
+              console.log('✅ Found reject stage:', stage.name, stage.id);
+            }
+            else if (stageName.includes('objection')) {
+              this.objectionStageId = stage.id;
+              console.log('✅ Found objection stage:', stage.name, stage.id);
+            }
+          });
+        }
+
+        console.log('✅ Stage IDs identified:', {
+          approveStageId: this.approveStageId,
+          rejectStageId: this.rejectStageId,
+          objectionStageId: this.objectionStageId
+        });
+
+        if (!this.approveStageId && stages.length > 0) {
+          console.warn('⚠️ No approve stage found! Available stages:', stages);
+          this.approveStageId = stages[0].id;
+          console.log('⚠️ Using fallback stage:', stages[0].name, stages[0].id);
+        }
+      },
+      error: (err: any) => {
+        console.error('❌ Error loading next stages:', err);
+        console.error('Error details:', {
+          status: err.status,
+          statusText: err.statusText,
+          url: err.url,
+          message: err.message
+        });
+        this.showError('Failed to load available actions. Please refresh and try again.');
+      }
+    });
+  }
+
+  private loadApplicationData(): void {
+    this.licenseData = [
+      { key: 'License Type', value: this.application.licenseTypeName || this.application.licenseType || '-', field: 'licenseType' },
+      { key: 'Application Type', value: this.application.license || '-', field: 'applicationType' },
+      { key: 'License Category', value: this.application.licenseCategoryName || this.application.licenseCategory || '-', field: 'licenseCategory' }
     ];
 
-    this.approvalStageId = this.findStageId(this.nextStages, currentLevel === 5 ? 'approved' : `level_${nextStageNumber}`);
-    this.objectionStageId = this.findStageId(this.nextStages, `level_${currentLevel}_objection`);
-    this.rejectionStageId = this.findStageId(this.nextStages, `rejected_by_level_${currentLevel}`);
-  }
- 
-  getCurrentLevel(): number | undefined {
-    if (this.accountService.hasAnyRole('level_1')) return 1;
-    if (this.accountService.hasAnyRole('level_2')) return 2;
-    if (this.accountService.hasAnyRole('level_3')) return 3;
-    if (this.accountService.hasAnyRole('level_4')) return 4;
-    if (this.accountService.hasAnyRole('level_5')) return 5;
-    return undefined;
+    this.keyInfoData = [
+      { key: 'Applicant Name', value: this.application.memberName || this.application.establishmentName || this.application.applicantName || this.application.firstName || '-', field: 'applicantName' },
+      { key: 'Father/Husband Name', value: this.application.fatherHusbandName || '-', field: 'fatherName' },
+      { key: 'Gender', value: this.application.gender || '-', field: 'gender' },
+      { key: 'Mobile', value: this.application.mobileNumber || this.application.memberMobileNumber || '-', field: 'mobile' },
+      { key: 'Email', value: this.application.email || this.application.emailId || this.application.memberEmail || '-', field: 'email' }
+    ];
+
+    this.addressData = [
+      { key: 'Address', value: this.application.address || this.application.businessAddress || '-', field: 'address' },
+      { key: 'Road Name', value: this.application.roadName || '-', field: 'roadName' },
+      { key: 'District', value: this.application.exciseDistrictName || this.application.siteDistrictName || '-', field: 'district' },
+      { key: 'State', value: 'Sikkim', field: 'state' },
+      { key: 'Pincode', value: this.application.pinCode || '-', field: 'pincode' }
+    ];
+
+    if (this.application.companyName) {
+      this.unitDetailsData = [
+        { key: 'Company Name', value: this.application.companyName || '-', field: 'companyName' },
+        { key: 'Registration Number', value: this.application.companyCin || '-', field: 'registrationNumber' },
+        { key: 'GST Number', value: '-', field: 'gstNumber' }
+      ];
+    }
+
+    this.memberDetailsData = [
+      { key: 'PAN Number', value: this.application.pan || this.application.companyPan || '-', field: 'panNumber' },
+      { key: 'Aadhaar', value: this.application.aadhaar || '-', field: 'aadhaar' },
+      { key: 'Nationality', value: this.application.nationality || '-', field: 'nationality' },
+      { key: 'Sikkim Subject', value: this.application.sikkimSubject ? 'Yes' : 'No', field: 'sikkimSubject' }
+    ];
+
+    const photoPath = this.application.passPhoto ||
+      this.application.photo ||
+      this.application.photoUrl ||
+      this.application.photo_url ||
+      this.application.memberPhoto ||
+      this.application.applicantPhoto;
+
+    if (photoPath) {
+      this.photoUrl = this.getPhotoUrl(photoPath);
+    }
+
+    if (this.application.siteDetail || this.application.site_detail) {
+      const siteDetailObj = this.application.siteDetail || this.application.site_detail;
+      this.siteDetail = siteDetailObj;
+      this.siteDetailData = [
+        { key: 'Establishment Name', value: this.application.establishmentName || '-', field: 'establishmentName' },
+        { key: 'Location', value: this.application.locationName || '-', field: 'locationName' },
+        { key: 'Ward', value: this.application.wardName || '-', field: 'wardName' },
+        { key: 'Functioning Status', value: this.application.functioningStatus || '-', field: 'functioningStatus' }
+      ];
+
+      this.sitePdfUrl = siteDetailObj.image_url || siteDetailObj.imageUrl || '';
+    }
   }
 
-  findStageId(stages: Stage[], name: string): string | undefined {
-    const stage = stages.find(s => s.name === name);
-    return stage ? stage.id.toString() : undefined;
+  private loadObjections(): void {
+    if (this.application.objections) {
+      this.existingObjections = Array.isArray(this.application.objections)
+        ? this.application.objections
+        : [];
+    }
   }
-  
 
-  fetchObjections() {
-    // Fetch objections related to the application from backend
-    this.licenseAppService.getObjections(this.application.applicationId).subscribe({
-      next: data => {
-        this.objections = data;
-        this.isObjectionLoaded = true; // Mark objections as loaded
-      },
-      error: err => {
-        console.error('Objection fetch error', err);
-        this.isObjectionLoaded = true; // Still mark as loaded to avoid blocking UI
+  private buildObjectionFields(): void {
+    const allFields = [
+      ...this.licenseData,
+      ...this.keyInfoData,
+      ...this.addressData,
+      ...this.unitDetailsData,
+      ...this.memberDetailsData
+    ];
+
+    this.objectionFields = allFields.map(item => ({
+      key: item.field,
+      label: item.key,
+      field: item.field
+    }));
+
+    const controls: any = {};
+    this.objectionFields.forEach(field => {
+      controls[field.key] = [false];
+      controls[field.key + '_remarks'] = [''];
+    });
+    this.objectionForm = this.fb.group(controls);
+  }
+
+  hasObjection(field: string): boolean {
+    return this.existingObjections.some(obj => obj.field === field);
+  }
+
+  getObjectionRemarks(field: string): string {
+    const objection = this.existingObjections.find(obj => obj.field === field);
+    return objection ? objection.remarks : '';
+  }
+
+  onApprove(stepper: MatStepper): void {
+    this.isApproveFlow = true;
+    this.isRejectFlow = false;
+    this.isObjection = false;
+    stepper.next();
+  }
+
+  onRaiseObjection(stepper: MatStepper): void {
+    this.isObjection = true;
+    this.isApproveFlow = false;
+    this.isRejectFlow = false;
+    stepper.next();
+  }
+
+  prepareObjections(stepper: MatStepper): void {
+    this.selectedObjections = [];
+
+    this.objectionFields.forEach(field => {
+      const isChecked = this.objectionForm.get(field.key)?.value;
+      if (isChecked) {
+        const remarks = this.objectionForm.get(field.key + '_remarks')?.value || '';
+        if (remarks.trim()) {
+          this.selectedObjections.push({
+            field: field.label,
+            remarks: remarks
+          });
+        }
       }
     });
-  }
 
-  get selectedObjections(): { field: string; remarks: string }[] {
-    return this.objectionFields
-      .filter(f => this.objectionForm.get(f.key)?.value)
-      .map(f => ({
-        field: f.label,
-        remarks: this.objectionForm.get(f.key + '_remarks')?.value || 'No remarks'
-      }));
-  }
-
-  fetchSiteDetails() {
-    // Fetch objections related to the application from backend
-    this.licenseAppService.getSiteDetails(this.application.applicationId).subscribe((data: SiteEnquiryFormModel) => {
-      this.siteDetail = data;
-
-      // Prepare data for display
-      this.siteDetailData = [
-        { key: 'Has Traditional Place', value: data.hasTraditionalPlace, field: 'hasTraditionalPlace' },
-        { key: 'Traditional Place Distance', value: data.traditionalPlaceDistance, field: 'traditionalPlaceDistance' },
-        { key: 'Traditional Place Name', value: data.traditionalPlaceName, field: 'traditionalPlaceName' },
-        { key: 'Traditional Place Nature', value: data.traditionalPlaceNature, field: 'traditionalPlaceNature' },
-        { key: 'Traditional Place Construction', value: data.traditionalPlaceConstruction, field: 'traditionalPlaceConstruction' },
-
-        { key: 'Has Educational Institution', value: data.hasEducationalInstitution, field: 'hasEducationalInstitution' },
-        { key: 'Educational Institution Distance', value: data.educationalInstitutionDistance, field: 'educationalInstitutionDistance' },
-        { key: 'Educational Institution Name', value: data.educationalInstitutionName, field: 'educationalInstitutionName' },
-        { key: 'Educational Institution Nature', value: data.educationalInstitutionNature, field: 'educationalInstitutionNature' },
-
-        { key: 'Has Hospital', value: data.hasHospital, field: 'hasHospital' },
-        { key: 'Hospital Distance', value: data.hospitalDistance, field: 'hospitalDistance' },
-        { key: 'Hospital Name', value: data.hospitalName, field: 'hospitalName' },
-
-        { key: 'Has Taxi Stand', value: data.hasTaxiStand, field: 'hasTaxiStand' },
-        { key: 'Taxi Stand Name', value: data.taxiStandName, field: 'taxiStandName' },
-        { key: 'Taxi Stand Distance', value: data.taxiStandDistance, field: 'taxiStandDistance' },
-
-        { key: 'Is Interconnected With Shops', value: data.isInterconnectedWithShops, field: 'isInterconnectedWithShops' },
-        { key: 'Interconnectivity Remarks', value: data.interconnectivityRemarks, field: 'interconnectivityRemarks' },
-
-        { key: 'Enquiry Officer Comments', value: data.enquiryOfficerComments, field: 'enquiryOfficerComments' },
-        { key: 'Shop Construction Type', value: data.shopConstructionType, field: 'shopConstructionType' },
-
-        { key: 'Has Excise Shops Nearby', value: data.hasExciseShopsNearby, field: 'hasExciseShopsNearby' },
-        { key: 'Nearby Excise Shop Count', value: data.nearbyExciseShopCount, field: 'nearbyExciseShopCount' },
-        { key: 'Nearby Excise Shops Remarks', value: data.nearbyExciseShopsRemarks, field: 'nearbyExciseShopsRemarks' },
-
-        { key: 'Is On Highway', value: data.isOnHighway, field: 'isOnHighway' },
-        { key: 'Highway Name', value: data.highwayName, field: 'highwayName' },
-
-        { key: 'Latitude', value: data.latitude, field: 'latitude' },
-        { key: 'Longitude', value: data.longitude, field: 'longitude' },
-
-        { key: 'Is Shop Size Correct', value: data.isShopSizeCorrect, field: 'isShopSizeCorrect' },
-        { key: 'Shop Size Remarks', value: data.shopSizeRemarks, field: 'shopSizeRemarks' },
-
-        { key: 'Additional Enquiry Officer Comments', value: data.additionalEnquiryOfficerComments, field: 'additionalEnquiryOfficerComments' },
-
-        { key: 'Has ID Proof', value: data.hasIdProof, field: 'hasIdProof' },
-        { key: 'ID Proof Comments', value: data.idProofComments, field: 'idProofComments' },
-
-        { key: 'Has Age Proof', value: data.hasAgeProof, field: 'hasAgeProof' },
-        { key: 'Age Proof Comments', value: data.ageProofComments, field: 'ageProofComments' },
-
-        { key: 'Has NOC From Landlord', value: data.hasNocFromLandlord, field: 'hasNocFromLandlord' },
-        { key: 'NOC Comments', value: data.nocComments, field: 'nocComments' },
-
-        { key: 'Has Ownership Proof', value: data.hasOwnershipProof, field: 'hasOwnershipProof' },
-        { key: 'Ownership Proof Comments', value: data.ownershipProofComments, field: 'ownershipProofComments' },
-
-        { key: 'Has Trade License', value: data.hasTradeLicense, field: 'hasTradeLicense' },
-        { key: 'Trade License Comments', value: data.tradeLicenseComments, field: 'tradeLicenseComments' },
-
-        { key: 'Proposes Barman Or Salesman', value: data.proposesBarmanOrSalesman, field: 'proposesBarmanOrSalesman' },
-        { key: 'Worker Proposal Comments', value: data.workerProposalComments, field: 'workerProposalComments' },
-
-        { key: 'Worker Docs Valid', value: data.workerDocsValid, field: 'workerDocsValid' },
-        { key: 'Worker Docs Comments', value: data.workerDocsComments, field: 'workerDocsComments' },
-
-        { key: 'License Recommendation', value: data.licenseRecommendation, field: 'licenseRecommendation' },
-        { key: 'Recommendation Comments', value: data.recommendationComments, field: 'recommendationComments' },
-
-        { key: 'Special Remarks', value: data.specialRemarks, field: 'specialRemarks' },
-        { key: 'Reporting Place', value: data.reportingPlace, field: 'reportingPlace' },
-      ];  
-
-      // PDF URL (safe handling)
-      this.sitePdfUrl = data.shopImageDocument
-        ? `${environment.apiBaseUrl}/${data.shopImageDocument}`
-        : '';    });
-  }
-
-  // Checks if a specific field has an unresolved objection
-  hasObjection(field: string): boolean {
-    return this.objections.some(obj => obj.fieldName === field && !obj.isResolved);
-  }
-
-  // Returns remarks for the unresolved objection for a given field, if any
-  getObjectionRemarks(field: string): string {
-    const match = this.objections.find(obj => obj.fieldName === field && !obj.isResolved);
-    return match?.remarks || '';
-  }
-
-  // Track whether the embedded form (site enquiry) is valid
-  onFormValidityChange(valid: boolean) {
-    this.siteEnquiryFormValid = valid;
-  }
-
-  // Capture the selected location and its associated fee
-  onLocationChange(selected: LocationFee) {
-    this.selectedLocation = selected;
-  }
-
-  onAdvance(stageId: string, action: 'approve' | 'raise_objection', stepper: MatStepper) {
-    this.stageID = stageId;
-    if (action === 'raise_objection') {
-      this.onRaiseObjection(stepper);
-    } else {
-      this.onApprove(stepper);
-    }
-  }
-
-  // Begin approve flow — navigate to next step and update flags
-  onApprove(stepper: MatStepper) {
-    this.stageID = this.approvalStageId;
-    this.isApproveFlow = true;
-    this.isRejectFlow = this.isObjection = this.isRejected = false;
-    stepper.next();
-  }
-
-  // Begin reject flow — navigate to next step and update flags
-  onReject(stepper: MatStepper) {
-    this.stageID = this.rejectionStageId;
-    this.isRejectFlow = true;
-    this.isApproveFlow = this.isObjection = false;
-    this.isRejected = true;
-    stepper.next();
-  }
-
-  // Begin objection-raising flow — navigate to next step and update flags
-  onRaiseObjection(stepper: MatStepper) {
-     this.stageID = this.objectionStageId;
-    this.isObjection = true;
-    this.isRejected = this.isApproveFlow = this.isRejectFlow = false;
-    stepper.next();
-  }
-
-  onConfirmClick() {
-    if (this.isObjection) {
-      this.onSubmitObjection(); // handle objection-specific logic
-    } else {
-      this.onConfirm(); // handle approval or rejection
-    }
-  }
-
-  onConfirm() {
-    const applicationId = this.application.applicationId;
-    const remarks = this.remarksForm.value.remarks;
-
-    if (!this.stageID) {
-        Swal.fire('Error', 'No valid stage selected for advancement.', 'error');
-        return;
-    }
-
-    // Utility to show error alert
-    const showError = (msg: string) => Swal.fire('Error', msg, 'error');
-
-    // Utility to show success alert and reload UI
-    const reload = (msg: string) => {
-      Swal.fire('Success', msg, 'success').then(() => location.reload());
-      this.dialogRef.close(true);
-    };
-
-    if (this.isRejected) {
-      this.licenseAppService.advanceApplication(
-        applicationId,
-        Number(this.stageID),
-        { action: 'reject', remarks }
-      ).subscribe({
-        next: () => reload('Application rejected.'),
-        error: () => showError('Rejection failed.')
-      });
+    if (this.selectedObjections.length === 0) {
+      this.showError('Please select at least one objection with remarks');
       return;
     }
+
+    stepper.next();
+  }
+
+  onReject(stepper: MatStepper): void {
+    this.isRejectFlow = true;
+    this.isApproveFlow = false;
+    this.isObjection = false;
+    stepper.next();
+  }
+
+  private loadLocationFees(): void {
+    this.licenseAppService.getLocationFee()
+      .subscribe({
+        next: (fees: any) => {
+          this.locationFees = fees;
+          console.log('📍 Location fees loaded:', fees);
+        },
+        error: (err: any) => {
+          console.error('❌ Error loading fees:', err);
+          this.showError('Failed to load location fees. Please try again or contact support.');
+          this.locationFees = [];
+        }
+      });
+  }
+
+  onLocationChange(location: any): void {
+    this.selectedLocation = location;
+    console.log('📍 Location selected:', location);
+  }
+
+  private loadLicenseCategories(): void {
+    this.licenseCategories = [
+      { id: 1, licenseCategory: 'FL-1A' },
+      { id: 2, licenseCategory: 'FL-2' },
+      { id: 3, licenseCategory: 'FL-3' }
+    ];
+  }
+
+  onFormValidityChange(isValid: boolean | Event): void {
+    if (typeof isValid === 'boolean') {
+      this.siteEnquiryFormValid = isValid;
+    } else {
+      this.siteEnquiryFormValid = true;
+    }
+  }
+
+  onConfirmClick(): void {
+    if (this.isApproveFlow) {
+      this.submitApproval();
+    } else if (this.isRejectFlow) {
+      this.submitRejection();
+    } else if (this.isObjection) {
+      this.submitObjection();
+    }
+  }
+
+  private submitApproval(): void {
+    console.log('🚀 ============ SUBMIT APPROVAL START ============');
+    console.log('📋 Application ID:', this.applicationId);
+    console.log('🎯 Current Stage:', this.application.current_stage || this.application.currentStage);
+    console.log('🎯 Approve Stage ID:', this.approveStageId);
+    console.log('📋 All Available Next Stages:', this.nextStages);
 
     if (this.accountService.hasAnyRole('level_1')) {
-      // Level 1 approval requires fee amount from selected location
-      const fee = this.selectedLocation?.feeAmount;
-      if (!fee) {
-        Swal.fire('Missing Fee', 'Select a location before proceeding.', 'warning');
+      if (!this.feeForm.valid || !this.selectedLocation) {
+        this.showError('Please select a location before approving');
         return;
       }
-      this.licenseAppService.advanceApplication(
-        applicationId,
-        Number(this.stageID),
-        {
-          action: 'approve',
-          remarks,
-          fee_amount: fee,
-          is_fee_calculated: true
-        }
-      ).subscribe({
-        next: () => reload('Application approved.'),
-        error: () => showError('Approval failed.')
-      });
+    }
+
+    if (!this.approveStageId) {
+      console.error('❌ CRITICAL ERROR: No approve stage ID found!');
+      console.error('Available stages:', this.nextStages);
+      this.showError('No valid approval stage found. Please refresh and try again.');
       return;
+    }
+
+    this.isSubmitting = true;
+
+    const contextData: any = {
+      action: 'approve',
+      remarks: this.remarksForm.value.remarks
+    };
+
+    if (this.accountService.hasAnyRole('level_1') && this.selectedLocation) {
+      contextData.location_id = this.selectedLocation.id;
+      contextData.location_name = this.selectedLocation.locationName;
+      contextData.fee_amount = this.selectedLocation.feeAmount;
     }
 
     if (this.accountService.hasAnyRole('level_2')) {
-      // Level 2 approval requires complete site enquiry data
-      const siteData = this.siteEnquiryFormComponent.getSiteEnquiryData();
-      if (!siteData) {
-        Swal.fire('Incomplete', 'Complete site enquiry.', 'warning');
-        return;
+      if (this.licenseCategoryForm.value.licenseCategory) {
+        contextData.license_category_id = this.licenseCategoryForm.value.licenseCategory;
+        const category = this.licenseCategories.find(c => c.id === contextData.license_category_id);
+        if (category) {
+          this.selectedCategory = category;
+          contextData.license_category_name = category.licenseCategory;
+        }
       }
 
-      // Prepare combined data object
-      const data: any = {
-        applicationId,
-        remarks,
-        ...siteData
-      };
+      if (this.siteEnquiryComponent) {
+        const siteData = this.siteEnquiryComponent.getSiteEnquiryData();
+        if (siteData) {
+          contextData.site_enquiry = siteData;
+          console.log('✅ Site enquiry data captured:', siteData);
+        } else {
+          console.warn('⚠️ Site enquiry form is invalid');
+        }
+      }
+    }
 
-      // Convert to FormData using utility (handles snake_case conversion)
-      const formData = FormDataUtil.buildFormData(data);
+    console.log('📦 Context Data:', contextData);
+    console.log('🚀 Making API call to advanceApplication...');
 
-      // Add license category ID if selected
-      const catId = this.licenseCategoryForm.value.licenseCategory;
+    const serviceMethods = this.getApplicationServiceMethods();
 
-      // First submit site enquiry data, then advance application
-      this.licenseAppService.submitSiteEnquiryData(
-        applicationId, 
-        formData
-      ).subscribe({
-        next: () => this.licenseAppService.advanceApplication(
-          applicationId,
-          Number(this.stageID!),
-          {
-            action: 'approve',
-            remarks,
-            new_license_category: catId
-          }
-        ).subscribe({
-          next: () => reload('Application approved.'),
-          error: () => showError('Advancing failed.')
-        }),
-        error: () => showError('Site enquiry failed.')
+    serviceMethods.advanceApplication(this.applicationId, this.approveStageId, contextData)
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          console.log('✔ API call finished');
+        })
+      )
+      .subscribe({
+        next: (response: any) => {
+          console.log('✅ ============ APPROVAL SUCCESS ============');
+          console.log('Response:', response);
+          this.showSuccess('Application approved successfully');
+          this.dialogRef.close({ success: true, action: 'approved' });
+        },
+        error: (error: any) => {
+          console.error('❌ ============ APPROVAL FAILED ============');
+          console.error('Full error object:', error);
+          console.error('Error status:', error.status);
+          console.error('Error message:', error.message);
+          console.error('Error detail:', error?.error?.detail);
+
+          const errorMessage = error?.error?.detail ||
+            error?.error?.message ||
+            error?.message ||
+            'Failed to approve application';
+          this.showError(errorMessage);
+        }
       });
+  }
+
+  private submitRejection(): void {
+    if (!this.rejectStageId) {
+      this.showError('No valid rejection stage found. Please refresh and try again.');
       return;
     }
 
-    // Default approve flow
-    this.licenseAppService.advanceApplication(
-      applicationId,
-      Number(this.stageID),
-      { action: 'approve', remarks }
-    ).subscribe({
-      next: () => reload('Application approved.'),
-      error: () => showError('Approval failed.')
+    this.isSubmitting = true;
+
+    const contextData = {
+      action: 'reject',
+      remarks: this.remarksForm.value.remarks
+    };
+
+    console.log('🚀 Submitting rejection with contextData:', contextData);
+
+    const serviceMethods = this.getApplicationServiceMethods();
+
+    serviceMethods.advanceApplication(this.applicationId, this.rejectStageId, contextData)
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: (response: any) => {
+          console.log('✅ Rejection Success:', response);
+          this.showSuccess('Application rejected successfully');
+          this.dialogRef.close({ success: true, action: 'rejected' });
+        },
+        error: (error: any) => {
+          console.error('❌ Rejection Error:', error);
+          const errorMessage = error?.error?.detail ||
+            error?.error?.message ||
+            'Failed to reject application';
+          this.showError(errorMessage);
+        }
+      });
+  }
+
+  private submitObjection(): void {
+    if (this.selectedObjections.length === 0) {
+      this.showError('No objections selected');
+      return;
+    }
+
+    if (!this.objectionStageId) {
+      this.showError('No valid objection stage found. Please refresh and try again.');
+      return;
+    }
+
+    this.isSubmitting = true;
+
+    const objections = this.selectedObjections.map(obj => {
+      const field = this.objectionFields.find(f => f.label === obj.field);
+      return {
+        field: field?.field || obj.field,
+        remarks: obj.remarks
+      };
+    });
+
+    console.log('🚀 Submitting objections:', objections);
+    console.log('🎯 Target objection stage ID:', this.objectionStageId);
+
+    const serviceMethods = this.getApplicationServiceMethods();
+
+    serviceMethods.raiseObjection(
+      this.applicationId,
+      this.objectionStageId,
+      objections,
+      'Objections raised'
+    )
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+        })
+      )
+      .subscribe({
+        next: (response: any) => {
+          console.log('✅ Objection Success:', response);
+          this.showSuccess('Objection raised successfully');
+          this.dialogRef.close({ success: true, action: 'objection' });
+        },
+        error: (error: any) => {
+          console.error('❌ Objection Error:', error);
+          const errorMessage = error?.error?.detail ||
+            error?.error?.message ||
+            'Failed to raise objection';
+          this.showError(errorMessage);
+        }
+      });
+  }
+
+  private showSuccess(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      panelClass: ['success-snackbar']
     });
   }
 
-  onSubmitObjection() {
-    const applicationId = this.application.applicationId;
-
-    // Collect selected objection fields with remarks
-    const selectedFields = this.objectionFields
-      .filter(f => this.objectionForm.get(f.key)?.value && this.objectionForm.get(f.key + '_remarks')?.value)
-      .map(f => ({
-        field: f.key,
-        remarks: this.objectionForm.get(f.key + '_remarks')?.value
-      }));
-
-    if (!selectedFields.length) {
-      Swal.fire('Required', 'Select at least one field with remarks.', 'warning');
-      return;
-    }
-
-    // Get general remarks from remarksForm if provided
-    const remarks = this.remarksForm.value.remarks || undefined;
-
-    // Call the new raiseObjection service method
-    this.licenseAppService.raiseObjection(applicationId, selectedFields, remarks).subscribe({
-      next: () => {
-        Swal.fire('Success', 'Objection raised.', 'success').then(() => {
-          this.dialogRef.close(true);
-          location.reload();
-        });
-      },
-      error: (err) => {
-        console.error('Objection error:', err);
-        Swal.fire('Error', 'Failed to raise objection.', 'error');
-      }
+  private showError(message: string): void {
+    this.snackBar.open(message, 'Close', {
+      duration: 5000,
+      panelClass: ['error-snackbar']
     });
   }
 }

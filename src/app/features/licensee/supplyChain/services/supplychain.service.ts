@@ -1,0 +1,224 @@
+import { catchError, map, Observable, of } from "rxjs";
+import { environment } from "../../../../../environments/environment";
+import { HttpClient } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+
+import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } from "../models/supply-chain.models";
+
+@Injectable({
+  providedIn: 'root',
+})
+export class SupplyChainService {
+  constructor(private http: HttpClient) { }
+
+  getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
+    return this.http
+      .get<{ success: boolean; data: BulkSpiritType[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`
+      )
+      .pipe(map((response) => response.data || []));
+  }
+
+  getDistilleries(): Observable<Distillery[]> {
+    return this.http
+      .get<{ success?: boolean; data?: Distillery[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
+      )
+      .pipe(map((response: any) => response.data || []));
+  }
+
+  getCheckposts(): Observable<Checkpost[]> {
+    return this.http
+      .get<{ status?: string; data?: Checkpost[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/checkposts/checkposts/`
+      )
+      .pipe(
+        map((response: any) => {
+          if (response && response.status === 'success') {
+            return response.data || [];
+          }
+          throw new Error('Failed to fetch checkposts');
+        }),
+        catchError((err) => {
+          console.error('getCheckposts error', err);
+          return of([]);
+        })
+      );
+  }
+
+  getPurposes(): Observable<Purpose[]> {
+    return this.http
+      .get<{ success?: boolean; data?: Purpose[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/purposes/purposes/`
+      )
+      .pipe(map((response: any) => response.data || []));
+  }
+
+  getLiquorBrands(): Observable<{ brandName: string; sizes: number[] }[]> {
+    return this.http
+      .get<{
+        success?: boolean;
+        data?: { brandName: string; sizes: number[] }[];
+      }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`
+      )
+      .pipe(map((response: any) => response.data || []));
+  }
+
+  public getLiquorRates(
+    brandName: string,
+    size: string
+  ): Observable<LiquorRates> {
+    return this.http
+      .get<{
+        success: boolean;
+        data: LiquorRates;
+      }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/liquor-data/rates/`,
+        {
+          params: {
+            brand_name: brandName,
+            pack_size_ml: size.replace('ml', ''),
+          },
+        }
+      )
+      .pipe(
+        map((response) => {
+          if (!response.success || !response.data) {
+            throw new Error('Failed to fetch liquor rates');
+          }
+          return response.data;
+        }),
+        catchError((error) => {
+          console.error('Error fetching liquor rates:', error);
+          // Return default values on error
+          return of({
+            brand: brandName,
+            size: `${size}ml`,
+            exFactoryPrice: 0,
+            educationCess: 0,
+            exciseDuty: 0,
+            additionalExcise: 0,
+            additionalExcise12_5: 0,
+            bottlingFee: 0,
+            exportFee: 0,
+            mrpPerBottle: 0,
+            totalPricePerCase: 0,
+          });
+        })
+      );
+  }
+
+  getDistributors(): Observable<DistRow[]> {
+    const dataUrl = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data/`;
+
+    return this.http.get<DistRow[]>(dataUrl).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.results && Array.isArray(response.results)) {
+          return response.results;
+        }
+        return [];
+      }),
+      catchError(() => of([]))
+    );
+  }
+
+  getStatuses(): Observable<any[]> {
+    return this.http
+      .get<{ success?: boolean; data?: any[] }>(
+        `${environment.apiBaseUrl}/masters/supply_chain/status-master/`
+      )
+      .pipe(map((response: any) => response.results || response || []));
+  }
+
+  getRevalidationData(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) {
+          return response;
+        } else if (response?.results && Array.isArray(response.results)) {
+          return response.results;
+        }
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getRevalidationData error', error);
+        return of([]);
+      })
+    );
+  }
+
+  getRevalidationDetail(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`).pipe(
+      catchError((error) => {
+        console.error('getRevalidationDetail error', error);
+        throw error;
+      })
+    );
+  }
+
+  submitRevalidation(id: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/submit_revalidation/`,
+      {}
+    ).pipe(
+      catchError((error) => {
+        console.error('submitRevalidation error', error);
+        throw error;
+      })
+    );
+  }
+
+  performRevalidationAction(id: string, action: 'APPROVE' | 'REJECT', role: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/perform_action/`,
+      { action, role }
+    ).pipe(
+      catchError((error) => {
+        console.error('performRevalidationAction error', error);
+        throw error;
+      })
+    );
+  }
+
+  submitCancellation(payload: any): Observable<any> {
+    const url = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/submit/`;
+    console.log('submitCancellation: Payload:', payload);
+    console.log('submitCancellation: URL:', url);
+    return this.http.post<any>(url, payload).pipe(
+      catchError((error) => {
+        console.error('submitCancellation error', error);
+        throw error;
+      })
+    );
+  }
+
+  getCancellations(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/`).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (response?.results) return response.results;
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getCancellations error', error);
+        return of([]);
+      })
+    );
+  }
+
+  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT', role: string = 'permit-section'): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
+      { action, role }
+    ).pipe(
+      catchError((error) => {
+        console.error('performCancellationAction error', error);
+        throw error;
+      })
+    );
+  }
+}
+

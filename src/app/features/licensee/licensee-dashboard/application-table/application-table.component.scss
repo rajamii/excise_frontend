@@ -13,10 +13,12 @@ mat-cell{
     padding-top: 10px;
     padding-bottom: 10px;
     justify-content: center;
+    
     .application-id{
         font-size: 15px;
         font-weight: 500;
         color: #184eb3;
+        
         mat-icon{
             color: #ff1100;
             vertical-align: middle;
@@ -24,7 +26,43 @@ mat-cell{
             margin-left: 6px;
         }
     }
+    
     .objection-text {
-        color: #ffb700 !important; // Material yellow 700
+        color: #ffb700 !important;
     }
+}
+
+// ✅ Payment button styling
+.payment-btn {
+    mat-icon {
+        color: #ff6f00 !important;
+    }
+    
+    &:hover {
+        background-color: rgba(255, 111, 0, 0.1);
+        
+        mat-icon {
+            color: #e65100 !important;
+        }
+    }
+}
+
+// ✅ Add spacing between action buttons
+mat-cell {
+    button[mat-icon-button] {
+        margin: 0 2px;
+        
+        &:first-child {
+            margin-left: 0;
+        }
+        
+        &:last-child {
+            margin-right: 0;
+        }
+    }
+}
+
+.text-secondary {
+    color: #666;
+    font-size: 13px;
 }

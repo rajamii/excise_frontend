@@ -158,7 +158,8 @@
             <app-application-table
               [dataSource]="appliedDataSource"
               [displayedColumns]="displayedColumns"
-              [tableType]="'applied'">
+              [tableType]="'applied'"
+              (refreshData)="handleRefreshRequest()">
             </app-application-table>
           </mat-card-content>
         </mat-card>
@@ -177,7 +178,8 @@
             <app-application-table
               [dataSource]="pendingDataSource"
               [displayedColumns]="displayedColumns"
-              [tableType]="'pending'">
+              [tableType]="'pending'"
+              (refreshData)="handleRefreshRequest()">
             </app-application-table>
           </mat-card-content>
         </mat-card>
@@ -196,7 +198,8 @@
             <app-application-table
               [dataSource]="approvedDataSource"
               [displayedColumns]="displayedColumns"
-              [tableType]="'approved'">
+              [tableType]="'approved'"
+              (refreshData)="handleRefreshRequest()">
             </app-application-table>
           </mat-card-content>
         </mat-card>
@@ -215,7 +218,8 @@
             <app-application-table
               [dataSource]="rejectedDataSource"
               [displayedColumns]="displayedColumns"
-              [tableType]="'rejected'">
+              [tableType]="'rejected'"
+              (refreshData)="handleRefreshRequest()">
             </app-application-table>
           </mat-card-content>
         </mat-card>

@@ -1,0 +1,148 @@
+// Hologram Monthly Report Component - Minimal SCSS (Most styling moved to Bootstrap classes)
+
+// Only essential custom styles that can't be achieved with Bootstrap
+
+// Custom 5-column grid for summary cards (20% width each)
+.col-lg-2-4 {
+  @media (min-width: 992px) {
+    flex: 0 0 auto;
+    width: 20%;
+  }
+  
+  @media (max-width: 991px) {
+    flex: 0 0 auto;
+    width: 50%; // 2 columns on tablets
+  }
+  
+  @media (max-width: 576px) {
+    flex: 0 0 auto;
+    width: 100%; // 1 column on mobile
+  }
+}
+
+// Tab hover effects (Bootstrap doesn't have this specific behavior)
+.nav-link:hover {
+  background-color: #f8f9fa !important;
+}
+
+// Opening stock input special styling for first row
+input.bg-info:focus {
+  background-color: #17a2b8 !important;
+  border-color: #0c5460 !important;
+  box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25) !important;
+}
+
+// Read-only input styling override
+input[readonly].bg-light {
+  background-color: #e9ecef !important;
+  color: #495057 !important;
+  cursor: not-allowed !important;
+}
+
+// Animation for table rows (Bootstrap doesn't include animations)
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate__animated.animate__fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+// Custom scrollbar for table (Bootstrap doesn't style scrollbars)
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+// Responsive adjustments for filter section (Bootstrap responsive utilities don't cover this specific case)
+@media (max-width: 1400px) {
+  .ms-auto {
+    margin-top: 1rem !important;
+    margin-left: 0 !important;
+  }
+
+  .d-flex.justify-content-between {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+}
+
+// Responsive font size adjustments for mobile (Bootstrap doesn't have these specific sizes)
+@media (max-width: 1200px) {
+  .table {
+    font-size: 0.65rem !important;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.15rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .table {
+    font-size: 0.6rem !important;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.1rem !important;
+  }
+}
+
+// Grouped rows styling - remove bottom border for grouped items
+.table tbody tr.border-bottom-0 td {
+  border-bottom: 1px dashed #dee2e6 !important;
+}
+
+// Last row in group has solid border
+.table tbody tr:not(.border-bottom-0) td {
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+// Calculation box styling
+.table tbody td .border-success {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+}
+
+// Calculation box text colors
+.table tbody td .border-success {
+  .text-success {
+    color: #198754 !important;
+  }
+  
+  .text-primary {
+    color: #0d6efd !important;
+  }
+  
+  .text-danger {
+    color: #dc3545 !important;
+  }
+}
