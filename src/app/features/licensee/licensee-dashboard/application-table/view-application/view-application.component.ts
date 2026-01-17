@@ -515,7 +515,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       return;
     }
     
-    this.unifiedService.getObjections(this.application.application_id, this.application.type).subscribe({
+    this.unifiedService.getObjections(this.application.application_id).subscribe({
       next: (data) => {
         this.objections = data;
         this.initializeResolveForm();

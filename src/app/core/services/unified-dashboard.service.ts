@@ -44,11 +44,6 @@ export class UnifiedDashboardService {
     ];
 
     return forkJoin(requests).pipe(
-      tap(([renewal, newLic, salesman]) => {
-        console.log('📊 Dashboard Counts - Renewal:', renewal);
-        console.log('📊 Dashboard Counts - New:', newLic);
-        console.log('📊 Dashboard Counts - Salesman:', salesman);
-      }),
       map(([renewal, newLic, salesman]) => ({
         applied: (renewal.applied || 0) + (newLic.applied || 0) + (salesman.applied || 0),
         pending: (renewal.pending || 0) + (newLic.pending || 0) + (salesman.pending || 0),
@@ -65,27 +60,23 @@ export class UnifiedDashboardService {
     rejected: UnifiedApplication[];
     awaitingPayment?: UnifiedApplication[];
   }> {
-    console.log('🔄 Fetching applications by status...');
-    
+       
     const requests = [
       this.http.get<any>(`${this.endpoints.renewal}/list-by-status/`).pipe(
-        tap(data => console.log('📥 RENEWAL RAW:', data)),
         catchError(err => {
-          console.error('❌ Renewal error:', err);
+          console.error('Renewal error:', err);
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
       ),
       this.http.get<any>(`${this.endpoints.new}/list-by-status/`).pipe(
-        tap(data => console.log('📥 NEW LICENSE RAW:', data)),
         catchError(err => {
-          console.error('❌ New License error:', err);
+          console.error('New License error:', err);
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
       ),
       this.http.get<any>(`${this.endpoints.salesman}/list-by-status/`).pipe(
-        tap(data => console.log('📥 SALESMAN RAW:', data)),
         catchError(err => {
-          console.error('❌ Salesman error:', err);
+          console.error('Salesman error:', err);
           return of({ applied: [], pending: [], approved: [], rejected: [] });
         })
       )
@@ -106,7 +97,7 @@ export class UnifiedDashboardService {
           );
 
           if (!hasStatusStructure) {
-            console.error(`❌ ${type}: Missing status structure`);
+            console.error(`${type}: Missing status structure`);
             return { applied: [], pending: [], approved: [], rejected: [], awaitingPayment: [] };
           }
 
@@ -265,7 +256,6 @@ export class UnifiedDashboardService {
     };
     const encodedId = encodeURIComponent(applicationId);
     const url = `${mapping[type]}/detail/${encodedId}/`;
-    console.log(`🔍 Fetching detail from: ${url}`);
     return this.http.get<any>(url);
   }
 

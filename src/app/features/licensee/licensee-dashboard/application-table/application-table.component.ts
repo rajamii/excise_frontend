@@ -80,82 +80,50 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
   ) { }
 
   ngOnChanges(changes: SimpleChanges) {
-    console.log('📋 ngOnChanges called');
-    console.log('📊 Changes:', changes);
-    
-    if (changes['dataSource']) {
-      console.log('📊 DataSource changed');
-      console.log('📊 DataSource value:', this.dataSource);
-      console.log('📊 DataSource.data:', this.dataSource?.data);
-      console.log('📊 DataSource.data length:', this.dataSource?.data?.length);
-      
-      this.unresolvedObjectionAppIds.clear();
 
+    if (changes['dataSource']) {
+      this.unresolvedObjectionAppIds.clear();
       if (this.dataSource?.data) {
-        console.log(`📋 Processing ${this.dataSource.data.length} applications`);
-        
         this.dataSource.data.forEach((app, index) => {
-          console.log(`📋 Processing app ${index}:`, app);
           const appId = this.getApplicationId(app);
-          const appType = app.type || 'license-renewal';
-          console.log(`🆔 Application ID for app ${index}:`, appId);
-          console.log(`📦 Application Type for app ${index}:`, appType);
-          
           if (appId) {
             this.unifiedDashboardService.getObjections(appId).subscribe({
               next: (objections) => {
                 const hasUnresolved = objections?.some((obj: Objection) => obj.isResolved === false);
                 if (hasUnresolved) {
                   this.unresolvedObjectionAppIds.add(appId);
-                  console.log(`⚠️ Found unresolved objections for ${appId}`);
                 }
               },
               error: (err) => {
                 if (err.status !== 404) {
-                  console.error(`❌ Error fetching objections for ${appId}:`, err);
+                  console.error(`Error fetching objections for ${appId}:`, err);
                 }
               }
             });
           } else {
-            console.warn(`⚠️ No applicationId found for app ${index}:`, app);
+            console.warn(`No applicationId found for app ${index}:`, app);
           }
         });
       } else {
-        console.log('⚠️ No data in dataSource');
+        console.log('No data in dataSource'); // Debug log
       }
-    }
-    
-    if (changes['tableType']) {
-      console.log('📊 Table Type changed to:', this.tableType);
     }
   }
 
   hasData(): boolean {
-    const hasData = this.dataSource && 
-                    this.dataSource.data && 
-                    Array.isArray(this.dataSource.data) && 
-                    this.dataSource.data.length > 0;
-    
-    console.log('✅ hasData check:', hasData);
-    console.log('📊 Data count:', this.dataSource?.data?.length || 0);
-    
-    if (hasData) {
-      console.log('📋 First item:', this.dataSource.data[0]);
-      console.log('📋 Sample item structure:', JSON.stringify(this.dataSource.data[0], null, 2));
-    }
-    
+    const hasData = this.dataSource &&
+      this.dataSource.data &&
+      Array.isArray(this.dataSource.data) &&
+      this.dataSource.data.length > 0;
     return hasData;
   }
 
   getApplicationId(element: any): string {
     if (!element) {
-      console.warn('⚠️ getApplicationId - element is null/undefined');
+      console.warn('Application ID is missing: null or undefined'); // WARN LOG
       return '';
     }
-    
-    console.log('🔍 Extracting ID from element:', element);
-    console.log('🔑 Element keys:', Object.keys(element));
-    
+
     const directProperties = [
       element.applicationId,
       element.application_id,
@@ -164,9 +132,7 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
       element.applicationID,
       element.application_ID
     ];
-    
-    console.log('🔍 Direct properties found:', directProperties.filter(id => id));
-    
+
     const nestedProperties = [
       element.raw?.application_id,
       element.raw?.applicationId,
@@ -175,48 +141,31 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
       element.data?.applicationId,
       element.data?.id
     ];
-    
-    console.log('🔍 Nested properties found:', nestedProperties.filter(id => id));
-    
+
     const possibleIds = [...directProperties, ...nestedProperties];
-    
-    console.log('🔍 All possible IDs:', possibleIds);
-    
+
     const appId = possibleIds.find(id => {
       return id !== null && id !== undefined && id !== '' && String(id).trim() !== '';
     });
-    
+
     if (appId) {
       const finalId = String(appId);
-      console.log('✅ Found application ID:', finalId);
       return finalId;
     }
-    
-    console.error('❌ CRITICAL: Could not find application ID in element');
-    console.error('❌ Element type:', element.type);
-    console.error('❌ Element keys:', Object.keys(element));
-    console.error('❌ Full element:', JSON.stringify(element, null, 2));
-    
     return '';
   }
 
   getCurrentStage(element: any): string {
-    const stage = element?.currentStage || 
-                  element?.current_stage || 
-                  element?.raw?.current_stage || 
-                  '';
-    console.log('🔍 Current stage:', stage, 'for element:', element);
+    const stage = element?.currentStage ||
+      element?.current_stage ||
+      element?.raw?.current_stage ||
+      '';
     return stage;
   }
 
   isAwaitingPayment(element: any): boolean {
     const stage = this.getCurrentStage(element);
     const isAwaiting = stage === 'awaiting_payment';
-    
-    if (isAwaiting) {
-      console.log('💳 Application is awaiting payment:', this.getApplicationId(element));
-    }
-    
     return isAwaiting;
   }
 
@@ -253,11 +202,6 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
   }
 
   onPayment(application: any): void {
-    console.log('💳 Payment clicked for application:', application);
-    console.log('💳 Application ID:', this.getApplicationId(application));
-    console.log('💳 Table Type:', this.tableType);
-    console.log('💳 Current Stage:', this.getCurrentStage(application));
-    
     this.payment.emit(application);
   }
 
@@ -271,106 +215,88 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
     }
   }
 
-  // ✅ CRITICAL FIX: Pass tableType to print dialog
+  // Pass tableType to print dialog
   onPrint(application: any) {
-    console.log('🖨️ Print clicked for application:', application);
-    
     const appId = this.getApplicationId(application);
     const appType = application.type || 'license-renewal';
-    
+
     if (!appId) {
-      console.error('❌ No application ID found');
+      console.error('No application ID found');
       Swal.fire('Error', 'Could not find application ID', 'error');
       return;
     }
-    
-    console.log('🔍 Fetching full application details for printing...');
-    console.log('📦 App ID:', appId);
-    console.log('📦 App Type:', appType);
-    console.log('📊 Table Type:', this.tableType); // ✅ NEW LOG
-    
+
     // Fetch the full application details before opening print dialog
     this.unifiedDashboardService.getApplicationDetail(appId, appType).subscribe({
       next: (fullApp) => {
-        console.log('✅ Full application loaded:', fullApp);
-        console.log('✅ Full app current_stage:', fullApp.current_stage);
-        console.log('✅ Full app is_approved:', fullApp.is_approved);
-        
-        // ✅ CRITICAL FIX: Pass tableType to print dialog
+        // Pass tableType to print dialog
         this.dialog.open(PrintApplicationComponent, {
           width: '450px',
-          data: { 
+          data: {
             application: fullApp,
-            tableType: this.tableType  // ✅ PASS TABLE TYPE HERE!
+            tableType: this.tableType
           }
         });
       },
       error: (err) => {
-        console.error('❌ Error fetching application details:', err);
+        console.error('Error fetching application details:', err);
         Swal.fire('Error', 'Failed to load application details for printing', 'error');
       }
     });
   }
-  
+
   onView(application: any) {
-    console.log('👁️ View clicked for application:', application);
-    console.log('📊 Application structure:', JSON.stringify(application, null, 2));
-    
     const applicationId = this.getApplicationId(application);
-    
+
     if (!applicationId) {
-      console.error('❌ CRITICAL: No applicationId found, cannot open view dialog');
-      console.error('❌ Full application object:', application);
+      console.error('CRITICAL: No applicationId found, cannot open view dialog');
+      console.error('Full application object:', application);
       return;
     }
-    
-    console.log('✅ Opening view dialog with ID:', applicationId);
-    
+
     const unifiedApp: UnifiedApplication = {
       type: application.type || 'license-renewal',
       applicationId: applicationId,
       currentStage: this.getCurrentStage(application),
-      currentStageName: application.currentStageName || 
-                       application.current_stage_name || 
-                       application.raw?.current_stage_name || 
-                       'Unknown',
-      isApproved: application.isApproved ?? 
-                  application.is_approved ?? 
-                  application.raw?.is_approved ?? 
-                  false,
-      establishmentName: application.establishmentName || 
-                        application.establishment_name || 
-                        application.raw?.establishment_name || 
-                        null,
-      applicantFullName: application.applicantFullName || 
-                        application.applicant_name || 
-                        application.raw?.applicant_name ||
-                        application.member_name ||
-                        application.raw?.member_name ||
-                        'N/A',
-      mobileNumber: application.mobileNumber || 
-                   application.mobile_number || 
-                   application.raw?.mobile_number || 
-                   '',
-      email: application.email || 
-            application.emailId || 
-            application.email_id || 
-            application.raw?.email ||
-            '',
-      licenseCategoryName: application.licenseCategoryName || 
-                          application.license_category_name || 
-                          application.raw?.license_category_name ||
-                          'N/A',
-      siteDistrictName: application.siteDistrictName || 
-                       application.site_district_name || 
-                       application.raw?.site_district_name ||
-                       'N/A',
+      currentStageName: application.currentStageName ||
+        application.current_stage_name ||
+        application.raw?.current_stage_name ||
+        'Unknown',
+      isApproved: application.isApproved ??
+        application.is_approved ??
+        application.raw?.is_approved ??
+        false,
+      establishmentName: application.establishmentName ||
+        application.establishment_name ||
+        application.raw?.establishment_name ||
+        null,
+      applicantFullName: application.applicantFullName ||
+        application.applicant_name ||
+        application.raw?.applicant_name ||
+        application.member_name ||
+        application.raw?.member_name ||
+        'N/A',
+      mobileNumber: application.mobileNumber ||
+        application.mobile_number ||
+        application.raw?.mobile_number ||
+        '',
+      email: application.email ||
+        application.emailId ||
+        application.email_id ||
+        application.raw?.email ||
+        '',
+      licenseCategoryName: application.licenseCategoryName ||
+        application.license_category_name ||
+        application.raw?.license_category_name ||
+        'N/A',
+      siteDistrictName: application.siteDistrictName ||
+        application.site_district_name ||
+        application.raw?.site_district_name ||
+        'N/A',
       transactions: application.transactions || application.raw?.transactions || [],
       raw: application.raw || application
     };
-    
-    console.log('✅ Created UnifiedApplication:', unifiedApp);
-    
+
     const dialogRef = this.dialog.open(ViewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
@@ -379,17 +305,14 @@ export class ApplicationTableComponent implements OnChanges, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result === true) {
-        console.log('🔄 Reloading page after dialog close');
         location.reload();
       }
     });
   }
-  
+
   viewMovement(application: any): void {
-    console.log('📊 Movement clicked for application:', application);
-    
     this.dialog.open(ApplicationMovementComponent, {
-      width: '70vw',        
+      width: '70vw',
       maxWidth: '100%',
       height: 'auto',
       data: {

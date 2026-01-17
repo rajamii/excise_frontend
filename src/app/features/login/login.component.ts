@@ -246,7 +246,6 @@ export class LoginComponent extends BaseComponent {
     const phoneNumber = this.registrationForm.get('phoneNumber')?.value;
     this.isSendingOtp = true;
     this.registrationError = false;
-    console.log('Sending registration OTP to:', phoneNumber);
     this.authService.sendRegistrationOtp({
       phoneNumber: phoneNumber,
       purpose: 'register'
@@ -331,8 +330,6 @@ export class LoginComponent extends BaseComponent {
       hashkey: formValue.hashkey,
       response: formValue.response
     };
-
-    console.log('Final registration payload:', requestPayload); // Debug this!
 
     this.authService.licenseeRegister(requestPayload).subscribe({
       next: (res: any) => {
@@ -452,7 +449,6 @@ export class LoginComponent extends BaseComponent {
   }
 
   private handleAuthResponse(res: any): void {
-    console.log('Login response:', res);
 
     let accessToken: string | null = null;
     let refreshToken: string | null = null;
