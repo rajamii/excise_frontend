@@ -48,6 +48,8 @@ interface RollInput {
   isLeftoverReuse?: boolean;
   leftoverUsageHistory?: LeftoverUsageHistory[];
   parentRollId?: string;
+  allocatedFromSerial?: string;
+  allocatedToSerial?: string;
 }
 
 interface RegisterEntry {
@@ -1055,20 +1057,30 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         // Create a unique identifier for this specific range
         const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
 
-        // Check if this roll has leftover ranges from locked rolls
+        // Check if this roll is LOCKED
         const lockedRolls = this.getLockedRollsForEntry(entry);
-        const lockedRoll = lockedRolls.find((lr: RollInput) =>
-          (lr.cartoonNumber === cartoonNumber || lr.rangeId === rangeId) && lr.leftOver > 0
-        );
+        const isLocked = lockedRolls.some((lr: RollInput) => {
+          // Check for exact rangeId match (if available)
+          if (lr.rangeId === rangeId) return true;
 
-        let leftoverInfo = '';
-        if (lockedRoll) {
-          const leftoverRanges = this.getLeftoverRanges(entry, lockedRoll);
-          if (leftoverRanges && leftoverRanges.length > 0) {
-            const totalLeftover = leftoverRanges.reduce((sum, r) => sum + r.quantity, 0);
-            const rangesStr = leftoverRanges.map(r => `${r.fromSerial}-${r.toSerial}`).join(', ');
-            leftoverInfo = ` [Leftover: ${totalLeftover} units (${rangesStr})]`;
+          // If rangeId doesn't match/exist, check if it's the same carton AND same serial range
+          // This prevents locking ALL ranges of a carton when only one is used
+          if (lr.cartoonNumber === cartoonNumber) {
+            // Strict check: serials must match if they exist
+            if (fromSerial && toSerial && lr.allocatedFromSerial && lr.allocatedToSerial) {
+              return lr.allocatedFromSerial === fromSerial && lr.allocatedToSerial === toSerial;
+            }
+            // If we can't match serials, fallback to rangeId or skip locking to avoid false positives
+            return false;
           }
+          return false;
+        });
+
+        // Determine display name
+        // NO leftover info as requested by user
+        let displayName = `${cartoonNumber} - ${serialRange}`;
+        if (isLocked) {
+          displayName += ' (Locked)';
         }
 
         // Create separate entry for this range
@@ -1076,7 +1088,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
           cartoonNumber: cartoonNumber, // Original cartoon number (for grouping if needed)
           rangeId: rangeId, // Unique ID for this specific range
           rangeIndex: rangeIndex, // Which range number (1, 2, 3, etc.)
-          displayName: `${cartoonNumber} - ${serialRange}${leftoverInfo}`, // Show range in dropdown with leftover info
+          displayName: displayName, // Show range in dropdown without leftover info, plus locked status
           allocatedQuantity: quantity,
           availableCount: quantity,
           serialRange: serialRange,
@@ -1084,7 +1096,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
           toSerial: toSerial,
           isSingleRange: true, // Mark as single range entry
           originalCartoonNumber: cartoonNumber, // Store original cartoon number for reference
-          leftoverInfo: leftoverInfo // Store leftover info for display
+          isLocked: isLocked // Add locked flag for potential UI styling (though text handles it now)
         });
 
         addedCartons.add(cartoonNumber);
@@ -1152,7 +1164,6 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 toSerial: toSerial,
                 isSingleRange: true,
                 originalCartoonNumber: cNo,
-                leftoverInfo: ''
               });
               addedCartons.add(cNo); // Prevent duplicates from other procurements
             }
@@ -2461,102 +2472,7 @@ After editing, click "Lock" to save your changes.`);
     }
   }
 
-  /**
-   * Use a leftover range for a new brand
-   * This creates a new roll entry with the leftover range as the allocated range
-   * The leftover range is NOT added to the dropdown - it's only shown in the Usage section
-   */
-  useLeftoverRange(entry: RegisterEntry, currentRollInput: RollInput, leftoverRange: { fromSerial: string; toSerial: string; quantity: number }): void {
-    console.log('🔄 Using leftover range:', leftoverRange);
 
-    // CRITICAL: Check if this range has already been used
-    // This can happen if the user clicks "Use" on a range that's already in progress
-    const lockedRolls = entry.lockedRolls || [];
-    const rangeAlreadyUsed = lockedRolls.some((lr: RollInput) => {
-      // Check if this is a leftover reuse of the same parent roll
-      if (lr.parentRollId === (currentRollInput.rangeId || currentRollInput.cartoonNumber)) {
-        // Check if the range overlaps
-        return lr.fromSerial === leftoverRange.fromSerial && lr.toSerial === leftoverRange.toSerial;
-      }
-      return false;
-    });
-
-    if (rangeAlreadyUsed) {
-      alert('This leftover range has already been used.\n\nPlease select a different range or refresh the page to see updated available ranges.');
-      return;
-    }
-
-    // Check if there's a current roll that needs to be locked first
-    if (entry.currentRollSelection && !this.isCurrentRollLocked(entry)) {
-      // Check if the current roll can be locked
-      if (!this.canLockRoll(entry)) {
-        alert('Please complete the current roll entry before using leftover ranges.\n\nMake sure:\n- Brand details and bottle size are filled\n- At least one range (issued or wastage) is entered\n- All ranges are valid');
-        return;
-      }
-
-      // Lock the current roll
-      this.lockRollForEntry(entry);
-    }
-
-    // Generate a unique range ID for this leftover range
-    // Use the original cartoon number + a unique suffix
-    const originalCartoonNumber = currentRollInput.cartoonNumber;
-
-    // Count how many times this cartoon number has been used (including the original)
-    const usageCount = lockedRolls.filter(r => r.cartoonNumber.startsWith(originalCartoonNumber)).length + 1;
-    const newRangeId = `${originalCartoonNumber}_LEFTOVER_${usageCount}`;
-    const displayName = `${originalCartoonNumber} - Leftover ${usageCount} (${leftoverRange.fromSerial}-${leftoverRange.toSerial})`;
-
-    console.log('📦 Creating new roll entry for leftover range:', {
-      rangeId: newRangeId,
-      displayName: displayName,
-      range: leftoverRange
-    });
-
-    // Create a new roll input for this leftover range
-    const newRollInput: RollInput = {
-      cartoonNumber: originalCartoonNumber,
-      rangeId: newRangeId,
-      displayName: displayName,
-      rangeIndex: usageCount,
-      availableCount: leftoverRange.quantity,
-      serialRange: `${leftoverRange.fromSerial} - ${leftoverRange.toSerial}`,
-      fromSerial: leftoverRange.fromSerial,
-      toSerial: leftoverRange.toSerial,
-      issuedRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
-      wastageRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
-      issuedQty: 0,
-      wastageQty: 0,
-      leftOver: leftoverRange.quantity,
-      damageReason: '',
-      brandDetails: '', // User will enter new brand details
-      bottleSize: '', // User will enter new bottle size
-      isLeftoverReuse: true, // Mark as leftover reuse
-      parentRollId: currentRollInput.rangeId || currentRollInput.cartoonNumber // Store parent roll ID for history tracking
-    };
-
-    // Set this as the current roll selection
-    // Note: The dropdown will still show the original roll, but the Usage section will show this leftover range
-    entry.currentRollSelection = {
-      selectedRoll: newRangeId,
-      rollInput: newRollInput,
-      isLocked: false
-    };
-
-    // Update the rolls view
-    this.updateRollsView(entry);
-    this.cdr.detectChanges();
-
-    // Scroll to the top to show the new roll input
-    setTimeout(() => {
-      const rollSelectionPanel = document.querySelector('.roll-selection-panel');
-      if (rollSelectionPanel) {
-        rollSelectionPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-
-    alert(`✅ Leftover range ready for use!\n\nRange: ${leftoverRange.fromSerial} - ${leftoverRange.toSerial}\nQuantity: ${leftoverRange.quantity} units\n\nPlease enter:\n- Brand details\n- Bottle size\n- Usage and/or wastage details\n\nThen lock this entry to continue.`);
-  }
 
   /**
    * Check if a roll has leftover usage history
