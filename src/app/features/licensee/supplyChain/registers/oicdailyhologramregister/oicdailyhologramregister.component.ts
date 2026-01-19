@@ -50,6 +50,7 @@ interface RollInput {
   parentRollId?: string;
   allocatedFromSerial?: string;
   allocatedToSerial?: string;
+  isNotInUse?: boolean;
 }
 
 interface RegisterEntry {
@@ -489,6 +490,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             // Create unique ID for tracking (use saved entry ID if available, otherwise use index)
             const uniqueId = saved.id || saved.Id || `${reqRef}_${index}_${Date.now()}`;
 
+            // Determine if this roll was marked as "Not In Use"
+            // If issued and wastage are both 0, and it's a saved entry, it's effectively "Not In Use"
+            const isNotInUse = issuedQty === 0 && wastageQty === 0;
+
             return {
               id: uniqueId, // Add unique ID for tracking
               cartoonNumber: savedRollRange || `ROLL_${index}`, // Fallback to prevent empty string
@@ -508,7 +513,8 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               issuedRanges: issuedRanges, // Properly parsed issued ranges
               wastageRanges: wastageRanges, // Properly parsed wastage ranges
               damageReason: damageReason,
-              isLocked: true
+              isLocked: true,
+              isNotInUse: isNotInUse // Restore "Not In Use" status based on zero usage
             };
           });
 
@@ -1953,7 +1959,9 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     }
 
     // Store the roll input with all its data
-    entry.lockedRolls.push({ ...rollInput });
+    // explicit isNotInUse: false because if we are locking via this method,
+    // it adheres to validation rules requiring usage/wastage > 0, so it is definitely IN USE.
+    entry.lockedRolls.push({ ...rollInput, isNotInUse: false });
 
     // Clear current selection to allow selecting next roll
     entry.currentRollSelection = undefined;
@@ -2032,6 +2040,63 @@ After editing, click "Lock" to save your changes.`);
     }
   }
 
+  /**
+   * Mark a roll as "Not In Use"
+   * This locks the roll with 0 usage/wastage and full leftover
+   */
+  markRollAsNotInUse(entry: RegisterEntry, rollInput: RollInput): void {
+    if (!confirm('Are you sure you want to mark this roll as NOT IN USE?\n\nThis will set usage and wastage to 0 and keep the entire roll available.')) {
+      return;
+    }
+
+    // 1. Reset inputs to "Not Used" state
+    rollInput.brandDetails = 'Not Used';
+    rollInput.bottleSize = 'N/A';
+
+    // 2. Clear usages
+    rollInput.issuedRanges = [{ fromSerial: '', toSerial: '', quantity: 0 }];
+    rollInput.wastageRanges = [{ fromSerial: '', toSerial: '', quantity: 0 }];
+    rollInput.issuedQty = 0;
+    rollInput.wastageQty = 0;
+    rollInput.damageReason = 'Not Used';
+
+    // 3. Set Leftover to Full Available Count
+    rollInput.leftOver = rollInput.availableCount;
+
+    // 4. Mark as Not In Use
+    rollInput.isNotInUse = true;
+
+    // 5. Create Locked Roll Entry
+    const lockedRollIndex = entry.lockedRolls ? entry.lockedRolls.findIndex(r => r.rangeId === rollInput.rangeId) : -1;
+    const lockedRollEntry = { ...rollInput }; // Clone it
+
+    if (!entry.lockedRolls) {
+      entry.lockedRolls = [];
+    }
+
+    if (lockedRollIndex >= 0) {
+      entry.lockedRolls[lockedRollIndex] = lockedRollEntry;
+    } else {
+      entry.lockedRolls.push(lockedRollEntry);
+    }
+
+    // 6. Update Entry Totals
+    this.recalculateEntryFromLockedRolls(entry);
+
+    // 7. Clear Selection (Lock it)
+    entry.currentRollSelection = {
+      selectedRoll: rollInput.rangeId || rollInput.cartoonNumber,
+      rollInput: lockedRollEntry,
+      isLocked: true
+    };
+
+    // 8. Update View
+    this.updateRollsView(entry);
+    this.cdr.detectChanges(); // Force update
+
+    console.log('✅ Roll marked as Not In Use:', lockedRollEntry);
+  }
+
   recalculateEntryFromLockedRolls(entry: RegisterEntry): void {
     const lockedRolls = entry.lockedRolls || [];
 
@@ -2103,6 +2168,7 @@ After editing, click "Lock" to save your changes.`);
 
       // CRITICAL FIX: Count only NON-leftover-reuse locked rolls
       // Leftover reuses don't count toward the total allocated ranges
+      // Also ensure 'Not In Use' rolls are counted (they are regular locked rolls with a flag)
       const nonLeftoverLockedRolls = lockedRolls.filter((roll: RollInput) => !roll.isLeftoverReuse);
       const lockedRangesCount = nonLeftoverLockedRolls.length;
 
@@ -2144,6 +2210,19 @@ After editing, click "Lock" to save your changes.`);
         brandName = String(entryBrand);
       }
 
+      // CRITICAL FIX: For "Not In Use" entries, we need to send the originally allocated range
+      // so the backend knows which serials to restore to AVAILABLE
+      const isNotInUse = roll.isNotInUse === true;
+      let allocatedFromSerial = '';
+      let allocatedToSerial = '';
+
+      if (isNotInUse) {
+        // Use the allocated range for restoration
+        allocatedFromSerial = roll.allocatedFromSerial || roll.fromSerial || '';
+        allocatedToSerial = roll.allocatedToSerial || roll.toSerial || '';
+        console.log(`📌 Not In Use entry - allocated range: ${allocatedFromSerial}-${allocatedToSerial}`);
+      }
+
       return {
         reference_no: entry.referenceNo || 'N/A',
         hologram_request: entry.requestId || null, // Link to original request
@@ -2167,7 +2246,11 @@ After editing, click "Lock" to save your changes.`);
         wastage_ranges: roll.wastageRanges || [],
 
         damage_reason: roll.damageReason || '',
-        is_fixed: true
+        is_fixed: true,
+
+        // CRITICAL: Include allocated range for "Not In Use" restoration
+        allocated_from_serial: allocatedFromSerial,
+        allocated_to_serial: allocatedToSerial
       };
     });
 

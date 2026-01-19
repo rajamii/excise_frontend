@@ -242,15 +242,28 @@
                       </div>
                       <div class="roll-stats">
                         @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                        @if (rollInput.isNotInUse) {
+                        <span class="badge bg-secondary">
+                          <i class="bi bi-slash-circle me-1"></i>
+                          Not In Use
+                        </span>
+                        } @else {
                         <span class="badge bg-success">
                           <i class="bi bi-lock-fill me-1"></i>
                           Locked (Read-Only)
                         </span>
+                        }
                         } @else {
                         <span class="badge bg-warning text-dark">
                           <i class="bi bi-clock me-1"></i>
                           In Progress
                         </span>
+                        <button class="btn btn-sm btn-outline-danger ms-2"
+                          (click)="markRollAsNotInUse(selectedEntryForRollsView, rollInput)"
+                          title="Mark this roll as Not In Use (Skip)">
+                          <i class="bi bi-slash-circle me-1"></i>
+                          Not In Use
+                        </button>
                         }
                       </div>
                     </div>
