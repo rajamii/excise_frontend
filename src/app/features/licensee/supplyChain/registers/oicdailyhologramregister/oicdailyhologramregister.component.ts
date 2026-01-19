@@ -15,6 +15,17 @@ interface RollRange {
   errorMessage?: string;
 }
 
+interface BrandEntry {
+  id: string;
+  brandName: string;
+  bottleSize: string;
+  issuedRanges: RollRange[];
+  wastageRanges: RollRange[];
+  issuedQty: number;
+  wastageQty: number;
+  colorIndex: number;
+}
+
 interface LeftoverUsageHistory {
   brandDetails: string;
   bottleSize: string;
@@ -45,6 +56,7 @@ interface RollInput {
   damageReason: string;
   brandDetails: string | { brandName: string;[key: string]: any };
   bottleSize: string;
+  brands?: BrandEntry[]; // Support for multiple brands from single roll
   isLeftoverReuse?: boolean;
   leftoverUsageHistory?: LeftoverUsageHistory[];
   parentRollId?: string;
@@ -2137,6 +2149,197 @@ After editing, click "Lock" to save your changes.`);
     // Leftover reuses are NOT counted here because they're already part of the original allocation
     entry.hologramQty = totalAllocated;
     entry.total = totalIssued + totalWastage + totalLeftOver;
+  }
+
+  /**
+   * Brand Management Methods for Multi-Brand Support
+   */
+
+  // Initialize brands array if it doesn't exist and ensure at least one brand
+  initializeBrands(rollInput: RollInput): void {
+    if (!rollInput.brands || rollInput.brands.length === 0) {
+      // Create first brand from existing brand details or empty
+      rollInput.brands = [{
+        id: this.generateBrandId(),
+        brandName: typeof rollInput.brandDetails === 'string' ? rollInput.brandDetails : '',
+        bottleSize: rollInput.bottleSize || '',
+        issuedRanges: rollInput.issuedRanges || [{ fromSerial: '', toSerial: '', quantity: 0 }],
+        wastageRanges: rollInput.wastageRanges || [{ fromSerial: '', toSerial: '', quantity: 0 }],
+        issuedQty: rollInput.issuedQty || 0,
+        wastageQty: rollInput.wastageQty || 0,
+        colorIndex: 0
+      }];
+    }
+  }
+
+  // Add a new brand to the roll
+  addBrandToRoll(entry: RegisterEntry, rollInput: RollInput): void {
+    if (!rollInput.brands) {
+      this.initializeBrands(rollInput);
+    }
+
+    const newBrand: BrandEntry = {
+      id: this.generateBrandId(),
+      brandName: '',
+      bottleSize: '',
+      issuedRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
+      wastageRanges: [{ fromSerial: '', toSerial: '', quantity: 0 }],
+      issuedQty: 0,
+      wastageQty: 0,
+      colorIndex: rollInput.brands!.length // Use array length as color index
+    };
+
+    rollInput.brands!.push(newBrand);
+    this.cdr.detectChanges();
+
+    console.log('✅ Added new brand to roll:', newBrand);
+  }
+
+  // Remove a brand from the roll
+  removeBrandFromRoll(entry: RegisterEntry, rollInput: RollInput, brandId: string): void {
+    if (!rollInput.brands || rollInput.brands.length <= 1) {
+      alert('Cannot remove the last brand. At least one brand is required.');
+      return;
+    }
+
+    const index = rollInput.brands.findIndex(b => b.id === brandId);
+    if (index !== -1) {
+      rollInput.brands.splice(index, 1);
+
+      // Recalculate total quantities from remaining brands
+      this.recalculateBrandTotals(rollInput);
+      this.cdr.detectChanges();
+
+      console.log('✅ Removed brand from roll');
+    }
+  }
+
+  // Get color for a brand based on its index
+  getBrandColor(colorIndex: number): string {
+    const colors = [
+      '#4CAF50', // Green
+      '#2196F3', // Blue
+      '#FF9800', // Orange
+      '#9C27B0', // Purple
+      '#F44336', // Red
+      '#00BCD4', // Cyan
+      '#FFEB3B', // Yellow
+      '#795548', // Brown
+      '#607D8B', // Blue Grey
+      '#E91E63'  // Pink
+    ];
+    return colors[colorIndex % colors.length];
+  }
+
+  // Get background color (lighter version) for a brand
+  getBrandBackgroundColor(colorIndex: number): string {
+    const baseColor = this.getBrandColor(colorIndex);
+    // Add transparency to create lighter version
+    return baseColor + '20'; // 20 is hex for ~12% opacity
+  }
+
+  // Recalculate total issued and wastage quantities from all brands
+  recalculateBrandTotals(rollInput: RollInput): void {
+    if (!rollInput.brands || rollInput.brands.length === 0) {
+      rollInput.issuedQty = 0;
+      rollInput.wastageQty = 0;
+      rollInput.leftOver = rollInput.availableCount;
+      return;
+    }
+
+    let totalIssued = 0;
+    let totalWastage = 0;
+
+    rollInput.brands.forEach(brand => {
+      // Recalculate brand's quantities from ranges
+      brand.issuedQty = brand.issuedRanges
+        .filter(r => r.fromSerial && r.toSerial)
+        .reduce((sum, r) => sum + (r.quantity || 0), 0);
+
+      brand.wastageQty = brand.wastageRanges
+        .filter(r => r.fromSerial && r.toSerial)
+        .reduce((sum, r) => sum + (r.quantity || 0), 0);
+
+      totalIssued += brand.issuedQty;
+      totalWastage += brand.wastageQty;
+    });
+
+    rollInput.issuedQty = totalIssued;
+    rollInput.wastageQty = totalWastage;
+    rollInput.leftOver = rollInput.availableCount - totalIssued - totalWastage;
+  }
+
+  // Validate that total brand quantities don't exceed available count
+  validateBrandQuantities(rollInput: RollInput): { isValid: boolean; errorMessage: string } {
+    if (!rollInput.brands || rollInput.brands.length === 0) {
+      return { isValid: true, errorMessage: '' };
+    }
+
+    const totalUsed = rollInput.issuedQty + rollInput.wastageQty;
+
+    if (totalUsed > rollInput.availableCount) {
+      return {
+        isValid: false,
+        errorMessage: `Total quantity (${totalUsed}) exceeds available count (${rollInput.availableCount})`
+      };
+    }
+
+    return { isValid: true, errorMessage: '' };
+  }
+
+  // Generate unique ID for brand
+  private generateBrandId(): string {
+    return `brand_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  // Check if roll is using multi-brand mode
+  isMultiBrandMode(rollInput: RollInput): boolean {
+    return !!(rollInput.brands && rollInput.brands.length > 0);
+  }
+
+  // Remove issued range from a specific brand
+  removeIssuedRangeFromBrand(entry: RegisterEntry, brand: BrandEntry, index: number): void {
+    if (brand.issuedRanges.length > 1) {
+      brand.issuedRanges.splice(index, 1);
+      const rollInput = this.getCurrentRollInput(entry);
+      if (rollInput) {
+        this.recalculateBrandTotals(rollInput);
+      }
+      this.cdr.detectChanges();
+    }
+    const rollInput = this.getCurrentRollInput(entry);
+    if (rollInput) {
+      this.recalculateBrandTotals(rollInput);
+    }
+    this.cdr.detectChanges();
+  }
+
+  // Remove wastage range from a specific brand
+  removeWastageRangeFromBrand(entry: RegisterEntry, brand: BrandEntry, index: number): void {
+    if (brand.wastageRanges.length <= 1) {
+      // Clear the values if it's the last range
+      brand.wastageRanges[0] = { fromSerial: '', toSerial: '', quantity: 0 };
+    } else {
+      brand.wastageRanges.splice(index, 1);
+    }
+
+    // Recalculate recalculateBrandTotals to update main rollInput
+    if (this.getCurrentSelectedRoll(entry) && this.getCurrentRollInput(entry)) {
+      this.recalculateBrandTotals(this.getCurrentRollInput(entry)!);
+    }
+    this.cdr.detectChanges();
+  }
+
+  // Add a new issued range to a specific brand
+  addIssuedRangeToBrand(entry: RegisterEntry, brand: BrandEntry): void {
+    brand.issuedRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
+    this.cdr.detectChanges();
+  }
+
+  // Add a new wastage range to a specific brand
+  addWastageRangeToBrand(entry: RegisterEntry, brand: BrandEntry): void {
+    brand.wastageRanges.push({ fromSerial: '', toSerial: '', quantity: 0 });
+    this.cdr.detectChanges();
   }
 
   /**

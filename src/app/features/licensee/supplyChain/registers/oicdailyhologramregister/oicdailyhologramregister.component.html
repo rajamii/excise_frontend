@@ -269,14 +269,27 @@
                     </div>
 
                     <div class="roll-card-body">
-                      <!-- Brand Details and Bottle Size Inputs -->
-                      <div class="roll-details-inputs mb-3">
+                      <!-- Multi-Brand Support UI -->
+                      <div class="multi-brand-section mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                          <label class="form-label small mb-0">
+                            <i class="bi bi-tags me-1"></i>
+                            <strong>Brand Details</strong>
+                          </label>
+                          @if (!selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                          <button class="btn btn-sm btn-success"
+                            (click)="addBrandToRoll(selectedEntryForRollsView, rollInput)"
+                            title="Add another brand to this roll">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            Add Brand
+                          </button>
+                          }
+                        </div>
+
+                        @if (!isMultiBrandMode(rollInput)) {
+                        <!-- Legacy single brand mode -->
                         <div class="row g-3">
                           <div class="col-md-6">
-                            <label class="form-label small">
-                              <i class="bi bi-tag me-1"></i>
-                              <strong>Brand Details</strong>
-                            </label>
                             <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.brandDetails"
                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                               placeholder="Enter brand details"
@@ -290,10 +303,6 @@
                             </small>
                           </div>
                           <div class="col-md-6">
-                            <label class="form-label small">
-                              <i class="bi bi-cup me-1"></i>
-                              <strong>Bottle Size</strong>
-                            </label>
                             <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.bottleSize"
                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                               placeholder="e.g., 750ml"
@@ -307,6 +316,83 @@
                             </small>
                           </div>
                         </div>
+                        } @else {
+                        <!-- Multi-brand mode - show each brand separately -->
+                        <div class="brands-list">
+                          @for (brand of rollInput.brands; track brand.id; let brandIndex = $index) {
+                          <div class="brand-entry-card mb-3"
+                            [style.border-left]="'4px solid ' + getBrandColor(brand.colorIndex)"
+                            [style.background-color]="getBrandBackgroundColor(brand.colorIndex)">
+                            <div class="brand-entry-header">
+                              <div class="brand-entry-title">
+                                <i class="bi bi-tag-fill me-1" [style.color]="getBrandColor(brand.colorIndex)"></i>
+                                <strong [style.color]="getBrandColor(brand.colorIndex)">Brand {{ brandIndex + 1
+                                  }}</strong>
+                              </div>
+                              @if (!selectedEntryForRollsView.currentRollSelection?.isLocked && rollInput.brands &&
+                              rollInput.brands.length > 1) {
+                              <button class="btn btn-sm btn-danger"
+                                (click)="removeBrandFromRoll(selectedEntryForRollsView, rollInput, brand.id)"
+                                title="Remove this brand">
+                                <i class="bi bi-trash"></i>
+                              </button>
+                              }
+                            </div>
+
+                            <!-- Brand Name and Bottle Size -->
+                            <div class="row g-2 mb-2">
+                              <div class="col-6">
+                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.brandName"
+                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
+                                  placeholder="Brand name" [style.border-color]="getBrandColor(brand.colorIndex)">
+                                <small class="text-muted d-block">Brand name</small>
+                              </div>
+                              <div class="col-6">
+                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.bottleSize"
+                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
+                                  placeholder="e.g., 750ml" [style.border-color]="getBrandColor(brand.colorIndex)">
+                                <small class="text-muted d-block">Bottle size</small>
+                              </div>
+                            </div>
+
+                            <!-- Usage and Damage Stats for this Brand -->
+                            @if (!selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <div class="brand-stats-row">
+                              <div class="stat-badge usage-badge">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Usage: <strong>{{ brand.issuedQty || 0 }}</strong>
+                              </div>
+                              <div class="stat-badge damage-badge">
+                                <i class="bi bi-x-circle me-1"></i>
+                                Damage: <strong>{{ brand.wastageQty || 0 }}</strong>
+                              </div>
+                            </div>
+                            } @else {
+                            <div class="brand-stats-row">
+                              <span class="text-muted small">
+                                <i class="bi bi-lock me-1"></i>
+                                Usage: {{ brand.issuedQty || 0 }} | Damage: {{ brand.wastageQty || 0 }}
+                              </span>
+                            </div>
+                            }
+                          </div>
+                          }
+                        </div>
+
+                        <!-- Total Summary when in multi-brand mode -->
+                        @if (rollInput.brands && rollInput.brands.length > 1) {
+                        <div class="multi-brand-summary"
+                          [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                          <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Total Usage: <strong>{{ rollInput.issuedQty || 0 }}</strong> |
+                            Total Damage: <strong>{{ rollInput.wastageQty || 0 }}</strong> |
+                            Leftover: <strong [class.text-danger]="rollInput.leftOver < 0">{{ rollInput.leftOver || 0
+                              }}</strong>
+                          </small>
+                        </div>
+                        }
+                        }
                       </div>
 
                       <!-- Allocated Ranges -->
@@ -654,13 +740,30 @@
                 </div>
               </td>
 
-              <!-- Brand Details - Per Roll -->
+              <!-- Brand Details - Per Roll with Multi-Brand Support -->
               <td class="brand-details">
                 @if (!entry.isFixed) {
                 <div class="range-input-container">
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show all brands -->
+                  @for (brand of rollInput.brands; track brand.id) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ $index + 1 }}</span>
+                    </div>
+                    <div class="brand-value">
+                      {{ brand.brandName || '-' }}
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section"
                     [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
                     [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
@@ -672,6 +775,8 @@
                       {{ rollInput.brandDetails || '-' }}
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -711,13 +816,30 @@
                 }
               </td>
 
-              <!-- Bottle Size - Per Roll -->
+              <!-- Bottle Size - Per Roll with Multi-Brand Support -->
               <td class="bottle-size">
                 @if (!entry.isFixed) {
                 <div class="range-input-container">
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show all brands -->
+                  @for (brand of rollInput.brands; track brand.id) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ $index + 1 }}</span>
+                    </div>
+                    <div class="bottle-value">
+                      {{ brand.bottleSize || '-' }}
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section"
                     [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
                     [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
@@ -729,6 +851,8 @@
                       {{ rollInput.bottleSize || '-' }}
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -775,13 +899,44 @@
                 </div>
               </td>
 
-              <!-- Issued From/To/Qty - Per Roll with Multiple Ranges -->
+              <!-- Issued From - Per Brand in Multi-Brand Mode -->
               <td class="issued-from">
                 @if (!entry.isFixed) {
                 <div class="range-input-container">
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show inputs for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.issuedRanges; track $index; let i = $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" class="form-control form-control-sm"
+                            [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
+                            (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="From"
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                          @if (brand.issuedRanges.length > 1) {
+                          <button class="btn-remove" (click)="removeIssuedRangeFromBrand(entry, brand, i)">
+                            <i class="bi bi-x"></i>
+                          </button>
+                          }
+                        </div>
+                      </div>
+                      }
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section"
                     [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
                     [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
@@ -813,6 +968,8 @@
                       }
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -863,6 +1020,32 @@
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show inputs for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.issuedRanges; track $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" class="form-control form-control-sm"
+                            [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
+                            (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="To"
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                        </div>
+                      </div>
+                      }
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section">
                     <div class="ranges-list">
                       @for (range of rollInput.issuedRanges; track $index) {
@@ -883,6 +1066,8 @@
                       }
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -925,6 +1110,39 @@
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show quantities for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.issuedRanges; track $index) {
+                      <div class="qty-row">
+                        <span class="qty-badge" [style.background-color]="getBrandColor(brand.colorIndex)">
+                          {{ range.quantity | number }}
+                        </span>
+                      </div>
+                      }
+                    </div>
+                    <div class="roll-subtotal" [style.color]="getBrandColor(brand.colorIndex)">
+                      <strong>{{ brand.issuedQty | number }}</strong>
+                    </div>
+
+                    <!-- Add Range Button Per Brand -->
+                    <button class="btn-add-range-icon" (click)="addIssuedRangeToBrand(entry, brand)"
+                      title="Add range to brand" [style.border-color]="getBrandColor(brand.colorIndex)"
+                      [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-plus-circle-fill"></i>
+                    </button>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section">
                     <div class="ranges-list">
                       @for (range of rollInput.issuedRanges; track $index) {
@@ -939,13 +1157,15 @@
                       <strong>{{ rollInput.issuedQty | number }}</strong>
                     </div>
 
-                    <!-- Add Range Button -->
+                    <!-- Add Range Button (Legacy) -->
                     <button class="btn-add-range-icon" (click)="addIssuedRange(entry)" title="Add issued range"
                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
                       [style.color]="getRollColor(getCurrentRollIndex(entry))">
                       <i class="bi bi-plus-circle-fill"></i>
                     </button>
                   </div>
+                  }
+
                   }
                   }
 
@@ -990,13 +1210,44 @@
                 }
               </td>
 
-              <!-- Wastage From/To/Qty - Per Roll with Multiple Ranges -->
+              <!-- Wastage From - Per Brand in Multi-Brand Mode -->
               <td class="wastage-from">
                 @if (!entry.isFixed) {
                 <div class="range-input-container">
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show inputs for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.wastageRanges; track $index; let i = $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" class="form-control form-control-sm"
+                            [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
+                            (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="From"
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                          @if (brand.wastageRanges.length > 1) {
+                          <button class="btn-remove" (click)="removeWastageRangeFromBrand(entry, brand, i)">
+                            <i class="bi bi-x"></i>
+                          </button>
+                          }
+                        </div>
+                      </div>
+                      }
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section"
                     [style.background-color]="getRollBackgroundColor(getCurrentRollIndex(entry))"
                     [style.border-color]="getRollColor(getCurrentRollIndex(entry))">
@@ -1024,6 +1275,8 @@
                       }
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -1071,6 +1324,32 @@
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show inputs for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.wastageRanges; track $index) {
+                      <div class="range-input-row">
+                        <div class="input-wrapper">
+                          <input type="text" class="form-control form-control-sm"
+                            [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
+                            (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="To"
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                        </div>
+                      </div>
+                      }
+                    </div>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section">
                     <div class="ranges-list">
                       @for (range of rollInput.wastageRanges; track $index) {
@@ -1091,6 +1370,8 @@
                       }
                     </div>
                   </div>
+                  }
+
                   }
                   }
 
@@ -1133,6 +1414,39 @@
                   <!-- Current Roll Input (only show if NOT locked/read-only) -->
                   @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
                   @if (!isCurrentRollLocked(entry)) {
+
+                  @if (isMultiBrandMode(rollInput)) {
+                  <!-- Multi-Brand Mode: Show quantities for each brand -->
+                  @for (brand of rollInput.brands; track brand.id; let brandIdx = $index) {
+                  <div class="current-roll-section" [style.background-color]="getBrandBackgroundColor(brand.colorIndex)"
+                    [style.border-color]="getBrandColor(brand.colorIndex)">
+                    <div class="roll-label" [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-tag-fill"></i>
+                      <span>Brand {{ brandIdx + 1 }}</span>
+                    </div>
+                    <div class="ranges-list">
+                      @for (range of brand.wastageRanges; track $index) {
+                      <div class="qty-row">
+                        <span class="qty-badge" [style.background-color]="getBrandColor(brand.colorIndex)">
+                          {{ range.quantity | number }}
+                        </span>
+                      </div>
+                      }
+                    </div>
+                    <div class="roll-subtotal" [style.color]="getBrandColor(brand.colorIndex)">
+                      <strong>{{ brand.wastageQty | number }}</strong>
+                    </div>
+
+                    <!-- Add Range Button Per Brand -->
+                    <button class="btn-add-range-icon" (click)="addWastageRangeToBrand(entry, brand)"
+                      title="Add wastage range to brand" [style.border-color]="getBrandColor(brand.colorIndex)"
+                      [style.color]="getBrandColor(brand.colorIndex)">
+                      <i class="bi bi-plus-circle-fill"></i>
+                    </button>
+                  </div>
+                  }
+                  } @else {
+                  <!-- Legacy Single Brand Mode -->
                   <div class="current-roll-section">
                     <div class="ranges-list">
                       @for (range of rollInput.wastageRanges; track $index) {
@@ -1147,13 +1461,15 @@
                       <strong>{{ rollInput.wastageQty | number }}</strong>
                     </div>
 
-                    <!-- Add Range Button -->
+                    <!-- Add Range Button (Legacy) -->
                     <button class="btn-add-range-icon" (click)="addWastageRange(entry)" title="Add wastage range"
                       [style.border-color]="getRollColor(getCurrentRollIndex(entry))"
                       [style.color]="getRollColor(getCurrentRollIndex(entry))">
                       <i class="bi bi-plus-circle-fill"></i>
                     </button>
                   </div>
+                  }
+
                   }
                   }
 
