@@ -119,11 +119,11 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   // For usage details modal
   selectedEntryForDetails: RegisterEntry | null = null;
   selectedRollTabIndex: number = 0;
-  
+
   // View state management
   private viewDetailsState: { [key: string]: boolean } = {};
   private readonly VIEW_STATE_KEY = 'hologramViewState';
-  
+
   // Subscription management
   private requestUpdateSubscription?: Subscription;
   private routerSubscription?: Subscription;
@@ -147,7 +147,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
       // Force change detection
       this.cdr.detectChanges();
     });
-    
+
     // CRITICAL: Also reload when navigating to this component
     // This ensures fresh data when user switches tabs/pages
     this.routerSubscription = this.router.events
@@ -163,11 +163,11 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
           }
         }
       });
-    
+
     // CRITICAL: Reload when page becomes visible (user switches back to this tab)
     // This catches the case where approval happens in another tab/window
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
-    
+
     console.log('✅ Daily Register: Subscribed to requestUpdate$, router events, and visibility changes');
 
     // CRITICAL FIX: Recalculate Available Hologram Data from Rolls data
@@ -215,7 +215,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     // Track load time to prevent duplicate loads
     this.lastLoadTime = Date.now();
     console.log('🔄 Loading approved entries at:', new Date().toLocaleTimeString());
-    
+
     // Load from Backend API - Fetch all hologram_request entries AND procurements
     // Requests have basic info, Procurements have the source of truth for Carton Ranges
 
@@ -389,7 +389,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
           const savedForRequest = savedEntriesMap.get(normalizedReqRef) || [];
           const hasSavedEntries = savedForRequest.length > 0;
-          
+
           // FIX: If there are ANY saved entries in the database, mark as saved
           // The presence of saved entries means data has been saved to the database
           // This is the key fix: having saved entries = entry is fixed/saved, regardless of is_fixed field value
@@ -404,7 +404,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               console.warn('🔍 DEBUG: First saved entry from database:', saved);
               console.warn('🔍 Available keys in saved entry:', Object.keys(saved));
             }
-            
+
             // Handle both snake_case (backend) and camelCase (frontend) field names
             const savedRollRange = saved.roll_range || saved.rollRange || '';
             const brandDetails = saved.brand_details || saved.brandDetails || '';
@@ -419,27 +419,27 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             const damageReason = saved.damage_reason || saved.damageReason || '';
             const issuedRangesField = saved.issued_ranges || saved.issuedRanges;
             const wastageRangesField = saved.wastage_ranges || saved.wastageRanges;
-            
+
             // Find the allocated range for this roll from allocatedRanges
-            const allocatedRange = allocatedRanges.find((ar: any) => 
-              (ar.cartoonNumber && savedRollRange && 
-               (ar.cartoonNumber === savedRollRange || 
+            const allocatedRange = allocatedRanges.find((ar: any) =>
+            (ar.cartoonNumber && savedRollRange &&
+              (ar.cartoonNumber === savedRollRange ||
                 ar.cartoonNumber?.toUpperCase() === savedRollRange.toUpperCase()))
             );
-            
+
             // Use allocated range for serialRange display, fallback to issued range if not found
             const allocatedFromSerial = allocatedRange?.fromSerial || '';
             const allocatedToSerial = allocatedRange?.toSerial || '';
-            const displaySerialRange = (allocatedFromSerial && allocatedToSerial) 
+            const displaySerialRange = (allocatedFromSerial && allocatedToSerial)
               ? `${allocatedFromSerial} - ${allocatedToSerial}`
-              : (issuedFrom && issuedTo 
-                ? `${issuedFrom} - ${issuedTo}` 
+              : (issuedFrom && issuedTo
+                ? `${issuedFrom} - ${issuedTo}`
                 : '-');
-            
+
             // Parse issued_ranges and wastage_ranges - handle both JSON strings and arrays
             let issuedRanges: any[] = [];
             let wastageRanges: any[] = [];
-            
+
             if (issuedRangesField) {
               if (typeof issuedRangesField === 'string') {
                 try {
@@ -452,7 +452,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 issuedRanges = issuedRangesField;
               }
             }
-            
+
             // If issued_ranges is empty but we have issued_from/issued_to, create a range entry
             if (issuedRanges.length === 0 && issuedFrom && issuedTo && issuedQty) {
               issuedRanges = [{
@@ -461,7 +461,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 quantity: issuedQty || 0
               }];
             }
-            
+
             if (wastageRangesField) {
               if (typeof wastageRangesField === 'string') {
                 try {
@@ -474,7 +474,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 wastageRanges = wastageRangesField;
               }
             }
-            
+
             // If wastage_ranges is empty but we have wastage_from/wastage_to, create a range entry
             if (wastageRanges.length === 0 && wastageFrom && wastageTo && wastageQty) {
               wastageRanges = [{
@@ -483,10 +483,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 quantity: wastageQty || 0
               }];
             }
-            
+
             // Create unique ID for tracking (use saved entry ID if available, otherwise use index)
             const uniqueId = saved.id || saved.Id || `${reqRef}_${index}_${Date.now()}`;
-            
+
             return {
               id: uniqueId, // Add unique ID for tracking
               cartoonNumber: savedRollRange || `ROLL_${index}`, // Fallback to prevent empty string
@@ -513,19 +513,19 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
           // Calculate total issued/wastage from all locked rolls
           const totalIssuedQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.issuedQty || 0), 0);
           const totalWastageQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.wastageQty || 0), 0);
-          
+
           // Get aggregated display values from all saved entries
           // Handle both snake_case (backend) and camelCase (frontend) field names
           const allIssuedFroms = savedForRequest.map((s: any) => s.issued_from || s.issuedFrom).filter(Boolean);
           const allIssuedTos = savedForRequest.map((s: any) => s.issued_to || s.issuedTo).filter(Boolean);
           const allWastageFroms = savedForRequest.map((s: any) => s.wastage_from || s.wastageFrom).filter(Boolean);
           const allWastageTos = savedForRequest.map((s: any) => s.wastage_to || s.wastageTo).filter(Boolean);
-          
+
           const aggregatedIssuedFrom = allIssuedFroms.length > 0 ? allIssuedFroms[0] : '';
           const aggregatedIssuedTo = allIssuedTos.length > 0 ? allIssuedTos[allIssuedTos.length - 1] : '';
           const aggregatedWastageFrom = allWastageFroms.length > 0 ? allWastageFroms[0] : '';
           const aggregatedWastageTo = allWastageTos.length > 0 ? allWastageTos[allWastageTos.length - 1] : '';
-          
+
           // Get the first saved entry for other fields
           const firstSavedEntry = savedForRequest.length > 0 ? savedForRequest[0] : null;
           const aggregatedDamageReason = firstSavedEntry?.damage_reason || firstSavedEntry?.damageReason || '';
@@ -544,7 +544,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               wastageRangesCount: r.wastageRanges?.length || 0
             })));
           }
-          
+
           // Debug: Log hologram type for all entries
           const hologramType = (req.hologram_type || req.hologramType || 'LOCAL').toString().toUpperCase();
           console.log(`🔍 Entry ${reqRef}: hologram_type=${req.hologram_type}, hologramType=${req.hologramType}, finalType=${hologramType}`);
@@ -595,15 +595,15 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         // These are entries that were saved but may not have a matching request in the filtered list
         const standaloneEntries: any[] = [];
         const processedRefs = new Set(apiEntries.map((e: any) => e.referenceNo?.toUpperCase()));
-        
+
         // Process saved entries that don't have a matching request entry
         savedEntriesMap.forEach((savedEntries, refKey) => {
           if (!processedRefs.has(refKey)) {
             console.log(`📋 Found standalone saved entries for ${refKey} (no matching request in filtered list)`);
-            
+
             // Group saved entries by reference_no to create a single display entry
             const firstSaved = savedEntries[0];
-            
+
             // Build lockedRolls from all saved entries for this reference
             const lockedRolls = savedEntries.map((saved: any) => {
               const savedRollRange = saved.roll_range || saved.rollRange || '';
@@ -617,11 +617,11 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               const wastageTo = saved.wastage_to || saved.wastageTo || '';
               const wastageQty = saved.wastage_qty || saved.wastageQty || 0;
               const damageReason = saved.damage_reason || saved.damageReason || '';
-              
+
               // Parse ranges
               let issuedRanges: any[] = [];
               let wastageRanges: any[] = [];
-              
+
               const issuedRangesField = saved.issued_ranges || saved.issuedRanges;
               if (issuedRangesField) {
                 if (typeof issuedRangesField === 'string') {
@@ -633,7 +633,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               if (issuedRanges.length === 0 && issuedFrom && issuedTo && issuedQty) {
                 issuedRanges = [{ fromSerial: issuedFrom, toSerial: issuedTo, quantity: issuedQty }];
               }
-              
+
               const wastageRangesField = saved.wastage_ranges || saved.wastageRanges;
               if (wastageRangesField) {
                 if (typeof wastageRangesField === 'string') {
@@ -645,7 +645,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               if (wastageRanges.length === 0 && wastageFrom && wastageTo && wastageQty) {
                 wastageRanges = [{ fromSerial: wastageFrom, toSerial: wastageTo, quantity: wastageQty }];
               }
-              
+
               return {
                 cartoonNumber: savedRollRange,
                 displayName: savedRollRange,
@@ -664,15 +664,15 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
                 isLocked: true
               };
             });
-            
+
             // Calculate totals
             const totalIssuedQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.issuedQty || 0), 0);
             const totalWastageQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.wastageQty || 0), 0);
             const totalHologramQty = lockedRolls.reduce((sum: number, r: any) => sum + (r.availableCount || 0), 0);
-            
+
             // Get hologram type from saved entry or default to LOCAL
             const hologramType = (firstSaved.hologram_type || 'LOCAL').toString().toUpperCase();
-            
+
             standaloneEntries.push({
               id: firstSaved.id || `standalone_${refKey}`,
               requestId: firstSaved.hologram_request || null,
@@ -705,9 +705,9 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
             });
           }
         });
-        
+
         console.log(`✅ Found ${standaloneEntries.length} standalone saved entries`);
-        
+
         // Merge API entries with standalone saved entries
         const allEntries = [...apiEntries, ...standaloneEntries];
         console.log('✅ Total entries after merge:', allEntries.length);
@@ -1099,7 +1099,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     // If rolls are explicitly assigned (allAllocations > 0), show ONLY those rolls
     if (allAllocations.length === 0) {
       console.log(`🏊 NO ALLOCATIONS FOUND - Checking Stock Pool and localStorage fallback`);
-      
+
       // Try procurement cache first
       if (this.procurementCache && this.procurementCache.length > 0) {
         console.log(`📦 Accessing Stock Pool (Cache: ${this.procurementCache.length}) for Type: ${entry.hologramType}`);
@@ -1160,7 +1160,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         });
         console.log(`✅ Final available rolls count from Stock Pool: ${availableRolls.length}`);
       }
-      
+
       // Fallback to localStorage ONLY if no rolls found yet
       if (availableRolls.length === 0) {
         console.log(`⚠️ No rolls from cache, trying localStorage fallback`);
@@ -1968,13 +1968,56 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   }
 
   unlockRollForEntry(entry: RegisterEntry, cartoonNumber: string): void {
+    console.log('🔓 Unlocking roll:', cartoonNumber);
+
     const lockedRolls = entry.lockedRolls || [];
-    const index = lockedRolls.findIndex(r => r.cartoonNumber === cartoonNumber);
+
+    // Find the roll to unlock - check both cartoonNumber and rangeId
+    const index = lockedRolls.findIndex(r =>
+      r.cartoonNumber === cartoonNumber ||
+      r.rangeId === cartoonNumber
+    );
 
     if (index !== -1) {
+      // Get the roll data before removing it
+      const rollToUnlock = lockedRolls[index];
+
+      console.log('📦 Roll to unlock:', rollToUnlock);
+
+      // Remove from locked rolls
       lockedRolls.splice(index, 1);
+
+      // Restore it as the current roll selection for editing
+      entry.currentRollSelection = {
+        selectedRoll: rollToUnlock.rangeId || rollToUnlock.cartoonNumber,
+        rollInput: rollToUnlock,
+        isLocked: false // CRITICAL: Set to false to allow editing
+      };
+
+      // Recalculate entry totals from remaining locked rolls
       this.recalculateEntryFromLockedRolls(entry);
+
+      // Update the rolls view if this entry is currently being viewed
+      if (this.selectedEntryForRollsView?.id === entry.id) {
+        this.updateRollsView(entry);
+      }
+
       this.cdr.detectChanges();
+
+      console.log('✅ Roll unlocked successfully! You can now edit the data.');
+
+      alert(`Roll ${rollToUnlock.displayName || rollToUnlock.cartoonNumber} has been unlocked!
+
+You can now edit:
+- Brand details
+- Bottle size  
+- Usage ranges (Issued From/To)
+- Wastage ranges (Damaged From/To)
+- Damage reason
+
+After editing, click "Lock" to save your changes.`);
+    } else {
+      console.warn('⚠️ Roll not found in locked rolls:', cartoonNumber);
     }
   }
 
@@ -2164,22 +2207,22 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
         // Update local stats for immediate display
         this.cdr.detectChanges();
-        
+
         // Notify other components that daily register has been updated
         this.hologramService.notifyDailyRegisterUpdate();
-        
+
         // Also notify request update to refresh "Currently Issued Holograms" tab
         // (to remove the request from there since it's now completed)
         this.hologramService.notifyRequestUpdate();
-        
+
         // CRITICAL FIX: Reload data from backend to show saved entries
         console.log('🔄 Reloading data from backend after successful save...');
         this.loadApprovedEntries();
-        
+
         // CRITICAL FIX: Close the rolls view panel after successful save
         console.log('🔒 Closing rolls view panel after successful save...');
         this.clearRollsView();
-        
+
         alert('✅ All entries saved to database successfully!');
       } else {
         alert(`⚠️ Completed with ${errors} errors. Please check console.`);
