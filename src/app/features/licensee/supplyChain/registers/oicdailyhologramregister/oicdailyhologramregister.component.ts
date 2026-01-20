@@ -138,6 +138,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   // View state management
   private viewDetailsState: { [key: string]: boolean } = {};
   private readonly VIEW_STATE_KEY = 'hologramViewState';
+  private readonly INPUT_STATE_KEY = 'hologramInputState';
 
   // Subscription management
   private requestUpdateSubscription?: Subscription;
@@ -199,6 +200,8 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
       // Only reload if more than 3 seconds have passed since last load
       if (now - this.lastLoadTime > 3000) {
         console.log('👁️ Daily Register: Page became visible, reloading entries');
+        // CRITICAL FIX: Save current input state before reloading
+        this.saveInputState();
         this.loadApprovedEntries();
       }
     }
@@ -761,6 +764,9 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
         }));
 
         console.log('✅ Final entries:', this.entries.length);
+
+        // CRITICAL FIX: Restore input state after loading entries
+        this.restoreInputState();
 
         // Refresh filtering
         this.loadFilteredData();
@@ -1329,6 +1335,9 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     console.log(`🎯 Selected range ${roll.displayName} (${selectedRollId}), serial range: ${roll.serialRange}`);
+    
+    // Save input state after selecting a roll
+    this.saveInputState();
   }
 
 
@@ -1718,6 +1727,9 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     // Recalculate entry totals from all rolls (locked + current)
     this.recalculateEntryFromLockedRolls(entry);
     this.cdr.detectChanges();
+    
+    // Save input state after any change
+    this.saveInputState();
   }
 
   addIssuedRange(entry: RegisterEntry): void {
@@ -2247,26 +2259,176 @@ After editing, click "Lock" to save your changes.`);
       return;
     }
 
+    // Get allocated ranges for validation
+    const allocatedRanges = this.getAllocatedRangesForRoll(
+      this.entries.find(e => e.currentRollSelection?.rollInput === rollInput)!,
+      rollInput.rangeId || rollInput.cartoonNumber
+    );
+
     let totalIssued = 0;
     let totalWastage = 0;
 
     rollInput.brands.forEach(brand => {
-      // Recalculate brand's quantities from ranges
-      brand.issuedQty = brand.issuedRanges
-        .filter(r => r.fromSerial && r.toSerial)
-        .reduce((sum, r) => sum + (r.quantity || 0), 0);
+      // Validate and calculate issued ranges for this brand
+      brand.issuedQty = brand.issuedRanges.reduce((sum, range) => {
+        range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
 
-      brand.wastageQty = brand.wastageRanges
-        .filter(r => r.fromSerial && r.toSerial)
-        .reduce((sum, r) => sum + (r.quantity || 0), 0);
+        // Validate range against the allocated range(s)
+        if (allocatedRanges.length > 0) {
+          const validation = this.validateSerialRangeInAllocatedRanges(
+            range.fromSerial,
+            range.toSerial,
+            allocatedRanges
+          );
+          range.isValid = validation.isValid;
+          range.errorMessage = validation.errorMessage;
+        } else {
+          range.isValid = true;
+          range.errorMessage = '';
+        }
+
+        return sum + range.quantity;
+      }, 0);
+
+      // Validate and calculate wastage ranges for this brand
+      brand.wastageQty = brand.wastageRanges.reduce((sum, range) => {
+        range.quantity = this.calculateQuantityFromSerials(range.fromSerial, range.toSerial);
+
+        // Validate range against the allocated range(s)
+        if (allocatedRanges.length > 0) {
+          const validation = this.validateSerialRangeInAllocatedRanges(
+            range.fromSerial,
+            range.toSerial,
+            allocatedRanges
+          );
+          range.isValid = validation.isValid;
+          range.errorMessage = validation.errorMessage;
+        } else {
+          range.isValid = true;
+          range.errorMessage = '';
+        }
+
+        return sum + range.quantity;
+      }, 0);
 
       totalIssued += brand.issuedQty;
       totalWastage += brand.wastageQty;
     });
 
+    // Validate that issued ranges don't overlap within each brand
+    rollInput.brands.forEach(brand => {
+      const issuedOverlapCheck = this.validateNoOverlapWithinCategory(brand.issuedRanges);
+      if (!issuedOverlapCheck.isValid) {
+        brand.issuedRanges.forEach((range) => {
+          if (range.fromSerial && range.toSerial) {
+            range.isValid = false;
+            range.errorMessage = `Issued ranges overlap within this brand: ${issuedOverlapCheck.overlappingRanges[0]}`;
+          }
+        });
+      }
+
+      const wastageOverlapCheck = this.validateNoOverlapWithinCategory(brand.wastageRanges);
+      if (!wastageOverlapCheck.isValid) {
+        brand.wastageRanges.forEach((range) => {
+          if (range.fromSerial && range.toSerial) {
+            range.isValid = false;
+            range.errorMessage = `Wastage ranges overlap within this brand: ${wastageOverlapCheck.overlappingRanges[0]}`;
+          }
+        });
+      }
+
+      const crossOverlapCheck = this.validateNoOverlapBetweenIssuedAndWastage(
+        brand.issuedRanges,
+        brand.wastageRanges
+      );
+      if (!crossOverlapCheck.isValid) {
+        brand.issuedRanges.forEach((issued) => {
+          if (!issued.fromSerial || !issued.toSerial) return;
+          brand.wastageRanges.forEach((wastage) => {
+            if (!wastage.fromSerial || !wastage.toSerial) return;
+            if (this.checkRangeOverlap(issued.fromSerial, issued.toSerial, wastage.fromSerial, wastage.toSerial)) {
+              issued.isValid = false;
+              issued.errorMessage = `Overlaps with wastage range (${wastage.fromSerial}-${wastage.toSerial}) in this brand`;
+              wastage.isValid = false;
+              wastage.errorMessage = `Overlaps with issued range (${issued.fromSerial}-${issued.toSerial}) in this brand`;
+            }
+          });
+        });
+      }
+    });
+
+    // Validate that ranges don't overlap across different brands
+    for (let i = 0; i < rollInput.brands.length; i++) {
+      for (let j = i + 1; j < rollInput.brands.length; j++) {
+        const brand1 = rollInput.brands[i];
+        const brand2 = rollInput.brands[j];
+
+        // Check issued ranges across brands
+        brand1.issuedRanges.forEach((range1) => {
+          if (!range1.fromSerial || !range1.toSerial) return;
+          brand2.issuedRanges.forEach((range2) => {
+            if (!range2.fromSerial || !range2.toSerial) return;
+            if (this.checkRangeOverlap(range1.fromSerial, range1.toSerial, range2.fromSerial, range2.toSerial)) {
+              range1.isValid = false;
+              range1.errorMessage = `Overlaps with Brand ${j + 1} issued range (${range2.fromSerial}-${range2.toSerial})`;
+              range2.isValid = false;
+              range2.errorMessage = `Overlaps with Brand ${i + 1} issued range (${range1.fromSerial}-${range1.toSerial})`;
+            }
+          });
+        });
+
+        // Check wastage ranges across brands
+        brand1.wastageRanges.forEach((range1) => {
+          if (!range1.fromSerial || !range1.toSerial) return;
+          brand2.wastageRanges.forEach((range2) => {
+            if (!range2.fromSerial || !range2.toSerial) return;
+            if (this.checkRangeOverlap(range1.fromSerial, range1.toSerial, range2.fromSerial, range2.toSerial)) {
+              range1.isValid = false;
+              range1.errorMessage = `Overlaps with Brand ${j + 1} wastage range (${range2.fromSerial}-${range2.toSerial})`;
+              range2.isValid = false;
+              range2.errorMessage = `Overlaps with Brand ${i + 1} wastage range (${range1.fromSerial}-${range1.toSerial})`;
+            }
+          });
+        });
+
+        // Check issued vs wastage across brands
+        brand1.issuedRanges.forEach((range1) => {
+          if (!range1.fromSerial || !range1.toSerial) return;
+          brand2.wastageRanges.forEach((range2) => {
+            if (!range2.fromSerial || !range2.toSerial) return;
+            if (this.checkRangeOverlap(range1.fromSerial, range1.toSerial, range2.fromSerial, range2.toSerial)) {
+              range1.isValid = false;
+              range1.errorMessage = `Overlaps with Brand ${j + 1} wastage range (${range2.fromSerial}-${range2.toSerial})`;
+              range2.isValid = false;
+              range2.errorMessage = `Overlaps with Brand ${i + 1} issued range (${range1.fromSerial}-${range1.toSerial})`;
+            }
+          });
+        });
+
+        brand2.issuedRanges.forEach((range2) => {
+          if (!range2.fromSerial || !range2.toSerial) return;
+          brand1.wastageRanges.forEach((range1) => {
+            if (!range1.fromSerial || !range1.toSerial) return;
+            if (this.checkRangeOverlap(range1.fromSerial, range1.toSerial, range2.fromSerial, range2.toSerial)) {
+              range1.isValid = false;
+              range1.errorMessage = `Overlaps with Brand ${i + 1} issued range (${range2.fromSerial}-${range2.toSerial})`;
+              range2.isValid = false;
+              range2.errorMessage = `Overlaps with Brand ${j + 1} wastage range (${range1.fromSerial}-${range1.toSerial})`;
+            }
+          });
+        });
+      }
+    }
+
     rollInput.issuedQty = totalIssued;
     rollInput.wastageQty = totalWastage;
     rollInput.leftOver = rollInput.availableCount - totalIssued - totalWastage;
+
+    // Trigger change detection
+    this.cdr.detectChanges();
+    
+    // Save input state after brand changes
+    this.saveInputState();
   }
 
   // Validate that total brand quantities don't exceed available count
@@ -2511,6 +2673,9 @@ After editing, click "Lock" to save your changes.`);
         // Also notify request update to refresh "Currently Issued Holograms" tab
         // (to remove the request from there since it's now completed)
         this.hologramService.notifyRequestUpdate();
+
+        // CRITICAL FIX: Clear saved input state after successful save
+        this.clearInputState();
 
         // CRITICAL FIX: Reload data from backend to show saved entries
         console.log('🔄 Reloading data from backend after successful save...');
@@ -3274,6 +3439,77 @@ After editing, click "Lock" to save your changes.`);
     } catch (e) {
       console.error('Error loading view state:', e);
       this.viewDetailsState = {};
+    }
+  }
+
+  // Input state management methods - Save and restore current input data
+  private saveInputState(): void {
+    try {
+      const inputState: any = {};
+      
+      // Save current input state for each entry
+      this.entries.forEach(entry => {
+        if (entry.currentRollSelection && !entry.isFixed) {
+          inputState[entry.id] = {
+            selectedRoll: entry.currentRollSelection.selectedRoll,
+            rollInput: {
+              ...entry.currentRollSelection.rollInput,
+              // Ensure brands are saved if in multi-brand mode
+              brands: entry.currentRollSelection.rollInput.brands || []
+            },
+            isLocked: entry.currentRollSelection.isLocked
+          };
+        }
+      });
+
+      if (Object.keys(inputState).length > 0) {
+        localStorage.setItem(this.INPUT_STATE_KEY, JSON.stringify(inputState));
+        console.log('💾 Saved input state for', Object.keys(inputState).length, 'entries');
+      }
+    } catch (e) {
+      console.error('Error saving input state:', e);
+    }
+  }
+
+  private restoreInputState(): void {
+    try {
+      const savedState = localStorage.getItem(this.INPUT_STATE_KEY);
+      if (!savedState) {
+        console.log('📭 No saved input state found');
+        return;
+      }
+
+      const inputState = JSON.parse(savedState);
+      let restoredCount = 0;
+
+      // Restore input state for each entry
+      this.entries.forEach(entry => {
+        if (inputState[entry.id] && !entry.isFixed) {
+          entry.currentRollSelection = {
+            selectedRoll: inputState[entry.id].selectedRoll,
+            rollInput: inputState[entry.id].rollInput,
+            isLocked: inputState[entry.id].isLocked
+          };
+          restoredCount++;
+        }
+      });
+
+      if (restoredCount > 0) {
+        console.log('✅ Restored input state for', restoredCount, 'entries');
+        // Clear the saved state after restoring to avoid stale data
+        // localStorage.removeItem(this.INPUT_STATE_KEY);
+      }
+    } catch (e) {
+      console.error('Error restoring input state:', e);
+    }
+  }
+
+  private clearInputState(): void {
+    try {
+      localStorage.removeItem(this.INPUT_STATE_KEY);
+      console.log('🗑️ Cleared input state');
+    } catch (e) {
+      console.error('Error clearing input state:', e);
     }
   }
 
