@@ -258,6 +258,12 @@
                           <i class="bi bi-clock me-1"></i>
                           In Progress
                         </span>
+                        <button class="btn btn-sm btn-success ms-2"
+                          (click)="lockRollForEntry(selectedEntryForRollsView)"
+                          [disabled]="!canLockRoll(selectedEntryForRollsView)" title="Lock this roll data">
+                          <i class="bi bi-lock-fill me-1"></i>
+                          Lock Data
+                        </button>
                         <button class="btn btn-sm btn-outline-danger ms-2"
                           (click)="markRollAsNotInUse(selectedEntryForRollsView, rollInput)"
                           title="Mark this roll as Not In Use (Skip)">
@@ -293,7 +299,8 @@
                             <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.brandDetails"
                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                               placeholder="Enter brand details"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
+                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
@@ -306,7 +313,8 @@
                             <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.bottleSize"
                               [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
                               placeholder="e.g., 750ml"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
+                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
@@ -344,13 +352,15 @@
                               <div class="col-6">
                                 <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.brandName"
                                   [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="Brand name" [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  placeholder="Brand name" [style.border-color]="getBrandColor(brand.colorIndex)"
+                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
                                 <small class="text-muted d-block">Brand name</small>
                               </div>
                               <div class="col-6">
                                 <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.bottleSize"
                                   [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="e.g., 750ml" [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  placeholder="e.g., 750ml" [style.border-color]="getBrandColor(brand.colorIndex)"
+                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
                                 <small class="text-muted d-block">Bottle size</small>
                               </div>
                             </div>
@@ -923,7 +933,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
                             (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="From"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)"
+                            (keyup.enter)="lockRollForEntry(entry)">
                           @if (brand.issuedRanges.length > 1) {
                           <button class="btn-remove" (click)="removeIssuedRangeFromBrand(entry, brand, i)">
                             <i class="bi bi-x"></i>
@@ -951,7 +962,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
                             (ngModelChange)="onRollInputChange(entry)" placeholder="From"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))"
+                            (keyup.enter)="lockRollForEntry(entry)">
                           @if (rollInput.issuedRanges.length > 1) {
                           <button class="btn-remove" (click)="removeIssuedRange(entry, i)">
                             <i class="bi bi-x"></i>
@@ -1037,7 +1049,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
                             (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="To"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)"
+                            (keyup.enter)="lockRollForEntry(entry)">
                         </div>
                       </div>
                       }
@@ -1054,7 +1067,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
                             (ngModelChange)="onRollInputChange(entry)" placeholder="To"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))"
+                            (keyup.enter)="lockRollForEntry(entry)">
                         </div>
                         @if (range.isValid === false && range.errorMessage) {
                         <div class="invalid-feedback d-block">
@@ -1234,7 +1248,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
                             (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="From"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)"
+                            (keyup.enter)="lockRollForEntry(entry)">
                           @if (brand.wastageRanges.length > 1) {
                           <button class="btn-remove" (click)="removeWastageRangeFromBrand(entry, brand, i)">
                             <i class="bi bi-x"></i>
@@ -1258,7 +1273,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.fromSerial"
                             (ngModelChange)="onRollInputChange(entry)" placeholder="From"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))"
+                            (keyup.enter)="lockRollForEntry(entry)">
                           @if (rollInput.wastageRanges.length > 1) {
                           <button class="btn-remove" (click)="removeWastageRange(entry, i)">
                             <i class="bi bi-x"></i>
@@ -1341,7 +1357,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
                             (ngModelChange)="recalculateBrandTotals(rollInput)" placeholder="To"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getBrandColor(brand.colorIndex)"
+                            (keyup.enter)="lockRollForEntry(entry)">
                         </div>
                       </div>
                       }
@@ -1358,7 +1375,8 @@
                           <input type="text" class="form-control form-control-sm"
                             [class.is-invalid]="range.isValid === false" [(ngModel)]="range.toSerial"
                             (ngModelChange)="onRollInputChange(entry)" placeholder="To"
-                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))">
+                            [style.border-color]="range.isValid === false ? '#dc3545' : getRollColor(getCurrentRollIndex(entry))"
+                            (keyup.enter)="lockRollForEntry(entry)">
                         </div>
                         @if (range.isValid === false && range.errorMessage) {
                         <div class="invalid-feedback d-block">

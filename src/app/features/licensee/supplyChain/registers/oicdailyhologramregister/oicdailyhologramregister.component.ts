@@ -1052,7 +1052,16 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     const allocatedRanges = (entry as any).allocatedRanges || [];
 
     // Combine both sources
-    const allAllocations = [...rollsAssigned, ...allocatedRanges];
+    // CRITICAL FIX: Use rollsAssigned if available (most specific), otherwise fallback to allocatedRanges
+    // Do NOT combine both to avoid duplicates
+    let allAllocations: any[] = [];
+    if (rollsAssigned && rollsAssigned.length > 0) {
+      allAllocations = rollsAssigned;
+      console.log('✅ Using rollsAssigned for available rolls (Priority 1)');
+    } else {
+      allAllocations = allocatedRanges;
+      console.log('ℹ️ Using allocatedRanges for available rolls (Priority 2)');
+    }
 
     console.log('📦 API allocated rolls:', allAllocations);
 
@@ -1775,87 +1784,142 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    // Check if brand details and bottle size are filled
-    if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') return false;
-    if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') return false;
+    // CRITICAL FIX: Handle both single-brand and multi-brand modes
+    const isMultiBrand = this.isMultiBrandMode(rollInput);
+
+    if (isMultiBrand) {
+      // Multi-brand mode validation
+      if (!rollInput.brands || rollInput.brands.length === 0) return false;
+
+      // Check if all brands have brand name and bottle size filled
+      const allBrandsHaveDetails = rollInput.brands.every((brand) => {
+        const hasBrandName = !!brand.brandName && brand.brandName.trim() !== '';
+        const hasBottleSize = !!brand.bottleSize && brand.bottleSize.trim() !== '';
+        return hasBrandName && hasBottleSize;
+      });
+
+      if (!allBrandsHaveDetails) return false;
+
+      // Check if at least ONE brand has valid ranges
+      let hasValidRangeInAnyBrand = false;
+
+      for (const brand of rollInput.brands) {
+        // Check issued ranges for this brand
+        if (brand.issuedRanges && brand.issuedRanges.length > 0) {
+          const hasValidIssued = brand.issuedRanges.some((range) => {
+            const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+            const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+            return hasFrom && hasTo && range.quantity > 0 && range.isValid !== false;
+          });
+          if (hasValidIssued) {
+            hasValidRangeInAnyBrand = true;
+            break;
+          }
+        }
+
+        // Check wastage ranges for this brand
+        if (brand.wastageRanges && brand.wastageRanges.length > 0) {
+          const hasValidWastage = brand.wastageRanges.some((range) => {
+            const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+            const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+            return hasFrom && hasTo && range.quantity > 0 && range.isValid !== false;
+          });
+          if (hasValidWastage) {
+            hasValidRangeInAnyBrand = true;
+            break;
+          }
+        }
+      }
+
+      if (!hasValidRangeInAnyBrand) return false;
+    } else {
+      // Single-brand mode validation (legacy)
+      // Check if brand details and bottle size are filled
+      if (!rollInput.brandDetails || rollInput.brandDetails.trim() === '') return false;
+      if (!rollInput.bottleSize || rollInput.bottleSize.trim() === '') return false;
+    }
 
     // CRITICAL: Check if ANY data is entered (issued OR wastage)
     // It's valid to have ONLY wastage (no issued) or ONLY issued (no wastage)
     let hasValidIssuedRange = false;
     let hasValidWastageRange = false;
 
-    // Check ISSUED ranges: Both FROM and TO must be filled for any range that has started
-    if (rollInput.issuedRanges && rollInput.issuedRanges.length > 0) {
-      // Check if any issued range has only one field filled (incomplete)
-      const hasIncompleteIssuedRange = rollInput.issuedRanges.some((range) => {
-        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
-        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        // If either FROM or TO is filled, both must be filled
-        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
-      });
-
-      if (hasIncompleteIssuedRange) return false;
-
-      // Check if there's at least one complete issued range with valid serials
-      hasValidIssuedRange = rollInput.issuedRanges.some((range) => {
-        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
-        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        return hasFrom && hasTo && range.quantity > 0;
-      });
-
-      // If there are issued ranges, check if all complete ones are valid (within allocated range)
-      if (hasValidIssuedRange) {
-        const allIssuedRangesValid = rollInput.issuedRanges.every((range) => {
+    // CRITICAL FIX: Only do legacy range validation if NOT in multi-brand mode
+    // In multi-brand mode, we already validated ranges above
+    if (!isMultiBrand) {
+      // Check ISSUED ranges: Both FROM and TO must be filled for any range that has started
+      if (rollInput.issuedRanges && rollInput.issuedRanges.length > 0) {
+        // Check if any issued range has only one field filled (incomplete)
+        const hasIncompleteIssuedRange = rollInput.issuedRanges.some((range) => {
           const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
           const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-          // If range is incomplete (empty), skip validation
-          if (!hasFrom && !hasTo) return true;
-          // If range is complete, check if it's valid
-          return range.isValid !== false;
+          // If either FROM or TO is filled, both must be filled
+          return (hasFrom && !hasTo) || (!hasFrom && hasTo);
         });
 
-        if (!allIssuedRangesValid) return false;
-      }
-    }
+        if (hasIncompleteIssuedRange) return false;
 
-    // Check WASTAGE ranges: Both FROM and TO must be filled for any range that has started
-    if (rollInput.wastageRanges && rollInput.wastageRanges.length > 0) {
-      // Check if any wastage range has only one field filled (incomplete)
-      const hasIncompleteWastageRange = rollInput.wastageRanges.some((range) => {
-        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
-        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        // If either FROM or TO is filled, both must be filled
-        return (hasFrom && !hasTo) || (!hasFrom && hasTo);
-      });
-
-      if (hasIncompleteWastageRange) return false;
-
-      // Check if there's at least one complete wastage range with valid serials
-      hasValidWastageRange = rollInput.wastageRanges.some((range) => {
-        const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
-        const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-        return hasFrom && hasTo && range.quantity > 0;
-      });
-
-      // If there are wastage ranges, check if all complete ones are valid (within allocated range)
-      if (hasValidWastageRange) {
-        const allWastageRangesValid = rollInput.wastageRanges.every((range) => {
+        // Check if there's at least one complete issued range with valid serials
+        hasValidIssuedRange = rollInput.issuedRanges.some((range) => {
           const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
           const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
-          // If range is incomplete (empty), skip validation
-          if (!hasFrom && !hasTo) return true;
-          // If range is complete, check if it's valid
-          return range.isValid !== false;
+          return hasFrom && hasTo && range.quantity > 0;
         });
 
-        if (!allWastageRangesValid) return false;
-      }
-    }
+        // If there are issued ranges, check if all complete ones are valid (within allocated range)
+        if (hasValidIssuedRange) {
+          const allIssuedRangesValid = rollInput.issuedRanges.every((range) => {
+            const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+            const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+            // If range is incomplete (empty), skip validation
+            if (!hasFrom && !hasTo) return true;
+            // If range is complete, check if it's valid
+            return range.isValid !== false;
+          });
 
-    // CRITICAL FIX: Must have at least ONE valid range (either issued OR wastage)
-    // This allows locking with ONLY wastage (no issued) or ONLY issued (no wastage)
-    if (!hasValidIssuedRange && !hasValidWastageRange) {
-      return false;
+          if (!allIssuedRangesValid) return false;
+        }
+      }
+
+      // Check WASTAGE ranges: Both FROM and TO must be filled for any range that has started
+      if (rollInput.wastageRanges && rollInput.wastageRanges.length > 0) {
+        // Check if any wastage range has only one field filled (incomplete)
+        const hasIncompleteWastageRange = rollInput.wastageRanges.some((range) => {
+          const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+          const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+          // If either FROM or TO is filled, both must be filled
+          return (hasFrom && !hasTo) || (!hasFrom && hasTo);
+        });
+
+        if (hasIncompleteWastageRange) return false;
+
+        // Check if there's at least one complete wastage range with valid serials
+        hasValidWastageRange = rollInput.wastageRanges.some((range) => {
+          const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+          const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+          return hasFrom && hasTo && range.quantity > 0;
+        });
+
+        // If there are wastage ranges, check if all complete ones are valid (within allocated range)
+        if (hasValidWastageRange) {
+          const allWastageRangesValid = rollInput.wastageRanges.every((range) => {
+            const hasFrom = !!range.fromSerial && range.fromSerial.trim() !== '';
+            const hasTo = !!range.toSerial && range.toSerial.trim() !== '';
+            // If range is incomplete (empty), skip validation
+            if (!hasFrom && !hasTo) return true;
+            // If range is complete, check if it's valid
+            return range.isValid !== false;
+          });
+
+          if (!allWastageRangesValid) return false;
+        }
+      }
+
+      // CRITICAL FIX: Must have at least ONE valid range (either issued OR wastage) in single-brand mode
+      // This allows locking with ONLY wastage (no issued) or ONLY issued (no wastage)
+      if (!hasValidIssuedRange && !hasValidWastageRange) {
+        return false;
+      }
     }
 
     // Left over must not be negative
@@ -3534,23 +3598,8 @@ After editing, click "Lock" to save your changes.`);
         'approvedHologramEntries'
       ];
 
-      // PRORITY 1: Check entries own allocatedRanges (from Backend API)
-      if (entry.allocatedRanges && entry.allocatedRanges.length > 0) {
-        console.log('✅ Found direct allocatedRanges in entry:', entry.allocatedRanges);
-        return {
-          referenceNo: referenceNo,
-          totalAllocated: entry.allocatedRanges.reduce((sum, r) => sum + r.quantity, 0),
-          allocatedCartoons: entry.allocatedRanges.map(r => ({
-            cartoonNumber: r.cartoonNumber,
-            quantity: r.quantity,
-            fromSerial: r.fromSerial,
-            toSerial: r.toSerial,
-            serialRange: `${r.fromSerial} - ${r.toSerial}`
-          }))
-        };
-      }
-
-      // PRIORITY 2: Check rollsAssigned (from Backend API - rolls_assigned field)
+      // PRORITY 1: Check rollsAssigned (from Backend API - rolls_assigned field)
+      // This is the specific list of rolls assigned to this request
       if (entry.rollsAssigned && entry.rollsAssigned.length > 0) {
         console.log('✅ Found rollsAssigned in entry:', entry.rollsAssigned);
         return {
@@ -3562,6 +3611,23 @@ After editing, click "Lock" to save your changes.`);
             fromSerial: r.fromSerial || r.from_serial || '',
             toSerial: r.toSerial || r.to_serial || '',
             serialRange: `${r.fromSerial || r.from_serial || ''} - ${r.toSerial || r.to_serial || ''}`
+          }))
+        };
+      }
+
+      // PRIORITY 2: Check entries own allocatedRanges (from Backend API)
+      // This might be broader allocation data
+      if (entry.allocatedRanges && entry.allocatedRanges.length > 0) {
+        console.log('✅ Found direct allocatedRanges in entry:', entry.allocatedRanges);
+        return {
+          referenceNo: referenceNo,
+          totalAllocated: entry.allocatedRanges.reduce((sum, r) => sum + r.quantity, 0),
+          allocatedCartoons: entry.allocatedRanges.map(r => ({
+            cartoonNumber: r.cartoonNumber,
+            quantity: r.quantity,
+            fromSerial: r.fromSerial,
+            toSerial: r.toSerial,
+            serialRange: `${r.fromSerial} - ${r.toSerial}`
           }))
         };
       }
