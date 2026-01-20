@@ -520,8 +520,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
               serialRange: displaySerialRange, // Use allocated range for display
               allocatedFromSerial: allocatedFromSerial, // Store allocated range
               allocatedToSerial: allocatedToSerial,
-              fromSerial: issuedFrom, // Issued from (what was actually used)
-              toSerial: issuedTo, // Issued to (what was actually used)
+              // CRITICAL FIX: Use allocated range for leftover calculation, NOT the issued range
+              // This ensures getLeftoverRanges() uses the full allocated range to calculate what's left
+              fromSerial: allocatedFromSerial, // Use allocated range (not issued range)
+              toSerial: allocatedToSerial,     // Use allocated range (not issued range)
               issuedQty: issuedQty,
               wastageQty: wastageQty,
               leftOver: hologramQty - issuedQty - wastageQty,
@@ -1335,7 +1337,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     console.log(`🎯 Selected range ${roll.displayName} (${selectedRollId}), serial range: ${roll.serialRange}`);
-    
+
     // Save input state after selecting a roll
     this.saveInputState();
   }
@@ -1727,7 +1729,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     // Recalculate entry totals from all rolls (locked + current)
     this.recalculateEntryFromLockedRolls(entry);
     this.cdr.detectChanges();
-    
+
     // Save input state after any change
     this.saveInputState();
   }
@@ -2170,26 +2172,48 @@ After editing, click "Lock" to save your changes.`);
   // Initialize brands array if it doesn't exist and ensure at least one brand
   initializeBrands(rollInput: RollInput): void {
     if (!rollInput.brands || rollInput.brands.length === 0) {
-      // Create first brand from existing brand details or empty
+      console.log('🎨 Initializing brands from existing single-brand data');
+      console.log('  - Existing issuedRanges:', rollInput.issuedRanges);
+      console.log('  - Existing wastageRanges:', rollInput.wastageRanges);
+      console.log('  - Existing brandDetails:', rollInput.brandDetails);
+      console.log('  - Existing bottleSize:', rollInput.bottleSize);
+
+      // CRITICAL: Preserve existing data from single-brand mode
+      // Deep copy the ranges to avoid reference issues
+      const existingIssuedRanges = rollInput.issuedRanges && rollInput.issuedRanges.length > 0
+        ? JSON.parse(JSON.stringify(rollInput.issuedRanges))
+        : [{ fromSerial: '', toSerial: '', quantity: 0 }];
+
+      const existingWastageRanges = rollInput.wastageRanges && rollInput.wastageRanges.length > 0
+        ? JSON.parse(JSON.stringify(rollInput.wastageRanges))
+        : [{ fromSerial: '', toSerial: '', quantity: 0 }];
+
+      // Create first brand from existing data
       rollInput.brands = [{
         id: this.generateBrandId(),
         brandName: typeof rollInput.brandDetails === 'string' ? rollInput.brandDetails : '',
         bottleSize: rollInput.bottleSize || '',
-        issuedRanges: rollInput.issuedRanges || [{ fromSerial: '', toSerial: '', quantity: 0 }],
-        wastageRanges: rollInput.wastageRanges || [{ fromSerial: '', toSerial: '', quantity: 0 }],
+        issuedRanges: existingIssuedRanges,
+        wastageRanges: existingWastageRanges,
         issuedQty: rollInput.issuedQty || 0,
         wastageQty: rollInput.wastageQty || 0,
         colorIndex: 0
       }];
+
+      console.log('✅ Created Brand 1 with existing data:', rollInput.brands[0]);
     }
   }
 
   // Add a new brand to the roll
   addBrandToRoll(entry: RegisterEntry, rollInput: RollInput): void {
-    if (!rollInput.brands) {
+    // CRITICAL: Initialize brands first if not already done
+    // This preserves existing single-brand data as Brand 1
+    if (!rollInput.brands || rollInput.brands.length === 0) {
+      console.log('🔄 Converting from single-brand to multi-brand mode');
       this.initializeBrands(rollInput);
     }
 
+    // Now add the new brand (Brand 2, 3, etc.)
     const newBrand: BrandEntry = {
       id: this.generateBrandId(),
       brandName: '',
@@ -2202,9 +2226,14 @@ After editing, click "Lock" to save your changes.`);
     };
 
     rollInput.brands!.push(newBrand);
+
+    // Recalculate totals to ensure everything is in sync
+    this.recalculateBrandTotals(rollInput);
+
     this.cdr.detectChanges();
 
-    console.log('✅ Added new brand to roll:', newBrand);
+    console.log(`✅ Added Brand ${rollInput.brands!.length} to roll`);
+    console.log('📊 Current brands:', rollInput.brands);
   }
 
   // Remove a brand from the roll
@@ -2259,9 +2288,39 @@ After editing, click "Lock" to save your changes.`);
       return;
     }
 
+    // Find the entry that contains this rollInput
+    const entry = this.entries.find(e => e.currentRollSelection?.rollInput === rollInput);
+    if (!entry) {
+      console.warn('⚠️ Could not find entry for rollInput, skipping validation');
+      // Still calculate quantities without validation
+      let totalIssued = 0;
+      let totalWastage = 0;
+
+      rollInput.brands.forEach(brand => {
+        brand.issuedQty = brand.issuedRanges.reduce((sum, r) => {
+          r.quantity = this.calculateQuantityFromSerials(r.fromSerial, r.toSerial);
+          return sum + r.quantity;
+        }, 0);
+
+        brand.wastageQty = brand.wastageRanges.reduce((sum, r) => {
+          r.quantity = this.calculateQuantityFromSerials(r.fromSerial, r.toSerial);
+          return sum + r.quantity;
+        }, 0);
+
+        totalIssued += brand.issuedQty;
+        totalWastage += brand.wastageQty;
+      });
+
+      rollInput.issuedQty = totalIssued;
+      rollInput.wastageQty = totalWastage;
+      rollInput.leftOver = rollInput.availableCount - totalIssued - totalWastage;
+      this.cdr.detectChanges();
+      return;
+    }
+
     // Get allocated ranges for validation
     const allocatedRanges = this.getAllocatedRangesForRoll(
-      this.entries.find(e => e.currentRollSelection?.rollInput === rollInput)!,
+      entry,
       rollInput.rangeId || rollInput.cartoonNumber
     );
 
@@ -2426,7 +2485,7 @@ After editing, click "Lock" to save your changes.`);
 
     // Trigger change detection
     this.cdr.detectChanges();
-    
+
     // Save input state after brand changes
     this.saveInputState();
   }
@@ -2558,103 +2617,187 @@ After editing, click "Lock" to save your changes.`);
     const lockedRolls = entry.lockedRolls || [];
     if (lockedRolls.length === 0) return;
 
-    // Create payloads for each locked roll (creating separate DB entries per roll)
-    const payloads = lockedRolls.map((roll: any) => {
-      // Safely extract brand name
-      let brandName = '';
-      const rollBrand = roll.brandDetails;
-      const entryBrand = entry.brandDetails;
+    // CRITICAL FIX: Handle multi-brand rolls by creating separate entries for each brand
+    const payloads: any[] = [];
 
-      if (rollBrand && typeof rollBrand === 'object') {
-        brandName = rollBrand.brandName || '';
-      } else if (rollBrand) {
-        brandName = String(rollBrand);
-      } else if (entryBrand && typeof entryBrand === 'object') {
-        brandName = entryBrand.brandName || '';
-      } else if (entryBrand) {
-        brandName = String(entryBrand);
+    lockedRolls.forEach((roll: any) => {
+      // Check if this roll has multiple brands
+      const isMultiBrand = roll.brands && roll.brands.length > 0;
+
+      if (isMultiBrand) {
+        // Multi-brand mode: Create separate payload for each brand
+        console.log(`🎨 Multi-brand roll detected: ${roll.cartoonNumber} with ${roll.brands.length} brands`);
+
+        roll.brands.forEach((brand: BrandEntry, brandIndex: number) => {
+          // Only save brands that have actual usage (issued or wastage)
+          const hasUsage = brand.issuedQty > 0 || brand.wastageQty > 0;
+
+          if (hasUsage) {
+            // CRITICAL: Create unique roll_range for each brand to prevent backend overwriting
+            // Format: "a1_BRAND_1", "a1_BRAND_2" instead of "a1 - Brand 1"
+            const uniqueRollRange = `${roll.displayName || roll.cartoonNumber}_BRAND_${brandIndex + 1}`;
+
+            const payload = {
+              reference_no: entry.referenceNo || 'N/A',
+              hologram_request: entry.requestId || null,
+              roll_range: uniqueRollRange, // Unique identifier per brand
+              submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
+              usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
+
+              brand_details: brand.brandName || '',
+              bottle_size: brand.bottleSize || '',
+
+              hologram_qty: roll.availableCount || 0, // Total allocated for this roll
+
+              issued_from: brand.issuedRanges?.[0]?.fromSerial || '',
+              issued_to: brand.issuedRanges?.[brand.issuedRanges.length - 1]?.toSerial || '',
+              issued_qty: brand.issuedQty || 0,
+              issued_ranges: brand.issuedRanges || [],
+
+              wastage_from: brand.wastageRanges?.[0]?.fromSerial || '',
+              wastage_to: brand.wastageRanges?.[brand.wastageRanges.length - 1]?.toSerial || '',
+              wastage_qty: brand.wastageQty || 0,
+              wastage_ranges: brand.wastageRanges || [],
+
+              damage_reason: roll.damageReason || '',
+              is_fixed: true,
+
+              // Store original roll info for tracking
+              allocated_from_serial: roll.fromSerial || '',
+              allocated_to_serial: roll.toSerial || '',
+
+              // CRITICAL: Add brand index for backend tracking
+              brand_index: brandIndex + 1,
+              total_brands: roll.brands.length
+            };
+
+            payloads.push(payload);
+            console.log(`  ✅ Created payload for Brand ${brandIndex + 1}:`, payload);
+          }
+        });
+      } else {
+        // Single-brand mode: Use existing logic
+        let brandName = '';
+        const rollBrand = roll.brandDetails;
+        const entryBrand = entry.brandDetails;
+
+        if (rollBrand && typeof rollBrand === 'object') {
+          brandName = rollBrand.brandName || '';
+        } else if (rollBrand) {
+          brandName = String(rollBrand);
+        } else if (entryBrand && typeof entryBrand === 'object') {
+          brandName = entryBrand.brandName || '';
+        } else if (entryBrand) {
+          brandName = String(entryBrand);
+        }
+
+        // CRITICAL FIX: For "Not In Use" entries
+        const isNotInUse = roll.isNotInUse === true;
+        let allocatedFromSerial = '';
+        let allocatedToSerial = '';
+
+        if (isNotInUse) {
+          allocatedFromSerial = roll.allocatedFromSerial || roll.fromSerial || '';
+          allocatedToSerial = roll.allocatedToSerial || roll.toSerial || '';
+          console.log(`📌 Not In Use entry - allocated range: ${allocatedFromSerial}-${allocatedToSerial}`);
+        }
+
+        const payload = {
+          reference_no: entry.referenceNo || 'N/A',
+          hologram_request: entry.requestId || null,
+          roll_range: roll.displayName || roll.cartoonNumber,
+          submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
+          usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
+
+          brand_details: brandName,
+          bottle_size: roll.bottleSize || entry.bottleSize || '',
+
+          hologram_qty: roll.availableCount || 0,
+
+          issued_from: roll.issuedRanges?.[0]?.fromSerial || '',
+          issued_to: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
+          issued_qty: roll.issuedQty || 0,
+          issued_ranges: roll.issuedRanges || [],
+
+          wastage_from: roll.wastageRanges?.[0]?.fromSerial || '',
+          wastage_to: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
+          wastage_qty: roll.wastageQty || 0,
+          wastage_ranges: roll.wastageRanges || [],
+
+          damage_reason: roll.damageReason || '',
+          is_fixed: true,
+
+          allocated_from_serial: allocatedFromSerial,
+          allocated_to_serial: allocatedToSerial
+        };
+
+        payloads.push(payload);
       }
-
-      // CRITICAL FIX: For "Not In Use" entries, we need to send the originally allocated range
-      // so the backend knows which serials to restore to AVAILABLE
-      const isNotInUse = roll.isNotInUse === true;
-      let allocatedFromSerial = '';
-      let allocatedToSerial = '';
-
-      if (isNotInUse) {
-        // Use the allocated range for restoration
-        allocatedFromSerial = roll.allocatedFromSerial || roll.fromSerial || '';
-        allocatedToSerial = roll.allocatedToSerial || roll.toSerial || '';
-        console.log(`📌 Not In Use entry - allocated range: ${allocatedFromSerial}-${allocatedToSerial}`);
-      }
-
-      return {
-        reference_no: entry.referenceNo || 'N/A',
-        hologram_request: entry.requestId || null, // Link to original request
-        roll_range: roll.displayName || roll.cartoonNumber,
-        submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
-        usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
-
-        brand_details: brandName,
-        bottle_size: roll.bottleSize || entry.bottleSize || '',
-
-        hologram_qty: roll.availableCount || 0, // Total allocated for this roll
-
-        issued_from: roll.issuedRanges?.[0]?.fromSerial || '',
-        issued_to: roll.issuedRanges?.[roll.issuedRanges.length - 1]?.toSerial || '',
-        issued_qty: roll.issuedQty || 0,
-        issued_ranges: roll.issuedRanges || [],
-
-        wastage_from: roll.wastageRanges?.[0]?.fromSerial || '',
-        wastage_to: roll.wastageRanges?.[roll.wastageRanges.length - 1]?.toSerial || '',
-        wastage_qty: roll.wastageQty || 0,
-        wastage_ranges: roll.wastageRanges || [],
-
-        damage_reason: roll.damageReason || '',
-        is_fixed: true,
-
-        // CRITICAL: Include allocated range for "Not In Use" restoration
-        allocated_from_serial: allocatedFromSerial,
-        allocated_to_serial: allocatedToSerial
-      };
     });
 
-    console.log('🚀 Saving to backend:', payloads);
+    console.log(`🚀 Saving ${payloads.length} entries to backend:`);
+    payloads.forEach((p, i) => {
+      console.log(`\nPayload ${i + 1}:`, {
+        roll_range: p.roll_range,
+        brand_details: p.brand_details,
+        bottle_size: p.bottle_size,
+        issued_qty: p.issued_qty,
+        wastage_qty: p.wastage_qty,
+        issued_ranges: p.issued_ranges,
+        wastage_ranges: p.wastage_ranges
+      });
+    });
 
-    // Save all rolls concurrently
-    // We use forkJoin if we decide to save multiple, but here we iterate or promise.all
-    // Since we need to update UI after ALL are done, let's use a counter or forkJoin
-
-    // Using forkJoin to save all rolls
-    const saveObservables = payloads.map((payload: any) =>
-      this.hologramService.saveDailyRegisterEntry(payload)
-    );
-
-    // Import forkJoin at top if not present, but for now we can assume it might be available or use subscribe loop
-    // Better to use forkJoin. I will use a simple loop for now if imports are tricky, but wait... 
-    // I restored forkJoin earlier! So I can use it.
-
-    // NOTE: accessing forkJoin from rxjs
-    // If imports are messy, I will use a simple Promise.all behavior via subscribe
-
+    // CRITICAL FIX: Save entries SEQUENTIALLY to avoid backend race conditions
+    // This ensures each brand's data is fully processed before the next one
     let completed = 0;
     const total = payloads.length;
     let errors = 0;
 
-    payloads.forEach((payload: any) => {
+    const saveNextPayload = (index: number) => {
+      if (index >= payloads.length) {
+        // All done
+        return;
+      }
+
+      const payload = payloads[index];
+      console.log(`\n📤 Sending payload ${index + 1}/${total} to backend...`);
+      console.log(`   Roll: ${payload.roll_range}`);
+      console.log(`   Brand: ${payload.brand_details}`);
+      console.log(`   Issued: ${payload.issued_from}-${payload.issued_to} (${payload.issued_qty})`);
+      console.log(`   Wastage: ${payload.wastage_from}-${payload.wastage_to} (${payload.wastage_qty})`);
+
       this.hologramService.saveDailyRegisterEntry(payload).subscribe({
         next: (res) => {
-          console.log('✅ Saved roll:', res);
+          console.log(`✅ Payload ${index + 1} saved successfully:`, res);
           completed++;
-          this.checkSaveCompletion(entry, completed, total, errors);
+
+          // Check if all completed
+          if (completed + errors === total) {
+            this.checkSaveCompletion(entry, completed, total, errors);
+          } else {
+            // Save next payload after a small delay to ensure backend processes sequentially
+            setTimeout(() => saveNextPayload(index + 1), 500);
+          }
         },
         error: (err) => {
-          console.error('❌ Error saving roll:', err);
+          console.error(`❌ Error saving payload ${index + 1}:`, err);
+          console.error(`   Payload was:`, payload);
           errors++;
-          this.checkSaveCompletion(entry, completed, total, errors);
+
+          // Check if all completed
+          if (completed + errors === total) {
+            this.checkSaveCompletion(entry, completed, total, errors);
+          } else {
+            // Continue with next payload even if this one failed
+            setTimeout(() => saveNextPayload(index + 1), 500);
+          }
         }
       });
-    });
+    };
+
+    // Start saving from first payload
+    saveNextPayload(0);
   }
 
   private checkSaveCompletion(entry: RegisterEntry, completed: number, total: number, errors: number): void {
@@ -2663,6 +2806,9 @@ After editing, click "Lock" to save your changes.`);
         // All successful
         entry.isFixed = true;
         entry.rollsAssigned = (entry.lockedRolls || []).map((r: any) => r.cartoonNumber);
+
+        // CRITICAL FIX: Update Available Hologram Data to release holograms from Not in Use rolls
+        this.releaseNotInUseHolograms(entry);
 
         // Update local stats for immediate display
         this.cdr.detectChanges();
@@ -2695,6 +2841,56 @@ After editing, click "Lock" to save your changes.`);
   // Legacy method removed or commented out to ensure no local storage usage for saving
   // private saveEntryToLocalStorage(entry: RegisterEntry) { ... }
   // private saveToMonthlyStatement(entry: RegisterEntry) { ... }
+
+  /**
+   * Release holograms from "Not in Use" rolls back to Available Hologram Data
+   * This ensures that when rolls are marked as not in use, the allocated quantities are returned to the available pool
+   */
+  private releaseNotInUseHolograms(entry: RegisterEntry): void {
+    const notInUseRolls = (entry.lockedRolls || []).filter((roll: any) => roll.isNotInUse);
+
+    if (notInUseRolls.length === 0) {
+      console.log('✅ No "Not in Use" rolls to release');
+      return;
+    }
+
+    console.log(`🔓 Releasing ${notInUseRolls.length} "Not in Use" rolls back to available pool...`);
+
+    // Update Available Hologram Data in localStorage
+    const availableData = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
+
+    notInUseRolls.forEach((roll: any) => {
+      const cartoonNumber = roll.cartoonNumber || roll.rangeId;
+      const quantityToRelease = roll.availableCount || 0;
+
+      if (quantityToRelease <= 0) return;
+
+      // Find the corresponding entry in Available Hologram Data
+      const availableIndex = availableData.findIndex((item: any) =>
+        item.cartoonNumber === cartoonNumber
+      );
+
+      if (availableIndex !== -1) {
+        const oldAvailable = availableData[availableIndex].availableCount || 0;
+        availableData[availableIndex].availableCount = oldAvailable + quantityToRelease;
+
+        console.log(`  ✅ ${cartoonNumber}: Released ${quantityToRelease} units (${oldAvailable} → ${availableData[availableIndex].availableCount})`);
+
+        // Recalculate percentage if we have total count
+        if (availableData[availableIndex].totalCount) {
+          availableData[availableIndex].percentage = Math.round(
+            (availableData[availableIndex].availableCount / availableData[availableIndex].totalCount) * 100
+          );
+        }
+      } else {
+        console.warn(`  ⚠️ Cartoon ${cartoonNumber} not found in Available Hologram Data`);
+      }
+    });
+
+    // Save updated data back to localStorage
+    localStorage.setItem('hologramOverviewAvailable', JSON.stringify(availableData));
+    console.log('💾 Updated Available Hologram Data in localStorage');
+  }
 
 
   /**
@@ -2792,9 +2988,11 @@ After editing, click "Lock" to save your changes.`);
     }
 
     try {
-      // Get the allocated range for this roll
-      const allocatedFromSerial = rollInput.fromSerial;
-      const allocatedToSerial = rollInput.toSerial;
+      // CRITICAL FIX: Get the allocated range for this roll
+      // Use allocatedFromSerial/allocatedToSerial which represent the ORIGINAL full range assigned to this roll
+      // NOT the fromSerial/toSerial which may represent only the issued/used portion
+      const allocatedFromSerial = rollInput.allocatedFromSerial || rollInput.fromSerial;
+      const allocatedToSerial = rollInput.allocatedToSerial || rollInput.toSerial;
 
       if (!allocatedFromSerial || !allocatedToSerial) {
         console.warn('No allocated range found for roll');
@@ -2817,38 +3015,97 @@ After editing, click "Lock" to save your changes.`);
       // Create a Set of all used serial numbers
       const usedSerials = new Set<number>();
 
-      // Add issued serials to used set (from current roll)
-      if (rollInput.issuedRanges && Array.isArray(rollInput.issuedRanges)) {
-        rollInput.issuedRanges.forEach((range: RollRange) => {
-          if (range.fromSerial && range.toSerial) {
-            const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
-            const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
-            if (fromMatch && toMatch) {
-              const from = parseInt(fromMatch[2], 10);
-              const to = parseInt(toMatch[2], 10);
-              for (let i = from; i <= to; i++) {
-                usedSerials.add(i);
-              }
-            }
-          }
-        });
-      }
+      // CRITICAL FIX: Check if this is multi-brand mode
+      const isMultiBrand = rollInput.brands && rollInput.brands.length > 0;
 
-      // Add wastage serials to used set (from current roll)
-      if (rollInput.wastageRanges && Array.isArray(rollInput.wastageRanges)) {
-        rollInput.wastageRanges.forEach((range: RollRange) => {
-          if (range.fromSerial && range.toSerial) {
-            const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
-            const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
-            if (fromMatch && toMatch) {
-              const from = parseInt(fromMatch[2], 10);
-              const to = parseInt(toMatch[2], 10);
-              for (let i = from; i <= to; i++) {
-                usedSerials.add(i);
+      console.log('🔍 DEBUG getLeftoverRanges:', {
+        isMultiBrand,
+        brandsCount: rollInput.brands?.length || 0,
+        allocatedRange: `${allocatedFromSerial}-${allocatedToSerial}`,
+        allocatedFrom,
+        allocatedTo,
+        totalInRange: allocatedTo - allocatedFrom + 1
+      });
+
+      if (isMultiBrand) {
+        // Multi-brand mode: collect ranges from all brands
+        console.log('🎨 Multi-brand mode: collecting used serials from all brands');
+        console.log('  📋 Brands:', rollInput.brands);
+
+        rollInput.brands!.forEach((brand: BrandEntry, brandIndex: number) => {
+          // Add issued serials from this brand
+          if (brand.issuedRanges && Array.isArray(brand.issuedRanges)) {
+            brand.issuedRanges.forEach((range: RollRange) => {
+              if (range.fromSerial && range.toSerial) {
+                const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+                const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+                if (fromMatch && toMatch) {
+                  const from = parseInt(fromMatch[2], 10);
+                  const to = parseInt(toMatch[2], 10);
+                  for (let i = from; i <= to; i++) {
+                    usedSerials.add(i);
+                  }
+                  console.log(`  ✓ Brand ${brandIndex + 1} issued: ${range.fromSerial}-${range.toSerial}`);
+                }
               }
-            }
+            });
+          }
+
+          // Add wastage serials from this brand
+          if (brand.wastageRanges && Array.isArray(brand.wastageRanges)) {
+            brand.wastageRanges.forEach((range: RollRange) => {
+              if (range.fromSerial && range.toSerial) {
+                const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+                const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+                if (fromMatch && toMatch) {
+                  const from = parseInt(fromMatch[2], 10);
+                  const to = parseInt(toMatch[2], 10);
+                  for (let i = from; i <= to; i++) {
+                    usedSerials.add(i);
+                  }
+                  console.log(`  ✓ Brand ${brandIndex + 1} wastage: ${range.fromSerial}-${range.toSerial}`);
+                }
+              }
+            });
           }
         });
+      } else {
+        // Single-brand mode: use rollInput ranges directly
+        console.log('📦 Single-brand mode: collecting used serials from rollInput');
+
+        // Add issued serials to used set (from current roll)
+        if (rollInput.issuedRanges && Array.isArray(rollInput.issuedRanges)) {
+          rollInput.issuedRanges.forEach((range: RollRange) => {
+            if (range.fromSerial && range.toSerial) {
+              const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+              const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+              if (fromMatch && toMatch) {
+                const from = parseInt(fromMatch[2], 10);
+                const to = parseInt(toMatch[2], 10);
+                for (let i = from; i <= to; i++) {
+                  usedSerials.add(i);
+                }
+              }
+            }
+          });
+        }
+
+        // Add wastage serials to used set (from current roll)
+        if (rollInput.wastageRanges && Array.isArray(rollInput.wastageRanges)) {
+          rollInput.wastageRanges.forEach((range: RollRange) => {
+            if (range.fromSerial && range.toSerial) {
+              const fromMatch = range.fromSerial.match(/^([A-Z]*)(\d+)$/);
+              const toMatch = range.toSerial.match(/^([A-Z]*)(\d+)$/);
+              if (fromMatch && toMatch) {
+                const from = parseInt(fromMatch[2], 10);
+                const to = parseInt(toMatch[2], 10);
+                for (let i = from; i <= to; i++) {
+                  usedSerials.add(i);
+                }
+              }
+            }
+          });
+        }
       }
 
       // CRITICAL: Also add serials used in leftover reuses (from usage history)
@@ -2883,6 +3140,8 @@ After editing, click "Lock" to save your changes.`);
           }
         });
       }
+
+      console.log(`📊 Total used serials: ${usedSerials.size} out of ${allocatedTo - allocatedFrom + 1}`);
 
       // Find all leftover ranges (gaps and final range)
       const leftoverRanges: Array<{ fromSerial: string; toSerial: string; quantity: number }> = [];
@@ -3446,7 +3705,7 @@ After editing, click "Lock" to save your changes.`);
   private saveInputState(): void {
     try {
       const inputState: any = {};
-      
+
       // Save current input state for each entry
       this.entries.forEach(entry => {
         if (entry.currentRollSelection && !entry.isFixed) {
