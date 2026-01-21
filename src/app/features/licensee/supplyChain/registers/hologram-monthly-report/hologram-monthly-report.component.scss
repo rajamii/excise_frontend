@@ -323,3 +323,91 @@
     }
   }
 }
+
+
+/* Roll Group Box Styling - Brands grouped by roll */
+.roll-group-box {
+  transition: all 0.3s ease;
+  border-width: 2px !important;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .roll-group-header {
+    border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    
+    .roll-badge {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+  }
+  
+  .brands-in-roll {
+    .brand-item {
+      transition: all 0.2s ease;
+      border-width: 1.5px !important;
+      
+      &:hover {
+        transform: translateX(5px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+      }
+      
+      .brand-number {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.1);
+        }
+      }
+      
+      .brand-name {
+        font-weight: 600;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: translateX(3px);
+        }
+      }
+      
+      .brand-meta {
+        span {
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: scale(1.05);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Responsive adjustments for roll groups */
+@media (max-width: 768px) {
+  .roll-group-box {
+    .roll-group-header {
+      .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+      }
+    }
+    
+    .brand-item {
+      flex-direction: column;
+      align-items: flex-start !important;
+      
+      .brand-meta {
+        flex-direction: column;
+        gap: 0.25rem !important;
+      }
+    }
+  }
+}

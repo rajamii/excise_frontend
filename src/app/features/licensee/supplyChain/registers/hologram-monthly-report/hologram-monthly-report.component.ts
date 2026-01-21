@@ -1070,4 +1070,60 @@ export class HologramMonthlyReportComponent implements OnInit {
     
     return rollsRanges;
   }
+
+  /**
+   * Group brands by roll for better organization
+   */
+  getBrandsByRoll(utilizationDetails: Array<{
+    rollName: string;
+    brandName: string;
+    bottleSize: string;
+    ranges: Array<{ from: string; to: string; qty: number }>;
+  }>): Array<{
+    rollName: string;
+    brands: Array<{
+      brandName: string;
+      bottleSize: string;
+      totalQty: number;
+    }>;
+  }> {
+    const rollsMap = new Map<string, Array<{
+      brandName: string;
+      bottleSize: string;
+      totalQty: number;
+    }>>();
+    
+    utilizationDetails.forEach(detail => {
+      const rollName = this.getRollDisplayName(detail.rollName);
+      
+      if (!rollsMap.has(rollName)) {
+        rollsMap.set(rollName, []);
+      }
+      
+      rollsMap.get(rollName)!.push({
+        brandName: detail.brandName,
+        bottleSize: detail.bottleSize,
+        totalQty: this.getTotalQtyForBrand(detail)
+      });
+    });
+    
+    // Convert map to array
+    const result: Array<{
+      rollName: string;
+      brands: Array<{
+        brandName: string;
+        bottleSize: string;
+        totalQty: number;
+      }>;
+    }> = [];
+    
+    rollsMap.forEach((brands, rollName) => {
+      result.push({
+        rollName: rollName,
+        brands: brands
+      });
+    });
+    
+    return result;
+  }
 }

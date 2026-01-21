@@ -445,7 +445,7 @@
                   </td>
                   <td class="p-2 align-middle" style="font-size: 0.875rem; min-width: 300px;" colspan="2">
                     @if (row.utilizationDetails && row.utilizationDetails.length > 0) {
-                      <!-- Show all brand entries organized by rolls with color coding -->
+                      <!-- Show brands grouped by rolls -->
                       <div class="brands-by-rolls-container">
                         <div class="brands-header mb-3">
                           <div class="d-flex align-items-center gap-2">
@@ -456,44 +456,56 @@
                           </div>
                         </div>
                         
-                        <div class="rolls-brands-grid d-flex flex-wrap gap-2">
-                          @for (detail of row.utilizationDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
-                            <div class="roll-brand-card border rounded p-2 shadow-sm"
+                        <!-- Group brands by roll -->
+                        <div class="rolls-groups d-flex flex-column gap-3">
+                          @for (rollGroup of getBrandsByRoll(row.utilizationDetails); track rollGroup.rollName; let rollIndex = $index) {
+                            <div class="roll-group-box border-2 rounded p-3 shadow-sm"
                                  [style.border-color]="getRollBorderColor(rollIndex)"
                                  [style.background-color]="getRollBackgroundColor(rollIndex)"
-                                 style="min-width: 220px; max-width: 280px;">
+                                 [style.border-left]="'4px solid ' + getRollBorderColor(rollIndex)">
                               
                               <!-- Roll Header -->
-                              <div class="roll-brand-header mb-2">
-                                <div class="roll-badge text-white fw-bold px-2 py-1 rounded text-center"
-                                     [style.background-color]="getRollBorderColor(rollIndex)"
-                                     style="font-size: 0.75rem;">
-                                  <i class="bi bi-box-seam me-1"></i>
-                                  {{ getRollDisplayName(detail.rollName) }}
+                              <div class="roll-group-header mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                  <div class="roll-badge text-white fw-bold px-3 py-2 rounded"
+                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.85rem;">
+                                    <i class="bi bi-box-seam me-2"></i>
+                                    Roll {{ rollGroup.rollName }}
+                                  </div>
+                                  <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                    {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
+                                  </span>
                                 </div>
                               </div>
                               
-                              <!-- Brand Details -->
-                              <div class="brand-info">
-                                <div class="brand-name fw-bold mb-1" 
-                                     [style.color]="getRollBorderColor(rollIndex)" 
-                                     style="font-size: 0.85rem;">
-                                  <i class="bi bi-tag me-1"></i>{{ detail.brandName }}
-                                </div>
-                                <div class="bottle-size text-muted mb-2" style="font-size: 0.75rem;">
-                                  <i class="bi bi-cup-straw me-1"></i>{{ detail.bottleSize }}{{ detail.bottleSize.toLowerCase().includes('ml') || detail.bottleSize.toLowerCase().includes('l') ? '' : ' ml' }}
-                                </div>
-                                
-                                <!-- Usage Summary -->
-                                <div class="usage-summary bg-white border rounded p-2"
-                                     [style.border-color]="getRollBorderColor(rollIndex)">
-                                  <div class="text-center">
-                                    <div class="fw-bold" [style.color]="getRollBorderColor(rollIndex)" style="font-size: 0.8rem;">
-                                      <i class="bi bi-calculator me-1"></i>{{ getTotalQtyForBrand(detail) | number }}
+                              <!-- Brands in this roll -->
+                              <div class="brands-in-roll d-flex flex-column gap-2">
+                                @for (brand of rollGroup.brands; track brand.brandName; let brandIdx = $index) {
+                                  <div class="brand-item d-flex align-items-center gap-3 p-2 bg-white rounded border"
+                                       [style.border-color]="getRollBorderColor(rollIndex)">
+                                    <div class="brand-number text-white fw-bold rounded-circle d-flex align-items-center justify-content-center"
+                                         [style.background-color]="getRollBorderColor(rollIndex)"
+                                         style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                      {{ brandIdx + 1 }}
                                     </div>
-                                    <div class="small text-muted">units used</div>
+                                    <div class="brand-details flex-grow-1">
+                                      <div class="brand-name fw-bold mb-1" 
+                                           [style.color]="getRollBorderColor(rollIndex)" 
+                                           style="font-size: 0.85rem;">
+                                        <i class="bi bi-tag-fill me-1"></i>{{ brand.brandName }}
+                                      </div>
+                                      <div class="brand-meta d-flex gap-3">
+                                        <span class="text-muted" style="font-size: 0.75rem;">
+                                          <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
+                                        </span>
+                                        <span class="text-primary fw-semibold" style="font-size: 0.75rem;">
+                                          <i class="bi bi-calculator me-1"></i>{{ brand.totalQty | number }} units
+                                        </span>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
+                                }
                               </div>
                             </div>
                           }
