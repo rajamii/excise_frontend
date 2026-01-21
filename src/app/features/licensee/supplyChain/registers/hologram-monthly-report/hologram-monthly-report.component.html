@@ -428,30 +428,54 @@
                   </td>
                   <td class="p-2 align-middle" style="font-size: 0.875rem; min-width: 300px;" colspan="2">
                     @if (row.utilizationDetails && row.utilizationDetails.length > 0) {
-                      <!-- Show all brand entries in organized boxes -->
-                      <div class="border border-info rounded p-3 bg-light">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                          <i class="bi bi-tags text-info fs-5"></i>
-                          <strong class="text-info" style="font-size: 0.9rem;">
-                            {{ row.utilizationDetails.length }} Brand{{ row.utilizationDetails.length > 1 ? 's' : '' }} Used
-                          </strong>
+                      <!-- Show all brand entries organized by rolls with color coding -->
+                      <div class="brands-by-rolls-container">
+                        <div class="brands-header mb-3">
+                          <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-tags text-info fs-5"></i>
+                            <strong class="text-info" style="font-size: 0.9rem;">
+                              {{ getUniqueRollsCount(row.utilizationDetails) }} Roll{{ getUniqueRollsCount(row.utilizationDetails) > 1 ? 's' : '' }} with {{ row.utilizationDetails.length }} Brand{{ row.utilizationDetails.length > 1 ? 's' : '' }}
+                            </strong>
+                          </div>
                         </div>
-                        <div class="d-flex flex-wrap gap-2">
-                          @for (detail of row.utilizationDetails; track $index) {
-                            <div class="badge bg-info bg-opacity-10 border border-info text-dark p-2" 
-                                 style="font-size: 0.8rem; min-width: 200px;">
-                              <div class="fw-bold text-info mb-1" style="font-size: 0.85rem;">
-                                <i class="bi bi-tag me-1"></i>{{ detail.brandName }}
+                        
+                        <div class="rolls-brands-grid d-flex flex-wrap gap-2">
+                          @for (detail of row.utilizationDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
+                            <div class="roll-brand-card border rounded p-2 shadow-sm"
+                                 [style.border-color]="getRollBorderColor(rollIndex)"
+                                 [style.background-color]="getRollBackgroundColor(rollIndex)"
+                                 style="min-width: 220px; max-width: 280px;">
+                              
+                              <!-- Roll Header -->
+                              <div class="roll-brand-header mb-2">
+                                <div class="roll-badge text-white fw-bold px-2 py-1 rounded text-center"
+                                     [style.background-color]="getRollBorderColor(rollIndex)"
+                                     style="font-size: 0.75rem;">
+                                  <i class="bi bi-box-seam me-1"></i>
+                                  {{ getRollDisplayName(detail.rollName) }}
+                                </div>
                               </div>
-                              <div class="text-muted mb-1" style="font-size: 0.75rem;">
-                                <i class="bi bi-box-seam me-1"></i>Roll: {{ detail.rollName }}
-                              </div>
-                              <div class="text-primary fw-semibold mb-1" style="font-size: 0.75rem;">
-                                <i class="bi bi-cup-straw me-1"></i>{{ detail.bottleSize }}{{ detail.bottleSize.toLowerCase().includes('ml') || detail.bottleSize.toLowerCase().includes('l') ? '' : ' ml' }}
-                              </div>
-                              <div class="bg-primary bg-opacity-10 border border-primary rounded p-1 mt-2">
-                                <div class="text-primary fw-bold text-center" style="font-size: 0.75rem;">
-                                  <i class="bi bi-calculator me-1"></i>Total Used: {{ getTotalQtyForBrand(detail) | number }}
+                              
+                              <!-- Brand Details -->
+                              <div class="brand-info">
+                                <div class="brand-name fw-bold mb-1" 
+                                     [style.color]="getRollBorderColor(rollIndex)" 
+                                     style="font-size: 0.85rem;">
+                                  <i class="bi bi-tag me-1"></i>{{ detail.brandName }}
+                                </div>
+                                <div class="bottle-size text-muted mb-2" style="font-size: 0.75rem;">
+                                  <i class="bi bi-cup-straw me-1"></i>{{ detail.bottleSize }}{{ detail.bottleSize.toLowerCase().includes('ml') || detail.bottleSize.toLowerCase().includes('l') ? '' : ' ml' }}
+                                </div>
+                                
+                                <!-- Usage Summary -->
+                                <div class="usage-summary bg-white border rounded p-2"
+                                     [style.border-color]="getRollBorderColor(rollIndex)">
+                                  <div class="text-center">
+                                    <div class="fw-bold" [style.color]="getRollBorderColor(rollIndex)" style="font-size: 0.8rem;">
+                                      <i class="bi bi-calculator me-1"></i>{{ getTotalQtyForBrand(detail) | number }}
+                                    </div>
+                                    <div class="small text-muted">units used</div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -465,32 +489,94 @@
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
                     @if (row.utilizationDetails?.length && row.utilizationQty && row.utilizationQty > 0) {
                       <div class="d-flex flex-column gap-3">
-                        @for (detail of row.utilizationDetails; track detail.rollName + detail.brandName) {
-                          <div class="border border-primary rounded p-3 bg-white shadow-sm">
-                            <div class="d-flex align-items-center justify-content-between">
-                              <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-secondary text-white" style="font-size: 0.75rem; padding: 5px 10px;">{{ detail.rollName }}</span>
-                                <span class="badge bg-info text-white" style="font-size: 0.75rem; padding: 5px 10px;">{{ detail.brandName }}</span>
-                              </div>
-                              <div class="d-flex align-items-center gap-3">
-                                <div class="d-flex align-items-center gap-2 bg-light border border-primary rounded p-2" style="font-family: 'Courier New', monospace;">
-                                  <span class="text-muted" style="font-size: 0.75rem;">Range Assigned:</span>
-                                  <span class="text-primary fw-bold" style="font-size: 0.9rem;">{{ getRollRange(detail.rollName) }}</span>
-                                  <span class="badge bg-primary text-white ms-2" style="font-size: 0.8rem; padding: 5px 10px;">{{ getTotalQtyForBrand(detail) | number }} used</span>
+                        @for (detail of row.utilizationDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
+                          <div class="roll-utilization-box border rounded p-3 shadow-sm"
+                               [style.border-color]="getRollBorderColor(rollIndex)"
+                               [style.background-color]="getRollBackgroundColor(rollIndex)">
+                            <div class="roll-header mb-2">
+                              <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                  <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
+                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.8rem;">
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    Roll {{ getRollDisplayName(detail.rollName) }}
+                                  </div>
+                                  <div class="brand-badge bg-white border px-2 py-1 rounded"
+                                       [style.border-color]="getRollBorderColor(rollIndex)"
+                                       [style.color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.75rem; font-weight: 600;">
+                                    <i class="bi bi-tag me-1"></i>
+                                    {{ detail.brandName }}
+                                  </div>
+                                  <div class="bottle-size-badge bg-white border px-2 py-1 rounded text-muted"
+                                       [style.border-color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.7rem;">
+                                    <i class="bi bi-cup-straw me-1"></i>
+                                    {{ detail.bottleSize }}
+                                  </div>
                                 </div>
+                                <div class="roll-stats">
+                                  <span class="badge text-white fw-bold px-3 py-2"
+                                        [style.background-color]="getRollBorderColor(rollIndex)"
+                                        style="font-size: 0.85rem;">
+                                    <i class="bi bi-calculator me-1"></i>
+                                    {{ getTotalQtyForBrand(detail) | number }} units
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div class="roll-details">
+                              <div class="d-flex align-items-center gap-3">
+                                <div class="range-info bg-white border rounded p-2 flex-grow-1"
+                                     [style.border-color]="getRollBorderColor(rollIndex)"
+                                     style="font-family: 'Courier New', monospace;">
+                                  <div class="d-flex align-items-center justify-content-between">
+                                    <span class="text-muted small">Range Assigned:</span>
+                                    <span class="fw-bold" [style.color]="getRollBorderColor(rollIndex)" style="font-size: 0.9rem;">
+                                      {{ getRollRange(detail.rollName) }}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                @for (range of detail.ranges; track range.from + range.to) {
+                                <div class="usage-range bg-white border rounded p-2"
+                                     [style.border-color]="getRollBorderColor(rollIndex)"
+                                     style="font-family: 'Courier New', monospace; min-width: 140px;">
+                                  <div class="text-center">
+                                    <div class="fw-bold" [style.color]="getRollBorderColor(rollIndex)" style="font-size: 0.85rem;">
+                                      {{ range.from }} → {{ range.to }}
+                                    </div>
+                                    <div class="small text-muted">Used: {{ range.qty | number }}</div>
+                                  </div>
+                                </div>
+                                }
                               </div>
                             </div>
                           </div>
                         }
-                        <!-- Total Summary Row - Smaller -->
-                        <div class="border border-success border-2 rounded p-2 bg-success bg-opacity-10">
+                        
+                        <!-- Enhanced Total Summary Row -->
+                        <div class="total-utilization-summary border border-success border-2 rounded p-3 bg-success bg-opacity-10">
                           <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
-                              <i class="bi bi-calculator-fill text-success fs-6"></i>
-                              <span class="fw-bold text-success" style="font-size: 0.85rem;">Total Used:</span>
+                              <i class="bi bi-calculator-fill text-success fs-5"></i>
+                              <span class="fw-bold text-success" style="font-size: 1rem;">Total Utilization Summary:</span>
                             </div>
-                            <div class="badge bg-success text-white" style="font-size: 0.85rem; padding: 5px 12px;">
-                              {{ row.utilizationQty | number }} units
+                            <div class="summary-stats d-flex gap-3">
+                              <div class="stat-item text-center">
+                                <div class="small text-muted">Rolls Used</div>
+                                <div class="badge bg-success text-white fw-bold" style="font-size: 0.9rem; padding: 8px 12px;">
+                                  {{ getUniqueRollsCount(row.utilizationDetails) }}
+                                </div>
+                              </div>
+                              <div class="stat-item text-center">
+                                <div class="small text-muted">Total Units</div>
+                                <div class="badge bg-success text-white fw-bold" style="font-size: 0.9rem; padding: 8px 12px;">
+                                  {{ row.utilizationQty | number }}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -505,35 +591,75 @@
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
                     @if (row.wastageDetails?.length && row.wastageQty && row.wastageQty > 0) {
                       <div class="d-flex flex-column gap-3">
-                        @for (detail of row.wastageDetails; track detail.rollName + detail.brandName) {
-                          <div class="border border-danger rounded p-3 bg-white shadow-sm">
-                            <div class="d-flex align-items-center justify-content-between">
-                              <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-secondary text-white" style="font-size: 0.75rem; padding: 5px 10px;">{{ detail.rollName }}</span>
-                                <span class="badge bg-danger text-white" style="font-size: 0.75rem; padding: 5px 10px;">{{ detail.brandName }}</span>
-                              </div>
-                              <div class="d-flex align-items-center gap-3">
-                                @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                                  <div class="d-flex align-items-center gap-2 bg-light border border-danger rounded p-2" style="font-family: 'Courier New', monospace;">
-                                    <span class="text-danger fw-bold" style="font-size: 0.9rem;">{{ range.from }}</span>
-                                    <i class="bi bi-arrow-right text-muted fs-5"></i>
-                                    <span class="text-danger fw-bold" style="font-size: 0.9rem;">{{ range.to }}</span>
-                                    <span class="badge bg-danger text-white ms-2" style="font-size: 0.8rem; padding: 5px 10px;">{{ range.qty | number }}</span>
+                        @for (detail of row.wastageDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
+                          <div class="roll-wastage-box border rounded p-3 shadow-sm"
+                               [style.border-color]="getRollBorderColor(rollIndex)"
+                               [style.background-color]="getRollBackgroundColor(rollIndex)">
+                            <div class="roll-header mb-2">
+                              <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                  <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
+                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.8rem;">
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    Roll {{ getRollDisplayName(detail.rollName) }}
                                   </div>
+                                  <div class="brand-badge bg-white border px-2 py-1 rounded"
+                                       [style.border-color]="getRollBorderColor(rollIndex)"
+                                       [style.color]="getRollBorderColor(rollIndex)"
+                                       style="font-size: 0.75rem; font-weight: 600;">
+                                    <i class="bi bi-tag me-1"></i>
+                                    {{ detail.brandName }}
+                                  </div>
+                                </div>
+                                <div class="roll-stats">
+                                  <span class="badge bg-danger text-white fw-bold px-3 py-2" style="font-size: 0.85rem;">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>
+                                    {{ getTotalWastageForBrand(detail) | number }} damaged
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div class="roll-details">
+                              <div class="d-flex align-items-center gap-3 flex-wrap">
+                                @for (range of detail.ranges; track range.from + range.to + range.qty) {
+                                <div class="wastage-range bg-white border border-danger rounded p-2"
+                                     [style.border-color]="getRollBorderColor(rollIndex)"
+                                     style="font-family: 'Courier New', monospace; min-width: 160px;">
+                                  <div class="text-center">
+                                    <div class="fw-bold text-danger" style="font-size: 0.85rem;">
+                                      {{ range.from }} → {{ range.to }}
+                                    </div>
+                                    <div class="small text-muted">Damaged: {{ range.qty | number }}</div>
+                                  </div>
+                                </div>
                                 }
                               </div>
                             </div>
                           </div>
                         }
-                        <!-- Total Wastage Summary Row - Smaller -->
-                        <div class="border border-danger border-2 rounded p-2 bg-danger bg-opacity-10">
+                        
+                        <!-- Enhanced Total Wastage Summary Row -->
+                        <div class="total-wastage-summary border border-danger border-2 rounded p-3 bg-danger bg-opacity-10">
                           <div class="d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
-                              <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
-                              <span class="fw-bold text-danger" style="font-size: 0.85rem;">Total Wastage:</span>
+                              <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                              <span class="fw-bold text-danger" style="font-size: 1rem;">Total Wastage Summary:</span>
                             </div>
-                            <div class="badge bg-danger text-white" style="font-size: 0.85rem; padding: 5px 12px;">
-                              {{ row.wastageQty | number }} units
+                            <div class="summary-stats d-flex gap-3">
+                              <div class="stat-item text-center">
+                                <div class="small text-muted">Rolls Affected</div>
+                                <div class="badge bg-danger text-white fw-bold" style="font-size: 0.9rem; padding: 8px 12px;">
+                                  {{ getUniqueRollsCount(row.wastageDetails) }}
+                                </div>
+                              </div>
+                              <div class="stat-item text-center">
+                                <div class="small text-muted">Total Damaged</div>
+                                <div class="badge bg-danger text-white fw-bold" style="font-size: 0.9rem; padding: 8px 12px;">
+                                  {{ row.wastageQty | number }}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>

@@ -940,4 +940,75 @@ export class HologramMonthlyReportComponent implements OnInit {
     }
     return 'N/A';
   }
+
+  /**
+   * Get roll display name (extracts the roll identifier like "a1(a)" from "a1(a) - 1 - 100_BRAND_3")
+   */
+  getRollDisplayName(rollName: string): string {
+    // Extract the roll identifier before the first dash and range
+    const parts = rollName.split(' - ');
+    if (parts.length > 0) {
+      return parts[0].trim();
+    }
+    return rollName;
+  }
+
+  /**
+   * Get roll border color based on roll index
+   */
+  getRollBorderColor(rollIndex: number): string {
+    const colors = [
+      '#007bff', // Blue
+      '#28a745', // Green  
+      '#dc3545', // Red
+      '#ffc107', // Yellow
+      '#6f42c1', // Purple
+      '#fd7e14', // Orange
+      '#20c997', // Teal
+      '#e83e8c', // Pink
+      '#6c757d', // Gray
+      '#17a2b8'  // Cyan
+    ];
+    return colors[rollIndex % colors.length];
+  }
+
+  /**
+   * Get roll background color based on roll index (light version)
+   */
+  getRollBackgroundColor(rollIndex: number): string {
+    const lightColors = [
+      '#e3f2fd', // Light Blue
+      '#e8f5e8', // Light Green
+      '#ffeaea', // Light Red
+      '#fff8e1', // Light Yellow
+      '#f3e5f5', // Light Purple
+      '#fff3e0', // Light Orange
+      '#e0f7fa', // Light Teal
+      '#fce4ec', // Light Pink
+      '#f8f9fa', // Light Gray
+      '#e0f2f1'  // Light Cyan
+    ];
+    return lightColors[rollIndex % lightColors.length];
+  }
+
+  /**
+   * Get unique rolls count from utilization or wastage details
+   */
+  getUniqueRollsCount(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }> | undefined): number {
+    if (!details || !Array.isArray(details)) {
+      return 0;
+    }
+    const uniqueRolls = new Set<string>();
+    details.forEach(detail => {
+      uniqueRolls.add(detail.rollName);
+    });
+    return uniqueRolls.size;
+  }
+
+  /**
+   * Get total wastage quantity for a brand (sum of all ranges)
+   */
+  getTotalWastageForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
+    return detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
+  }
 }
