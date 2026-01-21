@@ -20,6 +20,8 @@ interface StatementRow {
   closingBalance?: number | null;
   utilizationDetails?: Array<{
     rollName: string;
+    brandName: string;
+    bottleSize: string;
     ranges: Array<{
       from: string;
       to: string;
@@ -28,6 +30,8 @@ interface StatementRow {
   }>;
   wastageDetails?: Array<{
     rollName: string;
+    brandName: string;
+    bottleSize: string;
     ranges: Array<{
       from: string;
       to: string;
@@ -51,6 +55,8 @@ interface StatementRow {
     totalUtilizedForGroup?: number;
     totalWastageForGroup?: number;
     closingBalanceForGroup?: number;
+    isNotInUse?: boolean;
+    entryCount?: number;
   };
 }
 
@@ -153,12 +159,12 @@ export class HologramMonthlyReportComponent implements OnInit {
           approvalStatus: approvalStatus,
           matchesMonth: entryMonthKey === monthKey,
           matchesType: entryType === this.selectedHologramType,
-          matchesApproval: approvalStatus === 'APPROVED'
+          matchesApproval: approvalStatus === 'APPROVED' || approvalStatus === 'PENDING'
         });
         
         const matches = entryMonthKey === monthKey && 
                entryType === this.selectedHologramType &&
-               approvalStatus === 'APPROVED';
+               (approvalStatus === 'APPROVED' || approvalStatus === 'PENDING');
         
         if (matches) {
           console.log('✅ Matched entry:', entry);
@@ -290,30 +296,67 @@ export class HologramMonthlyReportComponent implements OnInit {
         });
       });
       
-      // Add utilizations with their precise timestamps
-      // Use created_at (DateTimeField) for precise ordering - this is the exact creation time
+      // Group utilization entries by reference number to show all in single row
+      const utilizationsByRef = new Map<string, any[]>();
+      
       filteredEntries.forEach((entry: any) => {
-        const entryId = entry.id || 0;
+        const refNo = entry.reference_no || entry.referenceNo || 'UNKNOWN';
+        
+        if (!utilizationsByRef.has(refNo)) {
+          utilizationsByRef.set(refNo, []);
+        }
+        utilizationsByRef.get(refNo)!.push(entry);
+      });
+      
+      console.log(`📋 Grouped ${filteredEntries.length} utilizations into ${utilizationsByRef.size} reference groups`);
+      
+      // Debug: Log each group
+      utilizationsByRef.forEach((entriesGroup, refNo) => {
+        console.log(`📋 Reference ${refNo}: ${entriesGroup.length} entries`, entriesGroup.map((e: any) => ({
+          id: e.id,
+          brand: e.brand_details || e.brandDetails,
+          bottle: e.bottle_size || e.bottleSize,
+          from: e.issued_from || e.issuedFrom,
+          to: e.issued_to || e.issuedTo,
+          qty: e.issued_qty || e.issuedQty
+        })));
+      });
+      
+      // Add grouped utilizations with their precise timestamps
+      utilizationsByRef.forEach((entriesGroup, refNo) => {
+        // Use the first entry's timestamp as the group timestamp
+        const firstEntry = entriesGroup[0];
         
         // Try to get the most precise timestamp available
-        // Priority: created_at > approved_at > submission_date > usage_date
-        const createdAt = entry.created_at || entry.createdAt || '';
-        const approvedAt = entry.approved_at || entry.approvedAt || '';
-        const submissionDate = entry.submission_date || entry.submissionDate || '';
-        const usageDate = entry.usage_date || entry.usageDate || '';
+        const createdAt = firstEntry.created_at || firstEntry.createdAt || '';
+        const approvedAt = firstEntry.approved_at || firstEntry.approvedAt || '';
+        const submissionDate = firstEntry.submission_date || firstEntry.submissionDate || '';
+        const usageDate = firstEntry.usage_date || firstEntry.usageDate || '';
         
-        // Use created_at if available (has full timestamp), otherwise fall back
         const dateToUse = createdAt || approvedAt || submissionDate || usageDate;
         const preciseTime = new Date(dateToUse).getTime();
         
-        console.log(`📋 Utilization ID=${entryId}, created_at=${createdAt}, approved_at=${approvedAt}, preciseTime=${preciseTime}`);
+        // Calculate totals for this reference
+        const totalUtilized = entriesGroup.reduce((sum, e) => sum + (e.issued_qty || e.issuedQty || 0), 0);
+        const totalWastage = entriesGroup.reduce((sum, e) => sum + (e.wastage_qty || e.wastageQty || 0), 0);
         
+        console.log(`📋 Reference ${refNo}: ${entriesGroup.length} entries, utilized=${totalUtilized}, wastage=${totalWastage}`);
+        
+        // Create single transaction with all entries grouped
         allTransactions.push({
           type: 'UTILIZATION',
-          id: entryId,
+          id: firstEntry.id || 0,
           timestamp: new Date(usageDate),
           preciseTimestamp: preciseTime,
-          data: entry
+          data: {
+            ...firstEntry,
+            ref_no: refNo,
+            refNo: refNo,
+            totalUtilized: totalUtilized,
+            totalWastage: totalWastage,
+            // Store all entries for detailed display
+            allEntries: entriesGroup
+          }
         });
       });
       
@@ -412,29 +455,150 @@ export class HologramMonthlyReportComponent implements OnInit {
         } else {
           // UTILIZATION
           const entry = transaction.data;
-          const utilized = entry.issued_qty || entry.issuedQty || 0;
-          const wastage = entry.wastage_qty || entry.wastageQty || 0;
+          const utilized = entry.totalUtilized || entry.issued_qty || entry.issuedQty || 0;
+          const wastage = entry.totalWastage || entry.wastage_qty || entry.wastageQty || 0;
           runningBalance = runningBalance - utilized - wastage;
+          
+          // Get all entries from this grouped utilization
+          const allEntries = entry.allEntries || [entry];
+          
+          console.log(`🔍 Processing utilization group with ${allEntries.length} entries:`, allEntries.map((e: any) => ({
+            id: e.id,
+            brand: e.brand_details || e.brandDetails,
+            bottle: e.bottle_size || e.bottleSize,
+            roll: e.cartoon_number || e.cartoonNumber
+          })));
+          
+          // Check if this is a "Not In Use" entry (all entries have 0 utilization and wastage)
+          const isNotInUse = allEntries.every((e: any) => 
+            (e.issued_qty || e.issuedQty || 0) === 0 && 
+            (e.wastage_qty || e.wastageQty || 0) === 0
+          );
+          
+          // Build utilization details grouped by roll and brand
+          const utilizationDetails: Array<{
+            rollName: string;
+            brandName: string;
+            bottleSize: string;
+            ranges: Array<{
+              from: string;
+              to: string;
+              qty: number;
+            }>;
+          }> = [];
+          
+          const wastageDetails: Array<{
+            rollName: string;
+            brandName: string;
+            bottleSize: string;
+            ranges: Array<{
+              from: string;
+              to: string;
+              qty: number;
+            }>;
+          }> = [];
+          
+          // Process each entry to extract roll and brand details
+          allEntries.forEach((e: any) => {
+            const rollName = e.cartoon_number || e.cartoonNumber || e.roll_range || e.rollRange || 'Unknown';
+            const brandName = e.brand_details || e.brandDetails || '-';
+            const bottleSize = e.bottle_size || e.bottleSize || '-';
+            
+            // Handle issued ranges
+            const issuedRanges = e.issued_ranges || e.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              issuedRanges.forEach((range: any) => {
+                utilizationDetails.push({
+                  rollName: rollName,
+                  brandName: brandName,
+                  bottleSize: bottleSize,
+                  ranges: [{
+                    from: range.fromSerial || range.from_serial || '',
+                    to: range.toSerial || range.to_serial || '',
+                    qty: range.quantity || 0
+                  }]
+                });
+              });
+            } else if ((e.issued_from || e.issuedFrom) && (e.issued_to || e.issuedTo)) {
+              // Fallback to single range
+              utilizationDetails.push({
+                rollName: rollName,
+                brandName: brandName,
+                bottleSize: bottleSize,
+                ranges: [{
+                  from: e.issued_from || e.issuedFrom || '',
+                  to: e.issued_to || e.issuedTo || '',
+                  qty: e.issued_qty || e.issuedQty || 0
+                }]
+              });
+            }
+            
+            // Handle wastage ranges
+            const wastageRanges = e.wastage_ranges || e.wastageRanges || [];
+            if (Array.isArray(wastageRanges) && wastageRanges.length > 0) {
+              wastageRanges.forEach((range: any) => {
+                wastageDetails.push({
+                  rollName: rollName,
+                  brandName: brandName,
+                  bottleSize: bottleSize,
+                  ranges: [{
+                    from: range.fromSerial || range.from_serial || '',
+                    to: range.toSerial || range.to_serial || '',
+                    qty: range.quantity || 0
+                  }]
+                });
+              });
+            } else if ((e.wastage_from || e.wastageFrom) && (e.wastage_to || e.wastageTo)) {
+              // Fallback to single range
+              wastageDetails.push({
+                rollName: rollName,
+                brandName: brandName,
+                bottleSize: bottleSize,
+                ranges: [{
+                  from: e.wastage_from || e.wastageFrom || '',
+                  to: e.wastage_to || e.wastageTo || '',
+                  qty: e.wastage_qty || e.wastageQty || 0
+                }]
+              });
+            }
+          });
+          
+          console.log(`✅ Built ${utilizationDetails.length} utilization details:`, utilizationDetails);
+          console.log(`✅ Built ${wastageDetails.length} wastage details:`, wastageDetails);
+          
+          const refNo = entry.ref_no || entry.refNo || 'N/A';
+          const firstEntry = allEntries[0];
           
           this.statementRows.push({
             rowType: 'UTILIZATION',
-            label: `Utilization - ${transaction.timestamp.toLocaleDateString()}`,
-            brandDetails: entry.brand_details || entry.brandDetails || '-',
-            bottleSize: entry.bottle_size || entry.bottleSize || '-',
-            utilizationFrom: entry.issued_from || entry.issuedFrom || '-',
-            utilizationTo: entry.issued_to || entry.issuedTo || '-',
+            label: isNotInUse 
+              ? `Not In Use - ${transaction.timestamp.toLocaleDateString()}`
+              : `Utilization - ${transaction.timestamp.toLocaleDateString()}`,
+            brandDetails: firstEntry.brand_details || firstEntry.brandDetails || '-',
+            bottleSize: firstEntry.bottle_size || firstEntry.bottleSize || '-',
+            utilizationFrom: firstEntry.issued_from || firstEntry.issuedFrom || '-',
+            utilizationTo: firstEntry.issued_to || firstEntry.issuedTo || '-',
             utilizationQty: utilized,
-            wastageFrom: entry.wastage_from || entry.wastageFrom || '-',
-            wastageTo: entry.wastage_to || entry.wastageTo || '-',
+            wastageFrom: firstEntry.wastage_from || firstEntry.wastageFrom || '-',
+            wastageTo: firstEntry.wastage_to || firstEntry.wastageTo || '-',
             wastageQty: wastage,
             leftOver: 0,
             closingBalance: runningBalance,
+            utilizationDetails: utilizationDetails.length > 0 ? utilizationDetails : undefined,
+            wastageDetails: wastageDetails.length > 0 ? wastageDetails : undefined,
             meta: {
-              referenceNo: entry.reference_no || entry.referenceNo,
-              cartoonNumber: entry.cartoon_number || entry.cartoonNumber,
-              serialRange: (entry.issued_from || entry.issuedFrom) && (entry.issued_to || entry.issuedTo)
-                ? `${entry.issued_from || entry.issuedFrom}-${entry.issued_to || entry.issuedTo}`
-                : undefined
+              referenceNo: refNo,
+              cartoonNumber: firstEntry.cartoon_number || firstEntry.cartoonNumber,
+              serialRange: (firstEntry.issued_from || firstEntry.issuedFrom) && (firstEntry.issued_to || firstEntry.issuedTo)
+                ? `${firstEntry.issued_from || firstEntry.issuedFrom}-${firstEntry.issued_to || firstEntry.issuedTo}`
+                : undefined,
+              isNotInUse: isNotInUse,
+              entryCount: allEntries.length,
+              isLastInGroup: true,
+              openingBalanceForGroup: runningBalance + utilized + wastage,
+              totalUtilizedForGroup: utilized,
+              totalWastageForGroup: wastage,
+              closingBalanceForGroup: runningBalance
             }
           });
         }
@@ -730,5 +894,50 @@ export class HologramMonthlyReportComponent implements OnInit {
    */
   goBack(): void {
     window.history.back();
+  }
+
+  /**
+   * Get unique brands from utilization details
+   */
+  getUniqueBrands(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }>): Array<{ brandName: string }> {
+    const uniqueBrands = new Map<string, { brandName: string }>();
+    details.forEach(detail => {
+      if (!uniqueBrands.has(detail.brandName)) {
+        uniqueBrands.set(detail.brandName, { brandName: detail.brandName });
+      }
+    });
+    return Array.from(uniqueBrands.values());
+  }
+
+  /**
+   * Get unique bottle sizes from utilization details
+   */
+  getUniqueBottleSizes(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }>): Array<{ bottleSize: string }> {
+    const uniqueSizes = new Map<string, { bottleSize: string }>();
+    details.forEach(detail => {
+      if (!uniqueSizes.has(detail.bottleSize)) {
+        uniqueSizes.set(detail.bottleSize, { bottleSize: detail.bottleSize });
+      }
+    });
+    return Array.from(uniqueSizes.values());
+  }
+
+  /**
+   * Get total quantity for a brand (sum of all ranges)
+   */
+  getTotalQtyForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
+    return detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
+  }
+
+  /**
+   * Get roll range from roll name (extracts the range part like "1 - 100" from "a1(a) - 1 - 100_BRAND_3")
+   */
+  getRollRange(rollName: string): string {
+    // Try to extract range from roll name format: "a1(a) - 1 - 100_BRAND_3"
+    const match = rollName.match(/(\d+)\s*-\s*(\d+)/);
+    if (match) {
+      return `${match[1]} → ${match[2]}`;
+    }
+    return 'N/A';
   }
 }

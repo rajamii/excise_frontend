@@ -130,6 +130,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   hologramInventory: HologramInventory[] = [];
   filteredInventory: HologramInventory[] = []; // Added for roll visibility
 
+  // Rolls Assigned Modal
+  showRollsModal = false;
+  selectedRequestForRolls: HologramRequest | null = null;
+
   ngOnInit() {
     this.loadHologramRequests();
   }
@@ -168,7 +172,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             status: rawStatus, // DISPLAY RAW STATUS
             allowedActions: req.allowed_actions || [], // Dynamic Actions
             officerComments: req.remarks,
-            approvedQuantity: req.quantity
+            approvedQuantity: req.quantity,
+            // CRITICAL: Include rolls_assigned data from API
+            rolls_assigned: req.rolls_assigned || req.rollsAssigned || req.issued_assets || [],
+            allocations: req.allocations || []
           }
         });
 
@@ -1734,5 +1741,64 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.editAllocationQuantity(allocation, newQuantity);
   }
 
+  // Rolls Assigned Methods
+  hasRollsAssigned(request: HologramRequest): boolean {
+    // Check if request has rolls_assigned or rollsAssigned property with data
+    const req = request as any;
+    const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
+    const hasRolls = Array.isArray(rolls) && rolls.length > 0;
+    
+    // Also check status - if approved/in_use/completed, it should have rolls
+    const status = (request.status || '').toUpperCase();
+    const isApprovedStatus = status.includes('APPROVED') || 
+                            status === 'IN_USE' || 
+                            status === 'COMPLETED' ||
+                            status === 'IN USE';
+    
+    // Debug logging
+    console.log('hasRollsAssigned check:', {
+      refNo: request.referenceNo,
+      status: request.status,
+      hasRolls,
+      isApprovedStatus,
+      rollsData: rolls
+    });
+    
+    // Show button if either has rolls data OR is in approved status
+    return hasRolls || isApprovedStatus;
+  }
+
+  viewRollsAssigned(request: HologramRequest): void {
+    this.selectedRequestForRolls = request;
+    this.showRollsModal = true;
+  }
+
+  closeRollsModal(): void {
+    this.showRollsModal = false;
+    this.selectedRequestForRolls = null;
+  }
+
+  getRollsAssigned(request: HologramRequest): any[] {
+    if (!request) return [];
+    
+    const req = request as any;
+    // Get rolls from either rolls_assigned, rollsAssigned, or allocations property
+    const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(rolls)) return [];
+    
+    return rolls.map((roll: any) => ({
+      cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
+      fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
+      toSerial: roll.toSerial || roll.to_serial || 'N/A',
+      quantity: roll.quantity || 0
+    }));
+  }
+
+  getTotalRollsQuantity(request: HologramRequest): number {
+    const rolls = this.getRollsAssigned(request);
+    return rolls.reduce((total, roll) => total + (roll.quantity || 0), 0);
+  }
 
 }
