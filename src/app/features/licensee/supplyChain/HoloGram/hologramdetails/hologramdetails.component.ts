@@ -60,6 +60,7 @@ export class HologramdetailsComponent implements OnInit {
   // Saved cartons list
   savedCartons: Array<{
     cartoonNumber: string;
+    baseCartoonNumber?: string; // Original carton number without suffix
     fromSerial: string;
     toSerial: string;
     numberOfHolograms: number;
@@ -399,6 +400,35 @@ export class HologramdetailsComponent implements OnInit {
     return false;
   }
 
+  // Track locked carton number and suffix counter
+  lockedCartonNumber: string = '';
+  cartonSuffixCounter: number = 0;
+
+  // Unlock carton number for editing
+  unlockCartonNumber(): void {
+    if (this.savedCartons.length > 0) {
+      const confirmUnlock = confirm(
+        `⚠️ Warning: Unlocking will remove all ${this.savedCartons.length} saved roll(s).\n\n` +
+        `This action cannot be undone. Do you want to continue?`
+      );
+      
+      if (!confirmUnlock) {
+        return;
+      }
+      
+      // Clear all saved cartons
+      this.savedCartons = [];
+      this.calculateTotalFromSavedCartons();
+    }
+    
+    // Unlock the carton
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
+    this.currentCarton.cartoonNumber = '';
+    
+    alert('✅ Carton number unlocked! You can now enter a new carton number.');
+  }
+
   updateArrivalDetails(record: HologramRecord) {
     this.selectedRecordForUpdate = record;
     // Reset saved cartons and current carton
@@ -412,6 +442,9 @@ export class HologramdetailsComponent implements OnInit {
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.showUpdateModal = true;
   }
 
@@ -447,13 +480,25 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  // Helper to get suffix letter (a, b, c, ... z, aa, ab, etc.)
+  getSuffixLetter(index: number): string {
+    let suffix = '';
+    let num = index;
+    while (num >= 0) {
+      suffix = String.fromCharCode(97 + (num % 26)) + suffix;
+      num = Math.floor(num / 26) - 1;
+    }
+    return suffix;
+  }
+
   // Save current carton to the list
   saveCurrentCarton() {
-    // Validate current carton
-    if (!this.currentCarton.cartoonNumber.trim()) {
+    // First entry: validate carton number
+    if (!this.lockedCartonNumber && !this.currentCarton.cartoonNumber.trim()) {
       alert('Please enter carton number');
       return;
     }
+    
     if (!this.currentCarton.fromSerial.trim()) {
       alert('Please enter from serial number');
       return;
@@ -478,34 +523,63 @@ export class HologramdetailsComponent implements OnInit {
       }
     }
 
-    // Add to saved cartons (include type)
+    // Lock carton number on first save
+    if (!this.lockedCartonNumber) {
+      this.lockedCartonNumber = this.currentCarton.cartoonNumber.trim();
+      this.cartonSuffixCounter = 0;
+    }
+
+    // Generate suffix for this roll
+    const suffix = this.getSuffixLetter(this.cartonSuffixCounter);
+    const displayCartoonNumber = `${this.lockedCartonNumber}(${suffix})`;
+
+    // Add to saved cartons (include type and display name with suffix)
     this.savedCartons.push({
-      cartoonNumber: this.currentCarton.cartoonNumber,
+      cartoonNumber: displayCartoonNumber, // Display name with suffix
+      baseCartoonNumber: this.lockedCartonNumber, // Original base name
       fromSerial: this.currentCarton.fromSerial,
       toSerial: this.currentCarton.toSerial,
       numberOfHolograms: this.currentCarton.numberOfHolograms,
       type: this.currentCarton.type || this.getDefaultHologramType()
     });
 
+    // Increment suffix counter for next roll
+    this.cartonSuffixCounter++;
+
     // Update total
     this.calculateTotalFromSavedCartons();
 
-    // Reset current carton for next entry
+    // Reset only serial numbers for next entry (keep carton locked)
     this.currentCarton = {
-      cartoonNumber: '',
+      cartoonNumber: this.lockedCartonNumber, // Keep locked carton number
       fromSerial: '',
       toSerial: '',
       numberOfHolograms: 0,
-      type: ''
+      type: this.currentCarton.type || '' // Keep type if selected
     };
 
-    // Show success message
-    alert(`Carton saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
+    // Show success message with suffix
+    alert(`Roll ${displayCartoonNumber} saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
   }
 
   // Remove a saved carton
   removeSavedCarton(index: number) {
     this.savedCartons.splice(index, 1);
+    
+    // If all cartons removed, unlock the carton number
+    if (this.savedCartons.length === 0) {
+      this.lockedCartonNumber = '';
+      this.cartonSuffixCounter = 0;
+      this.currentCarton.cartoonNumber = '';
+    } else {
+      // Recalculate suffixes for remaining cartons
+      this.savedCartons.forEach((carton, idx) => {
+        const suffix = this.getSuffixLetter(idx);
+        carton.cartoonNumber = `${carton.baseCartoonNumber || this.lockedCartonNumber}(${suffix})`;
+      });
+      this.cartonSuffixCounter = this.savedCartons.length;
+    }
+    
     this.calculateTotalFromSavedCartons();
   }
 
@@ -713,6 +787,9 @@ export class HologramdetailsComponent implements OnInit {
     this.showUpdateModal = false;
     this.selectedRecordForUpdate = null;
     this.savedCartons = [];
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.currentCarton = {
       cartoonNumber: '',
       fromSerial: '',
