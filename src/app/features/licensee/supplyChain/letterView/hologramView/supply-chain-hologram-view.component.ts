@@ -121,13 +121,16 @@ export class SupplyChainHologramViewComponent implements OnInit {
     // Try loading from procurement endpoint as fallback
     this.hologramService.getProcurements().subscribe({
       next: (procurements) => {
-        const found = procurements.find((p: any) => p.refNo === ref);
+        const found: any = procurements.find((p: any) => p.refNo === ref);
         
         if (found) {
           // CRITICAL FIX: Convert string values to numbers (handle both string and number types)
           const localQty = typeof found.localQty === 'string' ? parseFloat(found.localQty) : (found.localQty || 0);
           const exportQty = typeof found.exportQty === 'string' ? parseFloat(found.exportQty) : (found.exportQty || 0);
           const defenceQty = typeof found.defenceQty === 'string' ? parseFloat(found.defenceQty) : (found.defenceQty || 0);
+          
+          // Check if there's edit history from Commissioner
+          const hasEditHistory = found.editHistory || found.edit_history;
           
           // Map procurement data
           this.submittedData = {
@@ -137,7 +140,24 @@ export class SupplyChainHologramViewComponent implements OnInit {
             localQtyLakh: localQty,
             exportQtyLakh: exportQty,
             defenceQtyLakh: defenceQty,
-            procurementType: type || 'Local'
+            procurementType: type || 'Local',
+            editedByCommissioner: !!hasEditHistory,
+            editHistory: hasEditHistory ? {
+              editedBy: hasEditHistory.editedBy || hasEditHistory.edited_by || 'Commissioner',
+              editedDate: hasEditHistory.editedDate || hasEditHistory.edited_date,
+              originalQuantities: hasEditHistory.originalQuantities || hasEditHistory.original_quantities || {
+                local: 0,
+                export: 0,
+                defence: 0,
+                total: 0
+              },
+              updatedQuantities: hasEditHistory.updatedQuantities || hasEditHistory.updated_quantities || {
+                local: 0,
+                export: 0,
+                defence: 0,
+                total: 0
+              }
+            } : undefined
           };
           
           const currentStage: any = found.currentStage;

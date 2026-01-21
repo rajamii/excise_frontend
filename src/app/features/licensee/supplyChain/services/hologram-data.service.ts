@@ -41,6 +41,42 @@ export interface HologramProcurement {
   workflow?: number;
   currentStage?: number;
   carton_details?: any[];
+  editHistory?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    originalPayment: number;
+    updatedPayment: number;
+  };
+  edit_history?: {
+    editedBy: string;
+    editedDate: string;
+    originalQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    updatedQuantities: {
+      local: number;
+      export: number;
+      defence: number;
+      total: number;
+    };
+    originalPayment: number;
+    updatedPayment: number;
+  };
 }
 
 export interface HologramRequest {
@@ -213,6 +249,20 @@ export class HologramDataService {
   performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
     const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
     return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data });
+  }
+
+  // Update hologram procurement quantities (Commissioner edit feature)
+  updateProcurementQuantities(
+    id: number,
+    localQty: number,
+    exportQty: number,
+    defenceQty: number
+  ): Observable<any> {
+    return this.http.patch<any>(`${this.procurementApiUrl}/${id}/update-quantities/`, {
+      local_qty: localQty,
+      export_qty: exportQty,
+      defence_qty: defenceQty
+    });
   }
 
   // Notify that hologram arrivals have been updated

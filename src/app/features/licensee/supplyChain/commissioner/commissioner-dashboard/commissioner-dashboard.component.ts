@@ -66,6 +66,8 @@ export interface CommissionerTableData {
       defence: number;
       total: number;
     };
+    originalPayment: number;
+    updatedPayment: number;
   };
   // Commissioner status tracking
   commissionerStatus?: string;
@@ -272,7 +274,8 @@ export class CommissionerDashboardComponent implements OnInit {
             defenceQtyLakh: Number(item.defenceQty),
             totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
             hologramType: 'Security Hologram',
-            allowedActions: item.allowedActions || item.allowed_actions || []
+            allowedActions: item.allowedActions || item.allowed_actions || [],
+            editHistory: item.editHistory || item.edit_history || null
           };
         });
 

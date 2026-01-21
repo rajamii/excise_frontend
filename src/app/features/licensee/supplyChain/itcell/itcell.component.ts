@@ -72,7 +72,10 @@ export class ITCELLComponent implements OnInit {
           exportQtyLakh: Number(item.exportQty),
           defenceQtyLakh: Number(item.defenceQty),
           status: item.status, // Uses status name from backend
-          allowedActions: item.allowedActions || []
+          allowedActions: item.allowedActions || [],
+          // Include edit history
+          editedByCommissioner: !!(item.editHistory || item.edit_history),
+          editHistory: item.editHistory || item.edit_history || null
         }));
         this.applyFilters();
       },

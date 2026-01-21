@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, Inject, PLATFORM_ID } from '@an
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CommissionerTableData } from '../commissioner-dashboard/commissioner-dashboard.component';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 @Component({
   selector: 'app-hologram-details-view',
@@ -28,7 +29,10 @@ export class HologramDetailsViewComponent {
 
   private isBrowser = false;
 
-  constructor(@Inject(PLATFORM_ID) platformId: Object) {
+  constructor(
+    @Inject(PLATFORM_ID) platformId: Object,
+    private hologramService: HologramDataService
+  ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
@@ -67,9 +71,13 @@ export class HologramDetailsViewComponent {
   
   // Save updated quantities
   saveQuantityEdit(): void {
-    if (!this.application || !this.isBrowser) return;
+    if (!this.application) return;
     
-    const refNo = this.application.referenceNo;
+    const applicationId = this.application.id;
+    if (!applicationId) {
+      alert('Error: Application ID not found. Cannot update quantities.');
+      return;
+    }
     
     // Check if any quantity changed
     const hasChanges = 
@@ -83,70 +91,51 @@ export class HologramDetailsViewComponent {
       return;
     }
     
-    // Prepare edit history
-    const editHistory = {
-      editedBy: 'Commissioner',
-      editedDate: new Date().toISOString().split('T')[0],
-      originalQuantities: {
-        local: this.originalLocalQty,
-        export: this.originalExportQty,
-        defence: this.originalDefenceQty,
-        total: this.originalLocalQty + this.originalExportQty + this.originalDefenceQty
-      },
-      updatedQuantities: {
-        local: this.editedLocalQty,
-        export: this.editedExportQty,
-        defence: this.editedDefenceQty,
-        total: this.editedLocalQty + this.editedExportQty + this.editedDefenceQty
-      }
-    };
-    
-    // Update hologramRequests - DON'T update quantities yet, only store pending changes
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const reqIndex = hologramRequests.findIndex((req: any) => req.refNo === refNo);
-    if (reqIndex !== -1) {
-      // Store pending quantities (will be applied on approval)
-      hologramRequests[reqIndex].pendingQuantities = {
-        local: this.editedLocalQty,
-        export: this.editedExportQty,
-        defence: this.editedDefenceQty
-      };
-      // Store edit history but don't show it yet (will be shown after approval)
-      hologramRequests[reqIndex].pendingEditHistory = editHistory;
-      hologramRequests[reqIndex].hasUnapprovedEdit = true;
-      localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
+    // Validate quantities (must be non-negative)
+    if (this.editedLocalQty < 0 || this.editedExportQty < 0 || this.editedDefenceQty < 0) {
+      alert('Quantities cannot be negative.');
+      return;
     }
     
-    // Update hologramApplications (used by supply chain dashboard) - DON'T update quantities yet
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    applications.forEach((app: any) => {
-      if (app.refNo === refNo) {
-        // Store pending quantities (will be applied on approval)
-        app.pendingQuantities = {
-          local: this.editedLocalQty,
-          export: this.editedExportQty,
-          defence: this.editedDefenceQty
-        };
-        // Store edit history but don't show it yet (will be shown after approval)
-        app.pendingEditHistory = editHistory;
-        app.hasUnapprovedEdit = true;
+    // Call backend API to update quantities
+    this.hologramService.updateProcurementQuantities(
+      Number(applicationId),
+      this.editedLocalQty,
+      this.editedExportQty,
+      this.editedDefenceQty
+    ).subscribe({
+      next: (response) => {
+        console.log('Quantities updated successfully:', response);
+        
+        // Update current modal data with response
+        if (this.application) {
+          this.application.localQtyLakh = this.editedLocalQty;
+          this.application.exportQtyLakh = this.editedExportQty;
+          this.application.defenceQtyLakh = this.editedDefenceQty;
+          this.application.totalQtyLakh = this.editedLocalQty + this.editedExportQty + this.editedDefenceQty;
+          
+          // Update payment amount
+          const newPaymentAmount = response.new_payment_amount || (this.application.totalQtyLakh * 0.15);
+          this.application.amount = newPaymentAmount.toFixed(2);
+        }
+        
+        // Exit edit mode
+        this.isEditingQuantity = false;
+        
+        // Notify parent to reload data
+        this.dataUpdated.emit();
+        
+        alert(`Quantities updated successfully!\n\nOriginal Total: ${response.original_quantities.total}\nNew Total: ${response.updated_quantities.total}\nNew Payment Amount: ₹${response.new_payment_amount.toFixed(2)}\n\nThe changes are now reflected in the supply chain user's dashboard.`);
+      },
+      error: (error) => {
+        console.error('Error updating quantities:', error);
+        alert('Failed to update quantities: ' + (error.error?.error || error.message || 'Unknown error'));
+        // Revert to original values
+        this.editedLocalQty = this.originalLocalQty;
+        this.editedExportQty = this.originalExportQty;
+        this.editedDefenceQty = this.originalDefenceQty;
       }
     });
-    localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    
-    // Update current modal data (only for Commissioner to see)
-    this.application.localQtyLakh = this.editedLocalQty;
-    this.application.exportQtyLakh = this.editedExportQty;
-    this.application.defenceQtyLakh = this.editedDefenceQty;
-    this.application.totalQtyLakh = this.editedLocalQty + this.editedExportQty + this.editedDefenceQty;
-    
-    // Exit edit mode
-    this.isEditingQuantity = false;
-    
-    // Notify parent to reload data
-    this.dataUpdated.emit();
-    
-    alert('Quantities updated successfully! The changes are now reflected in the supply chain view.');
   }
 
   // Payment calculation methods for hologram details

@@ -79,6 +79,9 @@ export class HologramprocurementComponent implements OnInit {
           const requestedExport = Number((item as any).requested_export_qty || item.exportQty);
           const requestedDefence = Number((item as any).requested_defence_qty || item.defenceQty);
 
+          // Check if there's edit history
+          const hasEditHistory = (item as any).editHistory || (item as any).edit_history;
+
           return {
             ...item,
             // Ensure numeric values (API returns strings for Decimals)
@@ -91,7 +94,8 @@ export class HologramprocurementComponent implements OnInit {
             exportQtyLakh: requestedExport, // FIXED: Original requested quantity
             defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
             paymentCompleted: item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
-            editedByCommissioner: false, // Not yet supported in backend
+            editedByCommissioner: !!hasEditHistory,
+            editHistory: hasEditHistory || undefined,
             companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
             status: item.status || 'Submitted', // Default status
           };
