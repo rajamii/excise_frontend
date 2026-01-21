@@ -1,6 +1,8 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
+import { forkJoin, Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HologramDataService, HologramRequest as ApiHologramRequest } from '../../services/hologram-data.service';
 
 interface HologramRequest {
   id: string;
@@ -21,12 +23,14 @@ interface HologramRequest {
   };
   justification: string;
   urgencyLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  status: 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
+  status: 'PENDING' | 'UNDER_PROCESS' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'IN_USE';
   officerComments?: string;
   approvedQuantity?: number;
   approvalDate?: string;
   rejectionReason?: string;
   allocations?: HologramAllocation[]; // Allocation details saved when approved
+  allowedActions?: string[]; // Added from API
+  originalId?: number; // Backend ID
 }
 
 interface FilterOptions {
@@ -73,15 +77,18 @@ interface AllocationResult {
 
 @Component({
   selector: 'app-officerinchargehologramreq',
+  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './officerinchargehologramreq.component.html',
   styleUrl: './officerinchargehologramreq.component.scss'
 })
 export class OfficerinchargehologramreqComponent implements OnInit {
   @Output() backToRegister = new EventEmitter<void>();
-  
+
+  private hologramService = inject(HologramDataService);
+
   Math = Math;
-  
+
   // Officer information - same as officer-in-charge component
   currentOfficer = {
     name: 'Rajesh Kumar',
@@ -94,6 +101,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   hologramRequests: HologramRequest[] = [];
   filteredRequests: HologramRequest[] = [];
   paginatedRequests: HologramRequest[] = [];
+  allocations: any[] = []; // Calculated allocations for the modal
 
   filters: FilterOptions = {
     referenceNumber: '',
@@ -120,28 +128,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   showAllocationModal = false;
   allocationResult: AllocationResult | null = null;
   hologramInventory: HologramInventory[] = [];
+  filteredInventory: HologramInventory[] = []; // Added for roll visibility
 
   ngOnInit() {
     this.loadHologramRequests();
-    
-    // Listen for storage changes to auto-refresh when new requests are submitted
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'hologramRequests' || e.key === 'hologramApplications') {
-        console.log('Storage change detected:', e.key);
-        this.loadHologramRequests();
-      }
-    });
-    
-    // Check for updates every 10 seconds
-    setInterval(() => {
-      this.loadHologramRequests();
-    }, 10000);
-    
-    // Also listen for focus events to refresh when user returns to tab
-    window.addEventListener('focus', () => {
-      console.log('Window focus detected, refreshing requests...');
-      this.loadHologramRequests();
-    });
   }
 
   getCurrentDateTime(): string {
@@ -149,206 +139,134 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   loadHologramRequests() {
-    console.log('Loading hologram requests from localStorage...');
-    
-    // Load actual submitted requests from localStorage
-    const submittedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+    console.log('Loading hologram requests from API...');
+    this.hologramService.getRequests().subscribe({
+      next: (data) => {
+        this.hologramRequests = data.map((req: any) => {
+          // Use RAW status from backend - NO MAPPING
+          const rawStatus = req.status || 'PENDING';
+          console.log(`Ref: ${req.refNo}, Status: ${rawStatus}, Actions: ${req.allowed_actions}`);
 
-    console.log('Found hologramRequests:', submittedRequests);
-    console.log('Found hologramApplications:', hologramApplications);
-    
-    // FILTER: Only include HRQ (Hologram Request) entries, exclude YB (Hologram Procurement) entries
-    // This component shows REQUEST register, not PROCUREMENT register
-    const filteredRequests = submittedRequests.filter((item: any) => {
-      const refNo = item.refNumber || item.refNo || '';
-      const isHRQ = refNo.startsWith('HRQ/');
-      
-      if (!isHRQ && refNo) {
-        console.log(`🚫 Filtering out hologramRequest: ${refNo} (not HRQ - this is procurement, not request)`);
+          return {
+            id: `HR${req.id}`,
+            originalId: req.id,
+            referenceNo: req.refNo || 'N/A',
+            submissionDate: req.submissionDate || new Date().toISOString(),
+            usageDate: req.usageDate || new Date().toISOString(),
+            submittedBy: req.licenseeName || 'Unknown',
+            requestType: 'NEW_ALLOCATION',
+            hologramType: this.normalizeHologramType(req.hologramType || req.type),
+            requestedQuantity: req.quantity || 0,
+            brandDetails: {
+              brandName: req.brandName || 'Unknown Brand',
+              alcoholPercent: '42.8%',
+              sizeMl: parseInt(req.bottleSize) || 750,
+              liquorType: 'Whisky'
+            },
+            justification: req.remarks || '',
+            urgencyLevel: 'MEDIUM',
+            status: rawStatus, // DISPLAY RAW STATUS
+            allowedActions: req.allowed_actions || [], // Dynamic Actions
+            officerComments: req.remarks,
+            approvedQuantity: req.quantity
+          }
+        });
+
+        // Sort by date desc
+        this.hologramRequests.sort((a, b) => new Date(b.submissionDate).getTime() - new Date(a.submissionDate).getTime());
+
+        this.applyFilters();
+      },
+      error: (err) => {
+        console.error('Error loading hologram requests:', err);
       }
-      
-      return isHRQ;
     });
-    
-    const filteredApplications = hologramApplications.filter((item: any) => {
-      const refNo = item.refNo || item.referenceNo || '';
-      const isHRQ = refNo.startsWith('HRQ/');
-      
-      if (!isHRQ && refNo) {
-        console.log(`🚫 Filtering out hologramApplication: ${refNo} (not HRQ - this is procurement, not request)`);
-      }
-      
-      return isHRQ;
-    });
-    
-    console.log('✅ Filtered hologramRequests (HRQ only):', filteredRequests.length);
-    console.log('✅ Filtered hologramApplications (HRQ only):', filteredApplications.length);
-    
-    // Ensure allocation data is preserved when loading requests
-    filteredRequests.forEach((req: any) => {
-      if (req.allocations) {
-        console.log(`Request ${req.refNumber} has ${req.allocations.length} allocations`);
-      }
-    });
-    
-    // Convert submitted requests to officer format (using filtered requests)
-    const convertedRequests = filteredRequests.map((request: any, index: number) => {
-      console.log('Converting request:', request);
-      
-      // Determine hologram type from request data
-      let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
-      if (request.hologramType) {
-        hologramType = request.hologramType;
-      } else if (request.type) {
-        hologramType = request.type;
-      }
-      
-      return {
-        id: `HR${String(Date.now() + index).slice(-6)}`,
-        referenceNo: request.refNumber || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`,
-        submissionDate: request.submissionDate ? new Date(request.submissionDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        usageDate: request.usageDate ? new Date(request.usageDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // Map usageDate from request
-        submittedBy: 'Supply Chain User - Sikkim Distilleries Ltd',
-        requestType: 'NEW_ALLOCATION' as const,
-        hologramType: hologramType,
-        requestedQuantity: request.totalHolograms || 0,
-        brandDetails: {
-          brandName: this.getBrandLabel(request.brandName) || request.brandName || 'Unknown Brand',
-          alcoholPercent: '42.8%',
-          sizeMl: this.getBottleSizeNumber(request.bottleSize) || 750,
-          liquorType: this.getLiquorType(request.brandName) || 'Whisky'
-        },
-        justification: request.remarks || `Hologram request for ${this.getBrandLabel(request.brandName) || request.brandName} production - ${request.bottleSize} bottles. Usage date: ${request.usageDate}`,
-        urgencyLevel: this.determineUrgencyLevel(request.usageDate) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
-        status: request.status === 'APPROVED' ? 'APPROVED' as const : 
-                request.status === 'REJECTED' ? 'REJECTED' as const : 'PENDING' as const,
-        officerComments: request.officerComments,
-        approvedQuantity: request.approvedQuantity,
-        approvalDate: request.approvalDate,
-        rejectionReason: request.rejectionReason,
-        allocations: request.allocations || undefined // Preserve allocation data if available
-      };
-    });
+  }
 
-    // Convert hologram applications to officer format (using filtered applications)
-    const convertedApplications = filteredApplications.map((app: any, index: number) => {
-      const totalHolograms = (app.localQtyLakh || 0) + (app.exportQtyLakh || 0) + (app.defenceQtyLakh || 0);
-      let hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE' = 'LOCAL';
-      
-      if (app.exportQtyLakh > 0) hologramType = 'EXPORT';
-      else if (app.defenceQtyLakh > 0) hologramType = 'DEFENCE';
+  // Helper Methods for Dynamic Workflow
+  canIssue(request: any): boolean {
+    // 1. Check Dynamic Actions (Backend)
+    const actions = request.allowedActions || [];
+    if (actions.includes('issue') || actions.includes('approve')) return true;
 
-      return {
-        id: `HA${String(Date.now() + index + 1000).slice(-6)}`,
-        referenceNo: app.refNo || `HRQ/${new Date().getFullYear()}/${String(index + 100).padStart(3, '0')}`,
-        submissionDate: app.date || new Date().toISOString().split('T')[0],
-        usageDate: app.usageDate || app.date || new Date().toISOString().split('T')[0], // Map usageDate from application
-        submittedBy: `${app.companyName || 'Supply Chain User'} - Hologram Application`,
-        requestType: 'NEW_ALLOCATION' as const,
-        hologramType: hologramType,
-        requestedQuantity: totalHolograms,
-        brandDetails: {
-          brandName: app.companyName || 'Unknown Company',
-          alcoholPercent: '42.8%',
-          sizeMl: 750,
-          liquorType: 'Mixed Products'
-        },
-        justification: `Hologram application for ${hologramType.toLowerCase()} market. Local: ${app.localQtyLakh || 0}, Export: ${app.exportQtyLakh || 0}, Defence: ${app.defenceQtyLakh || 0} units.`,
-        urgencyLevel: 'MEDIUM' as const,
-        status: app.status === 'APPROVED' ? 'APPROVED' as const : 
-                app.status === 'REJECTED' ? 'REJECTED' as const : 'PENDING' as const,
-        officerComments: app.officerComments,
-        approvedQuantity: app.approvedQuantity || totalHolograms,
-        approvalDate: app.approvalDate,
-        rejectionReason: app.rejectionReason,
-        allocations: app.allocations || undefined // Preserve allocation data if available
-      };
-    });
+    // 2. Fallback: Explicitly allow for 'APPROVED BY PERMIT SECTION' and 'SUBMITTED'
+    // This handles cases where role-mapping might fail but status is correct
+    const s = (request.status || '').toUpperCase();
+    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
 
-    // Combine all requests
-    this.hologramRequests = [...convertedRequests, ...convertedApplications];
+    return false;
+  }
 
-    // Sort by submission date and reference number - newest first (descending order)
-    this.hologramRequests.sort((a, b) => {
-      // First, try to sort by submission date with time
-      const dateA = new Date(a.submissionDate).getTime();
-      const dateB = new Date(b.submissionDate).getTime();
-      
-      if (dateB !== dateA) {
-        return dateB - dateA; // Descending order (newest first)
-      }
-      
-      // If dates are the same, sort by reference number (descending - higher numbers first)
-      // Extract the numeric part from reference numbers like "HRQ/251125/012"
-      const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
-      const refNumB = parseInt(b.referenceNo.split('/').pop() || '0');
-      return refNumB - refNumA; // Descending order (higher ref numbers first)
-    });
+  canReject(request: any): boolean {
+    const actions = request.allowedActions || [];
+    if (actions.includes('reject')) return true;
 
-    console.log('Total converted requests:', convertedRequests.length);
-    console.log('Total converted applications:', convertedApplications.length);
-    console.log('Combined hologram requests:', this.hologramRequests.length);
-    console.log('Sorted by submission date and reference number (newest first)');
-    console.log('First 3 requests:', this.hologramRequests.slice(0, 3).map(r => ({ ref: r.referenceNo, date: r.submissionDate })));
+    // Fallback for SUBMITTED/PENDING
+    const s = (request.status || '').toUpperCase();
+    if (s === 'APPROVED BY PERMIT SECTION' || s === 'SUBMITTED' || s === 'PENDING') return true;
 
-    // No sample data - only show real requests
-    if (this.hologramRequests.length === 0) {
-      console.log('No real requests found - showing empty state');
-    } else {
-      console.log('Found real requests:', this.hologramRequests.length);
-    }
+    return false;
+  }
 
-    this.applyFilters();
+  private normalizeHologramType(type: string): 'LOCAL' | 'EXPORT' | 'DEFENCE' {
+    const t = (type || '').toUpperCase();
+    if (['LOCAL', 'EXPORT', 'DEFENCE'].includes(t)) return t as any;
+    return 'LOCAL';
+  }
+
+  // REMOVED mapStatus() - using raw status directly
+
+  getStatusClass(status: string): string {
+    const s = (status || '').toUpperCase();
+
+    // Green - Final States
+    if (s.includes('PRODUCTION COMPLETED') || s === 'COMPLETED') return 'bg-success';
+    if (s === 'APPROVED') return 'bg-success'; // Generic approved
+
+    // Yellow - Action Required States
+    if (s === 'APPROVED BY PERMIT SECTION') return 'bg-warning text-dark';
+    if (s === 'PENDING') return 'bg-warning text-dark';
+    if (s === 'SUBMITTED') return 'bg-warning text-dark';
+
+    // Red - Rejected
+    if (s.includes('REJECTED')) return 'bg-danger';
+
+    // Blue - In Process / Info
+    if (s.includes('UNDER PROCESS')) return 'bg-info';
+    if (s === 'IN_USE') return 'bg-primary';
+
+    return 'bg-secondary';
+  }
+
+  getStatusIcon(status: string): string {
+    const s = (status || '').toUpperCase();
+
+    if (s.includes('COMPLETED')) return 'bi bi-check-circle-fill';
+    if (s === 'APPROVED') return 'bi bi-check-circle';
+    if (s.includes('REJECTED')) return 'bi bi-x-circle';
+
+    if (s === 'APPROVED BY PERMIT SECTION') return 'bi bi-exclamation-circle'; // Distinctive for OIC action
+    if (s === 'PENDING') return 'bi bi-clock';
+    if (s === 'IN_USE') return 'bi bi-gear-wide-connected';
+
+    return 'bi bi-info-circle';
   }
 
   // Helper methods for data conversion
   private getBrandLabel(brandValue: string): string {
-    if (!brandValue) return 'Unknown Brand';
-    
-    const brandMap: { [key: string]: string } = {
-      'sikkim-supreme': 'Sikkim Supreme Whisky',
-      'himalayan-gold': 'Himalayan Gold Rum',
-      'royal-sikkim': 'Royal Sikkim Brandy',
-      'mountain-dew': 'Mountain Dew Vodka',
-      'gangtok-special': 'Gangtok Special Whisky',
-      'teesta-valley': 'Teesta Valley Rum',
-      'khangchendzonga': 'Khangchendzonga Premium',
-      'yuksom-heritage': 'Yuksom Heritage Whisky'
-    };
-    
-    return brandMap[brandValue] || brandValue;
+    return brandValue || 'Unknown Brand';
   }
 
   private getBottleSizeNumber(bottleSize: string): number {
-    const sizeMap: { [key: string]: number } = {
-      '180ml': 180,
-      '375ml': 375,
-      '750ml': 750,
-      '1000ml': 1000
-    };
-    return sizeMap[bottleSize] || 750;
+    return parseInt(bottleSize) || 750;
   }
 
   private getLiquorType(brandValue: string): string {
-    if (brandValue?.includes('whisky') || brandValue?.includes('whiskey')) return 'Whisky';
-    if (brandValue?.includes('rum')) return 'Rum';
-    if (brandValue?.includes('brandy')) return 'Brandy';
-    if (brandValue?.includes('vodka')) return 'Vodka';
     return 'Whisky';
   }
 
   private determineUrgencyLevel(usageDate: string): string {
-    if (!usageDate) return 'MEDIUM';
-    
-    const usage = new Date(usageDate);
-    const today = new Date();
-    const diffDays = Math.ceil((usage.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays <= 1) return 'CRITICAL';
-    if (diffDays <= 3) return 'HIGH';
-    if (diffDays <= 7) return 'MEDIUM';
-    return 'LOW';
+    return 'MEDIUM';
   }
 
   applyFilters() {
@@ -367,8 +285,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesDateTo = !this.filters.dateTo ||
         new Date(request.submissionDate) <= new Date(this.filters.dateTo);
 
-      return matchesReference && matchesStatus && matchesRequestType && 
-             matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
+      return matchesReference && matchesStatus && matchesRequestType &&
+        matchesHologramType && matchesUrgencyLevel && matchesDateFrom && matchesDateTo;
     });
 
     // Sort filtered results by submission date and reference number - newest first (descending order)
@@ -376,11 +294,11 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       // First, try to sort by submission date with time
       const dateA = new Date(a.submissionDate).getTime();
       const dateB = new Date(b.submissionDate).getTime();
-      
+
       if (dateB !== dateA) {
         return dateB - dateA; // Descending order (newest first)
       }
-      
+
       // If dates are the same, sort by reference number (descending - higher numbers first)
       // Extract the numeric part from reference numbers like "HRQ/251125/012"
       const refNumA = parseInt(a.referenceNo.split('/').pop() || '0');
@@ -414,45 +332,6 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   goToPage(page: number) {
     if (page >= 1 && page <= this.totalPages) {
-      this.currentPage = page;
-      this.updatePagination();
-    }
-  }
-
-  getPageNumbers(): number[] {
-    const pages: number[] = [];
-    const maxPagesToShow = 5;
-    let startPage = Math.max(1, this.currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(this.totalPages, startPage + maxPagesToShow - 1);
-
-    if (endPage - startPage + 1 < maxPagesToShow) {
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-
-    return pages;
-  }
-
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'PENDING': return 'bg-warning text-dark';
-      case 'APPROVED': return 'bg-success';
-      case 'REJECTED': return 'bg-danger';
-      default: return 'bg-secondary';
-    }
-  }
-
-  getStatusIcon(status: string): string {
-    switch (status) {
-      case 'PENDING': return 'bi bi-clock';
-      case 'UNDER_PROCESS': return 'bi bi-hourglass-split';
-      case 'APPROVED': return 'bi bi-check-circle';
-      case 'COMPLETED': return 'bi bi-check-circle-fill';
-      case 'REJECTED': return 'bi bi-x-circle';
-      default: return 'bi bi-question-circle';
     }
   }
 
@@ -479,7 +358,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Load allocation data if available
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const requestData = hologramRequests.find((req: any) => req.refNumber === request.referenceNo);
-    
+
     if (requestData && requestData.allocations) {
       request.allocations = requestData.allocations;
     } else {
@@ -490,7 +369,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         request.allocations = appData.allocations;
       }
     }
-    
+
     this.selectedRequest = request;
     console.log('Viewing request details:', request);
     console.log('Allocation details:', request.allocations);
@@ -509,7 +388,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.selectedRequest = request;
     this.approvalComments = '';
     this.approvedQuantity = request.requestedQuantity;
-    
+
     // Check inventory and show allocation popup
     this.showHologramAllocationModal(request);
   }
@@ -519,7 +398,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.rejectionReason = '';
     // In real app, open rejection modal
     const reason = prompt('Enter rejection reason (required):');
-    
+
     if (reason && reason.trim()) {
       this.rejectionReason = reason;
       this.confirmRejection();
@@ -527,101 +406,146 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   }
 
   confirmApproval() {
-    if (this.selectedRequest) {
-      // Update the request status
-      this.selectedRequest.status = 'APPROVED';
-      this.selectedRequest.officerComments = this.approvalComments;
-      this.selectedRequest.approvedQuantity = this.approvedQuantity;
-      this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
-
-      // Update in localStorage - find and update the original request
-      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-      
-      // Update in hologramRequests
-      const requestIndex = hologramRequests.findIndex((req: any) => 
-        req.refNumber === this.selectedRequest!.referenceNo || 
-        req.referenceNo === this.selectedRequest!.referenceNo
-      );
-      
-      if (requestIndex !== -1) {
-        hologramRequests[requestIndex].status = 'APPROVED';
-        hologramRequests[requestIndex].officerComments = this.approvalComments;
-        hologramRequests[requestIndex].approvedQuantity = this.approvedQuantity;
-        hologramRequests[requestIndex].approvalDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-      }
-      
-      // Update in hologramApplications
-      const appIndex = hologramApplications.findIndex((app: any) => 
-        app.refNo === this.selectedRequest!.referenceNo
-      );
-      
-      if (appIndex !== -1) {
-        hologramApplications[appIndex].status = 'APPROVED';
-        hologramApplications[appIndex].officerComments = this.approvalComments;
-        hologramApplications[appIndex].approvedQuantity = this.approvedQuantity;
-        hologramApplications[appIndex].approvalDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
-      }
-
-      console.log('Request approved:', this.selectedRequest.referenceNo);
-      alert(`Request ${this.selectedRequest.referenceNo} has been approved for ${this.approvedQuantity} holograms!`);
-
-      this.selectedRequest = null;
-      this.approvalComments = '';
-      this.approvedQuantity = 0;
-      
-      // Reload data to reflect changes
-      this.loadHologramRequests();
+    if (!this.selectedRequest || !this.selectedRequest.originalId) {
+      alert('Invalid request data');
+      return;
     }
+
+    // Determine action based on allowedActions or default to 'issue' (OIC standard)
+    let action = 'issue';
+    if (this.selectedRequest.allowedActions && this.selectedRequest.allowedActions.length > 0) {
+      if (this.selectedRequest.allowedActions.includes('issue')) action = 'issue';
+      else if (this.selectedRequest.allowedActions.includes('approve')) action = 'approve';
+      else action = this.selectedRequest.allowedActions[0];
+    }
+
+    // Use existing allocations from modal if available, otherwise auto-allocate
+    const quantity = this.selectedRequest.requestedQuantity || 0;
+    const type = (this.selectedRequest.hologramType || 'LOCAL').toUpperCase();
+
+    let allocations: any[] = [];
+    if (this.allocations && this.allocations.length > 0) {
+      // Use modal allocations and normalize format for backend
+      allocations = this.allocations.map((a: any) => {
+        // calculateHologramAllocation returns: {cartoonNumber, fromSerial, toSerial, quantity, remainingInCartoon}
+        // Backend expects: {cartoonNumber/cartoon_number, count/quantity, remainingInCartoon}
+
+        // Recalculate remainingInCartoon if needed
+        const allocatedQty = a.quantity || a.count || 0;
+        const currentRemaining = a.remainingInCartoon;
+
+        // If remainingInCartoon seems wrong, recalculate from inventory
+        let finalRemaining = currentRemaining;
+        if (currentRemaining === undefined || currentRemaining === null) {
+          const roll = this.hologramInventory.find(r => r.cartoonNumber === a.cartoonNumber);
+          if (roll) {
+            finalRemaining = roll.availableCount - allocatedQty;
+          } else {
+            finalRemaining = 0;
+          }
+        }
+
+        return {
+          cartoonNumber: a.cartoonNumber,
+          cartoon_number: a.cartoonNumber, // Include both formats
+          count: allocatedQty,
+          quantity: allocatedQty,
+          remainingInCartoon: finalRemaining,
+          range: a.range || `${a.fromSerial} - ${a.toSerial}`,
+          fromSerial: a.fromSerial,
+          toSerial: a.toSerial
+        };
+      });
+      console.log('Using modal allocations (normalized):', allocations);
+    } else {
+      allocations = this.autoAllocateHolograms(quantity, type);
+      console.log(`Auto-allocated fresh for ${quantity} ${type}:`, allocations);
+    }
+
+    this.hologramService.performAction('request', this.selectedRequest.originalId, action, this.approvalComments, { issued_assets: allocations }).subscribe({
+      next: () => {
+        alert(`Request approved successfully. Assigned ${allocations.length} rolls.`);
+        this.selectedRequest = null;
+        this.allocations = []; // Clear allocations
+        this.approvalComments = '';
+        this.loadHologramRequests();
+        this.loadHologramInventory(); // Reload inventory to see updated Available counts
+        
+        // Notify other components that request data has been updated
+        this.hologramService.notifyRequestUpdate();
+      },
+      error: (err) => {
+        console.error('Error approving request:', err);
+        alert('Failed to approve request');
+      }
+    });
+  }
+
+  autoAllocateHolograms(quantity: number, type: string): any[] {
+    const allocations: any[] = [];
+    let remaining = quantity;
+
+    // Ensure inventory is loaded
+    if (!this.hologramInventory || this.hologramInventory.length === 0) {
+      this.loadHologramInventory();
+    }
+
+    // Filter by type and sort by received date (FIFO)
+    const availableRolls = this.hologramInventory
+      .filter(r => r.type === type && r.availableCount > 0)
+      .sort((a, b) => new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime());
+
+    for (const roll of availableRolls) {
+      if (remaining <= 0) break;
+
+      const take = Math.min(remaining, roll.availableCount);
+      // Find specific range for this 'take' amount?
+      // For simplicity, we just assign the roll or part of it conceptually.
+      // Ideally we should find the exact serial range.
+
+      let allocatedRange = '';
+      if (roll.actualAvailableRanges && roll.actualAvailableRanges.length > 0) {
+        // Take from first available range
+        const range = roll.actualAvailableRanges[0];
+        // Simple approximation: just use the range string provided by the logic
+        // In a real scenario, we'd split the range if taking partial.
+        allocatedRange = `${range.fromSerial} - ${range.toSerial}`;
+      } else {
+        allocatedRange = `${roll.fromSerial} - ${roll.toSerial}`;
+      }
+
+      allocations.push({
+        cartoonNumber: roll.cartoonNumber,
+        range: allocatedRange,
+        count: take,
+        rollId: roll.id,
+        remainingInCartoon: roll.availableCount - take // Send remaining balance to backend
+      });
+
+      remaining -= take;
+    }
+
+    return allocations;
   }
 
   confirmRejection() {
-    if (this.selectedRequest && this.rejectionReason.trim()) {
-      // Update the request status
-      this.selectedRequest.status = 'REJECTED';
-      this.selectedRequest.rejectionReason = this.rejectionReason;
-      this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
-
-      // Update in localStorage - find and update the original request
-      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-      
-      // Update in hologramRequests
-      const requestIndex = hologramRequests.findIndex((req: any) => 
-        req.refNumber === this.selectedRequest!.referenceNo || 
-        req.referenceNo === this.selectedRequest!.referenceNo
-      );
-      
-      if (requestIndex !== -1) {
-        hologramRequests[requestIndex].status = 'REJECTED';
-        hologramRequests[requestIndex].rejectionReason = this.rejectionReason;
-        hologramRequests[requestIndex].approvalDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-      }
-      
-      // Update in hologramApplications
-      const appIndex = hologramApplications.findIndex((app: any) => 
-        app.refNo === this.selectedRequest!.referenceNo
-      );
-      
-      if (appIndex !== -1) {
-        hologramApplications[appIndex].status = 'REJECTED';
-        hologramApplications[appIndex].rejectionReason = this.rejectionReason;
-        hologramApplications[appIndex].approvalDate = new Date().toISOString().split('T')[0];
-        localStorage.setItem('hologramApplications', JSON.stringify(hologramApplications));
-      }
-
-      console.log('Request rejected:', this.selectedRequest.referenceNo);
-      alert(`Request ${this.selectedRequest.referenceNo} has been rejected.`);
-
-      this.selectedRequest = null;
-      this.rejectionReason = '';
-      
-      // Reload data to reflect changes
-      this.loadHologramRequests();
+    if (!this.selectedRequest || !this.selectedRequest.originalId) {
+      alert('Invalid request data');
+      return;
     }
+
+    this.hologramService.performAction('request', this.selectedRequest.originalId, 'reject', this.rejectionReason).subscribe({
+      next: () => {
+        alert('Request rejected');
+        this.selectedRequest = null;
+        this.rejectionReason = '';
+        this.loadHologramRequests();
+      },
+      error: (err) => {
+        console.error('Error rejecting request:', err);
+        alert('Failed to reject request');
+      }
+    });
   }
 
   getRequestCount(status?: string): number {
@@ -638,7 +562,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   getAvailableHologramsByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
     // Load hologram inventory from localStorage
     const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-    
+
     // Filter by type and sum available counts
     return savedRolls
       .filter((roll: any) => roll.type === type)
@@ -657,203 +581,263 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   // Manual refresh method
   refreshRequests() {
     console.log('Refreshing hologram requests...');
-    
+
     // Debug: Check what's in localStorage
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    
+
     console.log('Found hologramRequests in localStorage:', hologramRequests);
     console.log('Found hologramApplications in localStorage:', hologramApplications);
-    
+
     this.loadHologramRequests();
     alert(`Hologram requests refreshed successfully! Found ${hologramRequests.length} requests and ${hologramApplications.length} applications.`);
   }
 
-  // Debug method to add test request (for testing)
-  addTestRequest() {
-    const testRequest = {
-      usageDate: '2024-11-06',
-      brandName: 'himalayan-gold',
-      bottleSize: '750ml',
-      totalHolograms: 1000,
-      remarks: 'Test hologram request for verification',
-      refNumber: `TEST/${Date.now()}`,
-      submissionDate: new Date().toISOString(),
-      status: 'PENDING'
-    };
-
-    const existingRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    existingRequests.push(testRequest);
-    localStorage.setItem('hologramRequests', JSON.stringify(existingRequests));
-    
-    console.log('Added test request:', testRequest);
-    this.loadHologramRequests();
-    alert('Test request added successfully!');
-  }
-
-  // Debug method to show localStorage contents
-  showStorageContents() {
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    
-    console.log('=== LOCALSTORAGE CONTENTS ===');
-    console.log('hologramRequests:', hologramRequests);
-    console.log('hologramApplications:', hologramApplications);
-    console.log('Current component requests:', this.hologramRequests);
-    console.log('Filtered requests:', this.filteredRequests);
-    
-    const message = `
-    LocalStorage Contents:
-    - hologramRequests: ${hologramRequests.length} items
-    - hologramApplications: ${hologramApplications.length} items
-    
-    Component Data:
-    - Total requests loaded: ${this.hologramRequests.length}
-    - Filtered requests: ${this.filteredRequests.length}
-    
-    Check browser console for detailed data.
-    `;
-    
-    alert(message);
-  }
-
-  // Debug method to clear localStorage (for testing)
-  clearTestData() {
-    if (confirm('Are you sure you want to clear all test data? This will remove all hologram requests.')) {
-      localStorage.removeItem('hologramRequests');
-      localStorage.removeItem('hologramApplications');
-      localStorage.removeItem('approvedHologramEntries');
-      this.loadHologramRequests();
-      alert('Test data cleared successfully!');
-    }
-  }
-
   // Hologram allocation methods
   loadHologramInventory(): void {
-    console.log('=== LOADING HOLOGRAM INVENTORY ===');
-    
-    // Load from localStorage (saved by hologram overview)
-    const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-    const savedSerialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-    
-    console.log('Saved Rolls:', savedRolls);
-    console.log('Saved Serial Data:', savedSerialData);
-    
-    // Combine all inventory sources
-    const allInventory = [...savedSerialData, ...savedRolls];
-    
-    console.log('Combined Inventory (before deduplication):', allInventory.length, 'items');
-    
-    // Remove EXACT duplicates based on ID (not cartoon number, as we can have multiple rolls with same cartoon number)
-    // Use a Map to track unique items by their actual ID
-    const uniqueMap = new Map();
-    
-    allInventory.forEach(item => {
-      const cartoonNumber = item.cartoonNumber || item.rollNumber;
-      const itemId = item.id;
-      
-      // Create a unique key using both ID and cartoon number to handle duplicates properly
-      const uniqueKey = `${itemId}_${cartoonNumber}`;
-      
-      if (!uniqueMap.has(uniqueKey)) {
-        uniqueMap.set(uniqueKey, item);
-      } else {
-        console.log(`Skipping duplicate: ${cartoonNumber} (ID: ${itemId})`);
+    console.log('=== LOADING HOLOGRAM INVENTORY FROM SINGLE SOURCE OF TRUTH (ROLLS DETAILS) ===');
+
+    this.hologramService.getRollsDetails().subscribe({
+      next: (rolls: any[]) => {
+        console.log(`Fetched ${rolls.length} rolls details`);
+
+        const inventoryItems: HologramInventory[] = [];
+
+        for (const roll of rolls) {
+          // Basic validation
+          if (!roll.carton_number && !roll.cartonNumber) continue;
+
+          const uniqueId = roll.id || Math.random();
+          const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
+          
+          // Use the available_range field from backend (already calculated)
+          let actualAvailableRanges: any[] = [];
+          
+          console.log(`🔥 CHECKING ROLL ${roll.carton_number}:`, {
+            available_range: roll.available_range,
+            from_serial: roll.from_serial,
+            to_serial: roll.to_serial,
+            available: availableQty
+          });
+          
+          if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
+            console.log(`📊 Using available_range from backend for ${roll.carton_number}: ${roll.available_range}`);
+            
+            // Parse the available_range string (e.g., "101-1000" or "101-500, 600-1000")
+            const rangeStrings = roll.available_range.split(',').map((s: string) => s.trim());
+            
+            for (const rangeStr of rangeStrings) {
+              if (rangeStr.includes('-')) {
+                const [from, to] = rangeStr.split('-');
+                const fromNum = parseInt(from);
+                const toNum = parseInt(to);
+                const count = toNum - fromNum + 1;
+                
+                console.log(`  🎯 Parsing range "${rangeStr}": from=${from}, to=${to}, count=${count}`);
+                
+                // Don't pad - use the numbers as-is from the backend
+                actualAvailableRanges.push({
+                  fromSerial: from,
+                  toSerial: to,
+                  count
+                });
+              }
+            }
+            
+            console.log(`✅ Parsed ${actualAvailableRanges.length} ranges from available_range field:`, actualAvailableRanges);
+          }
+          
+          // Fallback: if no ranges parsed and available > 0, use the roll's original range
+          if (actualAvailableRanges.length === 0 && availableQty > 0) {
+            console.warn(`⚠️ No available_range from backend for ${roll.carton_number || roll.cartonNumber}, using fallback`);
+            console.warn(`⚠️ FALLBACK DATA:`, {
+              from_serial: roll.from_serial,
+              to_serial: roll.to_serial,
+              fromSerial: roll.fromSerial,
+              toSerial: roll.toSerial
+            });
+            actualAvailableRanges = [{
+              fromSerial: roll.from_serial || roll.fromSerial || '',
+              toSerial: roll.to_serial || roll.toSerial || '',
+              count: availableQty
+            }];
+            console.warn(`⚠️ FALLBACK RANGE CREATED:`, actualAvailableRanges);
+          }
+
+          const item: HologramInventory = {
+            id: uniqueId,
+            cartoonNumber: roll.carton_number || roll.cartonNumber,
+            type: (roll.type || 'LOCAL').toUpperCase() as any,
+            fromSerial: roll.from_serial || roll.fromSerial || '',
+            toSerial: roll.to_serial || roll.toSerial || '',
+            totalCount: roll.total_count || roll.totalCount || 0,
+            availableCount: availableQty,
+            usedCount: roll.used || roll.usedCount || 0,
+            damagedCount: roll.damaged || roll.damagedCount || 0,
+            status: (roll.status || 'AVAILABLE').toUpperCase() as any,
+            receivedDate: roll.received_date || roll.receivedDate || new Date().toISOString(),
+            actualAvailableRanges: actualAvailableRanges
+          };
+          
+          console.log(`📦 Roll ${item.cartoonNumber}: receivedDate=${item.receivedDate}, available=${item.availableCount}, ranges=${actualAvailableRanges.length}`);
+          
+          inventoryItems.push(item);
+        }
+
+        console.log(`✅ Built ${inventoryItems.length} inventory items from DB`);
+        
+        // CRITICAL: Sort inventory by receivedDate for FIFO (oldest first)
+        inventoryItems.sort((a, b) => {
+          const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+          const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+          return dateA - dateB;
+        });
+        
+        console.log('📊 Inventory sorted by receivedDate (FIFO):', inventoryItems.map(i => ({
+          cartoonNumber: i.cartoonNumber,
+          receivedDate: i.receivedDate,
+          availableCount: i.availableCount,
+          availableRange: i.actualAvailableRanges
+        })));
+
+        // Populate component state
+        this.hologramInventory = inventoryItems;
+        this.filteredInventory = [...this.hologramInventory];
+
+        // Debug
+        console.log('Final Inventory State:', this.hologramInventory);
+
+        // Update summaries
+        this.updateInventorySummary();
+      },
+      error: (err) => {
+        console.error('❌ Error loading rolls:', err);
       }
     });
-    
-    const uniqueInventory = Array.from(uniqueMap.values());
-    
-    console.log('Unique Inventory (after deduplication):', uniqueInventory.length, 'items');
-    
-    // Normalize the data structure to ensure consistent property names
-    const normalizedInventory = uniqueInventory.map(item => {
-      const cartoonNumber = item.cartoonNumber || item.rollNumber || 'UNKNOWN';
-      const hologramType = item.type || item.hologramType || 'LOCAL';
-      
-      // CRITICAL FIX: Use serialRanges from Serial Numbers Details if available
-      // This ensures we use the ACTUAL available ranges shown in the modal
-      let actualAvailableRanges: Array<{ fromSerial: string; toSerial: string; count: number }> = [];
-      
-      if (item.serialRanges && Array.isArray(item.serialRanges)) {
-        // Filter for AVAILABLE ranges only
-        actualAvailableRanges = item.serialRanges
-          .filter((range: any) => range.status === 'AVAILABLE')
-          .map((range: any) => ({
-            fromSerial: range.fromSerial,
-            toSerial: range.toSerial,
-            count: range.count
-          }));
-        console.log(`  Using serialRanges from ${cartoonNumber}:`, actualAvailableRanges);
-      } else {
-        // Fallback: Calculate from usage history
-        actualAvailableRanges = this.calculateActualAvailableRanges(cartoonNumber, hologramType, item.fromSerial, item.toSerial);
-        console.log(`  Calculated ranges for ${cartoonNumber}:`, actualAvailableRanges);
-      }
-      
-      // Calculate total available count from ALL ranges
-      const totalAvailableFromRanges = actualAvailableRanges.reduce((sum, range) => sum + range.count, 0);
-      
-      // Use the calculated total from ranges, or fall back to item.availableCount
-      const finalAvailableCount = totalAvailableFromRanges > 0 ? totalAvailableFromRanges : item.availableCount;
-      
-      const normalized: HologramInventory = {
-        id: item.id,
-        cartoonNumber: cartoonNumber,
-        type: hologramType as 'LOCAL' | 'EXPORT' | 'DEFENCE',
-        fromSerial: item.fromSerial,
-        toSerial: item.toSerial,
-        totalCount: item.totalCount,
-        availableCount: finalAvailableCount,
-        usedCount: item.usedCount || 0,
-        damagedCount: item.damagedCount || 0,
-        status: item.status,
-        receivedDate: item.receivedDate,
-        actualAvailableRange: actualAvailableRanges.length > 0 ? actualAvailableRanges[0] : undefined, // Keep for backward compatibility
-        actualAvailableRanges: actualAvailableRanges.length > 0 ? actualAvailableRanges : undefined
-      };
-      
-      console.log(`Normalized ${normalized.cartoonNumber}:`, {
-        type: normalized.type,
-        available: normalized.availableCount,
-        rangesCount: actualAvailableRanges.length,
-        ranges: actualAvailableRanges.map(r => `${r.fromSerial}-${r.toSerial} (${r.count})`).join(', '),
-        status: normalized.status
-      });
-      
-      return normalized;
-    });
-    
-    console.log('Normalized Inventory:', normalizedInventory);
-    
-    this.hologramInventory = normalizedInventory;
-    
-    // Sort by received date (oldest first for FIFO)
-    this.hologramInventory.sort((a, b) => {
-      return new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime();
-    });
-    
-    console.log('=== INVENTORY SUMMARY ===');
-    console.log('Total Rolls Loaded:', this.hologramInventory.length);
-    
-    // Group by type and show totals
-    const byType = this.hologramInventory.reduce((acc, item) => {
-      if (!acc[item.type]) {
-        acc[item.type] = { count: 0, available: 0, rolls: [] };
-      }
-      acc[item.type].count++;
-      acc[item.type].available += item.availableCount;
-      acc[item.type].rolls.push(item.cartoonNumber);
-      return acc;
-    }, {} as any);
-    
-    Object.keys(byType).forEach(type => {
-      console.log(`${type}: ${byType[type].count} rolls, ${byType[type].available} available holograms`);
-      console.log(`  Rolls: ${byType[type].rolls.join(', ')}`);
-    });
-    
-    console.log('=== END LOADING HOLOGRAM INVENTORY ===');
   }
+
+  // Async wrapper for loadHologramInventory that returns Observable
+  loadHologramInventoryAsync(): Observable<void> {
+    return new Observable(observer => {
+      forkJoin({
+        rolls: this.hologramService.getRollsDetails(),
+        requests: this.hologramService.getRequests()
+      }).subscribe({
+        next: ({ rolls, requests }) => {
+          const inventoryItems: HologramInventory[] = [];
+          
+          for (const roll of rolls) {
+            if (!roll.carton_number && !roll.cartonNumber) continue;
+            
+            const uniqueId = roll.id || Math.random();
+            const availableQty = roll.available !== undefined ? roll.available : (roll.available_count || 0);
+            
+            // Use the available_range field from backend (already calculated)
+            let actualAvailableRanges: any[] = [];
+            
+            // Handle both snake_case and camelCase
+            const availableRange = roll.available_range || roll.availableRange;
+            const fromSerial = roll.from_serial || roll.fromSerial;
+            const toSerial = roll.to_serial || roll.toSerial;
+            const cartonNumber = roll.carton_number || roll.cartonNumber;
+            
+            console.log(`🔥 ASYNC CHECKING ROLL ${cartonNumber}:`, {
+              available_range: roll.available_range,
+              availableRange: roll.availableRange,
+              from_serial: roll.from_serial,
+              fromSerial: roll.fromSerial,
+              to_serial: roll.to_serial,
+              toSerial: roll.toSerial,
+              available: availableQty,
+              rawRoll: roll
+            });
+            
+            if (availableRange && availableRange !== 'None' && availableRange !== 'N/A') {
+              console.log(`📊 Using available_range from backend for ${cartonNumber}: ${availableRange}`);
+              
+              // Parse the available_range string (e.g., "101-1000" or "101-500, 600-1000")
+              const rangeStrings = availableRange.split(',').map((s: string) => s.trim());
+              
+              for (const rangeStr of rangeStrings) {
+                if (rangeStr.includes('-')) {
+                  const [from, to] = rangeStr.split('-');
+                  const fromNum = parseInt(from);
+                  const toNum = parseInt(to);
+                  const count = toNum - fromNum + 1;
+                  
+                  console.log(`  🎯 ASYNC Parsing range "${rangeStr}": from=${from}, to=${to}, count=${count}`);
+                  
+                  // Don't pad - use the numbers as-is from the backend
+                  actualAvailableRanges.push({
+                    fromSerial: from,
+                    toSerial: to,
+                    count
+                  });
+                }
+              }
+              
+              console.log(`✅ ASYNC Parsed ${actualAvailableRanges.length} ranges from available_range field:`, actualAvailableRanges);
+            }
+            
+            // Fallback: if no ranges parsed and available > 0, use the roll's original range
+            if (actualAvailableRanges.length === 0 && availableQty > 0) {
+              console.warn(`⚠️ No available_range from backend for ${cartonNumber}, using fallback`);
+              actualAvailableRanges = [{
+                fromSerial: fromSerial || '',
+                toSerial: toSerial || '',
+                count: availableQty
+              }];
+              console.warn(`⚠️ FALLBACK RANGE CREATED:`, actualAvailableRanges);
+            }
+            
+            const item: HologramInventory = {
+              id: uniqueId,
+              cartoonNumber: cartonNumber,
+              type: (roll.type || 'LOCAL').toUpperCase() as any,
+              fromSerial: fromSerial || '',
+              toSerial: toSerial || '',
+              totalCount: roll.total_count || roll.totalCount || 0,
+              availableCount: availableQty,
+              usedCount: roll.used || roll.usedCount || 0,
+              damagedCount: roll.damaged || roll.damagedCount || 0,
+              status: (roll.status || 'AVAILABLE').toUpperCase() as any,
+              receivedDate: roll.received_date || roll.receivedDate || new Date().toISOString(),
+              actualAvailableRanges: actualAvailableRanges
+            };
+            
+            inventoryItems.push(item);
+          }
+          
+          // CRITICAL: Sort inventory by receivedDate for FIFO (oldest first)
+          inventoryItems.sort((a, b) => {
+            const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+            const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+            return dateA - dateB;
+          });
+          
+          this.hologramInventory = inventoryItems;
+          this.filteredInventory = [...this.hologramInventory];
+          this.updateInventorySummary();
+          observer.next();
+          observer.complete();
+        },
+        error: (err) => {
+          observer.error(err);
+        }
+      });
+    });
+  }
+
+  updateInventorySummary(): void {
+    // Simply refresh the filtered list, can be extended for filtering logic later
+    this.filteredInventory = [...this.hologramInventory];
+    // Sort by received date default (FIFO - oldest first)
+    this.filteredInventory.sort((a, b) => new Date(a.receivedDate || '1970-01-01').getTime() - new Date(b.receivedDate || '1970-01-01').getTime());
+  }
+
+
+
+
 
   /**
    * Calculate ALL actual available ranges for a cartoon, excluding IN_PROGRESS issued holograms
@@ -867,7 +851,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     toSerial: string
   ): Array<{ fromSerial: string; toSerial: string; count: number }> {
     console.log(`🔍 calculateActualAvailableRanges for ${cartoonNumber}:`, { fromSerial, toSerial });
-    
+
     if (!fromSerial || !toSerial) return [];
 
     // Extract serial numbers
@@ -879,7 +863,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Get IN_PROGRESS issued holograms for this cartoon
     const issuedData = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
-    const inProgressIssued = issuedData.filter((issued: any) => 
+    const inProgressIssued = issuedData.filter((issued: any) =>
       issued.status === 'IN_PROGRESS' &&
       issued.cartoonNumber === cartoonNumber &&
       (issued.hologramType === hologramType || !issued.hologramType)
@@ -902,8 +886,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Get USED and DAMAGED ranges from usage history
     const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
-    const serialRoll = serialData.find((roll: any) => 
-      (roll.rollNumber === cartoonNumber || roll.cartoonNumber === cartoonNumber) && 
+    const serialRoll = serialData.find((roll: any) =>
+      (roll.rollNumber === cartoonNumber || roll.cartoonNumber === cartoonNumber) &&
       roll.hologramType === hologramType
     );
 
@@ -914,10 +898,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       console.log(`  Processing ${serialRoll.usageHistory.length} usage history entries`);
       serialRoll.usageHistory.forEach((historyEntry: any) => {
         if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) return;
-        
+
         let fromSerial = '';
         let toSerial = '';
-        
+
         if (historyEntry.type === 'ISSUED') {
           fromSerial = historyEntry.issuedFromSerial || historyEntry.fromSerial || '';
           toSerial = historyEntry.issuedToSerial || historyEntry.toSerial || '';
@@ -947,7 +931,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     for (let i = rollStart; i <= rollEnd; i++) {
       const isUsed = usedSerials.has(i) || inProgressSerials.has(i);
-      
+
       if (!isUsed) {
         // Start a new range or extend current range
         if (currentRangeStart === null) {
@@ -999,55 +983,69 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   showHologramAllocationModal(request: HologramRequest): void {
     console.log('=== SHOW HOLOGRAM ALLOCATION MODAL ===');
-    console.log('Request:', request);
-    console.log('Request Type:', request.hologramType);
-    console.log('Requested Quantity:', request.requestedQuantity);
-    
     this.selectedRequest = request;
     this.approvedQuantity = request.requestedQuantity;
-    this.loadHologramInventory();
-    
-    console.log('Inventory loaded, count:', this.hologramInventory.length);
-    console.log('Inventory items:', this.hologramInventory);
-    
-    this.allocationResult = this.calculateHologramAllocation(request.requestedQuantity, request.hologramType);
-    
-    console.log('Allocation Result:', this.allocationResult);
-    console.log('=== END SHOW HOLOGRAM ALLOCATION MODAL ===');
-    
-    this.showAllocationModal = true;
+
+    // WAIT for inventory to load before showing modal
+    this.loadHologramInventoryAsync().subscribe({
+      next: () => {
+        console.log('Inventory loaded, count:', this.hologramInventory.length);
+        this.allocationResult = this.calculateHologramAllocation(request.requestedQuantity, request.hologramType);
+        this.allocations = this.allocationResult.allocations || [];
+        console.log('Allocation Result:', this.allocationResult);
+
+        // NOW show the modal (data is ready)
+        this.showAllocationModal = true;
+      },
+      error: (err) => {
+        console.error('Failed to load inventory:', err);
+        alert('Failed to load inventory data. Please try again.');
+      }
+    });
   }
 
   calculateHologramAllocation(requestedQuantity: number, hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'): AllocationResult {
     console.log('=== CALCULATING HOLOGRAM ALLOCATION ===');
     console.log('Requested Quantity:', requestedQuantity);
     console.log('Requested Type:', hologramType);
-    console.log('Total Inventory Items:', this.hologramInventory.length);
-    
+
     // Filter available inventory by type and status (IN_USE is also allowed if it has available count)
     const availableInventory = this.hologramInventory.filter(item => {
       const typeMatch = item.type === hologramType;
       const statusMatch = item.status === 'AVAILABLE' || item.status === 'IN_USE'; // Allow IN_USE if it has available
       const hasAvailable = item.availableCount > 0;
-      
+
       console.log(`Checking ${item.cartoonNumber}:`, {
         type: item.type,
         typeMatch,
         status: item.status,
         statusMatch,
         availableCount: item.availableCount,
-        actualRange: item.actualAvailableRange ? `${item.actualAvailableRange.fromSerial}-${item.actualAvailableRange.toSerial}` : 'N/A',
+        actualAvailableRanges: item.actualAvailableRanges,
+        rangesCount: item.actualAvailableRanges?.length || 0,
         hasAvailable,
+        receivedDate: item.receivedDate,
         passes: typeMatch && statusMatch && hasAvailable
       });
-      
+
       return typeMatch && statusMatch && hasAvailable;
     });
+    
+    // CRITICAL: Sort by receivedDate for FIFO (First In, First Out) - oldest first
+    availableInventory.sort((a, b) => {
+      const dateA = new Date(a.receivedDate || '1970-01-01').getTime();
+      const dateB = new Date(b.receivedDate || '1970-01-01').getTime();
+      return dateA - dateB; // Ascending order - oldest first
+    });
 
-    console.log('Available Inventory After Filter:', availableInventory);
-    
+    console.log('Available Inventory After Filter (FIFO sorted):', availableInventory.map(i => ({
+      cartoonNumber: i.cartoonNumber,
+      receivedDate: i.receivedDate,
+      availableCount: i.availableCount
+    })));
+
     const totalAvailable = availableInventory.reduce((sum, item) => sum + item.availableCount, 0);
-    
+
     console.log('Total Available:', totalAvailable);
 
     if (totalAvailable < requestedQuantity) {
@@ -1064,7 +1062,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Handle multiple ranges per cartoon properly
     const allocations: HologramAllocation[] = [];
     let remainingQuantity = requestedQuantity;
-    
+
     // Track how much has been allocated from each cartoon in this allocation
     const cartoonAllocations = new Map<string, number>();
     // Track which ranges have been used from each cartoon
@@ -1080,59 +1078,58 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       if (availableFromThisCartoon <= 0) continue; // Skip if no more available from this cartoon
 
       // Get all available ranges for this cartoon
-      const availableRanges = item.actualAvailableRanges || (item.actualAvailableRange ? [item.actualAvailableRange] : []);
+      const availableRanges = item.actualAvailableRanges || [];
       
+      console.log(`📦 Processing ${item.cartoonNumber}:`, {
+        availableCount: item.availableCount,
+        rangesCount: availableRanges.length,
+        ranges: availableRanges,
+        fromSerial: item.fromSerial,
+        toSerial: item.toSerial
+      });
+
       if (availableRanges.length === 0) {
-        // Fallback: calculate from item data
-        const quantityFromThisCartoon = Math.min(remainingQuantity, availableFromThisCartoon);
-        const startSerial = this.getNextAvailableSerial(item, alreadyAllocated);
-        const endSerial = this.calculateEndSerial(startSerial, quantityFromThisCartoon - 1);
-
-        allocations.push({
-          cartoonNumber: item.cartoonNumber,
-          fromSerial: startSerial,
-          toSerial: endSerial,
-          quantity: quantityFromThisCartoon,
-          remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromThisCartoon
-        });
-
-        cartoonAllocations.set(item.cartoonNumber, alreadyAllocated + quantityFromThisCartoon);
-        remainingQuantity -= quantityFromThisCartoon;
-        continue;
+        console.warn(`⚠️ No available ranges for ${item.cartoonNumber}, skipping...`);
+        continue; // Skip this cartoon if no ranges available
       }
 
       // Allocate from all available ranges in order
       let usedFromThisCartoon = 0;
-      
+
       for (const range of availableRanges) {
         if (remainingQuantity <= 0) break;
-        
+
+        console.log(`  🔍 Checking range:`, range);
+
         // Check how much has been used from this specific range
         const rangeKey = `${item.cartoonNumber}_${range.fromSerial}_${range.toSerial}`;
         const usedFromRange = cartoonRangeUsage.get(rangeKey) || 0;
         const availableInRange = range.count - usedFromRange;
-        
+
+        console.log(`    Available in range: ${availableInRange}, Used from range: ${usedFromRange}`);
+
         if (availableInRange <= 0) continue; // This range is fully used
-        
+
         // Allocate from this range
         const quantityFromRange = Math.min(remainingQuantity, availableInRange);
-        
+
         // CRITICAL FIX: Use the ACTUAL range from Serial Numbers Details
         // If we're taking the entire range, use the original fromSerial and toSerial
         // Only calculate new serials if we're taking a partial range
         let startSerial: string;
         let endSerial: string;
-        
+
         if (usedFromRange === 0 && quantityFromRange === range.count) {
           // Taking the entire range - use original range boundaries
           startSerial = range.fromSerial;
           endSerial = range.toSerial;
+          console.log(`    ✅ Taking ENTIRE range: ${startSerial} - ${endSerial}`);
         } else {
           // Taking a partial range - calculate the specific portion
-          const rangeStart = parseInt(range.fromSerial.match(/\d+$/)?.[0] || '0');
-          const prefix = range.fromSerial.replace(/\d+$/, '');
-          startSerial = prefix + String(rangeStart + usedFromRange).padStart(6, '0');
-          endSerial = this.calculateEndSerial(startSerial, quantityFromRange - 1);
+          const rangeStart = parseInt(range.fromSerial);
+          startSerial = String(rangeStart + usedFromRange);
+          endSerial = String(rangeStart + usedFromRange + quantityFromRange - 1);
+          console.log(`    ✅ Taking PARTIAL range: ${startSerial} - ${endSerial} (from ${range.fromSerial})`);
         }
 
         allocations.push({
@@ -1140,7 +1137,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           fromSerial: startSerial,
           toSerial: endSerial,
           quantity: quantityFromRange,
-          remainingInCartoon: item.availableCount - alreadyAllocated - usedFromThisCartoon - quantityFromRange
+          remainingInCartoon: item.availableCount - alreadyAllocated - quantityFromRange // What's left after this allocation
         });
 
         // Track usage
@@ -1186,7 +1183,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const serialPrefix = item.fromSerial.replace(/\d+$/, '');
     const startNumber = parseInt(item.fromSerial.match(/\d+$/)?.[0] || '0');
     const nextNumber = startNumber + item.usedCount + offset;
-    
+
     return serialPrefix + nextNumber.toString().padStart(6, '0');
   }
 
@@ -1194,7 +1191,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const serialPrefix = startSerial.replace(/\d+$/, '');
     const startNumber = parseInt(startSerial.match(/\d+$/)?.[0] || '0');
     const endNumber = startNumber + quantity;
-    
+
     return serialPrefix + endNumber.toString().padStart(6, '0');
   }
 
@@ -1222,12 +1219,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Create issued hologram entries
     this.createIssuedHologramEntries();
 
-    // Update request status to APPROVED
-    this.selectedRequest.status = 'APPROVED';
+    // Update request status to IN_USE
+    this.selectedRequest.status = 'IN_USE';
     this.selectedRequest.officerComments = this.approvalComments || 'Approved with hologram allocation';
     this.selectedRequest.approvedQuantity = this.approvedQuantity || this.selectedRequest.requestedQuantity;
     this.selectedRequest.approvalDate = new Date().toISOString().split('T')[0];
-    
+
     // Save allocation details for future reference
     this.selectedRequest.allocations = this.allocationResult.allocations.map(allocation => ({
       cartoonNumber: allocation.cartoonNumber,
@@ -1240,15 +1237,66 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('Request status set to APPROVED');
     console.log('Allocation details saved:', this.selectedRequest.allocations);
 
-    // Update localStorage
-    this.updateRequestInStorage();
+    // Verify we have the original ID for backend
+    if (!this.selectedRequest.originalId) {
+      console.warn('No originalId found for backend update');
+    } else {
+      // CALL REAL BACKEND API
+      // Use 'issue' as default for OIC, or fallback to dynamic action
+      let action = 'issue';
+      const actions = this.selectedRequest.allowedActions || [];
+      if (actions.includes('issue')) action = 'issue';
+      else if (actions.includes('approve')) action = 'approve';
 
-    alert(`Request ${this.selectedRequest.referenceNo} has been APPROVED! ${this.allocationResult.allocations.length} hologram allocation(s) created successfully.`);
+      console.log(`Performing backend action: ${action} on ID: ${this.selectedRequest.originalId}`);
+
+      // Normalize allocations for backend (ensure all formats are included)
+      const normalizedAllocations = this.allocationResult.allocations.map((a: any) => {
+        console.log('🔍 BEFORE normalization - Allocation object:', a);
+        console.log('🔍 remainingInCartoon value:', a.remainingInCartoon, 'Type:', typeof a.remainingInCartoon);
+
+        return {
+          cartoonNumber: a.cartoonNumber,
+          cartoon_number: a.cartoonNumber, // Both formats for compatibility
+          count: a.quantity,
+          quantity: a.quantity,
+          remainingInCartoon: a.remainingInCartoon,
+          range: `${a.fromSerial} - ${a.toSerial}`,
+          fromSerial: a.fromSerial,
+          toSerial: a.toSerial
+        };
+      });
+
+      console.log('🚀 Sending normalized allocations to backend:', normalizedAllocations);
+      console.log('🚀 Detailed check - First allocation remainingInCartoon:', normalizedAllocations[0]?.remainingInCartoon);
+
+      this.hologramService.performAction('request', this.selectedRequest.originalId, action, this.approvalComments, { issued_assets: normalizedAllocations }).subscribe({
+        next: (response) => {
+          console.log('Backend updated successfully:', response);
+          // Reload inventory to show updated available counts
+          this.loadHologramInventory();
+          // CRITICAL FIX: Notify Daily Register component to reload data
+          // This ensures text boxes appear immediately without page refresh
+          this.hologramService.notifyRequestUpdate();
+          console.log('📢 Notified Daily Register to reload after allocation');
+          // We can rely on loadHologramRequests() to refresh the UI
+        },
+        error: (err) => {
+          console.error('Backend update failed:', err);
+          // Optional: Show error to user, though we already showed success for localStorage
+          // alert('Warning: Backend update failed. Please check connection.');
+        }
+      });
+    }
+
+    alert(`Request ${this.selectedRequest.referenceNo} has been APPROVED!`);
 
     this.closeAllocationModal();
-    
+
     // Reload data to reflect changes immediately
-    this.loadHologramRequests();
+    setTimeout(() => {
+      this.loadHologramRequests();
+    }, 500); // Small delay to ensure backend transaction completes
   }
 
   updateInventoryAfterAllocation(): void {
@@ -1265,57 +1313,57 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       console.log(`Processing allocation for ${allocation.cartoonNumber}:`, allocation);
 
       // Update Rolls Tab Data
-      const rollIndex = rollsData.findIndex((roll: any) => 
+      const rollIndex = rollsData.findIndex((roll: any) =>
         roll.cartoonNumber === allocation.cartoonNumber
       );
-      
+
       if (rollIndex !== -1) {
         console.log(`BEFORE update - Roll ${allocation.cartoonNumber}:`, {
           availableCount: rollsData[rollIndex].availableCount,
           usedCount: rollsData[rollIndex].usedCount,
           status: rollsData[rollIndex].status
         });
-        
+
         // Update counts
         // Only subtract from available, DON'T add to usedCount yet
         // usedCount will be updated when Manufacturing Register is approved
         rollsData[rollIndex].availableCount -= allocation.quantity;
         // rollsData[rollIndex].usedCount = (rollsData[rollIndex].usedCount || 0) + allocation.quantity; // REMOVED - will be updated by Manufacturing Register
         rollsData[rollIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
-        
+
         console.log(`AFTER count update - Roll ${allocation.cartoonNumber}:`, {
           availableCount: rollsData[rollIndex].availableCount,
           allocated: allocation.quantity,
           note: 'usedCount will be updated when Manufacturing Register is approved'
         });
-        
+
         // Update status - Set to IN_USE when holograms have been allocated
         // usedCount will be updated later by Manufacturing Register
         rollsData[rollIndex].status = 'IN_USE';
         console.log(`Status set to IN_USE (allocated = ${allocation.quantity}, availableCount = ${rollsData[rollIndex].availableCount})`);
-        
+
         console.log(`FINAL - Roll ${allocation.cartoonNumber}:`, rollsData[rollIndex]);
       }
 
       // Update Available Hologram Data Tab
-      const availableIndex = availableData.findIndex((item: any) => 
+      const availableIndex = availableData.findIndex((item: any) =>
         item.cartoonNumber === allocation.cartoonNumber
       );
-      
+
       if (availableIndex !== -1) {
         console.log(`BEFORE update - Available ${allocation.cartoonNumber}:`, {
           availableCount: availableData[availableIndex].availableCount,
           status: availableData[availableIndex].status
         });
-        
+
         // Update counts
         availableData[availableIndex].availableCount -= allocation.quantity;
-        
+
         // Get the original total count from the rolls data to calculate percentage correctly
-        const correspondingRoll = rollsData.find((roll: any) => 
+        const correspondingRoll = rollsData.find((roll: any) =>
           roll.cartoonNumber === allocation.cartoonNumber
         );
-        
+
         // Calculate percentage based on original total count from roll
         if (correspondingRoll && correspondingRoll.totalCount > 0) {
           availableData[availableIndex].percentage = Math.round((availableData[availableIndex].availableCount / correspondingRoll.totalCount) * 100);
@@ -1323,51 +1371,51 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           // Fallback: if no roll found, percentage is 100% if we have any available, 0% otherwise
           availableData[availableIndex].percentage = availableData[availableIndex].availableCount > 0 ? 100 : 0;
         }
-        
+
         console.log(`AFTER count update - Available ${allocation.cartoonNumber}:`, {
           availableCount: availableData[availableIndex].availableCount,
           percentage: availableData[availableIndex].percentage,
           hasBeenAllocated: true
         });
-        
+
         // Update status - Always set to IN_USE when holograms have been allocated
         // Status will only be COMPLETED when explicitly marked by the system later
         availableData[availableIndex].status = 'IN_USE';
         console.log(`Status set to IN_USE (availableCount = ${availableData[availableIndex].availableCount})`);
 
-        
+
         console.log(`FINAL - Available ${allocation.cartoonNumber}:`, availableData[availableIndex]);
       }
 
       // Update Serial Numbers Data Tab
-      const serialIndex = serialData.findIndex((roll: any) => 
+      const serialIndex = serialData.findIndex((roll: any) =>
         (roll.rollNumber === allocation.cartoonNumber || roll.cartoonNumber === allocation.cartoonNumber)
       );
-      
+
       if (serialIndex !== -1) {
         console.log(`BEFORE update - Serial ${allocation.cartoonNumber}:`, {
           availableCount: serialData[serialIndex].availableCount,
           usedCount: serialData[serialIndex].usedCount,
           status: serialData[serialIndex].status
         });
-        
+
         // Update counts
         // Only subtract from available, DON'T add to usedCount yet
         // usedCount will be updated when Manufacturing Register is approved
         serialData[serialIndex].availableCount -= allocation.quantity;
         // serialData[serialIndex].usedCount = (serialData[serialIndex].usedCount || 0) + allocation.quantity; // REMOVED
         serialData[serialIndex].nextAvailableSerial = this.calculateEndSerial(allocation.toSerial, 1);
-        
+
         console.log(`AFTER count update - Serial ${allocation.cartoonNumber}:`, {
           availableCount: serialData[serialIndex].availableCount,
           allocated: allocation.quantity,
           note: 'usedCount will be updated when Manufacturing Register is approved'
         });
-        
+
         // Update status - Set to IN_USE when holograms have been allocated
         serialData[serialIndex].status = 'IN_USE';
         console.log(`Status set to IN_USE (allocated = ${allocation.quantity}, availableCount = ${serialData[serialIndex].availableCount})`);
-        
+
         console.log(`FINAL - Serial ${allocation.cartoonNumber}:`, serialData[serialIndex]);
       }
     }
@@ -1434,7 +1482,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     console.log('=== CREATING DAILY REGISTER ENTRIES ===');
     console.log('selectedRequest:', this.selectedRequest);
     console.log('allocationResult:', this.allocationResult);
-    
+
     if (!this.selectedRequest || !this.allocationResult) {
       console.error('Missing selectedRequest or allocationResult');
       return;
@@ -1447,12 +1495,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Create ONE entry for this request with ALL allocations
     const totalQuantity = this.allocationResult.allocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-    
+
     const entry = {
       id: `AUTO_${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
       hologramType: this.selectedRequest!.hologramType,
-      
+
       // Store ALL allocations in the entry
       issuedEntries: this.allocationResult.allocations.map((allocation, index) => ({
         id: `ISSUED_${Date.now()}_${index}`,
@@ -1461,9 +1509,9 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         quantity: allocation.quantity,
         cartoonNumber: allocation.cartoonNumber
       })),
-      
+
       wastageEntries: [],
-      
+
       // Total quantities
       issuedQuantity: 0, // User will fill this in
       utilizedQuantity: totalQuantity, // Total allocated quantity
@@ -1471,7 +1519,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       leftOverQuantity: totalQuantity, // Initially all is leftover
       damageReason: '',
       isFixed: false, // User can edit
-      
+
       // Metadata
       referenceNo: this.selectedRequest!.referenceNo,
       brandDetails: this.selectedRequest!.brandDetails,
@@ -1481,7 +1529,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       approvalDate: new Date().toISOString().split('T')[0],
       officerName: this.currentOfficer.name,
       autoGenerated: true,
-      
+
       // Store allocated ranges for reference
       allocatedRanges: this.allocationResult.allocations.map(allocation => ({
         cartoonNumber: allocation.cartoonNumber,
@@ -1490,7 +1538,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         quantity: allocation.quantity
       }))
     };
-    
+
     console.log('Created ONE daily entry with multiple allocations:', entry);
     console.log(`  - Total allocations: ${this.allocationResult.allocations.length}`);
     console.log(`  - Total quantity: ${totalQuantity}`);
@@ -1498,12 +1546,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Save to localStorage for daily register
     const existingDailyEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
     const updatedDailyEntries = [...existingDailyEntries, entry];
-    
+
     console.log('Existing entries:', existingDailyEntries.length);
     console.log('Total entries after update:', updatedDailyEntries.length);
-    
+
     localStorage.setItem('approvedHologramEntries', JSON.stringify(updatedDailyEntries));
-    
+
     console.log('Successfully saved to localStorage under key: approvedHologramEntries');
     console.log('=== END DAILY REGISTER ENTRIES CREATION ===');
   }
@@ -1513,7 +1561,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Update in hologramRequests
     const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const requestIndex = hologramRequests.findIndex((req: any) => 
+    const requestIndex = hologramRequests.findIndex((req: any) =>
       req.refNumber === this.selectedRequest!.referenceNo
     );
 
@@ -1532,7 +1580,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
     // Update in hologramApplications if exists
     const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const appIndex = hologramApplications.findIndex((app: any) => 
+    const appIndex = hologramApplications.findIndex((app: any) =>
       app.refNo === this.selectedRequest!.referenceNo
     );
 
@@ -1584,7 +1632,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   editAllocationQuantity(allocation: HologramAllocation, newQuantity: number): void {
     if (newQuantity <= 0 || !this.allocationResult) return;
 
-    const inventoryItem = this.hologramInventory.find(item => 
+    const inventoryItem = this.hologramInventory.find(item =>
       item.cartoonNumber === allocation.cartoonNumber
     );
 
@@ -1653,7 +1701,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Add to all storage locations
     localStorage.setItem('hologramOverviewRolls', JSON.stringify([...existingRolls, ...sampleInventory]));
     localStorage.setItem('hologramOverviewSerialData', JSON.stringify([...existingSerial, ...sampleInventory]));
-    
+
     // Create available data
     const availableData = sampleInventory.map(item => ({
       id: item.id + 1000,

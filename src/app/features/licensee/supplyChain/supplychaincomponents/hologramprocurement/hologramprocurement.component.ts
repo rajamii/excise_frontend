@@ -1,21 +1,23 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
+import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
 
-interface HologramRow {
-  refNo: string;
-  date: string;
-  companyName: string;
+/* Use the interface from service, but alias or extend if needed for grid */
+type HologramRow = HologramProcurement & {
+  // UI specific fields mapped from API response
+  procurementType?: 'Local' | 'Export' | 'Defence';
+  // FIXED: These display the ORIGINAL requested quantities (never change)
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
-  procurementType?: 'Local' | 'Export' | 'Defence';
-  status: string;
   paymentCompleted?: boolean;
   editedByCommissioner?: boolean;
-  editHistory?: any;
-}
+  companyName?: string;
+  status: string; // Ensure status is mandatory string for UI
+};
 
 @Component({
   selector: 'app-hologramprocurement',
@@ -31,7 +33,8 @@ export class HologramprocurementComponent implements OnInit {
   private isBrowser = false;
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
-  
+  currentUnitName: string | null = null;
+
   // Filter properties
   hologramDateFilter: string = '';
   hologramMonthFilter: string = '';
@@ -43,92 +46,91 @@ export class HologramprocurementComponent implements OnInit {
   pageSize: number = 5;
   currentPage: number = 1;
 
+  private hologramService = inject(HologramDataService);
+
   constructor(
     private router: Router,
-    @Inject(PLATFORM_ID) platformId: Object
+    @Inject(PLATFORM_ID) platformId: Object,
+    private profileService: SupplyChainProfileService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
-    this.refreshHologramList();
   }
 
   ngOnInit(): void {
-    this.filteredHologramData = [...this.hologramList];
-
     if (this.isBrowser) {
-      // Add visibility change listener
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          console.log('🔄 Tab became visible, refreshing hologram data...');
-          this.refreshHologramList();
-        }
-      });
-
-      // Add storage event listener
-      window.addEventListener('storage', (event) => {
-        if (event.key === 'hologramRequests' || event.key === 'hologramApplications') {
-          console.log('🔄 Storage changed, refreshing hologram data...');
-          this.refreshHologramList();
+      this.profileService.getProfile().subscribe(res => {
+        if (res.data) {
+          this.currentUnitName = res.data.manufacturingUnitName;
+          this.loadHolograms();
         }
       });
     }
   }
 
-  private refreshHologramList(): void {
-    if (!this.isBrowser) {
-      this.hologramList = [];
-      return;
-    }
+  private loadHolograms(): void {
+    this.hologramService.getProcurements().subscribe({
+      next: (data) => {
+        console.log('📦 Loading hologram data from API:', data.length, 'items');
 
-    const storedApplications = JSON.parse(localStorage.getItem("hologramApplications") || "[]");
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    
-    console.log('📦 Loading hologram data from hologramApplications:', storedApplications.length, 'items');
+        let mapped: HologramRow[] = data.map(item => {
+          // FIXED: Use requested_* quantities for display (these never change)
+          // Fallback to regular qty for existing records without requested_* fields
+          const requestedLocal = Number((item as any).requested_local_qty || item.localQty);
+          const requestedExport = Number((item as any).requested_export_qty || item.exportQty);
+          const requestedDefence = Number((item as any).requested_defence_qty || item.defenceQty);
 
-    let mapped: HologramRow[] = (storedApplications || []).map((a: any) => {
-      const request = hologramRequests.find((req: any) => req.refNo === a.refNo);
-      
-      let displayStatus = request?.status || a.status || "Submitted";
-      
-      if (request?.paymentCompleted === true || a.paymentCompleted === true) {
-        displayStatus = "Payment Completed";
-      }
-      
-      return {
-        refNo: a.refNo,
-        date: a.date,
-        companyName: a.companyName,
-        localQtyLakh: a.localQtyLakh,
-        exportQtyLakh: a.exportQtyLakh,
-        defenceQtyLakh: a.defenceQtyLakh,
-        procurementType: a.procurementType,
-        status: displayStatus,
-        paymentCompleted: a.paymentCompleted || request?.paymentCompleted || false,
-        editedByCommissioner: a.editedByCommissioner || request?.editedByCommissioner || false,
-        editHistory: a.editHistory || request?.editHistory || null,
-      };
-    });
+          return {
+            ...item,
+            // Ensure numeric values (API returns strings for Decimals)
+            localQty: Number(item.localQty),
+            exportQty: Number(item.exportQty),
+            defenceQty: Number(item.defenceQty),
 
-    // Sort by date (newest first)
-    if (mapped.length > 0) {
-      mapped = mapped.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }
+            // CRITICAL: UI displays ORIGINAL REQUESTED quantities (never change after submission)
+            localQtyLakh: requestedLocal,  // FIXED: Original requested quantity
+            exportQtyLakh: requestedExport, // FIXED: Original requested quantity
+            defenceQtyLakh: requestedDefence, // FIXED: Original requested quantity
+            paymentCompleted: item.status === 'Payment Completed' || item.status === 'Cartoon Assigned',
+            editedByCommissioner: false, // Not yet supported in backend
+            companyName: item.manufacturingUnit || item.licenseeName || '', // Map to companyName
+            status: item.status || 'Submitted', // Default status
+          };
+        });
 
-    // Ensure all items have procurementType
-    mapped = mapped.map(item => {
-      if (!item.procurementType) {
-        if (item.exportQtyLakh && item.exportQtyLakh > 0) {
-          item.procurementType = 'Export';
-        } else if (item.defenceQtyLakh && item.defenceQtyLakh > 0) {
-          item.procurementType = 'Defence';
-        } else {
-          item.procurementType = 'Local';
+        // Determine procurement type
+        mapped = mapped.map(item => {
+          if (!item.procurementType) {
+            if (item.exportQty > 0) {
+              item.procurementType = 'Export';
+            } else if (item.defenceQty > 0) {
+              item.procurementType = 'Defence';
+            } else {
+              item.procurementType = 'Local';
+            }
+          }
+          return item;
+        });
+
+        // Filter by Unit Name (Backend handles this via user context, but double check)
+        if (this.currentUnitName) {
+          // Backend already filters by user's licensee profile
         }
-      }
-      return item;
-    });
 
-    this.hologramList = mapped;
-    this.filteredHologramData = [...this.hologramList];
+        // Sort by date (newest first)
+        mapped.sort((a, b) => new Date(b.date || '').getTime() - new Date(a.date || '').getTime());
+
+        this.hologramList = mapped;
+        this.filteredHologramData = [...this.hologramList];
+        this.applyHologramFilters(); // Re-apply filters if any
+      },
+      error: (err) => {
+        console.error('Error loading procurements', err);
+      }
+    });
+  }
+
+  private refreshHologramList(): void {
+    this.loadHolograms();
   }
 
   // Filter methods
@@ -139,7 +141,7 @@ export class HologramprocurementComponent implements OnInit {
       let matchesYear = true;
       let matchesStatus = true;
 
-      const itemDate = new Date(item.date);
+      const itemDate = new Date(item.date || '');
 
       if (this.hologramDateFilter) {
         const filterDate = new Date(this.hologramDateFilter);
@@ -160,7 +162,7 @@ export class HologramprocurementComponent implements OnInit {
       }
 
       if (this.hologramStatusFilter) {
-        matchesStatus = item.status.toUpperCase() === this.hologramStatusFilter.toUpperCase();
+        matchesStatus = (item.status || '').toUpperCase() === this.hologramStatusFilter.toUpperCase();
       }
 
       return matchesDate && matchesMonth && matchesYear && matchesStatus;
@@ -197,21 +199,21 @@ export class HologramprocurementComponent implements OnInit {
   // Summary methods
   getHologramStatusCount(status: string): number {
     return this.hologramList.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
+      (item.status || '').toLowerCase().includes(status.toLowerCase())
     ).length;
   }
 
   getTotalHologramQuantity(): number {
-    return this.hologramList.reduce((total, item) => 
+    return this.hologramList.reduce((total, item) =>
       total + this.getHologramTotal(item), 0
     );
   }
 
   getHologramTotal(row: HologramRow): number {
     return (
-      (row.localQtyLakh || 0) +
-      (row.exportQtyLakh || 0) +
-      (row.defenceQtyLakh || 0)
+      (row.localQty || 0) +
+      (row.exportQty || 0) +
+      (row.defenceQty || 0)
     );
   }
 
@@ -219,14 +221,41 @@ export class HologramprocurementComponent implements OnInit {
     if (row.procurementType) {
       return row.procurementType;
     }
-    
-    if (row.exportQtyLakh && row.exportQtyLakh > 0) {
+
+    if (row.exportQty > 0) {
       return 'Export';
-    } else if (row.defenceQtyLakh && row.defenceQtyLakh > 0) {
+    } else if (row.defenceQty > 0) {
       return 'Defence';
     } else {
       return 'Local';
     }
+  }
+
+  // Returns array of all procurement types present in the request
+  getProcurementTypes(row: HologramRow): Array<'Local' | 'Export' | 'Defence'> {
+    const types: Array<'Local' | 'Export' | 'Defence'> = [];
+
+    // Check all quantity fields (both naming conventions)
+    const localQty = (row.localQtyLakh || (row as any).localQty || 0);
+    const exportQty = (row.exportQtyLakh || (row as any).exportQty || 0);
+    const defenceQty = (row.defenceQtyLakh || (row as any).defenceQty || 0);
+
+    if (localQty > 0) {
+      types.push('Local');
+    }
+    if (exportQty > 0) {
+      types.push('Export');
+    }
+    if (defenceQty > 0) {
+      types.push('Defence');
+    }
+
+    // Fallback to procurementType if no quantities set
+    if (types.length === 0 && row.procurementType) {
+      types.push(row.procurementType);
+    }
+
+    return types.length > 0 ? types : ['Local']; // Default to Local if nothing found
   }
 
   // Pagination methods
@@ -267,75 +296,30 @@ export class HologramprocurementComponent implements OnInit {
   // Navigation methods
   viewHologramApplication(item: HologramRow): void {
     this.router.navigate(["/dev-supply-chain-hologram-view"], {
-      queryParams: { 
+      queryParams: {
         ref: item.refNo,
         type: item.procurementType || this.getProcurementType(item)
       },
     });
   }
 
-  navigateTo(route: string){
-        this.router.navigate(["/dev-hologram"]);  
-    }
-  navigateToPaymentPage(hologram: HologramRow): void {
-    if (!this.isBrowser) return;
-
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const request = hologramRequests.find((req: any) => req.refNo === hologram.refNo);
-    
-    if (!request || request.commissionerStatus !== 'Approved') {
-      alert('Payment is pending Commissioner approval. Please wait for Commissioner to approve your application.');
-      return;
-    }
-
-    if (request.paymentCompleted === true) {
-      alert('Payment has already been completed for this reference number.');
-      return;
-    }
-
-    const sameRefItems = this.hologramList.filter(item => item.refNo === hologram.refNo);
-    
-    if (sameRefItems.length > 1) {
-      const allApproved = sameRefItems.every(item => {
-        const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
-        return req && req.commissionerStatus === 'Approved';
-      });
-
-      if (!allApproved) {
-        const notReadyTypes = sameRefItems.filter(item => {
-          const req = hologramRequests.find((r: any) => r.refNo === item.refNo);
-          return !req || req.commissionerStatus !== 'Approved';
-        }).map(item => this.getProcurementType(item));
-
-        alert(
-          `Multiple types exist for reference number ${hologram.refNo}.\n\n` +
-          `The following types are not yet ready for payment:\n${notReadyTypes.join(', ')}\n\n` +
-          `All types must be approved by Commissioner before making payment.`
-        );
-        return;
-      }
-    }
-
-    this.proceedToPayment(hologram.refNo);
+  navigateTo(route: string) {
+    this.router.navigate(["/dev-hologram"]);
   }
 
-  private proceedToPayment(refNo: string): void {
-    if (!this.isBrowser) return;
+  navigateToPaymentPage(hologram: HologramRow): void {
+    if (hologram.status !== 'Approved by Commissioner') {
+      alert('Payment is pending Commissioner approval.');
+      return;
+    }
 
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const updatedRequests = hologramRequests.map((req: any) => {
-      if (req.refNo === refNo) {
-        return { ...req, paymentPageVisited: true };
-      }
-      return req;
-    });
-    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
-
+    // In API version, we might redirect to a payment page with ID
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'hologram',
-        refNo: refNo,
-        action: 'makePayment'
+        refNo: hologram.refNo,
+        action: 'makePayment',
+        id: hologram.id // backend ID
       }
     });
   }
@@ -351,19 +335,7 @@ export class HologramprocurementComponent implements OnInit {
 
   // Payment methods
   isPaymentEnabled(item: HologramRow): boolean {
-    if (!this.isBrowser) {
-      return false;
-    }
-
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const request = hologramRequests.find((req: any) => req.refNo === item.refNo);
-
-    if (!request) {
-      return false;
-    }
-
-    const commissionerApproved = request.commissionerStatus === 'Approved';
-    return commissionerApproved;
+    return item.status === 'Approved by Commissioner';
   }
 
   calculatePaymentAmount(hologram: HologramRow): number {
@@ -372,13 +344,13 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   getPaymentStatusClass(item: HologramRow): string {
-    const status = item.status?.toLowerCase() || '';
-    
-    if (status.includes('payment completed') || item.paymentCompleted) {
+    const status = (item.status || '').toLowerCase();
+
+    if (status.includes('payment completed') || status.includes('cartoon assigned')) {
       return 'bg-success-subtle text-success';
     } else if (status.includes('approved')) {
       return 'bg-primary-subtle text-primary';
-    } else if (status.includes('pending')) {
+    } else if (status.includes('pending') || status.includes('submitted') || status.includes('under')) {
       return 'bg-warning-subtle text-warning';
     } else if (status.includes('rejected')) {
       return 'bg-danger-subtle text-danger';
@@ -387,110 +359,21 @@ export class HologramprocurementComponent implements OnInit {
     }
   }
 
-  markPaymentCompleted(refNo: string): void {
-    if (!this.isBrowser) return;
-
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const sameRefApplications = applications.filter((app: any) => app.refNo === refNo);
-    
-    const allPaid = sameRefApplications.every((app: any) => app.paymentCompleted === true);
-    
-    if (!allPaid) {
-      const updatedApplications = applications.map((app: any) => {
-        if (app.refNo === refNo && app.procurementType === this.getProcurementType(this.hologramList.find(h => h.refNo === refNo)!)) {
-          return {
-            ...app,
-            paymentCompleted: true,
-            paymentDate: new Date().toISOString()
-          };
-        }
-        return app;
-      });
-      localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
-      
-      const updatedSameRefApps = updatedApplications.filter((app: any) => app.refNo === refNo);
-      const nowAllPaid = updatedSameRefApps.every((app: any) => app.paymentCompleted === true);
-      
-      if (nowAllPaid) {
-        this.updateAllPaymentsCompleted(refNo);
-      } else {
-        alert(`Payment marked for this type. ${updatedSameRefApps.filter((a: any) => !a.paymentCompleted).length} more payment(s) pending for ${refNo}.`);
-      }
-    } else {
-      alert(`All payments already completed for ${refNo}.`);
-    }
-
-    this.refreshHologramList();
-  }
-
-  private updateAllPaymentsCompleted(refNo: string): void {
-    if (!this.isBrowser) return;
-
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const updatedRequests = hologramRequests.map((req: any) => {
-      if (req.refNo === refNo) {
-        return {
-          ...req,
-          paymentCompleted: true,
-          status: 'Payment Completed',
-          paymentDate: new Date().toISOString()
-        };
-      }
-      return req;
-    });
-    localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
-
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const updatedApplications = applications.map((app: any) => {
-      if (app.refNo === refNo) {
-        return {
-          ...app,
-          paymentCompleted: true,
-          status: 'Payment Completed',
-          paymentDate: new Date().toISOString()
-        };
-      }
-      return app;
-    });
-    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
-
-    alert(`All payments completed for ${refNo}. Status updated to "Payment Completed" in all dashboards.`);
+  markPaymentCompleted(refNo: string | undefined): void {
+    if (!refNo) return;
+    // This was a test method in legacy. 
+    // In real implementation, payment is handled via payment gateway or separate flow.
+    // For now, we can maybe call an API to mark it?
+    // Or just show alert that "This is testing only"
+    alert('In API mode, please use the Make Payment button to proceed with transaction.');
   }
 
   // Clear data methods (for testing)
   clearPaymentSlipData(): void {
-    if (!this.isBrowser) return;
-    
-    const confirmed = window.confirm('This will clear all uploaded payment slips. Are you sure?');
-    if (!confirmed) return;
-
-    localStorage.removeItem('hologramPayments');
-    
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const updatedApplications = applications.map((app: any) => {
-      const { paymentSlipUploaded, ...rest } = app;
-      return rest;
-    });
-    localStorage.setItem('hologramApplications', JSON.stringify(updatedApplications));
-    
-    this.refreshHologramList();
-    
-    alert('Payment slip data cleared successfully!');
+    alert('Not supported in API mode');
   }
 
   clearHologramData(): void {
-    if (!this.isBrowser) return;
-    
-    const confirmed = window.confirm('This will clear ALL hologram data including applications, payments, and transactions. Are you sure?');
-    if (!confirmed) return;
-
-    localStorage.removeItem('hologramApplications');
-    localStorage.removeItem('hologramPayments');
-    localStorage.removeItem('hologramPaymentTransactions');
-    localStorage.removeItem('hologramRequests');
-    
-    this.refreshHologramList();
-    
-    alert('All hologram data cleared successfully!');
+    alert('Not supported in API mode');
   }
 }

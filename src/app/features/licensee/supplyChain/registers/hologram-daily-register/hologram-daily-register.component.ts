@@ -1855,58 +1855,91 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
       
-      // CRITICAL FIX: Create SEPARATE dropdown entries for each range
-      // Instead of grouping multiple ranges into one roll, each range gets its own entry
-      // Example: Roll "1" with 2 ranges becomes:
-      //   - "1 - Range 1 (000001-000049): 49 units"
-      //   - "1 - Range 2 (000100-000500): 401 units"
+      // CRITICAL FIX: Group by cartoon number first to avoid duplicate roll entries
+      // Only create multiple range entries if the SAME cartoon has multiple DIFFERENT ranges
+      // Example: If "t1" appears once with range 1-200, show only ONE dropdown entry
+      //          If "t1" appears twice with ranges 1-100 and 101-200, show TWO entries
       
-      const separateRangeEntries: any[] = [];
-      const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
+      const cartoonGroups = new Map<string, any[]>();
       
+      // Group allocations by cartoon number
       allocationData.allocatedCartoons.forEach((cartoon: any) => {
         const cartoonNumber = cartoon.cartoonNumber;
-        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
-        const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
-        const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
-        const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
-        const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
-        const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
-        
-        // Increment range count for this roll
-        const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
-        rangeCountPerRoll.set(cartoonNumber, currentRangeCount + 1);
-        const rangeIndex = currentRangeCount + 1;
-        
-        // Create a unique identifier for this specific range
-        const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
-        
-        // Create separate entry for this range
-        separateRangeEntries.push({
-          cartoonNumber: cartoonNumber,
-          rangeId: rangeId, // Unique ID for this specific range
-          rangeIndex: rangeIndex, // Which range number (1, 2, 3, etc.)
-          displayName: rangeCountPerRoll.get(cartoonNumber)! > 1 || currentRangeCount > 0 
-            ? `${cartoonNumber} - Range ${rangeIndex}` 
-            : cartoonNumber, // Show "1 - Range 1" if multiple ranges exist
-          allocatedQuantity,
-          availableCount: allocatedQuantity,
-          remainingInCartoon,
-          serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
-          totalCount,
-          fromSerial: fromSerial,
-          toSerial: toSerial,
-          type: actualRollData?.type || cartoon.type || entry.hologramType,
-          status: actualRollData?.status || cartoon.status || 'ALLOCATED',
-          actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
-          // Store this as a single range (not an array)
-          isSingleRange: true,
-          originalCartoonNumber: cartoonNumber // Store original cartoon number for reference
-        });
+        if (!cartoonGroups.has(cartoonNumber)) {
+          cartoonGroups.set(cartoonNumber, []);
+        }
+        cartoonGroups.get(cartoonNumber)!.push(cartoon);
       });
       
-      console.log('✅ Separate range entries (each range is independent):', separateRangeEntries);
-      console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
+      console.log('📦 Grouped by cartoon number:', Array.from(cartoonGroups.entries()).map(([cn, items]) => `${cn}: ${items.length} range(s)`));
+      
+      const separateRangeEntries: any[] = [];
+      
+      // Process each cartoon group
+      cartoonGroups.forEach((cartoons, cartoonNumber) => {
+        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+        
+        // If only ONE allocation for this cartoon, show it without "Range X" suffix
+        if (cartoons.length === 1) {
+          const cartoon = cartoons[0];
+          const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+          const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+          const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+          const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+          const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
+          
+          separateRangeEntries.push({
+            cartoonNumber: cartoonNumber,
+            rangeId: cartoonNumber, // Use cartoon number as ID for single range
+            rangeIndex: 1,
+            displayName: cartoonNumber, // Just show cartoon number (no "Range 1")
+            allocatedQuantity,
+            availableCount: allocatedQuantity,
+            remainingInCartoon,
+            serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
+            totalCount,
+            fromSerial: fromSerial,
+            toSerial: toSerial,
+            type: actualRollData?.type || cartoon.type || entry.hologramType,
+            status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+            actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+            isSingleRange: true,
+            originalCartoonNumber: cartoonNumber
+          });
+        } else {
+          // Multiple ranges for same cartoon - show each with "Range X" suffix
+          cartoons.forEach((cartoon, index) => {
+            const rangeIndex = index + 1;
+            const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+            const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+            const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+            const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+            const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
+            const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
+            
+            separateRangeEntries.push({
+              cartoonNumber: cartoonNumber,
+              rangeId: rangeId,
+              rangeIndex: rangeIndex,
+              displayName: `${cartoonNumber} - Range ${rangeIndex}`,
+              allocatedQuantity,
+              availableCount: allocatedQuantity,
+              remainingInCartoon,
+              serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
+              totalCount,
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              type: actualRollData?.type || cartoon.type || entry.hologramType,
+              status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+              actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+              isSingleRange: false,
+              originalCartoonNumber: cartoonNumber
+            });
+          });
+        }
+      });
+      
+      console.log('✅ Final roll entries for dropdown:', separateRangeEntries.map(e => `${e.displayName} (${e.serialRange})`));
       return separateRangeEntries;
     }
     

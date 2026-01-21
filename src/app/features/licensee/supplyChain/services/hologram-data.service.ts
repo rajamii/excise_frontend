@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, BehaviorSubject, map, forkJoin } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
   id: string;
@@ -16,6 +18,48 @@ export interface HologramWastageEntry {
   damageReason: string;
 }
 
+export interface HologramProcurement {
+  id?: number;
+  refNo?: string;
+  licensee?: number;
+  licenseeName?: string;
+  manufacturingUnit?: string;
+  date?: string;
+  localQty: number;
+  exportQty: number;
+  defenceQty: number;
+  // FIXED: Original requested quantities that never change after submission
+  requested_local_qty?: number;
+  requested_export_qty?: number;
+  requested_defence_qty?: number;
+  total_requested_quantity?: number;  // Sum of all requested quantities (from backend)
+  paymentStatus?: string;
+  paymentDetails?: any;
+  remarks?: string;
+  status?: string;
+  stageId?: number;
+  workflow?: number;
+  currentStage?: number;
+  carton_details?: any[];
+}
+
+export interface HologramRequest {
+  id?: number;
+  refNo?: string;
+  licensee?: number;
+  licenseeName?: string;
+  submissionDate?: string;
+  usageDate: string;
+  quantity: number;
+  hologramType?: 'LOCAL' | 'EXPORT' | 'DEFENCE'; // Added to support type
+  remarks?: string;
+  status?: string;
+  stageId?: number;
+  workflow?: number;
+  currentStage?: number;
+}
+
+// Keep legacy interfaces for compatibility if needed, but we are moving to API
 export interface HologramDailyEntry {
   id: string;
   date: string;
@@ -25,7 +69,7 @@ export interface HologramDailyEntry {
   utilizedQuantity: number;
   leftOverQuantity: number;
   isFixed: boolean;
-  
+
   // Legacy fields for backward compatibility
   issuedFromSerial?: string;
   issuedToSerial?: string;
@@ -34,6 +78,7 @@ export interface HologramDailyEntry {
   wastageToSerial?: string;
   wastageQuantity?: number;
   damageReason?: string;
+  // ... other legacy fields
 }
 
 export interface MonthlyTotals {
@@ -74,8 +119,24 @@ export interface HologramArrivalRecord {
   providedIn: 'root'
 })
 export class HologramDataService {
-  private dailyEntriesSubject = new BehaviorSubject<HologramDailyEntry[]>([]);
+  private http = inject(HttpClient);
+  private apiUrl = `${environment.apiBaseUrl}/transactional/supply_chain/hologram`;
+
+  // Legacy subjects (keep if necessary for other components, but ideally should be replaced)
+  private dailyEntriesSubject = new BehaviorSubject<any[]>([]);
   public dailyEntries$ = this.dailyEntriesSubject.asObservable();
+
+  // Subject for notifying when hologram arrivals are updated
+  private arrivalUpdateSubject = new BehaviorSubject<void>(undefined);
+  public arrivalUpdate$ = this.arrivalUpdateSubject.asObservable();
+
+  // Subject for notifying when hologram requests are updated (allocation, approval, etc.)
+  private requestUpdateSubject = new BehaviorSubject<void>(undefined);
+  public requestUpdate$ = this.requestUpdateSubject.asObservable();
+
+  // Subject for notifying when daily register entries are updated (save, approve, etc.)
+  private dailyRegisterUpdateSubject = new BehaviorSubject<void>(undefined);
+  public dailyRegisterUpdate$ = this.dailyRegisterUpdateSubject.asObservable();
 
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
@@ -98,9 +159,79 @@ export class HologramDataService {
     DEFENCE: 0
   };
 
-  constructor() {
-    // Load initial data from localStorage if available
-    this.loadFromStorage();
+  private get procurementApiUrl() { return `${this.apiUrl}/procurement`; }
+  private get requestApiUrl() { return `${this.apiUrl}/request`; }
+
+  constructor() { }
+
+  // --- Procurement APIs ---
+
+  getProcurements(): Observable<HologramProcurement[]> {
+    const t = new Date().getTime();
+    return this.http.get<HologramProcurement[]>(`${this.apiUrl}/procurement/?_t=${t}`);
+  }
+
+  createProcurement(data: HologramProcurement): Observable<HologramProcurement> {
+    return this.http.post<HologramProcurement>(`${this.apiUrl}/procurement/`, data);
+  }
+
+  getProcurement(id: number): Observable<HologramProcurement> {
+    return this.http.get<HologramProcurement>(`${this.apiUrl}/procurement/${id}/`);
+  }
+
+  forwardProcurement(id: number, targetStage: string, remarks: string = ''): Observable<any> {
+    return this.http.post(`${this.apiUrl}/procurement/${id}/forward_request/`, {
+      target_stage: targetStage,
+      remarks: remarks
+    });
+  }
+
+  // --- Request APIs ---
+
+  getRequests(): Observable<HologramRequest[]> {
+    const t = new Date().getTime();
+    return this.http.get<HologramRequest[]>(`${this.apiUrl}/request/?_t=${t}`);
+  }
+
+  createRequest(data: HologramRequest): Observable<HologramRequest> {
+    return this.http.post<HologramRequest>(`${this.requestApiUrl}/`, data);
+  }
+
+  getRequest(id: number): Observable<HologramRequest> {
+    const t = new Date().getTime();
+    return this.http.get<HologramRequest>(`${this.requestApiUrl}/${id}/?_t=${t}`);
+  }
+
+  updateRequestStatus(id: number, targetStage: string, remarks: string = ''): Observable<any> {
+    return this.http.post(`${this.requestApiUrl}/${id}/update_status/`, {
+      target_stage: targetStage,
+      remarks: remarks
+    });
+  }
+
+  // Generic Workflow Action
+  performAction(endpoint: 'procurement' | 'request', id: number, action: string, remarks: string = '', data: any = {}): Observable<any> {
+    const url = endpoint === 'procurement' ? this.procurementApiUrl : this.requestApiUrl;
+    return this.http.post<any>(`${url}/${id}/perform_action/`, { action, remarks, ...data });
+  }
+
+  // Notify that hologram arrivals have been updated
+  // Components can call this after successfully updating arrival details
+  notifyArrivalUpdate(): void {
+    this.arrivalUpdateSubject.next(undefined);
+    console.log('📢 Arrival update notification sent');
+  }
+
+  // Components can call this after successfully updating request details (allocation, approval, etc.)
+  notifyRequestUpdate(): void {
+    this.requestUpdateSubject.next(undefined);
+    console.log('📢 Request update notification sent');
+  }
+
+  // Components can call this after successfully updating daily register entries (save, approve, etc.)
+  notifyDailyRegisterUpdate(): void {
+    this.dailyRegisterUpdateSubject.next(undefined);
+    console.log('📢 Daily register update notification sent');
   }
 
   private loadFromStorage(): void {
@@ -302,21 +433,21 @@ export class HologramDataService {
    */
   calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
     if (!fromSerial || !toSerial) return 0;
-    
+
     // Extract numeric parts from serials (assuming format like HG001001, EX002001, etc.)
     const fromMatch = fromSerial.match(/(\d+)$/);
     const toMatch = toSerial.match(/(\d+)$/);
-    
+
     if (fromMatch && toMatch) {
       const fromNum = parseInt(fromMatch[1], 10);
       const toNum = parseInt(toMatch[1], 10);
-      
+
       if (toNum >= fromNum) {
         // Inclusive range calculation: from 1 to 1 = 1, from 1 to 10 = 10
         return toNum - fromNum + 1;
       }
     }
-    
+
     return 0;
   }
 
@@ -324,29 +455,29 @@ export class HologramDataService {
    * Validates that serial ranges don't overlap
    */
   validateSerialRanges(entries: (HologramIssuedEntry | HologramWastageEntry)[]): boolean {
-    const ranges: Array<{from: number, to: number}> = [];
-    
+    const ranges: Array<{ from: number, to: number }> = [];
+
     for (const entry of entries) {
       const fromMatch = entry.fromSerial.match(/(\d+)$/);
       const toMatch = entry.toSerial.match(/(\d+)$/);
-      
+
       if (fromMatch && toMatch) {
         const fromNum = parseInt(fromMatch[1], 10);
         const toNum = parseInt(toMatch[1], 10);
-        
+
         // Check for overlaps with existing ranges
         for (const range of ranges) {
           if ((fromNum >= range.from && fromNum <= range.to) ||
-              (toNum >= range.from && toNum <= range.to) ||
-              (fromNum <= range.from && toNum >= range.to)) {
+            (toNum >= range.from && toNum <= range.to) ||
+            (fromNum <= range.from && toNum >= range.to)) {
             return false; // Overlap detected
           }
         }
-        
+
         ranges.push({ from: fromNum, to: toNum });
       }
     }
-    
+
     return true;
   }
 
@@ -685,5 +816,279 @@ export class HologramDataService {
       sortedKeys,
       initialOpening
     };
+  }
+  // --- Daily Register Integration ---
+
+  /**
+   * Save Daily Register Entry to Backend
+   */
+  saveDailyRegisterEntry(entryData: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/daily-register/`, entryData);
+  }
+
+  /**
+   * Fetch Daily Register Entries from Backend
+   */
+  getDailyRegisterEntries(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/daily-register/`);
+  }
+
+  getRollsDetails(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/rolls-details/`);
+  }
+  
+  getSerialRanges(rollId: number): Observable<any> {
+    return this.http.get<any>(`${this.apiUrl}/rolls-details/${rollId}/serial_ranges/`);
+  }
+
+  /**
+   * Get requests with allocated rolls (Currently Issued Holograms)
+   * These are requests that have rolls_assigned populated (In Use status)
+   */
+  getRequestsWithAllocatedRolls(): Observable<any[]> {
+    const t = new Date().getTime();
+    console.log('🔍 Fetching requests from API...');
+    console.log('API URL:', `${this.apiUrl}/request/?_t=${t}`);
+    
+    return this.http.get<any[]>(`${this.apiUrl}/request/?_t=${t}`).pipe(
+      map((requests: any[]) => {
+        console.log('📦 Received requests from API:', requests.length);
+        console.log('📦 Full API Response:', JSON.stringify(requests, null, 2));
+        
+        // Log all requests for debugging
+        requests.forEach((req: any, index: number) => {
+          console.log(`API Request ${index + 1}:`, {
+            id: req.id,
+            ref_no: req.ref_no || req.refNo,
+            issued_assets: req.issued_assets,
+            rolls_assigned: req.rolls_assigned,
+            issuedAssets: req.issuedAssets,
+            rollsAssigned: req.rollsAssigned,
+            issued_assets_type: typeof req.issued_assets,
+            rolls_assigned_type: typeof req.rolls_assigned,
+            issuedAssets_type: typeof req.issuedAssets,
+            rollsAssigned_type: typeof req.rollsAssigned,
+            issued_assets_length: req.issued_assets?.length,
+            rolls_assigned_length: req.rolls_assigned?.length,
+            issuedAssets_length: req.issuedAssets?.length,
+            rollsAssigned_length: req.rollsAssigned?.length,
+            has_issued_assets: !!(req.issued_assets && Array.isArray(req.issued_assets) && req.issued_assets.length > 0),
+            has_rolls_assigned: !!(req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0),
+            has_issuedAssets: !!(req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0),
+            has_rollsAssigned: !!(req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
+          });
+        });
+        
+        // Try filtering by BOTH snake_case AND camelCase (API might return either format)
+        const filteredByRollsAssigned = requests.filter(req => 
+          (req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0) ||
+          (req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
+        );
+        
+        const filteredByIssuedAssets = requests.filter(req => 
+          (req.issued_assets && Array.isArray(req.issued_assets) && req.issued_assets.length > 0) ||
+          (req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0)
+        );
+        
+        console.log('✅ Filtered by rolls_assigned/rollsAssigned:', filteredByRollsAssigned.length);
+        console.log('✅ Filtered by issued_assets/issuedAssets:', filteredByIssuedAssets.length);
+        
+        // Use rolls_assigned if available, otherwise fall back to issued_assets
+        const filtered = filteredByRollsAssigned.length > 0 ? filteredByRollsAssigned : filteredByIssuedAssets;
+        
+        console.log('✅ Final filtered requests:', filtered.length);
+        
+        return filtered;
+      })
+    );
+  }
+
+  /**
+   * Fetch Monthly Statement from Backend daily register entries AND rolls details
+   * This method fetches completed daily register entries and arrivals from backend
+   */
+  getMonthlyStatementFromBackend(
+    month: string,
+    year: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): Observable<MonthlyStatementSummary> {
+    const monthNumber = this.getMonthNumber(month);
+    const monthKey = `${year}-${monthNumber}`;
+
+    // Fetch BOTH daily register entries AND rolls details from backend
+    return forkJoin({
+      dailyEntries: this.getDailyRegisterEntries(),
+      rollsDetails: this.getRollsDetails()
+    }).pipe(
+      map(({ dailyEntries, rollsDetails }) => {
+        // Handle pagination/response structure for rollsDetails - cast to any to avoid type issues
+        const rollsArray: any[] = Array.isArray(rollsDetails) ? rollsDetails : ((rollsDetails as any)?.results || []);
+
+        console.log(`📦 Backend Daily Register: ${dailyEntries.length} total entries`);
+        console.log(`📦 Backend Rolls Details: ${rollsArray.length} total rolls`);
+
+        // Log first roll structure for debugging
+        if (rollsArray.length > 0) {
+          console.log('📋 Sample roll structure:', {
+            id: rollsArray[0].id,
+            carton_number: rollsArray[0].carton_number,
+            cartonNumber: rollsArray[0].cartonNumber,
+            received_date: rollsArray[0].received_date,
+            receivedDate: rollsArray[0].receivedDate,
+            type: rollsArray[0].type,
+            keys: Object.keys(rollsArray[0])
+          });
+        }
+
+        console.log(`📦 Total daily entries from backend: ${dailyEntries.length}`);
+
+        // Filter daily entries by month, year, hologram type
+        // Handle both camelCase (from DRF serializer) and snake_case field names
+        const filteredEntries = dailyEntries.filter((entry: any) => {
+          const entryDate = entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '';
+          const entryMonthKey = entryDate ? entryDate.substring(0, 7) : '';
+          const entryType = (entry.hologramType || entry.hologram_type || 'LOCAL').toString().toUpperCase().trim();
+
+          if (!entryDate) return false;
+          if (entryMonthKey !== monthKey) return false;
+          if (entryType !== hologramType) return false;
+
+          return true;
+        });
+
+        console.log(`📊 Filtered daily entries for ${monthKey}: ${filteredEntries.length}`);
+
+        // Debug: Log sample entry structure
+        if (filteredEntries.length > 0) {
+          console.log('📋 Sample daily register entry:', {
+            id: filteredEntries[0].id,
+            reference_no: filteredEntries[0].reference_no,
+            issued_qty: filteredEntries[0].issued_qty,
+            wastage_qty: filteredEntries[0].wastage_qty,
+            issued_from: filteredEntries[0].issued_from,
+            issued_to: filteredEntries[0].issued_to,
+            wastage_from: filteredEntries[0].wastage_from,
+            wastage_to: filteredEntries[0].wastage_to,
+            issued_ranges: filteredEntries[0].issued_ranges,
+            wastage_ranges: filteredEntries[0].wastage_ranges,
+            brand_details: filteredEntries[0].brand_details,
+            bottle_size: filteredEntries[0].bottle_size
+          });
+        }
+
+        // Convert backend entries to HologramDailyEntry format
+        // Handle both camelCase (from DRF serializer) and snake_case field names
+        const convertedEntries: HologramDailyEntry[] = filteredEntries.map((entry: any) => ({
+          id: String(entry.id),
+          date: entry.usageDate || entry.usage_date || entry.submissionDate || entry.submission_date || '',
+          hologramType: hologramType,
+          issuedEntries: entry.issuedRanges || entry.issued_ranges || [],
+          wastageEntries: entry.wastageRanges || entry.wastage_ranges || [],
+          utilizedQuantity: entry.hologramQty || entry.hologram_qty || 0,
+          leftOverQuantity: (entry.hologramQty || entry.hologram_qty || 0) - (entry.issuedQty || entry.issued_qty || 0) - (entry.wastageQty || entry.wastage_qty || 0),
+          isFixed: entry.isFixed ?? entry.is_fixed ?? false,
+          issuedFromSerial: entry.issuedFrom || entry.issued_from || '',
+          issuedToSerial: entry.issuedTo || entry.issued_to || '',
+          issuedQuantity: entry.issuedQty || entry.issued_qty || 0,
+          wastageFromSerial: entry.wastageFrom || entry.wastage_from || '',
+          wastageToSerial: entry.wastageTo || entry.wastage_to || '',
+          wastageQuantity: entry.wastageQty || entry.wastage_qty || 0,
+          damageReason: entry.damageReason || entry.damage_reason || '',
+          referenceNo: entry.referenceNo || entry.reference_no || '',
+          brandDetails: entry.brandDetails || entry.brand_details || '',
+          bottleSize: entry.bottleSize || entry.bottle_size || '',
+          cartoonNumber: entry.rollRange || entry.roll_range || '',
+          lockedRolls: [],
+          // Preserve original backend fields for fallback processing (both camelCase and snake_case)
+          issued_ranges: entry.issuedRanges || entry.issued_ranges,
+          wastage_ranges: entry.wastageRanges || entry.wastage_ranges,
+          issued_qty: entry.issuedQty || entry.issued_qty,
+          wastage_qty: entry.wastageQty || entry.wastage_qty,
+          brand_details: entry.brandDetails || entry.brand_details,
+          bottle_size: entry.bottleSize || entry.bottle_size
+        } as any));
+
+        // Calculate totals from daily entries
+        const totals = this.aggregateMonthlyTotals(convertedEntries);
+
+        // *** CRITICAL: Get arrivals from backend rolls details ***
+        // Filter rolls by type and received_date month
+        const arrivals: HologramArrivalRecord[] = rollsArray
+          .filter((roll: any) => {
+            // Handle both camelCase and snake_case field names
+            const cartonNumber = roll.carton_number || roll.cartonNumber || '';
+            const rollType = (roll.type || 'LOCAL').toString().toUpperCase().trim();
+            const typeMatch = rollType === hologramType;
+
+            // Check received_date matches the month
+            // Handle both date formats: "YYYY-MM-DD" and ISO "YYYY-MM-DDTHH:MM:SS"
+            // Also handle camelCase: receivedDate
+            const receivedDate = roll.received_date || roll.receivedDate || '';
+            if (!receivedDate) {
+              console.log(`⚠️ Roll ${cartonNumber || roll.id || 'unknown'}: No received_date`);
+              return false;
+            }
+
+            // Extract YYYY-MM from the date (works for both formats)
+            const rollMonthKey = receivedDate.substring(0, 7);
+            const dateMatch = rollMonthKey === monthKey;
+
+            console.log(`🔍 Roll ${cartonNumber}: type=${rollType}(match=${typeMatch}), date=${receivedDate}, monthKey=${rollMonthKey}(match=${dateMatch})`);
+
+            return typeMatch && dateMatch;
+          })
+          .map((roll: any) => ({
+            id: roll.id,
+            type: (roll.type || 'LOCAL').toString().toUpperCase().trim() as 'LOCAL' | 'EXPORT' | 'DEFENCE',
+            totalCount: roll.total_count || roll.totalCount || 0,
+            receivedDate: roll.received_date || roll.receivedDate || '',
+            cartoonNumber: roll.carton_number || roll.cartonNumber || '',
+            fromSerial: roll.from_serial || roll.fromSerial || '',
+            toSerial: roll.to_serial || roll.toSerial || ''
+          }));
+
+        const freshArrival = arrivals.reduce((sum, a) => sum + a.totalCount, 0);
+        console.log(`📊 Fresh Arrivals for ${monthKey} (${hologramType}): ${freshArrival} from ${arrivals.length} rolls`);
+
+        // Get opening stock from previous month
+        const initialOpening = this.getInitialOpeningStock(hologramType);
+
+        // Calculate closing balance: Opening + Fresh Arrival - Utilized - Wastage
+        const closingBalance = initialOpening + freshArrival - totals.totalIssued - totals.totalWastage;
+
+        console.log(`✅ Monthly Statement: Opening=${initialOpening}, Fresh=${freshArrival}, Issued=${totals.totalIssued}, Wastage=${totals.totalWastage}, Closing=${closingBalance}`);
+
+        return {
+          monthKey,
+          month: this.getMonthCodeFromNumber(monthNumber),
+          year,
+          hologramType,
+          openingStock: initialOpening,
+          freshArrival,
+          totals,
+          closingBalance,
+          entries: convertedEntries,
+          arrivals
+        };
+      })
+    );
+  }
+
+  /**
+   * Get Monthly Report from Backend API
+   * This uses the new monthly report endpoint that aggregates data automatically
+   */
+  getMonthlyReport(
+    month: string,
+    year: string,
+    hologramType: 'LOCAL' | 'EXPORT' | 'DEFENCE'
+  ): Observable<any> {
+    const params = {
+      month: month.toLowerCase(),
+      year: year,
+      hologram_type: hologramType
+    };
+    
+    return this.http.get(`${this.apiUrl}/monthly-report/generate_report/`, { params });
   }
 }

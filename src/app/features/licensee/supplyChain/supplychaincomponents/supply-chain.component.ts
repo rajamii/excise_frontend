@@ -8,6 +8,7 @@ import { CancellationComponent } from "./cancellation/cancellation.component";
 import { TransitComponent } from "./transit/transit.component";
 import { HologramrequestComponent } from "./hologramrequest/hologramrequest.component";
 import { HologramprocurementComponent } from "./hologramprocurement/hologramprocurement.component";
+import { SupplyChainProfileService } from "../../../../core/services/supply-chain-profile.service";
 
 interface TableData {
   referenceNo: string;
@@ -51,25 +52,20 @@ export class SupplyChainComponent implements OnInit {
   activeTab = "requisition";
   sidebarHidden = true;
   private isBrowser = false;
-  
+  currentProfile: any = null;
+  loadingProfile = true;
+
   // MOVED TO hologramprocurement.component.ts
   // hologramList: HologramRow[] = [];
-  // filteredHologramData: any[] = [];
-  // showHologramModal = false;
-  // showMultiTypePaymentModal = false;
-  // selectedPaymentHologram: HologramRow | null = null;
-  // paymentRemarks: string = '';
-  // multiTypePaymentItems: HologramRow[] = [];
-  // hologramDateFilter: string = '';
-  // hologramMonthFilter: string = '';
-  // hologramYearFilter: string = '';
-  // hologramStatusFilter: string = '';
-  // selectedHologram: HologramRow | null = null;
+
+  userUnits: any[] = [];
+  showUnitSwitcher = false;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
+    private profileService: SupplyChainProfileService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     // MOVED TO hologramprocurement.component.ts
@@ -77,6 +73,26 @@ export class SupplyChainComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Check for profile first
+    this.profileService.getProfile().subscribe({
+      next: (res) => {
+        if (res.exists && res.data) {
+          this.currentProfile = res.data;
+          this.loadingProfile = false;
+          this.loadUserUnits(); // Load other units
+        } else {
+          // If checking profile fails or doesn't exist, redirect to registration
+          this.router.navigate(['/licensee/supply-chain-registration']);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to fetch profile', err);
+        // On error, also redirect? Or show error?
+        // Safer to redirect or stay loading
+        this.router.navigate(['/licensee/supply-chain-registration']);
+      }
+    });
+
     // Check for tab query parameter
     if (this.isBrowser) {
       const tab = this.route.snapshot.queryParamMap.get('tab');
@@ -86,10 +102,54 @@ export class SupplyChainComponent implements OnInit {
     }
   }
 
+  loadUserUnits() {
+    this.profileService.getUserUnits().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.userUnits = res.data;
+        }
+      }
+    });
+  }
+
+  toggleUnitSwitcher() {
+    this.showUnitSwitcher = !this.showUnitSwitcher;
+  }
+
+  switchUnit(licenseeId: string) {
+    if (confirm('Verify switching to this unit?')) {
+      this.profileService.switchUnit(licenseeId).subscribe({
+        next: () => {
+          window.location.reload();
+        },
+        error: (err) => {
+          console.error('Switch failed', err);
+          alert('Failed to switch unit');
+        }
+      })
+    }
+  }
+
+  addNewUnit() {
+    if (confirm('This will take you to registration page to add a NEW unit. Continue?')) {
+      // We do NOT delete the profile, effectively "logging out" of the active session 
+      // but since we want to add *new*, we just go to registration.
+      // However, registration checks "if exists". We might need to clear active session first?
+      // Actually, to add new, we should just go to reg page.
+      // But the backend view checks `if SupplyChainUserProfile.objects.filter(user=request.user).exists(): return error`.
+      // So we DO need to clear the active session to allow "new" registration.
+      this.profileService.resetProfile().subscribe(() => {
+        this.router.navigate(['/licensee/supply-chain-registration']);
+      });
+    }
+  }
+
   setActiveTab(tab: string): void {
     console.log('setActiveTab called with:', tab);
     this.activeTab = tab;
   }
+
+
 
   viewWallet(): void {
     this.router.navigate(["/dev-payment-confirmation"]);

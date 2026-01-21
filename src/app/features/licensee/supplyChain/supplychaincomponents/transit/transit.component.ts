@@ -1,13 +1,16 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
+import { Component, Inject, PLATFORM_ID, OnInit, Input } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
+import { SupplyChainProfileService } from "../../../../../core/services/supply-chain-profile.service";
 import { Router } from "@angular/router";
+import { SupplyChainService } from "../../services/supplychain.service";
 
 interface TableData {
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
   status: string;
+  backendStatus?: string; // Original backend status for role-based logic
   amount: string;
   priority?: string;
   destination?: string;
@@ -26,20 +29,29 @@ interface TableData {
 export class TransitComponent implements OnInit {
   Math = Math;
   private isBrowser = false;
-  
+
+  /**
+   * User role determines which action buttons to show:
+   * - 'licensee': View + Pay (when PENDING)
+   * - 'oic': View + Approve/Reject (when forwarded to OIC)
+   * - 'permit': View + Approve/Reject (when forwarded to Permit Section)
+   * - 'commissioner': View + Approve/Reject (when forwarded to Commissioner)
+   */
+  @Input() userRole: 'licensee' | 'oic' | 'permit' | 'commissioner' = 'licensee';
+
   // Filter properties for transit
   transitDateFilter: string = '';
   transitStatusFilter: string = '';
   transitDestinationFilter: string = '';
-  
+
   // Pagination
   pageSizeOptions: number[] = [5, 10, 15];
   currentPage: number = 1;
   pageSize: number = 5;
-  
+
   filteredTransitData: TableData[] = [];
-  
-  // Sample data for transit permit applications (from commissioner's perspective)
+
+  // Sample data for transit permit applications
   transitData: TableData[] = [
     {
       referenceNo: "TRN/BF801",
@@ -118,13 +130,92 @@ export class TransitComponent implements OnInit {
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) platformId: Object,
+    private profileService: SupplyChainProfileService,
+    private supplyChainService: SupplyChainService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
-    // Initialize filtered data
-    this.filteredTransitData = [...this.transitData];
+    if (this.isBrowser) {
+      this.loadTransitData();
+    }
+  }
+
+  /**
+   * Returns the backend status directly for display
+   * No mapping - just like requisition/revalidation components
+   */
+  private mapBackendStatusToDisplayStatus(backendStatus: string): string {
+    // Return backend status directly, just like requisition component
+    return backendStatus || 'Pending';
+  }
+
+  loadTransitData(): void {
+    this.supplyChainService.getTransitPermits().subscribe({
+      next: (data) => {
+        // Group by bill_no
+        const grouped = new Map<string, any>();
+
+        data.forEach(item => {
+          // keys might be camelCase due to DRF settings
+          const billNo = item.billNo || item.bill_no;
+          const distributorName = item.soleDistributorName || item.sole_distributor_name;
+          const destination = item.depotAddress || item.depot_address;
+          const vehicleNumber = item.vehicleNumber || item.vehicle_number;
+          const date = item.date;
+
+          // Get the status from backend - support both camelCase and snake_case
+          const backendStatus = item.status || '';
+          const displayStatus = this.mapBackendStatusToDisplayStatus(backendStatus);
+
+          // Calculate duties for this row (supporting both casings)
+          const excise = parseFloat(item.exciseDutyRsPerCase || item.excise_duty_rs_per_case || '0');
+          const cess = parseFloat(item.educationCessRsPerCase || item.education_cess_rs_per_case || '0');
+          const additional = parseFloat(item.additionalExciseDutyRsPerCase || item.additional_excise_duty_rs_per_case || '0');
+          const cases = parseInt(item.cases || '0', 10);
+
+          // Use backend total if available, else calculate
+          let rowTotal = 0;
+          if (item.totalAmount || item.total_amount) {
+            rowTotal = parseFloat(item.totalAmount || item.total_amount);
+          } else {
+            rowTotal = (excise + cess + additional) * cases;
+          }
+
+          if (billNo && !grouped.has(billNo)) {
+            grouped.set(billNo, {
+              referenceNo: billNo,
+              submissionDate: date,
+              distilleryName: distributorName,
+              status: displayStatus, // Use status from database with proper mapping
+              backendStatus: backendStatus, // Store original backend status for role-based logic
+              amount: rowTotal,
+              priority: 'normal',
+              destination: destination,
+              transportMode: 'Road',
+              vehicleNumber: vehicleNumber,
+              permitValidUntil: ''
+            });
+          } else if (billNo) {
+            // Accumulate amount for existing bill
+            const existing = grouped.get(billNo);
+            existing.amount += rowTotal;
+          }
+        });
+
+        // Convert amounts to string with 2 decimals
+        this.transitData = Array.from(grouped.values()).map(item => ({
+          ...item,
+          amount: item.amount.toFixed(2)
+        }));
+
+        this.applyTransitFilters();
+      },
+      error: (err) => {
+        console.error('Failed to load transit data', err);
+      }
+    });
   }
 
   // Filter methods
@@ -176,7 +267,7 @@ export class TransitComponent implements OnInit {
   }
 
   getUrgentTransitCount(): number {
-    return this.filteredTransitData.filter(item => 
+    return this.filteredTransitData.filter(item =>
       item.priority === 'urgent' || item.priority === 'high'
     ).length;
   }
@@ -191,6 +282,52 @@ export class TransitComponent implements OnInit {
     this.router.navigate(['/dev-transit-permit-letter-view'], {
       queryParams: { ref: item.referenceNo }
     });
+  }
+
+  payTransit(item: TableData): void {
+    // Navigate to payment confirmation page with Transit Permit tab active
+    this.router.navigate(['/dev-payment-confirmation'], {
+      queryParams: {
+        billNo: item.referenceNo,
+        tab: 'transit'
+      }
+    });
+  }
+
+  /**
+   * Determines if the Pay button should be shown for an item
+   * Only for licensees when status is 'Ready for Payment'
+   */
+  canShowPayButton(item: TableData): boolean {
+    if (this.userRole !== 'licensee') return false;
+    // Check both display status and backend status
+    return item.status === 'Ready for Payment' || item.backendStatus === 'Ready for Payment';
+  }
+
+  /**
+   * Determines if Approve/Reject buttons should be shown for an item
+   * Only for officers when the application is forwarded to their specific stage
+   */
+  canShowApproveRejectButtons(item: TableData): boolean {
+    if (this.userRole === 'licensee') return false;
+
+    const backendStatus = item.backendStatus || '';
+
+    switch (this.userRole) {
+      case 'oic':
+        // OIC can approve/reject when payment is done and forwarded to them
+        return backendStatus === 'PaymentSuccessfulandForwardedToOfficerincharge';
+      case 'permit':
+        // Permit section can approve/reject when forwarded to them
+        return backendStatus.toLowerCase().includes('permit section') ||
+          backendStatus.toLowerCase().includes('forwarded to permit');
+      case 'commissioner':
+        // Commissioner can approve/reject when forwarded to them
+        return backendStatus.toLowerCase().includes('commissioner') ||
+          backendStatus.toLowerCase().includes('forwarded to commissioner');
+      default:
+        return false;
+    }
   }
 
   approveTransit(item: TableData): void {
@@ -210,20 +347,36 @@ export class TransitComponent implements OnInit {
 
   // Helper methods
   getStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'pending';
-      case 'APPROVED':
-        return 'approved';
-      case 'REJECTED':
-        return 'rejected';
-      case 'PROCESSING':
-        return 'processing';
-      case 'ISSUED':
-        return 'issued';
-      default:
-        return 'default';
+    if (!status) return 'default';
+
+    const statusLower = status.toLowerCase();
+
+    // Ready for Payment / Pending states
+    if (statusLower.includes('ready for payment') || statusLower === 'pending') {
+      return 'pending';
     }
+
+    // Forwarded / Processing states
+    if (statusLower.includes('forwarded') || statusLower === 'processing') {
+      return 'processing';
+    }
+
+    // Approved states
+    if (statusLower.includes('approved')) {
+      return 'approved';
+    }
+
+    // Cancelled / Rejected states
+    if (statusLower.includes('cancelled') || statusLower.includes('rejected') || statusLower.includes('refund')) {
+      return 'rejected';
+    }
+
+    // Issued states
+    if (statusLower.includes('issued')) {
+      return 'issued';
+    }
+
+    return 'default';
   }
 
   private parseDate(dateString: string): Date {
@@ -234,6 +387,13 @@ export class TransitComponent implements OnInit {
     return new Date(dateString);
   }
 
+  navigateTo(route: string) {
+    if (route === 'transit-permit') {
+      this.router.navigate(['/licensee/supply-chain/transit-permit']);
+    } else {
+      this.router.navigate([route]);
+    }
+  }
   // Pagination methods
   getCurrentPage(): number {
     return this.currentPage;

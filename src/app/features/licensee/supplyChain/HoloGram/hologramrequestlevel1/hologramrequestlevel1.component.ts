@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 interface HologramRequest {
   totalHolograms: number;
@@ -16,7 +17,7 @@ interface HologramRequest {
   styleUrl: './hologramrequestlevel1.component.scss'
 })
 export class Hologramrequestlevel1Component implements OnInit {
-  
+
   requestData: HologramRequest = {
     totalHolograms: 0,
     hologramType: 'LOCAL',
@@ -27,7 +28,9 @@ export class Hologramrequestlevel1Component implements OnInit {
   showSuccessModal: boolean = false;
   generatedRefNumber: string = '';
 
-  constructor(private router: Router) {}
+  private hologramService = inject(HologramDataService);
+
+  constructor(private router: Router) { }
 
   ngOnInit(): void {
     // No initialization needed for simplified form
@@ -38,18 +41,30 @@ export class Hologramrequestlevel1Component implements OnInit {
   onSubmit(): void {
     if (this.isValidForm()) {
       this.isSubmitting = true;
-      
-      // Generate reference number
-      this.generatedRefNumber = this.generateReferenceNumber();
-      
-      // Simulate API call delay
-      setTimeout(() => {
-        this.saveRequest();
-        this.isSubmitting = false;
-        this.showSuccessModal = true;
-      }, 2000);
+
+      const payload: any = {
+        quantity: this.requestData.totalHolograms,
+        usage_date: this.requestData.usageDate,
+        hologram_type: this.requestData.hologramType, // Send explicit type
+      };
+
+      this.hologramService.createRequest(payload).subscribe({
+        next: (res) => {
+          this.generatedRefNumber = res.refNo || this.generateReferenceNumber(); // Fallback if backend doesn't return refNo
+          this.isSubmitting = false;
+          this.showSuccessModal = true;
+          console.log('✅ Request submitted successfully:', res);
+        },
+        error: (err) => {
+          console.error('Error submitting request', err);
+          this.isSubmitting = false;
+          alert('Failed to submit request. Please try again.');
+        }
+      });
     }
   }
+
+  // ... (keeping isValidForm and generateReferenceNumber as helpers if needed, though ref no comes from backend)
 
   private isValidForm(): boolean {
     return !!(
@@ -65,22 +80,12 @@ export class Hologramrequestlevel1Component implements OnInit {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
+
     return `HRQ/${year}${month}${day}/${random}`;
   }
 
   private saveRequest(): void {
-    const requestWithMetadata = {
-      ...this.requestData,
-      refNumber: this.generatedRefNumber,
-      submissionDate: new Date().toISOString(),
-      status: 'PENDING'
-    };
-
-    // Save to localStorage (in real app, this would be an API call)
-    const existingRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    existingRequests.push(requestWithMetadata);
-    localStorage.setItem('hologramRequests', JSON.stringify(existingRequests));
+    // Deprecated - logic moved to onSubmit API call
   }
 
   downloadApplication(): void {
@@ -90,7 +95,7 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   private generateApplicationTemplate(): string {
     const currentDate = new Date().toLocaleDateString('en-IN');
-    
+
     return `
 HOLOGRAM REQUEST APPLICATION
 ============================

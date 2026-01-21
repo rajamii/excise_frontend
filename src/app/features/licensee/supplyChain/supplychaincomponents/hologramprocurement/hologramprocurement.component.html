@@ -83,50 +83,34 @@
       <i class="bi bi-funnel me-1"></i>
       <small class="text-muted">Filters:</small>
     </div>
-    
+
     <!-- Date Filter -->
     <div class="compact-filter">
-      <input 
-        type="date" 
-        class="form-control form-control-sm" 
-        [(ngModel)]="hologramDateFilter"
-        (change)="onHologramDateFilterChange()"
-        placeholder="Date"
-        title="Filter by date">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="hologramDateFilter"
+        (change)="onHologramDateFilterChange()" placeholder="Date" title="Filter by date">
     </div>
-    
+
     <!-- Month Filter -->
     <div class="compact-filter">
-      <input 
-        type="month" 
-        class="form-control form-control-sm" 
-        [(ngModel)]="hologramMonthFilter"
-        (change)="onHologramMonthFilterChange()"
-        placeholder="Month"
-        title="Filter by month">
+      <input type="month" class="form-control form-control-sm" [(ngModel)]="hologramMonthFilter"
+        (change)="onHologramMonthFilterChange()" placeholder="Month" title="Filter by month">
     </div>
-    
+
     <!-- Year Filter -->
     <div class="compact-filter">
-      <select 
-        class="form-select form-select-sm" 
-        [(ngModel)]="hologramYearFilter"
-        (change)="onHologramYearFilterChange()"
-        title="Filter by year">
+      <select class="form-select form-select-sm" [(ngModel)]="hologramYearFilter"
+        (change)="onHologramYearFilterChange()" title="Filter by year">
         <option value="">All Years</option>
         <option value="2025">2025</option>
         <option value="2024">2024</option>
         <option value="2023">2023</option>
       </select>
     </div>
-    
+
     <!-- Status Filter -->
     <div class="compact-filter">
-      <select 
-        class="form-select form-select-sm" 
-        [(ngModel)]="hologramStatusFilter"
-        (change)="onHologramStatusFilterChange()"
-        title="Filter by status">
+      <select class="form-select form-select-sm" [(ngModel)]="hologramStatusFilter"
+        (change)="onHologramStatusFilterChange()" title="Filter by status">
         <option value="">All Status</option>
         <option value="SUBMITTED">Submitted</option>
         <option value="DRAFT">Draft</option>
@@ -134,20 +118,19 @@
         <option value="PROCESSING">Processing</option>
       </select>
     </div>
-    
+
     <!-- Clear Button - only show when filters are active -->
-    <button 
-      class="btn btn-outline-danger btn-sm" 
-      (click)="clearHologramFilters()"
+    <button class="btn btn-outline-danger btn-sm" (click)="clearHologramFilters()"
       *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter"
       title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>
   </div>
-  
+
   <!-- Filter Results Summary -->
-  <div class="filter-results-compact mt-2" *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter">
+  <div class="filter-results-compact mt-2"
+    *ngIf="hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter">
     <small class="text-info">
       <i class="bi bi-info-circle me-1"></i>
       Showing <strong>{{ filteredHologramData.length }}</strong> of <strong>{{ hologramList.length }}</strong> holograms
@@ -198,9 +181,9 @@
               <div class="d-flex align-items-center gap-2">
                 <span class="ref-text">{{ item.refNo }}</span>
                 @if (item.editedByCommissioner) {
-                  <span class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
-                    <i class="bi bi-pencil-fill me-1"></i>EDITED
-                  </span>
+                <span class="badge bg-warning text-dark" title="Quantity edited by Commissioner">
+                  <i class="bi bi-pencil-fill me-1"></i>EDITED
+                </span>
                 }
               </div>
             </td>
@@ -208,14 +191,17 @@
               <span class="date-text">{{ item.date | date: "dd-MMM-yyyy" }}</span>
             </td>
             <td class="type">
-              <span class="badge text-white" 
-                [ngClass]="{
-                  'bg-success': getProcurementType(item) === 'Local',
-                  'bg-dark': getProcurementType(item) === 'Export',
-                  'bg-warning text-dark': getProcurementType(item) === 'Defence'
-                }">
-                {{ getProcurementType(item) }}
-              </span>
+              <div class="d-flex flex-wrap gap-1">
+                @for (type of getProcurementTypes(item); track type) {
+                <span class="badge text-white" [ngClass]="{
+                      'bg-success': type === 'Local',
+                      'bg-dark': type === 'Export',
+                      'bg-warning text-dark': type === 'Defence'
+                    }">
+                  {{ type }}
+                </span>
+                }
+              </div>
             </td>
             <td class="total-qty">
               <div class="qty-display">
@@ -226,7 +212,8 @@
                   (item.defenceQtyLakh || 0)) | number:'1.0-0'
                   }}
                 </span>
-                <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="openHologramDetails(item)" title="View Details">
+                <button class="btn btn-outline-warning btn-sm rounded-pill ms-2" (click)="openHologramDetails(item)"
+                  title="View Details">
                   <i class="bi bi-eye me-1"></i>
                   <span class="d-none d-lg-inline">View details</span>
                 </button>
@@ -239,9 +226,7 @@
               </div>
             </td>
             <td class="status">
-              <span
-                class="status-badge"
-                [ngClass]="getPaymentStatusClass(item)">
+              <span class="status-badge" [ngClass]="getPaymentStatusClass(item)">
                 {{ item.status }}
               </span>
             </td>
@@ -253,36 +238,25 @@
                 </button>
 
                 <!-- Make Payment button -->
-                <button 
-                  *ngIf="!item.paymentCompleted && isPaymentEnabled(item)"
-                  class="btn btn-warning btn-sm" 
-                  (click)="navigateToPaymentPage(item)" 
-                  title="Make Wallet Payment (₹0.15 per hologram)">
+                <button *ngIf="!item.paymentCompleted && isPaymentEnabled(item)" class="btn btn-warning btn-sm"
+                  (click)="navigateToPaymentPage(item)" title="Make Wallet Payment (₹0.15 per hologram)">
                   <i class="bi bi-wallet2 me-1"></i>
                   <span class="d-none d-md-inline">Make Payment</span>
                 </button>
                 <!-- Mark as Paid button (for testing) -->
-                <button 
-                  *ngIf="isPaymentEnabled(item) && !item.paymentCompleted"
-                  class="btn btn-info btn-sm" 
-                  (click)="markPaymentCompleted(item.refNo)" 
-                  title="Test: Mark payment as completed (for testing only)">
+                <button *ngIf="isPaymentEnabled(item) && !item.paymentCompleted" class="btn btn-info btn-sm"
+                  (click)="markPaymentCompleted(item.refNo)" title="Test: Mark payment as completed (for testing only)">
                   <i class="bi bi-check-circle me-1"></i>
                   <span class="d-none d-md-inline">Mark Paid (Test)</span>
                 </button>
                 <!-- View Payment Receipt button -->
-                <button 
-                  *ngIf="item.paymentCompleted"
-                  class="btn btn-success btn-sm" 
-                  (click)="viewPaymentSlip(item)" 
+                <button *ngIf="item.paymentCompleted" class="btn btn-success btn-sm" (click)="viewPaymentSlip(item)"
                   title="View Payment Receipt">
                   <i class="bi bi-receipt me-1"></i>
                   <span class="d-none d-md-inline">Payment Slip</span>
                 </button>
                 <!-- Payment Completed badge -->
-                <span 
-                  *ngIf="item.paymentCompleted"
-                  class="badge bg-success align-self-center"
+                <span *ngIf="item.paymentCompleted" class="badge bg-success align-self-center"
                   title="Payment Completed">
                   <i class="bi bi-check-circle me-1"></i>Paid
                 </span>
@@ -300,16 +274,18 @@
         <i class="bi bi-journal-x"></i>
       </div>
       <h5 class="empty-title">
-        {{ (hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter) ? 'No Matching Holograms Found' : 'No Holograms Found' }}
+        {{ (hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter) ? 'No Matching
+        Holograms Found' : 'No Holograms Found' }}
       </h5>
       <p class="empty-message">
-        {{ (hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter) ? 
-           'No holograms match your current filter criteria. Try adjusting your filters or clear them to see all holograms.' : 
-           'You haven\'t created any holograms yet. Start by creating your first hologram.' }}
+        {{ (hologramDateFilter || hologramMonthFilter || hologramYearFilter || hologramStatusFilter) ?
+        'No holograms match your current filter criteria. Try adjusting your filters or clear them to see all
+        holograms.' :
+        'You haven\'t created any holograms yet. Start by creating your first hologram.' }}
       </p>
-      <button class="btn btn-primary" *ngIf="filteredHologramData.length === 0 && !hologramDateFilter && !hologramMonthFilter && !hologramYearFilter && !hologramStatusFilter"
-      (click)="navigateTo('hologram')"
-      >
+      <button class="btn btn-primary"
+        *ngIf="filteredHologramData.length === 0 && !hologramDateFilter && !hologramMonthFilter && !hologramYearFilter && !hologramStatusFilter"
+        (click)="navigateTo('hologram')">
         <i class="bi bi-plus-circle me-2"></i>
         Create New Hologram
       </button>
@@ -349,26 +325,20 @@
           </select>
         </div>
         <div class="btn-group btn-group-sm pagination-buttons">
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(1)"
-            [disabled]="currentPage === 1">
+          <button class="btn btn-outline-secondary" (click)="goToPage(1)" [disabled]="currentPage === 1">
             «
           </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(currentPage - 1)"
-            [disabled]="currentPage === 1">
+          <button class="btn btn-outline-secondary" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
             ‹
           </button>
           <span class="btn btn-light disabled">
             {{ currentPage }} / {{ getTotalPages() }}
           </span>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(currentPage + 1)"
+          <button class="btn btn-outline-secondary" (click)="goToPage(currentPage + 1)"
             [disabled]="currentPage === getTotalPages()">
             ›
           </button>
-          <button class="btn btn-outline-secondary"
-            (click)="goToPage(getTotalPages())"
+          <button class="btn btn-outline-secondary" (click)="goToPage(getTotalPages())"
             [disabled]="currentPage === getTotalPages()">
             »
           </button>
@@ -456,7 +426,8 @@
                 </tr>
                 <tr class="table-active">
                   <td><strong>Total</strong></td>
-                  <td class="text-end"><strong class="text-primary fs-5">{{ getTotalHolograms(selectedHologram) | number:'1.0-0' }}</strong></td>
+                  <td class="text-end"><strong class="text-primary fs-5">{{ getTotalHolograms(selectedHologram) |
+                      number:'1.0-0' }}</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -464,7 +435,8 @@
         </div>
 
         <!-- Payment Calculation -->
-        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
+        <div class="card border-0 shadow-sm mb-4"
+          style="background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
           <div class="card-header bg-transparent border-0">
             <h6 class="mb-0 fw-bold text-dark">
               <i class="bi bi-currency-rupee me-2"></i>
@@ -490,7 +462,8 @@
                   </td>
                   <td class="text-end"><strong class="text-success">₹0.15</strong></td>
                   <td class="text-end"><strong>{{ getTotalHolograms(selectedHologram) | number:'1.0-0' }}</strong></td>
-                  <td class="text-end"><strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) | number:'1.2-2' }}</strong></td>
+                  <td class="text-end"><strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) |
+                      number:'1.2-2' }}</strong></td>
                 </tr>
               </tbody>
             </table>
@@ -545,14 +518,17 @@
               <div class="card-body">
                 <div class="mb-3">
                   <small class="text-muted d-block mb-1">Payment Status:</small>
-                  <span class="badge" [class.bg-success]="selectedHologram.paymentCompleted" [class.bg-warning]="!selectedHologram.paymentCompleted">
-                    <i class="bi" [class.bi-check-circle]="selectedHologram.paymentCompleted" [class.bi-clock]="!selectedHologram.paymentCompleted"></i>
+                  <span class="badge" [class.bg-success]="selectedHologram.paymentCompleted"
+                    [class.bg-warning]="!selectedHologram.paymentCompleted">
+                    <i class="bi" [class.bi-check-circle]="selectedHologram.paymentCompleted"
+                      [class.bi-clock]="!selectedHologram.paymentCompleted"></i>
                     {{ selectedHologram.paymentCompleted ? 'Completed' : 'Pending' }}
                   </span>
                 </div>
                 <div class="mb-3">
                   <small class="text-muted d-block mb-1">Total Amount:</small>
-                  <strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) | number:'1.2-2' }}</strong>
+                  <strong class="text-success fs-5">₹{{ calculatePaymentAmount(selectedHologram) | number:'1.2-2'
+                    }}</strong>
                 </div>
               </div>
             </div>
@@ -566,7 +542,8 @@
           <i class="bi bi-x-circle me-2"></i>
           Close
         </button>
-        <button type="button" class="btn btn-primary" (click)="viewHologramApplication(selectedHologram)" *ngIf="selectedHologram">
+        <button type="button" class="btn btn-primary" (click)="viewHologramApplication(selectedHologram)"
+          *ngIf="selectedHologram">
           <i class="bi bi-file-earmark-text me-2"></i>
           View Full Application
         </button>

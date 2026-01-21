@@ -1,36 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-interface DailyRegisterEntry {
-  id: string;
-  slNo: number;
-  referenceNo: string;
-  submissionDate: string;
-  usageDate: string;
-  brandDetails: {
-    brandName: string;
-    alcoholPercent: string;
-    sizeMl: number;
-    liquorType: string;
-  };
-  type: 'LOCAL' | 'EXPORT' | 'DEFENCE';
-  bottleSize: string;
-  hologramQty: number;
-  status: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED';
-  completedOnTime: boolean;
-  submittedDate: string;
-  submittedTime: string;
-  approvalDate?: string;
-  approvalTime?: string;
-  completionDate?: string;
-  completionTime?: string;
-  deadline?: string; // 5 PM on approval date (only set when approved)
-  isOverdue: boolean;
-  overdueHours?: number;
-  allocations?: any[];
-  distilleryName?: string; // Added distillery/brewery name
-}
+import { HologramService, DailyRegisterEntry, DailyRegisterSummary } from '../../../../../core/services/hologram.service';
 
 interface FilterOptions {
   referenceNumber: string;
@@ -39,7 +10,7 @@ interface FilterOptions {
   dateFrom: string;
   dateTo: string;
   onlyOverdue: boolean;
-  distillery: string; // Added distillery filter
+  distillery: string;
 }
 
 @Component({
@@ -54,6 +25,14 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   dailyRegisterEntries: DailyRegisterEntry[] = [];
   filteredEntries: DailyRegisterEntry[] = [];
   paginatedEntries: DailyRegisterEntry[] = [];
+  summary: DailyRegisterSummary = {
+    totalEntries: 0,
+    applied: 0,
+    underProcess: 0,
+    completedOnTime: 0,
+    completedLate: 0,
+    overdue: 0
+  };
 
   filters: FilterOptions = {
     referenceNumber: '',
@@ -65,17 +44,8 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     distillery: ''
   };
 
-  // List of distilleries/breweries
-  distilleries: string[] = [
-    'Sikkim Distilleries Ltd',
-    'Himalayan Distilleries Pvt Ltd',
-    'Royal Sikkim Brewery',
-    'Mountain View Distilleries',
-    'Eastern Himalaya Distillery',
-    'Gangtok Premium Spirits',
-    'Teesta Valley Breweries',
-    'Khangchendzonga Distillery'
-  ];
+  // List of distilleries/breweries - will be populated from backend
+  distilleries: string[] = [];
 
   // Pagination
   currentPage = 1;
@@ -85,207 +55,43 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   // Selected entry for details modal
   selectedEntry: DailyRegisterEntry | null = null;
 
-  // Overdue warnings
-  overdueEntries: DailyRegisterEntry[] = [];
+  // Loading state
+  isLoading = false;
+  errorMessage = '';
+
+  constructor(private hologramService: HologramService) {}
 
   ngOnInit() {
-    // Load only real data from workflow - no sample data
     this.loadDailyRegisterEntries();
     
-    // Listen for storage changes to auto-refresh
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'hologramRequests' || e.key === 'hologramManufacturingRegister') {
-        this.loadDailyRegisterEntries();
-      }
-    });
-    
-    // Check for updates and overdue entries every 30 seconds
+    // Auto-refresh every 30 seconds
     setInterval(() => {
       this.loadDailyRegisterEntries();
-      this.checkOverdueEntries();
     }, 30000);
   }
 
-  // Removed: initializeSampleManufacturingData() - No longer creating sample data
-  // All entries must come from the real workflow
-
   loadDailyRegisterEntries() {
-    console.log('Loading daily register entries...');
+    this.isLoading = true;
+    this.errorMessage = '';
     
-    // Load ALL requests from hologramRequests (not just approved)
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    
-    console.log('Found hologram requests:', hologramRequests.length);
-    
-    // Convert to daily register entries - ONLY real data, no samples
-    this.dailyRegisterEntries = hologramRequests.map((req: any, index: number) => {
-      // Determine status based on request status
-      let entryStatus: 'APPLIED' | 'UNDER_PROCESS' | 'COMPLETED' = 'APPLIED';
-      let deadline: Date | null = null;
-      let isOverdue = false;
-      let overdueHours = 0;
-      
-      // Submission date and time
-      const submissionDateTime = new Date(req.submissionDate || new Date());
-      const submittedDateStr = submissionDateTime.toISOString().split('T')[0];
-      const submittedTimeStr = req.submissionTime || submissionDateTime.toTimeString().split(' ')[0];
-      
-      // Approval date and time (if approved)
-      let approvalDateStr: string | undefined;
-      let approvalTimeStr: string | undefined;
-      
-      if (req.status === 'APPROVED') {
-        // Check if completed in manufacturing register
-        const isCompleted = this.checkIfCompleted(req.referenceNo || req.refNumber);
+    this.hologramService.getDailyRegisterOverview().subscribe({
+      next: (response) => {
+        this.summary = response.summary;
+        this.dailyRegisterEntries = response.entries;
         
-        if (isCompleted) {
-          entryStatus = 'COMPLETED';
-        } else {
-          entryStatus = 'UNDER_PROCESS';
-        }
+        // Extract unique distilleries
+        const distillerySet = new Set(response.entries.map(e => e.distilleryName));
+        this.distilleries = Array.from(distillerySet).sort();
         
-        // Set approval date and deadline
-        const approvalDateTime = new Date(req.approvalDate || new Date());
-        approvalDateStr = approvalDateTime.toISOString().split('T')[0];
-        approvalTimeStr = req.approvalTime || approvalDateTime.toTimeString().split(' ')[0];
-        
-        // Deadline is 5 PM (17:00) on the approval date
-        deadline = new Date(approvalDateStr + 'T17:00:00');
-        
-        // Calculate if overdue (only for UNDER_PROCESS)
-        if (entryStatus === 'UNDER_PROCESS') {
-          const now = new Date();
-          isOverdue = now > deadline;
-          overdueHours = isOverdue ? Math.floor((now.getTime() - deadline.getTime()) / (1000 * 60 * 60)) : 0;
-        }
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading daily register:', error);
+        this.errorMessage = 'Failed to load daily register data. Please try again.';
+        this.isLoading = false;
       }
-      
-      // Check completion info
-      const completionInfo = entryStatus === 'COMPLETED' ? this.getCompletionInfo(req.referenceNo || req.refNumber) : null;
-      
-      // Check if completed on time
-      const completedOnTime = entryStatus === 'COMPLETED' && completionInfo && deadline
-        ? new Date(completionInfo.completionDate + 'T' + completionInfo.completionTime) <= deadline
-        : false;
-      
-      const entry: DailyRegisterEntry = {
-        id: req.id || `DR${Date.now() + index}`,
-        slNo: index + 1,
-        referenceNo: req.referenceNo || req.refNumber,
-        submissionDate: req.submissionDate || submittedDateStr,
-        usageDate: req.usageDate || submittedDateStr,
-        brandDetails: {
-          brandName: this.getBrandLabel(req.brandName) || req.brandName || 'Unknown Brand',
-          alcoholPercent: '42.8%',
-          sizeMl: this.getBottleSizeNumber(req.bottleSize) || 750,
-          liquorType: this.getLiquorType(req.brandName) || 'Whisky'
-        },
-        type: req.hologramType || req.type || 'LOCAL',
-        bottleSize: req.bottleSize || '750ml',
-        hologramQty: req.approvedQuantity || req.totalHolograms || 0,
-        status: entryStatus,
-        completedOnTime: completedOnTime,
-        submittedDate: submittedDateStr,
-        submittedTime: submittedTimeStr,
-        approvalDate: approvalDateStr,
-        approvalTime: approvalTimeStr,
-        completionDate: completionInfo?.completionDate,
-        completionTime: completionInfo?.completionTime,
-        deadline: deadline?.toISOString(),
-        isOverdue: isOverdue,
-        overdueHours: overdueHours,
-        allocations: req.allocations,
-        distilleryName: req.distilleryName || req.companyName || 'Sikkim Distilleries Ltd'
-      };
-      
-      return entry;
     });
-    
-    console.log('Daily register entries:', this.dailyRegisterEntries);
-    
-    // Check for overdue entries
-    this.checkOverdueEntries();
-    
-    this.applyFilters();
-  }
-
-  checkIfCompleted(referenceNo: string): boolean {
-    // Check if the request has been completed in the manufacturing register
-    const manufacturingRegister = JSON.parse(localStorage.getItem('hologramManufacturingRegister') || '[]');
-    const completedEntry = manufacturingRegister.find((entry: any) => 
-      entry.referenceNo === referenceNo && entry.status === 'COMPLETED'
-    );
-    return !!completedEntry;
-  }
-
-  getCompletionInfo(referenceNo: string): { completionDate: string; completionTime: string } | null {
-    const manufacturingRegister = JSON.parse(localStorage.getItem('hologramManufacturingRegister') || '[]');
-    const completedEntry = manufacturingRegister.find((entry: any) => 
-      entry.referenceNo === referenceNo && entry.status === 'COMPLETED'
-    );
-    
-    if (completedEntry && completedEntry.completionDate) {
-      const completionDateTime = new Date(completedEntry.completionDate);
-      return {
-        completionDate: completionDateTime.toISOString().split('T')[0],
-        completionTime: completedEntry.completionTime || completionDateTime.toTimeString().split(' ')[0]
-      };
-    }
-    
-    return null;
-  }
-
-  checkOverdueEntries() {
-    this.overdueEntries = this.dailyRegisterEntries.filter(entry => entry.isOverdue);
-    
-    if (this.overdueEntries.length > 0) {
-      console.warn('OVERDUE ENTRIES DETECTED:', this.overdueEntries.length);
-      
-      // Store overdue warnings for commissioner dashboard
-      localStorage.setItem('overdueHologramEntries', JSON.stringify(this.overdueEntries));
-      
-      // Trigger event for dashboard to pick up
-      window.dispatchEvent(new CustomEvent('overdueHologramAlert', { 
-        detail: { count: this.overdueEntries.length, entries: this.overdueEntries }
-      }));
-    } else {
-      localStorage.removeItem('overdueHologramEntries');
-    }
-  }
-
-  private getBrandLabel(brandValue: string): string {
-    if (!brandValue) return 'Unknown Brand';
-    
-    const brandMap: { [key: string]: string } = {
-      'sikkim-supreme': 'Sikkim Supreme Whisky',
-      'himalayan-gold': 'Himalayan Gold Rum',
-      'royal-sikkim': 'Royal Sikkim Brandy',
-      'mountain-dew': 'Mountain Dew Vodka',
-      'gangtok-special': 'Gangtok Special Whisky',
-      'teesta-valley': 'Teesta Valley Rum',
-      'khangchendzonga': 'Khangchendzonga Premium',
-      'yuksom-heritage': 'Yuksom Heritage Whisky'
-    };
-    
-    return brandMap[brandValue] || brandValue;
-  }
-
-  private getBottleSizeNumber(bottleSize: string): number {
-    const sizeMap: { [key: string]: number } = {
-      '180ml': 180,
-      '375ml': 375,
-      '750ml': 750,
-      '1000ml': 1000
-    };
-    return sizeMap[bottleSize] || 750;
-  }
-
-  private getLiquorType(brandValue: string): string {
-    if (brandValue?.includes('whisky') || brandValue?.includes('whiskey')) return 'Whisky';
-    if (brandValue?.includes('rum')) return 'Rum';
-    if (brandValue?.includes('brandy')) return 'Brandy';
-    if (brandValue?.includes('vodka')) return 'Vodka';
-    return 'Whisky';
   }
 
   applyFilters() {
@@ -294,15 +100,15 @@ export class DailyhologramrecordregisterComponent implements OnInit {
         entry.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
 
       const matchesStatus = !this.filters.status || entry.status === this.filters.status;
-      const matchesType = !this.filters.type || entry.type === this.filters.type;
+      const matchesType = !this.filters.type || entry.hologramType === this.filters.type;
 
       const matchesDateFrom = !this.filters.dateFrom ||
         (entry.approvalDate ? new Date(entry.approvalDate) >= new Date(this.filters.dateFrom) : 
-         new Date(entry.submittedDate) >= new Date(this.filters.dateFrom));
+         new Date(entry.submissionDate) >= new Date(this.filters.dateFrom));
 
       const matchesDateTo = !this.filters.dateTo ||
         (entry.approvalDate ? new Date(entry.approvalDate) <= new Date(this.filters.dateTo) :
-         new Date(entry.submittedDate) <= new Date(this.filters.dateTo));
+         new Date(entry.submissionDate) <= new Date(this.filters.dateTo));
 
       const matchesOverdue = !this.filters.onlyOverdue || entry.isOverdue;
 
@@ -404,43 +210,48 @@ export class DailyhologramrecordregisterComponent implements OnInit {
   }
 
   getTotalHolograms(): number {
-    return this.filteredEntries.reduce((total, entry) => total + entry.hologramQty, 0);
+    return this.filteredEntries.reduce((total, entry) => total + entry.quantity, 0);
   }
 
   getOverdueCount(): number {
-    return this.overdueEntries.length;
+    return this.summary.overdue;
   }
 
   getCompletedOnTimeCount(): number {
-    return this.filteredEntries.filter(entry => entry.status === 'COMPLETED' && entry.completedOnTime).length;
+    return this.summary.completedOnTime;
   }
 
   getCompletedLateCount(): number {
-    return this.filteredEntries.filter(entry => entry.status === 'COMPLETED' && !entry.completedOnTime).length;
+    return this.summary.completedLate;
   }
 
   exportData() {
-    console.log('Exporting daily register data:', this.filteredEntries);
-    alert('Export functionality will be implemented with backend integration');
+    this.hologramService.exportDailyRegister('excel').subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `daily-hologram-register-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        console.error('Export failed:', error);
+        alert('Failed to export data. Please try again.');
+      }
+    });
   }
 
   refreshData() {
     this.loadDailyRegisterEntries();
-    alert('Daily register refreshed successfully!');
   }
 
   clearAllData() {
     if (confirm('Are you sure you want to clear all register data? This will remove all entries.')) {
-      localStorage.removeItem('hologramRequests');
-      localStorage.removeItem('hologramManufacturingRegister');
-      localStorage.removeItem('overdueHologramEntries');
-      
-      this.dailyRegisterEntries = [];
-      this.filteredEntries = [];
-      this.paginatedEntries = [];
-      this.overdueEntries = [];
-      
-      alert('All register data cleared successfully!');
+      // This would need a backend endpoint to clear data
+      alert('Clear functionality requires backend implementation');
     }
   }
 
@@ -453,23 +264,7 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       return 'Completed';
     }
 
-    if (!entry.deadline) {
-      return 'No deadline set';
-    }
-
-    const now = new Date();
-    const deadline = new Date(entry.deadline);
-    const diffMs = deadline.getTime() - now.getTime();
-
-    if (diffMs < 0) {
-      const hoursOverdue = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
-      const minutesOverdue = Math.floor((Math.abs(diffMs) % (1000 * 60 * 60)) / (1000 * 60));
-      return `Overdue by ${hoursOverdue}h ${minutesOverdue}m`;
-    }
-
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m remaining`;
+    return entry.timeRemaining || 'No deadline set';
   }
 
   getTimeRemainingClass(entry: DailyRegisterEntry): string {
@@ -481,24 +276,17 @@ export class DailyhologramrecordregisterComponent implements OnInit {
       return 'text-success';
     }
 
-    if (!entry.deadline) {
-      return 'text-muted';
-    }
-
-    const now = new Date();
-    const deadline = new Date(entry.deadline);
-    const diffMs = deadline.getTime() - now.getTime();
-
-    if (diffMs < 0) {
+    if (entry.isOverdue) {
       return 'text-danger fw-bold';
     }
 
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    
-    if (hours < 2) {
-      return 'text-danger';
-    } else if (hours < 4) {
-      return 'text-warning';
+    if (entry.timeRemaining) {
+      const hours = parseInt(entry.timeRemaining.split('h')[0]);
+      if (hours < 2) {
+        return 'text-danger';
+      } else if (hours < 4) {
+        return 'text-warning';
+      }
     }
     
     return 'text-success';

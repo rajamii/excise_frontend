@@ -502,6 +502,10 @@ export class LoginComponent extends BaseComponent {
       this.router.navigate(['/app-permit-section']);
     } else if (role === Authority.COMMISSIONER) {
       this.router.navigate(['/dev-commissioner-dashboard']);
+    } else if (role === 'officer-incharge') {
+      this.router.navigate(['/dev-officer-in-charge']);
+    } else if (role === 'it-cell') {
+      this.router.navigate(['/dev-itcell']);
     } else {
       console.warn('Unknown role:', role);
     }

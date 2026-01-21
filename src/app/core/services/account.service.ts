@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Account } from '../models/account.model';
 import { environment } from '../../../environments/environment';
@@ -16,7 +17,11 @@ export class AccountService {
   private accountCache$?: Observable<Account> | null;
   private logoutTimer?: any;
 
-  constructor(private http: HttpClient, private router: Router) { }
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) { }
 
   getUserDetails(): Observable<Account> {
     return this.http.get<Account>(`${this.baseUrl}/me/`);
@@ -26,29 +31,25 @@ export class AccountService {
     if (!this.accountCache$ || force) {
       this.accountCache$ = this.getUserDetails().pipe(
         tap(account => {
-          localStorage.setItem('username', account?.username ?? '');
-          localStorage.setItem('role', account.role!.name);
-          localStorage.setItem('firstName', account.firstName);
-          localStorage.setItem('lastName', account.lastName);
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('username', account?.username ?? '');
+            localStorage.setItem('role', account.role!.name);
+            localStorage.setItem('firstName', account.firstName);
+            localStorage.setItem('lastName', account.lastName);
 
-          this.authenticate(account);
-
-          // Auto logout
-          const access = localStorage.getItem('access');
-          const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
-          if (expiry) {
-            const timeout = Math.max(0, expiry - Date.now());  // Ensure non-negative
-            if (timeout > 0) {  // Only set if there's actual time left
+            // Auto logout
+            const access = localStorage.getItem('access');
+            const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
+            if (expiry) {
+              const timeout = expiry - Date.now();
               this.logoutTimer = setTimeout(() => {
                 this.clearAppData();
                 this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
               }, timeout);
-            } else {
-              // Token already expired -> logout immediately (graceful)
-              this.clearAppData();
-              this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
             }
           }
+
+          this.authenticate(account);
         }),
         shareReplay()
       );
@@ -92,8 +93,10 @@ export class AccountService {
       this.logoutTimer = undefined;
     }
 
-    localStorage.clear();
-    sessionStorage.clear();
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
     this.authenticate(null);
   }
 }
