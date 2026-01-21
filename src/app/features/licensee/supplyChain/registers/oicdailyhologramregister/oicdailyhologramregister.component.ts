@@ -2270,6 +2270,12 @@ After editing, click "Lock" to save your changes.`);
 
   // Add a new brand to the roll
   addBrandToRoll(entry: RegisterEntry, rollInput: RollInput): void {
+    console.log('🎯 ADD BRAND BUTTON CLICKED!');
+    console.log('  Entry:', entry.referenceNo);
+    console.log('  Roll Input:', rollInput);
+    console.log('  Current brands array:', rollInput.brands);
+    console.log('  Is locked?', entry.currentRollSelection?.isLocked);
+
     // CRITICAL: Initialize brands first if not already done
     // This preserves existing single-brand data as Brand 1
     if (!rollInput.brands || rollInput.brands.length === 0) {
@@ -2298,6 +2304,7 @@ After editing, click "Lock" to save your changes.`);
 
     console.log(`✅ Added Brand ${rollInput.brands!.length} to roll`);
     console.log('📊 Current brands:', rollInput.brands);
+    console.log('🎨 UI should now show', rollInput.brands!.length, 'brand cards');
   }
 
   // Remove a brand from the roll
