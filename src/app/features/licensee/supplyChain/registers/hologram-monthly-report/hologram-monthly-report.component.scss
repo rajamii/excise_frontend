@@ -284,3 +284,42 @@
     }
   }
 }
+
+
+/* Ranges Assigned Box Styling */
+.ranges-assigned-box {
+  border: 1px solid #dee2e6 !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .range-item {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    
+    &:hover {
+      transform: translateX(3px);
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .roll-name-badge {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+    
+    .range-value {
+      letter-spacing: 0.5px;
+    }
+  }
+}

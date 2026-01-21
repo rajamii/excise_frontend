@@ -1011,4 +1011,63 @@ export class HologramMonthlyReportComponent implements OnInit {
   getTotalWastageForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
     return detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
   }
+
+  /**
+   * Get assigned rolls ranges for display in the label column
+   * This shows the original assigned ranges for each roll, not the used ranges
+   */
+  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string }> {
+    const rollsRanges: Array<{ rollName: string; range: string }> = [];
+    
+    if (row.utilizationDetails && row.utilizationDetails.length > 0) {
+      // Create a set to track unique rolls
+      const processedRolls = new Set<string>();
+      
+      row.utilizationDetails.forEach(detail => {
+        const rollName = this.getRollDisplayName(detail.rollName);
+        
+        // Only process each roll once
+        if (!processedRolls.has(rollName)) {
+          processedRolls.add(rollName);
+          
+          // Try to extract the original range from the roll name
+          // Roll name format might be like "a1(a) - 1 - 100_BRAND_3"
+          const rangeMatch = detail.rollName.match(/(\d+)\s*-\s*(\d+)/);
+          
+          if (rangeMatch) {
+            rollsRanges.push({
+              rollName: rollName,
+              range: `${rangeMatch[1]}-${rangeMatch[2]}`
+            });
+          } else {
+            // Fallback: use the ranges from detail.ranges
+            if (detail.ranges && detail.ranges.length > 0) {
+              const allFromNumbers = detail.ranges.map(r => {
+                const num = parseInt(r.from.toString().replace(/\D/g, ''));
+                return isNaN(num) ? 0 : num;
+              });
+              const allToNumbers = detail.ranges.map(r => {
+                const num = parseInt(r.to.toString().replace(/\D/g, ''));
+                return isNaN(num) ? 0 : num;
+              });
+              
+              if (allFromNumbers.length > 0 && allToNumbers.length > 0) {
+                const minFrom = Math.min(...allFromNumbers);
+                const maxTo = Math.max(...allToNumbers);
+                
+                if (minFrom > 0 && maxTo > 0) {
+                  rollsRanges.push({
+                    rollName: rollName,
+                    range: `${minFrom}-${maxTo}`
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    return rollsRanges;
+  }
 }
