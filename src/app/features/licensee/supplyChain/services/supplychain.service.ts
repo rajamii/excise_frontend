@@ -109,6 +109,28 @@ export class SupplyChainService {
       );
   }
 
+  getBottleTypes(): Observable<any[]> {
+    return this.http
+      .get<any>(
+        `${environment.apiBaseUrl}/masters/supply_chain/transit-permit/bottle-types/`
+      )
+      .pipe(
+        map((response) => {
+          console.log('Bottle Types API Response:', response);
+          if (Array.isArray(response)) {
+            return response;
+          } else if (response?.results) {
+            return response.results;
+          }
+          return [];
+        }),
+        catchError((error) => {
+          console.error('getBottleTypes error:', error);
+          return of([]);
+        })
+      );
+  }
+
   getDistributors(): Observable<DistRow[]> {
     const dataUrl = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data/`;
 
