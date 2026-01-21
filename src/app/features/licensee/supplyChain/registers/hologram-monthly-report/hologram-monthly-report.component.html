@@ -310,19 +310,56 @@
                 <tr [ngClass]="getRowClass(row)">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
-                    @if (row.meta?.notes) {
-                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
-                      {{ row.meta?.notes }}
+                    @if (row.meta && row.meta.referenceNo) {
+                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                      Ref: {{ row.meta.referenceNo }}
                     </small>
                     }
-                    @if (row.meta?.cartoonNumber) {
-                    <small class="d-block text-primary fw-semibold" style="font-size: 0.75rem;">
-                      Carton: {{ row.meta?.cartoonNumber }}
+                    @if (row.meta && row.meta.notes) {
+                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
+                      {{ row.meta.notes }}
                     </small>
                     }
                   </td>
-                  <td colspan="9" class="text-center text-muted p-2 align-middle" style="font-size: 0.875rem;">
-                    <i class="bi bi-box-seam me-1"></i>Fresh Arrival: <strong class="text-success">{{ row.freshArrival | number }}</strong>
+                  <td colspan="2" class="text-center p-2 align-middle" style="font-size: 0.875rem;">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                      <i class="bi bi-box-seam text-success"></i>
+                      <span class="text-muted">Fresh Arrival:</span>
+                      <strong class="text-success fs-5">{{ row.freshArrival | number }}</strong>
+                    </div>
+                  </td>
+                  <!-- Carton Ranges Display Box -->
+                  <td colspan="7" class="p-2 align-middle">
+                    @if (row.meta && row.meta.cartonRanges && row.meta.cartonRanges.length > 0) {
+                      <div class="border border-success rounded p-2 bg-light">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                          <i class="bi bi-boxes text-success"></i>
+                          <strong class="text-success" style="font-size: 0.8rem;">
+                            {{ row.meta.cartonRanges.length }} Roll{{ row.meta.cartonRanges.length > 1 ? 's' : '' }} Arrived
+                          </strong>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber) {
+                            <div class="badge bg-success bg-opacity-10 border border-success text-dark p-2" 
+                                 style="font-size: 0.75rem; min-width: 150px;">
+                              <div class="fw-bold text-success mb-1">
+                                <i class="bi bi-box-seam me-1"></i>{{ carton.cartoonNumber }}
+                              </div>
+                              <div class="text-muted" style="font-size: 0.7rem; font-family: 'Courier New', monospace;">
+                                {{ carton.fromSerial }} → {{ carton.toSerial }}
+                              </div>
+                              <div class="text-primary fw-semibold mt-1" style="font-size: 0.7rem;">
+                                {{ carton.quantity | number }} units
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="text-center text-muted">
+                        <i class="bi bi-box-seam me-1"></i>No carton details available
+                      </div>
+                    }
                   </td>
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
                     @if (row.closingBalance !== null && row.closingBalance !== undefined) {

@@ -39,6 +39,12 @@ interface StatementRow {
     cartoonNumber?: string;
     serialRange?: string;
     notes?: string;
+    cartonRanges?: Array<{
+      cartoonNumber: string;
+      fromSerial: string;
+      toSerial: string;
+      quantity: number;
+    }>;
     isLastInGroup?: boolean;
     openingBalanceForGroup?: number;
     freshArrivalForGroup?: number;
@@ -240,23 +246,47 @@ export class HologramMonthlyReportComponent implements OnInit {
       
       const allTransactions: TransactionItem[] = [];
       
-      // Add arrivals with their precise timestamps
-      // received_date is a DateTimeField so it has full timestamp
+      // Group arrivals by procurement reference to show all rolls in single row
+      const arrivalsByRef = new Map<string, any[]>();
+      
       arrivals.forEach((arrival: any) => {
-        const receivedDate = arrival.received_date || arrival.receivedDate || '';
-        const arrivalId = arrival.id || 0;
+        const refNo = arrival.procurement_ref || arrival.procurementRef || arrival.ref_no || arrival.refNo || 'UNKNOWN';
         
-        // Parse the full datetime - received_date should be ISO format with time
+        if (!arrivalsByRef.has(refNo)) {
+          arrivalsByRef.set(refNo, []);
+        }
+        arrivalsByRef.get(refNo)!.push(arrival);
+      });
+      
+      console.log(`📦 Grouped ${arrivals.length} arrivals into ${arrivalsByRef.size} procurement groups`);
+      
+      // Add grouped arrivals with their precise timestamps
+      arrivalsByRef.forEach((rollsGroup, refNo) => {
+        // Use the first roll's received date as the group timestamp
+        const firstRoll = rollsGroup[0];
+        const receivedDate = firstRoll.received_date || firstRoll.receivedDate || '';
         const preciseTime = new Date(receivedDate).getTime();
         
-        console.log(`📦 Arrival ID=${arrivalId}, received_date=${receivedDate}, preciseTime=${preciseTime}`);
+        // Calculate total for this procurement
+        const totalAmount = rollsGroup.reduce((sum, roll) => sum + (roll.total_count || roll.totalCount || 0), 0);
         
+        console.log(`📦 Procurement ${refNo}: ${rollsGroup.length} rolls, total=${totalAmount}, date=${receivedDate}`);
+        
+        // Create single transaction with all rolls grouped
         allTransactions.push({
           type: 'ARRIVAL',
-          id: arrivalId,
+          id: firstRoll.id || 0,
           timestamp: new Date(receivedDate),
           preciseTimestamp: preciseTime,
-          data: arrival
+          data: {
+            ...firstRoll,
+            total_count: totalAmount,
+            totalCount: totalAmount,
+            ref_no: refNo,
+            refNo: refNo,
+            // Store all rolls for carton ranges display
+            allRolls: rollsGroup
+          }
         });
       });
       
@@ -316,14 +346,63 @@ export class HologramMonthlyReportComponent implements OnInit {
           const arrivalAmount = arrival.total_count || arrival.totalCount;
           runningBalance += arrivalAmount;
           
+          // Extract carton ranges from ALL rolls in this procurement
+          const cartonRanges: Array<{
+            cartoonNumber: string;
+            fromSerial: string;
+            toSerial: string;
+            quantity: number;
+          }> = [];
+          
+          // Get all rolls from this grouped arrival
+          const allRolls = arrival.allRolls || [arrival];
+          
+          allRolls.forEach((roll: any) => {
+            // Check for carton_details in the roll data
+            const cartonDetails = roll.carton_details || roll.cartonDetails || roll.cartoons || roll.cartoon_details || [];
+            
+            if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
+              cartonDetails.forEach((carton: any) => {
+                cartonRanges.push({
+                  cartoonNumber: carton.cartoonNumber || carton.cartoon_number || carton.carton_number || 'Unknown',
+                  fromSerial: carton.fromSerial || carton.from_serial || '',
+                  toSerial: carton.toSerial || carton.to_serial || '',
+                  quantity: carton.quantity || carton.totalCount || 0
+                });
+              });
+            } else {
+              // Fallback: If no carton_details, use the roll itself as a carton
+              const singleCarton = roll.carton_number || roll.cartonNumber || roll.cartoon_number;
+              if (singleCarton) {
+                cartonRanges.push({
+                  cartoonNumber: singleCarton,
+                  fromSerial: roll.from_serial || roll.fromSerial || '',
+                  toSerial: roll.to_serial || roll.toSerial || '',
+                  quantity: roll.total_count || roll.totalCount || 0
+                });
+              }
+            }
+          });
+          
+          // Sort carton ranges by fromSerial number to maintain entry order (a, b, c)
+          cartonRanges.sort((a, b) => {
+            // Extract numeric part from serial numbers
+            const aNum = parseInt(a.fromSerial.replace(/\D/g, '')) || 0;
+            const bNum = parseInt(b.fromSerial.replace(/\D/g, '')) || 0;
+            return aNum - bNum;
+          });
+          
+          const refNo = arrival.ref_no || arrival.refNo || 'N/A';
+          
           this.statementRows.push({
             rowType: 'ARRIVAL',
             label: `Arrival - ${transaction.timestamp.toLocaleDateString()}`,
             freshArrival: arrivalAmount,
             closingBalance: runningBalance,
             meta: {
-              cartoonNumber: arrival.carton_number || arrival.cartonNumber,
-              notes: `Received ${arrivalAmount} holograms`,
+              referenceNo: refNo,
+              cartonRanges: cartonRanges,
+              notes: `Received ${arrivalAmount} holograms in ${cartonRanges.length} roll(s)`,
               isLastInGroup: true,
               openingBalanceForGroup: runningBalance - arrivalAmount,
               freshArrivalForGroup: arrivalAmount,
