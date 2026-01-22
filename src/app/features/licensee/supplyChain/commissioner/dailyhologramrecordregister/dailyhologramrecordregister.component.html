@@ -362,112 +362,142 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">
-            <i class="bi bi-file-text me-2"></i>
+            <i class="bi bi-file-text"></i>
             Entry Details - {{ selectedEntry.referenceNo }}
           </h5>
           <button type="button" class="btn-close" (click)="closeDetailsModal()"></button>
         </div>
         <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Reference Number</label>
-              <p>{{ selectedEntry.referenceNo }}</p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Distillery/Brewery</label>
-              <p>
-                <i class="bi bi-building me-2"></i>
-                <strong>{{ selectedEntry.distilleryName }}</strong>
-              </p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Status</label>
-              <p>
-                <span class="badge" [ngClass]="getStatusClass(selectedEntry.status)">
-                  <i [class]="getStatusIcon(selectedEntry.status)"></i>
-                  {{ selectedEntry.status.replace('_', ' ') }}
+          <!-- Status Overview -->
+          <div class="detail-section">
+            <div class="section-title">Status Overview</div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span class="status-indicator" 
+                    [ngClass]="{
+                      'status-completed': selectedEntry.status === 'COMPLETED',
+                      'status-under-process': selectedEntry.status === 'UNDER_PROCESS',
+                      'status-applied': selectedEntry.status === 'APPLIED',
+                      'status-overdue': selectedEntry.isOverdue
+                    }">
+                <i [class]="getStatusIcon(selectedEntry.status)"></i>
+                {{ selectedEntry.status.replace('_', ' ') }}
+              </span>
+              @if (selectedEntry.status === 'COMPLETED') {
+                <span class="badge" [ngClass]="selectedEntry.completedOnTime ? 'bg-success' : 'bg-warning text-dark'">
+                  <i [class]="selectedEntry.completedOnTime ? 'bi bi-check-circle-fill' : 'bi bi-clock-history'"></i>
+                  {{ selectedEntry.completedOnTime ? 'Completed On Time' : 'Completed Late' }}
                 </span>
-              </p>
+              }
             </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Submission Date & Time</label>
-              <p>{{ selectedEntry.submissionDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.submissionTime }}</p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Usage Date</label>
-              <p>{{ selectedEntry.usageDate | date: 'dd/MM/yyyy' }}</p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Hologram Type</label>
-              <p>
-                <span class="badge" [ngClass]="getTypeClass(selectedEntry.hologramType)">
-                  {{ selectedEntry.hologramType }}
-                </span>
-              </p>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Hologram Quantity</label>
-              <p><strong>{{ selectedEntry.quantity }}</strong> units</p>
-            </div>
-            @if (selectedEntry.approvalDate) {
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Approval Date & Time</label>
-                <p>{{ selectedEntry.approvalDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.approvalTime }}</p>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Time Status</div>
+                <div class="info-value" [ngClass]="getTimeRemainingClass(selectedEntry)">
+                  <i class="bi" [ngClass]="selectedEntry.isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-clock'"></i>
+                  {{ getTimeRemaining(selectedEntry) }}
+                </div>
               </div>
-            }
-            @if (selectedEntry.deadline) {
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Deadline (5 PM)</label>
-                <p>{{ selectedEntry.deadline | date: 'dd/MM/yyyy HH:mm' }}</p>
-              </div>
-            }
-            @if (selectedEntry.completionDate) {
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Completion Date & Time</label>
-                <p>{{ selectedEntry.completionDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.completionTime }}</p>
-              </div>
-            }
-            <div class="col-md-6">
-              <label class="form-label fw-bold">Time Status</label>
-              <p [ngClass]="getTimeRemainingClass(selectedEntry)">
-                <i class="bi" [ngClass]="selectedEntry.isOverdue ? 'bi-exclamation-triangle-fill' : 'bi-clock'"></i>
-                {{ getTimeRemaining(selectedEntry) }}
-              </p>
+              @if (selectedEntry.deadline) {
+                <div class="info-item">
+                  <div class="info-label">Deadline (5 PM)</div>
+                  <div class="info-value">{{ selectedEntry.deadline | date: 'dd/MM/yyyy HH:mm' }}</div>
+                </div>
+              }
             </div>
-            @if (selectedEntry.status === 'COMPLETED') {
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Completed On Time</label>
-                <p>
-                  <span class="badge" [ngClass]="selectedEntry.completedOnTime ? 'bg-success' : 'bg-warning text-dark'">
-                    <i [class]="selectedEntry.completedOnTime ? 'bi bi-check-circle-fill' : 'bi bi-clock-history'"></i>
-                    {{ selectedEntry.completedOnTime ? 'Yes' : 'No' }}
+          </div>
+
+          <!-- Basic Information -->
+          <div class="detail-section">
+            <div class="section-title">Basic Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Reference Number</div>
+                <div class="info-value">{{ selectedEntry.referenceNo }}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Distillery/Brewery</div>
+                <div class="info-value">
+                  <i class="bi bi-building me-2"></i>
+                  {{ selectedEntry.distilleryName }}
+                </div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Hologram Type</div>
+                <div class="info-value">
+                  <span class="badge" [ngClass]="getTypeClass(selectedEntry.hologramType)">
+                    {{ selectedEntry.hologramType }}
                   </span>
-                </p>
+                </div>
               </div>
-            }
-            @if (selectedEntry.officerName) {
-              <div class="col-md-6">
-                <label class="form-label fw-bold">Officer/Distillery</label>
-                <p>{{ selectedEntry.officerName }}</p>
+              <div class="info-item">
+                <div class="info-label">Hologram Quantity</div>
+                <div class="info-value">
+                  <strong>{{ selectedEntry.quantity }}</strong> units
+                </div>
               </div>
-            }
+              <div class="info-item">
+                <div class="info-label">Usage Date</div>
+                <div class="info-value">{{ selectedEntry.usageDate | date: 'dd/MM/yyyy' }}</div>
+              </div>
+              @if (selectedEntry.officerName) {
+                <div class="info-item">
+                  <div class="info-label">Officer/Distillery</div>
+                  <div class="info-value">{{ selectedEntry.officerName }}</div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Timeline Information -->
+          <div class="detail-section">
+            <div class="section-title">Timeline Information</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Submission Date & Time</div>
+                <div class="info-value">
+                  <i class="bi bi-calendar-plus me-2"></i>
+                  {{ selectedEntry.submissionDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.submissionTime }}
+                </div>
+              </div>
+              @if (selectedEntry.approvalDate) {
+                <div class="info-item">
+                  <div class="info-label">Approval Date & Time</div>
+                  <div class="info-value">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {{ selectedEntry.approvalDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.approvalTime }}
+                  </div>
+                </div>
+              }
+              @if (selectedEntry.completionDate) {
+                <div class="info-item">
+                  <div class="info-label">Completion Date & Time</div>
+                  <div class="info-value">
+                    <i class="bi bi-flag-fill me-2"></i>
+                    {{ selectedEntry.completionDate | date: 'dd/MM/yyyy' }} at {{ selectedEntry.completionTime }}
+                  </div>
+                </div>
+              }
+            </div>
           </div>
 
           <!-- Brands Entered -->
           @if (selectedEntry.brandsEntered && selectedEntry.brandsEntered.length > 0) {
-            <div class="mt-4">
-              <h6 class="fw-bold mb-3">
-                <i class="bi bi-box-seam me-2"></i>
-                Brands Entered
-              </h6>
+            <div class="brands-table-container">
+              <div class="brands-header">
+                <div class="brands-icon">
+                  <i class="bi bi-box-seam"></i>
+                </div>
+                <h6 class="brands-title">Brands Entered</h6>
+                <span class="brands-count">{{ selectedEntry.brandsEntered.length }} brands</span>
+              </div>
               <div class="table-responsive">
                 <table class="table table-sm table-bordered">
                   <thead class="table-light">
                     <tr>
-                      <th>Brand Name</th>
-                      <th>Bottle Size</th>
-                      <th>Quantity</th>
-                      <th>Usage Date</th>
+                      <th><i class="bi bi-tag me-1"></i>Brand Name</th>
+                      <th><i class="bi bi-cup me-1"></i>Bottle Size</th>
+                      <th><i class="bi bi-123 me-1"></i>Quantity</th>
+                      <th><i class="bi bi-calendar me-1"></i>Usage Date</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -486,7 +516,10 @@
           }
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">Close</button>
+          <button type="button" class="btn btn-secondary" (click)="closeDetailsModal()">
+            <i class="bi bi-x-circle me-2"></i>
+            Close
+          </button>
         </div>
       </div>
     </div>
