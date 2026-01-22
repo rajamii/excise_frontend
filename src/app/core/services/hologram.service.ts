@@ -24,9 +24,24 @@ export interface DailyRegisterEntry {
   officerName?: string;
   brandsEntered?: Array<{
     brand: string;
+    brandCode?: string;
     bottleSize: string;
     quantity: number;
     usageDate: string;
+    rollsAssigned?: Array<{
+      rollId?: number;
+      cartoonNumber?: string;
+      rollNumber?: string;
+      quantity?: number;
+      fromSerial?: string;
+      toSerial?: string;
+    }>;
+    serialRanges?: Array<{
+      from: string;
+      to: string;
+      count?: number;
+      rollNumber?: string;
+    }>;
   }>;
   currentStage: string;
 }

@@ -498,19 +498,143 @@
                       <th><i class="bi bi-cup me-1"></i>Bottle Size</th>
                       <th><i class="bi bi-123 me-1"></i>Quantity</th>
                       <th><i class="bi bi-calendar me-1"></i>Usage Date</th>
+                      <th><i class="bi bi-collection me-1"></i>Roll Details</th>
+                      <th><i class="bi bi-list-ol me-1"></i>Serial Ranges</th>
                     </tr>
                   </thead>
                   <tbody>
                     @for (brand of selectedEntry.brandsEntered; track brand.brand) {
                       <tr>
-                        <td><strong>{{ brand.brand }}</strong></td>
-                        <td>{{ brand.bottleSize }}</td>
-                        <td><strong>{{ brand.quantity }}</strong></td>
-                        <td>{{ brand.usageDate | date: 'dd/MM/yyyy' }}</td>
+                        <td>
+                          <div class="brand-name-cell">
+                            <strong>{{ brand.brand }}</strong>
+                            @if (getBrandCode(brand)) {
+                              <small class="text-muted d-block">Code: {{ getBrandCode(brand) }}</small>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <span class="bottle-size-badge">{{ brand.bottleSize }}</span>
+                        </td>
+                        <td>
+                          <div class="quantity-cell">
+                            <strong class="quantity-number">{{ brand.quantity }}</strong>
+                            <small class="text-muted d-block">units</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="date-cell">
+                            <i class="bi bi-calendar-event me-1"></i>
+                            {{ brand.usageDate | date: 'dd/MM/yyyy' }}
+                          </div>
+                        </td>
+                        <td>
+                          <div class="roll-details-cell">
+                            @if (getRollsAssigned(brand) && getRollsAssigned(brand).length > 0) {
+                              <div class="rolls-container">
+                                @for (roll of getRollsAssigned(brand); track roll.rollId || roll.cartoonNumber) {
+                                  <div class="roll-item">
+                                    <div class="roll-header">
+                                      <span class="roll-number">
+                                        <i class="bi bi-box me-1"></i>
+                                        {{ roll.cartoonNumber || roll.rollNumber || 'Roll #' + $index }}
+                                      </span>
+                                      @if (roll.quantity) {
+                                        <span class="roll-quantity">{{ roll.quantity }} units</span>
+                                      }
+                                    </div>
+                                    @if (roll.rollId) {
+                                      <small class="roll-id text-muted">ID: {{ roll.rollId }}</small>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            } @else {
+                              <span class="text-muted">
+                                <i class="bi bi-dash-circle me-1"></i>
+                                No rolls assigned
+                              </span>
+                            }
+                          </div>
+                        </td>
+                        <td>
+                          <div class="serial-ranges-cell">
+                            @if (getSerialRanges(brand) && getSerialRanges(brand).length > 0) {
+                              <div class="serial-ranges-container">
+                                @for (range of getSerialRanges(brand); track range.from + '-' + range.to) {
+                                  <div class="serial-range-item">
+                                    <span class="serial-range">
+                                      <i class="bi bi-hash me-1"></i>
+                                      {{ range.from }} - {{ range.to }}
+                                    </span>
+                                    @if (range.rollNumber) {
+                                      <small class="range-roll text-muted">Roll: {{ range.rollNumber }}</small>
+                                    }
+                                    @if (range.count) {
+                                      <small class="range-count text-success">({{ range.count }} serials)</small>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            } @else if (getRollsAssigned(brand) && getRollsAssigned(brand).length > 0) {
+                              <div class="serial-ranges-container">
+                                @for (roll of getRollsAssigned(brand); track roll.rollId || roll.cartoonNumber) {
+                                  @if (roll.fromSerial && roll.toSerial) {
+                                    <div class="serial-range-item">
+                                      <span class="serial-range">
+                                        <i class="bi bi-hash me-1"></i>
+                                        {{ roll.fromSerial }} - {{ roll.toSerial }}
+                                      </span>
+                                      <small class="range-roll text-muted">{{ roll.cartoonNumber }}</small>
+                                      @if (roll.quantity) {
+                                        <small class="range-count text-success">({{ roll.quantity }} serials)</small>
+                                      }
+                                    </div>
+                                  }
+                                }
+                              </div>
+                            } @else {
+                              <span class="text-muted">
+                                <i class="bi bi-dash-circle me-1"></i>
+                                No serial ranges
+                              </span>
+                            }
+                          </div>
+                        </td>
                       </tr>
                     }
                   </tbody>
                 </table>
+              </div>
+              
+              <!-- Summary Section -->
+              <div class="brands-summary mt-3">
+                <div class="row g-2">
+                  <div class="col-md-3">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Brands:</span>
+                      <span class="summary-value">{{ selectedEntry.brandsEntered.length }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Quantity:</span>
+                      <span class="summary-value">{{ getTotalBrandQuantity(selectedEntry.brandsEntered) }} units</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-item">
+                      <span class="summary-label">Total Rolls:</span>
+                      <span class="summary-value">{{ getTotalRollsCount(selectedEntry.brandsEntered) }}</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="summary-item">
+                      <span class="summary-label">Serial Ranges:</span>
+                      <span class="summary-value">{{ getTotalSerialRanges(selectedEntry.brandsEntered) }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           }
