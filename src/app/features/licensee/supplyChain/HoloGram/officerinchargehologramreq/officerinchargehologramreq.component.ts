@@ -500,34 +500,97 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       .filter(r => r.type === type && r.availableCount > 0)
       .sort((a, b) => new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime());
 
+    console.log(`🎯 FIFO Allocation: Allocating ${quantity} holograms of type ${type}`);
+    console.log(`📦 Available rolls:`, availableRolls.map(r => ({
+      cartoonNumber: r.cartoonNumber,
+      availableCount: r.availableCount,
+      ranges: r.actualAvailableRanges
+    })));
+
     for (const roll of availableRolls) {
       if (remaining <= 0) break;
 
-      const take = Math.min(remaining, roll.availableCount);
-      // Find specific range for this 'take' amount?
-      // For simplicity, we just assign the roll or part of it conceptually.
-      // Ideally we should find the exact serial range.
-
-      let allocatedRange = '';
+      console.log(`\n🔍 Processing roll ${roll.cartoonNumber}, remaining needed: ${remaining}`);
+      
+      // CRITICAL FIX: Implement proper FIFO allocation within ranges
       if (roll.actualAvailableRanges && roll.actualAvailableRanges.length > 0) {
-        // Take from first available range
-        const range = roll.actualAvailableRanges[0];
-        // Simple approximation: just use the range string provided by the logic
-        // In a real scenario, we'd split the range if taking partial.
-        allocatedRange = `${range.fromSerial} - ${range.toSerial}`;
+        // Sort ranges by fromSerial to ensure FIFO order
+        const sortedRanges = roll.actualAvailableRanges.sort((a, b) => {
+          const aStart = parseInt(a.fromSerial.replace(/\D/g, ''));
+          const bStart = parseInt(b.fromSerial.replace(/\D/g, ''));
+          return aStart - bStart;
+        });
+
+        console.log(`📋 Available ranges in FIFO order:`, sortedRanges.map(r => 
+          `${r.fromSerial}-${r.toSerial} (${r.count} units)`
+        ));
+
+        // Allocate from earliest ranges first (FIFO)
+        for (const range of sortedRanges) {
+          if (remaining <= 0) break;
+
+          const rangeCount = range.count;
+          const take = Math.min(remaining, rangeCount);
+          
+          // Calculate actual serial range to allocate
+          const fromNum = parseInt(range.fromSerial.replace(/\D/g, ''));
+          const prefix = range.fromSerial.replace(/\d/g, '');
+          const toNum = fromNum + take - 1;
+          
+          // CRITICAL FIX: Don't add unnecessary zeros - use actual format from database
+          const allocatedFromSerial = prefix + String(fromNum);
+          const allocatedToSerial = prefix + String(toNum);
+          
+          console.log(`✅ FIFO Allocation: ${allocatedFromSerial}-${allocatedToSerial} (${take} units) from range ${range.fromSerial}-${range.toSerial}`);
+
+          allocations.push({
+            cartoonNumber: roll.cartoonNumber,
+            range: `${allocatedFromSerial} - ${allocatedToSerial}`,
+            fromSerial: allocatedFromSerial,
+            toSerial: allocatedToSerial,
+            count: take,
+            quantity: take,
+            rollId: roll.id,
+            remainingInCartoon: roll.availableCount - take
+          });
+
+          remaining -= take;
+          
+          // If we took the entire range, continue to next range
+          // If we took partial, we're done with this roll
+          if (take < rangeCount) {
+            break; // Partial allocation, move to next roll
+          }
+        }
       } else {
-        allocatedRange = `${roll.fromSerial} - ${roll.toSerial}`;
+        // Fallback: use the roll's original range
+        const take = Math.min(remaining, roll.availableCount);
+        const allocatedRange = `${roll.fromSerial} - ${roll.toSerial}`;
+        
+        console.log(`⚠️ Fallback allocation: ${allocatedRange} (${take} units)`);
+
+        allocations.push({
+          cartoonNumber: roll.cartoonNumber,
+          range: allocatedRange,
+          fromSerial: roll.fromSerial,
+          toSerial: roll.toSerial,
+          count: take,
+          quantity: take,
+          rollId: roll.id,
+          remainingInCartoon: roll.availableCount - take
+        });
+
+        remaining -= take;
       }
+    }
 
-      allocations.push({
-        cartoonNumber: roll.cartoonNumber,
-        range: allocatedRange,
-        count: take,
-        rollId: roll.id,
-        remainingInCartoon: roll.availableCount - take // Send remaining balance to backend
-      });
+    console.log(`🎉 FIFO Allocation complete. Allocated ${quantity - remaining}/${quantity} holograms`);
+    console.log(`📊 Final allocations:`, allocations.map(a => 
+      `${a.cartoonNumber}: ${a.fromSerial}-${a.toSerial} (${a.count} units)`
+    ));
 
-      remaining -= take;
+    if (remaining > 0) {
+      console.warn(`⚠️ Could not allocate ${remaining} holograms - insufficient inventory`);
     }
 
     return allocations;
@@ -1005,8 +1068,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         // End of current range - save it if valid
         if (currentRangeStart !== null && currentRangeEnd !== null) {
           availableRanges.push({
-            fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
-            toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+            fromSerial: prefix + String(currentRangeStart),
+            toSerial: prefix + String(currentRangeEnd),
             count: currentRangeEnd - currentRangeStart + 1
           });
           currentRangeStart = null;
@@ -1018,8 +1081,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Don't forget the last range if it extends to the end
     if (currentRangeStart !== null && currentRangeEnd !== null) {
       availableRanges.push({
-        fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
-        toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+        fromSerial: prefix + String(currentRangeStart),
+        toSerial: prefix + String(currentRangeEnd),
         count: currentRangeEnd - currentRangeStart + 1
       });
     }
@@ -1156,10 +1219,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         continue; // Skip this cartoon if no ranges available
       }
 
-      // Allocate from all available ranges in order
+      // CRITICAL FIX: Sort ranges by fromSerial to ensure FIFO order
+      const sortedRanges = availableRanges.sort((a, b) => {
+        const aStart = parseInt(a.fromSerial.replace(/\D/g, ''));
+        const bStart = parseInt(b.fromSerial.replace(/\D/g, ''));
+        return aStart - bStart;
+      });
+
+      console.log(`📋 Available ranges in FIFO order:`, sortedRanges.map(r => 
+        `${r.fromSerial}-${r.toSerial} (${r.count} units)`
+      ));
+
+      // Allocate from earliest ranges first (FIFO)
       let usedFromThisCartoon = 0;
 
-      for (const range of availableRanges) {
+      for (const range of sortedRanges) {
         if (remainingQuantity <= 0) break;
 
         console.log(`  🔍 Checking range:`, range);
@@ -1173,27 +1247,22 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
         if (availableInRange <= 0) continue; // This range is fully used
 
-        // Allocate from this range
+        // Allocate from this range using FIFO
         const quantityFromRange = Math.min(remainingQuantity, availableInRange);
 
-        // CRITICAL FIX: Use the ACTUAL range from Serial Numbers Details
-        // If we're taking the entire range, use the original fromSerial and toSerial
-        // Only calculate new serials if we're taking a partial range
-        let startSerial: string;
-        let endSerial: string;
+        // CRITICAL FIX: Implement proper FIFO allocation within the range
+        const rangeFromNum = parseInt(range.fromSerial.replace(/\D/g, ''));
+        const prefix = range.fromSerial.replace(/\d/g, '');
+        
+        // Start from the beginning of the range (FIFO)
+        const allocatedFromNum = rangeFromNum + usedFromRange;
+        const allocatedToNum = allocatedFromNum + quantityFromRange - 1;
+        
+        // CRITICAL FIX: Don't add unnecessary zeros - use actual format from database
+        const startSerial = prefix + String(allocatedFromNum);
+        const endSerial = prefix + String(allocatedToNum);
 
-        if (usedFromRange === 0 && quantityFromRange === range.count) {
-          // Taking the entire range - use original range boundaries
-          startSerial = range.fromSerial;
-          endSerial = range.toSerial;
-          console.log(`    ✅ Taking ENTIRE range: ${startSerial} - ${endSerial}`);
-        } else {
-          // Taking a partial range - calculate the specific portion
-          const rangeStart = parseInt(range.fromSerial);
-          startSerial = String(rangeStart + usedFromRange);
-          endSerial = String(rangeStart + usedFromRange + quantityFromRange - 1);
-          console.log(`    ✅ Taking PARTIAL range: ${startSerial} - ${endSerial} (from ${range.fromSerial})`);
-        }
+        console.log(`    ✅ FIFO Allocation: ${startSerial} - ${endSerial} (${quantityFromRange} units) from range ${range.fromSerial}-${range.toSerial}`);
 
         allocations.push({
           cartoonNumber: item.cartoonNumber,
@@ -1207,6 +1276,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         cartoonRangeUsage.set(rangeKey, usedFromRange + quantityFromRange);
         usedFromThisCartoon += quantityFromRange;
         remainingQuantity -= quantityFromRange;
+        
+        // If we took the entire range, continue to next range
+        // If we took partial, we're done with this cartoon for now
+        if (quantityFromRange < availableInRange) {
+          break; // Partial allocation, move to next cartoon
+        }
       }
 
       // Update total allocation from this cartoon
@@ -1229,7 +1304,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     if (item.actualAvailableRange) {
       const rangeStart = parseInt(item.actualAvailableRange.fromSerial.match(/\d+$/)?.[0] || '0');
       const prefix = item.actualAvailableRange.fromSerial.replace(/\d+$/, '');
-      return prefix + String(rangeStart + offset).padStart(6, '0');
+      return prefix + String(rangeStart + offset);
     }
 
     if (item.nextAvailableSerial) {
@@ -1237,7 +1312,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       if (offset > 0) {
         const prefix = item.nextAvailableSerial.replace(/\d+$/, '');
         const startNumber = parseInt(item.nextAvailableSerial.match(/\d+$/)?.[0] || '0');
-        return prefix + String(startNumber + offset).padStart(6, '0');
+        return prefix + String(startNumber + offset);
       }
       return item.nextAvailableSerial;
     }
@@ -1247,7 +1322,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const startNumber = parseInt(item.fromSerial.match(/\d+$/)?.[0] || '0');
     const nextNumber = startNumber + item.usedCount + offset;
 
-    return serialPrefix + nextNumber.toString().padStart(6, '0');
+    return serialPrefix + nextNumber.toString();
   }
 
   calculateEndSerial(startSerial: string, quantity: number): string {
@@ -1255,7 +1330,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const startNumber = parseInt(startSerial.match(/\d+$/)?.[0] || '0');
     const endNumber = startNumber + quantity;
 
-    return serialPrefix + endNumber.toString().padStart(6, '0');
+    return serialPrefix + endNumber.toString();
   }
 
   confirmHologramAllocation(): void {
@@ -1268,8 +1343,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       // Create a test allocation for daily register entry
       this.allocationResult.allocations = [{
         cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001100',
+        fromSerial: 'HG1001',
+        toSerial: 'HG1100',
         quantity: this.selectedRequest.requestedQuantity || 100,
         remainingInCartoon: 0
       }];
@@ -1678,8 +1753,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       totalAvailable: this.selectedRequest.requestedQuantity,
       allocations: [{
         cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG001001',
-        toSerial: `HG${String(1001 + this.selectedRequest.requestedQuantity - 1).padStart(6, '0')}`,
+        fromSerial: 'HG1001',
+        toSerial: `HG${1001 + this.selectedRequest.requestedQuantity - 1}`,
         quantity: this.selectedRequest.requestedQuantity,
         remainingInCartoon: 0
       }],
@@ -1728,8 +1803,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: Date.now(),
         cartoonNumber: `CTN${String(Date.now()).slice(-3)}`,
         type: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
+        fromSerial: 'HG1001',
+        toSerial: 'HG1500',
         totalCount: 500,
         availableCount: 500,
         usedCount: 0,
