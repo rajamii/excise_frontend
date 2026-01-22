@@ -1272,6 +1272,80 @@ export class HologramdetailsComponent implements OnInit {
     return 'Pending';
   }
 
+  // Clean cartoon number by removing prefixes and keeping only the user-entered part
+  getCleanCartoonNumber(cartoonNumber: string): string {
+    if (!cartoonNumber) return '';
+    
+    // Remove common prefixes like "YB/6/BREW/2024/", "HRQ/", etc.
+    // Keep only the last part after the final slash or the whole string if no slashes
+    const parts = cartoonNumber.split('/');
+    return parts[parts.length - 1] || cartoonNumber;
+  }
+
+  // Get the overall serial range from carton details (first to last)
+  getOverallSerialRange(record: HologramRecord): { fromSerial: string, toSerial: string } {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    let allSerials: number[] = [];
+    
+    // Collect all serial numbers from all carton details
+    for (const carton of record.carton_details) {
+      try {
+        const fromSerial = carton.fromSerial || carton.from_serial;
+        const toSerial = carton.toSerial || carton.to_serial;
+        
+        const fromNum = parseInt(fromSerial);
+        const toNum = parseInt(toSerial);
+        
+        if (!isNaN(fromNum) && !isNaN(toNum)) {
+          // Add the range to our collection
+          for (let i = fromNum; i <= toNum; i++) {
+            allSerials.push(i);
+          }
+        }
+      } catch (e) {
+        // Skip invalid serial numbers
+        continue;
+      }
+    }
+
+    if (allSerials.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    // Sort and get min/max
+    allSerials.sort((a, b) => a - b);
+    const minSerial = allSerials[0];
+    const maxSerial = allSerials[allSerials.length - 1];
+
+    return {
+      fromSerial: minSerial.toString(),
+      toSerial: maxSerial.toString()
+    };
+  }
+
+  // Get unique cartoon numbers from carton details (cleaned)
+  getUniqueCartoonNumbers(record: HologramRecord): string[] {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return record.cartoonNumber ? [this.getCleanCartoonNumber(record.cartoonNumber)] : [];
+    }
+    
+    const uniqueNumbers = new Set<string>();
+    record.carton_details.forEach(carton => {
+      const cartoonNumber = carton.cartoonNumber || carton.cartoon_number || carton.carton_number;
+      if (cartoonNumber) {
+        const cleanNumber = this.getCleanCartoonNumber(cartoonNumber);
+        if (cleanNumber) {
+          uniqueNumbers.add(cleanNumber);
+        }
+      }
+    });
+    
+    return Array.from(uniqueNumbers).sort();
+  }
+
 
 
 

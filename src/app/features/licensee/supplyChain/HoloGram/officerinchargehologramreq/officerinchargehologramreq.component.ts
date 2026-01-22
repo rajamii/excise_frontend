@@ -224,39 +224,37 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   // REMOVED mapStatus() - using raw status directly
 
   getStatusClass(status: string): string {
-    const s = (status || '').toUpperCase();
+    const category = this.mapStatusToCategory(status);
 
-    // Green - Final States
-    if (s.includes('PRODUCTION COMPLETED') || s === 'COMPLETED') return 'bg-success';
-    if (s === 'APPROVED') return 'bg-success'; // Generic approved
-
-    // Yellow - Action Required States
-    if (s === 'APPROVED BY PERMIT SECTION') return 'bg-warning text-dark';
-    if (s === 'PENDING') return 'bg-warning text-dark';
-    if (s === 'SUBMITTED') return 'bg-warning text-dark';
-
-    // Red - Rejected
-    if (s.includes('REJECTED')) return 'bg-danger';
-
-    // Blue - In Process / Info
-    if (s.includes('UNDER PROCESS')) return 'bg-info';
-    if (s === 'IN_USE') return 'bg-primary';
-
-    return 'bg-secondary';
+    switch (category) {
+      case 'APPROVED':
+        return 'bg-success';
+      case 'UNDER_PROCESS':
+        return 'bg-warning text-dark';
+      case 'PENDING':
+        return 'bg-info';
+      case 'REJECTED':
+        return 'bg-danger';
+      default:
+        return 'bg-secondary';
+    }
   }
 
   getStatusIcon(status: string): string {
-    const s = (status || '').toUpperCase();
+    const category = this.mapStatusToCategory(status);
 
-    if (s.includes('COMPLETED')) return 'bi bi-check-circle-fill';
-    if (s === 'APPROVED') return 'bi bi-check-circle';
-    if (s.includes('REJECTED')) return 'bi bi-x-circle';
-
-    if (s === 'APPROVED BY PERMIT SECTION') return 'bi bi-exclamation-circle'; // Distinctive for OIC action
-    if (s === 'PENDING') return 'bi bi-clock';
-    if (s === 'IN_USE') return 'bi bi-gear-wide-connected';
-
-    return 'bi bi-info-circle';
+    switch (category) {
+      case 'APPROVED':
+        return 'bi bi-check-circle-fill';
+      case 'UNDER_PROCESS':
+        return 'bi bi-hourglass-split';
+      case 'PENDING':
+        return 'bi bi-clock';
+      case 'REJECTED':
+        return 'bi bi-x-circle';
+      default:
+        return 'bi bi-info-circle';
+    }
   }
 
   // Helper methods for data conversion
@@ -281,7 +279,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesReference = !this.filters.referenceNumber ||
         request.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
 
-      const matchesStatus = !this.filters.status || request.status === this.filters.status;
+      const matchesStatus = !this.filters.status || this.mapStatusToCategory(request.status) === this.filters.status;
       const matchesRequestType = !this.filters.requestType || request.requestType === this.filters.requestType;
       const matchesHologramType = !this.filters.hologramType || request.hologramType === this.filters.hologramType;
       const matchesUrgencyLevel = !this.filters.urgencyLevel || request.urgencyLevel === this.filters.urgencyLevel;
@@ -557,9 +555,67 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getRequestCount(status?: string): number {
     if (status) {
-      return this.filteredRequests.filter(req => req.status === status).length;
+      return this.filteredRequests.filter(req => this.mapStatusToCategory(req.status) === status).length;
     }
     return this.filteredRequests.length;
+  }
+
+  // Map backend workflow stage names to frontend status categories
+  mapStatusToCategory(backendStatus: string): string {
+    const status = (backendStatus || '').toUpperCase();
+    
+    // PENDING REVIEW - Initial submission states
+    if (status === 'SUBMITTED' || 
+        status === 'PENDING' || 
+        status.includes('FORWARDED TO COMMISSIONER')) {
+      return 'PENDING';
+    }
+    
+    // UNDER PROCESS - Being reviewed/processed
+    if (status === 'APPROVED BY PERMIT SECTION' || 
+        status === 'UNDER IT CELL REVIEW' ||
+        status === 'IN USE' ||
+        status.includes('UNDER PROCESS') ||
+        status.includes('UNDER_PROCESS')) {
+      return 'UNDER_PROCESS';
+    }
+    
+    // APPROVED/COMPLETED - Final approved states
+    if (status === 'APPROVED BY COMMISSIONER' ||
+        status === 'APPROVED' ||
+        status === 'PRODUCTION COMPLETED' ||
+        status === 'COMPLETED' ||
+        status === 'PAYMENT COMPLETED' ||
+        status === 'CARTOON ASSIGNED' ||
+        status === 'ARRIVED') {
+      return 'APPROVED';
+    }
+    
+    // REJECTED
+    if (status.includes('REJECTED')) {
+      return 'REJECTED';
+    }
+    
+    // Default fallback
+    return 'PENDING';
+  }
+
+  // Get user-friendly status display text
+  getDisplayStatus(backendStatus: string): string {
+    const category = this.mapStatusToCategory(backendStatus);
+    
+    switch (category) {
+      case 'PENDING':
+        return 'Pending Review';
+      case 'UNDER_PROCESS':
+        return 'Under Process';
+      case 'APPROVED':
+        return 'Completed';
+      case 'REJECTED':
+        return 'Rejected';
+      default:
+        return backendStatus || 'Unknown';
+    }
   }
 
   getTotalRequestedHolograms(): number {

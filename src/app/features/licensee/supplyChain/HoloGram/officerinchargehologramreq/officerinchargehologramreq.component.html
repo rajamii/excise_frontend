@@ -53,8 +53,8 @@
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <div class="card-content">
-                            <h3 class="card-value">{{ getRequestCount('APPROVED') + getRequestCount('COMPLETED') }}</h3>
-                            <p class="card-label">Approved/Completed</p>
+                            <h3 class="card-value">{{ getRequestCount('APPROVED') }}</h3>
+                            <p class="card-label">Completed</p>
                         </div>
                     </div>
                 </div>
@@ -252,13 +252,13 @@
                                 <td class="status">
                                 <span class="status-badge" [ngClass]="getStatusClass(request.status)">
                                     <i [class]="getStatusIcon(request.status)" class="me-1"></i>
-                                    {{ request.status }}
+                                    {{ getDisplayStatus(request.status) }}
                                 </span>
                                 </td>
                                 <td class="actions">
                                     <div class="action-buttons">
-                                        <!-- Show view details button only for APPROVED requests (has allocation data) -->
-                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view"
+                                        <!-- Show view details button only for COMPLETED requests (has allocation data) -->
+                                        <button *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="btn-action view"
                                             (click)="viewRequestDetails(request)" title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -271,26 +271,19 @@
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
-                                        <!-- Show status badge for APPROVED/COMPLETED -->
-                                        <!-- Show status badge for APPROVED -->
-                                        <span *ngIf="request.status === 'APPROVED'" class="badge bg-success text-white">
+                                        <!-- Show status badge for COMPLETED -->
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
-                                            Approved
+                                            Completed
                                         </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
-                                        <span *ngIf="request.status === 'UNDER_PROCESS'"
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'UNDER_PROCESS'"
                                             class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
                                             Under Process
                                         </span>
-                                        <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="request.status === 'COMPLETED'"
-                                            class="badge bg-success text-white">
-                                            <i class="bi bi-check-circle-fill me-1"></i>
-                                            Completed
-                                        </span>
                                         <!-- Show status badge for REJECTED -->
-                                        <span *ngIf="request.status === 'REJECTED'" class="badge bg-danger text-white">
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'REJECTED'" class="badge bg-danger text-white">
                                             <i class="bi bi-x-circle-fill me-1"></i>
                                             Rejected
                                         </span>
@@ -383,8 +376,8 @@
     </div>
 </div>
 
-<!-- Allocation Details Modal (Only for Approved Requests) -->
-<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'"
+<!-- Allocation Details Modal (Only for Completed Requests) -->
+<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest.status) === 'APPROVED'"
     style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
     <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">
@@ -730,7 +723,7 @@
                                     <label class="info-label">Status:</label>
                                     <div class="info-value">
                                         <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls.status)">
-                                            {{ selectedRequestForRolls.status }}
+                                            {{ getDisplayStatus(selectedRequestForRolls.status) }}
                                         </span>
                                     </div>
                                 </div>
