@@ -57,6 +57,10 @@ export class HologramdetailsComponent implements OnInit {
   showUpdateModal: boolean = false;
   selectedRecordForUpdate: HologramRecord | null = null;
 
+  // Roll Details Modal properties
+  showRollDetailsModal: boolean = false;
+  selectedRecordForRollDetails: HologramRecord | null = null;
+
   // Saved cartons list
   savedCartons: Array<{
     cartoonNumber: string;
@@ -621,6 +625,9 @@ export class HologramdetailsComponent implements OnInit {
 
   saveArrivalUpdate() {
     if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
+      // Capture the current timestamp when officer saves the arrival
+      const currentTimestamp = new Date().toISOString();
+      
       // Prepare payload for backend
       // We need to send 'carton_details' which seems to be what we want to save
       // The backend expects 'carton_details' JSON.
@@ -631,13 +638,20 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: carton.fromSerial,
         toSerial: carton.toSerial,
         type: carton.type || this.getDefaultHologramType(),  // Include type for backend
+        arrivedDate: currentTimestamp, // Capture when officer saved this carton
+        processedBy: this.currentOfficer.name, // Track which officer processed this
+        processedAt: currentTimestamp // When it was processed
       }));
 
       // We use 'assign_cartons' action as per views.py update or 'carton_assigned'
       const action = 'assign_cartons';
-      const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons.`;
+      const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons. Processed by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`;
 
-      this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { carton_details: cartonDetails })
+      this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { 
+        carton_details: cartonDetails,
+        arrival_processed_date: currentTimestamp, // Overall processing timestamp
+        processed_by_officer: this.currentOfficer.name
+      })
         .subscribe({
           next: (res) => {
             alert(`Hologram ${this.selectedRecordForUpdate?.ourRefNo} marked as arrived successfully with ${this.savedCartons.length} carton(s)!`);
@@ -1132,6 +1146,130 @@ export class HologramdetailsComponent implements OnInit {
     this.loadHologramRecords();
 
     console.log(`✅ Payment marked as completed for ${refNo} (${procurementType})`);
+  }
+
+  // Roll Details Methods
+  hasRollDetails(record: HologramRecord): boolean {
+    // Check if record has carton details with data
+    const details = record.carton_details || [];
+    return Array.isArray(details) && details.length > 0;
+  }
+
+  viewRollDetails(record: HologramRecord): void {
+    this.selectedRecordForRollDetails = record;
+    this.showRollDetailsModal = true;
+  }
+
+  closeRollDetailsModal(): void {
+    this.showRollDetailsModal = false;
+    this.selectedRecordForRollDetails = null;
+  }
+
+  getRollDetailsForRecord(record: HologramRecord): any[] {
+    if (!record) return [];
+    
+    // Get roll details from carton_details property
+    const details = record.carton_details || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(details)) return [];
+    
+    return details.map((detail: any) => ({
+      cartoonNumber: detail.cartoonNumber || detail.cartoon_number || detail.carton_number || 'N/A',
+      fromSerial: detail.fromSerial || detail.from_serial || 'N/A',
+      toSerial: detail.toSerial || detail.to_serial || 'N/A',
+      quantity: this.calculateQuantityFromSerials(detail.fromSerial || detail.from_serial, detail.toSerial || detail.to_serial),
+      type: detail.type || this.getHologramType(record)
+    }));
+  }
+
+  getTotalRollDetailsQuantity(record: HologramRecord): number {
+    const details = this.getRollDetailsForRecord(record);
+    return details.reduce((total, detail) => total + (detail.quantity || 0), 0);
+  }
+
+  private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
+    if (!fromSerial || !toSerial) return 0;
+    
+    const fromNum = this.extractSerialNumber(fromSerial);
+    const toNum = this.extractSerialNumber(toSerial);
+    
+    if (fromNum && toNum && toNum >= fromNum) {
+      return toNum - fromNum + 1;
+    }
+    
+    return 0;
+  }
+
+  // Modern styling methods for the new design
+  getModernStatusClass(status: string): string {
+    switch (status) {
+      case 'ARRIVED':
+        return 'status-arrived';
+      case 'PENDING_ARRIVAL':
+        return 'status-pending';
+      case 'APPROVED':
+        return 'status-approved';
+      case 'REJECTED':
+        return 'status-rejected';
+      default:
+        return 'status-default';
+    }
+  }
+
+  getModernTypeClass(type: string): string {
+    switch (type) {
+      case 'LOCAL':
+        return 'type-local';
+      case 'EXPORT':
+        return 'type-export';
+      case 'DEFENCE':
+        return 'type-defence';
+      default:
+        return 'type-default';
+    }
+  }
+
+  // Get the actual date when officer saved the arrival details
+  getActualArrivalDate(roll: any, record: HologramRecord): string {
+    // First check if there's a specific arrival date for this roll/carton
+    if (roll.arrivedDate) {
+      return new Date(roll.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check if there's a general arrival date for the record (when officer saved)
+    if (record.arrivedDate) {
+      return new Date(record.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for updated_at timestamp (when the record was last updated by officer)
+    if (record.supplyChainData?.updated_at) {
+      return new Date(record.supplyChainData.updated_at).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for any timestamp indicating when the arrival was processed
+    if (record.supplyChainData?.arrival_processed_date) {
+      return new Date(record.supplyChainData.arrival_processed_date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // If no specific date found, return pending
+    return 'Pending';
   }
 
 

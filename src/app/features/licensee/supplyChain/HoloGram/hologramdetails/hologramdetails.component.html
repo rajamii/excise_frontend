@@ -152,7 +152,7 @@
                             <th class="serial-from">From Serial</th>
                             <th class="serial-to">To Serial</th>
                             <th class="hologram-count">Total No. of Holograms</th>
-                            <th class="remarks">Remarks</th>
+                            <th class="roll-details">Roll Details</th>
                             <th class="actions">Actions</th>
                         </tr>
                     </thead>
@@ -193,8 +193,19 @@
                                     <span class="count-label">units</span>
                                 </div>
                             </td>
-                            <td class="remarks">
-                                <span class="remarks-text">{{ record.remarks || '-' }}</span>
+                            <td class="roll-details">
+                                @if (hasRollDetails(record)) {
+                                <button class="btn btn-primary btn-sm roll-details-btn" (click)="viewRollDetails(record)" 
+                                        title="View Roll Details">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Details
+                                </button>
+                                } @else {
+                                <span class="text-muted small no-rolls-text">
+                                    <i class="bi bi-dash-circle me-1"></i>
+                                    No rolls
+                                </span>
+                                }
                             </td>
                             <td class="actions">
                                 <div class="d-flex gap-1 align-items-center flex-wrap">
@@ -575,4 +586,139 @@
     </div>
 </div>
 </div>
+</div>
+
+
+<!-- Roll Details Modal -->
+<div class="modal fade show roll-details-modal-backdrop" *ngIf="showRollDetailsModal" style="display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.5);"
+    tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modern-modal">
+            <!-- Modern Header with Gradient -->
+            <div class="modal-header modern-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5 class="modal-title">Roll Details</h5>
+                        <span class="ref-subtitle">{{ selectedRecordForRollDetails?.ourRefNo }}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close modern-close" (click)="closeRollDetailsModal()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body modern-body">
+                <div class="roll-details-container" *ngIf="selectedRecordForRollDetails">
+                    <!-- Modern Info Cards -->
+                    <div class="info-cards-grid">
+                        <div class="info-card modern-card">
+                            <div class="card-label">REFERENCE NO.</div>
+                            <div class="card-value">{{ selectedRecordForRollDetails.ourRefNo }}</div>
+                        </div>
+                        <div class="info-card modern-card">
+                            <div class="card-label">TOTAL HOLOGRAMS:</div>
+                            <div class="card-value">{{ selectedRecordForRollDetails.numberOfHolograms | number }} units</div>
+                        </div>
+                        <div class="info-card modern-card">
+                            <div class="card-label">ARRIVAL DATE:</div>
+                            <div class="card-value">{{ selectedRecordForRollDetails.arrivedDate ? (selectedRecordForRollDetails.arrivedDate | date:'dd MMM yyyy') : 'Not arrived yet' }}</div>
+                        </div>
+                        <div class="info-card modern-card">
+                            <div class="card-label">STATUS:</div>
+                            <div class="card-value">
+                                <span class="modern-status-badge" [class]="getModernStatusClass(selectedRecordForRollDetails.status)">
+                                    {{ getStatusLabel(selectedRecordForRollDetails.status) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modern Roll Details Section -->
+                    <div class="roll-section">
+                        <div class="section-header">
+                            <div class="section-icon">
+                                <i class="bi bi-boxes"></i>
+                            </div>
+                            <h6 class="section-title">Roll/Carton Details</h6>
+                        </div>
+
+                        @if (getRollDetailsForRecord(selectedRecordForRollDetails).length > 0) {
+                            <div class="modern-table-container">
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th>SL. NO.</th>
+                                            <th>CARTON NUMBER</th>
+                                            <th>HOLOGRAM TYPE</th>
+                                            <th>FROM SERIAL</th>
+                                            <th>TO SERIAL</th>
+                                            <th>QUANTITY</th>
+                                            <th>ARRIVED DATE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (roll of getRollDetailsForRecord(selectedRecordForRollDetails); track roll.cartoonNumber; let i = $index) {
+                                            <tr>
+                                                <td class="sl-col">{{ i + 1 }}</td>
+                                                <td class="carton-col">
+                                                    <div class="carton-info">
+                                                        <i class="bi bi-box-seam carton-icon"></i>
+                                                        <span class="carton-name">{{ roll.cartoonNumber }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="type-col">
+                                                    <span class="modern-type-badge" [class]="getModernTypeClass(roll.type || 'LOCAL')">
+                                                        {{ roll.type || 'LOCAL' }}
+                                                    </span>
+                                                </td>
+                                                <td class="serial-col">
+                                                    <span class="modern-serial from-serial">{{ roll.fromSerial }}</span>
+                                                </td>
+                                                <td class="serial-col">
+                                                    <span class="modern-serial to-serial">{{ roll.toSerial }}</span>
+                                                </td>
+                                                <td class="qty-col">
+                                                    <span class="modern-qty">{{ roll.quantity | number }}</span>
+                                                </td>
+                                                <td class="date-col">
+                                                    <span class="modern-date">{{ getActualArrivalDate(roll, selectedRecordForRollDetails) }}</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="total-row">
+                                            <td colspan="5" class="total-label">Total Quantity:</td>
+                                            <td class="total-value">{{ getTotalRollDetailsQuantity(selectedRecordForRollDetails) | number }}</td>
+                                            <td class="total-dash">-</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        } @else {
+                            <div class="no-data-message">
+                                <div class="no-data-icon">
+                                    <i class="bi bi-inbox"></i>
+                                </div>
+                                <div class="no-data-text">
+                                    <h6>No roll details available</h6>
+                                    <p>Rolls will appear here once they arrive and are assigned.</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer modern-footer">
+                <button type="button" class="btn modern-close-btn" (click)="closeRollDetailsModal()">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
