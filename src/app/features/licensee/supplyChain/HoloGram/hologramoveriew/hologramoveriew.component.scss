@@ -111,10 +111,11 @@
       
       &.total-holograms {
         .card-icon {
-          background: linear-gradient(135deg, #667eea, #764ba2);
+           background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%);
+
         }
         .card-value {
-          color: #667eea;
+           color: #07394a;
         }
       }
       
@@ -123,7 +124,7 @@
           background: linear-gradient(135deg, #10b981, #059669);
         }
         .card-value {
-          color: #10b981;
+          color: #0e8265;
         }
       }
       

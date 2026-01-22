@@ -876,27 +876,6 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
 
   /**
-   * Navigate to daily register
-   */
-  goToDailyRegister(): void {
-    this.router.navigate(['/dev-hologram-daily-register']);
-  }
-
-  /**
-   * Navigate to monthly report (for distilleries/breweries)
-   */
-  goToMonthlyReport(): void {
-    this.router.navigate(['/dev-monthly-report']);
-  }
-
-  /**
-   * Go back
-   */
-  goBack(): void {
-    window.history.back();
-  }
-
-  /**
    * Get unique brands from utilization details
    */
   getUniqueBrands(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }>): Array<{ brandName: string }> {
