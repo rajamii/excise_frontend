@@ -394,12 +394,12 @@
                             <strong class="text-primary" style="font-size: 0.8rem;">Ranges Assigned:</strong>
                           </div>
                           <div class="d-flex flex-column gap-1">
-                            @for (rollRange of rollsRanges; track rollRange.rollName; let idx = $index) {
+                            @for (rollRange of rollsRanges; track rollRange.rollName + rollRange.range; let idx = $index) {
                               <div class="range-item d-flex align-items-center gap-2 p-1 rounded"
-                                   [style.background-color]="getRollBackgroundColor(idx)"
-                                   [style.border-left]="'3px solid ' + getRollBorderColor(idx)">
+                                   [style.background-color]="getRollBackgroundColor(rollRange.rollAssignmentIndex)"
+                                   [style.border-left]="'3px solid ' + getRollBorderColor(rollRange.rollAssignmentIndex)">
                                 <span class="roll-name-badge badge text-white px-2 py-1"
-                                      [style.background-color]="getRollBorderColor(idx)"
+                                      [style.background-color]="getRollBorderColor(rollRange.rollAssignmentIndex)"
                                       style="font-size: 0.7rem; min-width: 60px;">
                                   <i class="bi bi-box-seam me-1"></i>{{ rollRange.rollName }}
                                 </span>
@@ -427,22 +427,22 @@
                           </div>
                         </div>
                         
-                        <!-- Group brands by roll -->
+                        <!-- Group brands by roll assignment (not just roll name) -->
                         <div class="rolls-groups d-flex flex-column gap-3">
-                          @for (rollGroup of getBrandsByRoll(row.utilizationDetails); track rollGroup.rollName; let rollIndex = $index) {
+                          @for (rollGroup of getBrandsByRoll(row.utilizationDetails); track rollGroup.rollAssignmentKey; let rollIndex = $index) {
                             <div class="roll-group-box border-2 rounded p-3 shadow-sm"
-                                 [style.border-color]="getRollBorderColor(rollIndex)"
-                                 [style.background-color]="getRollBackgroundColor(rollIndex)"
-                                 [style.border-left]="'4px solid ' + getRollBorderColor(rollIndex)">
+                                 [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                 [style.background-color]="getRollBackgroundColor(rollGroup.rollAssignmentIndex)"
+                                 [style.border-left]="'4px solid ' + getRollBorderColor(rollGroup.rollAssignmentIndex)">
                               
-                              <!-- Roll Header -->
+                              <!-- Roll Header with Assignment Number -->
                               <div class="roll-group-header mb-3 pb-2 border-bottom">
                                 <div class="d-flex align-items-center gap-2">
                                   <div class="roll-badge text-white fw-bold px-3 py-2 rounded"
-                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                        style="font-size: 0.85rem;">
                                     <i class="bi bi-box-seam me-2"></i>
-                                    Roll {{ rollGroup.rollName }}
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
                                   </div>
                                   <span class="badge bg-secondary" style="font-size: 0.75rem;">
                                     {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
@@ -450,19 +450,19 @@
                                 </div>
                               </div>
                               
-                              <!-- Brands in this roll -->
+                              <!-- Brands in this roll assignment -->
                               <div class="brands-in-roll d-flex flex-column gap-2">
                                 @for (brand of rollGroup.brands; track brand.brandName; let brandIdx = $index) {
                                   <div class="brand-item d-flex align-items-center gap-3 p-2 bg-white rounded border"
-                                       [style.border-color]="getRollBorderColor(rollIndex)">
+                                       [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
                                     <div class="brand-number text-white fw-bold rounded-circle d-flex align-items-center justify-content-center"
-                                         [style.background-color]="getRollBorderColor(rollIndex)"
+                                         [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
                                          style="width: 28px; height: 28px; font-size: 0.75rem;">
                                       {{ brandIdx + 1 }}
                                     </div>
                                     <div class="brand-details flex-grow-1">
                                       <div class="brand-name fw-bold mb-1" 
-                                           [style.color]="getRollBorderColor(rollIndex)" 
+                                           [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)" 
                                            style="font-size: 0.85rem;">
                                         <i class="bi bi-tag-fill me-1"></i>{{ brand.brandName }}
                                       </div>
@@ -489,28 +489,28 @@
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
                     @if (row.utilizationDetails?.length && row.utilizationQty && row.utilizationQty > 0) {
                       <div class="d-flex flex-column gap-3">
-                        @for (detail of row.utilizationDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
+                        @for (detail of row.utilizationDetails; track detail.rollAssignmentKey || (detail.rollName + detail.brandName); let rollIndex = $index) {
                           <div class="roll-utilization-box border rounded p-3 shadow-sm"
-                               [style.border-color]="getRollBorderColor(rollIndex)"
-                               [style.background-color]="getRollBackgroundColor(rollIndex)">
+                               [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
+                               [style.background-color]="getRollBackgroundColor(detail.rollAssignmentIndex ?? rollIndex)">
                             <div class="roll-header mb-2">
                               <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                   <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
-                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       [style.background-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.8rem;">
                                     <i class="bi bi-box-seam me-1"></i>
-                                    Roll {{ getRollDisplayName(detail.rollName) }}
+                                    Roll {{ getRollDisplayName(detail.rollName) }} - Assignment #{{ (detail.rollAssignmentIndex ?? rollIndex) + 1 }}
                                   </div>
                                   <div class="brand-badge bg-white border px-2 py-1 rounded"
-                                       [style.border-color]="getRollBorderColor(rollIndex)"
-                                       [style.color]="getRollBorderColor(rollIndex)"
+                                       [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
+                                       [style.color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.75rem; font-weight: 600;">
                                     <i class="bi bi-tag me-1"></i>
                                     {{ detail.brandName }}
                                   </div>
                                   <div class="bottle-size-badge bg-white border px-2 py-1 rounded text-muted"
-                                       [style.border-color]="getRollBorderColor(rollIndex)"
+                                       [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.7rem;">
                                     <i class="bi bi-cup-straw me-1"></i>
                                     {{ detail.bottleSize }}
@@ -518,7 +518,7 @@
                                 </div>
                                 <div class="roll-stats">
                                   <span class="badge text-white fw-bold px-3 py-2"
-                                        [style.background-color]="getRollBorderColor(rollIndex)"
+                                        [style.background-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                         style="font-size: 0.85rem;">
                                     <i class="bi bi-calculator me-1"></i>
                                     {{ getTotalQtyForBrand(detail) | number }} units
@@ -531,10 +531,10 @@
                               <div class="d-flex align-items-center gap-3 flex-wrap">
                                 @for (range of detail.ranges; track range.from + range.to) {
                                 <div class="usage-range bg-white border rounded p-2"
-                                     [style.border-color]="getRollBorderColor(rollIndex)"
+                                     [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                      style="font-family: 'Courier New', monospace; min-width: 140px;">
                                   <div class="text-center">
-                                    <div class="fw-bold" [style.color]="getRollBorderColor(rollIndex)" style="font-size: 0.85rem;">
+                                    <div class="fw-bold" [style.color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)" style="font-size: 0.85rem;">
                                       {{ range.from }} → {{ range.to }}
                                     </div>
                                     <div class="small text-muted">Used: {{ range.qty | number }}</div>
@@ -580,22 +580,22 @@
                   <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
                     @if (row.wastageDetails?.length && row.wastageQty && row.wastageQty > 0) {
                       <div class="d-flex flex-column gap-3">
-                        @for (detail of row.wastageDetails; track detail.rollName + detail.brandName; let rollIndex = $index) {
+                        @for (detail of row.wastageDetails; track detail.rollAssignmentKey || (detail.rollName + detail.brandName); let rollIndex = $index) {
                           <div class="roll-wastage-box border rounded p-3 shadow-sm"
-                               [style.border-color]="getRollBorderColor(rollIndex)"
-                               [style.background-color]="getRollBackgroundColor(rollIndex)">
+                               [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
+                               [style.background-color]="getRollBackgroundColor(detail.rollAssignmentIndex ?? rollIndex)">
                             <div class="roll-header mb-2">
                               <div class="d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-2">
                                   <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
-                                       [style.background-color]="getRollBorderColor(rollIndex)"
+                                       [style.background-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.8rem;">
                                     <i class="bi bi-box-seam me-1"></i>
-                                    Roll {{ getRollDisplayName(detail.rollName) }}
+                                    Roll {{ getRollDisplayName(detail.rollName) }} - Assignment #{{ (detail.rollAssignmentIndex ?? rollIndex) + 1 }}
                                   </div>
                                   <div class="brand-badge bg-white border px-2 py-1 rounded"
-                                       [style.border-color]="getRollBorderColor(rollIndex)"
-                                       [style.color]="getRollBorderColor(rollIndex)"
+                                       [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
+                                       [style.color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.75rem; font-weight: 600;">
                                     <i class="bi bi-tag me-1"></i>
                                     {{ detail.brandName }}
@@ -614,7 +614,7 @@
                               <div class="d-flex align-items-center gap-3 flex-wrap">
                                 @for (range of detail.ranges; track range.from + range.to + range.qty) {
                                 <div class="wastage-range bg-white border border-danger rounded p-2"
-                                     [style.border-color]="getRollBorderColor(rollIndex)"
+                                     [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                      style="font-family: 'Courier New', monospace; min-width: 160px;">
                                   <div class="text-center">
                                     <div class="fw-bold text-danger" style="font-size: 0.85rem;">

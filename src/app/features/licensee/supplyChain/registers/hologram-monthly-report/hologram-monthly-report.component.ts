@@ -20,6 +20,8 @@ interface StatementRow {
   closingBalance?: number | null;
   utilizationDetails?: Array<{
     rollName: string;
+    rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+    rollAssignmentIndex?: number; // NEW: Index for color coding
     brandName: string;
     bottleSize: string;
     ranges: Array<{
@@ -30,6 +32,8 @@ interface StatementRow {
   }>;
   wastageDetails?: Array<{
     rollName: string;
+    rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+    rollAssignmentIndex?: number; // NEW: Index for color coding
     brandName: string;
     bottleSize: string;
     ranges: Array<{
@@ -475,9 +479,11 @@ export class HologramMonthlyReportComponent implements OnInit {
             (e.wastage_qty || e.wastageQty || 0) === 0
           );
           
-          // Build utilization details grouped by roll and brand
+          // Build utilization details grouped by roll assignment (not just roll name)
           const utilizationDetails: Array<{
             rollName: string;
+            rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+            rollAssignmentIndex?: number; // NEW: Index for color coding
             brandName: string;
             bottleSize: string;
             ranges: Array<{
@@ -489,6 +495,8 @@ export class HologramMonthlyReportComponent implements OnInit {
           
           const wastageDetails: Array<{
             rollName: string;
+            rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+            rollAssignmentIndex?: number; // NEW: Index for color coding
             brandName: string;
             bottleSize: string;
             ranges: Array<{
@@ -497,6 +505,42 @@ export class HologramMonthlyReportComponent implements OnInit {
               qty: number;
             }>;
           }> = [];
+          
+          // Create a mapping of unique roll assignments to indices for color coding
+          // Each unique roll assignment (roll + range) gets a unique index
+          const rollAssignmentMap = new Map<string, number>();
+          let nextAssignmentIndex = 0;
+          
+          // First pass: identify all unique roll assignments
+          allEntries.forEach((e: any) => {
+            const rollName = e.cartoon_number || e.cartoonNumber || e.roll_range || e.rollRange || 'Unknown';
+            
+            // Create a unique key for this roll assignment (roll + range)
+            // Use issued ranges to determine the assignment
+            const issuedRanges = e.issued_ranges || e.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              issuedRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || '';
+                const toSerial = range.toSerial || range.to_serial || '';
+                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+                
+                if (!rollAssignmentMap.has(assignmentKey)) {
+                  rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
+                }
+              });
+            } else if ((e.issued_from || e.issuedFrom) && (e.issued_to || e.issuedTo)) {
+              const fromSerial = e.issued_from || e.issuedFrom || '';
+              const toSerial = e.issued_to || e.issuedTo || '';
+              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+              
+              if (!rollAssignmentMap.has(assignmentKey)) {
+                rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
+              }
+            }
+          });
+          
+          console.log(`🎨 Created ${rollAssignmentMap.size} unique roll assignments for color coding:`, 
+            Array.from(rollAssignmentMap.entries()).map(([key, index]) => ({ key, index })));
           
           // Process each entry to extract roll and brand details
           allEntries.forEach((e: any) => {
@@ -508,26 +552,40 @@ export class HologramMonthlyReportComponent implements OnInit {
             const issuedRanges = e.issued_ranges || e.issuedRanges || [];
             if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
               issuedRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || '';
+                const toSerial = range.toSerial || range.to_serial || '';
+                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+                const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+                
                 utilizationDetails.push({
                   rollName: rollName,
+                  rollAssignmentKey: assignmentKey, // Include roll assignment key
+                  rollAssignmentIndex: assignmentIndex, // Include index for color
                   brandName: brandName,
                   bottleSize: bottleSize,
                   ranges: [{
-                    from: range.fromSerial || range.from_serial || '',
-                    to: range.toSerial || range.to_serial || '',
+                    from: fromSerial,
+                    to: toSerial,
                     qty: range.quantity || 0
                   }]
                 });
               });
             } else if ((e.issued_from || e.issuedFrom) && (e.issued_to || e.issuedTo)) {
               // Fallback to single range
+              const fromSerial = e.issued_from || e.issuedFrom || '';
+              const toSerial = e.issued_to || e.issuedTo || '';
+              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+              const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+              
               utilizationDetails.push({
                 rollName: rollName,
+                rollAssignmentKey: assignmentKey, // Include roll assignment key
+                rollAssignmentIndex: assignmentIndex, // Include index for color
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
-                  from: e.issued_from || e.issuedFrom || '',
-                  to: e.issued_to || e.issuedTo || '',
+                  from: fromSerial,
+                  to: toSerial,
                   qty: e.issued_qty || e.issuedQty || 0
                 }]
               });
@@ -537,26 +595,41 @@ export class HologramMonthlyReportComponent implements OnInit {
             const wastageRanges = e.wastage_ranges || e.wastageRanges || [];
             if (Array.isArray(wastageRanges) && wastageRanges.length > 0) {
               wastageRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || '';
+                const toSerial = range.toSerial || range.to_serial || '';
+                // Use the same assignment key as utilization for consistent coloring
+                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+                const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+                
                 wastageDetails.push({
                   rollName: rollName,
+                  rollAssignmentKey: assignmentKey, // Include roll assignment key
+                  rollAssignmentIndex: assignmentIndex, // Include index for color
                   brandName: brandName,
                   bottleSize: bottleSize,
                   ranges: [{
-                    from: range.fromSerial || range.from_serial || '',
-                    to: range.toSerial || range.to_serial || '',
+                    from: fromSerial,
+                    to: toSerial,
                     qty: range.quantity || 0
                   }]
                 });
               });
             } else if ((e.wastage_from || e.wastageFrom) && (e.wastage_to || e.wastageTo)) {
               // Fallback to single range
+              const fromSerial = e.wastage_from || e.wastageFrom || '';
+              const toSerial = e.wastage_to || e.wastageTo || '';
+              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
+              const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+              
               wastageDetails.push({
                 rollName: rollName,
+                rollAssignmentKey: assignmentKey, // Include roll assignment key
+                rollAssignmentIndex: assignmentIndex, // Include index for color
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
-                  from: e.wastage_from || e.wastageFrom || '',
-                  to: e.wastage_to || e.wastageTo || '',
+                  from: fromSerial,
+                  to: toSerial,
                   qty: e.wastage_qty || e.wastageQty || 0
                 }]
               });
@@ -993,21 +1066,23 @@ export class HologramMonthlyReportComponent implements OnInit {
 
   /**
    * Get assigned rolls ranges for display in the label column
-   * This shows the original assigned ranges for each roll, not the used ranges
+   * This shows the original assigned ranges for each roll assignment (not just unique rolls)
    */
-  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string }> {
-    const rollsRanges: Array<{ rollName: string; range: string }> = [];
+  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string; rollAssignmentIndex: number }> {
+    const rollsRanges: Array<{ rollName: string; range: string; rollAssignmentIndex: number }> = [];
     
     if (row.utilizationDetails && row.utilizationDetails.length > 0) {
-      // Create a set to track unique rolls
-      const processedRolls = new Set<string>();
+      // Create a set to track unique roll assignments (not just roll names)
+      const processedAssignments = new Set<string>();
       
       row.utilizationDetails.forEach(detail => {
         const rollName = this.getRollDisplayName(detail.rollName);
+        const assignmentKey = detail.rollAssignmentKey || detail.rollName;
+        const assignmentIndex = detail.rollAssignmentIndex ?? 0;
         
-        // Only process each roll once
-        if (!processedRolls.has(rollName)) {
-          processedRolls.add(rollName);
+        // Only process each roll assignment once (not just each roll name)
+        if (!processedAssignments.has(assignmentKey)) {
+          processedAssignments.add(assignmentKey);
           
           // Try to extract the original range from the roll name
           // Roll name format might be like "a1(a) - 1 - 100_BRAND_3"
@@ -1016,7 +1091,8 @@ export class HologramMonthlyReportComponent implements OnInit {
           if (rangeMatch) {
             rollsRanges.push({
               rollName: rollName,
-              range: `${rangeMatch[1]}-${rangeMatch[2]}`
+              range: `${rangeMatch[1]}-${rangeMatch[2]}`,
+              rollAssignmentIndex: assignmentIndex
             });
           } else {
             // Fallback: use the ranges from detail.ranges
@@ -1037,7 +1113,8 @@ export class HologramMonthlyReportComponent implements OnInit {
                 if (minFrom > 0 && maxTo > 0) {
                   rollsRanges.push({
                     rollName: rollName,
-                    range: `${minFrom}-${maxTo}`
+                    range: `${minFrom}-${maxTo}`,
+                    rollAssignmentIndex: assignmentIndex
                   });
                 }
               }
@@ -1051,44 +1128,62 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
 
   /**
-   * Group brands by roll for better organization
+   * Group brands by roll assignment (not just roll name)
+   * This ensures each roll assignment shows separately with its own color
    */
   getBrandsByRoll(utilizationDetails: Array<{
     rollName: string;
+    rollAssignmentKey?: string;
+    rollAssignmentIndex?: number;
     brandName: string;
     bottleSize: string;
     ranges: Array<{ from: string; to: string; qty: number }>;
   }>): Array<{
     rollName: string;
+    rollAssignmentKey: string;
+    rollAssignmentIndex: number;
     brands: Array<{
       brandName: string;
       bottleSize: string;
       totalQty: number;
     }>;
   }> {
-    const rollsMap = new Map<string, Array<{
-      brandName: string;
-      bottleSize: string;
-      totalQty: number;
-    }>>();
+    // Group by roll assignment key (roll + range), not just roll name
+    const rollsMap = new Map<string, {
+      rollName: string;
+      rollAssignmentIndex: number;
+      brands: Array<{
+        brandName: string;
+        bottleSize: string;
+        totalQty: number;
+      }>;
+    }>();
     
     utilizationDetails.forEach(detail => {
-      const rollName = this.getRollDisplayName(detail.rollName);
+      // Use rollAssignmentKey if available, otherwise fall back to rollName
+      const groupKey = detail.rollAssignmentKey || detail.rollName;
+      const rollDisplayName = this.getRollDisplayName(detail.rollName);
       
-      if (!rollsMap.has(rollName)) {
-        rollsMap.set(rollName, []);
+      if (!rollsMap.has(groupKey)) {
+        rollsMap.set(groupKey, {
+          rollName: rollDisplayName,
+          rollAssignmentIndex: detail.rollAssignmentIndex || 0,
+          brands: []
+        });
       }
       
-      rollsMap.get(rollName)!.push({
+      rollsMap.get(groupKey)!.brands.push({
         brandName: detail.brandName,
         bottleSize: detail.bottleSize,
         totalQty: this.getTotalQtyForBrand(detail)
       });
     });
     
-    // Convert map to array
+    // Convert map to array with roll assignment info
     const result: Array<{
       rollName: string;
+      rollAssignmentKey: string;
+      rollAssignmentIndex: number;
       brands: Array<{
         brandName: string;
         bottleSize: string;
@@ -1096,10 +1191,12 @@ export class HologramMonthlyReportComponent implements OnInit {
       }>;
     }> = [];
     
-    rollsMap.forEach((brands, rollName) => {
+    rollsMap.forEach((value, key) => {
       result.push({
-        rollName: rollName,
-        brands: brands
+        rollName: value.rollName,
+        rollAssignmentKey: key,
+        rollAssignmentIndex: value.rollAssignmentIndex,
+        brands: value.brands
       });
     });
     
