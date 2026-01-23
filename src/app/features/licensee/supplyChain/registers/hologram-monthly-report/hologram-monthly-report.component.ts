@@ -20,6 +20,11 @@ interface StatementRow {
   closingBalance?: number | null;
   utilizationDetails?: Array<{
     rollName: string;
+    rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+    rollAssignmentIndex?: number; // NEW: Index for color coding
+    brandNumber?: number; // NEW: Brand number within roll assignment (1, 2, 3...)
+    brandName: string;
+    bottleSize: string;
     ranges: Array<{
       from: string;
       to: string;
@@ -28,6 +33,11 @@ interface StatementRow {
   }>;
   wastageDetails?: Array<{
     rollName: string;
+    rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+    rollAssignmentIndex?: number; // NEW: Index for color coding
+    brandNumber?: number; // NEW: Brand number within roll assignment (1, 2, 3...)
+    brandName: string;
+    bottleSize: string;
     ranges: Array<{
       from: string;
       to: string;
@@ -39,12 +49,20 @@ interface StatementRow {
     cartoonNumber?: string;
     serialRange?: string;
     notes?: string;
+    cartonRanges?: Array<{
+      cartoonNumber: string;
+      fromSerial: string;
+      toSerial: string;
+      quantity: number;
+    }>;
     isLastInGroup?: boolean;
     openingBalanceForGroup?: number;
     freshArrivalForGroup?: number;
     totalUtilizedForGroup?: number;
     totalWastageForGroup?: number;
     closingBalanceForGroup?: number;
+    isNotInUse?: boolean;
+    entryCount?: number;
   };
 }
 
@@ -147,12 +165,12 @@ export class HologramMonthlyReportComponent implements OnInit {
           approvalStatus: approvalStatus,
           matchesMonth: entryMonthKey === monthKey,
           matchesType: entryType === this.selectedHologramType,
-          matchesApproval: approvalStatus === 'APPROVED'
+          matchesApproval: approvalStatus === 'APPROVED' || approvalStatus === 'PENDING'
         });
         
         const matches = entryMonthKey === monthKey && 
                entryType === this.selectedHologramType &&
-               approvalStatus === 'APPROVED';
+               (approvalStatus === 'APPROVED' || approvalStatus === 'PENDING');
         
         if (matches) {
           console.log('✅ Matched entry:', entry);
@@ -240,50 +258,111 @@ export class HologramMonthlyReportComponent implements OnInit {
       
       const allTransactions: TransactionItem[] = [];
       
-      // Add arrivals with their precise timestamps
-      // received_date is a DateTimeField so it has full timestamp
+      // Group arrivals by procurement reference to show all rolls in single row
+      const arrivalsByRef = new Map<string, any[]>();
+      
       arrivals.forEach((arrival: any) => {
-        const receivedDate = arrival.received_date || arrival.receivedDate || '';
-        const arrivalId = arrival.id || 0;
+        const refNo = arrival.procurement_ref || arrival.procurementRef || arrival.ref_no || arrival.refNo || 'UNKNOWN';
         
-        // Parse the full datetime - received_date should be ISO format with time
+        if (!arrivalsByRef.has(refNo)) {
+          arrivalsByRef.set(refNo, []);
+        }
+        arrivalsByRef.get(refNo)!.push(arrival);
+      });
+      
+      console.log(`📦 Grouped ${arrivals.length} arrivals into ${arrivalsByRef.size} procurement groups`);
+      
+      // Add grouped arrivals with their precise timestamps
+      arrivalsByRef.forEach((rollsGroup, refNo) => {
+        // Use the first roll's received date as the group timestamp
+        const firstRoll = rollsGroup[0];
+        const receivedDate = firstRoll.received_date || firstRoll.receivedDate || '';
         const preciseTime = new Date(receivedDate).getTime();
         
-        console.log(`📦 Arrival ID=${arrivalId}, received_date=${receivedDate}, preciseTime=${preciseTime}`);
+        // Calculate total for this procurement
+        const totalAmount = rollsGroup.reduce((sum, roll) => sum + (roll.total_count || roll.totalCount || 0), 0);
         
+        console.log(`📦 Procurement ${refNo}: ${rollsGroup.length} rolls, total=${totalAmount}, date=${receivedDate}`);
+        
+        // Create single transaction with all rolls grouped
         allTransactions.push({
           type: 'ARRIVAL',
-          id: arrivalId,
+          id: firstRoll.id || 0,
           timestamp: new Date(receivedDate),
           preciseTimestamp: preciseTime,
-          data: arrival
+          data: {
+            ...firstRoll,
+            total_count: totalAmount,
+            totalCount: totalAmount,
+            ref_no: refNo,
+            refNo: refNo,
+            // Store all rolls for carton ranges display
+            allRolls: rollsGroup
+          }
         });
       });
       
-      // Add utilizations with their precise timestamps
-      // Use created_at (DateTimeField) for precise ordering - this is the exact creation time
+      // Group utilization entries by reference number to show all in single row
+      const utilizationsByRef = new Map<string, any[]>();
+      
       filteredEntries.forEach((entry: any) => {
-        const entryId = entry.id || 0;
+        const refNo = entry.reference_no || entry.referenceNo || 'UNKNOWN';
+        
+        if (!utilizationsByRef.has(refNo)) {
+          utilizationsByRef.set(refNo, []);
+        }
+        utilizationsByRef.get(refNo)!.push(entry);
+      });
+      
+      console.log(`📋 Grouped ${filteredEntries.length} utilizations into ${utilizationsByRef.size} reference groups`);
+      
+      // Debug: Log each group
+      utilizationsByRef.forEach((entriesGroup, refNo) => {
+        console.log(`📋 Reference ${refNo}: ${entriesGroup.length} entries`, entriesGroup.map((e: any) => ({
+          id: e.id,
+          brand: e.brand_details || e.brandDetails,
+          bottle: e.bottle_size || e.bottleSize,
+          from: e.issued_from || e.issuedFrom,
+          to: e.issued_to || e.issuedTo,
+          qty: e.issued_qty || e.issuedQty
+        })));
+      });
+      
+      // Add grouped utilizations with their precise timestamps
+      utilizationsByRef.forEach((entriesGroup, refNo) => {
+        // Use the first entry's timestamp as the group timestamp
+        const firstEntry = entriesGroup[0];
         
         // Try to get the most precise timestamp available
-        // Priority: created_at > approved_at > submission_date > usage_date
-        const createdAt = entry.created_at || entry.createdAt || '';
-        const approvedAt = entry.approved_at || entry.approvedAt || '';
-        const submissionDate = entry.submission_date || entry.submissionDate || '';
-        const usageDate = entry.usage_date || entry.usageDate || '';
+        const createdAt = firstEntry.created_at || firstEntry.createdAt || '';
+        const approvedAt = firstEntry.approved_at || firstEntry.approvedAt || '';
+        const submissionDate = firstEntry.submission_date || firstEntry.submissionDate || '';
+        const usageDate = firstEntry.usage_date || firstEntry.usageDate || '';
         
-        // Use created_at if available (has full timestamp), otherwise fall back
         const dateToUse = createdAt || approvedAt || submissionDate || usageDate;
         const preciseTime = new Date(dateToUse).getTime();
         
-        console.log(`📋 Utilization ID=${entryId}, created_at=${createdAt}, approved_at=${approvedAt}, preciseTime=${preciseTime}`);
+        // Calculate totals for this reference
+        const totalUtilized = entriesGroup.reduce((sum, e) => sum + (e.issued_qty || e.issuedQty || 0), 0);
+        const totalWastage = entriesGroup.reduce((sum, e) => sum + (e.wastage_qty || e.wastageQty || 0), 0);
         
+        console.log(`📋 Reference ${refNo}: ${entriesGroup.length} entries, utilized=${totalUtilized}, wastage=${totalWastage}`);
+        
+        // Create single transaction with all entries grouped
         allTransactions.push({
           type: 'UTILIZATION',
-          id: entryId,
+          id: firstEntry.id || 0,
           timestamp: new Date(usageDate),
           preciseTimestamp: preciseTime,
-          data: entry
+          data: {
+            ...firstEntry,
+            ref_no: refNo,
+            refNo: refNo,
+            totalUtilized: totalUtilized,
+            totalWastage: totalWastage,
+            // Store all entries for detailed display
+            allEntries: entriesGroup
+          }
         });
       });
       
@@ -316,14 +395,63 @@ export class HologramMonthlyReportComponent implements OnInit {
           const arrivalAmount = arrival.total_count || arrival.totalCount;
           runningBalance += arrivalAmount;
           
+          // Extract carton ranges from ALL rolls in this procurement
+          const cartonRanges: Array<{
+            cartoonNumber: string;
+            fromSerial: string;
+            toSerial: string;
+            quantity: number;
+          }> = [];
+          
+          // Get all rolls from this grouped arrival
+          const allRolls = arrival.allRolls || [arrival];
+          
+          allRolls.forEach((roll: any) => {
+            // Check for carton_details in the roll data
+            const cartonDetails = roll.carton_details || roll.cartonDetails || roll.cartoons || roll.cartoon_details || [];
+            
+            if (Array.isArray(cartonDetails) && cartonDetails.length > 0) {
+              cartonDetails.forEach((carton: any) => {
+                cartonRanges.push({
+                  cartoonNumber: carton.cartoonNumber || carton.cartoon_number || carton.carton_number || 'Unknown',
+                  fromSerial: carton.fromSerial || carton.from_serial || '',
+                  toSerial: carton.toSerial || carton.to_serial || '',
+                  quantity: carton.quantity || carton.totalCount || 0
+                });
+              });
+            } else {
+              // Fallback: If no carton_details, use the roll itself as a carton
+              const singleCarton = roll.carton_number || roll.cartonNumber || roll.cartoon_number;
+              if (singleCarton) {
+                cartonRanges.push({
+                  cartoonNumber: singleCarton,
+                  fromSerial: roll.from_serial || roll.fromSerial || '',
+                  toSerial: roll.to_serial || roll.toSerial || '',
+                  quantity: roll.total_count || roll.totalCount || 0
+                });
+              }
+            }
+          });
+          
+          // Sort carton ranges by fromSerial number to maintain entry order (a, b, c)
+          cartonRanges.sort((a, b) => {
+            // Extract numeric part from serial numbers
+            const aNum = parseInt(a.fromSerial.replace(/\D/g, '')) || 0;
+            const bNum = parseInt(b.fromSerial.replace(/\D/g, '')) || 0;
+            return aNum - bNum;
+          });
+          
+          const refNo = arrival.ref_no || arrival.refNo || 'N/A';
+          
           this.statementRows.push({
             rowType: 'ARRIVAL',
             label: `Arrival - ${transaction.timestamp.toLocaleDateString()}`,
             freshArrival: arrivalAmount,
             closingBalance: runningBalance,
             meta: {
-              cartoonNumber: arrival.carton_number || arrival.cartonNumber,
-              notes: `Received ${arrivalAmount} holograms`,
+              referenceNo: refNo,
+              cartonRanges: cartonRanges,
+              notes: `Received ${arrivalAmount} holograms in ${cartonRanges.length} roll(s)`,
               isLastInGroup: true,
               openingBalanceForGroup: runningBalance - arrivalAmount,
               freshArrivalForGroup: arrivalAmount,
@@ -333,29 +461,239 @@ export class HologramMonthlyReportComponent implements OnInit {
         } else {
           // UTILIZATION
           const entry = transaction.data;
-          const utilized = entry.issued_qty || entry.issuedQty || 0;
-          const wastage = entry.wastage_qty || entry.wastageQty || 0;
+          const utilized = entry.totalUtilized || entry.issued_qty || entry.issuedQty || 0;
+          const wastage = entry.totalWastage || entry.wastage_qty || entry.wastageQty || 0;
           runningBalance = runningBalance - utilized - wastage;
+          
+          // Get all entries from this grouped utilization
+          const allEntries = entry.allEntries || [entry];
+          
+          console.log(`🔍 Processing utilization group with ${allEntries.length} entries:`, allEntries.map((e: any) => ({
+            id: e.id,
+            brand: e.brand_details || e.brandDetails,
+            bottle: e.bottle_size || e.bottleSize,
+            roll: e.cartoon_number || e.cartoonNumber
+          })));
+          
+          // Check if this is a "Not In Use" entry (all entries have 0 utilization and wastage)
+          const isNotInUse = allEntries.every((e: any) => 
+            (e.issued_qty || e.issuedQty || 0) === 0 && 
+            (e.wastage_qty || e.wastageQty || 0) === 0
+          );
+          
+          // Build utilization details grouped by roll assignment (not just roll name)
+          const utilizationDetails: Array<{
+            rollName: string;
+            rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+            rollAssignmentIndex?: number; // NEW: Index for color coding
+            brandNumber?: number; // NEW: Brand number within this roll assignment (1, 2, 3...)
+            brandName: string;
+            bottleSize: string;
+            ranges: Array<{
+              from: string;
+              to: string;
+              qty: number;
+            }>;
+          }> = [];
+          
+          const wastageDetails: Array<{
+            rollName: string;
+            rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
+            rollAssignmentIndex?: number; // NEW: Index for color coding
+            brandNumber?: number; // NEW: Brand number within this roll assignment (1, 2, 3...)
+            brandName: string;
+            bottleSize: string;
+            ranges: Array<{
+              from: string;
+              to: string;
+              qty: number;
+            }>;
+          }> = [];
+          
+          // Create a mapping of unique roll assignments to indices for color coding
+          // Each unique roll assignment (roll + range) gets a unique index
+          const rollAssignmentMap = new Map<string, number>();
+          let nextAssignmentIndex = 0;
+          
+          // Also track brands per roll assignment for numbering (Brand 1, Brand 2, etc.)
+          const brandsPerAssignment = new Map<string, Map<string, number>>();
+          
+          // First pass: identify all unique roll assignments (by roll + from serial, NOT by brand)
+          // Group by the FIRST serial number in the range to identify the assignment
+          allEntries.forEach((e: any) => {
+            const rollName = e.cartoon_number || e.cartoonNumber || e.roll_range || e.rollRange || 'Unknown';
+            
+            // Get the first serial number to identify this roll assignment
+            let firstSerial = '';
+            const issuedRanges = e.issued_ranges || e.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              firstSerial = issuedRanges[0].fromSerial || issuedRanges[0].from_serial || '';
+            } else if (e.issued_from || e.issuedFrom) {
+              firstSerial = e.issued_from || e.issuedFrom || '';
+            }
+            
+            // Create assignment key using roll + first serial only
+            // This groups all entries from the same roll assignment together
+            const assignmentKey = `${rollName}_${firstSerial}`;
+            
+            if (!rollAssignmentMap.has(assignmentKey)) {
+              rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
+              brandsPerAssignment.set(assignmentKey, new Map<string, number>());
+            }
+            
+            // Track unique brands within this assignment
+            const brandName = e.brand_details || e.brandDetails || '-';
+            const brandsMap = brandsPerAssignment.get(assignmentKey)!;
+            if (!brandsMap.has(brandName)) {
+              brandsMap.set(brandName, brandsMap.size + 1); // Brand number (1, 2, 3...)
+            }
+          });
+          
+          console.log(`🎨 Created ${rollAssignmentMap.size} unique roll assignments for color coding:`, 
+            Array.from(rollAssignmentMap.entries()).map(([key, index]) => ({ 
+              key, 
+              index,
+              brands: Array.from(brandsPerAssignment.get(key)?.entries() || []).map(([brand, num]) => ({ brand, num }))
+            })));
+          
+          // Process each entry to extract roll and brand details
+          allEntries.forEach((e: any) => {
+            const rollName = e.cartoon_number || e.cartoonNumber || e.roll_range || e.rollRange || 'Unknown';
+            const brandName = e.brand_details || e.brandDetails || '-';
+            const bottleSize = e.bottle_size || e.bottleSize || '-';
+            
+            // Get the first serial number to identify this roll assignment
+            let firstSerial = '';
+            const issuedRanges = e.issued_ranges || e.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              firstSerial = issuedRanges[0].fromSerial || issuedRanges[0].from_serial || '';
+            } else if (e.issued_from || e.issuedFrom) {
+              firstSerial = e.issued_from || e.issuedFrom || '';
+            }
+            
+            // Create assignment key using roll + first serial only
+            const assignmentKey = `${rollName}_${firstSerial}`;
+            const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+            const brandNumber = brandsPerAssignment.get(assignmentKey)?.get(brandName) ?? 1;
+            
+            // Handle issued ranges
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              issuedRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || '';
+                const toSerial = range.toSerial || range.to_serial || '';
+                
+                utilizationDetails.push({
+                  rollName: rollName,
+                  rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                  rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                  brandNumber: brandNumber, // Use the pre-calculated brand number
+                  brandName: brandName,
+                  bottleSize: bottleSize,
+                  ranges: [{
+                    from: fromSerial,
+                    to: toSerial,
+                    qty: range.quantity || 0
+                  }]
+                });
+              });
+            } else if ((e.issued_from || e.issuedFrom) && (e.issued_to || e.issuedTo)) {
+              // Fallback to single range
+              const fromSerial = e.issued_from || e.issuedFrom || '';
+              const toSerial = e.issued_to || e.issuedTo || '';
+              
+              utilizationDetails.push({
+                rollName: rollName,
+                rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                brandNumber: brandNumber, // Use the pre-calculated brand number
+                brandName: brandName,
+                bottleSize: bottleSize,
+                ranges: [{
+                  from: fromSerial,
+                  to: toSerial,
+                  qty: e.issued_qty || e.issuedQty || 0
+                }]
+              });
+            }
+            
+            // Handle wastage ranges
+            const wastageRanges = e.wastage_ranges || e.wastageRanges || [];
+            if (Array.isArray(wastageRanges) && wastageRanges.length > 0) {
+              wastageRanges.forEach((range: any) => {
+                const fromSerial = range.fromSerial || range.from_serial || '';
+                const toSerial = range.toSerial || range.to_serial || '';
+                
+                wastageDetails.push({
+                  rollName: rollName,
+                  rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                  rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                  brandNumber: brandNumber, // Use the pre-calculated brand number
+                  brandName: brandName,
+                  bottleSize: bottleSize,
+                  ranges: [{
+                    from: fromSerial,
+                    to: toSerial,
+                    qty: range.quantity || 0
+                  }]
+                });
+              });
+            } else if ((e.wastage_from || e.wastageFrom) && (e.wastage_to || e.wastageTo)) {
+              // Fallback to single range
+              const fromSerial = e.wastage_from || e.wastageFrom || '';
+              const toSerial = e.wastage_to || e.wastageTo || '';
+              
+              wastageDetails.push({
+                rollName: rollName,
+                rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                brandNumber: brandNumber, // Use the pre-calculated brand number
+                brandName: brandName,
+                bottleSize: bottleSize,
+                ranges: [{
+                  from: fromSerial,
+                  to: toSerial,
+                  qty: e.wastage_qty || e.wastageQty || 0
+                }]
+              });
+            }
+          });
+          
+          console.log(`✅ Built ${utilizationDetails.length} utilization details:`, utilizationDetails);
+          console.log(`✅ Built ${wastageDetails.length} wastage details:`, wastageDetails);
+          
+          const refNo = entry.ref_no || entry.refNo || 'N/A';
+          const firstEntry = allEntries[0];
           
           this.statementRows.push({
             rowType: 'UTILIZATION',
-            label: `Utilization - ${transaction.timestamp.toLocaleDateString()}`,
-            brandDetails: entry.brand_details || entry.brandDetails || '-',
-            bottleSize: entry.bottle_size || entry.bottleSize || '-',
-            utilizationFrom: entry.issued_from || entry.issuedFrom || '-',
-            utilizationTo: entry.issued_to || entry.issuedTo || '-',
+            label: isNotInUse 
+              ? `Not In Use - ${transaction.timestamp.toLocaleDateString()}`
+              : `Utilization - ${transaction.timestamp.toLocaleDateString()}`,
+            brandDetails: firstEntry.brand_details || firstEntry.brandDetails || '-',
+            bottleSize: firstEntry.bottle_size || firstEntry.bottleSize || '-',
+            utilizationFrom: firstEntry.issued_from || firstEntry.issuedFrom || '-',
+            utilizationTo: firstEntry.issued_to || firstEntry.issuedTo || '-',
             utilizationQty: utilized,
-            wastageFrom: entry.wastage_from || entry.wastageFrom || '-',
-            wastageTo: entry.wastage_to || entry.wastageTo || '-',
+            wastageFrom: firstEntry.wastage_from || firstEntry.wastageFrom || '-',
+            wastageTo: firstEntry.wastage_to || firstEntry.wastageTo || '-',
             wastageQty: wastage,
             leftOver: 0,
             closingBalance: runningBalance,
+            utilizationDetails: utilizationDetails.length > 0 ? utilizationDetails : undefined,
+            wastageDetails: wastageDetails.length > 0 ? wastageDetails : undefined,
             meta: {
-              referenceNo: entry.reference_no || entry.referenceNo,
-              cartoonNumber: entry.cartoon_number || entry.cartoonNumber,
-              serialRange: (entry.issued_from || entry.issuedFrom) && (entry.issued_to || entry.issuedTo)
-                ? `${entry.issued_from || entry.issuedFrom}-${entry.issued_to || entry.issuedTo}`
-                : undefined
+              referenceNo: refNo,
+              cartoonNumber: firstEntry.cartoon_number || firstEntry.cartoonNumber,
+              serialRange: (firstEntry.issued_from || firstEntry.issuedFrom) && (firstEntry.issued_to || firstEntry.issuedTo)
+                ? `${firstEntry.issued_from || firstEntry.issuedFrom}-${firstEntry.issued_to || firstEntry.issuedTo}`
+                : undefined,
+              isNotInUse: isNotInUse,
+              entryCount: allEntries.length,
+              isLastInGroup: true,
+              openingBalanceForGroup: runningBalance + utilized + wastage,
+              totalUtilizedForGroup: utilized,
+              totalWastageForGroup: wastage,
+              closingBalanceForGroup: runningBalance
             }
           });
         }
@@ -633,23 +971,248 @@ export class HologramMonthlyReportComponent implements OnInit {
   }
 
   /**
-   * Navigate to daily register
+   * Get unique brands from utilization details
    */
-  goToDailyRegister(): void {
-    this.router.navigate(['/dev-hologram-daily-register']);
+  getUniqueBrands(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }>): Array<{ brandName: string }> {
+    const uniqueBrands = new Map<string, { brandName: string }>();
+    details.forEach(detail => {
+      if (!uniqueBrands.has(detail.brandName)) {
+        uniqueBrands.set(detail.brandName, { brandName: detail.brandName });
+      }
+    });
+    return Array.from(uniqueBrands.values());
   }
 
   /**
-   * Navigate to monthly report (for distilleries/breweries)
+   * Get unique bottle sizes from utilization details
    */
-  goToMonthlyReport(): void {
-    this.router.navigate(['/dev-monthly-report']);
+  getUniqueBottleSizes(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }>): Array<{ bottleSize: string }> {
+    const uniqueSizes = new Map<string, { bottleSize: string }>();
+    details.forEach(detail => {
+      if (!uniqueSizes.has(detail.bottleSize)) {
+        uniqueSizes.set(detail.bottleSize, { bottleSize: detail.bottleSize });
+      }
+    });
+    return Array.from(uniqueSizes.values());
   }
 
   /**
-   * Go back
+   * Get total quantity for a brand (sum of all ranges)
    */
-  goBack(): void {
-    window.history.back();
+  getTotalQtyForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
+    return detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
+  }
+
+  /**
+   * Get roll range from roll name (extracts the range part like "1 - 100" from "a1(a) - 1 - 100_BRAND_3")
+   */
+  getRollRange(rollName: string): string {
+    // Try to extract range from roll name format: "a1(a) - 1 - 100_BRAND_3"
+    const match = rollName.match(/(\d+)\s*-\s*(\d+)/);
+    if (match) {
+      return `${match[1]} → ${match[2]}`;
+    }
+    return 'N/A';
+  }
+
+  /**
+   * Get roll display name (extracts the roll identifier like "a1(a)" from "a1(a) - 1 - 100_BRAND_3")
+   */
+  getRollDisplayName(rollName: string): string {
+    // Extract the roll identifier before the first dash and range
+    const parts = rollName.split(' - ');
+    if (parts.length > 0) {
+      return parts[0].trim();
+    }
+    return rollName;
+  }
+
+  /**
+   * Get roll border color based on roll index
+   */
+  getRollBorderColor(rollIndex: number): string {
+    const colors = [
+      '#007bff', // Blue
+      '#28a745', // Green  
+      '#dc3545', // Red
+      '#ffc107', // Yellow
+      '#6f42c1', // Purple
+      '#fd7e14', // Orange
+      '#20c997', // Teal
+      '#e83e8c', // Pink
+      '#6c757d', // Gray
+      '#17a2b8'  // Cyan
+    ];
+    return colors[rollIndex % colors.length];
+  }
+
+  /**
+   * Get roll background color based on roll index (light version)
+   */
+  getRollBackgroundColor(rollIndex: number): string {
+    const lightColors = [
+      '#e3f2fd', // Light Blue
+      '#e8f5e8', // Light Green
+      '#ffeaea', // Light Red
+      '#fff8e1', // Light Yellow
+      '#f3e5f5', // Light Purple
+      '#fff3e0', // Light Orange
+      '#e0f7fa', // Light Teal
+      '#fce4ec', // Light Pink
+      '#f8f9fa', // Light Gray
+      '#e0f2f1'  // Light Cyan
+    ];
+    return lightColors[rollIndex % lightColors.length];
+  }
+
+  /**
+   * Get unique rolls count from utilization or wastage details
+   */
+  getUniqueRollsCount(details: Array<{ rollName: string; brandName: string; bottleSize: string; ranges: any[] }> | undefined): number {
+    if (!details || !Array.isArray(details)) {
+      return 0;
+    }
+    const uniqueRolls = new Set<string>();
+    details.forEach(detail => {
+      uniqueRolls.add(detail.rollName);
+    });
+    return uniqueRolls.size;
+  }
+
+  /**
+   * Get total wastage quantity for a brand (sum of all ranges)
+   */
+  getTotalWastageForBrand(detail: { rollName: string; brandName: string; bottleSize: string; ranges: Array<{ from: string; to: string; qty: number }> }): number {
+    return detail.ranges.reduce((sum, range) => sum + (range.qty || 0), 0);
+  }
+
+  /**
+   * Get assigned rolls ranges for display in the label column
+   * This shows the original assigned ranges for each roll assignment (not just unique rolls)
+   */
+  getAssignedRollsRanges(row: StatementRow): Array<{ rollName: string; range: string; rollAssignmentIndex: number }> {
+    const rollsRanges: Array<{ rollName: string; range: string; rollAssignmentIndex: number }> = [];
+    
+    if (row.utilizationDetails && row.utilizationDetails.length > 0) {
+      // Create a set to track unique roll assignments (not just roll names)
+      const processedAssignments = new Set<string>();
+      
+      row.utilizationDetails.forEach(detail => {
+        const rollName = this.getRollDisplayName(detail.rollName);
+        const assignmentKey = detail.rollAssignmentKey || detail.rollName;
+        const assignmentIndex = detail.rollAssignmentIndex ?? 0;
+        
+        // Only process each roll assignment once (not just each roll name)
+        if (!processedAssignments.has(assignmentKey)) {
+          processedAssignments.add(assignmentKey);
+          
+          // Try to extract the original range from the roll name
+          // Roll name format might be like "a1(a) - 1 - 100_BRAND_3"
+          const rangeMatch = detail.rollName.match(/(\d+)\s*-\s*(\d+)/);
+          
+          if (rangeMatch) {
+            rollsRanges.push({
+              rollName: rollName,
+              range: `${rangeMatch[1]}-${rangeMatch[2]}`,
+              rollAssignmentIndex: assignmentIndex
+            });
+          } else {
+            // Fallback: use the ranges from detail.ranges
+            if (detail.ranges && detail.ranges.length > 0) {
+              const allFromNumbers = detail.ranges.map(r => {
+                const num = parseInt(r.from.toString().replace(/\D/g, ''));
+                return isNaN(num) ? 0 : num;
+              });
+              const allToNumbers = detail.ranges.map(r => {
+                const num = parseInt(r.to.toString().replace(/\D/g, ''));
+                return isNaN(num) ? 0 : num;
+              });
+              
+              if (allFromNumbers.length > 0 && allToNumbers.length > 0) {
+                const minFrom = Math.min(...allFromNumbers);
+                const maxTo = Math.max(...allToNumbers);
+                
+                if (minFrom > 0 && maxTo > 0) {
+                  rollsRanges.push({
+                    rollName: rollName,
+                    range: `${minFrom}-${maxTo}`,
+                    rollAssignmentIndex: assignmentIndex
+                  });
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    return rollsRanges;
+  }
+
+  /**
+   * Group brands by roll assignment (not just roll name)
+   * This ensures each roll assignment shows separately with its own color
+   */
+  getBrandsByRoll(utilizationDetails: Array<{
+    rollName: string;
+    rollAssignmentKey?: string;
+    rollAssignmentIndex?: number;
+    brandNumber?: number;
+    brandName: string;
+    bottleSize: string;
+    ranges: Array<{ from: string; to: string; qty: number }>;
+  }>): Array<{
+    rollName: string;
+    rollAssignmentKey: string;
+    rollAssignmentIndex: number;
+    brandCount: number; // NEW: Total number of brands in this roll assignment
+    brands: Array<{
+      brandNumber?: number; // NEW: Brand number within this roll assignment
+      brandName: string;
+      bottleSize: string;
+      totalQty: number;
+    }>;
+  }> {
+    // Group by roll assignment key (roll + range), not just roll name
+    const rollsMap = new Map<string, {
+      rollName: string;
+      rollAssignmentIndex: number;
+      brands: Array<{
+        brandNumber?: number;
+        brandName: string;
+        bottleSize: string;
+        totalQty: number;
+      }>;
+    }>();
+    
+    utilizationDetails.forEach(detail => {
+      // Use rollAssignmentKey if available, otherwise fall back to rollName
+      const groupKey = detail.rollAssignmentKey || detail.rollName;
+      const rollDisplayName = this.getRollDisplayName(detail.rollName);
+      
+      if (!rollsMap.has(groupKey)) {
+        rollsMap.set(groupKey, {
+          rollName: rollDisplayName,
+          rollAssignmentIndex: detail.rollAssignmentIndex || 0,
+          brands: []
+        });
+      }
+      
+      rollsMap.get(groupKey)!.brands.push({
+        brandNumber: detail.brandNumber, // Include brand number
+        brandName: detail.brandName,
+        bottleSize: detail.bottleSize,
+        totalQty: this.getTotalQtyForBrand(detail)
+      });
+    });
+    
+    // Convert map to array with roll assignment info and brand count
+    return Array.from(rollsMap.entries()).map(([key, value]) => ({
+      rollName: value.rollName,
+      rollAssignmentKey: key,
+      rollAssignmentIndex: value.rollAssignmentIndex,
+      brandCount: value.brands.length, // Add brand count
+      brands: value.brands
+    }));
   }
 }

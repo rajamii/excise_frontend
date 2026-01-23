@@ -25,6 +25,10 @@ export class HologramrequestComponent implements OnInit {
   showRequestModal = false;
   selectedRequest: any = null;
 
+  // Rolls Assigned Modal
+  showRollsModal = false;
+  selectedRequestForRolls: any = null;
+
   // Pagination state
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize: number = 5;
@@ -334,5 +338,44 @@ End of Application
 
     // Refresh the list
     this.loadHologramRequests();
+  }
+
+  // Rolls Assigned Methods
+  hasRollsAssigned(request: any): boolean {
+    // Check if request has rolls_assigned or rollsAssigned property with data
+    const rolls = request.rolls_assigned || request.rollsAssigned || [];
+    return Array.isArray(rolls) && rolls.length > 0;
+  }
+
+  viewRollsAssigned(request: any): void {
+    this.selectedRequestForRolls = request;
+    this.showRollsModal = true;
+  }
+
+  closeRollsModal(): void {
+    this.showRollsModal = false;
+    this.selectedRequestForRolls = null;
+  }
+
+  getRollsAssigned(request: any): any[] {
+    if (!request) return [];
+    
+    // Get rolls from either rolls_assigned or rollsAssigned property
+    const rolls = request.rolls_assigned || request.rollsAssigned || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(rolls)) return [];
+    
+    return rolls.map((roll: any) => ({
+      cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
+      fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
+      toSerial: roll.toSerial || roll.to_serial || 'N/A',
+      quantity: roll.quantity || 0
+    }));
+  }
+
+  getTotalRollsQuantity(request: any): number {
+    const rolls = this.getRollsAssigned(request);
+    return rolls.reduce((total, roll) => total + (roll.quantity || 0), 0);
   }
 }

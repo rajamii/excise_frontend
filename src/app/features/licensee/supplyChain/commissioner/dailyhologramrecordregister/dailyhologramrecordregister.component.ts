@@ -291,4 +291,44 @@ export class DailyhologramrecordregisterComponent implements OnInit {
     
     return 'text-success';
   }
+
+  // Helper methods for brands summary
+  getTotalBrandQuantity(brands: any[]): number {
+    return brands.reduce((total, brand) => total + (brand.quantity || 0), 0);
+  }
+
+  getTotalRollsCount(brands: any[]): number {
+    return brands.reduce((total, brand) => {
+      const rollsCount = this.getRollsAssigned(brand).length;
+      return total + rollsCount;
+    }, 0);
+  }
+
+  getTotalSerialRanges(brands: any[]): number {
+    return brands.reduce((total, brand) => {
+      let rangesCount = 0;
+      const serialRanges = this.getSerialRanges(brand);
+      const rollsAssigned = this.getRollsAssigned(brand);
+      
+      if (serialRanges.length > 0) {
+        rangesCount = serialRanges.length;
+      } else if (rollsAssigned.length > 0) {
+        rangesCount = rollsAssigned.filter((roll: any) => roll.fromSerial && roll.toSerial).length;
+      }
+      return total + rangesCount;
+    }, 0);
+  }
+
+  // Helper methods for template access to optional properties
+  getBrandCode(brand: any): string {
+    return (brand as any).brandCode || '';
+  }
+
+  getRollsAssigned(brand: any): any[] {
+    return (brand as any).rollsAssigned || [];
+  }
+
+  getSerialRanges(brand: any): any[] {
+    return (brand as any).serialRanges || [];
+  }
 }

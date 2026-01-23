@@ -57,9 +57,14 @@ export class HologramdetailsComponent implements OnInit {
   showUpdateModal: boolean = false;
   selectedRecordForUpdate: HologramRecord | null = null;
 
+  // Roll Details Modal properties
+  showRollDetailsModal: boolean = false;
+  selectedRecordForRollDetails: HologramRecord | null = null;
+
   // Saved cartons list
   savedCartons: Array<{
     cartoonNumber: string;
+    baseCartoonNumber?: string; // Original carton number without suffix
     fromSerial: string;
     toSerial: string;
     numberOfHolograms: number;
@@ -399,6 +404,35 @@ export class HologramdetailsComponent implements OnInit {
     return false;
   }
 
+  // Track locked carton number and suffix counter
+  lockedCartonNumber: string = '';
+  cartonSuffixCounter: number = 0;
+
+  // Unlock carton number for editing
+  unlockCartonNumber(): void {
+    if (this.savedCartons.length > 0) {
+      const confirmUnlock = confirm(
+        `⚠️ Warning: Unlocking will remove all ${this.savedCartons.length} saved roll(s).\n\n` +
+        `This action cannot be undone. Do you want to continue?`
+      );
+      
+      if (!confirmUnlock) {
+        return;
+      }
+      
+      // Clear all saved cartons
+      this.savedCartons = [];
+      this.calculateTotalFromSavedCartons();
+    }
+    
+    // Unlock the carton
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
+    this.currentCarton.cartoonNumber = '';
+    
+    alert('✅ Carton number unlocked! You can now enter a new carton number.');
+  }
+
   updateArrivalDetails(record: HologramRecord) {
     this.selectedRecordForUpdate = record;
     // Reset saved cartons and current carton
@@ -412,6 +446,9 @@ export class HologramdetailsComponent implements OnInit {
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.showUpdateModal = true;
   }
 
@@ -447,13 +484,25 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  // Helper to get suffix letter (a, b, c, ... z, aa, ab, etc.)
+  getSuffixLetter(index: number): string {
+    let suffix = '';
+    let num = index;
+    while (num >= 0) {
+      suffix = String.fromCharCode(97 + (num % 26)) + suffix;
+      num = Math.floor(num / 26) - 1;
+    }
+    return suffix;
+  }
+
   // Save current carton to the list
   saveCurrentCarton() {
-    // Validate current carton
-    if (!this.currentCarton.cartoonNumber.trim()) {
+    // First entry: validate carton number
+    if (!this.lockedCartonNumber && !this.currentCarton.cartoonNumber.trim()) {
       alert('Please enter carton number');
       return;
     }
+    
     if (!this.currentCarton.fromSerial.trim()) {
       alert('Please enter from serial number');
       return;
@@ -478,34 +527,63 @@ export class HologramdetailsComponent implements OnInit {
       }
     }
 
-    // Add to saved cartons (include type)
+    // Lock carton number on first save
+    if (!this.lockedCartonNumber) {
+      this.lockedCartonNumber = this.currentCarton.cartoonNumber.trim();
+      this.cartonSuffixCounter = 0;
+    }
+
+    // Generate suffix for this roll
+    const suffix = this.getSuffixLetter(this.cartonSuffixCounter);
+    const displayCartoonNumber = `${this.lockedCartonNumber}(${suffix})`;
+
+    // Add to saved cartons (include type and display name with suffix)
     this.savedCartons.push({
-      cartoonNumber: this.currentCarton.cartoonNumber,
+      cartoonNumber: displayCartoonNumber, // Display name with suffix
+      baseCartoonNumber: this.lockedCartonNumber, // Original base name
       fromSerial: this.currentCarton.fromSerial,
       toSerial: this.currentCarton.toSerial,
       numberOfHolograms: this.currentCarton.numberOfHolograms,
       type: this.currentCarton.type || this.getDefaultHologramType()
     });
 
+    // Increment suffix counter for next roll
+    this.cartonSuffixCounter++;
+
     // Update total
     this.calculateTotalFromSavedCartons();
 
-    // Reset current carton for next entry
+    // Reset only serial numbers for next entry (keep carton locked)
     this.currentCarton = {
-      cartoonNumber: '',
+      cartoonNumber: this.lockedCartonNumber, // Keep locked carton number
       fromSerial: '',
       toSerial: '',
       numberOfHolograms: 0,
-      type: ''
+      type: this.currentCarton.type || '' // Keep type if selected
     };
 
-    // Show success message
-    alert(`Carton saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
+    // Show success message with suffix
+    alert(`Roll ${displayCartoonNumber} saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
   }
 
   // Remove a saved carton
   removeSavedCarton(index: number) {
     this.savedCartons.splice(index, 1);
+    
+    // If all cartons removed, unlock the carton number
+    if (this.savedCartons.length === 0) {
+      this.lockedCartonNumber = '';
+      this.cartonSuffixCounter = 0;
+      this.currentCarton.cartoonNumber = '';
+    } else {
+      // Recalculate suffixes for remaining cartons
+      this.savedCartons.forEach((carton, idx) => {
+        const suffix = this.getSuffixLetter(idx);
+        carton.cartoonNumber = `${carton.baseCartoonNumber || this.lockedCartonNumber}(${suffix})`;
+      });
+      this.cartonSuffixCounter = this.savedCartons.length;
+    }
+    
     this.calculateTotalFromSavedCartons();
   }
 
@@ -547,6 +625,9 @@ export class HologramdetailsComponent implements OnInit {
 
   saveArrivalUpdate() {
     if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
+      // Capture the current timestamp when officer saves the arrival
+      const currentTimestamp = new Date().toISOString();
+      
       // Prepare payload for backend
       // We need to send 'carton_details' which seems to be what we want to save
       // The backend expects 'carton_details' JSON.
@@ -557,13 +638,20 @@ export class HologramdetailsComponent implements OnInit {
         fromSerial: carton.fromSerial,
         toSerial: carton.toSerial,
         type: carton.type || this.getDefaultHologramType(),  // Include type for backend
+        arrivedDate: currentTimestamp, // Capture when officer saved this carton
+        processedBy: this.currentOfficer.name, // Track which officer processed this
+        processedAt: currentTimestamp // When it was processed
       }));
 
       // We use 'assign_cartons' action as per views.py update or 'carton_assigned'
       const action = 'assign_cartons';
-      const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons.`;
+      const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons. Processed by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`;
 
-      this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { carton_details: cartonDetails })
+      this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { 
+        carton_details: cartonDetails,
+        arrival_processed_date: currentTimestamp, // Overall processing timestamp
+        processed_by_officer: this.currentOfficer.name
+      })
         .subscribe({
           next: (res) => {
             alert(`Hologram ${this.selectedRecordForUpdate?.ourRefNo} marked as arrived successfully with ${this.savedCartons.length} carton(s)!`);
@@ -713,6 +801,9 @@ export class HologramdetailsComponent implements OnInit {
     this.showUpdateModal = false;
     this.selectedRecordForUpdate = null;
     this.savedCartons = [];
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.currentCarton = {
       cartoonNumber: '',
       fromSerial: '',
@@ -1055,6 +1146,204 @@ export class HologramdetailsComponent implements OnInit {
     this.loadHologramRecords();
 
     console.log(`✅ Payment marked as completed for ${refNo} (${procurementType})`);
+  }
+
+  // Roll Details Methods
+  hasRollDetails(record: HologramRecord): boolean {
+    // Check if record has carton details with data
+    const details = record.carton_details || [];
+    return Array.isArray(details) && details.length > 0;
+  }
+
+  viewRollDetails(record: HologramRecord): void {
+    this.selectedRecordForRollDetails = record;
+    this.showRollDetailsModal = true;
+  }
+
+  closeRollDetailsModal(): void {
+    this.showRollDetailsModal = false;
+    this.selectedRecordForRollDetails = null;
+  }
+
+  getRollDetailsForRecord(record: HologramRecord): any[] {
+    if (!record) return [];
+    
+    // Get roll details from carton_details property
+    const details = record.carton_details || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(details)) return [];
+    
+    return details.map((detail: any) => ({
+      cartoonNumber: detail.cartoonNumber || detail.cartoon_number || detail.carton_number || 'N/A',
+      fromSerial: detail.fromSerial || detail.from_serial || 'N/A',
+      toSerial: detail.toSerial || detail.to_serial || 'N/A',
+      quantity: this.calculateQuantityFromSerials(detail.fromSerial || detail.from_serial, detail.toSerial || detail.to_serial),
+      type: detail.type || this.getHologramType(record)
+    }));
+  }
+
+  getTotalRollDetailsQuantity(record: HologramRecord): number {
+    const details = this.getRollDetailsForRecord(record);
+    return details.reduce((total, detail) => total + (detail.quantity || 0), 0);
+  }
+
+  private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
+    if (!fromSerial || !toSerial) return 0;
+    
+    const fromNum = this.extractSerialNumber(fromSerial);
+    const toNum = this.extractSerialNumber(toSerial);
+    
+    if (fromNum && toNum && toNum >= fromNum) {
+      return toNum - fromNum + 1;
+    }
+    
+    return 0;
+  }
+
+  // Modern styling methods for the new design
+  getModernStatusClass(status: string): string {
+    switch (status) {
+      case 'ARRIVED':
+        return 'status-arrived';
+      case 'PENDING_ARRIVAL':
+        return 'status-pending';
+      case 'APPROVED':
+        return 'status-approved';
+      case 'REJECTED':
+        return 'status-rejected';
+      default:
+        return 'status-default';
+    }
+  }
+
+  getModernTypeClass(type: string): string {
+    switch (type) {
+      case 'LOCAL':
+        return 'type-local';
+      case 'EXPORT':
+        return 'type-export';
+      case 'DEFENCE':
+        return 'type-defence';
+      default:
+        return 'type-default';
+    }
+  }
+
+  // Get the actual date when officer saved the arrival details
+  getActualArrivalDate(roll: any, record: HologramRecord): string {
+    // First check if there's a specific arrival date for this roll/carton
+    if (roll.arrivedDate) {
+      return new Date(roll.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check if there's a general arrival date for the record (when officer saved)
+    if (record.arrivedDate) {
+      return new Date(record.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for updated_at timestamp (when the record was last updated by officer)
+    if (record.supplyChainData?.updated_at) {
+      return new Date(record.supplyChainData.updated_at).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for any timestamp indicating when the arrival was processed
+    if (record.supplyChainData?.arrival_processed_date) {
+      return new Date(record.supplyChainData.arrival_processed_date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // If no specific date found, return pending
+    return 'Pending';
+  }
+
+  // Clean cartoon number by removing prefixes and keeping only the user-entered part
+  getCleanCartoonNumber(cartoonNumber: string): string {
+    if (!cartoonNumber) return '';
+    
+    // Remove common prefixes like "YB/6/BREW/2024/", "HRQ/", etc.
+    // Keep only the last part after the final slash or the whole string if no slashes
+    const parts = cartoonNumber.split('/');
+    return parts[parts.length - 1] || cartoonNumber;
+  }
+
+  // Get the overall serial range from carton details (first to last)
+  getOverallSerialRange(record: HologramRecord): { fromSerial: string, toSerial: string } {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    let allSerials: number[] = [];
+    
+    // Collect all serial numbers from all carton details
+    for (const carton of record.carton_details) {
+      try {
+        const fromSerial = carton.fromSerial || carton.from_serial;
+        const toSerial = carton.toSerial || carton.to_serial;
+        
+        const fromNum = parseInt(fromSerial);
+        const toNum = parseInt(toSerial);
+        
+        if (!isNaN(fromNum) && !isNaN(toNum)) {
+          // Add the range to our collection
+          for (let i = fromNum; i <= toNum; i++) {
+            allSerials.push(i);
+          }
+        }
+      } catch (e) {
+        // Skip invalid serial numbers
+        continue;
+      }
+    }
+
+    if (allSerials.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    // Sort and get min/max
+    allSerials.sort((a, b) => a - b);
+    const minSerial = allSerials[0];
+    const maxSerial = allSerials[allSerials.length - 1];
+
+    return {
+      fromSerial: minSerial.toString(),
+      toSerial: maxSerial.toString()
+    };
+  }
+
+  // Get unique cartoon numbers from carton details (cleaned)
+  getUniqueCartoonNumbers(record: HologramRecord): string[] {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return record.cartoonNumber ? [this.getCleanCartoonNumber(record.cartoonNumber)] : [];
+    }
+    
+    const uniqueNumbers = new Set<string>();
+    record.carton_details.forEach(carton => {
+      const cartoonNumber = carton.cartoonNumber || carton.cartoon_number || carton.carton_number;
+      if (cartoonNumber) {
+        const cleanNumber = this.getCleanCartoonNumber(cartoonNumber);
+        if (cleanNumber) {
+          uniqueNumbers.add(cleanNumber);
+        }
+      }
+    });
+    
+    return Array.from(uniqueNumbers).sort();
   }
 
 

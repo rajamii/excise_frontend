@@ -882,18 +882,24 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
       return dateMatch;
     });
 
-    // CRITICAL: Sort entries so new entries (not fixed) appear at the top
-    // This ensures pending entries are always visible first
+    // CRITICAL: Sort entries in CHRONOLOGICAL ORDER (oldest to newest, top to bottom)
+    // This shows the flow of operations: Arrival → Utilization → Arrival → Utilization
+    // Users can see how the balance changes with each transaction
     this.filteredEntries.sort((a, b) => {
-      // First, sort by isFixed status (false/pending first, true/saved last)
-      if (a.isFixed !== b.isFixed) {
-        return a.isFixed ? 1 : -1; // Not fixed (false) comes first
+      // Sort by usage date in ASCENDING order (oldest first)
+      // This creates a timeline view where earlier tasks appear at the top
+      const dateA = new Date(a.dates.usage || a.dates.submission || '1970-01-01').getTime();
+      const dateB = new Date(b.dates.usage || b.dates.submission || '1970-01-01').getTime();
+      
+      if (dateA !== dateB) {
+        return dateA - dateB; // Ascending order (oldest first)
       }
-
-      // If both have same fixed status, sort by date (newest first)
-      const dateA = new Date(a.dates.usage || '1970-01-01').getTime();
-      const dateB = new Date(b.dates.usage || '1970-01-01').getTime();
-      return dateB - dateA; // Descending order (newest first)
+      
+      // If dates are the same, sort by ID to maintain creation order
+      // This ensures entries created at the same time appear in the order they were saved
+      const idA = typeof a.id === 'number' ? a.id : parseInt(a.id || '0');
+      const idB = typeof b.id === 'number' ? b.id : parseInt(b.id || '0');
+      return idA - idB;
     });
 
     console.log(`✅ Filtered entries for ${this.selectedHologramType}: ${this.filteredEntries.length} (from ${this.entries.length} total)`);

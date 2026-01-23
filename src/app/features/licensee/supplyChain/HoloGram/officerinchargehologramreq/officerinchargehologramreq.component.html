@@ -53,8 +53,8 @@
                             <i class="bi bi-check-circle"></i>
                         </div>
                         <div class="card-content">
-                            <h3 class="card-value">{{ getRequestCount('APPROVED') + getRequestCount('COMPLETED') }}</h3>
-                            <p class="card-label">Approved/Completed</p>
+                            <h3 class="card-value">{{ getRequestCount('APPROVED') }}</h3>
+                            <p class="card-label">Completed</p>
                         </div>
                     </div>
                 </div>
@@ -194,6 +194,7 @@
                                 <th class="usage-date">USAGE DATE</th>
                                 <th class="type">TYPE</th>
                                 <th class="hologram-qty">HOLOGRAM QTY</th>
+                                <th class="rolls-assigned">ROLLS ASSIGNED</th>
                                 <th class="status">STATUS</th>
                                 <th class="actions">ACTIONS</th>
                             </tr>
@@ -234,14 +235,30 @@
                                         <span class="qty-label">units</span>
                                     </div>
                                 </td>
+                                <td class="rolls-assigned">
+                                    <ng-container *ngIf="hasRollsAssigned(request); else notAssigned">
+                                        <button class="btn-details" (click)="viewRollsAssigned(request)" title="View Rolls Assigned">
+                                            <i class="bi bi-box-seam me-1"></i>
+                                            Details
+                                        </button>
+                                    </ng-container>
+                                    <ng-template #notAssigned>
+                                        <span class="text-muted small">
+                                            <i class="bi bi-dash-circle me-1"></i>
+                                            Not Assigned
+                                        </span>
+                                    </ng-template>
+                                </td>
+                                <td class="status">
                                 <span class="status-badge" [ngClass]="getStatusClass(request.status)">
                                     <i [class]="getStatusIcon(request.status)" class="me-1"></i>
-                                    {{ request.status }}
+                                    {{ getDisplayStatus(request.status) }}
                                 </span>
+                                </td>
                                 <td class="actions">
                                     <div class="action-buttons">
-                                        <!-- Show view details button only for APPROVED requests (has allocation data) -->
-                                        <button *ngIf="request.status === 'APPROVED'" class="btn-action view"
+                                        <!-- Show view details button only for COMPLETED requests (has allocation data) -->
+                                        <button *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="btn-action view"
                                             (click)="viewRequestDetails(request)" title="View Allocation Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -254,26 +271,19 @@
                                             (click)="rejectRequest(request)" title="Reject Request">
                                             <i class="bi bi-x-circle"></i>
                                         </button>
-                                        <!-- Show status badge for APPROVED/COMPLETED -->
-                                        <!-- Show status badge for APPROVED -->
-                                        <span *ngIf="request.status === 'APPROVED'" class="badge bg-success text-white">
+                                        <!-- Show status badge for COMPLETED -->
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'APPROVED'" class="badge bg-success text-white">
                                             <i class="bi bi-check-circle-fill me-1"></i>
-                                            Approved
+                                            Completed
                                         </span>
                                         <!-- Show status badge for UNDER_PROCESS -->
-                                        <span *ngIf="request.status === 'UNDER_PROCESS'"
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'UNDER_PROCESS'"
                                             class="badge bg-info text-white">
                                             <i class="bi bi-hourglass-split me-1"></i>
                                             Under Process
                                         </span>
-                                        <!-- Show status badge for COMPLETED -->
-                                        <span *ngIf="request.status === 'COMPLETED'"
-                                            class="badge bg-success text-white">
-                                            <i class="bi bi-check-circle-fill me-1"></i>
-                                            Completed
-                                        </span>
                                         <!-- Show status badge for REJECTED -->
-                                        <span *ngIf="request.status === 'REJECTED'" class="badge bg-danger text-white">
+                                        <span *ngIf="mapStatusToCategory(request.status) === 'REJECTED'" class="badge bg-danger text-white">
                                             <i class="bi bi-x-circle-fill me-1"></i>
                                             Rejected
                                         </span>
@@ -366,8 +376,8 @@
     </div>
 </div>
 
-<!-- Allocation Details Modal (Only for Approved Requests) -->
-<div class="modal fade show" *ngIf="selectedRequest && selectedRequest.status === 'APPROVED'"
+<!-- Allocation Details Modal (Only for Completed Requests) -->
+<div class="modal fade show" *ngIf="selectedRequest && mapStatusToCategory(selectedRequest.status) === 'APPROVED'"
     style="display: block; background-color: rgba(0,0,0,0.5); z-index: 1050;" (click)="closeRequestDetailsModal()">
     <div class="modal-dialog modal-lg" style="z-index: 1051;" (click)="$event.stopPropagation()">
         <div class="modal-content" style="z-index: 1052;">
@@ -674,5 +684,118 @@
             <i class="bi bi-exclamation-triangle me-1"></i>
             Force Approve (Test Mode)
         </button>
+    </div>
+</div>
+
+
+<!-- Rolls Assigned Details Modal -->
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5);"
+    *ngIf="showRollsModal">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-box-seam me-2"></i>
+                    Rolls Assigned Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" aria-label="Close"
+                    (click)="closeRollsModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="rolls-details-container" *ngIf="selectedRequestForRolls">
+                    <!-- Header Info -->
+                    <div class="rolls-header-info mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="info-card">
+                                    <label class="info-label">Reference No:</label>
+                                    <div class="info-value">{{ selectedRequestForRolls.referenceNo }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-card">
+                                    <label class="info-label">Total Hologram Qty:</label>
+                                    <div class="info-value">{{ selectedRequestForRolls.requestedQuantity | number }} units</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-card">
+                                    <label class="info-label">Status:</label>
+                                    <div class="info-value">
+                                        <span class="status-badge" [ngClass]="getStatusClass(selectedRequestForRolls.status)">
+                                            {{ getDisplayStatus(selectedRequestForRolls.status) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rolls Assigned Table -->
+                    <div class="rolls-table-section">
+                        <h6 class="section-title mb-3">
+                            <i class="bi bi-list-ul me-2"></i>
+                            Assigned Rolls and Ranges
+                        </h6>
+
+                        <ng-container *ngIf="getRollsAssigned(selectedRequestForRolls).length > 0; else noRolls">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover rolls-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-center" style="width: 80px;">Sl. No.</th>
+                                            <th>Carton Number</th>
+                                            <th>From Serial</th>
+                                            <th>To Serial</th>
+                                            <th class="text-end">Quantity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr *ngFor="let roll of getRollsAssigned(selectedRequestForRolls); let i = index">
+                                            <td class="text-center">{{ i + 1 }}</td>
+                                            <td>
+                                                <div class="carton-display">
+                                                    <i class="bi bi-box-seam me-2 text-primary"></i>
+                                                    <strong>{{ roll.cartoonNumber }}</strong>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="serial-badge from-serial">{{ roll.fromSerial }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="serial-badge to-serial">{{ roll.toSerial }}</span>
+                                            </td>
+                                            <td class="text-end">
+                                                <span class="qty-badge">{{ roll.quantity | number }}</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <td colspan="4" class="text-end"><strong>Total Quantity:</strong></td>
+                                            <td class="text-end">
+                                                <strong class="text-primary">{{ getTotalRollsQuantity(selectedRequestForRolls) | number }}</strong>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </ng-container>
+                        <ng-template #noRolls>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No rolls have been assigned to this request yet.
+                            </div>
+                        </ng-template>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" (click)="closeRollsModal()">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Close
+                </button>
+            </div>
+        </div>
     </div>
 </div>

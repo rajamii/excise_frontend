@@ -130,6 +130,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   hologramInventory: HologramInventory[] = [];
   filteredInventory: HologramInventory[] = []; // Added for roll visibility
 
+  // Rolls Assigned Modal
+  showRollsModal = false;
+  selectedRequestForRolls: HologramRequest | null = null;
+
   ngOnInit() {
     this.loadHologramRequests();
   }
@@ -168,7 +172,10 @@ export class OfficerinchargehologramreqComponent implements OnInit {
             status: rawStatus, // DISPLAY RAW STATUS
             allowedActions: req.allowed_actions || [], // Dynamic Actions
             officerComments: req.remarks,
-            approvedQuantity: req.quantity
+            approvedQuantity: req.quantity,
+            // CRITICAL: Include rolls_assigned data from API
+            rolls_assigned: req.rolls_assigned || req.rollsAssigned || req.issued_assets || [],
+            allocations: req.allocations || []
           }
         });
 
@@ -217,39 +224,37 @@ export class OfficerinchargehologramreqComponent implements OnInit {
   // REMOVED mapStatus() - using raw status directly
 
   getStatusClass(status: string): string {
-    const s = (status || '').toUpperCase();
+    const category = this.mapStatusToCategory(status);
 
-    // Green - Final States
-    if (s.includes('PRODUCTION COMPLETED') || s === 'COMPLETED') return 'bg-success';
-    if (s === 'APPROVED') return 'bg-success'; // Generic approved
-
-    // Yellow - Action Required States
-    if (s === 'APPROVED BY PERMIT SECTION') return 'bg-warning text-dark';
-    if (s === 'PENDING') return 'bg-warning text-dark';
-    if (s === 'SUBMITTED') return 'bg-warning text-dark';
-
-    // Red - Rejected
-    if (s.includes('REJECTED')) return 'bg-danger';
-
-    // Blue - In Process / Info
-    if (s.includes('UNDER PROCESS')) return 'bg-info';
-    if (s === 'IN_USE') return 'bg-primary';
-
-    return 'bg-secondary';
+    switch (category) {
+      case 'APPROVED':
+        return 'bg-success';
+      case 'UNDER_PROCESS':
+        return 'bg-warning text-dark';
+      case 'PENDING':
+        return 'bg-info';
+      case 'REJECTED':
+        return 'bg-danger';
+      default:
+        return 'bg-secondary';
+    }
   }
 
   getStatusIcon(status: string): string {
-    const s = (status || '').toUpperCase();
+    const category = this.mapStatusToCategory(status);
 
-    if (s.includes('COMPLETED')) return 'bi bi-check-circle-fill';
-    if (s === 'APPROVED') return 'bi bi-check-circle';
-    if (s.includes('REJECTED')) return 'bi bi-x-circle';
-
-    if (s === 'APPROVED BY PERMIT SECTION') return 'bi bi-exclamation-circle'; // Distinctive for OIC action
-    if (s === 'PENDING') return 'bi bi-clock';
-    if (s === 'IN_USE') return 'bi bi-gear-wide-connected';
-
-    return 'bi bi-info-circle';
+    switch (category) {
+      case 'APPROVED':
+        return 'bi bi-check-circle-fill';
+      case 'UNDER_PROCESS':
+        return 'bi bi-hourglass-split';
+      case 'PENDING':
+        return 'bi bi-clock';
+      case 'REJECTED':
+        return 'bi bi-x-circle';
+      default:
+        return 'bi bi-info-circle';
+    }
   }
 
   // Helper methods for data conversion
@@ -274,7 +279,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       const matchesReference = !this.filters.referenceNumber ||
         request.referenceNo.toLowerCase().includes(this.filters.referenceNumber.toLowerCase());
 
-      const matchesStatus = !this.filters.status || request.status === this.filters.status;
+      const matchesStatus = !this.filters.status || this.mapStatusToCategory(request.status) === this.filters.status;
       const matchesRequestType = !this.filters.requestType || request.requestType === this.filters.requestType;
       const matchesHologramType = !this.filters.hologramType || request.hologramType === this.filters.hologramType;
       const matchesUrgencyLevel = !this.filters.urgencyLevel || request.urgencyLevel === this.filters.urgencyLevel;
@@ -495,34 +500,97 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       .filter(r => r.type === type && r.availableCount > 0)
       .sort((a, b) => new Date(a.receivedDate || '2024-01-01').getTime() - new Date(b.receivedDate || '2024-01-01').getTime());
 
+    console.log(`🎯 FIFO Allocation: Allocating ${quantity} holograms of type ${type}`);
+    console.log(`📦 Available rolls:`, availableRolls.map(r => ({
+      cartoonNumber: r.cartoonNumber,
+      availableCount: r.availableCount,
+      ranges: r.actualAvailableRanges
+    })));
+
     for (const roll of availableRolls) {
       if (remaining <= 0) break;
 
-      const take = Math.min(remaining, roll.availableCount);
-      // Find specific range for this 'take' amount?
-      // For simplicity, we just assign the roll or part of it conceptually.
-      // Ideally we should find the exact serial range.
-
-      let allocatedRange = '';
+      console.log(`\n🔍 Processing roll ${roll.cartoonNumber}, remaining needed: ${remaining}`);
+      
+      // CRITICAL FIX: Implement proper FIFO allocation within ranges
       if (roll.actualAvailableRanges && roll.actualAvailableRanges.length > 0) {
-        // Take from first available range
-        const range = roll.actualAvailableRanges[0];
-        // Simple approximation: just use the range string provided by the logic
-        // In a real scenario, we'd split the range if taking partial.
-        allocatedRange = `${range.fromSerial} - ${range.toSerial}`;
+        // Sort ranges by fromSerial to ensure FIFO order
+        const sortedRanges = roll.actualAvailableRanges.sort((a, b) => {
+          const aStart = parseInt(a.fromSerial.replace(/\D/g, ''));
+          const bStart = parseInt(b.fromSerial.replace(/\D/g, ''));
+          return aStart - bStart;
+        });
+
+        console.log(`📋 Available ranges in FIFO order:`, sortedRanges.map(r => 
+          `${r.fromSerial}-${r.toSerial} (${r.count} units)`
+        ));
+
+        // Allocate from earliest ranges first (FIFO)
+        for (const range of sortedRanges) {
+          if (remaining <= 0) break;
+
+          const rangeCount = range.count;
+          const take = Math.min(remaining, rangeCount);
+          
+          // Calculate actual serial range to allocate
+          const fromNum = parseInt(range.fromSerial.replace(/\D/g, ''));
+          const prefix = range.fromSerial.replace(/\d/g, '');
+          const toNum = fromNum + take - 1;
+          
+          // CRITICAL FIX: Don't add unnecessary zeros - use actual format from database
+          const allocatedFromSerial = prefix + String(fromNum);
+          const allocatedToSerial = prefix + String(toNum);
+          
+          console.log(`✅ FIFO Allocation: ${allocatedFromSerial}-${allocatedToSerial} (${take} units) from range ${range.fromSerial}-${range.toSerial}`);
+
+          allocations.push({
+            cartoonNumber: roll.cartoonNumber,
+            range: `${allocatedFromSerial} - ${allocatedToSerial}`,
+            fromSerial: allocatedFromSerial,
+            toSerial: allocatedToSerial,
+            count: take,
+            quantity: take,
+            rollId: roll.id,
+            remainingInCartoon: roll.availableCount - take
+          });
+
+          remaining -= take;
+          
+          // If we took the entire range, continue to next range
+          // If we took partial, we're done with this roll
+          if (take < rangeCount) {
+            break; // Partial allocation, move to next roll
+          }
+        }
       } else {
-        allocatedRange = `${roll.fromSerial} - ${roll.toSerial}`;
+        // Fallback: use the roll's original range
+        const take = Math.min(remaining, roll.availableCount);
+        const allocatedRange = `${roll.fromSerial} - ${roll.toSerial}`;
+        
+        console.log(`⚠️ Fallback allocation: ${allocatedRange} (${take} units)`);
+
+        allocations.push({
+          cartoonNumber: roll.cartoonNumber,
+          range: allocatedRange,
+          fromSerial: roll.fromSerial,
+          toSerial: roll.toSerial,
+          count: take,
+          quantity: take,
+          rollId: roll.id,
+          remainingInCartoon: roll.availableCount - take
+        });
+
+        remaining -= take;
       }
+    }
 
-      allocations.push({
-        cartoonNumber: roll.cartoonNumber,
-        range: allocatedRange,
-        count: take,
-        rollId: roll.id,
-        remainingInCartoon: roll.availableCount - take // Send remaining balance to backend
-      });
+    console.log(`🎉 FIFO Allocation complete. Allocated ${quantity - remaining}/${quantity} holograms`);
+    console.log(`📊 Final allocations:`, allocations.map(a => 
+      `${a.cartoonNumber}: ${a.fromSerial}-${a.toSerial} (${a.count} units)`
+    ));
 
-      remaining -= take;
+    if (remaining > 0) {
+      console.warn(`⚠️ Could not allocate ${remaining} holograms - insufficient inventory`);
     }
 
     return allocations;
@@ -550,9 +618,67 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
   getRequestCount(status?: string): number {
     if (status) {
-      return this.filteredRequests.filter(req => req.status === status).length;
+      return this.filteredRequests.filter(req => this.mapStatusToCategory(req.status) === status).length;
     }
     return this.filteredRequests.length;
+  }
+
+  // Map backend workflow stage names to frontend status categories
+  mapStatusToCategory(backendStatus: string): string {
+    const status = (backendStatus || '').toUpperCase();
+    
+    // PENDING REVIEW - Initial submission states
+    if (status === 'SUBMITTED' || 
+        status === 'PENDING' || 
+        status.includes('FORWARDED TO COMMISSIONER')) {
+      return 'PENDING';
+    }
+    
+    // UNDER PROCESS - Being reviewed/processed
+    if (status === 'APPROVED BY PERMIT SECTION' || 
+        status === 'UNDER IT CELL REVIEW' ||
+        status === 'IN USE' ||
+        status.includes('UNDER PROCESS') ||
+        status.includes('UNDER_PROCESS')) {
+      return 'UNDER_PROCESS';
+    }
+    
+    // APPROVED/COMPLETED - Final approved states
+    if (status === 'APPROVED BY COMMISSIONER' ||
+        status === 'APPROVED' ||
+        status === 'PRODUCTION COMPLETED' ||
+        status === 'COMPLETED' ||
+        status === 'PAYMENT COMPLETED' ||
+        status === 'CARTOON ASSIGNED' ||
+        status === 'ARRIVED') {
+      return 'APPROVED';
+    }
+    
+    // REJECTED
+    if (status.includes('REJECTED')) {
+      return 'REJECTED';
+    }
+    
+    // Default fallback
+    return 'PENDING';
+  }
+
+  // Get user-friendly status display text
+  getDisplayStatus(backendStatus: string): string {
+    const category = this.mapStatusToCategory(backendStatus);
+    
+    switch (category) {
+      case 'PENDING':
+        return 'Pending Review';
+      case 'UNDER_PROCESS':
+        return 'Under Process';
+      case 'APPROVED':
+        return 'Completed';
+      case 'REJECTED':
+        return 'Rejected';
+      default:
+        return backendStatus || 'Unknown';
+    }
   }
 
   getTotalRequestedHolograms(): number {
@@ -942,8 +1068,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         // End of current range - save it if valid
         if (currentRangeStart !== null && currentRangeEnd !== null) {
           availableRanges.push({
-            fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
-            toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+            fromSerial: prefix + String(currentRangeStart),
+            toSerial: prefix + String(currentRangeEnd),
             count: currentRangeEnd - currentRangeStart + 1
           });
           currentRangeStart = null;
@@ -955,8 +1081,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     // Don't forget the last range if it extends to the end
     if (currentRangeStart !== null && currentRangeEnd !== null) {
       availableRanges.push({
-        fromSerial: prefix + String(currentRangeStart).padStart(6, '0'),
-        toSerial: prefix + String(currentRangeEnd).padStart(6, '0'),
+        fromSerial: prefix + String(currentRangeStart),
+        toSerial: prefix + String(currentRangeEnd),
         count: currentRangeEnd - currentRangeStart + 1
       });
     }
@@ -1093,10 +1219,21 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         continue; // Skip this cartoon if no ranges available
       }
 
-      // Allocate from all available ranges in order
+      // CRITICAL FIX: Sort ranges by fromSerial to ensure FIFO order
+      const sortedRanges = availableRanges.sort((a, b) => {
+        const aStart = parseInt(a.fromSerial.replace(/\D/g, ''));
+        const bStart = parseInt(b.fromSerial.replace(/\D/g, ''));
+        return aStart - bStart;
+      });
+
+      console.log(`📋 Available ranges in FIFO order:`, sortedRanges.map(r => 
+        `${r.fromSerial}-${r.toSerial} (${r.count} units)`
+      ));
+
+      // Allocate from earliest ranges first (FIFO)
       let usedFromThisCartoon = 0;
 
-      for (const range of availableRanges) {
+      for (const range of sortedRanges) {
         if (remainingQuantity <= 0) break;
 
         console.log(`  🔍 Checking range:`, range);
@@ -1110,27 +1247,22 @@ export class OfficerinchargehologramreqComponent implements OnInit {
 
         if (availableInRange <= 0) continue; // This range is fully used
 
-        // Allocate from this range
+        // Allocate from this range using FIFO
         const quantityFromRange = Math.min(remainingQuantity, availableInRange);
 
-        // CRITICAL FIX: Use the ACTUAL range from Serial Numbers Details
-        // If we're taking the entire range, use the original fromSerial and toSerial
-        // Only calculate new serials if we're taking a partial range
-        let startSerial: string;
-        let endSerial: string;
+        // CRITICAL FIX: Implement proper FIFO allocation within the range
+        const rangeFromNum = parseInt(range.fromSerial.replace(/\D/g, ''));
+        const prefix = range.fromSerial.replace(/\d/g, '');
+        
+        // Start from the beginning of the range (FIFO)
+        const allocatedFromNum = rangeFromNum + usedFromRange;
+        const allocatedToNum = allocatedFromNum + quantityFromRange - 1;
+        
+        // CRITICAL FIX: Don't add unnecessary zeros - use actual format from database
+        const startSerial = prefix + String(allocatedFromNum);
+        const endSerial = prefix + String(allocatedToNum);
 
-        if (usedFromRange === 0 && quantityFromRange === range.count) {
-          // Taking the entire range - use original range boundaries
-          startSerial = range.fromSerial;
-          endSerial = range.toSerial;
-          console.log(`    ✅ Taking ENTIRE range: ${startSerial} - ${endSerial}`);
-        } else {
-          // Taking a partial range - calculate the specific portion
-          const rangeStart = parseInt(range.fromSerial);
-          startSerial = String(rangeStart + usedFromRange);
-          endSerial = String(rangeStart + usedFromRange + quantityFromRange - 1);
-          console.log(`    ✅ Taking PARTIAL range: ${startSerial} - ${endSerial} (from ${range.fromSerial})`);
-        }
+        console.log(`    ✅ FIFO Allocation: ${startSerial} - ${endSerial} (${quantityFromRange} units) from range ${range.fromSerial}-${range.toSerial}`);
 
         allocations.push({
           cartoonNumber: item.cartoonNumber,
@@ -1144,6 +1276,12 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         cartoonRangeUsage.set(rangeKey, usedFromRange + quantityFromRange);
         usedFromThisCartoon += quantityFromRange;
         remainingQuantity -= quantityFromRange;
+        
+        // If we took the entire range, continue to next range
+        // If we took partial, we're done with this cartoon for now
+        if (quantityFromRange < availableInRange) {
+          break; // Partial allocation, move to next cartoon
+        }
       }
 
       // Update total allocation from this cartoon
@@ -1166,7 +1304,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     if (item.actualAvailableRange) {
       const rangeStart = parseInt(item.actualAvailableRange.fromSerial.match(/\d+$/)?.[0] || '0');
       const prefix = item.actualAvailableRange.fromSerial.replace(/\d+$/, '');
-      return prefix + String(rangeStart + offset).padStart(6, '0');
+      return prefix + String(rangeStart + offset);
     }
 
     if (item.nextAvailableSerial) {
@@ -1174,7 +1312,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       if (offset > 0) {
         const prefix = item.nextAvailableSerial.replace(/\d+$/, '');
         const startNumber = parseInt(item.nextAvailableSerial.match(/\d+$/)?.[0] || '0');
-        return prefix + String(startNumber + offset).padStart(6, '0');
+        return prefix + String(startNumber + offset);
       }
       return item.nextAvailableSerial;
     }
@@ -1184,7 +1322,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const startNumber = parseInt(item.fromSerial.match(/\d+$/)?.[0] || '0');
     const nextNumber = startNumber + item.usedCount + offset;
 
-    return serialPrefix + nextNumber.toString().padStart(6, '0');
+    return serialPrefix + nextNumber.toString();
   }
 
   calculateEndSerial(startSerial: string, quantity: number): string {
@@ -1192,7 +1330,7 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     const startNumber = parseInt(startSerial.match(/\d+$/)?.[0] || '0');
     const endNumber = startNumber + quantity;
 
-    return serialPrefix + endNumber.toString().padStart(6, '0');
+    return serialPrefix + endNumber.toString();
   }
 
   confirmHologramAllocation(): void {
@@ -1205,8 +1343,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       // Create a test allocation for daily register entry
       this.allocationResult.allocations = [{
         cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001100',
+        fromSerial: 'HG1001',
+        toSerial: 'HG1100',
         quantity: this.selectedRequest.requestedQuantity || 100,
         remainingInCartoon: 0
       }];
@@ -1615,8 +1753,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       totalAvailable: this.selectedRequest.requestedQuantity,
       allocations: [{
         cartoonNumber: 'TEST_CTN001',
-        fromSerial: 'HG001001',
-        toSerial: `HG${String(1001 + this.selectedRequest.requestedQuantity - 1).padStart(6, '0')}`,
+        fromSerial: 'HG1001',
+        toSerial: `HG${1001 + this.selectedRequest.requestedQuantity - 1}`,
         quantity: this.selectedRequest.requestedQuantity,
         remainingInCartoon: 0
       }],
@@ -1665,8 +1803,8 @@ export class OfficerinchargehologramreqComponent implements OnInit {
         id: Date.now(),
         cartoonNumber: `CTN${String(Date.now()).slice(-3)}`,
         type: 'LOCAL',
-        fromSerial: 'HG001001',
-        toSerial: 'HG001500',
+        fromSerial: 'HG1001',
+        toSerial: 'HG1500',
         totalCount: 500,
         availableCount: 500,
         usedCount: 0,
@@ -1734,5 +1872,64 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     this.editAllocationQuantity(allocation, newQuantity);
   }
 
+  // Rolls Assigned Methods
+  hasRollsAssigned(request: HologramRequest): boolean {
+    // Check if request has rolls_assigned or rollsAssigned property with data
+    const req = request as any;
+    const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
+    const hasRolls = Array.isArray(rolls) && rolls.length > 0;
+    
+    // Also check status - if approved/in_use/completed, it should have rolls
+    const status = (request.status || '').toUpperCase();
+    const isApprovedStatus = status.includes('APPROVED') || 
+                            status === 'IN_USE' || 
+                            status === 'COMPLETED' ||
+                            status === 'IN USE';
+    
+    // Debug logging
+    console.log('hasRollsAssigned check:', {
+      refNo: request.referenceNo,
+      status: request.status,
+      hasRolls,
+      isApprovedStatus,
+      rollsData: rolls
+    });
+    
+    // Show button if either has rolls data OR is in approved status
+    return hasRolls || isApprovedStatus;
+  }
+
+  viewRollsAssigned(request: HologramRequest): void {
+    this.selectedRequestForRolls = request;
+    this.showRollsModal = true;
+  }
+
+  closeRollsModal(): void {
+    this.showRollsModal = false;
+    this.selectedRequestForRolls = null;
+  }
+
+  getRollsAssigned(request: HologramRequest): any[] {
+    if (!request) return [];
+    
+    const req = request as any;
+    // Get rolls from either rolls_assigned, rollsAssigned, or allocations property
+    const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(rolls)) return [];
+    
+    return rolls.map((roll: any) => ({
+      cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
+      fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
+      toSerial: roll.toSerial || roll.to_serial || 'N/A',
+      quantity: roll.quantity || 0
+    }));
+  }
+
+  getTotalRollsQuantity(request: HologramRequest): number {
+    const rolls = this.getRollsAssigned(request);
+    return rolls.reduce((total, roll) => total + (roll.quantity || 0), 0);
+  }
 
 }

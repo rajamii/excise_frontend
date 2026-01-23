@@ -237,7 +237,7 @@
 
     .register-table {
       width: 100%;
-      min-width: 1200px;
+      min-width: 1300px;
       border-collapse: collapse;
       font-size: 0.9rem;
       margin: 0;
@@ -268,6 +268,7 @@
           &.usage-date { width: 150px; }
           &.type { width: 120px; text-align: center; }
           &.hologram-qty { width: 150px; text-align: center; }
+          &.rolls-assigned { width: 130px; text-align: center; }
           &.status { width: 150px; text-align: center; }
           &.actions { width: 150px; text-align: center; }
         }
@@ -1069,6 +1070,222 @@
               }
             }
           }
+        }
+      }
+    }
+  }
+}
+
+
+// Rolls Assigned Column Styles
+.rolls-assigned {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.5rem;
+  min-width: 120px;
+  max-width: 130px;
+  width: 120px;
+
+  .btn-details {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    i {
+      font-size: 0.875rem;
+    }
+  }
+
+  .text-muted {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+  }
+}
+
+// Rolls Assigned Modal Styles
+.rolls-details-container {
+  padding: 1.5rem;
+
+  .rolls-header-info {
+    .info-card {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+
+      .info-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+
+      .info-value {
+        font-size: 1.125rem;
+        color: #1f2937;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .rolls-table-section {
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .rolls-table {
+      margin-bottom: 0;
+      border-radius: 8px;
+      overflow: hidden;
+
+      thead {
+        background: #f8fafc;
+
+        th {
+          font-weight: 700;
+          color: #374151;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 1rem;
+          border-bottom: 2px solid #e2e8f0;
+        }
+      }
+
+      tbody {
+        tr {
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: #f8fafc;
+          }
+
+          td {
+            padding: 1rem;
+            vertical-align: middle;
+            font-size: 0.9375rem;
+          }
+        }
+      }
+
+      tfoot {
+        background: #f8fafc;
+        border-top: 2px solid #e2e8f0;
+
+        td {
+          padding: 1rem;
+          font-size: 1rem;
+        }
+      }
+
+      .carton-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #1f2937;
+
+        i {
+          font-size: 1.125rem;
+        }
+      }
+
+      .serial-badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        font-size: 0.875rem;
+
+        &.from-serial {
+          background: #dbeafe;
+          color: #1e40af;
+          border: 1px solid #93c5fd;
+        }
+
+        &.to-serial {
+          background: #fce7f3;
+          color: #be185d;
+          border: 1px solid #f9a8d4;
+        }
+      }
+
+      .qty-badge {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #6ee7b7;
+        font-weight: 700;
+        font-size: 0.9375rem;
+      }
+    }
+  }
+}
+
+// Modal Responsive Adjustments
+@media (max-width: 768px) {
+  .rolls-assigned {
+    .btn-details {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+  }
+
+  .rolls-details-container {
+    padding: 1rem;
+
+    .rolls-table-section {
+      .rolls-table {
+        font-size: 0.875rem;
+
+        thead th,
+        tbody td,
+        tfoot td {
+          padding: 0.75rem 0.5rem;
+        }
+
+        .serial-badge {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.8125rem;
+        }
+
+        .qty-badge {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.875rem;
         }
       }
     }
