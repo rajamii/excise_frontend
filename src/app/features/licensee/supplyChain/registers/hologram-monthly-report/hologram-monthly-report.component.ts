@@ -22,6 +22,7 @@ interface StatementRow {
     rollName: string;
     rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
     rollAssignmentIndex?: number; // NEW: Index for color coding
+    brandNumber?: number; // NEW: Brand number within roll assignment (1, 2, 3...)
     brandName: string;
     bottleSize: string;
     ranges: Array<{
@@ -34,6 +35,7 @@ interface StatementRow {
     rollName: string;
     rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
     rollAssignmentIndex?: number; // NEW: Index for color coding
+    brandNumber?: number; // NEW: Brand number within roll assignment (1, 2, 3...)
     brandName: string;
     bottleSize: string;
     ranges: Array<{
@@ -484,6 +486,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             rollName: string;
             rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
             rollAssignmentIndex?: number; // NEW: Index for color coding
+            brandNumber?: number; // NEW: Brand number within this roll assignment (1, 2, 3...)
             brandName: string;
             bottleSize: string;
             ranges: Array<{
@@ -497,6 +500,7 @@ export class HologramMonthlyReportComponent implements OnInit {
             rollName: string;
             rollAssignmentKey?: string; // NEW: Unique key for this roll assignment
             rollAssignmentIndex?: number; // NEW: Index for color coding
+            brandNumber?: number; // NEW: Brand number within this roll assignment (1, 2, 3...)
             brandName: string;
             bottleSize: string;
             ranges: Array<{
@@ -511,36 +515,46 @@ export class HologramMonthlyReportComponent implements OnInit {
           const rollAssignmentMap = new Map<string, number>();
           let nextAssignmentIndex = 0;
           
-          // First pass: identify all unique roll assignments
+          // Also track brands per roll assignment for numbering (Brand 1, Brand 2, etc.)
+          const brandsPerAssignment = new Map<string, Map<string, number>>();
+          
+          // First pass: identify all unique roll assignments (by roll + from serial, NOT by brand)
+          // Group by the FIRST serial number in the range to identify the assignment
           allEntries.forEach((e: any) => {
             const rollName = e.cartoon_number || e.cartoonNumber || e.roll_range || e.rollRange || 'Unknown';
             
-            // Create a unique key for this roll assignment (roll + range)
-            // Use issued ranges to determine the assignment
+            // Get the first serial number to identify this roll assignment
+            let firstSerial = '';
             const issuedRanges = e.issued_ranges || e.issuedRanges || [];
             if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
-              issuedRanges.forEach((range: any) => {
-                const fromSerial = range.fromSerial || range.from_serial || '';
-                const toSerial = range.toSerial || range.to_serial || '';
-                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-                
-                if (!rollAssignmentMap.has(assignmentKey)) {
-                  rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
-                }
-              });
-            } else if ((e.issued_from || e.issuedFrom) && (e.issued_to || e.issuedTo)) {
-              const fromSerial = e.issued_from || e.issuedFrom || '';
-              const toSerial = e.issued_to || e.issuedTo || '';
-              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-              
-              if (!rollAssignmentMap.has(assignmentKey)) {
-                rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
-              }
+              firstSerial = issuedRanges[0].fromSerial || issuedRanges[0].from_serial || '';
+            } else if (e.issued_from || e.issuedFrom) {
+              firstSerial = e.issued_from || e.issuedFrom || '';
+            }
+            
+            // Create assignment key using roll + first serial only
+            // This groups all entries from the same roll assignment together
+            const assignmentKey = `${rollName}_${firstSerial}`;
+            
+            if (!rollAssignmentMap.has(assignmentKey)) {
+              rollAssignmentMap.set(assignmentKey, nextAssignmentIndex++);
+              brandsPerAssignment.set(assignmentKey, new Map<string, number>());
+            }
+            
+            // Track unique brands within this assignment
+            const brandName = e.brand_details || e.brandDetails || '-';
+            const brandsMap = brandsPerAssignment.get(assignmentKey)!;
+            if (!brandsMap.has(brandName)) {
+              brandsMap.set(brandName, brandsMap.size + 1); // Brand number (1, 2, 3...)
             }
           });
           
           console.log(`🎨 Created ${rollAssignmentMap.size} unique roll assignments for color coding:`, 
-            Array.from(rollAssignmentMap.entries()).map(([key, index]) => ({ key, index })));
+            Array.from(rollAssignmentMap.entries()).map(([key, index]) => ({ 
+              key, 
+              index,
+              brands: Array.from(brandsPerAssignment.get(key)?.entries() || []).map(([brand, num]) => ({ brand, num }))
+            })));
           
           // Process each entry to extract roll and brand details
           allEntries.forEach((e: any) => {
@@ -548,19 +562,31 @@ export class HologramMonthlyReportComponent implements OnInit {
             const brandName = e.brand_details || e.brandDetails || '-';
             const bottleSize = e.bottle_size || e.bottleSize || '-';
             
-            // Handle issued ranges
+            // Get the first serial number to identify this roll assignment
+            let firstSerial = '';
             const issuedRanges = e.issued_ranges || e.issuedRanges || [];
+            if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
+              firstSerial = issuedRanges[0].fromSerial || issuedRanges[0].from_serial || '';
+            } else if (e.issued_from || e.issuedFrom) {
+              firstSerial = e.issued_from || e.issuedFrom || '';
+            }
+            
+            // Create assignment key using roll + first serial only
+            const assignmentKey = `${rollName}_${firstSerial}`;
+            const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
+            const brandNumber = brandsPerAssignment.get(assignmentKey)?.get(brandName) ?? 1;
+            
+            // Handle issued ranges
             if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
               issuedRanges.forEach((range: any) => {
                 const fromSerial = range.fromSerial || range.from_serial || '';
                 const toSerial = range.toSerial || range.to_serial || '';
-                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-                const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
                 
                 utilizationDetails.push({
                   rollName: rollName,
-                  rollAssignmentKey: assignmentKey, // Include roll assignment key
-                  rollAssignmentIndex: assignmentIndex, // Include index for color
+                  rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                  rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                  brandNumber: brandNumber, // Use the pre-calculated brand number
                   brandName: brandName,
                   bottleSize: bottleSize,
                   ranges: [{
@@ -574,13 +600,12 @@ export class HologramMonthlyReportComponent implements OnInit {
               // Fallback to single range
               const fromSerial = e.issued_from || e.issuedFrom || '';
               const toSerial = e.issued_to || e.issuedTo || '';
-              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-              const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
               
               utilizationDetails.push({
                 rollName: rollName,
-                rollAssignmentKey: assignmentKey, // Include roll assignment key
-                rollAssignmentIndex: assignmentIndex, // Include index for color
+                rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                brandNumber: brandNumber, // Use the pre-calculated brand number
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
@@ -597,14 +622,12 @@ export class HologramMonthlyReportComponent implements OnInit {
               wastageRanges.forEach((range: any) => {
                 const fromSerial = range.fromSerial || range.from_serial || '';
                 const toSerial = range.toSerial || range.to_serial || '';
-                // Use the same assignment key as utilization for consistent coloring
-                const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-                const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
                 
                 wastageDetails.push({
                   rollName: rollName,
-                  rollAssignmentKey: assignmentKey, // Include roll assignment key
-                  rollAssignmentIndex: assignmentIndex, // Include index for color
+                  rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                  rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                  brandNumber: brandNumber, // Use the pre-calculated brand number
                   brandName: brandName,
                   bottleSize: bottleSize,
                   ranges: [{
@@ -618,13 +641,12 @@ export class HologramMonthlyReportComponent implements OnInit {
               // Fallback to single range
               const fromSerial = e.wastage_from || e.wastageFrom || '';
               const toSerial = e.wastage_to || e.wastageTo || '';
-              const assignmentKey = `${rollName}_${fromSerial}_${toSerial}`;
-              const assignmentIndex = rollAssignmentMap.get(assignmentKey) ?? 0;
               
               wastageDetails.push({
                 rollName: rollName,
-                rollAssignmentKey: assignmentKey, // Include roll assignment key
-                rollAssignmentIndex: assignmentIndex, // Include index for color
+                rollAssignmentKey: assignmentKey, // Use the assignment key (roll + first serial)
+                rollAssignmentIndex: assignmentIndex, // Use the pre-calculated index
+                brandNumber: brandNumber, // Use the pre-calculated brand number
                 brandName: brandName,
                 bottleSize: bottleSize,
                 ranges: [{
@@ -1135,6 +1157,7 @@ export class HologramMonthlyReportComponent implements OnInit {
     rollName: string;
     rollAssignmentKey?: string;
     rollAssignmentIndex?: number;
+    brandNumber?: number;
     brandName: string;
     bottleSize: string;
     ranges: Array<{ from: string; to: string; qty: number }>;
@@ -1142,7 +1165,9 @@ export class HologramMonthlyReportComponent implements OnInit {
     rollName: string;
     rollAssignmentKey: string;
     rollAssignmentIndex: number;
+    brandCount: number; // NEW: Total number of brands in this roll assignment
     brands: Array<{
+      brandNumber?: number; // NEW: Brand number within this roll assignment
       brandName: string;
       bottleSize: string;
       totalQty: number;
@@ -1153,6 +1178,7 @@ export class HologramMonthlyReportComponent implements OnInit {
       rollName: string;
       rollAssignmentIndex: number;
       brands: Array<{
+        brandNumber?: number;
         brandName: string;
         bottleSize: string;
         totalQty: number;
@@ -1173,33 +1199,20 @@ export class HologramMonthlyReportComponent implements OnInit {
       }
       
       rollsMap.get(groupKey)!.brands.push({
+        brandNumber: detail.brandNumber, // Include brand number
         brandName: detail.brandName,
         bottleSize: detail.bottleSize,
         totalQty: this.getTotalQtyForBrand(detail)
       });
     });
     
-    // Convert map to array with roll assignment info
-    const result: Array<{
-      rollName: string;
-      rollAssignmentKey: string;
-      rollAssignmentIndex: number;
-      brands: Array<{
-        brandName: string;
-        bottleSize: string;
-        totalQty: number;
-      }>;
-    }> = [];
-    
-    rollsMap.forEach((value, key) => {
-      result.push({
-        rollName: value.rollName,
-        rollAssignmentKey: key,
-        rollAssignmentIndex: value.rollAssignmentIndex,
-        brands: value.brands
-      });
-    });
-    
-    return result;
+    // Convert map to array with roll assignment info and brand count
+    return Array.from(rollsMap.entries()).map(([key, value]) => ({
+      rollName: value.rollName,
+      rollAssignmentKey: key,
+      rollAssignmentIndex: value.rollAssignmentIndex,
+      brandCount: value.brands.length, // Add brand count
+      brands: value.brands
+    }));
   }
 }

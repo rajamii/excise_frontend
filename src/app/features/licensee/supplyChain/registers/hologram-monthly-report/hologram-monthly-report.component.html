@@ -464,7 +464,12 @@
                                       <div class="brand-name fw-bold mb-1" 
                                            [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)" 
                                            style="font-size: 0.85rem;">
-                                        <i class="bi bi-tag-fill me-1"></i>{{ brand.brandName }}
+                                        <i class="bi bi-tag-fill me-1"></i>
+                                        @if (brand.brandNumber) {
+                                          Brand {{ brand.brandNumber }}: {{ brand.brandName }}
+                                        } @else {
+                                          {{ brand.brandName }}
+                                        }
                                       </div>
                                       <div class="brand-meta d-flex gap-3">
                                         <span class="text-muted" style="font-size: 0.75rem;">
@@ -507,7 +512,11 @@
                                        [style.color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
                                        style="font-size: 0.75rem; font-weight: 600;">
                                     <i class="bi bi-tag me-1"></i>
-                                    {{ detail.brandName }}
+                                    @if (detail.brandNumber) {
+                                      Brand {{ detail.brandNumber }}: {{ detail.brandName }}
+                                    } @else {
+                                      {{ detail.brandName }}
+                                    }
                                   </div>
                                   <div class="bottle-size-badge bg-white border px-2 py-1 rounded text-muted"
                                        [style.border-color]="getRollBorderColor(detail.rollAssignmentIndex ?? rollIndex)"
