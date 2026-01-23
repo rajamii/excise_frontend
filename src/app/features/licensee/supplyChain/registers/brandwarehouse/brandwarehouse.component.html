@@ -1,1 +1,815 @@
-<p>brandwarehouse works!</p>
+<!-- Brand Warehouse Management -->
+<div class="warehouse-container">
+  <!-- Header Section -->
+  <div class="warehouse-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="warehouse-title">
+          <i class="fas fa-warehouse"></i>
+          Brand Warehouse Management
+        </h1>
+        <p class="warehouse-subtitle">Monitor and manage brand inventory, stock levels, and warehouse operations</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
+          <i class="fas fa-sync-alt" [class.fa-spin]="isLoading"></i>
+          Refresh
+        </button>
+        <button class="btn btn-primary" (click)="exportToExcel()">
+          <i class="fas fa-file-excel"></i>
+          Export Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Dashboard -->
+  <div class="overview-dashboard">
+    <div class="overview-grid">
+      <!-- Total Brands -->
+      <div class="overview-card brands-card">
+        <div class="card-icon">
+          <i class="fas fa-tags"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalBrands }}</h3>
+          <p>Total Brands</p>
+        </div>
+      </div>
+
+      <!-- Total Capacity 180ml -->
+      <div class="overview-card capacity-card">
+        <div class="card-icon">
+          <i class="fas fa-wine-bottle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCapacity180ml | number }}</h3>
+          <p>180ml Bottles Capacity</p>
+        </div>
+      </div>
+
+      <!-- Total Capacity 360ml -->
+      <div class="overview-card capacity-card">
+        <div class="card-icon">
+          <i class="fas fa-wine-bottle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCapacity360ml | number }}</h3>
+          <p>360ml Bottles Capacity</p>
+        </div>
+      </div>
+
+      <!-- Total Capacity 550ml -->
+      <div class="overview-card capacity-card">
+        <div class="card-icon">
+          <i class="fas fa-wine-bottle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCapacity550ml | number }}</h3>
+          <p>550ml Bottles Capacity</p>
+        </div>
+      </div>
+
+      <!-- Current Stock -->
+      <div class="overview-card stock-card">
+        <div class="card-icon">
+          <i class="fas fa-boxes"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCurrentStock | number }}</h3>
+          <p>Current Stock (Units)</p>
+        </div>
+      </div>
+
+      <!-- Today's Production -->
+      <div class="overview-card production-card">
+        <div class="card-icon">
+          <i class="fas fa-plus-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.todayProduction | number }}</h3>
+          <p>Today's Production</p>
+        </div>
+      </div>
+
+      <!-- Today's Consumption -->
+      <div class="overview-card consumption-card">
+        <div class="card-icon">
+          <i class="fas fa-minus-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.todayConsumption | number }}</h3>
+          <p>Today's Consumption</p>
+        </div>
+      </div>
+
+      <!-- Low Stock Alerts -->
+      <div class="overview-card alert-card low-stock">
+        <div class="card-icon">
+          <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.lowStockAlerts }}</h3>
+          <p>Low Stock Alerts</p>
+        </div>
+      </div>
+
+      <!-- Out of Stock -->
+      <div class="overview-card alert-card out-stock">
+        <div class="card-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.outOfStockAlerts }}</h3>
+          <p>Out of Stock</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-header">
+      <h3><i class="fas fa-filter"></i> Filters & Search</h3>
+      <button class="btn btn-outline btn-sm" (click)="clearFilters()">
+        <i class="fas fa-times"></i>
+        Clear All
+      </button>
+    </div>
+    
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Brand Name</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          placeholder="Search brand name..."
+          [(ngModel)]="filters.brandName"
+          (input)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label>Liquor Type</label>
+        <select class="form-control" [(ngModel)]="filters.liquorType" (change)="applyFilters()">
+          <option value="">All Types</option>
+          <option value="Whisky">Whisky</option>
+          <option value="Rum">Rum</option>
+          <option value="Vodka">Vodka</option>
+          <option value="Gin">Gin</option>
+          <option value="Beer">Beer</option>
+          <option value="Wine">Wine</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Stock Status</label>
+        <select class="form-control" [(ngModel)]="filters.status" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option value="IN_STOCK">In Stock</option>
+          <option value="LOW_STOCK">Low Stock</option>
+          <option value="OUT_OF_STOCK">Out of Stock</option>
+          <option value="OVERSTOCKED">Overstocked</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Stock Level</label>
+        <select class="form-control" [(ngModel)]="filters.stockLevel" (change)="applyFilters()">
+          <option value="">All Levels</option>
+          <option value="HIGH">High (80%+)</option>
+          <option value="MEDIUM">Medium (40-80%)</option>
+          <option value="LOW">Low (<40%)</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Date From</label>
+        <input 
+          type="date" 
+          class="form-control"
+          [(ngModel)]="filters.dateFrom"
+          (change)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label>Date To</label>
+        <input 
+          type="date" 
+          class="form-control"
+          [(ngModel)]="filters.dateTo"
+          (change)="applyFilters()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="results-summary">
+    <div class="summary-info">
+      <span class="results-count">
+        Showing {{ paginatedStocks.length }} of {{ filteredStocks.length }} brands
+      </span>
+      <span class="total-stock">
+        Total Stock: {{ getTotalStock() | number }} units
+      </span>
+    </div>
+  </div>
+
+  <!-- Warehouse Table -->
+  <div class="warehouse-table-container">
+    <div class="table-wrapper" *ngIf="!isLoading; else loadingTemplate">
+      <table class="warehouse-table">
+        <thead>
+          <tr class="table-header">
+            <th>Brand Details</th>
+            <th>Current Stock</th>
+            <th>Capacity (Bottles)</th>
+            <th>Last Entry</th>
+            <th>Utilized</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let brand of paginatedStocks; let i = index" 
+              class="table-row"
+              [class.low-stock-row]="brand.status === 'LOW_STOCK'"
+              [class.out-stock-row]="brand.status === 'OUT_OF_STOCK'"
+              [class.over-stock-row]="brand.status === 'OVERSTOCKED'">
+            
+            <!-- Brand Details -->
+            <td class="brand-details-cell">
+              <div class="brand-info">
+                <div class="brand-name">{{ brand.brandName }}</div>
+                <div class="brand-meta">
+                  <span class="brand-code">{{ brand.brandCode }}</span>
+                  <span class="separator">•</span>
+                  <span class="alcohol-percent">{{ brand.alcoholPercent }}</span>
+                  <span class="separator">•</span>
+                  <span class="bottle-size">{{ brand.bottleSize }}ml</span>
+                  <span class="separator">•</span>
+                  <span class="liquor-type">{{ brand.liquorType }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Current Stock -->
+            <td class="stock-cell">
+              <div class="stock-info">
+                <div class="stock-number">{{ brand.currentStock | number }}</div>
+                <div class="stock-label">units</div>
+              </div>
+            </td>
+
+            <!-- Capacity -->
+            <td class="capacity-cell">
+              <div class="capacity-info">
+                <div class="capacity-breakdown">
+                  <div class="capacity-item">
+                    <span class="size-label">180ml:</span>
+                    <span class="size-value">{{ brand.capacity180ml | number }}</span>
+                  </div>
+                  <div class="capacity-item">
+                    <span class="size-label">360ml:</span>
+                    <span class="size-value">{{ brand.capacity360ml | number }}</span>
+                  </div>
+                  <div class="capacity-item">
+                    <span class="size-label">550ml:</span>
+                    <span class="size-value">{{ brand.capacity550ml | number }}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Last Entry -->
+            <td class="last-entry-cell">
+              <div class="entry-info">
+                <div class="entry-type" [class]="'type-' + brand.lastEntry.type.toLowerCase()">
+                  {{ brand.lastEntry.type }}
+                </div>
+                <div class="entry-details">
+                  <span class="entry-quantity">{{ brand.lastEntry.quantity | number }}</span>
+                  <span class="entry-date">{{ brand.lastEntry.date | date:'MMM dd' }}</span>
+                </div>
+                <button class="btn btn-sm btn-outline last-entry-btn" 
+                        (click)="viewLastEntries(brand)"
+                        title="View All Last Entries">
+                  <i class="fas fa-history"></i>
+                  All Entries
+                </button>
+              </div>
+            </td>
+
+            <!-- Utilized -->
+            <td class="utilized-cell">
+              <div class="utilized-info">
+                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
+                <div class="utilized-label">units utilized</div>
+                <button class="btn btn-sm btn-info utilized-details-btn" 
+                        (click)="viewTransitPermits(brand)"
+                        title="View Transit Permit Details">
+                  <i class="fas fa-truck"></i>
+                  Details
+                </button>
+              </div>
+            </td>
+
+            <!-- Status -->
+            <td class="status-cell">
+              <span class="status-badge" [class]="'badge-' + getStatusColor(brand.status)">
+                <i class="fas" 
+                   [class.fa-check-circle]="brand.status === 'IN_STOCK'"
+                   [class.fa-exclamation-triangle]="brand.status === 'LOW_STOCK'"
+                   [class.fa-times-circle]="brand.status === 'OUT_OF_STOCK'"
+                   [class.fa-arrow-up]="brand.status === 'OVERSTOCKED'"></i>
+                {{ brand.status.replace('_', ' ') }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" 
+                        (click)="viewBrandDetails(brand)"
+                        title="View Details">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-primary" 
+                        (click)="openAdjustmentModal(brand)"
+                        title="Adjust Stock">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Loading Template -->
+    <ng-template #loadingTemplate>
+      <div class="loading-container">
+        <div class="loading-spinner">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <p>Loading warehouse data...</p>
+      </div>
+    </ng-template>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && filteredStocks.length === 0">
+      <div class="empty-icon">
+        <i class="fas fa-search"></i>
+      </div>
+      <h3>No brands found</h3>
+      <p>Try adjusting your filters or search criteria</p>
+      <button class="btn btn-primary" (click)="clearFilters()">Clear Filters</button>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="totalPages > 1">
+    <div class="pagination-info">
+      Page {{ currentPage }} of {{ totalPages }}
+    </div>
+    <div class="pagination-controls">
+      <button class="btn btn-outline btn-sm" 
+              (click)="changePage(currentPage - 1)"
+              [disabled]="currentPage === 1">
+        <i class="fas fa-chevron-left"></i>
+        Previous
+      </button>
+      
+      <div class="page-numbers">
+        <button *ngFor="let page of getPageNumbers(); let i = index"
+                class="btn btn-sm"
+                [class.btn-primary]="currentPage === i + 1"
+                [class.btn-outline]="currentPage !== i + 1"
+                (click)="changePage(i + 1)">
+          {{ i + 1 }}
+        </button>
+      </div>
+      
+      <button class="btn btn-outline btn-sm" 
+              (click)="changePage(currentPage + 1)"
+              [disabled]="currentPage === totalPages">
+        Next
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Brand Details Modal -->
+<div class="modal-overlay" *ngIf="showDetailsModal" (click)="showDetailsModal = false">
+  <div class="modal-content brand-details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="fas fa-info-circle"></i>
+        Brand Details
+      </h2>
+      <button class="modal-close" (click)="showDetailsModal = false">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="selectedBrand">
+      <div class="brand-details-grid">
+        <!-- Basic Information -->
+        <div class="details-section">
+          <h3>Basic Information</h3>
+          <div class="details-row">
+            <span class="label">Brand Name:</span>
+            <span class="value">{{ selectedBrand.brandName }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Brand Code:</span>
+            <span class="value">{{ selectedBrand.brandCode }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Liquor Type:</span>
+            <span class="value">{{ selectedBrand.liquorType }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Alcohol %:</span>
+            <span class="value">{{ selectedBrand.alcoholPercent }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Bottle Size:</span>
+            <span class="value">{{ selectedBrand.bottleSize }}ml</span>
+          </div>
+        </div>
+
+        <!-- Stock Information -->
+        <div class="details-section">
+          <h3>Stock Information</h3>
+          <div class="details-row">
+            <span class="label">Current Stock:</span>
+            <span class="value highlight">{{ selectedBrand.currentStock | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Capacity 180ml:</span>
+            <span class="value">{{ selectedBrand.capacity180ml | number }} bottles</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Capacity 360ml:</span>
+            <span class="value">{{ selectedBrand.capacity360ml | number }} bottles</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Capacity 550ml:</span>
+            <span class="value">{{ selectedBrand.capacity550ml | number }} bottles</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Max Capacity:</span>
+            <span class="value">{{ selectedBrand.maxCapacity | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Reorder Level:</span>
+            <span class="value">{{ selectedBrand.reorderLevel | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Status:</span>
+            <span class="value">
+              <span class="status-badge" [class]="'badge-' + getStatusColor(selectedBrand.status)">
+                {{ selectedBrand.status.replace('_', ' ') }}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Usage Analytics -->
+        <div class="details-section">
+          <h3>Usage Analytics</h3>
+          <div class="details-row">
+            <span class="label">Daily Usage:</span>
+            <span class="value">{{ selectedBrand.averageDailyUsage | number }} units/day</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Total Utilized:</span>
+            <span class="value highlight">{{ selectedBrand.totalUtilized | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Total Production:</span>
+            <span class="value">{{ selectedBrand.totalProduction | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Last Updated:</span>
+            <span class="value">{{ selectedBrand.lastUpdated | date:'medium' }}</span>
+          </div>
+        </div>
+
+        <!-- Last Entry -->
+        <div class="details-section">
+          <h3>Last Entry</h3>
+          <div class="details-row">
+            <span class="label">Type:</span>
+            <span class="value">{{ selectedBrand.lastEntry.type }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Date:</span>
+            <span class="value">{{ selectedBrand.lastEntry.date | date:'mediumDate' }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Quantity:</span>
+            <span class="value">{{ selectedBrand.lastEntry.quantity | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Previous Stock:</span>
+            <span class="value">{{ selectedBrand.lastEntry.previousStock | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Reference No:</span>
+            <span class="value">{{ selectedBrand.lastEntry.referenceNo }}</span>
+          </div>
+        </div>
+
+        <!-- Monthly Movement -->
+        <div class="details-section full-width">
+          <h3>Monthly Movement ({{ selectedBrand.monthlyMovement.month }})</h3>
+          <div class="movement-grid">
+            <div class="movement-item">
+              <span class="movement-label">Opening</span>
+              <span class="movement-value">{{ selectedBrand.monthlyMovement.opening | number }}</span>
+            </div>
+            <div class="movement-item">
+              <span class="movement-label">Production</span>
+              <span class="movement-value positive">+{{ selectedBrand.monthlyMovement.production | number }}</span>
+            </div>
+            <div class="movement-item">
+              <span class="movement-label">Consumption</span>
+              <span class="movement-value negative">-{{ selectedBrand.monthlyMovement.consumption | number }}</span>
+            </div>
+            <div class="movement-item">
+              <span class="movement-label">Wastage</span>
+              <span class="movement-value negative">-{{ selectedBrand.monthlyMovement.wastage | number }}</span>
+            </div>
+            <div class="movement-item">
+              <span class="movement-label">Closing</span>
+              <span class="movement-value highlight">{{ selectedBrand.monthlyMovement.closing | number }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal-overlay" *ngIf="showAdjustmentModal" (click)="showAdjustmentModal = false">
+  <div class="modal-content adjustment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="fas fa-edit"></i>
+        Stock Adjustment
+      </h2>
+      <button class="modal-close" (click)="showAdjustmentModal = false">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="selectedBrand">
+      <div class="adjustment-form">
+        <div class="current-stock-info">
+          <h3>{{ selectedBrand.brandName }}</h3>
+          <p>Current Stock: <strong>{{ selectedBrand.currentStock | number }} units</strong></p>
+        </div>
+
+        <div class="form-group">
+          <label>Adjustment Type</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" [(ngModel)]="adjustmentType" value="ADD">
+              <span class="radio-label">
+                <i class="fas fa-plus"></i>
+                Add Stock
+              </span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" [(ngModel)]="adjustmentType" value="SUBTRACT">
+              <span class="radio-label">
+                <i class="fas fa-minus"></i>
+                Subtract Stock
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Quantity</label>
+          <input 
+            type="number" 
+            class="form-control"
+            [(ngModel)]="adjustmentQuantity"
+            min="1"
+            placeholder="Enter quantity">
+        </div>
+
+        <div class="form-group">
+          <label>Reason</label>
+          <textarea 
+            class="form-control"
+            [(ngModel)]="adjustmentReason"
+            rows="3"
+            placeholder="Enter reason for adjustment..."></textarea>
+        </div>
+
+        <div class="adjustment-preview" *ngIf="adjustmentQuantity > 0">
+          <h4>Preview</h4>
+          <div class="preview-calculation">
+            <span class="current">{{ selectedBrand.currentStock | number }}</span>
+            <span class="operator">{{ adjustmentType === 'ADD' ? '+' : '-' }}</span>
+            <span class="adjustment">{{ adjustmentQuantity | number }}</span>
+            <span class="equals">=</span>
+            <span class="result" 
+                  [class.negative]="adjustmentType === 'SUBTRACT' && adjustmentQuantity > selectedBrand.currentStock">
+              {{ getAdjustmentResult() | number }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showAdjustmentModal = false">
+        Cancel
+      </button>
+      <button class="btn btn-primary" 
+              (click)="submitStockAdjustment()"
+              [disabled]="adjustmentQuantity <= 0 || !adjustmentReason.trim()">
+        <i class="fas fa-save"></i>
+        Save Adjustment
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Transit Permits Modal -->
+<div class="modal-overlay" *ngIf="showTransitPermitsModal" (click)="showTransitPermitsModal = false">
+  <div class="modal-content transit-permits-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="fas fa-truck"></i>
+        Transit Permits - {{ selectedBrand?.brandName }}
+      </h2>
+      <button class="modal-close" (click)="showTransitPermitsModal = false">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="permits-summary">
+        <div class="summary-card">
+          <h3>Total Utilized: {{ selectedBrand?.totalUtilized | number }} units</h3>
+          <p>Through {{ selectedTransitPermits.length }} transit permits</p>
+        </div>
+      </div>
+
+      <div class="permits-table-container">
+        <table class="permits-table">
+          <thead>
+            <tr>
+              <th>Permit No</th>
+              <th>Date</th>
+              <th>Distributor</th>
+              <th>Depot Address</th>
+              <th>Vehicle</th>
+              <th>Quantity</th>
+              <th>Status</th>
+              <th>Approved By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let permit of selectedTransitPermits" class="permit-row">
+              <td class="permit-no">{{ permit.permitNo }}</td>
+              <td class="permit-date">{{ permit.date | date:'dd/MM/yyyy' }}</td>
+              <td class="distributor-name">{{ permit.distributorName }}</td>
+              <td class="depot-address">{{ permit.depotAddress }}</td>
+              <td class="vehicle-number">{{ permit.vehicleNumber }}</td>
+              <td class="quantity">
+                <div class="quantity-details">
+                  <span class="cases">{{ permit.cases }} cases</span>
+                  <span class="bottles">{{ permit.totalBottles }} bottles</span>
+                </div>
+              </td>
+              <td class="permit-status">
+                <span class="status-badge" 
+                      [class.badge-success]="permit.status === 'DELIVERED'"
+                      [class.badge-info]="permit.status === 'IN_TRANSIT'"
+                      [class.badge-warning]="permit.status === 'APPROVED'"
+                      [class.badge-secondary]="permit.status === 'PENDING'"
+                      [class.badge-danger]="permit.status === 'CANCELLED'">
+                  {{ permit.status.replace('_', ' ') }}
+                </span>
+              </td>
+              <td class="approved-by">
+                <div class="approval-info">
+                  <span class="approver">{{ permit.approvedBy }}</span>
+                  <span class="approval-date" *ngIf="permit.approvalDate">
+                    {{ permit.approvalDate | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
+        <div class="empty-icon">
+          <i class="fas fa-truck"></i>
+        </div>
+        <h3>No Transit Permits</h3>
+        <p>No transit permits found for this brand</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Last Entries Modal -->
+<div class="modal-overlay" *ngIf="showLastEntriesModal" (click)="showLastEntriesModal = false">
+  <div class="modal-content last-entries-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="fas fa-history"></i>
+        Recent Entries - {{ selectedBrand?.brandName }}
+      </h2>
+      <button class="modal-close" (click)="showLastEntriesModal = false">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="entries-summary">
+        <div class="summary-card">
+          <h3>{{ selectedLastEntries.length }} Recent Entries</h3>
+          <p>Latest stock movements and transactions</p>
+        </div>
+      </div>
+
+      <div class="entries-timeline">
+        <div *ngFor="let entry of selectedLastEntries; let i = index" 
+             class="timeline-item" 
+             [class.timeline-production]="entry.type === 'PRODUCTION'"
+             [class.timeline-consumption]="entry.type === 'CONSUMPTION'"
+             [class.timeline-adjustment]="entry.type === 'ADJUSTMENT'"
+             [class.timeline-transit]="entry.type === 'TRANSIT_PERMIT'">
+          
+          <div class="timeline-marker">
+            <i class="fas" 
+               [class.fa-plus]="entry.type === 'PRODUCTION'"
+               [class.fa-minus]="entry.type === 'CONSUMPTION'"
+               [class.fa-edit]="entry.type === 'ADJUSTMENT'"
+               [class.fa-truck]="entry.type === 'TRANSIT_PERMIT'"></i>
+          </div>
+          
+          <div class="timeline-content">
+            <div class="entry-header">
+              <div class="entry-type-badge" [class]="'badge-' + entry.type.toLowerCase()">
+                {{ entry.type.replace('_', ' ') }}
+              </div>
+              <div class="entry-date">{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+            
+            <div class="entry-details">
+              <h4>{{ entry.description }}</h4>
+              <div class="entry-meta">
+                <div class="quantity-change">
+                  <span class="label">Quantity:</span>
+                  <span class="value" 
+                        [class.positive]="entry.type === 'PRODUCTION'"
+                        [class.negative]="entry.type === 'CONSUMPTION' || entry.type === 'TRANSIT_PERMIT'">
+                    {{ entry.type === 'PRODUCTION' ? '+' : '-' }}{{ entry.quantity | number }}
+                  </span>
+                </div>
+                <div class="stock-change">
+                  <span class="label">Stock:</span>
+                  <span class="value">
+                    {{ entry.previousStock | number }} → {{ entry.newStock | number }}
+                  </span>
+                </div>
+                <div class="reference">
+                  <span class="label">Reference:</span>
+                  <span class="value">{{ entry.referenceNo }}</span>
+                </div>
+                <div class="officer" *ngIf="entry.officerName">
+                  <span class="label">Officer:</span>
+                  <span class="value">{{ entry.officerName }}</span>
+                </div>
+                <div class="transit-permit" *ngIf="entry.transitPermitNo">
+                  <span class="label">Transit Permit:</span>
+                  <span class="value">{{ entry.transitPermitNo }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="selectedLastEntries.length === 0">
+        <div class="empty-icon">
+          <i class="fas fa-history"></i>
+        </div>
+        <h3>No Recent Entries</h3>
+        <p>No recent entries found for this brand</p>
+      </div>
+    </div>
+  </div>
+</div>
