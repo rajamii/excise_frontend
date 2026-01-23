@@ -2710,14 +2710,14 @@ After editing, click "Lock" to save your changes.`);
           const hasUsage = brand.issuedQty > 0 || brand.wastageQty > 0;
 
           if (hasUsage) {
-            // CRITICAL: Create unique roll_range for each brand to prevent backend overwriting
-            // Format: "a1_BRAND_1", "a1_BRAND_2" instead of "a1 - Brand 1"
-            const uniqueRollRange = `${roll.displayName || roll.cartoonNumber}_BRAND_${brandIndex + 1}`;
+            // FIXED: Keep original assigned roll information in roll_range
+            // Use brand_index to differentiate brands from same roll
+            const originalRollRange = roll.displayName || roll.cartoonNumber;
 
             const payload = {
               reference_no: entry.referenceNo || 'N/A',
               hologram_request: entry.requestId || null,
-              roll_range: uniqueRollRange, // Unique identifier per brand
+              roll_range: originalRollRange, // Keep original assigned roll info
               submission_date: entry.dates.submission || new Date().toISOString().split('T')[0],
               usage_date: entry.dates.usage || new Date().toISOString().split('T')[0],
 
@@ -3039,9 +3039,12 @@ After editing, click "Lock" to save your changes.`);
     if (!currentRoll) return 0;
 
     // Extract cartoon number from rangeId if needed
-    const cartoonNumber = currentRoll.includes('_RANGE_')
+    let cartoonNumber = currentRoll.includes('_RANGE_')
       ? currentRoll.split('_RANGE_')[0]
       : currentRoll;
+
+    // CRITICAL FIX: Remove brand suffix to ensure same color for same roll
+    cartoonNumber = cartoonNumber.split('_')[0];
 
     return this.getRollColorIndex(cartoonNumber);
   }
@@ -3381,7 +3384,9 @@ After editing, click "Lock" to save your changes.`);
     const lockedRolls = this.getLockedRollsForEntry(entry);
 
     lockedRolls.forEach((roll: any) => {
-      const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
+      // CRITICAL FIX: Use base roll number (remove brand suffix) for consistent colors
+      const baseRollNumber = roll.cartoonNumber.split('_')[0];
+      const rollIndex = this.getRollColorIndex(baseRollNumber);
       const entries = (roll.issuedRanges || []).map((range: any) => ({
         fromSerial: range.fromSerial,
         toSerial: range.toSerial,
@@ -3408,7 +3413,9 @@ After editing, click "Lock" to save your changes.`);
     const lockedRolls = this.getLockedRollsForEntry(entry);
 
     lockedRolls.forEach((roll: any) => {
-      const rollIndex = this.getRollColorIndex(roll.cartoonNumber);
+      // CRITICAL FIX: Use base roll number (remove brand suffix) for consistent colors
+      const baseRollNumber = roll.cartoonNumber.split('_')[0];
+      const rollIndex = this.getRollColorIndex(baseRollNumber);
       const entries = (roll.wastageRanges || []).map((range: any) => ({
         fromSerial: range.fromSerial,
         toSerial: range.toSerial,
@@ -3879,5 +3886,129 @@ After editing, click "Lock" to save your changes.`);
   selectRollTab(index: number): void {
     this.selectedRollTabIndex = index;
     this.cdr.detectChanges();
+  }
+
+  /**
+   * Get the original assigned roll information for display in ROLL/RANGE column
+   * This ensures only the originally assigned roll is shown, not brand-specific variations
+   */
+  getOriginalAssignedRoll(entry: RegisterEntry): { cartoonNumber: string; serialRange: string; brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> } | null {
+    // For saved entries, get from allocatedRanges (original assignment)
+    if (entry.isFixed && entry.allocatedRanges && entry.allocatedRanges.length > 0) {
+      const firstRange = entry.allocatedRanges[0];
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: firstRange.cartoonNumber,
+        serialRange: `${firstRange.fromSerial} - ${firstRange.toSerial}`,
+        brands: brands
+      };
+    }
+
+    // For unsaved entries, get from locked rolls or current selection
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.length > 0) {
+      const firstRoll = lockedRolls[0];
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: firstRoll.cartoonNumber.split('_')[0], // Remove brand suffix
+        serialRange: firstRoll.serialRange || `${firstRoll.fromSerial} - ${firstRoll.toSerial}`,
+        brands: brands
+      };
+    }
+
+    // Fallback to current selected roll
+    const currentRoll = this.getCurrentRollInput(entry);
+    if (currentRoll) {
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: (this.getCurrentSelectedRoll(entry) || '').split('_')[0],
+        serialRange: currentRoll.serialRange || '',
+        brands: brands
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if multiple brands are being used from the same roll
+   */
+  hasMultipleBrandsFromSameRoll(entry: RegisterEntry): boolean {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.length <= 1) return false;
+
+    // Check if multiple rolls have the same base carton number (before _BRAND_ suffix)
+    const baseCartoonNumbers = lockedRolls.map(roll => roll.cartoonNumber.split('_')[0]);
+    const uniqueBaseNumbers = [...new Set(baseCartoonNumbers)];
+    
+    return uniqueBaseNumbers.length < baseCartoonNumbers.length;
+  }
+
+  /**
+   * Get brands information from the same roll with consistent color coding and quantities
+   */
+  getBrandsFromSameRoll(entry: RegisterEntry): Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> = [];
+    
+    if (lockedRolls.length === 0) return brands;
+
+    // Group rolls by base carton number
+    const rollsByCarton = new Map<string, any[]>();
+    lockedRolls.forEach(roll => {
+      const baseCarton = roll.cartoonNumber.split('_')[0];
+      if (!rollsByCarton.has(baseCarton)) {
+        rollsByCarton.set(baseCarton, []);
+      }
+      rollsByCarton.get(baseCarton)!.push(roll);
+    });
+
+    // For each carton, create brand entries with consistent colors
+    rollsByCarton.forEach((rolls, baseCarton) => {
+      // CRITICAL: Use the same color for all brands from the same roll
+      const rollColor = this.getRollColor(baseCarton);
+      
+      if (rolls.length > 1) {
+        // Multiple brands from same roll - all get the SAME color
+        rolls.forEach((roll, index) => {
+          const brandName = roll.brandDetails || roll.brand_details || `Brand ${index + 1}`;
+          brands.push({
+            name: brandName,
+            index: index + 1,
+            color: rollColor, // Same color for all brands from same roll
+            issuedQty: roll.issuedQty || 0,
+            wastageQty: roll.wastageQty || 0
+          });
+        });
+      } else {
+        // Single brand from roll
+        const roll = rolls[0];
+        const brandName = roll.brandDetails || roll.brand_details || 'Brand 1';
+        brands.push({
+          name: brandName,
+          index: 1,
+          color: rollColor,
+          issuedQty: roll.issuedQty || 0,
+          wastageQty: roll.wastageQty || 0
+        });
+      }
+    });
+
+    return brands;
+  }
+
+  /**
+   * Get enhanced brand details for display in BRAND DETAILS column
+   */
+  getEnhancedBrandDetails(entry: RegisterEntry): Array<{brandLabel: string, brandName: string, color: string, issuedQty: number, wastageQty: number}> {
+    const brands = this.getBrandsFromSameRoll(entry);
+    
+    return brands.map(brand => ({
+      brandLabel: `Brand ${brand.index}`,
+      brandName: brand.name,
+      color: brand.color,
+      issuedQty: brand.issuedQty,
+      wastageQty: brand.wastageQty
+    }));
   }
 }
