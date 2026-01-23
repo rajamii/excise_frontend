@@ -16,17 +16,9 @@
               <i class="bi bi-arrow-clockwise me-2"></i>
               Refresh Data
             </button>
-            <button class="btn btn-outline-warning me-2" (click)="clearTestData()">
-              <i class="bi bi-trash me-2"></i>
-              Clear Test Data
-            </button>
             <button class="btn btn-outline-secondary me-2" onclick="window.close()">
               <i class="bi bi-x-lg me-2"></i>
               Close
-            </button>
-            <button class="btn btn-primary">
-              <i class="bi bi-download me-2"></i>
-              Export Report
             </button>
           </div>
         </div>
@@ -61,7 +53,8 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalAvailable() | number }}</h3>
               <p class="card-label">Available</p>
-              <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalAvailable(), getTotalHolograms()) |
+                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>
@@ -74,7 +67,8 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalUsedInProduction() | number }}</h3>
               <p class="card-label">Used in Production</p>
-              <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+              <small class="card-change neutral">{{ getPercentage(getTotalUsedInProduction(), getTotalHolograms()) |
+                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>
@@ -87,7 +81,8 @@
             <div class="card-content">
               <h3 class="card-value">{{ getTotalDamagedWastage() | number }}</h3>
               <p class="card-label">Damaged/Wastage</p>
-              <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) | number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
+              <small class="card-change negative">{{ getPercentage(getTotalDamagedWastage(), getTotalHolograms()) |
+                number:'1.1-1' }}% of total (From Serial Numbers Data)</small>
             </div>
           </div>
         </div>
@@ -228,13 +223,64 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="chart-placeholder">
-                <div class="chart-mock">
-                  <p class="text-center text-muted">
-                    <i class="bi bi-bar-chart display-4"></i><br>
-                    Interactive usage charts will be implemented here<br>
-                    <small>Filtered data: {{ getFilteredDataCount() }} records | {{ getFilterSummary() }}</small>
-                  </p>
+              <div class="chart-container p-3">
+                <!-- Simple CSS-based Bar Chart for Usage Trends -->
+                <div class="usage-trends-chart">
+
+                  <!-- Available -->
+                  <div class="trend-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="fw-bold text-success"><i class="bi bi-check-circle me-2"></i>Available</span>
+                      <span class="fw-bold">{{ getUsageTrendValue('AVAILABLE') | number }} ({{
+                        getUsageTrendPercentage('AVAILABLE') }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                      <div class="progress-bar bg-success" role="progressbar"
+                        [style.width.%]="getUsageTrendPercentage('AVAILABLE')"
+                        [attr.aria-valuenow]="getUsageTrendPercentage('AVAILABLE')" aria-valuemin="0"
+                        aria-valuemax="100">
+                        {{ getUsageTrendPercentage('AVAILABLE') }}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Used -->
+                  <div class="trend-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="fw-bold text-primary"><i class="bi bi-arrow-up-circle me-2"></i>Used in
+                        Production</span>
+                      <span class="fw-bold">{{ getUsageTrendValue('USED') | number }} ({{
+                        getUsageTrendPercentage('USED') }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                      <div class="progress-bar bg-primary" role="progressbar"
+                        [style.width.%]="getUsageTrendPercentage('USED')"
+                        [attr.aria-valuenow]="getUsageTrendPercentage('USED')" aria-valuemin="0" aria-valuemax="100">
+                        {{ getUsageTrendPercentage('USED') }}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Damaged -->
+                  <div class="trend-item">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="fw-bold text-danger"><i
+                          class="bi bi-exclamation-triangle me-2"></i>Damaged/Wastage</span>
+                      <span class="fw-bold">{{ getUsageTrendValue('DAMAGED') | number }} ({{
+                        getUsageTrendPercentage('DAMAGED') }}%)</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                      <div class="progress-bar bg-danger" role="progressbar"
+                        [style.width.%]="getUsageTrendPercentage('DAMAGED')"
+                        [attr.aria-valuenow]="getUsageTrendPercentage('DAMAGED')" aria-valuemin="0" aria-valuemax="100">
+                        {{ getUsageTrendPercentage('DAMAGED') }}%
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                <div class="mt-3 text-center">
+                  <small class="text-muted">Total Holograms: {{ getTotalHolograms() | number }}</small>
                 </div>
               </div>
             </div>
@@ -254,34 +300,34 @@
                 <div class="distribution-item">
                   <div class="distribution-info">
                     <span class="distribution-label">Local Production</span>
-                    <span class="distribution-value">750,000</span>
+                    <span class="distribution-value">{{ getDistributionValue('LOCAL') | number }}</span>
                   </div>
                   <div class="distribution-bar">
-                    <div class="bar-fill local" style="width: 60%"></div>
+                    <div class="bar-fill local" [style.width.%]="getDistributionPercentage('LOCAL')"></div>
                   </div>
-                  <span class="distribution-percent">60%</span>
+                  <span class="distribution-percent">{{ getDistributionPercentage('LOCAL') }}%</span>
                 </div>
 
                 <div class="distribution-item">
                   <div class="distribution-info">
                     <span class="distribution-label">Export</span>
-                    <span class="distribution-value">375,000</span>
+                    <span class="distribution-value">{{ getDistributionValue('EXPORT') | number }}</span>
                   </div>
                   <div class="distribution-bar">
-                    <div class="bar-fill export" style="width: 30%"></div>
+                    <div class="bar-fill export" [style.width.%]="getDistributionPercentage('EXPORT')"></div>
                   </div>
-                  <span class="distribution-percent">30%</span>
+                  <span class="distribution-percent">{{ getDistributionPercentage('EXPORT') }}%</span>
                 </div>
 
                 <div class="distribution-item">
                   <div class="distribution-info">
                     <span class="distribution-label">Defence</span>
-                    <span class="distribution-value">125,000</span>
+                    <span class="distribution-value">{{ getDistributionValue('DEFENCE') | number }}</span>
                   </div>
                   <div class="distribution-bar">
-                    <div class="bar-fill defence" style="width: 10%"></div>
+                    <div class="bar-fill defence" [style.width.%]="getDistributionPercentage('DEFENCE')"></div>
                   </div>
-                  <span class="distribution-percent">10%</span>
+                  <span class="distribution-percent">{{ getDistributionPercentage('DEFENCE') }}%</span>
                 </div>
               </div>
             </div>
@@ -437,8 +483,9 @@
                           </div>
                           <div class="col-md-2">
                             <label class="form-label small fw-bold">Serial Range</label>
-                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollsFilters.serialSearch"
-                              (input)="applyRollsFilters()" placeholder="e.g. HG001001">
+                            <input type="text" class="form-control form-control-sm"
+                              [(ngModel)]="rollsFilters.serialSearch" (input)="applyRollsFilters()"
+                              placeholder="e.g. HG001001">
                           </div>
                           <div class="col-md-2">
                             <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearRollsFilters()">
@@ -690,7 +737,8 @@
                     </thead>
                     <tbody>
                       @for (issued of issuedData; track issued.id) {
-                      <tr [class.table-warning]="issued.status === 'IN_PROGRESS'" [class.table-success]="issued.status === 'COMPLETED'">
+                      <tr [class.table-warning]="issued.status === 'IN_PROGRESS'"
+                        [class.table-success]="issued.status === 'COMPLETED'">
                         <td>
                           {{ issued.issueDate | date:'dd-MMM-yyyy' }}
                           <br>
@@ -722,7 +770,8 @@
                         </td>
                         <td>
                           <span class="badge" [class]="getStatusClass(issued.status)">
-                            <i class="bi" [class.bi-clock]="issued.status === 'IN_PROGRESS'" [class.bi-check-circle]="issued.status === 'COMPLETED'"></i>
+                            <i class="bi" [class.bi-clock]="issued.status === 'IN_PROGRESS'"
+                              [class.bi-check-circle]="issued.status === 'COMPLETED'"></i>
                             {{ issued.status === 'IN_PROGRESS' ? 'IN PROCESS' : issued.status }}
                           </span>
                         </td>
@@ -734,7 +783,9 @@
                           <br>
                           No holograms have been issued yet.
                           <br>
-                          <small>Approved hologram requests will appear here with "In Process" status. They will automatically move to "Issued History" when the officer approves the daily register entry.</small>
+                          <small>Approved hologram requests will appear here with "In Process" status. They will
+                            automatically move to "Issued History" when the officer approves the daily register
+                            entry.</small>
                         </td>
                       </tr>
                       }
@@ -855,628 +906,617 @@
   </div>
 </div>
 
-  <!-- Usage Details Modal -->
-  @if (showUsageDetailsModal && getUsageDetailsData()) {
-  <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
-          <h5 class="modal-title">
-            <i class="bi bi-graph-up-arrow me-2"></i>
-            Usage Details - {{ selectedRollForUsageRolls?.cartoonNumber }}
-          </h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeUsageDetailsModal()"></button>
-        </div>
-        <div class="modal-body">
-          @if (getUsageDetailsData(); as usageData) {
-          
-          <!-- Roll Information Card -->
-          <div class="card mb-4" style="border-left: 4px solid #667eea;">
-            <div class="card-body">
-              <h6 class="card-title text-primary mb-3">
-                <i class="bi bi-info-circle me-2"></i>Roll Information
-              </h6>
-              <div class="row g-3">
-                <div class="col-md-3">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Roll Number</small>
-                    <strong class="font-monospace">{{ usageData.roll.rollNumber }}</strong>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Hologram Type</small>
-                    <span class="badge" [class]="getTypeClass(usageData.roll.hologramType)">
-                      {{ usageData.roll.hologramType }}
-                    </span>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Received Date</small>
-                    <strong>{{ usageData.roll.receivedDate | date:'dd-MMM-yyyy' }}</strong>
-                  </div>
-                </div>
-                <div class="col-md-3">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Status</small>
-                    <span class="badge" [class]="getStatusClass(usageData.roll.status)">
-                      {{ usageData.roll.status }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <hr class="my-3">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Serial Range</small>
-                    <strong class="font-monospace">
-                      {{ usageData.roll.fromSerial }} - {{ usageData.roll.toSerial }}
-                    </strong>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="info-item">
-                    <small class="text-muted d-block">Total Count</small>
-                    <strong class="text-primary">{{ usageData.roll.totalCount | number }} units</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Summary Statistics -->
-          <div class="row g-3 mb-4">
-            <div class="col-md-3">
-              <div class="card border-success h-100">
-                <div class="card-body text-center">
-                  <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
-                  <h3 class="mt-2 mb-1 text-success">{{ usageData.roll.availableCount | number }}</h3>
-                  <small class="text-muted">Available</small>
-                  <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-success" 
-                         [style.width.%]="(usageData.roll.availableCount / usageData.roll.totalCount) * 100">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-primary h-100">
-                <div class="card-body text-center">
-                  <i class="bi bi-arrow-up-circle-fill text-primary" style="font-size: 2rem;"></i>
-                  <h3 class="mt-2 mb-1 text-primary">{{ usageData.roll.usedCount | number }}</h3>
-                  <small class="text-muted">Used in Production</small>
-                  <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-primary" 
-                         [style.width.%]="(usageData.roll.usedCount / usageData.roll.totalCount) * 100">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-danger h-100">
-                <div class="card-body text-center">
-                  <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2rem;"></i>
-                  <h3 class="mt-2 mb-1 text-danger">{{ usageData.roll.damagedCount | number }}</h3>
-                  <small class="text-muted">Damaged/Wastage</small>
-                  <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-danger" 
-                         [style.width.%]="(usageData.roll.damagedCount / usageData.roll.totalCount) * 100">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-3">
-              <div class="card border-info h-100">
-                <div class="card-body text-center">
-                  <i class="bi bi-pie-chart-fill text-info" style="font-size: 2rem;"></i>
-                  <h3 class="mt-2 mb-1 text-info">
-                    {{ ((usageData.roll.usedCount / usageData.roll.totalCount) * 100) | number:'1.1-1' }}%
-                  </h3>
-                  <small class="text-muted">Utilization Rate</small>
-                  <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-info" 
-                         [style.width.%]="(usageData.roll.usedCount / usageData.roll.totalCount) * 100">
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Issued Details Section -->
-          <div class="card mb-4">
-            <div class="card-header" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd);">
-              <h6 class="mb-0">
-                <i class="bi bi-box-arrow-up-right me-2 text-primary"></i>
-                Issued Holograms Details
-                <span class="badge bg-primary ms-2">{{ usageData.issuedDetails.length }} Entries</span>
-              </h6>
-            </div>
-            <div class="card-body p-0">
-              @if (usageData.issuedDetails.length > 0) {
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th style="width: 12%;">Date Issued</th>
-                      <th style="width: 15%;">Reference No.</th>
-                      <th style="width: 18%;">Brand Name</th>
-                      <th style="width: 20%;">Serial Range</th>
-                      <th style="width: 10%;" class="text-end">Quantity</th>
-                      <th style="width: 15%;">Officer</th>
-                      <th style="width: 10%;" class="text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (issued of usageData.issuedDetails; track $index) {
-                    <tr>
-                      <td>
-                        <i class="bi bi-calendar-event text-primary me-1"></i>
-                        {{ issued.date | date:'dd-MMM-yyyy' }}
-                        <br>
-                        <small class="text-muted">{{ issued.date | date:'EEEE' }}</small>
-                      </td>
-                      <td>
-                        <span class="badge bg-primary">{{ issued.referenceNo }}</span>
-                      </td>
-                      <td>
-                        <strong>{{ issued.brandName }}</strong>
-                      </td>
-                      <td>
-                        <span class="font-monospace small" style="background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
-                          {{ issued.fromSerial }} - {{ issued.toSerial }}
-                        </span>
-                      </td>
-                      <td class="text-end">
-                        <strong class="text-primary">{{ issued.quantity | number }}</strong>
-                        <br>
-                        <small class="text-muted">units</small>
-                      </td>
-                      <td>
-                        <i class="bi bi-person-badge text-secondary me-1"></i>
-                        {{ issued.officerName }}
-                      </td>
-                      <td class="text-center">
-                        <span class="badge bg-success">
-                          <i class="bi bi-check-circle me-1"></i>Issued
-                        </span>
-                      </td>
-                    </tr>
-                    }
-                  </tbody>
-                  <tfoot class="table-light">
-                    <tr>
-                      <td colspan="4" class="text-end"><strong>Total Issued:</strong></td>
-                      <td class="text-end">
-                        <strong class="text-primary fs-5">{{ usageData.totalIssued | number }}</strong>
-                      </td>
-                      <td colspan="2"></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              } @else {
-              <div class="text-center py-5">
-                <i class="bi bi-inbox display-4 text-muted"></i>
-                <h6 class="text-muted mt-3">No Issued Records</h6>
-                <p class="text-muted">No holograms have been issued from this roll yet.</p>
-              </div>
-              }
-            </div>
-          </div>
-
-          <!-- Wastage/Damaged Details Section -->
-          <div class="card">
-            <div class="card-header" style="background: linear-gradient(135deg, #fee2e2, #fecaca);">
-              <h6 class="mb-0">
-                <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
-                Wastage & Damaged Holograms Details
-                <span class="badge bg-danger ms-2">{{ usageData.wastageDetails.length }} Entries</span>
-              </h6>
-            </div>
-            <div class="card-body p-0">
-              @if (usageData.wastageDetails.length > 0) {
-              <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th style="width: 12%;">Date Reported</th>
-                      <th style="width: 15%;">Reference No.</th>
-                      <th style="width: 20%;">Serial Range</th>
-                      <th style="width: 10%;" class="text-end">Quantity</th>
-                      <th style="width: 28%;">Damage Reason</th>
-                      <th style="width: 15%;">Reported By</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (wastage of usageData.wastageDetails; track $index) {
-                    <tr>
-                      <td>
-                        <i class="bi bi-calendar-x text-danger me-1"></i>
-                        {{ wastage.date | date:'dd-MMM-yyyy' }}
-                        <br>
-                        <small class="text-muted">{{ wastage.date | date:'EEEE' }}</small>
-                      </td>
-                      <td>
-                        @if (wastage.referenceNo && wastage.referenceNo !== 'N/A') {
-                          <span class="badge bg-danger">{{ wastage.referenceNo }}</span>
-                        } @else {
-                          <span class="text-muted">-</span>
-                        }
-                      </td>
-                      <td>
-                        <span class="font-monospace small" style="background: #fef2f2; padding: 4px 8px; border-radius: 4px; border: 1px solid #fecaca;">
-                          {{ wastage.fromSerial }} - {{ wastage.toSerial }}
-                        </span>
-                      </td>
-                      <td class="text-end">
-                        <strong class="text-danger">{{ wastage.quantity | number }}</strong>
-                        <br>
-                        <small class="text-muted">units</small>
-                      </td>
-                      <td>
-                        <i class="bi bi-info-circle text-warning me-1"></i>
-                        {{ wastage.reason }}
-                      </td>
-                      <td>
-                        <i class="bi bi-person-badge text-secondary me-1"></i>
-                        {{ wastage.officerName }}
-                      </td>
-                    </tr>
-                    }
-                  </tbody>
-                  <tfoot class="table-light">
-                    <tr>
-                      <td colspan="3" class="text-end"><strong>Total Wastage/Damaged:</strong></td>
-                      <td class="text-end">
-                        <strong class="text-danger fs-5">{{ usageData.totalWastage | number }}</strong>
-                      </td>
-                      <td colspan="2"></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              } @else {
-              <div class="text-center py-5">
-                <i class="bi bi-check-circle display-4 text-success"></i>
-                <h6 class="text-success mt-3">No Wastage Records</h6>
-                <p class="text-muted">No damaged or wasted holograms reported for this roll.</p>
-              </div>
-              }
-            </div>
-          </div>
-
-          }
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeUsageDetailsModal()">
-            <i class="bi bi-x-lg me-1"></i>Close
-          </button>
-          <button type="button" class="btn btn-primary">
-            <i class="bi bi-download me-1"></i>Export Report
-          </button>
-          <button type="button" class="btn btn-success">
-            <i class="bi bi-printer me-1"></i>Print
-          </button>
-        </div>
+<!-- Usage Details Modal -->
+@if (showUsageDetailsModal && getUsageDetailsData()) {
+<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+        <h5 class="modal-title">
+          <i class="bi bi-graph-up-arrow me-2"></i>
+          Usage Details - {{ selectedRollForUsageRolls?.cartoonNumber }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeUsageDetailsModal()"></button>
       </div>
-    </div>
-  </div>
-  }
+      <div class="modal-body">
+        @if (getUsageDetailsData(); as usageData) {
 
-  @if (showSerialDetailsModal) {
-  <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header bg-info text-white">
-          <h5 class="modal-title">
-            <i class="bi bi-list-ol me-2"></i>
-            Serial Numbers Details - {{ selectedSerialData?.cartoonNumber }}
-          </h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeSerialDetailsModal()"></button>
-        </div>
-        <div class="modal-body p-0">
-          @if (selectedSerialData) {
-
-          <!-- Summary Cards -->
-          <div class="container-fluid p-3 bg-light">
+        <!-- Roll Information Card -->
+        <div class="card mb-4" style="border-left: 4px solid #667eea;">
+          <div class="card-body">
+            <h6 class="card-title text-primary mb-3">
+              <i class="bi bi-info-circle me-2"></i>Roll Information
+            </h6>
             <div class="row g-3">
               <div class="col-md-3">
-                <div class="card border-primary">
-                  <div class="card-body text-center">
-                    <h4 class="text-primary">{{ selectedSerialData.totalCount | number }}</h4>
-                    <small class="text-muted">Total Serial Numbers</small>
-                  </div>
+                <div class="info-item">
+                  <small class="text-muted d-block">Roll Number</small>
+                  <strong class="font-monospace">{{ usageData.roll.rollNumber }}</strong>
                 </div>
               </div>
               <div class="col-md-3">
-                <div class="card border-success">
-                  <div class="card-body text-center">
-                    <h4 class="text-success">{{ selectedSerialData.availableCount | number }}</h4>
-                    <small class="text-muted">Available</small>
-                  </div>
+                <div class="info-item">
+                  <small class="text-muted d-block">Hologram Type</small>
+                  <span class="badge" [class]="getTypeClass(usageData.roll.hologramType)">
+                    {{ usageData.roll.hologramType }}
+                  </span>
                 </div>
               </div>
               <div class="col-md-3">
-                <div class="card border-warning">
-                  <div class="card-body text-center">
-                    <h4 class="text-warning">{{ selectedSerialData.usedCount | number }}</h4>
-                    <small class="text-muted">Used</small>
-                  </div>
+                <div class="info-item">
+                  <small class="text-muted d-block">Received Date</small>
+                  <strong>{{ usageData.roll.receivedDate | date:'dd-MMM-yyyy' }}</strong>
                 </div>
               </div>
               <div class="col-md-3">
-                <div class="card border-danger">
-                  <div class="card-body text-center">
-                    <h4 class="text-danger">{{ selectedSerialData.damagedCount | number }}</h4>
-                    <small class="text-muted">Damaged</small>
+                <div class="info-item">
+                  <small class="text-muted d-block">Status</small>
+                  <span class="badge" [class]="getStatusClass(usageData.roll.status)">
+                    {{ usageData.roll.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <hr class="my-3">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="info-item">
+                  <small class="text-muted d-block">Serial Range</small>
+                  <strong class="font-monospace">
+                    {{ usageData.roll.fromSerial }} - {{ usageData.roll.toSerial }}
+                  </strong>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="info-item">
+                  <small class="text-muted d-block">Total Count</small>
+                  <strong class="text-primary">{{ usageData.roll.totalCount | number }} units</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="card border-success h-100">
+              <div class="card-body text-center">
+                <i class="bi bi-check-circle-fill text-success" style="font-size: 2rem;"></i>
+                <h3 class="mt-2 mb-1 text-success">{{ usageData.roll.availableCount | number }}</h3>
+                <small class="text-muted">Available</small>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div class="progress-bar bg-success"
+                    [style.width.%]="(usageData.roll.availableCount / usageData.roll.totalCount) * 100">
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <!-- Serial Numbers Grid -->
-          <div class="container-fluid p-3">
-            <div class="row">
-              <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h6 class="mb-0">Serial Numbers Status</h6>
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn" [class.btn-primary]="serialViewMode === 'all'"
-                      [class.btn-outline-primary]="serialViewMode !== 'all'" (click)="setSerialViewMode('all')">
-                      All ({{ selectedSerialData.totalCount }})
-                    </button>
-                    <button class="btn" [class.btn-success]="serialViewMode === 'available'"
-                      [class.btn-outline-success]="serialViewMode !== 'available'"
-                      (click)="setSerialViewMode('available')">
-                      Available ({{ selectedSerialData.availableCount }})
-                    </button>
-                    <button class="btn" [class.btn-warning]="serialViewMode === 'used'"
-                      [class.btn-outline-warning]="serialViewMode !== 'used'" (click)="setSerialViewMode('used')">
-                      Used ({{ selectedSerialData.usedCount }})
-                    </button>
-                    <button class="btn" [class.btn-danger]="serialViewMode === 'damaged'"
-                      [class.btn-outline-danger]="serialViewMode !== 'damaged'" (click)="setSerialViewMode('damaged')">
-                      Damaged ({{ selectedSerialData.damagedCount }})
-                    </button>
+          <div class="col-md-3">
+            <div class="card border-primary h-100">
+              <div class="card-body text-center">
+                <i class="bi bi-arrow-up-circle-fill text-primary" style="font-size: 2rem;"></i>
+                <h3 class="mt-2 mb-1 text-primary">{{ usageData.roll.usedCount | number }}</h3>
+                <small class="text-muted">Used in Production</small>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div class="progress-bar bg-primary"
+                    [style.width.%]="(usageData.roll.usedCount / usageData.roll.totalCount) * 100">
                   </div>
                 </div>
-                
-                <!-- Filter Section -->
-                <div class="card mb-3 border-info">
-                  <div class="card-body p-3">
-                    <div class="row g-3 align-items-end">
-                      <div class="col-md-3">
-                        <label class="form-label small fw-bold mb-1">
-                          <i class="bi bi-file-text me-1"></i>Brand Reference No
-                        </label>
-                        <div class="position-relative">
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
-                            [(ngModel)]="serialFilters.brandReferenceNo"
-                            (input)="onBrandReferenceNoInput()"
-                            placeholder="Type reference no..."
-                            autocomplete="off">
-                          @if (brandReferenceNoSuggestions.length > 0 && serialFilters.brandReferenceNo) {
-                          <div class="autocomplete-dropdown">
-                            @for (suggestion of brandReferenceNoSuggestions; track suggestion) {
-                            <div class="autocomplete-item" (click)="selectBrandReferenceNo(suggestion)">
-                              <i class="bi bi-file-text me-2 text-info"></i>{{ suggestion }}
-                            </div>
-                            }
-                          </div>
-                          }
-                        </div>
-                      </div>
-                      <div class="col-md-3">
-                        <label class="form-label small fw-bold mb-1">
-                          <i class="bi bi-tag me-1"></i>Brand Name
-                        </label>
-                        <div class="position-relative">
-                          <input 
-                            type="text" 
-                            class="form-control form-control-sm" 
-                            [(ngModel)]="serialFilters.brandName"
-                            (input)="onBrandNameInput()"
-                            placeholder="Type brand name..."
-                            autocomplete="off">
-                          @if (brandNameSuggestions.length > 0 && serialFilters.brandName) {
-                          <div class="autocomplete-dropdown">
-                            @for (suggestion of brandNameSuggestions; track suggestion) {
-                            <div class="autocomplete-item" (click)="selectBrandName(suggestion)">
-                              <i class="bi bi-tag me-2 text-success"></i>{{ suggestion }}
-                            </div>
-                            }
-                          </div>
-                          }
-                        </div>
-                      </div>
-                      <div class="col-md-2">
-                        <label class="form-label small fw-bold mb-1">
-                          <i class="bi bi-123 me-1"></i>Quantity
-                        </label>
-                        <input 
-                          type="number" 
-                          class="form-control form-control-sm" 
-                          [(ngModel)]="serialFilters.qty"
-                          (input)="applySerialFilters()"
-                          placeholder="Enter qty..."
-                          min="1">
-                      </div>
-                      <div class="col-md-4">
-                        <button class="btn btn-outline-secondary btn-sm me-2" (click)="clearSerialFilters(); applySerialFilters()">
-                          <i class="bi bi-x-circle me-1"></i>Clear Filters
-                        </button>
-                        <button class="btn btn-info btn-sm" (click)="applySerialFilters()">
-                          <i class="bi bi-search me-1"></i>Apply
-                        </button>
-                      </div>
-                    </div>
-                    @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty) {
-                    <div class="mt-2 p-2 bg-light rounded">
-                      <small class="text-muted">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Active Filters: 
-                        @if (serialFilters.brandReferenceNo) {
-                        <span class="badge bg-info ms-1">Ref: {{ serialFilters.brandReferenceNo }}</span>
-                        }
-                        @if (serialFilters.brandName) {
-                        <span class="badge bg-success ms-1">Brand: {{ serialFilters.brandName }}</span>
-                        }
-                        @if (serialFilters.qty) {
-                        <span class="badge bg-primary ms-1">Qty: {{ serialFilters.qty }}</span>
-                        }
-                      </small>
-                    </div>
-                    }
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-danger h-100">
+              <div class="card-body text-center">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 2rem;"></i>
+                <h3 class="mt-2 mb-1 text-danger">{{ usageData.roll.damagedCount | number }}</h3>
+                <small class="text-muted">Damaged/Wastage</small>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div class="progress-bar bg-danger"
+                    [style.width.%]="(usageData.roll.damagedCount / usageData.roll.totalCount) * 100">
                   </div>
                 </div>
-
-                <!-- Serial Ranges Display -->
-                <div class="serial-ranges-container" style="max-height: 400px; overflow-y: auto;">
-                  <div class="row g-3">
-                    @for (range of getFilteredSerialRanges(); track range.fromSerial) {
-                    <div class="col-12">
-                      <div class="range-card" [class]="getRangeStatusClass(range.status)">
-                        <div class="row align-items-center">
-                          <div class="col-md-4">
-                            <div class="range-info">
-                              <div class="range-serials">
-                                <i class="bi" [class]="getRangeStatusIcon(range.status)" 
-                                   [class.text-success]="range.status === 'AVAILABLE'"
-                                   [class.text-warning]="range.status === 'USED'"
-                                   [class.text-danger]="range.status === 'DAMAGED'"></i>
-                                <span class="font-monospace fw-bold">{{ range.fromSerial }}</span>
-                                <span class="mx-2">to</span>
-                                <span class="font-monospace fw-bold">{{ range.toSerial }}</span>
-                              </div>
-                              <div class="range-count">
-                                <span class="badge" [class]="getSerialBadgeClass(range.status)">
-                                  {{ range.count | number }} units
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div class="col-md-4">
-                            <div class="range-status">
-                              <div class="status-label">
-                                <strong>{{ range.status }}</strong>
-                              </div>
-                              <div class="status-description text-muted">
-                                {{ range.description }}
-                              </div>
-                            </div>
-                          </div>
-                          <div class="col-md-4">
-                            <div class="range-details">
-                              @if (range.usedDate) {
-                              <div class="detail-item">
-                                <i class="bi bi-calendar-check text-primary me-1"></i>
-                                <small>Used: {{ range.usedDate | date:'dd-MMM-yyyy' }}</small>
-                              </div>
-                              }
-                              @if (range.damageDate) {
-                              <div class="detail-item">
-                                <i class="bi bi-exclamation-triangle text-danger me-1"></i>
-                                <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
-                              </div>
-                              }
-                              @if (range.referenceNo) {
-                              <div class="detail-item">
-                                <i class="bi bi-file-text text-info me-1"></i>
-                                <small>Request Ref: {{ range.referenceNo }}</small>
-                              </div>
-                              }
-                              @if (range.brandDetails) {
-                              <div class="detail-item">
-                                <i class="bi bi-tag text-success me-1"></i>
-                                <small>Brand: {{ range.brandDetails }}</small>
-                              </div>
-                              }
-                              @if (range.bottleSize) {
-                              <div class="detail-item">
-                                <i class="bi bi-cup text-primary me-1"></i>
-                                <small>Bottle Size: {{ range.bottleSize }}</small>
-                              </div>
-                              }
-                              @if (range.productionLine) {
-                              <div class="detail-item">
-                                <i class="bi bi-gear text-secondary me-1"></i>
-                                <small>{{ range.productionLine }}</small>
-                              </div>
-                              }
-                              @if (range.damageReason) {
-                              <div class="detail-item">
-                                <i class="bi bi-info-circle text-warning me-1"></i>
-                                <small>{{ range.damageReason }}</small>
-                              </div>
-                              }
-                              @if (range.reportedBy) {
-                              <div class="detail-item">
-                                <i class="bi bi-person text-muted me-1"></i>
-                                <small>Reported by: {{ range.reportedBy }}</small>
-                              </div>
-                              }
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    } @empty {
-                    <div class="col-12">
-                      <div class="text-center py-4">
-                        <i class="bi bi-inbox display-4 text-muted"></i>
-                        <h5 class="text-muted mt-2">No ranges found</h5>
-                        <p class="text-muted">No serial ranges match the selected filter.</p>
-                      </div>
-                    </div>
-                    }
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card border-info h-100">
+              <div class="card-body text-center">
+                <i class="bi bi-pie-chart-fill text-info" style="font-size: 2rem;"></i>
+                <h3 class="mt-2 mb-1 text-info">
+                  {{ ((usageData.roll.usedCount / usageData.roll.totalCount) * 100) | number:'1.1-1' }}%
+                </h3>
+                <small class="text-muted">Utilization Rate</small>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div class="progress-bar bg-info"
+                    [style.width.%]="(usageData.roll.usedCount / usageData.roll.totalCount) * 100">
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                <!-- Pagination for large datasets -->
-                @if (getTotalSerialPages() > 1) {
-                <div class="d-flex justify-content-center mt-3">
-                  <nav>
-                    <ul class="pagination pagination-sm">
-                      <li class="page-item" [class.disabled]="currentSerialPage === 1">
-                        <button class="page-link" (click)="setSerialPage(currentSerialPage - 1)">Previous</button>
-                      </li>
-                      @for (page of getSerialPageNumbers(); track page) {
-                      <li class="page-item" [class.active]="page === currentSerialPage">
-                        <button class="page-link" (click)="setSerialPage(page)">{{ page }}</button>
-                      </li>
+        <!-- Issued Details Section -->
+        <div class="card mb-4">
+          <div class="card-header" style="background: linear-gradient(135deg, #e0f2fe, #bae6fd);">
+            <h6 class="mb-0">
+              <i class="bi bi-box-arrow-up-right me-2 text-primary"></i>
+              Issued Holograms Details
+              <span class="badge bg-primary ms-2">{{ usageData.issuedDetails.length }} Entries</span>
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            @if (usageData.issuedDetails.length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 12%;">Date Issued</th>
+                    <th style="width: 15%;">Reference No.</th>
+                    <th style="width: 18%;">Brand Name</th>
+                    <th style="width: 20%;">Serial Range</th>
+                    <th style="width: 10%;" class="text-end">Quantity</th>
+                    <th style="width: 15%;">Officer</th>
+                    <th style="width: 10%;" class="text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (issued of usageData.issuedDetails; track $index) {
+                  <tr>
+                    <td>
+                      <i class="bi bi-calendar-event text-primary me-1"></i>
+                      {{ issued.date | date:'dd-MMM-yyyy' }}
+                      <br>
+                      <small class="text-muted">{{ issued.date | date:'EEEE' }}</small>
+                    </td>
+                    <td>
+                      <span class="badge bg-primary">{{ issued.referenceNo }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ issued.brandName }}</strong>
+                    </td>
+                    <td>
+                      <span class="font-monospace small"
+                        style="background: #f8fafc; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                        {{ issued.fromSerial }} - {{ issued.toSerial }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <strong class="text-primary">{{ issued.quantity | number }}</strong>
+                      <br>
+                      <small class="text-muted">units</small>
+                    </td>
+                    <td>
+                      <i class="bi bi-person-badge text-secondary me-1"></i>
+                      {{ issued.officerName }}
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-success">
+                        <i class="bi bi-check-circle me-1"></i>Issued
+                      </span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="4" class="text-end"><strong>Total Issued:</strong></td>
+                    <td class="text-end">
+                      <strong class="text-primary fs-5">{{ usageData.totalIssued | number }}</strong>
+                    </td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            } @else {
+            <div class="text-center py-5">
+              <i class="bi bi-inbox display-4 text-muted"></i>
+              <h6 class="text-muted mt-3">No Issued Records</h6>
+              <p class="text-muted">No holograms have been issued from this roll yet.</p>
+            </div>
+            }
+          </div>
+        </div>
+
+        <!-- Wastage/Damaged Details Section -->
+        <div class="card">
+          <div class="card-header" style="background: linear-gradient(135deg, #fee2e2, #fecaca);">
+            <h6 class="mb-0">
+              <i class="bi bi-exclamation-triangle me-2 text-danger"></i>
+              Wastage & Damaged Holograms Details
+              <span class="badge bg-danger ms-2">{{ usageData.wastageDetails.length }} Entries</span>
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            @if (usageData.wastageDetails.length > 0) {
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 12%;">Date Reported</th>
+                    <th style="width: 15%;">Reference No.</th>
+                    <th style="width: 20%;">Serial Range</th>
+                    <th style="width: 10%;" class="text-end">Quantity</th>
+                    <th style="width: 28%;">Damage Reason</th>
+                    <th style="width: 15%;">Reported By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (wastage of usageData.wastageDetails; track $index) {
+                  <tr>
+                    <td>
+                      <i class="bi bi-calendar-x text-danger me-1"></i>
+                      {{ wastage.date | date:'dd-MMM-yyyy' }}
+                      <br>
+                      <small class="text-muted">{{ wastage.date | date:'EEEE' }}</small>
+                    </td>
+                    <td>
+                      @if (wastage.referenceNo && wastage.referenceNo !== 'N/A') {
+                      <span class="badge bg-danger">{{ wastage.referenceNo }}</span>
+                      } @else {
+                      <span class="text-muted">-</span>
                       }
-                      <li class="page-item" [class.disabled]="currentSerialPage === getTotalSerialPages()">
-                        <button class="page-link" (click)="setSerialPage(currentSerialPage + 1)">Next</button>
-                      </li>
-                    </ul>
-                  </nav>
-                </div>
-                }
-              </div>
+                    </td>
+                    <td>
+                      <span class="font-monospace small"
+                        style="background: #fef2f2; padding: 4px 8px; border-radius: 4px; border: 1px solid #fecaca;">
+                        {{ wastage.fromSerial }} - {{ wastage.toSerial }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <strong class="text-danger">{{ wastage.quantity | number }}</strong>
+                      <br>
+                      <small class="text-muted">units</small>
+                    </td>
+                    <td>
+                      <i class="bi bi-info-circle text-warning me-1"></i>
+                      {{ wastage.reason }}
+                    </td>
+                    <td>
+                      <i class="bi bi-person-badge text-secondary me-1"></i>
+                      {{ wastage.officerName }}
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="3" class="text-end"><strong>Total Wastage/Damaged:</strong></td>
+                    <td class="text-end">
+                      <strong class="text-danger fs-5">{{ usageData.totalWastage | number }}</strong>
+                    </td>
+                    <td colspan="2"></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
+            } @else {
+            <div class="text-center py-5">
+              <i class="bi bi-check-circle display-4 text-success"></i>
+              <h6 class="text-success mt-3">No Wastage Records</h6>
+              <p class="text-muted">No damaged or wasted holograms reported for this roll.</p>
+            </div>
+            }
           </div>
-          }
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" (click)="closeSerialDetailsModal()">
-            <i class="bi bi-x-lg me-1"></i>
-            Close
-          </button>
-          <button type="button" class="btn btn-primary" (click)="exportSerialNumbers()">
-            <i class="bi bi-download me-1"></i>
-            Export Serial Numbers
-          </button>
-        </div>
+
+        }
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeUsageDetailsModal()">
+          <i class="bi bi-x-lg me-1"></i>Close
+        </button>
+        <button type="button" class="btn btn-primary">
+          <i class="bi bi-download me-1"></i>Export Report
+        </button>
+        <button type="button" class="btn btn-success">
+          <i class="bi bi-printer me-1"></i>Print
+        </button>
       </div>
     </div>
   </div>
-  }
+</div>
+}
+
+@if (showSerialDetailsModal) {
+<div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title">
+          <i class="bi bi-list-ol me-2"></i>
+          Serial Numbers Details - {{ selectedSerialData?.cartoonNumber }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeSerialDetailsModal()"></button>
+      </div>
+      <div class="modal-body p-0">
+        @if (selectedSerialData) {
+
+        <!-- Summary Cards -->
+        <div class="container-fluid p-3 bg-light">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="card border-primary">
+                <div class="card-body text-center">
+                  <h4 class="text-primary">{{ selectedSerialData.totalCount | number }}</h4>
+                  <small class="text-muted">Total Serial Numbers</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-success">
+                <div class="card-body text-center">
+                  <h4 class="text-success">{{ selectedSerialData.availableCount | number }}</h4>
+                  <small class="text-muted">Available</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-warning">
+                <div class="card-body text-center">
+                  <h4 class="text-warning">{{ selectedSerialData.usedCount | number }}</h4>
+                  <small class="text-muted">Used</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="card border-danger">
+                <div class="card-body text-center">
+                  <h4 class="text-danger">{{ selectedSerialData.damagedCount | number }}</h4>
+                  <small class="text-muted">Damaged</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Serial Numbers Grid -->
+        <div class="container-fluid p-3">
+          <div class="row">
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Serial Numbers Status</h6>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn" [class.btn-primary]="serialViewMode === 'all'"
+                    [class.btn-outline-primary]="serialViewMode !== 'all'" (click)="setSerialViewMode('all')">
+                    All ({{ selectedSerialData.totalCount }})
+                  </button>
+                  <button class="btn" [class.btn-success]="serialViewMode === 'available'"
+                    [class.btn-outline-success]="serialViewMode !== 'available'"
+                    (click)="setSerialViewMode('available')">
+                    Available ({{ selectedSerialData.availableCount }})
+                  </button>
+                  <button class="btn" [class.btn-warning]="serialViewMode === 'used'"
+                    [class.btn-outline-warning]="serialViewMode !== 'used'" (click)="setSerialViewMode('used')">
+                    Used ({{ selectedSerialData.usedCount }})
+                  </button>
+                  <button class="btn" [class.btn-danger]="serialViewMode === 'damaged'"
+                    [class.btn-outline-danger]="serialViewMode !== 'damaged'" (click)="setSerialViewMode('damaged')">
+                    Damaged ({{ selectedSerialData.damagedCount }})
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter Section -->
+              <div class="card mb-3 border-info">
+                <div class="card-body p-3">
+                  <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-file-text me-1"></i>Brand Reference No
+                      </label>
+                      <div class="position-relative">
+                        <input type="text" class="form-control form-control-sm"
+                          [(ngModel)]="serialFilters.brandReferenceNo" (input)="onBrandReferenceNoInput()"
+                          placeholder="Type reference no..." autocomplete="off">
+                        @if (brandReferenceNoSuggestions.length > 0 && serialFilters.brandReferenceNo) {
+                        <div class="autocomplete-dropdown">
+                          @for (suggestion of brandReferenceNoSuggestions; track suggestion) {
+                          <div class="autocomplete-item" (click)="selectBrandReferenceNo(suggestion)">
+                            <i class="bi bi-file-text me-2 text-info"></i>{{ suggestion }}
+                          </div>
+                          }
+                        </div>
+                        }
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-tag me-1"></i>Brand Name
+                      </label>
+                      <div class="position-relative">
+                        <input type="text" class="form-control form-control-sm" [(ngModel)]="serialFilters.brandName"
+                          (input)="onBrandNameInput()" placeholder="Type brand name..." autocomplete="off">
+                        @if (brandNameSuggestions.length > 0 && serialFilters.brandName) {
+                        <div class="autocomplete-dropdown">
+                          @for (suggestion of brandNameSuggestions; track suggestion) {
+                          <div class="autocomplete-item" (click)="selectBrandName(suggestion)">
+                            <i class="bi bi-tag me-2 text-success"></i>{{ suggestion }}
+                          </div>
+                          }
+                        </div>
+                        }
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-123 me-1"></i>Quantity
+                      </label>
+                      <input type="number" class="form-control form-control-sm" [(ngModel)]="serialFilters.qty"
+                        (input)="applySerialFilters()" placeholder="Enter qty..." min="1">
+                    </div>
+                    <div class="col-md-4">
+                      <button class="btn btn-outline-secondary btn-sm me-2"
+                        (click)="clearSerialFilters(); applySerialFilters()">
+                        <i class="bi bi-x-circle me-1"></i>Clear Filters
+                      </button>
+                      <button class="btn btn-info btn-sm" (click)="applySerialFilters()">
+                        <i class="bi bi-search me-1"></i>Apply
+                      </button>
+                    </div>
+                  </div>
+                  @if (serialFilters.brandReferenceNo || serialFilters.brandName || serialFilters.qty) {
+                  <div class="mt-2 p-2 bg-light rounded">
+                    <small class="text-muted">
+                      <i class="bi bi-info-circle me-1"></i>
+                      Active Filters:
+                      @if (serialFilters.brandReferenceNo) {
+                      <span class="badge bg-info ms-1">Ref: {{ serialFilters.brandReferenceNo }}</span>
+                      }
+                      @if (serialFilters.brandName) {
+                      <span class="badge bg-success ms-1">Brand: {{ serialFilters.brandName }}</span>
+                      }
+                      @if (serialFilters.qty) {
+                      <span class="badge bg-primary ms-1">Qty: {{ serialFilters.qty }}</span>
+                      }
+                    </small>
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Serial Ranges Display -->
+              <div class="serial-ranges-container" style="max-height: 400px; overflow-y: auto;">
+                <div class="row g-3">
+                  @for (range of getFilteredSerialRanges(); track range.fromSerial) {
+                  <div class="col-12">
+                    <div class="range-card" [class]="getRangeStatusClass(range.status)">
+                      <div class="row align-items-center">
+                        <div class="col-md-4">
+                          <div class="range-info">
+                            <div class="range-serials">
+                              <i class="bi" [class]="getRangeStatusIcon(range.status)"
+                                [class.text-success]="range.status === 'AVAILABLE'"
+                                [class.text-warning]="range.status === 'USED'"
+                                [class.text-danger]="range.status === 'DAMAGED'"></i>
+                              <span class="font-monospace fw-bold">{{ range.fromSerial }}</span>
+                              <span class="mx-2">to</span>
+                              <span class="font-monospace fw-bold">{{ range.toSerial }}</span>
+                            </div>
+                            <div class="range-count">
+                              <span class="badge" [class]="getSerialBadgeClass(range.status)">
+                                {{ range.count | number }} units
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="range-status">
+                            <div class="status-label">
+                              <strong>{{ range.status }}</strong>
+                            </div>
+                            <div class="status-description text-muted">
+                              {{ range.description }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-4">
+                          <div class="range-details">
+                            @if (range.usedDate) {
+                            <div class="detail-item">
+                              <i class="bi bi-calendar-check text-primary me-1"></i>
+                              <small>Used: {{ range.usedDate | date:'dd-MMM-yyyy' }}</small>
+                            </div>
+                            }
+                            @if (range.damageDate) {
+                            <div class="detail-item">
+                              <i class="bi bi-exclamation-triangle text-danger me-1"></i>
+                              <small>Damaged: {{ range.damageDate | date:'dd-MMM-yyyy' }}</small>
+                            </div>
+                            }
+                            @if (range.referenceNo) {
+                            <div class="detail-item">
+                              <i class="bi bi-file-text text-info me-1"></i>
+                              <small>Request Ref: {{ range.referenceNo }}</small>
+                            </div>
+                            }
+                            @if (range.brandDetails) {
+                            <div class="detail-item">
+                              <i class="bi bi-tag text-success me-1"></i>
+                              <small>Brand: {{ range.brandDetails }}</small>
+                            </div>
+                            }
+                            @if (range.bottleSize) {
+                            <div class="detail-item">
+                              <i class="bi bi-cup text-primary me-1"></i>
+                              <small>Bottle Size: {{ range.bottleSize }}</small>
+                            </div>
+                            }
+                            @if (range.productionLine) {
+                            <div class="detail-item">
+                              <i class="bi bi-gear text-secondary me-1"></i>
+                              <small>{{ range.productionLine }}</small>
+                            </div>
+                            }
+                            @if (range.damageReason) {
+                            <div class="detail-item">
+                              <i class="bi bi-info-circle text-warning me-1"></i>
+                              <small>{{ range.damageReason }}</small>
+                            </div>
+                            }
+                            @if (range.reportedBy) {
+                            <div class="detail-item">
+                              <i class="bi bi-person text-muted me-1"></i>
+                              <small>Reported by: {{ range.reportedBy }}</small>
+                            </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  } @empty {
+                  <div class="col-12">
+                    <div class="text-center py-4">
+                      <i class="bi bi-inbox display-4 text-muted"></i>
+                      <h5 class="text-muted mt-2">No ranges found</h5>
+                      <p class="text-muted">No serial ranges match the selected filter.</p>
+                    </div>
+                  </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Pagination for large datasets -->
+              @if (getTotalSerialPages() > 1) {
+              <div class="d-flex justify-content-center mt-3">
+                <nav>
+                  <ul class="pagination pagination-sm">
+                    <li class="page-item" [class.disabled]="currentSerialPage === 1">
+                      <button class="page-link" (click)="setSerialPage(currentSerialPage - 1)">Previous</button>
+                    </li>
+                    @for (page of getSerialPageNumbers(); track page) {
+                    <li class="page-item" [class.active]="page === currentSerialPage">
+                      <button class="page-link" (click)="setSerialPage(page)">{{ page }}</button>
+                    </li>
+                    }
+                    <li class="page-item" [class.disabled]="currentSerialPage === getTotalSerialPages()">
+                      <button class="page-link" (click)="setSerialPage(currentSerialPage + 1)">Next</button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+              }
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeSerialDetailsModal()">
+          <i class="bi bi-x-lg me-1"></i>
+          Close
+        </button>
+        <button type="button" class="btn btn-primary" (click)="exportSerialNumbers()">
+          <i class="bi bi-download me-1"></i>
+          Export Serial Numbers
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+}

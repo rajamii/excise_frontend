@@ -174,18 +174,18 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   serialViewMode: 'all' | 'available' | 'used' | 'damaged' = 'all';
   currentSerialPage: number = 1;
   serialPageSize: number = 50;
-  
+
   // Serial Details Filters
   serialFilters: {
     brandReferenceNo: string;
     brandName: string;
     qty: number | null;
   } = {
-    brandReferenceNo: '',
-    brandName: '',
-    qty: null
-  };
-  
+      brandReferenceNo: '',
+      brandName: '',
+      qty: null
+    };
+
   // Autocomplete suggestions
   brandReferenceNoSuggestions: string[] = [];
   brandNameSuggestions: string[] = [];
@@ -217,12 +217,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     dateTo: string;
     serialSearch: string;
   } = {
-    rollStatus: '',
-    hologramType: '',
-    dateFrom: '',
-    dateTo: '',
-    serialSearch: ''
-  };
+      rollStatus: '',
+      hologramType: '',
+      dateFrom: '',
+      dateTo: '',
+      serialSearch: ''
+    };
 
 
 
@@ -255,14 +255,14 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadAllData();
-    
+
     // Subscribe to request updates from other components
     this.requestUpdateSubscription = this.hologramService.requestUpdate$.subscribe(() => {
       console.log('📢 Received request update notification - reloading issued data');
       this.loadIssuedData();
       this.loadRollsData(); // Also reload rolls to update available counts
     });
-    
+
     // Subscribe to daily register updates from other components
     this.dailyRegisterUpdateSubscription = this.hologramService.dailyRegisterUpdate$.subscribe(() => {
       console.log('📢 Received daily register update notification - reloading history data');
@@ -287,7 +287,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // Note: loadAvailableData() is now called inside loadRollsData() after data is loaded
     this.loadIssuedData();
     this.loadHistoryData();
-    
+
     // Force change detection to ensure UI updates
     setTimeout(() => {
       // This ensures the UI reflects the new data order
@@ -303,7 +303,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.hologramService.getRollsDetails().subscribe({
       next: (apiRolls) => {
         console.log('✅ Loaded rolls from API:', apiRolls);
-        
+
         // Transform API data to component format
         this.rollsData = apiRolls.map((roll: any) => ({
           id: roll.id,
@@ -322,51 +322,51 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           usageHistory: roll.usageHistory || roll.usage_history || [],
           available_range: roll.available_range || roll.availableRange // Add this field!
         }));
-        
+
         // Sort by received date (newest first) and then by ID (newest first)
         this.rollsData.sort((a: any, b: any) => {
           const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
           const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
-          
+
           if (dateB !== dateA) {
             return dateB - dateA; // Newer date first
           }
-          
+
           return (b.id || 0) - (a.id || 0); // Newer ID first
         });
-        
+
         // Also sync to localStorage for offline capability
         localStorage.setItem('hologramOverviewRolls', JSON.stringify(this.rollsData));
-        
+
         // Apply filters after loading
         this.applyRollsFilters();
-        
+
         // Generate available data from rolls
         this.loadAvailableData();
-        
+
         console.log('📊 Rolls data loaded:', this.rollsData.length, 'rolls');
       },
       error: (error) => {
         console.error('❌ Error loading rolls from API:', error);
-        
+
         // Fallback to localStorage if API fails
         const savedRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
         this.rollsData = savedRolls.sort((a: any, b: any) => {
           const dateA = new Date(a.receivedDate || '2024-01-01').getTime();
           const dateB = new Date(b.receivedDate || '2024-01-01').getTime();
-          
+
           if (dateB !== dateA) {
             return dateB - dateA;
           }
-          
+
           return (b.id || 0) - (a.id || 0);
         });
-        
+
         this.applyRollsFilters();
-        
+
         // Generate available data from rolls (even in fallback mode)
         this.loadAvailableData();
-        
+
         console.log('⚠️ Using localStorage fallback:', this.rollsData.length, 'rolls');
       }
     });
@@ -381,7 +381,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         // Use available_range from backend if available
         let availableRange: string;
         let nextSerial: string;
-        
+
         // CRITICAL FIX: Handle completed rolls (availableCount = 0)
         if (roll.availableCount === 0 || roll.status === 'COMPLETED') {
           // Roll is fully used - show "None" for available range
@@ -390,7 +390,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         } else if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
           // Use the available_range from backend (e.g., "101-1000" or "1-49, 101-300")
           availableRange = roll.available_range.replace(',', ' -'); // Format for display
-          
+
           // Get the first available serial from the range
           const firstRange = roll.available_range.split(',')[0].trim();
           if (firstRange.includes('-')) {
@@ -402,26 +402,26 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           // Fallback: Calculate manually
           const fromSerialNum = this.extractSerialNumber(roll.fromSerial);
           const prefix = roll.fromSerial.replace(/\d+$/, '');
-          
+
           // Calculate next available serial (after used ones)
           const nextSerialNum = fromSerialNum + roll.usedCount + roll.damagedCount;
           nextSerial = prefix + nextSerialNum.toString().padStart(6, '0');
-          
+
           // Available range is from next serial to end serial
           availableRange = `${nextSerial} - ${roll.toSerial}`;
         }
-        
+
         // Calculate percentage of available
-        const percentage = roll.totalCount > 0 
-          ? (roll.availableCount / roll.totalCount) * 100 
+        const percentage = roll.totalCount > 0
+          ? (roll.availableCount / roll.totalCount) * 100
           : 0;
-        
+
         // Determine display status dynamically based on database status
         // AVAILABLE: Roll has holograms available and is not assigned to any request
         // IN_USE: Roll is assigned to a request (after allocation, before/during Daily Register)
         // COMPLETED: Roll has no holograms left (availableCount = 0)
         let displayStatus: 'AVAILABLE' | 'IN_USE' | 'COMPLETED' = 'AVAILABLE';
-        
+
         // Use the status from database (backend manages this)
         if (roll.status === 'COMPLETED' || roll.availableCount === 0) {
           // Roll is fully used - show as COMPLETED so users can see usage history
@@ -433,7 +433,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           // Roll is AVAILABLE (has holograms and not assigned)
           displayStatus = 'AVAILABLE';
         }
-        
+
         return {
           id: roll.id,
           cartoonNumber: roll.cartoonNumber,
@@ -448,13 +448,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         } as AvailableHologram;
       })
       .sort((a, b) => b.id - a.id); // Sort by ID (newest first)
-    
+
     // Also sync to localStorage for offline capability
     localStorage.setItem('hologramOverviewAvailable', JSON.stringify(this.availableData));
-    
+
     console.log('📊 Available data generated from rolls:', this.availableData.length, 'available');
   }
-  
+
   // Helper method to extract serial number from serial string
   private extractSerialNumber(serial: string): number {
     const match = serial.match(/\d+$/);
@@ -464,16 +464,16 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   loadIssuedData(): void {
     // Load issued holograms from database (requests with rolls_assigned populated)
     // These are requests in "In Use" status (after allocation, before daily register completion)
-    
+
     console.log('🔍 Loading issued data...');
     console.log('🔍 Current issuedData length:', this.issuedData.length);
     console.log('🔍 Calling hologramService.getRequestsWithAllocatedRolls()...');
-    
+
     this.hologramService.getRequestsWithAllocatedRolls().subscribe({
       next: (requests) => {
         console.log('✅ Loaded requests with allocated rolls:', requests);
         console.log('📊 Total requests received:', requests.length);
-        
+
         // Log each request for debugging
         requests.forEach((req: any, index: number) => {
           console.log(`Request ${index + 1}:`, {
@@ -487,82 +487,82 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             rolls_assigned_length: req.rolls_assigned?.length || 0
           });
         });
-        
+
         // Transform API data to IssuedHologram format
         // Group multiple rolls by reference number (one row per request)
         this.issuedData = [];
-        
+
         requests.forEach((request: any) => {
           // Try rolls_assigned first, then rollsAssigned, then fall back to issued_assets/issuedAssets
           const rollsAssigned = request.rolls_assigned || request.rollsAssigned || request.issued_assets || request.issuedAssets || [];
-          
+
           console.log(`Processing request ${request.ref_no || request.refNo}:`, {
             rollsAssignedCount: rollsAssigned.length,
             rollsAssigned: rollsAssigned,
-            source: request.rolls_assigned ? 'rolls_assigned' : 
-                    (request.rollsAssigned ? 'rollsAssigned' : 
-                    (request.issued_assets ? 'issued_assets' : 
-                    (request.issuedAssets ? 'issuedAssets' : 'none')))
+            source: request.rolls_assigned ? 'rolls_assigned' :
+              (request.rollsAssigned ? 'rollsAssigned' :
+                (request.issued_assets ? 'issued_assets' :
+                  (request.issuedAssets ? 'issuedAssets' : 'none')))
           });
-          
+
           if (rollsAssigned.length === 0) {
             console.warn(`⚠️ Request ${request.ref_no || request.refNo} has no rolls assigned`);
             return;
           }
-          
+
           // Collect all carton numbers and serial ranges for this request
           const cartoonNumbers: string[] = [];
           const serialRanges: string[] = [];
           let totalQuantity = 0;
-          
+
           rollsAssigned.forEach((roll: any) => {
             const cartoonNumber = roll.cartoonNumber || roll.cartoon_number || roll.cartonNumber || '';
             const fromSerial = roll.fromSerial || roll.from_serial || '';
             const toSerial = roll.toSerial || roll.to_serial || '';
             const quantity = roll.count || roll.quantity || 0;
-            
+
             console.log(`  Roll:`, {
               cartoonNumber,
               fromSerial,
               toSerial,
               quantity
             });
-            
+
             if (cartoonNumber) {
               cartoonNumbers.push(cartoonNumber);
             }
-            
+
             if (fromSerial && toSerial) {
               serialRanges.push(`${fromSerial}-${toSerial}`);
             }
-            
+
             totalQuantity += quantity;
           });
-          
+
           console.log(`  Collected:`, {
             cartoonNumbers,
             serialRanges,
             totalQuantity
           });
-          
+
           // Determine status based on request stage
           const stageName = request.status || request.current_stage?.name || '';
           let status: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' = 'IN_PROGRESS';
-          
+
           if (stageName.includes('Production Completed') || stageName.includes('Completed')) {
             status = 'COMPLETED';
           } else if (stageName.includes('Cancelled') || stageName.includes('Rejected')) {
             status = 'CANCELLED';
           }
-          
+
           console.log(`  Status: ${stageName} → ${status}`);
-          
+
           // Skip COMPLETED and CANCELLED requests - they should be in History tab
           if (status === 'COMPLETED' || status === 'CANCELLED') {
             console.log(`  ⏭️ Skipping ${status} request - belongs in History tab`);
             return;
           }
-          
+
           // Create one entry per request with comma-separated values
           const entry = {
             id: request.id,
@@ -578,17 +578,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             hologramType: request.hologram_type || request.hologramType || 'LOCAL',
             cartoonNumber: cartoonNumbers.join(', ') // Comma-separated carton numbers
           };
-          
+
           console.log(`  Created entry:`, entry);
-          
+
           this.issuedData.push(entry);
         });
-        
+
         // Sort by issue date (newest first)
         this.issuedData.sort((a, b) => {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
-        
+
         console.log('📊 Issued data loaded:', this.issuedData.length, 'entries (grouped by reference)');
         console.log('📋 Final issuedData:', this.issuedData);
       },
@@ -609,25 +609,25 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // Load history data from backend (saved daily register entries)
     // These are entries that have been saved (is_fixed=True)
     // They appear immediately after "Save Entry" is clicked
-    
+
     console.log('🔍 Loading history data from API...');
-    
+
     this.hologramService.getDailyRegisterEntries().subscribe({
       next: (entries) => {
         console.log('✅ Loaded daily register entries:', entries);
         console.log('📊 Total entries received:', entries.length);
-        
+
         // Filter for SAVED entries (is_fixed=True)
         // Show entries immediately after "Save Entry" is clicked
-        const savedEntries = entries.filter((entry: any) => 
+        const savedEntries = entries.filter((entry: any) =>
           (entry.is_fixed === true || entry.isFixed === true)
         );
-        
+
         console.log('📊 Saved entries (is_fixed=true):', savedEntries.length);
-        
+
         // Group entries by request reference (multiple rolls per request)
         const groupedByRequest = new Map<string, any[]>();
-        
+
         savedEntries.forEach((entry: any) => {
           const refNo = entry.reference_no || entry.referenceNo || 'N/A';
           if (!groupedByRequest.has(refNo)) {
@@ -635,9 +635,9 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           }
           groupedByRequest.get(refNo)!.push(entry);
         });
-        
+
         console.log('📊 Grouped by request:', groupedByRequest.size, 'requests');
-        
+
         // Transform to HistoryHologram format (one row per request)
         this.historyData = Array.from(groupedByRequest.entries()).map(([refNo, requestEntries]) => {
           // Collect data from all entries for this request
@@ -653,15 +653,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           let approvedAt = '';
           let approvedBy = 'Pending';
           let hologramType = 'LOCAL';
-          
+
           requestEntries.forEach((entry: any) => {
             // Carton number from roll_range or cartoon_number
-            const cartoonNumber = entry.cartoon_number || entry.cartoonNumber || 
-                                 entry.roll_range || entry.rollRange || 'N/A';
+            const cartoonNumber = entry.cartoon_number || entry.cartoonNumber ||
+              entry.roll_range || entry.rollRange || 'N/A';
             if (cartoonNumber && cartoonNumber !== 'N/A' && !cartoonNumbers.includes(cartoonNumber)) {
               cartoonNumbers.push(cartoonNumber);
             }
-            
+
             // Serial ranges from issued_ranges (JSON array)
             const issuedRanges = entry.issued_ranges || entry.issuedRanges || [];
             if (Array.isArray(issuedRanges) && issuedRanges.length > 0) {
@@ -680,7 +680,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
                 serialRanges.push(`${issuedFrom}-${issuedTo}`);
               }
             }
-            
+
             // Also add wastage ranges if they exist
             const wastageRanges = entry.wastage_ranges || entry.wastageRanges || [];
             if (Array.isArray(wastageRanges) && wastageRanges.length > 0) {
@@ -695,27 +695,27 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
                 }
               });
             }
-            
+
             // Accumulate quantities
             totalQty += entry.hologram_qty || entry.hologramQty || 0;
             totalUsed += entry.issued_qty || entry.issuedQty || 0;
             totalDamaged += entry.wastage_qty || entry.wastageQty || 0;
-            
+
             // Take first non-empty brand name
             if (brandName === 'N/A') {
               brandName = entry.brand_details || entry.brandDetails || 'N/A';
             }
-            
+
             // Take first non-empty bottle size
             if (bottleSize === 'N/A') {
               bottleSize = entry.bottle_size || entry.bottleSize || 'N/A';
             }
-            
+
             // Take first usage date
             if (!usageDate) {
               usageDate = entry.usage_date || entry.usageDate || new Date().toISOString();
             }
-            
+
             // Take approval info from first entry
             if (!approvedAt) {
               approvalStatus = entry.approval_status || entry.approvalStatus || 'PENDING';
@@ -724,14 +724,14 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
               hologramType = entry.hologram_type || entry.hologramType || 'LOCAL';
             }
           });
-          
+
           // Calculate leftover: total allocated - used - damaged
           const qtyLeftover = totalQty - totalUsed - totalDamaged;
-          
+
           // Build comma-separated strings
           const cartoonNumberStr = cartoonNumbers.length > 0 ? cartoonNumbers.join(', ') : 'N/A';
           const serialRangeStr = serialRanges.length > 0 ? serialRanges.join(', ') : 'N/A';
-          
+
           console.log(`📋 Request ${refNo}:`, {
             cartoonNumbers,
             serialRanges,
@@ -742,7 +742,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             totalDamaged,
             qtyLeftover
           });
-          
+
           // Determine status based on approval
           let status: 'COMPLETED' | 'CANCELLED' = 'COMPLETED';
           if (approvalStatus === 'APPROVED') {
@@ -753,7 +753,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             // PENDING - still show as COMPLETED but with "Pending" officer
             status = 'COMPLETED';
           }
-          
+
           return {
             id: requestEntries[0].id,
             issueDate: usageDate,
@@ -772,12 +772,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
             hologramType: hologramType as 'LOCAL' | 'EXPORT' | 'DEFENCE'
           };
         });
-        
+
         // Sort by usage date (newest first)
         this.historyData.sort((a, b) => {
           return new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime();
         });
-        
+
         console.log('📊 History data loaded:', this.historyData.length, 'entries');
         console.log('📋 Final historyData:', this.historyData);
       },
@@ -798,31 +798,93 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   getTypeClass(type: string): string {
     switch (type) {
-      case 'LOCAL':
-        return 'bg-success text-white';
-      case 'EXPORT':
-        return 'bg-primary text-white';
-      case 'DEFENCE':
-        return 'bg-warning text-dark';
-      default:
-        return 'bg-secondary text-white';
+      case 'LOCAL': return 'bg-primary';
+      case 'EXPORT': return 'bg-dark';
+      case 'DEFENCE': return 'bg-warning text-dark';
+      default: return 'bg-secondary';
     }
   }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'AVAILABLE':
-        return 'bg-success text-white';
-      case 'IN_USE':
-        return 'bg-warning text-dark';
-      case 'COMPLETED':
-        return 'bg-secondary text-white';
-      case 'DAMAGED':
-        return 'bg-danger text-white';
-      default:
-        return 'bg-secondary text-white';
+      case 'AVAILABLE': return 'bg-success';
+      case 'IN_USE': return 'bg-warning text-dark'; // Changed from 'IN_PROGRESS' to match interface
+      case 'IN_PROGRESS': return 'bg-warning text-dark'; // Keep for compatibility
+      case 'COMPLETED': return 'bg-secondary'; // Changed from 'USED' to match interface
+      case 'USED': return 'bg-secondary'; // Keep for compatibility
+      case 'DAMAGED': return 'bg-danger';
+      case 'CANCELLED': return 'bg-danger';
+      default: return 'bg-secondary';
     }
   }
+
+  // --- Analytics Helper Methods ---
+
+  getDistributionValue(type: string): number {
+    // Calculate total count for a specific type (LOCAL, EXPORT, DEFENCE)
+    // Use filteredRollsData if filters are active, otherwise rollsData
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data
+      .filter(roll => roll.type === type)
+      .reduce((sum, roll) => sum + roll.totalCount, 0);
+  }
+
+  getDistributionPercentage(type: string): number {
+    const total = this.getTotalHolograms();
+    if (total === 0) return 0;
+    return Math.round((this.getDistributionValue(type) / total) * 100);
+  }
+
+  getUsageTrendValue(status: string): number {
+    // Calculate total count for a specific status (AVAILABLE, USED, DAMAGED)
+    // Note: This sums up the *counts* within rolls, not just counting rolls by status
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+
+    switch (status) {
+      case 'AVAILABLE':
+        return data.reduce((sum, roll) => sum + roll.availableCount, 0);
+      case 'USED':
+        return data.reduce((sum, roll) => sum + roll.usedCount, 0);
+      case 'DAMAGED':
+        return data.reduce((sum, roll) => sum + roll.damagedCount, 0);
+      default:
+        return 0;
+    }
+  }
+
+  getUsageTrendPercentage(status: string): number {
+    const total = this.getTotalHolograms();
+    if (total === 0) return 0;
+    return Math.round((this.getUsageTrendValue(status) / total) * 100);
+  }
+
+  // Existing helper methods need to be robust
+  getTotalHolograms(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((sum, roll) => sum + roll.totalCount, 0);
+  }
+
+  getTotalAvailable(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((sum, roll) => sum + roll.availableCount, 0);
+  }
+
+  getTotalUsedInProduction(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((sum, roll) => sum + roll.usedCount, 0);
+  }
+
+  getTotalDamagedWastage(): number {
+    const data = this.hasActiveRollsFilters() ? this.filteredRollsData : this.rollsData;
+    return data.reduce((sum, roll) => sum + roll.damagedCount, 0);
+  }
+
+  getPercentage(value: number, total: number): number {
+    if (total === 0) return 0;
+    return (value / total) * 100;
+  }
+
+
 
   isNewRoll(roll: HologramRoll): boolean {
     return !!(roll.isNew === true && roll.newUntil && Date.now() < roll.newUntil);
@@ -833,26 +895,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   // Overview statistics calculated from Rolls tab data (NOT Serial Numbers Data)
-  getTotalHolograms(): number {
-    return this.rollsData.reduce((total, roll) => total + (roll.totalCount || 0), 0);
-  }
 
-  getTotalAvailable(): number {
-    return this.rollsData.reduce((total, roll) => total + roll.availableCount, 0);
-  }
-
-  getTotalUsedInProduction(): number {
-    return this.rollsData.reduce((total, roll) => total + roll.usedCount, 0);
-  }
-
-  getTotalDamagedWastage(): number {
-    return this.rollsData.reduce((total, roll) => total + roll.damagedCount, 0);
-  }
-
-  // Helper method to calculate percentage safely
-  getPercentage(value: number, total: number): number {
-    return total > 0 ? (value / total) * 100 : 0;
-  }
 
   getAvailableByType(type: 'LOCAL' | 'EXPORT' | 'DEFENCE'): number {
     return this.rollsData
@@ -890,7 +933,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.currentSerialPage = 1;
     this.clearSerialFilters();
   }
-  
+
   clearSerialFilters(): void {
     this.serialFilters = {
       brandReferenceNo: '',
@@ -898,15 +941,15 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       qty: null
     };
   }
-  
+
   applySerialFilters(): void {
     // Reset to first page when filters change
     this.currentSerialPage = 1;
   }
-  
+
   getBrandReferenceNoSuggestions(): string[] {
     if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
-    
+
     // Extract unique brand reference numbers from serial ranges
     const uniqueRefs = new Set<string>();
     this.selectedSerialData.serialRanges.forEach(range => {
@@ -914,13 +957,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         uniqueRefs.add(range.referenceNo);
       }
     });
-    
+
     return Array.from(uniqueRefs).sort();
   }
-  
+
   getBrandNameSuggestions(): string[] {
     if (!this.selectedSerialData || !this.selectedSerialData.serialRanges) return [];
-    
+
     // Extract unique brand names from serial ranges
     const uniqueBrands = new Set<string>();
     this.selectedSerialData.serialRanges.forEach(range => {
@@ -932,10 +975,10 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         uniqueBrands.add(range.productionLine);
       }
     });
-    
+
     return Array.from(uniqueBrands).sort();
   }
-  
+
   onBrandReferenceNoInput(): void {
     // Update suggestions based on input
     this.brandReferenceNoSuggestions = this.getBrandReferenceNoSuggestions().filter(ref =>
@@ -943,7 +986,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     );
     this.applySerialFilters();
   }
-  
+
   onBrandNameInput(): void {
     // Update suggestions based on input
     this.brandNameSuggestions = this.getBrandNameSuggestions().filter(brand =>
@@ -951,13 +994,13 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     );
     this.applySerialFilters();
   }
-  
+
   selectBrandReferenceNo(ref: string): void {
     this.serialFilters.brandReferenceNo = ref;
     this.brandReferenceNoSuggestions = [];
     this.applySerialFilters();
   }
-  
+
   selectBrandName(brand: string): void {
     this.serialFilters.brandName = brand;
     this.brandNameSuggestions = [];
@@ -966,8 +1009,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   generateSerialNumbersData(availableData: AvailableHologram): SerialData {
     // Find the actual roll data from rollsData to get real counts
-    const actualRoll = this.rollsData.find(roll => 
-      roll.cartoonNumber === availableData.cartoonNumber && 
+    const actualRoll = this.rollsData.find(roll =>
+      roll.cartoonNumber === availableData.cartoonNumber &&
       roll.type === availableData.type
     );
 
@@ -1021,9 +1064,9 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
     // Create realistic mixed usage pattern
     return this.generateRealisticMixedRanges(
-      prefix, 
-      startNum, 
-      endNum, 
+      prefix,
+      startNum,
+      endNum,
       totalCount,
       actualAvailableCount,
       usedCount,
@@ -1032,22 +1075,22 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   }
 
   generateRealisticMixedRanges(
-    prefix: string, 
-    startNum: number, 
-    endNum: number, 
+    prefix: string,
+    startNum: number,
+    endNum: number,
     totalCount: number,
     availableCount: number,
     usedCount: number,
     damagedCount: number
   ): SerialRange[] {
     const ranges: SerialRange[] = [];
-    
+
     // Create usage events with realistic patterns
     const usageEvents = this.generateUsageEvents(startNum, endNum, availableCount, usedCount, damagedCount);
-    
+
     // Sort events by serial number to process in order
     usageEvents.sort((a, b) => a.startSerial - b.startSerial);
-    
+
     // Convert events to ranges
     for (const event of usageEvents) {
       const range: SerialRange = {
@@ -1078,20 +1121,20 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   generateUsageEvents(startNum: number, endNum: number, availableCount: number, usedCount: number, damagedCount: number): UsageEvent[] {
     const events: UsageEvent[] = [];
     const totalRange = endNum - startNum + 1;
-    
+
     // Create realistic usage timeline (last 90 days)
     const today = new Date();
     const usageDates = this.generateRealisticUsageDates(usedCount + damagedCount);
-    
+
     let currentSerial = startNum;
     let eventIndex = 0;
 
     // Strategy: Create mixed patterns that reflect real-world usage
-    
+
     // 1. Start with some available holograms (fresh stock)
     if (availableCount > 0) {
       const availableChunks = this.splitIntoChunks(availableCount, 1, 3); // 1-3 available chunks
-      
+
       for (const chunkSize of availableChunks) {
         events.push({
           startSerial: currentSerial,
@@ -1108,7 +1151,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // 2. Create realistic production usage patterns
     if (usedCount > 0) {
       const productionBatches = this.generateProductionBatches(usedCount);
-      
+
       for (const batch of productionBatches) {
         if (currentSerial + batch.size - 1 <= endNum && eventIndex < usageDates.length) {
           events.push({
@@ -1130,7 +1173,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // 3. Simulate damage incidents at various points
     if (damagedCount > 0) {
       const damageIncidents = this.generateDamageIncidents(damagedCount);
-      
+
       for (const incident of damageIncidents) {
         if (currentSerial + incident.count - 1 <= endNum && eventIndex < usageDates.length) {
           events.push({
@@ -1153,12 +1196,12 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     while (currentSerial <= endNum) {
       const remaining = endNum - currentSerial + 1;
       const chunkSize = Math.min(remaining, Math.floor(Math.random() * 50) + 10);
-      
+
       // 70% chance of being used, 20% available, 10% damaged
       const rand = Math.random();
       let status: 'AVAILABLE' | 'USED' | 'DAMAGED';
       let description: string;
-      
+
       if (rand < 0.7) {
         status = 'USED';
         description = 'Production batch - Mixed products';
@@ -1178,7 +1221,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         description: description,
         date: eventIndex < usageDates.length ? usageDates[eventIndex] : today.toISOString().split('T')[0]
       });
-      
+
       currentSerial += chunkSize;
       eventIndex++;
     }
@@ -1190,31 +1233,31 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     const batches: ProductionBatch[] = [];
     const productNames = [
       'Premium Whiskey 750ml',
-      'Export Rum 1L', 
+      'Export Rum 1L',
       'Local Brandy 750ml',
       'Special Edition Vodka 500ml',
       'Craft Beer 330ml',
       'Wine Collection 750ml'
     ];
-    
+
     let remaining = totalUsed;
     let batchCounter = 1;
-    
+
     while (remaining > 0) {
       const batchSize = Math.min(remaining, this.getRealisticBatchSize());
       const productName = productNames[Math.floor(Math.random() * productNames.length)];
-      
+
       batches.push({
         size: batchSize,
         productName: productName,
         referenceNo: `REF-${String(batchCounter).padStart(3, '0')}`, // Changed from batchNumber to referenceNo
         productionLine: `LINE-${Math.floor(Math.random() * 5) + 1}`
       });
-      
+
       remaining -= batchSize;
       batchCounter++;
     }
-    
+
     return batches;
   }
 
@@ -1224,7 +1267,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       'Printing quality defects - Color bleeding',
       'Physical damage during transport',
       'Adhesive failure - Poor bonding',
-      'Color mismatch - Batch variation', 
+      'Color mismatch - Batch variation',
       'Cutting defects - Irregular edges',
       'Storage damage - Moisture exposure',
       'Quality control rejection - Specifications not met',
@@ -1232,23 +1275,23 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       'Handling damage during inspection',
       'Temperature damage during storage'
     ];
-    
+
     const inspectors = ['QC-001', 'QC-002', 'QC-003', 'PROD-MGR', 'SHIFT-SUP'];
-    
+
     let remaining = totalDamaged;
-    
+
     while (remaining > 0) {
       const incidentSize = Math.min(remaining, Math.floor(Math.random() * 25) + 5); // 5-30 damaged per incident
-      
+
       incidents.push({
         count: incidentSize,
         reason: damageReasons[Math.floor(Math.random() * damageReasons.length)],
         reportedBy: inspectors[Math.floor(Math.random() * inspectors.length)]
       });
-      
+
       remaining -= incidentSize;
     }
-    
+
     return incidents;
   }
 
@@ -1262,25 +1305,25 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     const numChunks = Math.min(maxChunks, Math.max(minChunks, Math.floor(Math.random() * maxChunks) + 1));
     const chunks: number[] = [];
     let remaining = total;
-    
+
     for (let i = 0; i < numChunks - 1; i++) {
       const chunkSize = Math.floor(remaining / (numChunks - i)) + Math.floor(Math.random() * 20) - 10;
       const actualChunkSize = Math.max(1, Math.min(remaining - (numChunks - i - 1), chunkSize));
       chunks.push(actualChunkSize);
       remaining -= actualChunkSize;
     }
-    
+
     if (remaining > 0) {
       chunks.push(remaining);
     }
-    
+
     return chunks;
   }
 
   generateRealisticUsageDates(eventCount: number): string[] {
     const dates: string[] = [];
     const today = new Date();
-    
+
     for (let i = 0; i < eventCount; i++) {
       // Generate dates over the last 90 days with more recent activity
       const daysAgo = Math.floor(Math.pow(Math.random(), 2) * 90); // Weighted towards recent dates
@@ -1288,7 +1331,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       date.setDate(date.getDate() - daysAgo);
       dates.push(date.toISOString().split('T')[0]);
     }
-    
+
     return dates.sort(); // Sort chronologically
   }
 
@@ -1325,26 +1368,26 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         }
       });
     }
-    
+
     // Filter by brand reference no
     if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
-      filtered = filtered.filter(range => 
-        range.referenceNo && 
+      filtered = filtered.filter(range =>
+        range.referenceNo &&
         range.referenceNo.toLowerCase().includes(this.serialFilters.brandReferenceNo.toLowerCase())
       );
     }
-    
+
     // Filter by brand name
     if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
       filtered = filtered.filter(range => {
-        const brandMatch = range.brandDetails && 
+        const brandMatch = range.brandDetails &&
           range.brandDetails.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        const productionLineMatch = range.productionLine && 
+        const productionLineMatch = range.productionLine &&
           range.productionLine.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
         return brandMatch || productionLineMatch;
       });
     }
-    
+
     // Filter by quantity
     if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
       filtered = filtered.filter(range => range.count === this.serialFilters.qty);
@@ -1429,26 +1472,26 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         }
       });
     }
-    
+
     // Filter by brand reference no
     if (this.serialFilters.brandReferenceNo && this.serialFilters.brandReferenceNo.trim() !== '') {
-      filtered = filtered.filter(range => 
-        range.referenceNo && 
+      filtered = filtered.filter(range =>
+        range.referenceNo &&
         range.referenceNo.toLowerCase().includes(this.serialFilters.brandReferenceNo.toLowerCase())
       );
     }
-    
+
     // Filter by brand name
     if (this.serialFilters.brandName && this.serialFilters.brandName.trim() !== '') {
       filtered = filtered.filter(range => {
-        const brandMatch = range.brandDetails && 
+        const brandMatch = range.brandDetails &&
           range.brandDetails.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
-        const productionLineMatch = range.productionLine && 
+        const productionLineMatch = range.productionLine &&
           range.productionLine.toLowerCase().includes(this.serialFilters.brandName.toLowerCase());
         return brandMatch || productionLineMatch;
       });
     }
-    
+
     // Filter by quantity
     if (this.serialFilters.qty !== null && this.serialFilters.qty > 0) {
       filtered = filtered.filter(range => range.count === this.serialFilters.qty);
@@ -1637,7 +1680,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // Handle HologramRoll (from Rolls tab)
     let roll: any = null;
     let rollType: 'rolls' = 'rolls';
-    
+
     if (this.selectedRollForUsageRolls) {
       roll = this.selectedRollForUsageRolls;
       rollType = 'rolls';
@@ -1651,17 +1694,17 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     // Primary source: usage history stored in hologramOverviewSerialData or hologramOverviewRolls
     const serialData = JSON.parse(localStorage.getItem('hologramOverviewSerialData') || '[]');
     const rollsData = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
-    
+
     // Try to find in serial data first (more detailed)
-    let serialRoll = serialData.find((r: any) => 
-      (r.rollNumber === cartoonNumber || r.cartoonNumber === cartoonNumber) && 
+    let serialRoll = serialData.find((r: any) =>
+      (r.rollNumber === cartoonNumber || r.cartoonNumber === cartoonNumber) &&
       (r.hologramType === hologramType || r.type === hologramType)
     );
-    
+
     // If not found in serial data, try rolls data
     if (!serialRoll && rollType === 'rolls') {
-      const rollData = rollsData.find((r: any) => 
-        (r.cartoonNumber === cartoonNumber || r.rollNumber === cartoonNumber) && 
+      const rollData = rollsData.find((r: any) =>
+        (r.cartoonNumber === cartoonNumber || r.rollNumber === cartoonNumber) &&
         (r.type === hologramType || r.hologramType === hologramType)
       );
       if (rollData && rollData.usageHistory) {
@@ -1714,8 +1757,8 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       const dailyEntries = JSON.parse(localStorage.getItem('hologramDailyEntries') || '[]');
       const approvedEntries = JSON.parse(localStorage.getItem('dailyRegisterEntries') || '[]');
       const allEntries = [...dailyEntries, ...approvedEntries];
-      const relevantEntries = allEntries.filter((entry: any) => 
-        (entry.cartoonNumber === cartoonNumber || entry.cartoonNumber === roll.rollNumber) && 
+      const relevantEntries = allEntries.filter((entry: any) =>
+        (entry.cartoonNumber === cartoonNumber || entry.cartoonNumber === roll.rollNumber) &&
         (entry.hologramType === hologramType || entry.hologramType === roll.hologramType) &&
         (entry.isFixed === true || entry.approvalStatus === 'APPROVED')
       );
@@ -1802,23 +1845,23 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
       localStorage.removeItem('hologramOverviewSerialData');
       localStorage.removeItem('hologramOverviewIssued');
       localStorage.removeItem('hologramOverviewHistory');
-      
+
       // Clear daily register and approval data
       localStorage.removeItem('dailyRegisterEntries');
       localStorage.removeItem('approvedHologramEntries');
-      
+
       // Clear legacy keys
       localStorage.removeItem('issuedHolograms');
       localStorage.removeItem('hologramDailyEntries');
-      
+
       // Clear all arrays to show empty state
       this.rollsData = [];
       this.availableData = [];
       this.issuedData = [];
       this.historyData = [];
-      
+
       alert('✅ All hologram data cleared successfully!\n\nYou now have a fresh start. All tabs are empty.');
-      
+
       console.log('=== ALL HOLOGRAM DATA CLEARED ===');
       console.log('Rolls:', this.rollsData.length);
       console.log('Available:', this.availableData.length);
@@ -1838,7 +1881,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
   markAsCompleted(issued: IssuedHologram): void {
     if (confirm(`Mark request ${issued.referenceNo} as completed?`)) {
       issued.status = 'COMPLETED';
-      
+
       // Update in localStorage
       const issuedHolograms = JSON.parse(localStorage.getItem('hologramOverviewIssued') || '[]');
       const index = issuedHolograms.findIndex((item: any) => item.id === issued.id);
@@ -1846,7 +1889,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         issuedHolograms[index].status = 'COMPLETED';
         localStorage.setItem('hologramOverviewIssued', JSON.stringify(issuedHolograms));
       }
-      
+
       alert(`Request ${issued.referenceNo} marked as completed!`);
     }
   }
@@ -1864,7 +1907,7 @@ Officer: ${issued.officer}
 ${issued.hologramType ? `Hologram Type: ${issued.hologramType}` : ''}
 ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     `;
-    
+
     alert(details);
   }
 
@@ -1897,8 +1940,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     const ranges: SerialRange[] = [];
 
     // PRIMARY SOURCE: Get usage history from rollsData (which comes from API)
-    const roll = this.rollsData.find((r: any) => 
-      r.cartoonNumber === cartoonNumber && 
+    const roll = this.rollsData.find((r: any) =>
+      r.cartoonNumber === cartoonNumber &&
       r.type === hologramType
     );
 
@@ -1911,10 +1954,10 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Process usage history from roll (from API/database)
     if (roll && roll.usageHistory && roll.usageHistory.length > 0) {
       console.log('✅ Using usage history from API:', roll.usageHistory.length, 'entries');
-      
+
       roll.usageHistory.forEach((historyEntry: any, index: number) => {
         console.log(`Processing history entry ${index}:`, historyEntry);
-        
+
         // Only process entries that belong to this cartoon number
         if (historyEntry.cartoonNumber && historyEntry.cartoonNumber !== cartoonNumber) {
           console.log('Skipping entry - belongs to different cartoon:', historyEntry.cartoonNumber);
@@ -1943,13 +1986,13 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         }
 
         if (isValid && fromSerial && toSerial && quantity > 0) {
-          const rangeKey = historyEntry.type === 'ISSUED' 
-            ? `USED-${fromSerial}-${toSerial}` 
+          const rangeKey = historyEntry.type === 'ISSUED'
+            ? `USED-${fromSerial}-${toSerial}`
             : `DAMAGED-${fromSerial}-${toSerial}`;
-            
+
           if (!processedRanges.has(rangeKey)) {
             processedRanges.add(rangeKey);
-            
+
             if (historyEntry.type === 'ISSUED') {
               ranges.push({
                 fromSerial: fromSerial,
@@ -1986,28 +2029,28 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           console.log('⚠️ Skipping invalid entry:', historyEntry);
         }
       });
-      
+
       console.log('✅ Total ranges generated from usage history:', ranges.length);
     } else {
       console.log('⚠️ No usage history found in roll data');
     }
-    
+
     // Add AVAILABLE range(s) if there are available holograms
     if (availableCount > 0 && roll) {
       // Use the available_range field from backend if available
       if (roll.available_range && roll.available_range !== 'None' && roll.available_range !== 'N/A') {
         console.log('✅ Using available_range from backend:', roll.available_range);
-        
+
         // Parse comma-separated ranges (e.g., "1-49, 101-300")
         const rangeStrings = roll.available_range.split(',').map((s: string) => s.trim());
-        
+
         for (const rangeStr of rangeStrings) {
           if (rangeStr.includes('-')) {
             const [from, to] = rangeStr.split('-');
             const fromNum = parseInt(from);
             const toNum = parseInt(to);
             const count = toNum - fromNum + 1;
-            
+
             // Don't pad - use the numbers as-is from backend
             ranges.push({
               fromSerial: from,
@@ -2016,7 +2059,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
               status: 'AVAILABLE',
               description: 'Ready for production use'
             });
-            
+
             console.log(`✅ Added AVAILABLE range: ${from} - ${to} (${count} units)`);
           }
         }
@@ -2026,9 +2069,9 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         const fromNum = this.extractSerialNumber(roll.fromSerial);
         const nextNum = fromNum + usedCount + damagedCount;
         const prefix = roll.fromSerial.replace(/\d+$/, '');
-        
+
         const nextSerial = prefix + nextNum.toString().padStart(6, '0');
-        
+
         ranges.push({
           fromSerial: nextSerial,
           toSerial: roll.toSerial,
@@ -2036,11 +2079,11 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           status: 'AVAILABLE',
           description: 'Ready for production use'
         });
-        
+
         console.log('✅ Added AVAILABLE range (fallback):', nextSerial, '-', roll.toSerial, 'quantity:', availableCount);
       }
     }
-    
+
     // Sort ranges by from_serial
     ranges.sort((a, b) => {
       const aNum = this.extractSerialNumber(a.fromSerial);
@@ -2053,7 +2096,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
   }
 
   // Payment Slip Upload Tracking Methods
-  
+
   /**
    * Upload payment slip for a specific type of hologram application
    */
@@ -2079,7 +2122,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Update payment slip tracking
     const slipTrackingKey = 'hologramPaymentSlipTracking';
     const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
-    
+
     if (!slipTracking[refNo]) {
       alert('Application not found');
       return;
@@ -2100,7 +2143,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     };
 
     // Check if all required slips are uploaded
-    const allUploaded = slipTracking[refNo].requiredTypes.every((type: string) => 
+    const allUploaded = slipTracking[refNo].requiredTypes.every((type: string) =>
       slipTracking[refNo].uploadedTypes.includes(type)
     );
 
@@ -2111,7 +2154,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
 
     // Update the application status in hologramApplications
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const appIndex = applications.findIndex((app: any) => 
+    const appIndex = applications.findIndex((app: any) =>
       app.refNo === refNo && app.procurementType === procurementType
     );
 
@@ -2119,20 +2162,20 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
       applications[appIndex].paymentSlipUploaded = true;
       applications[appIndex].paymentSlipUploadDate = new Date().toISOString();
       applications[appIndex].paymentSlipFileName = file.name;
-      
+
       // Update status if all slips uploaded
       if (allUploaded) {
         applications[appIndex].status = 'Slip Uploaded - Pending Commissioner Approval';
       }
-      
+
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
     }
 
     // Show success message
-    const message = allUploaded 
+    const message = allUploaded
       ? `✅ Payment slip uploaded successfully for ${procurementType}!\n\nAll payment slips have been uploaded. This application is now visible to the Commissioner for approval.`
       : `✅ Payment slip uploaded successfully for ${procurementType}!\n\nRemaining types to upload: ${slipTracking[refNo].requiredTypes.filter((t: string) => !slipTracking[refNo].uploadedTypes.includes(t)).join(', ')}`;
-    
+
     alert(message);
 
     // Reload data to reflect changes
@@ -2162,8 +2205,8 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
   getApplicationsForCommissioner(): any[] {
     const slipTrackingKey = 'hologramPaymentSlipTracking';
     const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
-    
-    return Object.values(slipTracking).filter((tracking: any) => 
+
+    return Object.values(slipTracking).filter((tracking: any) =>
       tracking.allSlipsUploaded && tracking.commissionerVisible
     );
   }
@@ -2175,10 +2218,10 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const slipTrackingKey = 'hologramPaymentSlipTracking';
     const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
-    
+
     // Group by reference number
     const grouped: { [key: string]: any } = {};
-    
+
     applications.forEach((app: any) => {
       if (!grouped[app.refNo]) {
         grouped[app.refNo] = {
@@ -2193,7 +2236,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           }
         };
       }
-      
+
       grouped[app.refNo].types.push({
         type: app.procurementType,
         quantity: app.totalQtyLakh,
@@ -2202,7 +2245,7 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
         fileName: app.paymentSlipFileName
       });
     });
-    
+
     return Object.values(grouped);
   }
 }
