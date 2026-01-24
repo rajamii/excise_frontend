@@ -84,6 +84,10 @@ interface FilterOptions {
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
 
+  // Current distillery context - TODO: Make this dynamic based on logged-in user
+  private readonly CURRENT_DISTILLERY = 'Sikkim'; // This will be dynamic later
+  private readonly EXCLUDED_BREWERIES = ['Yuksom', 'Breweries']; // Exclude brewery brands
+
   // Data
   groupedBrandStocks: GroupedBrandStock[] = [];
   filteredStocks: GroupedBrandStock[] = [];
@@ -102,7 +106,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   // Filters
   filters: FilterOptions = {
-    brandName: 'Sikkim', // Default filter as requested
+    brandName: '', // Start with empty brand name filter
     liquorType: '',
     status: '',
     stockLevel: '',
@@ -173,10 +177,11 @@ export class BrandwarehouseComponent implements OnInit {
       }
     });
 
-    // Load brand warehouses
+    // Load brand warehouses with distillery filter
     this.brandWarehouseService.getGroupedBrandWarehouses(this.buildApiFilters()).subscribe({
       next: (data) => {
-        this.groupedBrandStocks = data;
+        // Filter to show only current distillery's brands
+        this.groupedBrandStocks = this.filterByCurrentDistillery(data);
         this.applyFilters();
         this.isLoading = false;
       },
@@ -192,13 +197,42 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   /**
+   * Filter brands to show only those belonging to the current distillery
+   * Excludes brewery brands as they will have separate dashboard
+   * TODO: Make this dynamic based on logged-in user's distillery
+   */
+  private filterByCurrentDistillery(brands: GroupedBrandStock[]): GroupedBrandStock[] {
+    return brands.filter(brand => {
+      if (!brand.distilleryName) return false;
+      
+      const distilleryName = brand.distilleryName.toLowerCase();
+      
+      // Check if it belongs to current distillery
+      const belongsToCurrentDistillery = distilleryName.includes(this.CURRENT_DISTILLERY.toLowerCase());
+      
+      // Check if it's a brewery (exclude breweries from distillery dashboard)
+      const isBrewery = this.EXCLUDED_BREWERIES.some(brewery => 
+        distilleryName.includes(brewery.toLowerCase())
+      );
+      
+      // Include only if belongs to current distillery AND is not a brewery
+      return belongsToCurrentDistillery && !isBrewery;
+    });
+  }
+
+  /**
    * Build API filters from component filters
    */
   private buildApiFilters(): any {
-    const filters: any = {};
+    const filters: any = {
+      // Always filter by current distillery
+      distillery_name: this.CURRENT_DISTILLERY,
+      // Exclude breweries from distillery dashboard
+      exclude_breweries: true
+    };
 
     if (this.filters.brandName) {
-      filters.distillery_name = this.filters.brandName;
+      filters.brand_name = this.filters.brandName;
     }
     if (this.filters.liquorType) {
       filters.brand_type = this.filters.liquorType;
@@ -216,7 +250,7 @@ export class BrandwarehouseComponent implements OnInit {
   initializeSampleData(): void {
     this.groupedBrandStocks = [
       {
-        brandName: 'Sikkim Gold Whisky (Fallback Sample)',
+        brandName: 'Sikkim Gold Whisky',
         distilleryName: 'M/s Sikkim Distilleries Ltd',
         brandType: 'Whisky',
         packSizes: {
@@ -256,6 +290,38 @@ export class BrandwarehouseComponent implements OnInit {
         totalUtilized: 450,
         lastUpdated: new Date().toISOString(),
         overallStatus: 'IN_STOCK'
+      },
+      {
+        brandName: 'Sikkim Premium Rum',
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        brandType: 'Rum',
+        packSizes: {
+          375: {
+            id: '4',
+            capacitySize: 375,
+            currentStock: 150,
+            maxCapacity: 600,
+            status: 'LOW_STOCK',
+            totalUtilized: 300,
+            reorderLevel: 120,
+            utilizationPercentage: 25
+          },
+          750: {
+            id: '5',
+            capacitySize: 750,
+            currentStock: 80,
+            maxCapacity: 400,
+            status: 'LOW_STOCK',
+            totalUtilized: 200,
+            reorderLevel: 100,
+            utilizationPercentage: 20
+          }
+        },
+        totalStock: 230,
+        totalCapacity: 1000,
+        totalUtilized: 500,
+        lastUpdated: new Date().toISOString(),
+        overallStatus: 'LOW_STOCK'
       }
     ];
   }
@@ -318,7 +384,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   clearFilters(): void {
     this.filters = {
-      brandName: 'Sikkim', // Reset to default Sikkim filter
+      brandName: '', // Clear the brand name completely
       liquorType: '',
       status: '',
       stockLevel: '',
@@ -479,6 +545,23 @@ export class BrandwarehouseComponent implements OnInit {
   exportToExcel(): void {
     // TODO: Implement Excel export functionality
     console.log('Exporting warehouse data to Excel...');
+  }
+
+  /**
+   * Get current distillery name
+   * TODO: Replace with actual user session/authentication service
+   */
+  getCurrentDistillery(): string {
+    return this.CURRENT_DISTILLERY;
+  }
+
+  /**
+   * Set current distillery (for future dynamic implementation)
+   * TODO: This will be called when user authentication is implemented
+   */
+  setCurrentDistillery(distilleryName: string): void {
+    // TODO: Implement when making dashboard dynamic
+    console.log(`Future implementation: Set distillery to ${distilleryName}`);
   }
 
   refreshData(): void {

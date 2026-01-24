@@ -6,9 +6,9 @@
       <div class="title-section">
         <h1 class="warehouse-title">
           <i class="bi bi-house-gear"></i>
-          Brand Warehouse Management
+          Sikkim Distillery - Brand Warehouse
         </h1>
-        <p class="warehouse-subtitle">Monitor and manage brand inventory, stock levels, and warehouse operations</p>
+        <p class="warehouse-subtitle">Monitor and manage Sikkim Distillery brand inventory (Distillery products only - Breweries managed separately)</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
@@ -188,8 +188,8 @@
           <tr class="table-header">
             <th>Brand Details</th>
             <th>Pack Sizes & Stock</th>
-            <th>Total Stock</th>
             <th>Total Utilized</th>
+            <th>Total Stock</th>
             <th>Overall Status</th>
             <th>Actions</th>
           </tr>
@@ -228,14 +228,15 @@
                     <span class="stock-number">{{ brand.packSizes[packSize].currentStock | number }}</span>
                     <span class="stock-label">units</span>
                   </div>
-                  <div class="pack-actions">
-                    <button class="btn btn-xs btn-outline" 
-                            (click)="openAdjustmentModal(brand, brand.packSizes[packSize])" 
-                            title="Adjust Stock">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                  </div>
                 </div>
+              </div>
+            </td>
+
+            <!-- Total Utilized -->
+            <td class="utilized-cell">
+              <div class="utilized-info">
+                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
+                <div class="utilized-label">units utilized</div>
               </div>
             </td>
 
@@ -247,14 +248,6 @@
                 <div class="capacity-info">
                   <small>of {{ brand.totalCapacity | number }} capacity</small>
                 </div>
-              </div>
-            </td>
-
-            <!-- Total Utilized -->
-            <td class="utilized-cell">
-              <div class="utilized-info">
-                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
-                <div class="utilized-label">units utilized</div>
               </div>
             </td>
 

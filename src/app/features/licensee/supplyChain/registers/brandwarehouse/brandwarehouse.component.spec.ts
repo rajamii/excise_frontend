@@ -54,7 +54,7 @@ describe('BrandwarehouseComponent', () => {
     expect(component.paginatedStocks).toEqual([]);
     expect(component.currentPage).toBe(1);
     expect(component.pageSize).toBe(10);
-    expect(component.filters.brandName).toBe('Sikkim');
+    expect(component.filters.brandName).toBe('');
   });
 
   it('should calculate total stock correctly', () => {
@@ -198,7 +198,7 @@ describe('BrandwarehouseComponent', () => {
     
     component.clearFilters();
     
-    expect(component.filters.brandName).toBe('Sikkim');
+    expect(component.filters.brandName).toBe('');
     expect(component.filters.liquorType).toBe('');
     expect(component.filters.status).toBe('');
     expect(component.filters.stockLevel).toBe('');
@@ -291,7 +291,7 @@ describe('BrandwarehouseComponent', () => {
 
   it('should build API filters correctly', () => {
     component.filters = {
-      brandName: 'Sikkim',
+      brandName: 'Test Brand',
       liquorType: 'Whisky',
       status: 'IN_STOCK',
       stockLevel: 'HIGH',
@@ -301,9 +301,48 @@ describe('BrandwarehouseComponent', () => {
 
     const apiFilters = (component as any).buildApiFilters();
     
-    expect(apiFilters.distillery_name).toBe('Sikkim');
+    expect(apiFilters.distillery_name).toBe('Sikkim'); // Always filters by Sikkim
+    expect(apiFilters.exclude_breweries).toBe(true); // Excludes breweries
+    expect(apiFilters.brand_name).toBe('Test Brand');
     expect(apiFilters.brand_type).toBe('Whisky');
     expect(apiFilters.status).toBe('IN_STOCK');
     expect(apiFilters.stock_level).toBe('HIGH');
+  });
+
+  it('should filter brands by current distillery and exclude breweries', () => {
+    const mockBrands = [
+      {
+        brandName: 'Sikkim Gold',
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        brandType: 'Whisky'
+      } as any,
+      {
+        brandName: 'Royal Challenge',
+        distilleryName: 'UBL Distillery',
+        brandType: 'Whisky'
+      } as any,
+      {
+        brandName: 'Sikkim Premium',
+        distilleryName: 'Sikkim Distilleries',
+        brandType: 'Rum'
+      } as any,
+      {
+        brandName: 'Densberg Beer',
+        distilleryName: 'M/s Yuksom Breweries Ltd, Melli, Sikkim',
+        brandType: 'Beer'
+      } as any
+    ];
+
+    const filteredBrands = (component as any).filterByCurrentDistillery(mockBrands);
+    
+    expect(filteredBrands.length).toBe(2);
+    expect(filteredBrands[0].brandName).toBe('Sikkim Gold');
+    expect(filteredBrands[1].brandName).toBe('Sikkim Premium');
+    // Densberg Beer should be excluded as it's from a brewery
+    expect(filteredBrands.find((b: any) => b.brandName === 'Densberg Beer')).toBeUndefined();
+  });
+
+  it('should get current distillery name', () => {
+    expect(component.getCurrentDistillery()).toBe('Sikkim');
   });
 });
