@@ -8,7 +8,7 @@
           <i class="bi bi-house-gear"></i>
           Sikkim Distillery - Brand Warehouse
         </h1>
-        <p class="warehouse-subtitle">Monitor and manage Sikkim Distillery brand inventory (Distillery products only - Breweries managed separately)</p>
+        <p class="warehouse-subtitle">Monitor and manage all Sikkim brand inventory (Distilleries and Breweries)</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
@@ -273,6 +273,10 @@
                 </button>
                 <button class="btn btn-sm btn-outline" (click)="viewLastEntries(brand)" title="Recent Entries">
                   <i class="bi bi-clock-history"></i>
+                </button>
+                <button class="btn btn-sm btn-success" (click)="viewProduction(brand)" title="Production Details">
+                  <i class="bi bi-gear-fill"></i>
+                  Production
                 </button>
               </div>
             </td>
@@ -671,6 +675,169 @@
         </div>
         <h3>No Recent Entries</h3>
         <p>No recent entries found for this brand</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Production Modal -->
+<div class="modal-overlay" *ngIf="showProductionModal" (click)="showProductionModal = false">
+  <div class="modal-content production-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-gear-fill"></i>
+        Production Details - {{ selectedBrand?.brandName }}
+      </h2>
+      <button class="modal-close" (click)="showProductionModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedBrand">
+      <!-- Production Summary Card -->
+      <div class="production-summary-card">
+        <div class="production-header">
+          <div class="production-badge">
+            <i class="bi bi-gear-fill"></i>
+            <span>PRODUCTION</span>
+          </div>
+          <div class="production-date">
+            {{ getCurrentDate() | date:'dd/MM/yyyy HH:mm' }}
+          </div>
+        </div>
+
+        <div class="production-title">
+          <h3>Daily production batch</h3>
+        </div>
+
+        <div class="production-details">
+          <div class="production-row">
+            <div class="production-item">
+              <span class="label">QUANTITY:</span>
+              <span class="value quantity-value">{{ productionSummary.todayProduction | number }}</span>
+            </div>
+            <div class="production-item">
+              <span class="label">STOCK:</span>
+              <span class="value stock-range">
+                {{ productionSummary.stockBefore | number }} — {{ productionSummary.stockAfter | number }}
+              </span>
+            </div>
+            <div class="production-item">
+              <span class="label">REFERENCE:</span>
+              <span class="value reference-value">{{ productionSummary.latestReference }}</span>
+            </div>
+          </div>
+
+          <div class="production-officer">
+            <span class="label">OFFICER:</span>
+            <span class="value officer-name">{{ productionSummary.productionManager }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production History -->
+      <div class="production-history" *ngIf="productionHistory.length > 0">
+        <h4>Recent Production History</h4>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Quantity</th>
+                <th>Stock Change</th>
+                <th>Manager</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let batch of productionHistory" class="history-row">
+                <td class="batch-date">
+                  {{ batch.production_date | date:'dd/MM/yyyy' }}
+                  <small>{{ batch.production_time | date:'HH:mm' }}</small>
+                </td>
+                <td class="batch-reference">{{ batch.batch_reference }}</td>
+                <td class="batch-quantity">
+                  <span class="quantity-badge positive">
+                    +{{ batch.quantity_produced | number }}
+                  </span>
+                </td>
+                <td class="stock-change">
+                  <span class="stock-before">{{ batch.stock_before | number }}</span>
+                  <i class="bi bi-arrow-right"></i>
+                  <span class="stock-after">{{ batch.stock_after | number }}</span>
+                </td>
+                <td class="batch-manager">{{ batch.production_manager }}</td>
+                <td class="batch-status">
+                  <span class="status-badge" [class.badge-success]="batch.status === 'COMPLETED'"
+                    [class.badge-warning]="batch.status === 'IN_PROGRESS'"
+                    [class.badge-info]="batch.status === 'PENDING'"
+                    [class.badge-danger]="batch.status === 'CANCELLED'">
+                    {{ batch.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add New Production -->
+      <div class="add-production-section">
+        <h4>Add New Production Batch</h4>
+        <div class="production-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantity Produced</label>
+              <input type="number" class="form-control" [(ngModel)]="newProduction.quantity" 
+                     min="1" placeholder="Enter quantity">
+            </div>
+            <div class="form-group">
+              <label>Production Manager</label>
+              <input type="text" class="form-control" [(ngModel)]="newProduction.manager" 
+                     placeholder="Enter manager name">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Production Date</label>
+              <input type="date" class="form-control" [(ngModel)]="newProduction.date">
+            </div>
+            <div class="form-group">
+              <label>Production Time</label>
+              <input type="time" class="form-control" [(ngModel)]="newProduction.time">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Notes (Optional)</label>
+            <textarea class="form-control" [(ngModel)]="newProduction.notes" 
+                      rows="2" placeholder="Additional notes..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-success" (click)="addProductionBatch()" 
+                    [disabled]="!newProduction.quantity || !newProduction.manager">
+              <i class="bi bi-plus-circle"></i>
+              Add Production Batch
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="productionHistory.length === 0 && !isLoadingProduction">
+        <div class="empty-icon">
+          <i class="bi bi-gear"></i>
+        </div>
+        <h3>No Production History</h3>
+        <p>No production batches found for this brand</p>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoadingProduction">
+        <div class="loading-spinner">
+          <i class="bi bi-arrow-repeat spin"></i>
+        </div>
+        <p>Loading production data...</p>
       </div>
     </div>
   </div>

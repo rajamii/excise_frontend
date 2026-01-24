@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrandWarehouseService } from '../../services/brand-warehouse.service';
+import { ProductionService, ProductionBatch, CreateProductionBatch } from '../../services/production.service';
 
 interface TransitPermitDetail {
   permitNo: string;
@@ -86,7 +87,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   // Current distillery context - TODO: Make this dynamic based on logged-in user
   private readonly CURRENT_DISTILLERY = 'Sikkim'; // This will be dynamic later
-  private readonly EXCLUDED_BREWERIES = ['Yuksom', 'Breweries']; // Exclude brewery brands
+  private readonly EXCLUDED_BREWERIES: string[] = []; // Show all Sikkim brands including breweries
 
   // Data
   groupedBrandStocks: GroupedBrandStock[] = [];
@@ -127,11 +128,30 @@ export class BrandwarehouseComponent implements OnInit {
   showAdjustmentModal = false;
   showTransitPermitsModal = false;
   showLastEntriesModal = false;
+  showProductionModal = false;
+  isLoadingProduction = false;
   adjustmentQuantity = 0;
   adjustmentType: 'ADD' | 'SUBTRACT' = 'ADD';
   adjustmentReason = '';
   selectedTransitPermits: TransitPermitDetail[] = [];
   selectedLastEntries: LastEntryDetail[] = [];
+
+  // Production data
+  productionHistory: ProductionBatch[] = [];
+  productionSummary = {
+    todayProduction: 0,
+    stockBefore: 0,
+    stockAfter: 0,
+    latestReference: '',
+    productionManager: 'Production Manager'
+  };
+  newProduction = {
+    quantity: 0,
+    manager: '',
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    notes: ''
+  };
 
   // Chart data for stock levels
   stockLevelChart = {
@@ -139,7 +159,10 @@ export class BrandwarehouseComponent implements OnInit {
     data: [] as number[]
   };
 
-  constructor(private brandWarehouseService: BrandWarehouseService) { }
+  constructor(
+    private brandWarehouseService: BrandWarehouseService,
+    private productionService: ProductionService
+  ) { }
 
   ngOnInit(): void {
     this.initializeSikkimBrands();
@@ -180,8 +203,16 @@ export class BrandwarehouseComponent implements OnInit {
     // Load brand warehouses with distillery filter
     this.brandWarehouseService.getGroupedBrandWarehouses(this.buildApiFilters()).subscribe({
       next: (data) => {
+        console.log('🔍 Received grouped data from service:', data);
+        console.log('📊 Data length:', data.length);
+        if (data.length > 0) {
+          console.log('📋 Sample brand:', data[0]);
+        }
+        
         // Filter to show only current distillery's brands
         this.groupedBrandStocks = this.filterByCurrentDistillery(data);
+        console.log('✅ After distillery filtering:', this.groupedBrandStocks.length);
+        
         this.applyFilters();
         this.isLoading = false;
       },
@@ -226,9 +257,8 @@ export class BrandwarehouseComponent implements OnInit {
   private buildApiFilters(): any {
     const filters: any = {
       // Always filter by current distillery
-      distillery_name: this.CURRENT_DISTILLERY,
-      // Exclude breweries from distillery dashboard
-      exclude_breweries: true
+      distillery_name: this.CURRENT_DISTILLERY
+      // Show all Sikkim brands including breweries
     };
 
     if (this.filters.brandName) {
@@ -523,6 +553,145 @@ export class BrandwarehouseComponent implements OnInit {
       }
     ];
     this.showLastEntriesModal = true;
+  }
+
+  viewProduction(brand: GroupedBrandStock): void {
+    this.selectedBrand = brand;
+    this.showProductionModal = true;
+    this.loadProductionData(brand);
+  }
+
+  loadProductionData(brand: GroupedBrandStock): void {
+    this.isLoadingProduction = true;
+    
+    // Get the first pack size ID for the API call
+    const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
+    if (packSizeKeys.length === 0) {
+      this.isLoadingProduction = false;
+      return;
+    }
+
+    const firstPackSize = brand.packSizes[packSizeKeys[0]];
+    const brandWarehouseId = parseInt(firstPackSize.id);
+
+    // Load production history
+    this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.productionHistory = response.production_history;
+          
+          // Update production summary
+          this.productionSummary = {
+            todayProduction: response.summary.total_quantity,
+            stockBefore: this.productionHistory.length > 0 ? this.productionHistory[0].stock_before : brand.totalStock,
+            stockAfter: this.productionHistory.length > 0 ? this.productionHistory[0].stock_after : brand.totalStock,
+            latestReference: this.productionHistory.length > 0 ? this.productionHistory[0].batch_reference : 'PROD-2024-001',
+            productionManager: this.productionHistory.length > 0 ? this.productionHistory[0].production_manager : 'Production Manager'
+          };
+        }
+        this.isLoadingProduction = false;
+      },
+      error: (error) => {
+        console.error('Error loading production data:', error);
+        this.isLoadingProduction = false;
+        // Use sample data on error
+        this.loadSampleProductionData();
+      }
+    });
+  }
+
+  loadSampleProductionData(): void {
+    // Sample production data matching the image
+    this.productionSummary = {
+      todayProduction: 1000,
+      stockBefore: 2000,
+      stockAfter: 3000,
+      latestReference: 'PROD-2024-001',
+      productionManager: 'Production Manager'
+    };
+
+    this.productionHistory = [
+      {
+        id: 1,
+        batch_reference: 'PROD-2024-001',
+        production_date: '2024-01-24',
+        production_time: '00:00:00',
+        production_datetime: '2024-01-24T00:00:00Z',
+        formatted_reference: 'PROD-2024-001',
+        quantity_produced: 1000,
+        stock_before: 2000,
+        stock_after: 3000,
+        production_manager: 'Production Manager',
+        approved_by: 'Supervisor',
+        status: 'COMPLETED',
+        notes: 'Daily production batch',
+        brand_name: this.selectedBrand?.brandName || '',
+        pack_size: '750ml',
+        created_at: '2024-01-24T00:00:00Z',
+        updated_at: '2024-01-24T00:00:00Z'
+      }
+    ];
+  }
+
+  addProductionBatch(): void {
+    if (!this.selectedBrand || !this.newProduction.quantity || !this.newProduction.manager) {
+      return;
+    }
+
+    // Get the first pack size ID for the API call
+    const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
+    if (packSizeKeys.length === 0) return;
+
+    const firstPackSize = this.selectedBrand.packSizes[packSizeKeys[0]];
+    const brandWarehouseId = parseInt(firstPackSize.id);
+
+    const productionData: CreateProductionBatch = {
+      brand_warehouse_id: brandWarehouseId,
+      production_date: this.newProduction.date,
+      production_time: this.newProduction.time,
+      quantity_produced: this.newProduction.quantity,
+      production_manager: this.newProduction.manager,
+      notes: this.newProduction.notes || undefined
+    };
+
+    this.productionService.createProductionBatch(productionData).subscribe({
+      next: (response) => {
+        if (response.success) {
+          console.log('Production batch added:', response);
+          
+          // Update local data
+          this.productionHistory.unshift(response.production_batch);
+          
+          // Update brand stock
+          if (this.selectedBrand) {
+            this.selectedBrand.totalStock = response.updated_stock.new_stock;
+            firstPackSize.currentStock = response.updated_stock.new_stock;
+          }
+
+          // Reset form
+          this.newProduction = {
+            quantity: 0,
+            manager: '',
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+            notes: ''
+          };
+
+          // Refresh warehouse data
+          this.loadWarehouseData();
+          
+          alert('Production batch added successfully!');
+        }
+      },
+      error: (error) => {
+        console.error('Error adding production batch:', error);
+        alert(`Error adding production batch: ${error.error?.message || error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  getCurrentDate(): Date {
+    return new Date();
   }
 
   getStatusColor(status: string): string {

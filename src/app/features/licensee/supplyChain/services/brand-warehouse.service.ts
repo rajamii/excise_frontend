@@ -89,12 +89,92 @@ export class BrandWarehouseService {
             if (filters.stock_level) params = params.set('stock_level', filters.stock_level);
         }
 
-        return this.http.get<any>(`${this.baseUrl}/grouped/`, { params }).pipe(
+        // Use the main endpoint since /grouped/ doesn't exist
+        return this.http.get<any>(`${this.baseUrl}/`, { params }).pipe(
             map((response: any) => {
-                if (Array.isArray(response)) return response;
-                if (response?.results) return response.results;
-                if (response?.data) return response.data;
-                return [];
+                let brands = [];
+                if (Array.isArray(response)) {
+                    brands = response;
+                } else if (response?.results) {
+                    brands = response.results;
+                } else if (response?.data) {
+                    brands = response.data;
+                }
+
+                // Group brands by brand name and create the expected structure
+                const groupedBrands = new Map<string, any>();
+
+                console.log('🔍 Processing brands for grouping:', brands.length);
+
+                brands.forEach((brand: any) => {
+                    const brandName = brand.brandDetails || brand.brand_details || 'Unknown Brand';
+                    const distilleryName = brand.distilleryName || brand.distillery_name || '';
+                    const brandType = brand.brandType || brand.brand_type || '';
+                    const capacitySize = brand.capacitySize || brand.capacity_size || 0;
+                    const currentStock = brand.currentStock || brand.current_stock || 0;
+                    const maxCapacity = brand.maxCapacity || brand.max_capacity || 0;
+                    const status = brand.status || 'OUT_OF_STOCK';
+                    const totalUtilized = brand.totalUtilized || brand.total_utilized || 0;
+                    const utilizationPercentage = brand.utilizationPercentage || brand.utilization_percentage || 0;
+                    const isNew = brand.isNew || brand.is_new || false;
+
+                    // Create a unique key for grouping (brand name + distillery)
+                    const groupKey = `${brandName}_${distilleryName}`;
+
+                    if (!groupedBrands.has(groupKey)) {
+                        groupedBrands.set(groupKey, {
+                            brandName: brandName,
+                            distilleryName: distilleryName,
+                            brandType: brandType,
+                            packSizes: {},
+                            totalStock: 0,
+                            totalCapacity: 0,
+                            totalUtilized: 0,
+                            lastUpdated: new Date().toISOString(),
+                            overallStatus: 'OUT_OF_STOCK',
+                            isNew: false
+                        });
+                    }
+
+                    const groupedBrand = groupedBrands.get(groupKey);
+
+                    // Add pack size information
+                    groupedBrand.packSizes[capacitySize] = {
+                        id: brand.id?.toString() || '',
+                        capacitySize: capacitySize,
+                        currentStock: currentStock,
+                        maxCapacity: maxCapacity,
+                        status: status,
+                        totalUtilized: totalUtilized,
+                        reorderLevel: brand.reorderLevel || brand.reorder_level || 0,
+                        utilizationPercentage: utilizationPercentage
+                    };
+
+                    // Update totals
+                    groupedBrand.totalStock += currentStock;
+                    groupedBrand.totalCapacity += maxCapacity;
+                    groupedBrand.totalUtilized += totalUtilized;
+
+                    // Update overall status (prioritize worst status)
+                    if (status === 'OUT_OF_STOCK' || groupedBrand.overallStatus === 'OUT_OF_STOCK') {
+                        groupedBrand.overallStatus = 'OUT_OF_STOCK';
+                    } else if (status === 'LOW_STOCK' || groupedBrand.overallStatus === 'LOW_STOCK') {
+                        groupedBrand.overallStatus = 'LOW_STOCK';
+                    } else if (status === 'IN_STOCK') {
+                        groupedBrand.overallStatus = 'IN_STOCK';
+                    }
+
+                    // Update NEW status
+                    if (isNew) {
+                        groupedBrand.isNew = true;
+                    }
+                });
+
+                const result = Array.from(groupedBrands.values());
+                console.log('✅ Grouped brands result:', result.length, 'groups');
+                console.log('📋 Sample grouped brand:', result[0]);
+
+                return result;
             }),
             catchError((error) => {
                 console.error('getGroupedBrandWarehouses error:', error);
@@ -123,10 +203,36 @@ export class BrandWarehouseService {
 
         return this.http.get<any>(`${this.baseUrl}/`, { params }).pipe(
             map((response: any) => {
-                if (Array.isArray(response)) return response;
-                if (response?.results) return response.results;
-                if (response?.data) return response.data;
-                return [];
+                let brands = [];
+                if (Array.isArray(response)) {
+                    brands = response;
+                } else if (response?.results) {
+                    brands = response.results;
+                } else if (response?.data) {
+                    brands = response.data;
+                }
+
+                // Transform backend response to match frontend expectations
+                return brands.map((brand: any) => ({
+                    id: brand.id,
+                    distillery_name: brand.distilleryName || brand.distillery_name || '',
+                    brand_type: brand.brandType || brand.brand_type || '',
+                    brand_details: brand.brandDetails || brand.brand_details || '',
+                    current_stock: brand.currentStock || brand.current_stock || 0,
+                    capacity_size: brand.capacitySize || brand.capacity_size || 0,
+                    total_capacity: brand.totalCapacity || brand.total_capacity || 0,
+                    status: brand.status || 'OUT_OF_STOCK',
+                    liquor_data: brand.liquorData || brand.liquor_data || null,
+                    liquor_data_details: brand.liquorDataDetails || brand.liquor_data_details || null,
+                    reorder_level: brand.reorderLevel || brand.reorder_level || 0,
+                    max_capacity: brand.maxCapacity || brand.max_capacity || 0,
+                    average_daily_usage: brand.averageDailyUsage || brand.average_daily_usage || 0,
+                    total_utilized: brand.totalUtilized || brand.total_utilized || 0,
+                    utilization_percentage: brand.utilizationPercentage || brand.utilization_percentage || 0,
+                    utilizations: brand.utilizations || [],
+                    created_at: brand.createdAt || brand.created_at || null,
+                    updated_at: brand.updatedAt || brand.updated_at || null
+                }));
             }),
             catchError((error) => {
                 console.error('getBrandWarehouses error:', error);
@@ -200,7 +306,7 @@ export class BrandWarehouseService {
      * Initialize Sikkim brands from liquor_data_details
      */
     initializeSikkimBrands(): Observable<any> {
-        return this.http.post<any>(`${this.baseUrl}/initialize-sikkim-brands/`, {}).pipe(
+        return this.http.post<any>(`${this.baseUrl}/initialize-all-brands/`, {}).pipe(
             catchError((error) => {
                 console.error('initializeSikkimBrands error:', error);
                 throw error;
@@ -242,8 +348,22 @@ export class BrandWarehouseService {
      * Get warehouse overview statistics
      */
     getWarehouseOverview(): Observable<WarehouseOverview> {
-        return this.http.get<any>(`${this.baseUrl}/overview/`).pipe(
-            map((response: any) => response?.data || response || {}),
+        // Since /overview/ doesn't exist, calculate from main data
+        return this.getBrandWarehouses().pipe(
+            map((brands: BrandWarehouse[]) => {
+                const overview: WarehouseOverview = {
+                    totalBrands: brands.length,
+                    totalCapacity: brands.reduce((sum, b) => sum + (b.max_capacity || 0), 0),
+                    totalCurrentStock: brands.reduce((sum, b) => sum + (b.current_stock || 0), 0),
+                    lowStockAlerts: brands.filter(b => b.status === 'LOW_STOCK').length,
+                    outOfStockAlerts: brands.filter(b => b.status === 'OUT_OF_STOCK').length,
+                    newArrivals: 0, // TODO: Calculate from recent arrivals
+                    todayProduction: 0, // TODO: Calculate from today's production
+                    todayConsumption: 0, // TODO: Calculate from today's consumption
+                    pendingAdjustments: 0 // TODO: Calculate from pending adjustments
+                };
+                return overview;
+            }),
             catchError((error) => {
                 console.error('getWarehouseOverview error:', error);
                 return of({

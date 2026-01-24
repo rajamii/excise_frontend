@@ -185,6 +185,10 @@ export class HologramDataService {
   private dailyRegisterUpdateSubject = new BehaviorSubject<void>(undefined);
   public dailyRegisterUpdate$ = this.dailyRegisterUpdateSubject.asObservable();
 
+  // Subject for notifying when monthly statement needs to be refreshed
+  private monthlyStatementUpdateSubject = new BehaviorSubject<void>(undefined);
+  public monthlyStatementUpdate$ = this.monthlyStatementUpdateSubject.asObservable();
+
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
 
