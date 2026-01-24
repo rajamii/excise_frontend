@@ -1,43 +1,67 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { of } from 'rxjs';
 import { BrandwarehouseComponent } from './brandwarehouse.component';
-import { HologramDataService } from '../../services/hologram-data.service';
+import { BrandWarehouseService } from '../../services/brand-warehouse.service';
 
 describe('BrandwarehouseComponent', () => {
   let component: BrandwarehouseComponent;
   let fixture: ComponentFixture<BrandwarehouseComponent>;
-  let mockHologramDataService: jasmine.SpyObj<HologramDataService>;
+  let mockBrandWarehouseService: jasmine.SpyObj<BrandWarehouseService>;
 
   beforeEach(async () => {
-    const spy = jasmine.createSpyObj('HologramDataService', ['getDailyEntries']);
+    const spy = jasmine.createSpyObj('BrandWarehouseService', [
+      'getGroupedBrandWarehouses',
+      'getWarehouseOverview',
+      'initializeSikkimBrands',
+      'adjustStock'
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [BrandwarehouseComponent, FormsModule],
       providers: [
-        { provide: HologramDataService, useValue: spy }
+        { provide: BrandWarehouseService, useValue: spy }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(BrandwarehouseComponent);
     component = fixture.componentInstance;
-    mockHologramDataService = TestBed.inject(HologramDataService) as jasmine.SpyObj<HologramDataService>;
+    mockBrandWarehouseService = TestBed.inject(BrandWarehouseService) as jasmine.SpyObj<BrandWarehouseService>;
+
+    // Setup default mock responses
+    mockBrandWarehouseService.initializeSikkimBrands.and.returnValue(of({ success: true, created: 0, updated: 0 }));
+    mockBrandWarehouseService.getWarehouseOverview.and.returnValue(of({
+      totalBrands: 5,
+      totalCapacity: 10000,
+      totalCurrentStock: 5000,
+      lowStockAlerts: 2,
+      outOfStockAlerts: 1,
+      newArrivals: 0,
+      todayProduction: 100,
+      todayConsumption: 50,
+      pendingAdjustments: 0
+    }));
+    mockBrandWarehouseService.getGroupedBrandWarehouses.and.returnValue(of([]));
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should initialize with sample data', () => {
-    component.ngOnInit();
-    expect(component.brandStocks.length).toBeGreaterThan(0);
-    expect(component.warehouseOverview.totalBrands).toBeGreaterThan(0);
+  it('should initialize with default values', () => {
+    expect(component.groupedBrandStocks).toEqual([]);
+    expect(component.filteredStocks).toEqual([]);
+    expect(component.paginatedStocks).toEqual([]);
+    expect(component.currentPage).toBe(1);
+    expect(component.pageSize).toBe(10);
+    expect(component.filters.brandName).toBe('Sikkim');
   });
 
   it('should calculate total stock correctly', () => {
     component.filteredStocks = [
-      { currentStock: 100 } as any,
-      { currentStock: 200 } as any,
-      { currentStock: 300 } as any
+      { totalStock: 100 } as any,
+      { totalStock: 200 } as any,
+      { totalStock: 300 } as any
     ];
     
     expect(component.getTotalStock()).toBe(600);
@@ -46,82 +70,240 @@ describe('BrandwarehouseComponent', () => {
   it('should generate page numbers correctly', () => {
     component.totalPages = 3;
     const pageNumbers = component.getPageNumbers();
-    expect(pageNumbers).toEqual([0, 1, 2]);
+    expect(pageNumbers).toEqual([1, 2, 3]);
   });
 
-  it('should calculate adjustment result correctly', () => {
-    component.selectedBrand = { currentStock: 100 } as any;
+  it('should calculate adjustment result correctly for ADD', () => {
+    component.selectedPackSize = { currentStock: 100 } as any;
     component.adjustmentQuantity = 50;
-    
     component.adjustmentType = 'ADD';
-    expect(component.getAdjustmentResult()).toBe(150);
     
+    expect(component.getAdjustmentResult()).toBe(150);
+  });
+
+  it('should calculate adjustment result correctly for SUBTRACT', () => {
+    component.selectedPackSize = { currentStock: 100 } as any;
+    component.adjustmentQuantity = 50;
     component.adjustmentType = 'SUBTRACT';
+    
     expect(component.getAdjustmentResult()).toBe(50);
   });
 
+  it('should handle SUBTRACT with quantity greater than stock', () => {
+    component.selectedPackSize = { currentStock: 30 } as any;
+    component.adjustmentQuantity = 50;
+    component.adjustmentType = 'SUBTRACT';
+    
+    expect(component.getAdjustmentResult()).toBe(0);
+  });
+
+  it('should return 0 when no pack size is selected', () => {
+    component.selectedPackSize = null;
+    component.adjustmentQuantity = 50;
+    
+    expect(component.getAdjustmentResult()).toBe(0);
+  });
+
   it('should apply filters correctly', () => {
-    component.initializeSampleData();
+    component.groupedBrandStocks = [
+      {
+        brandName: 'Sikkim Gold Whisky',
+        distilleryName: 'Sikkim Distilleries',
+        brandType: 'Whisky',
+        overallStatus: 'IN_STOCK',
+        totalStock: 1000,
+        totalCapacity: 2000
+      } as any,
+      {
+        brandName: 'Royal Challenge',
+        distilleryName: 'UBL',
+        brandType: 'Whisky',
+        overallStatus: 'LOW_STOCK',
+        totalStock: 500,
+        totalCapacity: 1000
+      } as any
+    ];
+
     component.filters.brandName = 'Sikkim';
     component.applyFilters();
     
-    expect(component.filteredStocks.length).toBeGreaterThan(0);
-    expect(component.filteredStocks.every(stock => 
-      stock.brandName.toLowerCase().includes('sikkim')
-    )).toBeTruthy();
+    expect(component.filteredStocks.length).toBe(1);
+    expect(component.filteredStocks[0].brandName).toContain('Sikkim');
   });
 
-  it('should update brand status correctly', () => {
-    const brand = {
-      currentStock: 0,
-      reorderLevel: 100,
-      capacity180ml: 500,
-      capacity360ml: 300,
-      capacity550ml: 200,
-      averageDailyUsage: 10
+  it('should check stock level correctly', () => {
+    const highStock = {
+      totalStock: 900,
+      totalCapacity: 1000
     } as any;
 
-    component.updateBrandStatus(brand);
-    expect(brand.status).toBe('OUT_OF_STOCK');
+    const mediumStock = {
+      totalStock: 600,
+      totalCapacity: 1000
+    } as any;
 
-    brand.currentStock = 50;
-    component.updateBrandStatus(brand);
-    expect(brand.status).toBe('LOW_STOCK');
+    const lowStock = {
+      totalStock: 300,
+      totalCapacity: 1000
+    } as any;
 
-    brand.currentStock = 500;
-    component.updateBrandStatus(brand);
-    expect(brand.status).toBe('IN_STOCK');
+    component.filters.stockLevel = 'HIGH';
+    expect(component.checkStockLevel(highStock)).toBeTruthy();
+    expect(component.checkStockLevel(mediumStock)).toBeFalsy();
 
-    brand.currentStock = 1200;
-    component.updateBrandStatus(brand);
-    expect(brand.status).toBe('OVERSTOCKED');
+    component.filters.stockLevel = 'MEDIUM';
+    expect(component.checkStockLevel(mediumStock)).toBeTruthy();
+    expect(component.checkStockLevel(lowStock)).toBeFalsy();
+
+    component.filters.stockLevel = 'LOW';
+    expect(component.checkStockLevel(lowStock)).toBeTruthy();
+    expect(component.checkStockLevel(highStock)).toBeFalsy();
+  });
+
+  it('should update pagination correctly', () => {
+    component.filteredStocks = new Array(25).fill({}).map((_, i) => ({ id: i })) as any;
+    component.pageSize = 10;
+    component.currentPage = 1;
+    
+    component.updatePagination();
+    
+    expect(component.totalPages).toBe(3);
+    expect(component.paginatedStocks.length).toBe(10);
+  });
+
+  it('should change page correctly', () => {
+    component.totalPages = 5;
+    component.currentPage = 1;
+    
+    component.changePage(3);
+    expect(component.currentPage).toBe(3);
+    
+    // Should not change to invalid page
+    component.changePage(10);
+    expect(component.currentPage).toBe(3);
+    
+    component.changePage(0);
+    expect(component.currentPage).toBe(3);
+  });
+
+  it('should clear filters correctly', () => {
+    component.filters = {
+      brandName: 'Test',
+      liquorType: 'Whisky',
+      status: 'IN_STOCK',
+      stockLevel: 'HIGH',
+      dateFrom: '2024-01-01',
+      dateTo: '2024-01-31'
+    };
+    
+    component.clearFilters();
+    
+    expect(component.filters.brandName).toBe('Sikkim');
+    expect(component.filters.liquorType).toBe('');
+    expect(component.filters.status).toBe('');
+    expect(component.filters.stockLevel).toBe('');
+    expect(component.filters.dateFrom).toBe('');
+    expect(component.filters.dateTo).toBe('');
+  });
+
+  it('should open brand details modal', () => {
+    const mockBrand = {
+      brandName: 'Test Brand',
+      distilleryName: 'Test Distillery'
+    } as any;
+
+    component.viewBrandDetails(mockBrand);
+    
+    expect(component.selectedBrand).toBe(mockBrand);
+    expect(component.showDetailsModal).toBeTruthy();
+  });
+
+  it('should open adjustment modal', () => {
+    const mockBrand = { brandName: 'Test Brand' } as any;
+    const mockPackSize = { id: '1', currentStock: 100 } as any;
+
+    component.openAdjustmentModal(mockBrand, mockPackSize);
+    
+    expect(component.selectedBrand).toBe(mockBrand);
+    expect(component.selectedPackSize).toBe(mockPackSize);
+    expect(component.adjustmentQuantity).toBe(0);
+    expect(component.adjustmentType).toBe('ADD');
+    expect(component.adjustmentReason).toBe('');
+    expect(component.showAdjustmentModal).toBeTruthy();
   });
 
   it('should open transit permits modal', () => {
-    const mockBrand = {
-      transitPermits: [
-        { permitNo: 'TRP/001', status: 'DELIVERED' }
-      ]
-    } as any;
+    const mockBrand = { brandName: 'Test Brand' } as any;
 
     component.viewTransitPermits(mockBrand);
     
     expect(component.selectedBrand).toBe(mockBrand);
-    expect(component.selectedTransitPermits).toBe(mockBrand.transitPermits);
+    expect(component.selectedTransitPermits.length).toBeGreaterThan(0);
     expect(component.showTransitPermitsModal).toBeTruthy();
   });
 
   it('should open last entries modal', () => {
-    const mockBrand = {
-      lastEntries: [
-        { id: '1', type: 'PRODUCTION', quantity: 100 }
-      ]
-    } as any;
+    const mockBrand = { brandName: 'Test Brand' } as any;
 
     component.viewLastEntries(mockBrand);
     
     expect(component.selectedBrand).toBe(mockBrand);
-    expect(component.selectedLastEntries).toBe(mockBrand.lastEntries);
+    expect(component.selectedLastEntries.length).toBeGreaterThan(0);
     expect(component.showLastEntriesModal).toBeTruthy();
+  });
+
+  it('should return correct status color', () => {
+    expect(component.getStatusColor('IN_STOCK')).toBe('success');
+    expect(component.getStatusColor('LOW_STOCK')).toBe('warning');
+    expect(component.getStatusColor('OUT_OF_STOCK')).toBe('danger');
+    expect(component.getStatusColor('OVERSTOCKED')).toBe('info');
+    expect(component.getStatusColor('UNKNOWN')).toBe('secondary');
+  });
+
+  it('should return correct utilization color', () => {
+    expect(component.getUtilizationColor(95)).toBe('danger');
+    expect(component.getUtilizationColor(75)).toBe('warning');
+    expect(component.getUtilizationColor(45)).toBe('success');
+    expect(component.getUtilizationColor(25)).toBe('info');
+  });
+
+  it('should get pack size keys in sorted order', () => {
+    const packSizes = {
+      750: { id: '1' } as any,
+      180: { id: '2' } as any,
+      375: { id: '3' } as any
+    };
+
+    const keys = component.getPackSizeKeys(packSizes);
+    expect(keys).toEqual([180, 375, 750]);
+  });
+
+  it('should initialize sample data when API fails', () => {
+    mockBrandWarehouseService.getGroupedBrandWarehouses.and.returnValue(
+      new Promise((_, reject) => reject('API Error')) as any
+    );
+
+    component.loadWarehouseData();
+    
+    // The component should fall back to sample data
+    expect(component.groupedBrandStocks.length).toBeGreaterThan(0);
+  });
+
+  it('should build API filters correctly', () => {
+    component.filters = {
+      brandName: 'Sikkim',
+      liquorType: 'Whisky',
+      status: 'IN_STOCK',
+      stockLevel: 'HIGH',
+      dateFrom: '2024-01-01',
+      dateTo: '2024-01-31'
+    };
+
+    const apiFilters = (component as any).buildApiFilters();
+    
+    expect(apiFilters.distillery_name).toBe('Sikkim');
+    expect(apiFilters.brand_type).toBe('Whisky');
+    expect(apiFilters.status).toBe('IN_STOCK');
+    expect(apiFilters.stock_level).toBe('HIGH');
   });
 });

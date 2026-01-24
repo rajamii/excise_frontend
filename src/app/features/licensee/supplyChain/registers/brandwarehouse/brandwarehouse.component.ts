@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HologramDataService } from '../../services/hologram-data.service';
+import { BrandWarehouseService } from '../../services/brand-warehouse.service';
 
 interface TransitPermitDetail {
   permitNo: string;
@@ -30,49 +30,32 @@ interface LastEntryDetail {
   transitPermitNo?: string;
 }
 
-interface BrandStock {
+interface PackSizeInfo {
   id: string;
-  brandName: string;
-  brandCode: string;
-  alcoholPercent: string;
-  bottleSize: number;
-  liquorType: string;
+  capacitySize: number;
   currentStock: number;
-  capacity180ml: number; // Capacity for 180ml bottles
-  capacity360ml: number; // Capacity for 360ml bottles
-  capacity550ml: number; // Capacity for 550ml bottles
-  totalProduction: number;
-  lastUpdated: string;
-  status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
-  reorderLevel: number;
   maxCapacity: number;
-  averageDailyUsage: number;
-  totalUtilized: number; // Total quantity utilized through transit permits
-  transitPermits: TransitPermitDetail[]; // All transit permits for this brand
-  lastEntry: {
-    date: string;
-    type: 'PRODUCTION' | 'CONSUMPTION' | 'ADJUSTMENT' | 'TRANSIT_PERMIT';
-    quantity: number;
-    previousStock: number;
-    newStock: number;
-    referenceNo: string;
-  };
-  lastEntries: LastEntryDetail[]; // All recent entries
-  monthlyMovement: {
-    month: string;
-    opening: number;
-    production: number;
-    consumption: number;
-    wastage: number;
-    closing: number;
-  };
+  status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
+  totalUtilized: number;
+  reorderLevel: number;
+  utilizationPercentage: number;
+}
+
+interface GroupedBrandStock {
+  brandName: string;
+  distilleryName: string;
+  brandType: string;
+  packSizes: { [key: number]: PackSizeInfo };
+  totalStock: number;
+  totalCapacity: number;
+  totalUtilized: number;
+  lastUpdated: string;
+  overallStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' | 'OVERSTOCKED';
 }
 
 interface WarehouseOverview {
   totalBrands: number;
-  totalCapacity180ml: number;
-  totalCapacity360ml: number;
-  totalCapacity550ml: number;
+  totalCapacity: number;
   totalCurrentStock: number;
   lowStockAlerts: number;
   outOfStockAlerts: number;
@@ -96,20 +79,18 @@ interface FilterOptions {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './brandwarehouse.component.html',
-  styleUrl: './brandwarehouse.component.scss'
+  styleUrls: ['./brandwarehouse.component.scss']
 })
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
 
   // Data
-  brandStocks: BrandStock[] = [];
-  filteredStocks: BrandStock[] = [];
-  paginatedStocks: BrandStock[] = [];
+  groupedBrandStocks: GroupedBrandStock[] = [];
+  filteredStocks: GroupedBrandStock[] = [];
+  paginatedStocks: GroupedBrandStock[] = [];
   warehouseOverview: WarehouseOverview = {
     totalBrands: 0,
-    totalCapacity180ml: 0,
-    totalCapacity360ml: 0,
-    totalCapacity550ml: 0,
+    totalCapacity: 0,
     totalCurrentStock: 0,
     lowStockAlerts: 0,
     outOfStockAlerts: 0,
@@ -121,7 +102,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   // Filters
   filters: FilterOptions = {
-    brandName: '',
+    brandName: 'Sikkim', // Default filter as requested
     liquorType: '',
     status: '',
     stockLevel: '',
@@ -136,7 +117,8 @@ export class BrandwarehouseComponent implements OnInit {
 
   // UI State
   isLoading = false;
-  selectedBrand: BrandStock | null = null;
+  selectedBrand: GroupedBrandStock | null = null;
+  selectedPackSize: PackSizeInfo | null = null;
   showDetailsModal = false;
   showAdjustmentModal = false;
   showTransitPermitsModal = false;
@@ -153,449 +135,154 @@ export class BrandwarehouseComponent implements OnInit {
     data: [] as number[]
   };
 
-  constructor(private hologramDataService: HologramDataService) {}
+  constructor(private brandWarehouseService: BrandWarehouseService) { }
 
   ngOnInit(): void {
+    this.initializeSikkimBrands();
     this.loadWarehouseData();
-    this.initializeSampleData();
+  }
+
+  /**
+   * Initialize Sikkim brands from liquor_data_details table
+   */
+  initializeSikkimBrands(): void {
+    this.brandWarehouseService.initializeSikkimBrands().subscribe({
+      next: (response) => {
+        console.log('Sikkim brands initialized:', response);
+        if (response.success) {
+          console.log(`Created: ${response.created}, Updated: ${response.updated}`);
+        }
+      },
+      error: (error) => {
+        console.error('Error initializing Sikkim brands:', error);
+        // Continue even if initialization fails
+      }
+    });
   }
 
   loadWarehouseData(): void {
     this.isLoading = true;
-    // TODO: Replace with actual API call
-    setTimeout(() => {
-      this.calculateOverview();
-      this.applyFilters();
-      this.isLoading = false;
-    }, 1000);
+
+    // Load overview first
+    this.brandWarehouseService.getWarehouseOverview().subscribe({
+      next: (overview) => {
+        this.warehouseOverview = overview;
+      },
+      error: (error) => {
+        console.error('Error loading overview:', error);
+      }
+    });
+
+    // Load brand warehouses
+    this.brandWarehouseService.getGroupedBrandWarehouses(this.buildApiFilters()).subscribe({
+      next: (data) => {
+        this.groupedBrandStocks = data;
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading warehouse data:', error);
+        this.isLoading = false;
+        // Fall back to sample data on error
+        this.initializeSampleData();
+        this.calculateOverview();
+        this.applyFilters();
+      }
+    });
+  }
+
+  /**
+   * Build API filters from component filters
+   */
+  private buildApiFilters(): any {
+    const filters: any = {};
+
+    if (this.filters.brandName) {
+      filters.distillery_name = this.filters.brandName;
+    }
+    if (this.filters.liquorType) {
+      filters.brand_type = this.filters.liquorType;
+    }
+    if (this.filters.status) {
+      filters.status = this.filters.status;
+    }
+    if (this.filters.stockLevel) {
+      filters.stock_level = this.filters.stockLevel;
+    }
+
+    return filters;
   }
 
   initializeSampleData(): void {
-    this.brandStocks = [
+    this.groupedBrandStocks = [
       {
-        id: '1',
-        brandName: 'Sikkim Supreme Whisky',
-        brandCode: 'SSW001',
-        alcoholPercent: '42.8%',
-        bottleSize: 750,
-        liquorType: 'Whisky',
-        currentStock: 15420,
-        capacity180ml: 8500,
-        capacity360ml: 4200,
-        capacity550ml: 2720,
-        totalProduction: 89650,
-        totalUtilized: 12500,
-        lastUpdated: '2026-01-23T10:30:00',
-        status: 'IN_STOCK',
-        reorderLevel: 5000,
-        maxCapacity: 30000,
-        averageDailyUsage: 850,
-        transitPermits: [
-          {
-            permitNo: 'TRP/2026/001',
-            date: '2026-01-20',
-            distributorName: 'M/s Karma Chapel Bhutia',
-            depotAddress: 'Gangtok Main Market, Sikkim',
-            vehicleNumber: 'SK01AB1234',
-            cases: 50,
-            bottlesPerCase: 12,
-            totalBottles: 600,
-            status: 'DELIVERED',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-20'
-          },
-          {
-            permitNo: 'TRP/2026/015',
-            date: '2026-01-22',
-            distributorName: 'M/s Himalayan Distributors',
-            depotAddress: 'Namchi Industrial Area, Sikkim',
-            vehicleNumber: 'SK02CD5678',
-            cases: 75,
-            bottlesPerCase: 12,
-            totalBottles: 900,
-            status: 'IN_TRANSIT',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-22'
-          }
-        ],
-        lastEntry: {
-          date: '2026-01-23',
-          type: 'PRODUCTION',
-          quantity: 2500,
-          previousStock: 12920,
-          newStock: 15420,
-          referenceNo: 'PRD/2026/001'
-        },
-        lastEntries: [
-          {
+        brandName: 'Sikkim Gold Whisky (Fallback Sample)',
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        brandType: 'Whisky',
+        packSizes: {
+          180: {
             id: '1',
-            date: '2026-01-23',
-            type: 'PRODUCTION',
-            quantity: 2500,
-            previousStock: 12920,
-            newStock: 15420,
-            referenceNo: 'PRD/2026/001',
-            description: 'Daily production batch #001',
-            officerName: 'Rajesh Kumar'
+            capacitySize: 180,
+            currentStock: 500,
+            maxCapacity: 1000,
+            status: 'IN_STOCK',
+            totalUtilized: 100,
+            reorderLevel: 100,
+            utilizationPercentage: 50
           },
-          {
+          375: {
             id: '2',
-            date: '2026-01-22',
-            type: 'TRANSIT_PERMIT',
-            quantity: 900,
-            previousStock: 13820,
-            newStock: 12920,
-            referenceNo: 'TRP/2026/015',
-            description: 'Transit permit to Himalayan Distributors',
-            officerName: 'Commissioner Singh',
-            transitPermitNo: 'TRP/2026/015'
+            capacitySize: 375,
+            currentStock: 300,
+            maxCapacity: 800,
+            status: 'IN_STOCK',
+            totalUtilized: 200,
+            reorderLevel: 80,
+            utilizationPercentage: 37.5
           },
-          {
+          750: {
             id: '3',
-            date: '2026-01-21',
-            type: 'CONSUMPTION',
-            quantity: 450,
-            previousStock: 14270,
-            newStock: 13820,
-            referenceNo: 'CON/2026/021',
-            description: 'Quality testing and sampling',
-            officerName: 'Lab Technician'
+            capacitySize: 750,
+            currentStock: 200,
+            maxCapacity: 500,
+            status: 'IN_STOCK',
+            totalUtilized: 150,
+            reorderLevel: 50,
+            utilizationPercentage: 40
           }
-        ],
-        monthlyMovement: {
-          month: 'January 2026',
-          opening: 12500,
-          production: 8500,
-          consumption: 5580,
-          wastage: 0,
-          closing: 15420
-        }
-      },
-      {
-        id: '2',
-        brandName: 'Himalayan Gold Rum',
-        brandCode: 'HGR002',
-        alcoholPercent: '40%',
-        bottleSize: 750,
-        liquorType: 'Rum',
-        currentStock: 3200,
-        capacity180ml: 1800,
-        capacity360ml: 900,
-        capacity550ml: 500,
-        totalProduction: 45230,
-        totalUtilized: 8500,
-        lastUpdated: '2026-01-23T09:15:00',
-        status: 'LOW_STOCK',
-        reorderLevel: 3500,
-        maxCapacity: 18000,
-        averageDailyUsage: 420,
-        transitPermits: [
-          {
-            permitNo: 'TRP/2026/008',
-            date: '2026-01-18',
-            distributorName: 'M/s Mountain View Traders',
-            depotAddress: 'Pelling Market, West Sikkim',
-            vehicleNumber: 'SK03EF9012',
-            cases: 40,
-            bottlesPerCase: 12,
-            totalBottles: 480,
-            status: 'DELIVERED',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-18'
-          }
-        ],
-        lastEntry: {
-          date: '2026-01-22',
-          type: 'CONSUMPTION',
-          quantity: 800,
-          previousStock: 4000,
-          newStock: 3200,
-          referenceNo: 'CON/2026/045'
         },
-        lastEntries: [
-          {
-            id: '4',
-            date: '2026-01-22',
-            type: 'CONSUMPTION',
-            quantity: 800,
-            previousStock: 4000,
-            newStock: 3200,
-            referenceNo: 'CON/2026/045',
-            description: 'Regular consumption for local market',
-            officerName: 'Market Officer'
-          },
-          {
-            id: '5',
-            date: '2026-01-20',
-            type: 'PRODUCTION',
-            quantity: 1200,
-            previousStock: 2800,
-            newStock: 4000,
-            referenceNo: 'PRD/2026/020',
-            description: 'Weekly production batch',
-            officerName: 'Production Manager'
-          }
-        ],
-        monthlyMovement: {
-          month: 'January 2026',
-          opening: 8500,
-          production: 4200,
-          consumption: 9500,
-          wastage: 0,
-          closing: 3200
-        }
-      },
-      {
-        id: '3',
-        brandName: 'Royal Sikkim Vodka',
-        brandCode: 'RSV003',
-        alcoholPercent: '40%',
-        bottleSize: 750,
-        liquorType: 'Vodka',
-        currentStock: 0,
-        capacity180ml: 6700,
-        capacity360ml: 3350,
-        capacity550ml: 1950,
-        totalProduction: 28450,
-        totalUtilized: 15200,
-        lastUpdated: '2026-01-22T16:45:00',
-        status: 'OUT_OF_STOCK',
-        reorderLevel: 2500,
-        maxCapacity: 15000,
-        averageDailyUsage: 320,
-        transitPermits: [
-          {
-            permitNo: 'TRP/2026/012',
-            date: '2026-01-19',
-            distributorName: 'M/s Royal Distributors',
-            depotAddress: 'Jorethang Commercial Complex',
-            vehicleNumber: 'SK04GH3456',
-            cases: 60,
-            bottlesPerCase: 12,
-            totalBottles: 720,
-            status: 'DELIVERED',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-19'
-          }
-        ],
-        lastEntry: {
-          date: '2026-01-22',
-          type: 'CONSUMPTION',
-          quantity: 450,
-          previousStock: 450,
-          newStock: 0,
-          referenceNo: 'CON/2026/044'
-        },
-        lastEntries: [
-          {
-            id: '6',
-            date: '2026-01-22',
-            type: 'CONSUMPTION',
-            quantity: 450,
-            previousStock: 450,
-            newStock: 0,
-            referenceNo: 'CON/2026/044',
-            description: 'Final stock consumption - urgent order',
-            officerName: 'Emergency Officer'
-          }
-        ],
-        monthlyMovement: {
-          month: 'January 2026',
-          opening: 5500,
-          production: 2800,
-          consumption: 8300,
-          wastage: 0,
-          closing: 0
-        }
-      },
-      {
-        id: '4',
-        brandName: 'Mountain Gin Premium',
-        brandCode: 'MGP004',
-        alcoholPercent: '43%',
-        bottleSize: 750,
-        liquorType: 'Gin',
-        currentStock: 8750,
-        capacity180ml: 5600,
-        capacity360ml: 2800,
-        capacity550ml: 1600,
-        totalProduction: 32100,
-        totalUtilized: 5400,
-        lastUpdated: '2026-01-23T11:20:00',
-        status: 'IN_STOCK',
-        reorderLevel: 2000,
-        maxCapacity: 12000,
-        averageDailyUsage: 280,
-        transitPermits: [
-          {
-            permitNo: 'TRP/2026/005',
-            date: '2026-01-17',
-            distributorName: 'M/s Premium Spirits Ltd',
-            depotAddress: 'Singtam Industrial Estate',
-            vehicleNumber: 'SK05IJ7890',
-            cases: 30,
-            bottlesPerCase: 12,
-            totalBottles: 360,
-            status: 'DELIVERED',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-17'
-          }
-        ],
-        lastEntry: {
-          date: '2026-01-23',
-          type: 'PRODUCTION',
-          quantity: 1500,
-          previousStock: 7250,
-          newStock: 8750,
-          referenceNo: 'PRD/2026/002'
-        },
-        lastEntries: [
-          {
-            id: '7',
-            date: '2026-01-23',
-            type: 'PRODUCTION',
-            quantity: 1500,
-            previousStock: 7250,
-            newStock: 8750,
-            referenceNo: 'PRD/2026/002',
-            description: 'Premium batch production',
-            officerName: 'Head Distiller'
-          }
-        ],
-        monthlyMovement: {
-          month: 'January 2026',
-          opening: 6500,
-          production: 5200,
-          consumption: 2950,
-          wastage: 0,
-          closing: 8750
-        }
-      },
-      {
-        id: '5',
-        brandName: 'Heritage Beer',
-        brandCode: 'HB005',
-        alcoholPercent: '5%',
-        bottleSize: 650,
-        liquorType: 'Beer',
-        currentStock: 22500,
-        capacity180ml: 11100,
-        capacity360ml: 5550,
-        capacity550ml: 3350,
-        totalProduction: 156780,
-        totalUtilized: 25600,
-        lastUpdated: '2026-01-23T12:00:00',
-        status: 'OVERSTOCKED',
-        reorderLevel: 8000,
-        maxCapacity: 25000,
-        averageDailyUsage: 1200,
-        transitPermits: [
-          {
-            permitNo: 'TRP/2026/020',
-            date: '2026-01-21',
-            distributorName: 'M/s Beer Distributors Pvt Ltd',
-            depotAddress: 'Rangpo Border Trade Complex',
-            vehicleNumber: 'SK06KL2468',
-            cases: 100,
-            bottlesPerCase: 24,
-            totalBottles: 2400,
-            status: 'APPROVED',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-21'
-          },
-          {
-            permitNo: 'TRP/2026/018',
-            date: '2026-01-20',
-            distributorName: 'M/s Valley Beverages',
-            depotAddress: 'Mangan North Sikkim Depot',
-            vehicleNumber: 'SK07MN1357',
-            cases: 80,
-            bottlesPerCase: 24,
-            totalBottles: 1920,
-            status: 'IN_TRANSIT',
-            approvedBy: 'Commissioner Singh',
-            approvalDate: '2026-01-20'
-          }
-        ],
-        lastEntry: {
-          date: '2026-01-23',
-          type: 'PRODUCTION',
-          quantity: 5000,
-          previousStock: 17500,
-          newStock: 22500,
-          referenceNo: 'PRD/2026/003'
-        },
-        lastEntries: [
-          {
-            id: '8',
-            date: '2026-01-23',
-            type: 'PRODUCTION',
-            quantity: 5000,
-            previousStock: 17500,
-            newStock: 22500,
-            referenceNo: 'PRD/2026/003',
-            description: 'Large batch beer production',
-            officerName: 'Brewery Manager'
-          },
-          {
-            id: '9',
-            date: '2026-01-21',
-            type: 'TRANSIT_PERMIT',
-            quantity: 2400,
-            previousStock: 19900,
-            newStock: 17500,
-            referenceNo: 'TRP/2026/020',
-            description: 'Transit permit to Beer Distributors',
-            officerName: 'Commissioner Singh',
-            transitPermitNo: 'TRP/2026/020'
-          }
-        ],
-        monthlyMovement: {
-          month: 'January 2026',
-          opening: 15000,
-          production: 18500,
-          consumption: 11000,
-          wastage: 0,
-          closing: 22500
-        }
+        totalStock: 1000,
+        totalCapacity: 2300,
+        totalUtilized: 450,
+        lastUpdated: new Date().toISOString(),
+        overallStatus: 'IN_STOCK'
       }
     ];
   }
 
   calculateOverview(): void {
     this.warehouseOverview = {
-      totalBrands: this.brandStocks.length,
-      totalCapacity180ml: this.brandStocks.reduce((sum, brand) => sum + brand.capacity180ml, 0),
-      totalCapacity360ml: this.brandStocks.reduce((sum, brand) => sum + brand.capacity360ml, 0),
-      totalCapacity550ml: this.brandStocks.reduce((sum, brand) => sum + brand.capacity550ml, 0),
-      totalCurrentStock: this.brandStocks.reduce((sum, brand) => sum + brand.currentStock, 0),
-      lowStockAlerts: this.brandStocks.filter(b => b.status === 'LOW_STOCK').length,
-      outOfStockAlerts: this.brandStocks.filter(b => b.status === 'OUT_OF_STOCK').length,
-      newArrivals: this.brandStocks.filter(b => 
-        b.lastEntry.type === 'PRODUCTION' && 
-        new Date(b.lastEntry.date).toDateString() === new Date().toDateString()
-      ).length,
-      todayProduction: this.brandStocks
-        .filter(b => b.lastEntry.type === 'PRODUCTION' && 
-          new Date(b.lastEntry.date).toDateString() === new Date().toDateString())
-        .reduce((sum, b) => sum + b.lastEntry.quantity, 0),
-      todayConsumption: this.brandStocks
-        .filter(b => b.lastEntry.type === 'CONSUMPTION' && 
-          new Date(b.lastEntry.date).toDateString() === new Date().toDateString())
-        .reduce((sum, b) => sum + b.lastEntry.quantity, 0),
+      totalBrands: this.groupedBrandStocks.length,
+      totalCapacity: this.groupedBrandStocks.reduce((sum, brand) => sum + brand.totalCapacity, 0),
+      totalCurrentStock: this.groupedBrandStocks.reduce((sum, brand) => sum + brand.totalStock, 0),
+      lowStockAlerts: this.groupedBrandStocks.filter(b => b.overallStatus === 'LOW_STOCK').length,
+      outOfStockAlerts: this.groupedBrandStocks.filter(b => b.overallStatus === 'OUT_OF_STOCK').length,
+      newArrivals: 0,
+      todayProduction: 0,
+      todayConsumption: this.groupedBrandStocks.reduce((sum, brand) => sum + brand.totalUtilized, 0),
       pendingAdjustments: 2
     };
   }
 
   applyFilters(): void {
-    this.filteredStocks = this.brandStocks.filter(stock => {
-      const matchesBrand = !this.filters.brandName || 
+    this.filteredStocks = this.groupedBrandStocks.filter(stock => {
+      const matchesBrand = !this.filters.brandName ||
         stock.brandName.toLowerCase().includes(this.filters.brandName.toLowerCase());
-      
-      const matchesType = !this.filters.liquorType || stock.liquorType === this.filters.liquorType;
-      
-      const matchesStatus = !this.filters.status || stock.status === this.filters.status;
-      
+
+      const matchesType = !this.filters.liquorType || stock.brandType === this.filters.liquorType;
+
+      const matchesStatus = !this.filters.status || stock.overallStatus === this.filters.status;
+
       const matchesStockLevel = !this.filters.stockLevel || this.checkStockLevel(stock);
 
       return matchesBrand && matchesType && matchesStatus && matchesStockLevel;
@@ -604,10 +291,9 @@ export class BrandwarehouseComponent implements OnInit {
     this.updatePagination();
   }
 
-  checkStockLevel(stock: BrandStock): boolean {
-    const totalCapacity = stock.capacity180ml + stock.capacity360ml + stock.capacity550ml;
-    const utilizationPercent = (stock.currentStock / totalCapacity) * 100;
-    
+  checkStockLevel(stock: GroupedBrandStock): boolean {
+    const utilizationPercent = stock.totalCapacity > 0 ? (stock.totalStock / stock.totalCapacity) * 100 : 0;
+
     switch (this.filters.stockLevel) {
       case 'HIGH': return utilizationPercent >= 80;
       case 'MEDIUM': return utilizationPercent >= 40 && utilizationPercent < 80;
@@ -632,7 +318,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   clearFilters(): void {
     this.filters = {
-      brandName: '',
+      brandName: 'Sikkim', // Reset to default Sikkim filter
       liquorType: '',
       status: '',
       stockLevel: '',
@@ -642,13 +328,14 @@ export class BrandwarehouseComponent implements OnInit {
     this.applyFilters();
   }
 
-  viewBrandDetails(brand: BrandStock): void {
+  viewBrandDetails(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
     this.showDetailsModal = true;
   }
 
-  openAdjustmentModal(brand: BrandStock): void {
+  openAdjustmentModal(brand: GroupedBrandStock, packSize: PackSizeInfo): void {
     this.selectedBrand = brand;
+    this.selectedPackSize = packSize;
     this.adjustmentQuantity = 0;
     this.adjustmentType = 'ADD';
     this.adjustmentReason = '';
@@ -656,61 +343,119 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   submitStockAdjustment(): void {
-    if (!this.selectedBrand || this.adjustmentQuantity <= 0) return;
+    if (!this.selectedBrand || !this.selectedPackSize || this.adjustmentQuantity <= 0) return;
 
-    const previousStock = this.selectedBrand.currentStock;
-    const newStock = this.adjustmentType === 'ADD' 
-      ? previousStock + this.adjustmentQuantity
-      : previousStock - this.adjustmentQuantity;
-
-    // Update the brand stock
-    this.selectedBrand.currentStock = Math.max(0, newStock);
-    this.selectedBrand.lastUpdated = new Date().toISOString();
-    this.selectedBrand.lastEntry = {
-      date: new Date().toISOString().split('T')[0],
-      type: 'ADJUSTMENT',
+    const brandId = parseInt(this.selectedPackSize.id);
+    const adjustment = {
+      adjustment_type: this.adjustmentType,
       quantity: this.adjustmentQuantity,
-      previousStock: previousStock,
-      newStock: this.selectedBrand.currentStock,
-      referenceNo: `ADJ/2026/${Date.now()}`
+      reason: this.adjustmentReason
     };
 
-    // Update status based on new stock level
-    this.updateBrandStatus(this.selectedBrand);
+    this.brandWarehouseService.adjustStock(brandId, adjustment).subscribe({
+      next: (response) => {
+        console.log('Stock adjusted:', response);
 
-    // Recalculate overview
-    this.calculateOverview();
-    this.applyFilters();
+        // Update local data
+        if (this.selectedBrand && this.selectedPackSize) {
+          this.selectedPackSize.currentStock = response.data.new_stock;
+          this.selectedPackSize.status = response.data.status;
+          
+          // Recalculate brand totals
+          this.selectedBrand.totalStock = Object.values(this.selectedBrand.packSizes)
+            .reduce((sum, pack) => sum + pack.currentStock, 0);
+          
+          this.selectedBrand.lastUpdated = new Date().toISOString();
+        }
 
-    // Close modal
-    this.showAdjustmentModal = false;
-    this.selectedBrand = null;
-  }
+        // Recalculate overview
+        this.calculateOverview();
+        this.applyFilters();
 
-  updateBrandStatus(brand: BrandStock): void {
-    if (brand.currentStock === 0) {
-      brand.status = 'OUT_OF_STOCK';
-    } else if (brand.currentStock <= brand.reorderLevel) {
-      brand.status = 'LOW_STOCK';
-    } else {
-      const totalCapacity = brand.capacity180ml + brand.capacity360ml + brand.capacity550ml;
-      if (brand.currentStock > totalCapacity) {
-        brand.status = 'OVERSTOCKED';
-      } else {
-        brand.status = 'IN_STOCK';
+        // Close modal
+        this.showAdjustmentModal = false;
+        this.selectedBrand = null;
+        this.selectedPackSize = null;
+      },
+      error: (error) => {
+        console.error('Error adjusting stock:', error);
+        alert(`Error adjusting stock: ${error.error?.errors || error.message || 'Unknown error'}`);
       }
-    }
+    });
   }
 
-  viewTransitPermits(brand: BrandStock): void {
+  viewTransitPermits(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
-    this.selectedTransitPermits = brand.transitPermits;
+    // Sample transit permits data
+    this.selectedTransitPermits = [
+      {
+        permitNo: 'TP-2024-001',
+        date: '2024-01-20',
+        distributorName: 'ABC Distributors Pvt Ltd',
+        depotAddress: 'Sector 5, Industrial Area, Gangtok',
+        vehicleNumber: 'SK-01-AB-1234',
+        cases: 50,
+        bottlesPerCase: 12,
+        totalBottles: 600,
+        status: 'DELIVERED',
+        approvedBy: 'John Doe',
+        approvalDate: '2024-01-19'
+      },
+      {
+        permitNo: 'TP-2024-002',
+        date: '2024-01-22',
+        distributorName: 'XYZ Wine Shop',
+        depotAddress: 'MG Road, Gangtok',
+        vehicleNumber: 'SK-02-CD-5678',
+        cases: 25,
+        bottlesPerCase: 12,
+        totalBottles: 300,
+        status: 'IN_TRANSIT',
+        approvedBy: 'Jane Smith',
+        approvalDate: '2024-01-21'
+      }
+    ];
     this.showTransitPermitsModal = true;
   }
 
-  viewLastEntries(brand: BrandStock): void {
+  viewLastEntries(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
-    this.selectedLastEntries = brand.lastEntries;
+    // Sample last entries data
+    this.selectedLastEntries = [
+      {
+        id: '1',
+        date: '2024-01-24',
+        type: 'PRODUCTION',
+        quantity: 1000,
+        previousStock: 2000,
+        newStock: 3000,
+        referenceNo: 'PROD-2024-001',
+        description: 'Daily production batch',
+        officerName: 'Production Manager'
+      },
+      {
+        id: '2',
+        date: '2024-01-23',
+        type: 'TRANSIT_PERMIT',
+        quantity: 600,
+        previousStock: 2600,
+        newStock: 2000,
+        referenceNo: 'TP-2024-001',
+        description: 'Transit permit to ABC Distributors',
+        transitPermitNo: 'TP-2024-001'
+      },
+      {
+        id: '3',
+        date: '2024-01-22',
+        type: 'ADJUSTMENT',
+        quantity: 50,
+        previousStock: 2550,
+        newStock: 2600,
+        referenceNo: 'ADJ-2024-001',
+        description: 'Stock adjustment - damaged goods replacement',
+        officerName: 'Warehouse Supervisor'
+      }
+    ];
     this.showLastEntriesModal = true;
   }
 
@@ -741,19 +486,23 @@ export class BrandwarehouseComponent implements OnInit {
   }
 
   getTotalStock(): number {
-    return this.filteredStocks.reduce((sum, brand) => sum + brand.currentStock, 0);
+    return this.filteredStocks.reduce((sum, brand) => sum + brand.totalStock, 0);
+  }
+
+  getAdjustmentResult(): number {
+    if (!this.selectedPackSize) return 0;
+
+    return this.adjustmentType === 'ADD'
+      ? (this.selectedPackSize.currentStock + this.adjustmentQuantity)
+      : Math.max(0, this.selectedPackSize.currentStock - this.adjustmentQuantity);
+  }
+
+  getPackSizeKeys(packSizes: { [key: number]: PackSizeInfo }): number[] {
+    return Object.keys(packSizes).map(key => parseInt(key)).sort((a, b) => a - b);
   }
 
   getPageNumbers(): number[] {
     const pageCount = Math.min(5, this.totalPages);
-    return Array.from({ length: pageCount }, (_, i) => i);
-  }
-
-  getAdjustmentResult(): number {
-    if (!this.selectedBrand) return 0;
-    
-    return this.adjustmentType === 'ADD' 
-      ? (this.selectedBrand.currentStock + this.adjustmentQuantity)
-      : Math.max(0, this.selectedBrand.currentStock - this.adjustmentQuantity);
+    return Array.from({ length: pageCount }, (_, i) => i + 1);
   }
 }
