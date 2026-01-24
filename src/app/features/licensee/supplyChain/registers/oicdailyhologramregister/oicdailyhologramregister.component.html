@@ -296,30 +296,52 @@
                         <!-- Legacy single brand mode -->
                         <div class="row g-3">
                           <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.brandDetails"
-                              [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                              placeholder="Enter brand details"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
-                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                            @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <!-- Show readonly text when locked -->
+                            <input type="text" class="form-control form-control-sm" [value]="rollInput.brandDetails"
+                              readonly
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                            } @else {
+                            <!-- Show dropdown when not locked -->
+                            <select class="form-select form-select-sm" [(ngModel)]="rollInput.brandDetails"
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              <option value="">Select brand...</option>
+                              @for (brand of liquorBrands; track brand.brandName) {
+                              <option [value]="brand.brandName">{{ brand.brandName }}</option>
+                              }
+                            </select>
+                            }
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
                               } @else {
-                              Enter brand name for this roll
+                              Select brand name for this roll
                               }
                             </small>
                           </div>
                           <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.bottleSize"
-                              [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                              placeholder="e.g., 750ml"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
-                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                            @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <!-- Show readonly text when locked -->
+                            <input type="text" class="form-control form-control-sm" [value]="rollInput.bottleSize"
+                              readonly
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                            } @else {
+                            <!-- Show dropdown when not locked -->
+                            <select class="form-select form-select-sm" [(ngModel)]="rollInput.bottleSize"
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              <option value="">Select size...</option>
+                              @if (rollInput.brandDetails) {
+                              @for (size of getBottleSizesForBrand(rollInput.brandDetails); track size) {
+                              <option [value]="formatBottleSize(size)">{{ formatBottleSize(size) }}</option>
+                              }
+                              }
+                            </select>
+                            }
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
                               } @else {
-                              Enter bottle size for this roll
+                              Select bottle size for this roll
                               }
                             </small>
                           </div>
@@ -350,17 +372,39 @@
                             <!-- Brand Name and Bottle Size -->
                             <div class="row g-2 mb-2">
                               <div class="col-6">
-                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.brandName"
-                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="Brand name" [style.border-color]="getBrandColor(brand.colorIndex)"
-                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                                @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                                <!-- Show readonly text when locked -->
+                                <input type="text" class="form-control form-control-sm" [value]="brand.brandName"
+                                  readonly [style.border-color]="getBrandColor(brand.colorIndex)">
+                                } @else {
+                                <!-- Show dropdown when not locked -->
+                                <select class="form-select form-select-sm" [(ngModel)]="brand.brandName"
+                                  [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  <option value="">Select brand...</option>
+                                  @for (liquorBrand of liquorBrands; track liquorBrand.brandName) {
+                                  <option [value]="liquorBrand.brandName">{{ liquorBrand.brandName }}</option>
+                                  }
+                                </select>
+                                }
                                 <small class="text-muted d-block">Brand name</small>
                               </div>
                               <div class="col-6">
-                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.bottleSize"
-                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="e.g., 750ml" [style.border-color]="getBrandColor(brand.colorIndex)"
-                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                                @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                                <!-- Show readonly text when locked -->
+                                <input type="text" class="form-control form-control-sm" [value]="brand.bottleSize"
+                                  readonly [style.border-color]="getBrandColor(brand.colorIndex)">
+                                } @else {
+                                <!-- Show dropdown when not locked -->
+                                <select class="form-select form-select-sm" [(ngModel)]="brand.bottleSize"
+                                  [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  <option value="">Select size...</option>
+                                  @if (brand.brandName) {
+                                  @for (size of getBottleSizesForBrand(brand.brandName); track size) {
+                                  <option [value]="formatBottleSize(size)">{{ formatBottleSize(size) }}</option>
+                                  }
+                                  }
+                                </select>
+                                }
                                 <small class="text-muted d-block">Bottle size</small>
                               </div>
                             </div>
@@ -706,7 +750,8 @@
                   </div>
                   } @else if (originalRoll.brands.length === 1) {
                   <div class="brands-indicator">
-                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color" [style.border-color]="originalRoll.brands[0].color">
+                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color"
+                      [style.border-color]="originalRoll.brands[0].color">
                       {{ originalRoll.brands[0].name }}
                     </span>
                   </div>
@@ -754,7 +799,8 @@
                   </div>
                   } @else if (originalRoll.brands.length === 1) {
                   <div class="brands-indicator">
-                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color" [style.border-color]="originalRoll.brands[0].color">
+                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color"
+                      [style.border-color]="originalRoll.brands[0].color">
                       {{ originalRoll.brands[0].name }}
                     </span>
                   </div>
@@ -762,7 +808,8 @@
                 </div>
                 } @else {
                 <!-- Fallback: show first locked roll -->
-                @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId || $index; let first = $first) {
+                @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId || $index;
+                let first = $first) {
                 @if (first) {
                 <div class="roll-range-display">
                   <div class="roll-name-text">
@@ -852,7 +899,8 @@
                 @if (brandDetails.length > 0) {
                 <div class="enhanced-brand-display">
                   @for (brand of brandDetails; track brand.brandLabel) {
-                  <div class="brand-detail-item" [style.background-color]="brand.color + '15'" [style.border-color]="brand.color">
+                  <div class="brand-detail-item" [style.background-color]="brand.color + '15'"
+                    [style.border-color]="brand.color">
                     <div class="brand-header" [style.color]="brand.color">
                       <i class="bi bi-tag-fill me-1"></i>
                       <strong>{{ brand.brandLabel }}</strong>
@@ -1051,7 +1099,8 @@
                     </div>
                     <div class="roll-values">
                       @for (range of lockedRoll.issuedRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
                         [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.fromSerial }}
                       </span>
@@ -1148,7 +1197,8 @@
                     [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.issuedRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
                         [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.toSerial }}
                       </span>
@@ -1242,7 +1292,8 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item">
-                    <span class="qty-badge" [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <span class="qty-badge"
+                      [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.issuedQty | number }}
                     </span>
                   </div>
@@ -1359,7 +1410,8 @@
                     [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.wastageRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
                         [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.fromSerial || '-' }}
                       </span>
@@ -1456,7 +1508,8 @@
                     [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.wastageRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
                         [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.toSerial || '-' }}
                       </span>
@@ -1550,7 +1603,8 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item">
-                    <span class="qty-badge" [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <span class="qty-badge"
+                      [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.wastageQty | number }}
                     </span>
                   </div>
@@ -1823,7 +1877,8 @@
         @for (roll of getLockedRollsForEntry(selectedEntryForDetails); track roll.cartoonNumber; let i = $index) {
         @if (selectedRollTabIndex === i) {
         <div class="roll-detail-card" [style.border-left-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
-          <div class="roll-detail-header" [style.background-color]="getRollBackgroundColor(roll.cartoonNumber.split('_')[0])">
+          <div class="roll-detail-header"
+            [style.background-color]="getRollBackgroundColor(roll.cartoonNumber.split('_')[0])">
             <div class="roll-name-badge" [style.background-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
               <i class="bi bi-box-seam me-2"></i>
               {{ roll.cartoonNumber.split('_')[0] }}

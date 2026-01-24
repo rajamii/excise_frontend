@@ -145,6 +145,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   private routerSubscription?: Subscription;
   private lastLoadTime: number = 0;
 
+  // Liquor brands and sizes for dropdowns
+  liquorBrands: Array<{ brandName: string, sizes: number[] }> = [];
+  availableBottleSizesMap: Map<string, number[]> = new Map();
+
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -155,6 +159,7 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     console.log('🔵 Daily Register Component: ngOnInit called');
     this.loadViewState();
     this.loadApprovedEntries();
+    this.loadLiquorBrandsData();
 
     // Subscribe to request updates from other components (e.g., when officer approves a request)
     this.requestUpdateSubscription = this.hologramService.requestUpdate$.subscribe(() => {
@@ -832,6 +837,49 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  /**
+   * Load liquor brands and sizes from the backend API
+   * Fetches Sikkim distillery brands for dropdown population
+   */
+  loadLiquorBrandsData(): void {
+    this.hologramService.getLiquorBrandsAndSizes().subscribe({
+      next: (brands) => {
+        this.liquorBrands = brands;
+        // Build a map for quick lookup of sizes by brand name
+        this.availableBottleSizesMap.clear();
+        brands.forEach(brand => {
+          this.availableBottleSizesMap.set(brand.brandName, brand.sizes);
+        });
+        console.log('✅ Loaded liquor brands:', this.liquorBrands.length);
+      },
+      error: (err) => {
+        console.error('❌ Error loading liquor brands:', err);
+        // Continue with empty brands array - component will still work with manual input as fallback
+      }
+    });
+  }
+
+  /**
+   * Get available bottle sizes for a selected brand
+   * Used to populate the bottle size dropdown when a brand is selected
+   * Handles both string brand names and brand objects with brandName property
+   */
+  getBottleSizesForBrand(brandDetails: string | { brandName: string;[key: string]: any }): number[] {
+    // Extract brand name from either string or object
+    const brandName = typeof brandDetails === 'string'
+      ? brandDetails
+      : brandDetails?.brandName || '';
+
+    return this.availableBottleSizesMap.get(brandName) || [];
+  }
+
+  /**
+   * Format bottle size for display (e.g., 750 -> "750ml")
+   */
+  formatBottleSize(size: number): string {
+    return `${size}ml`;
+  }
+
   loadFilteredData(): void {
     const monthNumber = this.getMonthNumber(this.selectedMonth);
     const datePrefix = `${this.selectedYear}-${monthNumber}`;
@@ -890,11 +938,11 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
       // This creates a timeline view where earlier tasks appear at the top
       const dateA = new Date(a.dates.usage || a.dates.submission || '1970-01-01').getTime();
       const dateB = new Date(b.dates.usage || b.dates.submission || '1970-01-01').getTime();
-      
+
       if (dateA !== dateB) {
         return dateA - dateB; // Ascending order (oldest first)
       }
-      
+
       // If dates are the same, sort by ID to maintain creation order
       // This ensures entries created at the same time appear in the order they were saved
       const idA = typeof a.id === 'number' ? a.id : parseInt(a.id || '0');
@@ -3892,7 +3940,7 @@ After editing, click "Lock" to save your changes.`);
    * Get the original assigned roll information for display in ROLL/RANGE column
    * This ensures only the originally assigned roll is shown, not brand-specific variations
    */
-  getOriginalAssignedRoll(entry: RegisterEntry): { cartoonNumber: string; serialRange: string; brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> } | null {
+  getOriginalAssignedRoll(entry: RegisterEntry): { cartoonNumber: string; serialRange: string; brands: Array<{ name: string, index: number, color: string, issuedQty: number, wastageQty: number }> } | null {
     // For saved entries, get from allocatedRanges (original assignment)
     if (entry.isFixed && entry.allocatedRanges && entry.allocatedRanges.length > 0) {
       const firstRange = entry.allocatedRanges[0];
@@ -3940,17 +3988,17 @@ After editing, click "Lock" to save your changes.`);
     // Check if multiple rolls have the same base carton number (before _BRAND_ suffix)
     const baseCartoonNumbers = lockedRolls.map(roll => roll.cartoonNumber.split('_')[0]);
     const uniqueBaseNumbers = [...new Set(baseCartoonNumbers)];
-    
+
     return uniqueBaseNumbers.length < baseCartoonNumbers.length;
   }
 
   /**
    * Get brands information from the same roll with consistent color coding and quantities
    */
-  getBrandsFromSameRoll(entry: RegisterEntry): Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> {
+  getBrandsFromSameRoll(entry: RegisterEntry): Array<{ name: string, index: number, color: string, issuedQty: number, wastageQty: number }> {
     const lockedRolls = this.getLockedRollsForEntry(entry);
-    const brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> = [];
-    
+    const brands: Array<{ name: string, index: number, color: string, issuedQty: number, wastageQty: number }> = [];
+
     if (lockedRolls.length === 0) return brands;
 
     // Group rolls by base carton number
@@ -3967,7 +4015,7 @@ After editing, click "Lock" to save your changes.`);
     rollsByCarton.forEach((rolls, baseCarton) => {
       // CRITICAL: Use the same color for all brands from the same roll
       const rollColor = this.getRollColor(baseCarton);
-      
+
       if (rolls.length > 1) {
         // Multiple brands from same roll - all get the SAME color
         rolls.forEach((roll, index) => {
@@ -4000,9 +4048,9 @@ After editing, click "Lock" to save your changes.`);
   /**
    * Get enhanced brand details for display in BRAND DETAILS column
    */
-  getEnhancedBrandDetails(entry: RegisterEntry): Array<{brandLabel: string, brandName: string, color: string, issuedQty: number, wastageQty: number}> {
+  getEnhancedBrandDetails(entry: RegisterEntry): Array<{ brandLabel: string, brandName: string, color: string, issuedQty: number, wastageQty: number }> {
     const brands = this.getBrandsFromSameRoll(entry);
-    
+
     return brands.map(brand => ({
       brandLabel: `Brand ${brand.index}`,
       brandName: brand.name,
