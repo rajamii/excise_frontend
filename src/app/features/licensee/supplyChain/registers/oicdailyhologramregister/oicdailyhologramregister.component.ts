@@ -145,6 +145,10 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
   private routerSubscription?: Subscription;
   private lastLoadTime: number = 0;
 
+  // Loading state to prevent double-click submissions
+  isSaving: boolean = false;
+  savingEntryId: string | null = null;
+
   // Liquor brands and sizes for dropdowns
   liquorBrands: Array<{ brandName: string, sizes: number[] }> = [];
   availableBottleSizesMap: Map<string, number[]> = new Map();
@@ -2739,8 +2743,19 @@ After editing, click "Lock" to save your changes.`);
       return;
     }
 
+    // Prevent double-click submissions
+    if (this.isSaving) {
+      console.warn('⚠️ Save already in progress, ignoring duplicate click');
+      return;
+    }
+
     const lockedRolls = entry.lockedRolls || [];
     if (lockedRolls.length === 0) return;
+
+    // Set loading state
+    this.isSaving = true;
+    this.savingEntryId = entry.id;
+    console.log('🔒 Save started, button disabled to prevent double-click');
 
     // CRITICAL FIX: Handle multi-brand rolls by creating separate entries for each brand
     const payloads: any[] = [];
@@ -2927,6 +2942,11 @@ After editing, click "Lock" to save your changes.`);
 
   private checkSaveCompletion(entry: RegisterEntry, completed: number, total: number, errors: number): void {
     if (completed + errors === total) {
+      // Clear loading state
+      this.isSaving = false;
+      this.savingEntryId = null;
+      console.log('🔓 Save completed, button re-enabled');
+
       if (errors === 0) {
         // All successful
         entry.isFixed = true;
