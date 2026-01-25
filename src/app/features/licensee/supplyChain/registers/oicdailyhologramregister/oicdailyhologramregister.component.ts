@@ -1104,24 +1104,38 @@ export class OicdailyhologramregisterComponent implements OnInit, OnDestroy {
 
     const availableRolls: any[] = [];
 
-    // CRITICAL FIX: Use rollsAssigned from entry (loaded from database via rolls_assigned column)
-    // This bypasses HTTP interceptor issues with issued_assets field
+    console.log('🔍🔍🔍 getAvailableRollsForEntry - Entry data:', {
+      referenceNo: entry.referenceNo,
+      hasRollsAssigned: !!(entry as any).rollsAssigned,
+      hasAllocatedRanges: !!(entry as any).allocatedRanges,
+      rollsAssignedLength: ((entry as any).rollsAssigned || []).length,
+      allocatedRangesLength: ((entry as any).allocatedRanges || []).length
+    });
+
+    // CRITICAL FIX: Use rollsAssigned from entry (contains the actual allocated ranges from backend)
+    // rollsAssigned is populated by the backend with the exact ranges that were allocated (e.g., 4-4, 7-7)
+    // allocatedRanges comes from procurement carton_details and contains full roll ranges (e.g., 101-101, 102-102)
     const rollsAssigned = (entry as any).rollsAssigned || [];
     const allocatedRanges = (entry as any).allocatedRanges || [];
 
-    // Combine both sources
-    // CRITICAL FIX: Use rollsAssigned if available (most specific), otherwise fallback to allocatedRanges
-    // Do NOT combine both to avoid duplicates
+    // CRITICAL FIX: Prioritize rollsAssigned over allocatedRanges to show correct allocated ranges
+    // rollsAssigned contains the TRUE allocated ranges sent from frontend during allocation (e.g., 4-4, 7-7)
+    // allocatedRanges contains full roll ranges from procurement (e.g., 101-101, 102-102) - WRONG!
     let allAllocations: any[] = [];
     if (rollsAssigned && rollsAssigned.length > 0) {
       allAllocations = rollsAssigned;
-      console.log('✅ Using rollsAssigned for available rolls (Priority 1)');
-    } else {
+      console.log('✅ Using rollsAssigned for available rolls (Priority 1 - TRUE ALLOCATED RANGES FROM BACKEND)');
+      console.log('📦 rollsAssigned data:', JSON.stringify(rollsAssigned, null, 2));
+    } else if (allocatedRanges && allocatedRanges.length > 0) {
       allAllocations = allocatedRanges;
-      console.log('ℹ️ Using allocatedRanges for available rolls (Priority 2)');
+      console.log('⚠️ Using allocatedRanges for available rolls (Priority 2 - FALLBACK FROM PROCUREMENT)');
+      console.log('📦 allocatedRanges data:', JSON.stringify(allocatedRanges, null, 2));
+    } else {
+      allAllocations = [];
+      console.log('❌ No allocation data found');
     }
 
-    console.log('📦 API allocated rolls:', allAllocations);
+    console.log('📦 Final allAllocations to use:', JSON.stringify(allAllocations, null, 2));
 
     // Track added cartons to avoid duplicates from pool
     const addedCartons = new Set<string>();
@@ -3686,10 +3700,10 @@ After editing, click "Lock" to save your changes.`);
         'approvedHologramEntries'
       ];
 
-      // PRORITY 1: Check rollsAssigned (from Backend API - rolls_assigned field)
-      // This is the specific list of rolls assigned to this request
+      // PRIORITY 1: Check rollsAssigned (from Backend API - contains TRUE allocated ranges from allocation)
+      // This contains the actual allocated ranges sent from frontend during allocation (e.g., 4-4, 7-7)
       if (entry.rollsAssigned && entry.rollsAssigned.length > 0) {
-        console.log('✅ Found rollsAssigned in entry:', entry.rollsAssigned);
+        console.log('✅ Found rollsAssigned in entry (TRUE ALLOCATED RANGES):', entry.rollsAssigned);
         return {
           referenceNo: referenceNo,
           totalAllocated: entry.rollsAssigned.reduce((sum: number, r: any) => sum + (r.quantity || 0), 0),
@@ -3703,8 +3717,22 @@ After editing, click "Lock" to save your changes.`);
         };
       }
 
-      // PRIORITY 2: Check entries own allocatedRanges (from Backend API)
-      // This might be broader allocation data
+      // PRIORITY 2: Check allocatedRanges (FALLBACK - contains full roll ranges from procurement)
+      // This contains full roll ranges from procurement carton_details (e.g., 101-101, 102-102) - NOT what we want
+      if (entry.allocatedRanges && entry.allocatedRanges.length > 0) {
+        console.log('⚠️ Using allocatedRanges in entry (FALLBACK FROM PROCUREMENT):', entry.allocatedRanges);
+        return {
+          referenceNo: referenceNo,
+          totalAllocated: entry.allocatedRanges.reduce((sum: number, r: any) => sum + (r.quantity || 0), 0),
+          allocatedCartoons: entry.allocatedRanges.map((r: any) => ({
+            cartoonNumber: r.cartoonNumber || r.cartoon_number || '',
+            quantity: r.quantity || 0,
+            fromSerial: r.fromSerial || r.from_serial || '',
+            toSerial: r.toSerial || r.to_serial || '',
+            serialRange: `${r.fromSerial || r.from_serial || ''} - ${r.toSerial || r.to_serial || ''}`
+          }))
+        };
+      }
       if (entry.allocatedRanges && entry.allocatedRanges.length > 0) {
         console.log('✅ Found direct allocatedRanges in entry:', entry.allocatedRanges);
         return {

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrandWarehouseService } from '../../services/brand-warehouse.service';
-import { ProductionService, ProductionBatch, CreateProductionBatch } from '../../services/production.service';
+import { ProductionService, ProductionBatch } from '../../services/production.service';
 
 interface TransitPermitDetail {
   permitNo: string;
@@ -145,13 +145,7 @@ export class BrandwarehouseComponent implements OnInit {
     latestReference: '',
     productionManager: 'Production Manager'
   };
-  newProduction = {
-    quantity: 0,
-    manager: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-    notes: ''
-  };
+
 
   // Chart data for stock levels
   stockLevelChart = {
@@ -208,11 +202,11 @@ export class BrandwarehouseComponent implements OnInit {
         if (data.length > 0) {
           console.log('📋 Sample brand:', data[0]);
         }
-        
+
         // Filter to show only current distillery's brands
         this.groupedBrandStocks = this.filterByCurrentDistillery(data);
         console.log('✅ After distillery filtering:', this.groupedBrandStocks.length);
-        
+
         this.applyFilters();
         this.isLoading = false;
       },
@@ -235,17 +229,17 @@ export class BrandwarehouseComponent implements OnInit {
   private filterByCurrentDistillery(brands: GroupedBrandStock[]): GroupedBrandStock[] {
     return brands.filter(brand => {
       if (!brand.distilleryName) return false;
-      
+
       const distilleryName = brand.distilleryName.toLowerCase();
-      
+
       // Check if it belongs to current distillery
       const belongsToCurrentDistillery = distilleryName.includes(this.CURRENT_DISTILLERY.toLowerCase());
-      
+
       // Check if it's a brewery (exclude breweries from distillery dashboard)
-      const isBrewery = this.EXCLUDED_BREWERIES.some(brewery => 
+      const isBrewery = this.EXCLUDED_BREWERIES.some(brewery =>
         distilleryName.includes(brewery.toLowerCase())
       );
-      
+
       // Include only if belongs to current distillery AND is not a brewery
       return belongsToCurrentDistillery && !isBrewery;
     });
@@ -456,11 +450,11 @@ export class BrandwarehouseComponent implements OnInit {
         if (this.selectedBrand && this.selectedPackSize) {
           this.selectedPackSize.currentStock = response.data.new_stock;
           this.selectedPackSize.status = response.data.status;
-          
+
           // Recalculate brand totals
           this.selectedBrand.totalStock = Object.values(this.selectedBrand.packSizes)
             .reduce((sum, pack) => sum + pack.currentStock, 0);
-          
+
           this.selectedBrand.lastUpdated = new Date().toISOString();
         }
 
@@ -563,7 +557,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   loadProductionData(brand: GroupedBrandStock): void {
     this.isLoadingProduction = true;
-    
+
     // Get the first pack size ID for the API call
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
     if (packSizeKeys.length === 0) {
@@ -579,14 +573,14 @@ export class BrandwarehouseComponent implements OnInit {
       next: (response) => {
         if (response.success) {
           this.productionHistory = response.production_history;
-          
+
           // Update production summary
           this.productionSummary = {
             todayProduction: response.summary.total_quantity,
             stockBefore: this.productionHistory.length > 0 ? this.productionHistory[0].stock_before : brand.totalStock,
             stockAfter: this.productionHistory.length > 0 ? this.productionHistory[0].stock_after : brand.totalStock,
-            latestReference: this.productionHistory.length > 0 ? this.productionHistory[0].batch_reference : 'PROD-2024-001',
-            productionManager: this.productionHistory.length > 0 ? this.productionHistory[0].production_manager : 'Production Manager'
+            latestReference: this.productionHistory.length > 0 ? this.productionHistory[0].batch_reference : 'N/A',
+            productionManager: this.productionHistory.length > 0 ? this.productionHistory[0].production_manager : 'N/A'
           };
         }
         this.isLoadingProduction = false;
@@ -594,101 +588,11 @@ export class BrandwarehouseComponent implements OnInit {
       error: (error) => {
         console.error('Error loading production data:', error);
         this.isLoadingProduction = false;
-        // Use sample data on error
-        this.loadSampleProductionData();
       }
     });
   }
 
-  loadSampleProductionData(): void {
-    // Sample production data matching the image
-    this.productionSummary = {
-      todayProduction: 1000,
-      stockBefore: 2000,
-      stockAfter: 3000,
-      latestReference: 'PROD-2024-001',
-      productionManager: 'Production Manager'
-    };
 
-    this.productionHistory = [
-      {
-        id: 1,
-        batch_reference: 'PROD-2024-001',
-        production_date: '2024-01-24',
-        production_time: '00:00:00',
-        production_datetime: '2024-01-24T00:00:00Z',
-        formatted_reference: 'PROD-2024-001',
-        quantity_produced: 1000,
-        stock_before: 2000,
-        stock_after: 3000,
-        production_manager: 'Production Manager',
-        approved_by: 'Supervisor',
-        status: 'COMPLETED',
-        notes: 'Daily production batch',
-        brand_name: this.selectedBrand?.brandName || '',
-        pack_size: '750ml',
-        created_at: '2024-01-24T00:00:00Z',
-        updated_at: '2024-01-24T00:00:00Z'
-      }
-    ];
-  }
-
-  addProductionBatch(): void {
-    if (!this.selectedBrand || !this.newProduction.quantity || !this.newProduction.manager) {
-      return;
-    }
-
-    // Get the first pack size ID for the API call
-    const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
-    if (packSizeKeys.length === 0) return;
-
-    const firstPackSize = this.selectedBrand.packSizes[packSizeKeys[0]];
-    const brandWarehouseId = parseInt(firstPackSize.id);
-
-    const productionData: CreateProductionBatch = {
-      brand_warehouse_id: brandWarehouseId,
-      production_date: this.newProduction.date,
-      production_time: this.newProduction.time,
-      quantity_produced: this.newProduction.quantity,
-      production_manager: this.newProduction.manager,
-      notes: this.newProduction.notes || undefined
-    };
-
-    this.productionService.createProductionBatch(productionData).subscribe({
-      next: (response) => {
-        if (response.success) {
-          console.log('Production batch added:', response);
-          
-          // Update local data
-          this.productionHistory.unshift(response.production_batch);
-          
-          // Update brand stock
-          if (this.selectedBrand) {
-            this.selectedBrand.totalStock = response.updated_stock.new_stock;
-            firstPackSize.currentStock = response.updated_stock.new_stock;
-          }
-
-          // Reset form
-          this.newProduction = {
-            quantity: 0,
-            manager: '',
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-            notes: ''
-          };
-
-          // Refresh warehouse data
-          this.loadWarehouseData();
-          
-          alert('Production batch added successfully!');
-        }
-      },
-      error: (error) => {
-        console.error('Error adding production batch:', error);
-        alert(`Error adding production batch: ${error.error?.message || error.message || 'Unknown error'}`);
-      }
-    });
-  }
 
   getCurrentDate(): Date {
     return new Date();

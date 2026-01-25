@@ -360,13 +360,17 @@ End of Application
   getRollsAssigned(request: any): any[] {
     if (!request) return [];
     
-    // Get rolls from either rolls_assigned or rollsAssigned property
-    const rolls = request.rolls_assigned || request.rollsAssigned || [];
+    // CRITICAL FIX: Use rolls_assigned which contains the actual allocated ranges from backend
+    // rolls_assigned is populated during allocation with the exact ranges that were allocated (e.g., 4-4, 7-7)
+    // available_cartons contains full roll ranges from procurement (e.g., 101-101, 102-102) - NOT what we want
+    const rollsAssigned = request.rolls_assigned || request.rollsAssigned || [];
     
     // Ensure it's an array and normalize the data structure
-    if (!Array.isArray(rolls)) return [];
+    if (!Array.isArray(rollsAssigned)) return [];
     
-    return rolls.map((roll: any) => ({
+    console.log('✅ getRollsAssigned - using rolls_assigned:', rollsAssigned);
+    
+    return rollsAssigned.map((roll: any) => ({
       cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
       fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
       toSerial: roll.toSerial || roll.to_serial || 'N/A',

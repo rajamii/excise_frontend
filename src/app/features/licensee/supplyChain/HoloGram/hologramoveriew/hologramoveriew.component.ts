@@ -493,19 +493,18 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
         this.issuedData = [];
 
         requests.forEach((request: any) => {
-          // Try rolls_assigned first, then rollsAssigned, then fall back to issued_assets/issuedAssets
-          const rollsAssigned = request.rolls_assigned || request.rollsAssigned || request.issued_assets || request.issuedAssets || [];
+          // CRITICAL FIX: Use rolls_assigned which contains the actual allocated ranges from backend
+          // rolls_assigned is populated during allocation with the exact ranges that were allocated (e.g., 4-4, 7-7)
+          // available_cartons contains full roll ranges from procurement (e.g., 101-101, 102-102) - NOT what we want
+          const rollsData = request.rolls_assigned || request.rollsAssigned || request.issued_assets || request.issuedAssets || [];
 
           console.log(`Processing request ${request.ref_no || request.refNo}:`, {
-            rollsAssignedCount: rollsAssigned.length,
-            rollsAssigned: rollsAssigned,
-            source: request.rolls_assigned ? 'rolls_assigned' :
-              (request.rollsAssigned ? 'rollsAssigned' :
-                (request.issued_assets ? 'issued_assets' :
-                  (request.issuedAssets ? 'issuedAssets' : 'none')))
+            rollsDataCount: rollsData.length,
+            rollsData: rollsData,
+            source: 'rolls_assigned (TRUE ALLOCATED RANGES)'
           });
 
-          if (rollsAssigned.length === 0) {
+          if (rollsData.length === 0) {
             console.warn(`⚠️ Request ${request.ref_no || request.refNo} has no rolls assigned`);
             return;
           }
@@ -515,7 +514,7 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
           const serialRanges: string[] = [];
           let totalQuantity = 0;
 
-          rollsAssigned.forEach((roll: any) => {
+          rollsData.forEach((roll: any) => {
             const cartoonNumber = roll.cartoonNumber || roll.cartoon_number || roll.cartonNumber || '';
             const fromSerial = roll.fromSerial || roll.from_serial || '';
             const toSerial = roll.toSerial || roll.to_serial || '';

@@ -152,7 +152,7 @@
           <option value="">All Levels</option>
           <option value="HIGH">High (80%+)</option>
           <option value="MEDIUM">Medium (40-80%)</option>
-          <option value="LOW">Low (<40%)</option>
+          <option value="LOW">Low (<40%)< /option>
         </select>
       </div>
 
@@ -196,7 +196,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let brand of paginatedStocks; let i = index" class="table-row"
-            [class.low-stock-row]="brand.overallStatus === 'LOW_STOCK'" 
+            [class.low-stock-row]="brand.overallStatus === 'LOW_STOCK'"
             [class.out-stock-row]="brand.overallStatus === 'OUT_OF_STOCK'"
             [class.over-stock-row]="brand.overallStatus === 'OVERSTOCKED'">
 
@@ -215,14 +215,14 @@
             <!-- Pack Sizes & Stock -->
             <td class="pack-sizes-cell">
               <div class="pack-sizes-grid">
-                <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" 
-                     class="pack-size-item"
-                     [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK'"
-                     [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
-                     [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
+                <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="pack-size-item"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK'"
+                  [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
+                  [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
                   <div class="pack-size-header">
                     <span class="size-label">{{ packSize }}ml</span>
-                    <span class="status-indicator" [class]="'status-' + brand.packSizes[packSize].status.toLowerCase()"></span>
+                    <span class="status-indicator"
+                      [class]="'status-' + brand.packSizes[packSize].status.toLowerCase()"></span>
                   </div>
                   <div class="stock-info">
                     <span class="stock-number">{{ brand.packSizes[packSize].currentStock | number }}</span>
@@ -402,7 +402,8 @@
             <div *ngFor="let packSize of getPackSizeKeys(selectedBrand.packSizes)" class="pack-size-detail">
               <div class="pack-size-header">
                 <h4>{{ packSize }}ml</h4>
-                <span class="status-badge" [class]="'badge-' + getStatusColor(selectedBrand.packSizes[packSize].status)">
+                <span class="status-badge"
+                  [class]="'badge-' + getStatusColor(selectedBrand.packSizes[packSize].status)">
                   {{ selectedBrand.packSizes[packSize].status.replace('_', ' ') }}
                 </span>
               </div>
@@ -421,7 +422,8 @@
                 </div>
                 <div class="info-row">
                   <span class="label">Utilization:</span>
-                  <span class="value">{{ selectedBrand.packSizes[packSize].utilizationPercentage | number:'1.1-1' }}%</span>
+                  <span class="value">{{ selectedBrand.packSizes[packSize].utilizationPercentage | number:'1.1-1'
+                    }}%</span>
                 </div>
               </div>
             </div>
@@ -716,12 +718,23 @@
               <span class="label">QUANTITY:</span>
               <span class="value quantity-value">{{ productionSummary.todayProduction | number }}</span>
             </div>
-            <div class="production-item">
-              <span class="label">STOCK:</span>
+
+            <!-- Show Range if there is history -->
+            <div class="production-item" *ngIf="productionHistory.length > 0">
+              <span class="label">STOCK CHANGE:</span>
               <span class="value stock-range">
                 {{ productionSummary.stockBefore | number }} — {{ productionSummary.stockAfter | number }}
               </span>
             </div>
+
+            <!-- Show Single Value if no history -->
+            <div class="production-item" *ngIf="productionHistory.length === 0">
+              <span class="label">CURRENT STOCK:</span>
+              <span class="value stock-range">
+                {{ productionSummary.stockAfter | number }}
+              </span>
+            </div>
+
             <div class="production-item">
               <span class="label">REFERENCE:</span>
               <span class="value reference-value">{{ productionSummary.latestReference }}</span>
@@ -771,8 +784,7 @@
                 <td class="batch-status">
                   <span class="status-badge" [class.badge-success]="batch.status === 'COMPLETED'"
                     [class.badge-warning]="batch.status === 'IN_PROGRESS'"
-                    [class.badge-info]="batch.status === 'PENDING'"
-                    [class.badge-danger]="batch.status === 'CANCELLED'">
+                    [class.badge-info]="batch.status === 'PENDING'" [class.badge-danger]="batch.status === 'CANCELLED'">
                     {{ batch.status }}
                   </span>
                 </td>
@@ -782,46 +794,7 @@
         </div>
       </div>
 
-      <!-- Add New Production -->
-      <div class="add-production-section">
-        <h4>Add New Production Batch</h4>
-        <div class="production-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Quantity Produced</label>
-              <input type="number" class="form-control" [(ngModel)]="newProduction.quantity" 
-                     min="1" placeholder="Enter quantity">
-            </div>
-            <div class="form-group">
-              <label>Production Manager</label>
-              <input type="text" class="form-control" [(ngModel)]="newProduction.manager" 
-                     placeholder="Enter manager name">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Production Date</label>
-              <input type="date" class="form-control" [(ngModel)]="newProduction.date">
-            </div>
-            <div class="form-group">
-              <label>Production Time</label>
-              <input type="time" class="form-control" [(ngModel)]="newProduction.time">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Notes (Optional)</label>
-            <textarea class="form-control" [(ngModel)]="newProduction.notes" 
-                      rows="2" placeholder="Additional notes..."></textarea>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-success" (click)="addProductionBatch()" 
-                    [disabled]="!newProduction.quantity || !newProduction.manager">
-              <i class="bi bi-plus-circle"></i>
-              Add Production Batch
-            </button>
-          </div>
-        </div>
-      </div>
+
 
       <!-- Empty State -->
       <div class="empty-state" *ngIf="productionHistory.length === 0 && !isLoadingProduction">
