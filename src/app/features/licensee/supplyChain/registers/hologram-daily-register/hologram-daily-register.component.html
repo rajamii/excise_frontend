@@ -625,6 +625,17 @@
                         Click "Use" to select rolls
                       </div>
                     }
+
+                    <!-- Show assigned liquid quantity for Sikkim Distillery brands -->
+                    @if (getCurrentSelectedRoll(entry) || getLockedRollsForEntry(entry).length > 0) {
+                      <div class="liquid-quantity-info mt-2">
+                        <div class="liquid-quantity-badge">
+                          <i class="bi bi-droplet me-1"></i>
+                          <span class="liquid-qty-label">Assigned Qty:</span>
+                          <span class="liquid-qty-value">{{ formatLiquidQuantity(getTotalLiquidQuantityInMl(entry)) }}</span>
+                        </div>
+                      </div>
+                    }
                   } @else {
                     <!-- Show locked rolls for saved entries with color coding matching issued/wastage fields -->
                     <div class="rolls-list">
@@ -636,6 +647,15 @@
                           {{ rollData.roll.split('_')[0] }}
                         </span>
                       }
+                    </div>
+                    
+                    <!-- Show assigned liquid quantity for saved entries -->
+                    <div class="liquid-quantity-info mt-2">
+                      <div class="liquid-quantity-badge">
+                        <i class="bi bi-droplet me-1"></i>
+                        <span class="liquid-qty-label">Assigned Qty:</span>
+                        <span class="liquid-qty-value">{{ formatLiquidQuantity(getTotalLiquidQuantityInMl(entry)) }}</span>
+                      </div>
                     </div>
                   }
                 </td>

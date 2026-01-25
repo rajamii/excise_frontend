@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, map, forkJoin } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, BehaviorSubject, map, forkJoin, of, catchError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
@@ -155,6 +155,7 @@ export interface HologramArrivalRecord {
 export interface LiquorBrandSize {
   brandName: string;
   sizes: number[];
+  manufacturingUnit?: string;
 }
 
 export interface LiquorBrandsResponse {
@@ -303,19 +304,29 @@ export class HologramDataService {
 
   /**
    * Fetches liquor brands and their available sizes from liquor_data_details table
-   * Filtered for Sikkim distillery brands
+   * Filtered for Sikkim Distilleries Ltd brands only
    */
   getLiquorBrandsAndSizes(): Observable<LiquorBrandSize[]> {
-    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`)
+    // Add distillery filter to only get Sikkim Distilleries Ltd brands
+    const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
+    
+    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, { params })
       .pipe(
         map(response => {
           if (response.success && response.data) {
-            // Filter for Sikkim distillery brands (case-insensitive)
+            // Additional client-side filtering to ensure only Sikkim Distilleries Ltd brands
             return response.data.filter(brand =>
-              brand.brandName && brand.brandName.toLowerCase().includes('sikkim')
+              brand.brandName && 
+              // Ensure it's from Sikkim Distilleries Ltd (not other Sikkim companies)
+              (brand.manufacturingUnit?.includes('Sikkim Distilleries Ltd') || 
+               brand.brandName.toLowerCase().includes('sikkim'))
             );
           }
           return [];
+        }),
+        catchError(error => {
+          console.error('Error fetching liquor brands:', error);
+          return of([]);
         })
       );
   }

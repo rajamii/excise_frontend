@@ -3400,6 +3400,56 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
   }
 
   /**
+   * Calculate the total liquid quantity in ml for a brand based on assigned holograms
+   * Formula: hologram_quantity * bottle_size_in_ml
+   */
+  getTotalLiquidQuantityInMl(entry: HologramDailyEntry): number {
+    const hologramQty = this.getTotalHologramQty(entry);
+    const bottleSize = this.getEntryMetadata(entry).bottleSize;
+    
+    // Extract numeric value from bottle size (e.g., "750ml" -> 750)
+    const bottleSizeInMl = this.extractBottleSizeInMl(bottleSize);
+    
+    return hologramQty * bottleSizeInMl;
+  }
+
+  /**
+   * Extract bottle size in ml from bottle size string
+   * Examples: "750ml" -> 750, "375 ml" -> 375, "180ML" -> 180
+   */
+  private extractBottleSizeInMl(bottleSize: string): number {
+    if (!bottleSize) return 750; // Default to 750ml
+    
+    // Remove spaces and convert to lowercase
+    const sizeStr = bottleSize.replace(/\s+/g, '').toLowerCase();
+    
+    // Extract numeric part
+    const match = sizeStr.match(/(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    return 750; // Default fallback
+  }
+
+  /**
+   * Format liquid quantity for display with proper units
+   * Examples: 750000 -> "750 L", 1500 -> "1.5 L", 500 -> "500 ml"
+   */
+  formatLiquidQuantity(quantityInMl: number): string {
+    if (quantityInMl >= 1000) {
+      const liters = quantityInMl / 1000;
+      if (liters % 1 === 0) {
+        return `${liters} L`;
+      } else {
+        return `${liters.toFixed(1)} L`;
+      }
+    } else {
+      return `${quantityInMl} ml`;
+    }
+  }
+
+  /**
    * Calculate subtotal for a group of entries
    */
   getGroupSubtotal(entries: any[]): number {
