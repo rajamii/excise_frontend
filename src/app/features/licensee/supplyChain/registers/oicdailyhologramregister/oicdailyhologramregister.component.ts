@@ -3543,6 +3543,43 @@ After editing, click "Lock" to save your changes.`);
     return entry.lockedRolls || [];
   }
 
+  /**
+   * Get unique locked rolls for an entry (grouped by base cartoon number)
+   * This prevents showing duplicate rolls when multiple brands are assigned to the same roll
+   */
+  getUniqueLockedRollsForEntry(entry: RegisterEntry): Array<{ baseCartoonNumber: string; serialRange: string; brandCount: number }> {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const rollMap = new Map<string, { serialRange: string; brandCount: number }>();
+
+    // Group rolls by base cartoon number (remove brand suffix like _BRAND_1, _BRAND_2)
+    lockedRolls.forEach((roll: any) => {
+      const baseCartoonNumber = (roll.cartoonNumber || roll.displayName || 'ROLL').split('_')[0];
+      
+      // Check if this roll has multiple brands in its brands array
+      const hasBrandsArray = roll.brands && Array.isArray(roll.brands) && roll.brands.length > 0;
+      const brandCount = hasBrandsArray ? roll.brands.length : 1;
+      
+      if (!rollMap.has(baseCartoonNumber)) {
+        rollMap.set(baseCartoonNumber, {
+          serialRange: roll.serialRange || '-',
+          brandCount: brandCount
+        });
+      } else {
+        // This shouldn't happen if multi-brand is working correctly,
+        // but handle it just in case by incrementing brand count
+        const existing = rollMap.get(baseCartoonNumber)!;
+        existing.brandCount += brandCount;
+      }
+    });
+
+    // Convert map to array
+    return Array.from(rollMap.entries()).map(([baseCartoonNumber, data]) => ({
+      baseCartoonNumber,
+      serialRange: data.serialRange,
+      brandCount: data.brandCount
+    }));
+  }
+
   // Get allocated ranges for a specific roll from entry's allocation data
   // IMPORTANT: This should return ONLY the specific range that was selected, not all ranges for the roll
   getAllocatedRangesForRoll(entry: RegisterEntry, cartoonNumberOrRangeId: string): Array<{ fromSerial: string; toSerial: string; quantity: number }> {

@@ -717,111 +717,109 @@
                 </div>
               </td>
 
-              <!-- Roll & Range Info -->
+              <!-- Roll & Range Info - Beautified Display -->
               <td class="roll-range locked-field">
                 @if (!entry.isFixed) {
-                <!-- Show current selected roll with its allocated range -->
-                @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
-                  </div>
-                  <div class="range-text">
-                    {{ rollInput.serialRange }}
-                  </div>
-                </div>
-                }
-                <!-- Show original assigned roll (not brand-specific variations) -->
-                @if (getOriginalAssignedRoll(entry); as originalRoll) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ originalRoll.cartoonNumber }}</strong>
-                  </div>
-                  <div class="range-text">
-                    {{ originalRoll.serialRange }}
-                  </div>
-                  @if (originalRoll.brands.length > 1) {
-                  <div class="brands-indicator">
-                    @for (brand of originalRoll.brands; track brand.index) {
-                    <span class="brand-badge" [style.background-color]="brand.color" [style.border-color]="brand.color">
-                      Brand {{ brand.index }}
-                    </span>
+                <!-- Show all rolls beautifully -->
+                <div class="roll-ranges-container">
+                  <!-- Current selected roll (only if not already in locked rolls) -->
+                  @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
+                  <div class="roll-range-item" 
+                       [style.border-color]="getRollColor((getCurrentSelectedRoll(entry) || '').split('_')[0])"
+                       [style.background-color]="getRollBackgroundColor((getCurrentSelectedRoll(entry) || '').split('_')[0])">
+                    <div class="roll-badge" [style.background-color]="getRollColor((getCurrentSelectedRoll(entry) || '').split('_')[0])">
+                      <i class="bi bi-box-seam me-1"></i>
+                      <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ rollInput.serialRange }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (isMultiBrandMode(rollInput)) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ rollInput.brands?.length || 0 }} Brands</span>
+                    </div>
                     }
                   </div>
-                  } @else if (originalRoll.brands.length === 1) {
-                  <div class="brands-indicator">
-                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color"
-                      [style.border-color]="originalRoll.brands[0].color">
-                      {{ originalRoll.brands[0].name }}
-                    </span>
-                  </div>
                   }
-                </div>
-                } @else {
-                <!-- Fallback: Auto-display Allocated Ranges for Pending Entries -->
-                @for (allocated of (entry.allocatedRanges || []); track allocated.cartoonNumber) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ allocated.cartoonNumber }}</strong>
-                  </div>
-                  @if (allocated.fromSerial && allocated.toSerial) {
-                  <div class="range-text">
-                    {{ allocated.fromSerial }} - {{ allocated.toSerial }}
-                  </div>
-                  } @else {
-                  <div class="range-text text-muted small">
-                    Range not available
-                  </div>
-                  }
-                </div>
-                }
-                @if ((entry.allocatedRanges?.length || 0) === 0) {
-                <span class="text-muted">-</span>
-                }
-                }
-                } @else {
-                <!-- For saved entries, show only the original assigned roll -->
-                @if (getOriginalAssignedRoll(entry); as originalRoll) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ originalRoll.cartoonNumber }}</strong>
-                  </div>
-                  <div class="range-text">
-                    {{ originalRoll.serialRange }}
-                  </div>
-                  @if (originalRoll.brands.length > 1) {
-                  <div class="brands-indicator">
-                    @for (brand of originalRoll.brands; track brand.index) {
-                    <span class="brand-badge" [style.background-color]="brand.color" [style.border-color]="brand.color">
-                      Brand {{ brand.index }}
-                    </span>
+                  
+                  <!-- Show locked rolls (grouped by base cartoon number to avoid duplicates) -->
+                  @for (lockedRoll of getUniqueLockedRollsForEntry(entry); track lockedRoll.baseCartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(lockedRoll.baseCartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(lockedRoll.baseCartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(lockedRoll.baseCartoonNumber)">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      <strong>{{ lockedRoll.baseCartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ lockedRoll.serialRange || '-' }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (lockedRoll.brandCount > 1) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ lockedRoll.brandCount }} Brands</span>
+                    </div>
                     }
                   </div>
-                  } @else if (originalRoll.brands.length === 1) {
-                  <div class="brands-indicator">
-                    <span class="brand-badge" [style.background-color]="originalRoll.brands[0].color"
-                      [style.border-color]="originalRoll.brands[0].color">
-                      {{ originalRoll.brands[0].name }}
-                    </span>
+                  }
+                  
+                  <!-- Show remaining allocated ranges (not yet selected) -->
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges || []).length > 0) {
+                  @for (allocated of (entry.allocatedRanges || []); track allocated.cartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(allocated.cartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(allocated.cartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(allocated.cartoonNumber)">
+                      <i class="bi bi-box me-1"></i>
+                      <strong>{{ allocated.cartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      @if (allocated.fromSerial && allocated.toSerial) {
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ allocated.fromSerial }} - {{ allocated.toSerial }}</span>
+                      } @else {
+                      <span class="range-label text-muted small">Range not available</span>
+                      }
+                    </div>
                   </div>
+                  }
+                  }
+                  
+                  <!-- Empty state -->
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges?.length || 0) === 0) {
+                  <span class="text-muted">-</span>
                   }
                 </div>
                 } @else {
-                <!-- Fallback: show first locked roll -->
-                @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId || $index;
-                let first = $first) {
-                @if (first) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ (lockedRoll.cartoonNumber || lockedRoll.displayName || 'ROLL').split('_')[0] }}</strong>
+                <!-- For saved entries, show all locked rolls beautifully (grouped by base cartoon number) -->
+                <div class="roll-ranges-container saved-view">
+                  @for (lockedRoll of getUniqueLockedRollsForEntry(entry); track lockedRoll.baseCartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(lockedRoll.baseCartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(lockedRoll.baseCartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(lockedRoll.baseCartoonNumber)">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      <strong>{{ lockedRoll.baseCartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ lockedRoll.serialRange || '-' }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (lockedRoll.brandCount > 1) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ lockedRoll.brandCount }} Brands</span>
+                    </div>
+                    }
                   </div>
-                  <div class="range-text">
-                    {{ lockedRoll.serialRange || '-' }}
-                  </div>
+                  }
                 </div>
-                }
-                }
-                }
                 }
               </td>
 
