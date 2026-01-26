@@ -33,9 +33,11 @@ export class AccountService {
         tap(account => {
           if (isPlatformBrowser(this.platformId)) {
             localStorage.setItem('username', account?.username ?? '');
+            console.log('User Identity Loaded:', account);
             localStorage.setItem('role', account.role!.name);
             localStorage.setItem('firstName', account.firstName);
             localStorage.setItem('lastName', account.lastName);
+            localStorage.setItem('has_active_license', String(account.hasActiveLicense ?? false));
 
             // Auto logout
             const access = localStorage.getItem('access');

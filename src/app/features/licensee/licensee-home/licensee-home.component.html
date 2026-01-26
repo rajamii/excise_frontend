@@ -16,6 +16,7 @@
         <div class="username">
           {{ userName }}
           <!-- Displays the user's name -->
+          <div style="font-size: 10px; color: yellow;">License Active: {{ user?.hasActiveLicense }}</div>
         </div>
         <!-- Button to view the user's profile -->
         <button mat-mini-fab class="view-profile" (click)="viewProfile()" type="button">
@@ -39,6 +40,7 @@
         <mat-list-item (click)="openNewLicenseInfo()" class="nav-header-cus">
           <span class="nav-header-cus">Apply New License</span>
         </mat-list-item>
+        @if (user?.hasActiveLicense) {
         <mat-list-item (click)="openSupplyChain()" class="nav-header-cus">
           <span class="nav-header-cus">Apply Supply Chain</span>
         </mat-list-item>
@@ -91,6 +93,7 @@
             </div>
           </div>
         </div>
+        }
         <!-- Accordion Menu for Company Registration -->
         <mat-accordion>
           <mat-expansion-panel>
