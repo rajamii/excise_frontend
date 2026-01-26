@@ -640,6 +640,10 @@
             <div class="entry-details">
               <h4>{{ entry.description }}</h4>
               <div class="entry-meta">
+                <div class="pack-size" *ngIf="entry.packSize">
+                  <span class="label">Pack Size:</span>
+                  <span class="value pack-size-badge">{{ entry.packSize }}ml</span>
+                </div>
                 <div class="quantity-change">
                   <span class="label">Quantity:</span>
                   <span class="value" [class.positive]="entry.type === 'PRODUCTION'"
@@ -689,6 +693,9 @@
       <h2>
         <i class="bi bi-gear-fill"></i>
         Production Details - {{ selectedBrand?.brandName }}
+        <span class="pack-size-indicator" *ngIf="getCurrentPackSize()">
+          ({{ getCurrentPackSize() }})
+        </span>
       </h2>
       <button class="modal-close" (click)="showProductionModal = false">
         <i class="bi bi-x"></i>
@@ -696,6 +703,23 @@
     </div>
 
     <div class="modal-body" *ngIf="selectedBrand">
+      <!-- Pack Sizes Info -->
+      <div class="pack-sizes-info">
+        <div class="info-label">
+          <i class="bi bi-box-seam"></i>
+          Available Pack Sizes:
+        </div>
+        <div class="pack-sizes-list">
+          <span *ngFor="let packSizeKey of getPackSizeKeys(selectedBrand.packSizes)" 
+                class="pack-size-badge"
+                [class.active]="selectedBrand.packSizes[packSizeKey].id === getCurrentPackSizeId()"
+                (click)="switchPackSize(selectedBrand.packSizes[packSizeKey].id)">
+            {{ selectedBrand.packSizes[packSizeKey].capacitySize }}ml
+            <small>({{ selectedBrand.packSizes[packSizeKey].currentStock }} units)</small>
+          </span>
+        </div>
+      </div>
+
       <!-- Production Summary Card -->
       <div class="production-summary-card">
         <div class="production-header">
@@ -704,7 +728,12 @@
             <span>PRODUCTION</span>
           </div>
           <div class="production-date">
-            {{ getCurrentDate() | date:'dd/MM/yyyy HH:mm' }}
+            <ng-container *ngIf="productionSummary.productionDate && productionSummary.productionTime">
+              {{ productionSummary.productionDate | date:'dd/MM/yyyy' }} {{ productionSummary.productionTime }}
+            </ng-container>
+            <ng-container *ngIf="!productionSummary.productionDate || !productionSummary.productionTime">
+              {{ getCurrentDate() | date:'dd/MM/yyyy HH:mm' }}
+            </ng-container>
           </div>
         </div>
 
@@ -720,7 +749,7 @@
             </div>
 
             <!-- Show Range if there is history -->
-            <div class="production-item" *ngIf="productionHistory.length > 0">
+            <div class="production-item" *ngIf="productionHistory && productionHistory.length > 0">
               <span class="label">STOCK CHANGE:</span>
               <span class="value stock-range">
                 {{ productionSummary.stockBefore | number }} — {{ productionSummary.stockAfter | number }}
@@ -728,7 +757,7 @@
             </div>
 
             <!-- Show Single Value if no history -->
-            <div class="production-item" *ngIf="productionHistory.length === 0">
+            <div class="production-item" *ngIf="!productionHistory || productionHistory.length === 0">
               <span class="label">CURRENT STOCK:</span>
               <span class="value stock-range">
                 {{ productionSummary.stockAfter | number }}
@@ -749,7 +778,7 @@
       </div>
 
       <!-- Production History -->
-      <div class="production-history" *ngIf="productionHistory.length > 0">
+      <div class="production-history" *ngIf="productionHistory && productionHistory.length > 0">
         <h4>Recent Production History</h4>
         <div class="history-table-container">
           <table class="history-table">
@@ -766,21 +795,21 @@
             <tbody>
               <tr *ngFor="let batch of productionHistory" class="history-row">
                 <td class="batch-date">
-                  {{ batch.production_date | date:'dd/MM/yyyy' }}
-                  <small>{{ batch.production_time | date:'HH:mm' }}</small>
+                  {{ batch.productionDate | date:'dd/MM/yyyy' }}
+                  <small>{{ batch.productionTime }}</small>
                 </td>
-                <td class="batch-reference">{{ batch.batch_reference }}</td>
+                <td class="batch-reference">{{ batch.sourceReference || batch.batchReference }}</td>
                 <td class="batch-quantity">
                   <span class="quantity-badge positive">
-                    +{{ batch.quantity_produced | number }}
+                    +{{ batch.quantityProduced | number }}
                   </span>
                 </td>
                 <td class="stock-change">
-                  <span class="stock-before">{{ batch.stock_before | number }}</span>
+                  <span class="stock-before">{{ batch.stockBefore | number }}</span>
                   <i class="bi bi-arrow-right"></i>
-                  <span class="stock-after">{{ batch.stock_after | number }}</span>
+                  <span class="stock-after">{{ batch.stockAfter | number }}</span>
                 </td>
-                <td class="batch-manager">{{ batch.production_manager }}</td>
+                <td class="batch-manager">{{ batch.productionManager }}</td>
                 <td class="batch-status">
                   <span class="status-badge" [class.badge-success]="batch.status === 'COMPLETED'"
                     [class.badge-warning]="batch.status === 'IN_PROGRESS'"
@@ -797,7 +826,7 @@
 
 
       <!-- Empty State -->
-      <div class="empty-state" *ngIf="productionHistory.length === 0 && !isLoadingProduction">
+      <div class="empty-state" *ngIf="(!productionHistory || productionHistory.length === 0) && !isLoadingProduction">
         <div class="empty-icon">
           <i class="bi bi-gear"></i>
         </div>

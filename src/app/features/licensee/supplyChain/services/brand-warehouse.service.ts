@@ -383,28 +383,70 @@ export class BrandWarehouseService {
 
     /**
      * Get utilization records with optional filters
+     * Can be called with just filters object or with brandWarehouseId + filters
      */
-    getUtilizations(filters?: {
-        brand_warehouse?: number;
-        status?: string;
-        date_from?: string;
-        date_to?: string;
-    }): Observable<BrandWarehouseUtilization[]> {
+    getUtilizations(
+        brandWarehouseIdOrFilters?: number | {
+            brand_warehouse?: number;
+            status?: string;
+            date_from?: string;
+            date_to?: string;
+            limit?: number;
+        },
+        additionalFilters?: {
+            limit?: number;
+            status?: string;
+            date_from?: string;
+            date_to?: string;
+        }
+    ): Observable<BrandWarehouseUtilization[]> {
         let params = new HttpParams();
+        let brandWarehouseId: number | undefined;
 
-        if (filters) {
-            if (filters.brand_warehouse) params = params.set('brand_warehouse', filters.brand_warehouse.toString());
+        // Handle overloaded parameters
+        if (typeof brandWarehouseIdOrFilters === 'number') {
+            // Called with brandWarehouseId as first parameter
+            brandWarehouseId = brandWarehouseIdOrFilters;
+            if (additionalFilters) {
+                if (additionalFilters.limit) params = params.set('limit', additionalFilters.limit.toString());
+                if (additionalFilters.status) params = params.set('status', additionalFilters.status);
+                if (additionalFilters.date_from) params = params.set('date_from', additionalFilters.date_from);
+                if (additionalFilters.date_to) params = params.set('date_to', additionalFilters.date_to);
+            }
+        } else if (brandWarehouseIdOrFilters) {
+            // Called with filters object only
+            const filters = brandWarehouseIdOrFilters;
+            if (filters.brand_warehouse) {
+                brandWarehouseId = filters.brand_warehouse;
+                params = params.set('brand_warehouse', filters.brand_warehouse.toString());
+            }
             if (filters.status) params = params.set('status', filters.status);
             if (filters.date_from) params = params.set('date_from', filters.date_from);
             if (filters.date_to) params = params.set('date_to', filters.date_to);
+            if (filters.limit) params = params.set('limit', filters.limit.toString());
         }
 
         return this.http.get<any>(`${this.utilizationUrl}/`, { params }).pipe(
             map((response: any) => {
-                if (Array.isArray(response)) return response;
-                if (response?.results) return response.results;
-                if (response?.data) return response.data;
-                return [];
+                let utilizations = [];
+                if (Array.isArray(response)) {
+                    utilizations = response;
+                } else if (response?.results) {
+                    utilizations = response.results;
+                } else if (response?.data) {
+                    utilizations = response.data;
+                }
+
+                // Filter by brandWarehouseId if specified and not already filtered by backend
+                if (brandWarehouseId && utilizations.length > 0) {
+                    utilizations = utilizations.filter((util: any) => 
+                        util.brand_warehouse === brandWarehouseId || 
+                        util.brand_warehouse_id === brandWarehouseId ||
+                        util.brandWarehouse === brandWarehouseId
+                    );
+                }
+
+                return utilizations;
             }),
             catchError((error) => {
                 console.error('getUtilizations error:', error);
@@ -442,4 +484,27 @@ export class BrandWarehouseService {
             })
         );
     }
+
+    /**
+     * Get arrivals (stock additions) for a brand warehouse
+     */
+    getArrivals(brandWarehouseId: number, filters?: { limit?: number; days?: number }): Observable<any[]> {
+        let params = new HttpParams();
+        if (filters?.limit) {
+            params = params.set('limit', filters.limit.toString());
+        }
+        if (filters?.days) {
+            params = params.set('days', filters.days.toString());
+        }
+
+        return this.http.get<any>(`${this.baseUrl}/${brandWarehouseId}/arrivals/`, { params }).pipe(
+            map((response: any) => response?.arrivals || response || []),
+            catchError((error) => {
+                console.error('getArrivals error:', error);
+                return of([]);
+            })
+        );
+    }
+
+
 }

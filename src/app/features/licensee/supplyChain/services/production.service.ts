@@ -5,22 +5,23 @@ import { environment } from '../../../../../environments/environment';
 
 export interface ProductionBatch {
   id: number;
-  batch_reference: string;
-  production_date: string;
-  production_time: string;
-  production_datetime: string;
-  formatted_reference: string;
-  quantity_produced: number;
-  stock_before: number;
-  stock_after: number;
-  production_manager: string;
-  approved_by?: string;
+  batchReference: string;
+  sourceReference?: string;  // Request Register Entry reference number
+  productionDate: string;
+  productionTime: string;
+  productionDatetime: string;
+  formattedReference: string;
+  quantityProduced: number;
+  stockBefore: number;
+  stockAfter: number;
+  productionManager: string;
+  approvedBy?: string;
   status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   notes?: string;
-  brand_name: string;
-  pack_size: string;
-  created_at: string;
-  updated_at: string;
+  brandName: string;
+  packSize: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductionSummary {
@@ -59,17 +60,17 @@ export interface CreateProductionBatch {
 
 export interface ProductionHistoryResponse {
   success: boolean;
-  production_history: ProductionBatch[];
+  productionHistory: ProductionBatch[];  // Changed from production_history to productionHistory
   summary: {
-    total_quantity: number;
-    total_batches: number;
-    average_batch_size: number;
-    period_days: number;
+    totalQuantity: number;  // Changed from total_quantity
+    totalBatches: number;   // Changed from total_batches
+    averageBatchSize: number;  // Changed from average_batch_size
+    periodDays: number;     // Changed from period_days
   };
-  brand_info: {
-    brand_name: string;
-    pack_size: string;
-    current_stock: number;
+  brandInfo: {
+    brandName: string;      // Changed from brand_name
+    packSize: string;       // Changed from pack_size
+    currentStock: number;   // Changed from current_stock
   };
 }
 
@@ -77,7 +78,7 @@ export interface ProductionHistoryResponse {
   providedIn: 'root'
 })
 export class ProductionService {
-  private readonly API_BASE = `${environment.apiBaseUrl}/api/transactional/supply_chain/brand_warehouse`;
+  private readonly API_BASE = `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse`;
 
   constructor(private http: HttpClient) { }
 

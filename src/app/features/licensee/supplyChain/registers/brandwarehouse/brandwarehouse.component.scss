@@ -2034,3 +2034,125 @@
     align-items: center;
   }
 }
+
+
+// Pack Sizes Info Section
+.pack-sizes-info {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  position: relative;
+  z-index: 1;
+
+  .info-label {
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    i {
+      font-size: 16px;
+    }
+  }
+
+  .pack-sizes-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .pack-size-badge {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    pointer-events: auto;
+    position: relative;
+    z-index: 3;
+
+    small {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    &.active {
+      background: rgba(255, 255, 255, 0.95);
+      color: #667eea;
+      border-color: white;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+      cursor: default;
+
+      small {
+        color: #764ba2;
+      }
+    }
+
+    &:not(.active):hover {
+      background: rgba(255, 255, 255, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    &:not(.active):active {
+      transform: translateY(0);
+    }
+  }
+}
+
+
+// Pack Size Indicator in Modal Title
+.modal-header {
+  h2 {
+    .pack-size-indicator {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: 8px;
+      vertical-align: middle;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+  }
+}
+
+
+// Pack Size Badge in Recent Entries
+.entry-meta {
+  .pack-size {
+    .pack-size-badge {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+  }
+}

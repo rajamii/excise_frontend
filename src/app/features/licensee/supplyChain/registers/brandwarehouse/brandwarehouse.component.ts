@@ -29,6 +29,7 @@ interface LastEntryDetail {
   description: string;
   officerName?: string;
   transitPermitNo?: string;
+  packSize?: number;  // Pack size in ml
 }
 
 interface PackSizeInfo {
@@ -130,6 +131,7 @@ export class BrandwarehouseComponent implements OnInit {
   showLastEntriesModal = false;
   showProductionModal = false;
   isLoadingProduction = false;
+  isLoadingLastEntries = false;
   adjustmentQuantity = 0;
   adjustmentType: 'ADD' | 'SUBTRACT' = 'ADD';
   adjustmentReason = '';
@@ -138,12 +140,15 @@ export class BrandwarehouseComponent implements OnInit {
 
   // Production data
   productionHistory: ProductionBatch[] = [];
+  currentPackSizeId: string = '';
   productionSummary = {
     todayProduction: 0,
     stockBefore: 0,
     stockAfter: 0,
     latestReference: '',
-    productionManager: 'Production Manager'
+    productionManager: 'Production Manager',
+    productionDate: '',
+    productionTime: ''
   };
 
 
@@ -510,43 +515,110 @@ export class BrandwarehouseComponent implements OnInit {
 
   viewLastEntries(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
-    // Sample last entries data
-    this.selectedLastEntries = [
-      {
-        id: '1',
-        date: '2024-01-24',
-        type: 'PRODUCTION',
-        quantity: 1000,
-        previousStock: 2000,
-        newStock: 3000,
-        referenceNo: 'PROD-2024-001',
-        description: 'Daily production batch',
-        officerName: 'Production Manager'
-      },
-      {
-        id: '2',
-        date: '2024-01-23',
-        type: 'TRANSIT_PERMIT',
-        quantity: 600,
-        previousStock: 2600,
-        newStock: 2000,
-        referenceNo: 'TP-2024-001',
-        description: 'Transit permit to ABC Distributors',
-        transitPermitNo: 'TP-2024-001'
-      },
-      {
-        id: '3',
-        date: '2024-01-22',
-        type: 'ADJUSTMENT',
-        quantity: 50,
-        previousStock: 2550,
-        newStock: 2600,
-        referenceNo: 'ADJ-2024-001',
-        description: 'Stock adjustment - damaged goods replacement',
-        officerName: 'Warehouse Supervisor'
-      }
-    ];
+    this.isLoadingLastEntries = true;
+    this.selectedLastEntries = [];
+    
+    // Get all pack size IDs for this brand
+    const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
+    const brandWarehouseIds = packSizeKeys.map(key => parseInt(brand.packSizes[key].id));
+    
+    console.log('Loading recent entries for brand warehouse IDs:', brandWarehouseIds);
+    
+    // Fetch arrivals and utilizations for all pack sizes
+    const allEntries: LastEntryDetail[] = [];
+    let completedRequests = 0;
+    const totalRequests = brandWarehouseIds.length * 2; // arrivals + utilizations for each pack size
+    
+    brandWarehouseIds.forEach(brandWarehouseId => {
+      // Fetch arrivals (production, stock additions)
+      this.brandWarehouseService.getArrivals(brandWarehouseId, { limit: 10 }).subscribe({
+        next: (arrivals: any[]) => {
+          arrivals.forEach((arrival: any) => {
+            const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            allEntries.push({
+              id: `arrival-${arrival.id}`,
+              date: arrival.arrival_date || arrival.arrivalDate,
+              type: 'PRODUCTION',
+              quantity: arrival.quantity_added || arrival.quantityAdded,
+              previousStock: arrival.previous_stock || arrival.previousStock,
+              newStock: arrival.new_stock || arrival.newStock,
+              referenceNo: arrival.reference_no || arrival.referenceNo,
+              description: `Stock addition - ${packSize}ml`,
+              officerName: 'System',
+              packSize: packSize
+            });
+          });
+          
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        },
+        error: (error) => {
+          console.error('Error loading arrivals:', error);
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        }
+      });
+      
+      // Fetch utilizations (transit permits, stock reductions)
+      this.brandWarehouseService.getUtilizations(brandWarehouseId, { limit: 10 }).subscribe({
+        next: (utilizations: any[]) => {
+          utilizations.forEach((util: any) => {
+            const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            allEntries.push({
+              id: `util-${util.id}`,
+              date: util.date,
+              type: 'TRANSIT_PERMIT',
+              quantity: util.quantity,
+              previousStock: 0, // Will be calculated
+              newStock: 0, // Will be calculated
+              referenceNo: util.permit_no || util.permitNo,
+              description: `Transit to ${util.distributor} - ${packSize}ml`,
+              transitPermitNo: util.permit_no || util.permitNo,
+              packSize: packSize
+            });
+          });
+          
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        },
+        error: (error) => {
+          console.error('Error loading utilizations:', error);
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        }
+      });
+    });
+    
     this.showLastEntriesModal = true;
+  }
+  
+  getPackSizeFromId(brand: GroupedBrandStock, brandWarehouseId: string): number {
+    const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
+    for (const key of packSizeKeys) {
+      if (brand.packSizes[key].id === brandWarehouseId) {
+        return brand.packSizes[key].capacitySize;
+      }
+    }
+    return 0;
+  }
+  
+  finalizeLastEntries(entries: LastEntryDetail[]): void {
+    // Sort by date descending (most recent first)
+    entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    // Take only the most recent 10 entries
+    this.selectedLastEntries = entries.slice(0, 10);
+    this.isLoadingLastEntries = false;
+    
+    console.log('Finalized recent entries:', this.selectedLastEntries);
   }
 
   viewProduction(brand: GroupedBrandStock): void {
@@ -557,6 +629,18 @@ export class BrandwarehouseComponent implements OnInit {
 
   loadProductionData(brand: GroupedBrandStock): void {
     this.isLoadingProduction = true;
+    
+    // Initialize with empty data
+    this.productionHistory = [];
+    this.productionSummary = {
+      todayProduction: 0,
+      stockBefore: brand.totalStock,
+      stockAfter: brand.totalStock,
+      latestReference: 'N/A',
+      productionManager: 'N/A',
+      productionDate: '',
+      productionTime: ''
+    };
 
     // Get the first pack size ID for the API call
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
@@ -567,26 +651,54 @@ export class BrandwarehouseComponent implements OnInit {
 
     const firstPackSize = brand.packSizes[packSizeKeys[0]];
     const brandWarehouseId = parseInt(firstPackSize.id);
+    
+    // Store current pack size ID for highlighting
+    this.currentPackSizeId = firstPackSize.id;
 
     // Load production history
     this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
       next: (response) => {
-        if (response.success) {
-          this.productionHistory = response.production_history;
+        console.log('Production history response:', response);
+        
+        if (response && response.success) {
+          // Backend returns camelCase
+          this.productionHistory = response.productionHistory || [];
+          
+          console.log('Production history array:', this.productionHistory);
+          console.log('Production history length:', this.productionHistory.length);
 
           // Update production summary
-          this.productionSummary = {
-            todayProduction: response.summary.total_quantity,
-            stockBefore: this.productionHistory.length > 0 ? this.productionHistory[0].stock_before : brand.totalStock,
-            stockAfter: this.productionHistory.length > 0 ? this.productionHistory[0].stock_after : brand.totalStock,
-            latestReference: this.productionHistory.length > 0 ? this.productionHistory[0].batch_reference : 'N/A',
-            productionManager: this.productionHistory.length > 0 ? this.productionHistory[0].production_manager : 'N/A'
-          };
+          if (this.productionHistory && this.productionHistory.length > 0) {
+            const firstBatch = this.productionHistory[0];
+            this.productionSummary = {
+              todayProduction: response.summary?.totalQuantity || 0,
+              stockBefore: firstBatch.stockBefore,
+              stockAfter: firstBatch.stockAfter,
+              latestReference: firstBatch.sourceReference || firstBatch.batchReference,
+              productionManager: firstBatch.productionManager,
+              productionDate: firstBatch.productionDate,
+              productionTime: firstBatch.productionTime
+            };
+            console.log('Production summary updated:', this.productionSummary);
+          } else {
+            console.log('No production history found, using defaults');
+            // No production history, use current stock
+            this.productionSummary = {
+              todayProduction: 0,
+              stockBefore: brand.totalStock,
+              stockAfter: brand.totalStock,
+              latestReference: 'N/A',
+              productionManager: 'N/A',
+              productionDate: '',
+              productionTime: ''
+            };
+          }
         }
         this.isLoadingProduction = false;
       },
       error: (error) => {
         console.error('Error loading production data:', error);
+        this.productionHistory = [];
         this.isLoadingProduction = false;
       }
     });
@@ -596,6 +708,94 @@ export class BrandwarehouseComponent implements OnInit {
 
   getCurrentDate(): Date {
     return new Date();
+  }
+
+  getCurrentPackSizeId(): string {
+    return this.currentPackSizeId;
+  }
+
+  getCurrentPackSize(): string {
+    if (!this.selectedBrand || !this.currentPackSizeId) {
+      return '';
+    }
+    const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
+    for (const key of packSizeKeys) {
+      if (this.selectedBrand.packSizes[key].id === this.currentPackSizeId) {
+        return `${this.selectedBrand.packSizes[key].capacitySize}ml`;
+      }
+    }
+    return '';
+  }
+
+  switchPackSize(packSizeId: string): void {
+    console.log('switchPackSize called with:', packSizeId);
+    console.log('Current pack size ID:', this.currentPackSizeId);
+    console.log('Selected brand:', this.selectedBrand);
+    
+    if (!this.selectedBrand || packSizeId === this.currentPackSizeId) {
+      console.log('Returning early - same pack size or no brand selected');
+      return;
+    }
+
+    // Update current pack size ID
+    this.currentPackSizeId = packSizeId;
+    console.log('Updated current pack size ID to:', this.currentPackSizeId);
+
+    // Reload production data for the new pack size
+    this.isLoadingProduction = true;
+    const brandWarehouseId = parseInt(packSizeId);
+    console.log('Loading production data for brand warehouse ID:', brandWarehouseId);
+
+    this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
+      next: (response) => {
+        console.log('Production history response for pack size:', response);
+        
+        if (response && response.success) {
+          this.productionHistory = response.productionHistory || [];
+          
+          if (this.productionHistory && this.productionHistory.length > 0) {
+            const firstBatch = this.productionHistory[0];
+            this.productionSummary = {
+              todayProduction: response.summary?.totalQuantity || 0,
+              stockBefore: firstBatch.stockBefore,
+              stockAfter: firstBatch.stockAfter,
+              latestReference: firstBatch.sourceReference || firstBatch.batchReference,
+              productionManager: firstBatch.productionManager,
+              productionDate: firstBatch.productionDate,
+              productionTime: firstBatch.productionTime
+            };
+          } else {
+            // No production history, use current stock from selected pack size
+            if (this.selectedBrand) {
+              const packSizeKeys = this.getPackSizeKeys(this.selectedBrand.packSizes);
+              let currentStock = 0;
+              for (const key of packSizeKeys) {
+                if (this.selectedBrand.packSizes[key].id === packSizeId) {
+                  currentStock = this.selectedBrand.packSizes[key].currentStock;
+                  break;
+                }
+              }
+              
+              this.productionSummary = {
+                todayProduction: 0,
+                stockBefore: currentStock,
+                stockAfter: currentStock,
+                latestReference: 'N/A',
+                productionManager: 'N/A',
+                productionDate: '',
+                productionTime: ''
+              };
+            }
+          }
+        }
+        this.isLoadingProduction = false;
+      },
+      error: (error) => {
+        console.error('Error loading production data:', error);
+        this.productionHistory = [];
+        this.isLoadingProduction = false;
+      }
+    });
   }
 
   getStatusColor(status: string): string {
