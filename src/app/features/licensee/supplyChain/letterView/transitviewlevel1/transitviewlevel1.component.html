@@ -107,6 +107,10 @@
                   <tr>
                     <th class="fw-bold text-center">BRAND</th>
                     <th class="fw-bold text-center">SIZE</th>
+                    <th class="fw-bold text-center">BOTTLE TYPE</th>
+                    <th class="fw-bold text-center">LIQUOR TYPE</th>
+                    <th class="fw-bold text-center">BRAND OWNER</th>
+                    <th class="fw-bold text-center">MANUFACTURING UNIT</th>
                     <th class="fw-bold text-center">CASES</th>
                     <th class="fw-bold text-center bg-info text-white">EDUCATION CESS<br>(₹ PER CASE)</th>
                     <th class="fw-bold text-center bg-info text-white">EXCISE DUTY<br>(₹ PER CASE)</th>
@@ -115,10 +119,14 @@
                 </thead>
                 <tbody>
                   @if (transitData.products && transitData.products.length > 0) {
-                    @for (product of transitData.products; track product.brand) {
+                    @for (product of transitData.products; track $index) {
                       <tr>
                         <td class="fw-normal">{{ product.brand }}</td>
                         <td class="fw-normal text-center">{{ product.size }}</td>
+                        <td class="fw-normal text-center">{{ product.bottleType || 'N/A' }}</td>
+                        <td class="fw-normal text-center">{{ product.liquorType || 'N/A' }}</td>
+                        <td class="fw-normal">{{ product.brandOwner || 'N/A' }}</td>
+                        <td class="fw-normal">{{ product.manufacturingUnit || 'N/A' }}</td>
                         <td class="fw-normal text-center">{{ product.cases }}</td>
                         <td class="fw-normal text-center">₹{{ product.educationCess || '15.50' }}</td>
                         <td class="fw-normal text-center">₹{{ product.exciseDuty || '125.00' }}</td>
@@ -129,6 +137,10 @@
                     <tr>
                       <td class="fw-normal">Royal Stag</td>
                       <td class="fw-normal text-center">180ml</td>
+                      <td class="fw-normal text-center">Plastic</td>
+                      <td class="fw-normal text-center">Whisky</td>
+                      <td class="fw-normal">M/s Sikkim Distilleries Ltd</td>
+                      <td class="fw-normal">M/s Sikkim Distilleries Ltd</td>
                       <td class="fw-normal text-center">1</td>
                       <td class="fw-normal text-center">₹15.50</td>
                       <td class="fw-normal text-center">₹125.00</td>
@@ -138,17 +150,17 @@
                 </tbody>
                 <tfoot class="table-light">
                   <tr>
-                    <td colspan="3" class="fw-bold">Education Cess Total:</td>
+                    <td colspan="7" class="fw-bold">Education Cess Total:</td>
                     <td class="fw-bold text-center">₹{{ calculateEducationCessTotal() }}</td>
                     <td colspan="2"></td>
                   </tr>
                   <tr>
-                    <td colspan="3" class="fw-bold">Excise Duty Total:</td>
+                    <td colspan="7" class="fw-bold">Excise Duty Total:</td>
                     <td colspan="2" class="fw-bold text-center">₹{{ calculateExciseDutyTotal() }}</td>
                     <td></td>
                   </tr>
                   <tr>
-                    <td colspan="3" class="fw-bold">Additional Excise Total:</td>
+                    <td colspan="7" class="fw-bold">Additional Excise Total:</td>
                     <td colspan="3" class="fw-bold text-center">₹{{ calculateAdditionalExciseTotal() }}</td>
                   </tr>
                 </tfoot>

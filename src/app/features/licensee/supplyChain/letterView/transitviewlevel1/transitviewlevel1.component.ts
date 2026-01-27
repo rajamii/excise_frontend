@@ -23,6 +23,10 @@ interface TransitData {
     brand: string;
     size: string;
     cases: number;
+    bottleType?: string;
+    brandOwner?: string;
+    liquorType?: string;
+    manufacturingUnit?: string;
     educationCess?: string;
     exciseDuty?: string;
     additionalExcise?: string;
@@ -73,24 +77,38 @@ export class Transitviewlevel1Component implements OnInit {
       const foundTransit = transitList.find((r: any) => (r.billNo || r.refNo) === refNo);
       
       if (foundTransit) {
+        // Map brands array to products array with all details
+        const products = (foundTransit.brands || foundTransit.products || []).map((item: any) => ({
+          brand: item.brand,
+          size: item.size || item.size_ml ? `${item.size_ml}ml` : item.size,
+          cases: item.cases,
+          bottleType: item.bottleType || item.bottle_type,
+          brandOwner: item.brandOwner || item.brand_owner,
+          liquorType: item.liquorType || item.liquor_type,
+          manufacturingUnit: item.manufacturingUnit || item.manufacturing_unit_name,
+          educationCess: item.educationCess || item.education_cess_rs_per_case || item.total_education_cess,
+          exciseDuty: item.exciseDuty || item.excise_duty_rs_per_case || item.total_excise_duty,
+          additionalExcise: item.additionalExcise || item.additional_excise_duty_rs_per_case || item.total_additional_excise
+        }));
+
         this.transitData = {
           id: foundTransit.id || refNo,
-          referenceNo: foundTransit.billNo || foundTransit.refNo,
-          billNo: foundTransit.billNo,
+          referenceNo: foundTransit.billNo || foundTransit.bill_no || foundTransit.refNo,
+          billNo: foundTransit.billNo || foundTransit.bill_no,
           submissionDate: new Date(foundTransit.submissionDate || foundTransit.date || Date.now()),
           date: foundTransit.date,
-          soleDistributor: foundTransit.soleDistributor,
+          soleDistributor: foundTransit.soleDistributor || foundTransit.sole_distributor_name,
           distilleryName: foundTransit.distilleryName,
           status: foundTransit.status || 'TRANSIT PERMIT ISSUED',
-          totalAmount: Number(foundTransit.totalAmount || foundTransit.brAmount || 0),
+          totalAmount: Number(foundTransit.totalAmount || foundTransit.total_amount || foundTransit.brAmount || 0),
           brAmount: Number(foundTransit.brAmount || 0),
-          depotAddress: foundTransit.depotAddress,
+          depotAddress: foundTransit.depotAddress || foundTransit.depot_address,
           toLocation: foundTransit.toLocation,
           routeDetails: foundTransit.routeDetails,
           checkpostEntry: foundTransit.checkpostEntry,
           checkpostExit: foundTransit.checkpostExit,
-          vehicleNumber: foundTransit.vehicleNumber,
-          products: foundTransit.products || []
+          vehicleNumber: foundTransit.vehicleNumber || foundTransit.vehicle_number,
+          products: products
         };
         return;
       }
@@ -133,9 +151,53 @@ export class Transitviewlevel1Component implements OnInit {
               brand: 'Royal Stag',
               size: '180ml',
               cases: 1,
+              bottleType: 'Plastic',
+              liquorType: 'Whisky',
+              brandOwner: 'M/s Sikkim Distilleries Ltd',
+              manufacturingUnit: 'M/s Sikkim Distilleries Ltd',
               educationCess: '15.50',
               exciseDuty: '125.00',
               additionalExcise: '45.00'
+            }
+          ]
+        },
+        // Sample with multiple brands (like TRP/16/EXCISE)
+        {
+          referenceNo: 'TRP/16/EXCISE',
+          submissionDate: new Date('2025-01-20'),
+          soleDistributor: 'M/s Sikkim Distilleries Ltd',
+          status: 'TRANSIT PERMIT ISSUED',
+          totalAmount: 485.5,
+          depotAddress: 'gangtok',
+          toLocation: 'Gangtok, Sikkim',
+          routeDetails: 'Gangtok - Siliguri Highway via Rangpo',
+          checkpostEntry: 'Rangpo Checkpost',
+          checkpostExit: 'Melli Checkpost',
+          vehicleNumber: 'SK 01 AB 1234',
+          products: [
+            {
+              brand: 'Sikkim Premium Old Gold Blended Whisky (Khukuri)',
+              size: '180ml',
+              cases: 2,
+              bottleType: 'Plastic',
+              liquorType: 'Whisky',
+              brandOwner: 'M/s Sikkim Distilleries Ltd',
+              manufacturingUnit: 'M/s Sikkim Distilleries Ltd',
+              educationCess: '15.50',
+              exciseDuty: '125.00',
+              additionalExcise: '45.00'
+            },
+            {
+              brand: 'Sikkim Juniper Gin',
+              size: '750ml',
+              cases: 1,
+              bottleType: 'Glass',
+              liquorType: 'Gin',
+              brandOwner: 'M/s Sikkim Distilleries Ltd',
+              manufacturingUnit: 'M/s Sikkim Distilleries Ltd',
+              educationCess: '20.00',
+              exciseDuty: '150.00',
+              additionalExcise: '60.00'
             }
           ]
         },
@@ -158,6 +220,10 @@ export class Transitviewlevel1Component implements OnInit {
               brand: 'Grain ENA',
               size: '1000 BL',
               cases: 1,
+              bottleType: 'Bulk',
+              liquorType: 'ENA',
+              brandOwner: 'M/s Sikkim Distilleries Ltd',
+              manufacturingUnit: 'M/s Sikkim Distilleries Ltd',
               educationCess: '15.00',
               exciseDuty: '35.00',
               additionalExcise: '25.00'
@@ -184,6 +250,10 @@ export class Transitviewlevel1Component implements OnInit {
               brand: 'Himalayan Whisky',
               size: '750ml',
               cases: 1,
+              bottleType: 'Glass',
+              liquorType: 'Whisky',
+              brandOwner: 'M/s Royal Sikkim Brewery',
+              manufacturingUnit: 'M/s Royal Sikkim Brewery',
               educationCess: '15.50',
               exciseDuty: '120.00',
               additionalExcise: '50.00'
@@ -210,6 +280,10 @@ export class Transitviewlevel1Component implements OnInit {
               brand: 'Grain ENA',
               size: '1000 BL',
               cases: 1,
+              bottleType: 'Bulk',
+              liquorType: 'ENA',
+              brandOwner: 'M/s Royal Sikkim Brewery',
+              manufacturingUnit: 'M/s Royal Sikkim Brewery',
               educationCess: '0.00',
               exciseDuty: '0.00',
               additionalExcise: '10.00'
@@ -240,6 +314,10 @@ export class Transitviewlevel1Component implements OnInit {
               brand: 'Royal Stag',
               size: '180ml',
               cases: 1,
+              bottleType: 'Plastic',
+              liquorType: 'Whisky',
+              brandOwner: 'M/s Sikkim Distilleries Ltd',
+              manufacturingUnit: 'M/s Sikkim Distilleries Ltd',
               educationCess: '15.50',
               exciseDuty: '125.00',
               additionalExcise: '45.00'
