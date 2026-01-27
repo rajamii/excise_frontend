@@ -14,6 +14,7 @@ interface FormData {
   size: string;
   cases: number;
   vehicleNumber?: string;
+  bottleType?: string;
 }
 
 interface Product {
@@ -28,6 +29,7 @@ interface Product {
   liquorType?: string;
   exFactoryPrice?: number;
   manufacturingUnitName?: string;
+  bottleType?: string;
 }
 
 @Component({
@@ -46,7 +48,8 @@ export class TransitPermitComponent implements OnInit {
     brand: '',
     size: '',
     cases: 0,
-    vehicleNumber: ''
+    vehicleNumber: '',
+    bottleType: ''
   };
 
   products: Product[] = [];
@@ -58,6 +61,7 @@ export class TransitPermitComponent implements OnInit {
   availableDepotAddresses: string[] = [];
   brandOptions: string[] = [];
   sizeOptions: string[] = [];
+  bottleTypes: { id: number; bottleType: string }[] = [];
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
 
@@ -78,7 +82,7 @@ export class TransitPermitComponent implements OnInit {
 
     // Fetch initial data
     this.loadInitialData();
-    
+
     // Load by ref if provided
     const ref = this.route.snapshot.queryParamMap.get('ref');
     if (ref && this.isBrowser) {
@@ -90,7 +94,7 @@ export class TransitPermitComponent implements OnInit {
         return; // Don't generate new bill number if loading existing
       }
     }
-    
+
     // Generate next sequential bill number
     this.generateNextBillNumber();
   }
@@ -106,6 +110,12 @@ export class TransitPermitComponent implements OnInit {
       this.brandsData = data;
       this.brandOptions = data.map(b => b.brandName);
     });
+
+    // Fetch Bottle Types
+    this.supplyChainService.getBottleTypes().subscribe(data => {
+      console.log('Bottle Types loaded in component:', data);
+      this.bottleTypes = data;
+    });
   }
 
   onDistributorChange(): void {
@@ -116,16 +126,16 @@ export class TransitPermitComponent implements OnInit {
     // Filter distributors matching the selected name to get their addresses
     const matches = this.distributors.filter(d => d.distributorName === this.formData.soleDistributor);
     this.availableDepotAddresses = matches.map(d => d.depoAddress).filter(a => !!a);
-    
+
     if (this.availableDepotAddresses.length === 1) {
       this.formData.depotAddress = this.availableDepotAddresses[0];
     } else {
-       this.formData.depotAddress = '';
+      this.formData.depotAddress = '';
     }
-    
+
     // Check if there is an onDepotAddressChange method needed or just simple binding
   }
-  
+
   onDepotAddressChange(): void {
     // Logic if needed when depot address changes explicitly
   }
@@ -156,12 +166,13 @@ export class TransitPermitComponent implements OnInit {
           educationCess: rates.educationCess,
           exciseDuty: rates.exciseDuty,
           additionalExcise: rates.additionalExcise,
-          
+
           // Populate new fields (ensure backend returns these or handle defaults)
           brandOwner: (rates as any).brandOwner || (rates as any).brand_owner || '',
           liquorType: (rates as any).liquorType || (rates as any).liquor_type || '',
           exFactoryPrice: rates.exFactoryPrice,
-          manufacturingUnitName: (rates as any).manufacturingUnitName
+          manufacturingUnitName: (rates as any).manufacturingUnitName,
+          bottleType: this.formData.bottleType
         };
 
         // Add to products list
@@ -171,6 +182,7 @@ export class TransitPermitComponent implements OnInit {
         this.formData.brand = '';
         this.formData.size = '';
         this.formData.cases = 0;
+        this.formData.bottleType = '';
         this.sizeOptions = [];
 
         console.log('Product added:', newProduct);
@@ -211,6 +223,9 @@ export class TransitPermitComponent implements OnInit {
     if (!this.formData.cases || this.formData.cases <= 0) {
       errors.push('Cases must be greater than 0');
     }
+    if (!this.formData.bottleType) {
+      errors.push('Bottle Type is required');
+    }
 
     this.validationErrors = errors;
     return errors.length === 0;
@@ -219,17 +234,17 @@ export class TransitPermitComponent implements OnInit {
 
 
   getTotalEducationCess(): number {
-    return this.products.reduce((total, product) => 
+    return this.products.reduce((total, product) =>
       total + (product.educationCess * product.cases), 0);
   }
 
   getTotalExciseDuty(): number {
-    return this.products.reduce((total, product) => 
+    return this.products.reduce((total, product) =>
       total + (product.exciseDuty * product.cases), 0);
   }
 
   getTotalAdditionalExcise(): number {
-    return this.products.reduce((total, product) => 
+    return this.products.reduce((total, product) =>
       total + (product.additionalExcise * product.cases), 0);
   }
 
@@ -238,7 +253,7 @@ export class TransitPermitComponent implements OnInit {
     if (!this.formData.date) errors.push('Date is required');
     if (!this.formData.depotAddress) errors.push('Depot Address is required');
     if (!this.formData.vehicleNumber) errors.push('Vehicle Number is required');
-    
+
     this.validationErrors = errors;
     return errors.length === 0;
   }
@@ -259,10 +274,10 @@ export class TransitPermitComponent implements OnInit {
   submitApplication(): void {
     // Final check (should be valid already)
     if (!this.validateApplication()) return;
-    
+
     // Clear validation errors
     this.validationErrors = [];
-    
+
     // Create payload
     const payload = {
       ...this.formData,
@@ -275,37 +290,37 @@ export class TransitPermitComponent implements OnInit {
         // Mark as submitted and locked
         this.isSubmitted = true;
         this.isLocked = true;
-        
+
         // Show success message
         alert('Transit Permit Application submitted successfully!');
-        
+
         // Optional: Navigate or reset
       },
       error: (error) => {
         console.error('Submission failed', error);
         let errorMessage = 'Submission failed. Please try again.';
-        
+
         if (error.error && typeof error.error === 'object') {
-            // Check for explicit message field first
-            if (error.error.message) {
-                errorMessage = error.error.message;
-            } else {
-                 // Handle DRF standard error format
-                const keys = Object.keys(error.error);
-                if (keys.length > 0) {
-                     const firstKey = keys[0];
-                     const firstError = error.error[firstKey];
-                     if (Array.isArray(firstError)) {
-                        errorMessage = `${firstKey}: ${firstError[0]}`;
-                     } else if (typeof firstError === 'string') {
-                        errorMessage = `${firstKey}: ${firstError}`;
-                     } else {
-                        errorMessage = JSON.stringify(error.error);
-                     }
-                }
+          // Check for explicit message field first
+          if (error.error.message) {
+            errorMessage = error.error.message;
+          } else {
+            // Handle DRF standard error format
+            const keys = Object.keys(error.error);
+            if (keys.length > 0) {
+              const firstKey = keys[0];
+              const firstError = error.error[firstKey];
+              if (Array.isArray(firstError)) {
+                errorMessage = `${firstKey}: ${firstError[0]}`;
+              } else if (typeof firstError === 'string') {
+                errorMessage = `${firstKey}: ${firstError}`;
+              } else {
+                errorMessage = JSON.stringify(error.error);
+              }
             }
+          }
         }
-        
+
         this.validationErrors = [errorMessage];
       }
     });
@@ -314,11 +329,11 @@ export class TransitPermitComponent implements OnInit {
   acceptDeclaration(): void {
     // Proceed with submission
     this.submitApplication();
-    
+
     // Manually close modal if we assume submission trigger started (or move this inside submitApplication subscription)
     // Looking at submitApplication, it has an alert.
     // Ideally we should close modal ONLY if validation passes.
-    
+
     if (this.validationErrors.length === 0) {
       const closeBtn = document.getElementById('closeModalBtn');
       if (closeBtn) closeBtn.click();
@@ -333,40 +348,40 @@ export class TransitPermitComponent implements OnInit {
     this.supplyChainService.getTransitPermits().subscribe({
       next: (permits: any[]) => {
         let maxSequence = 0;
-        
+
         // Check backend data
         if (permits && permits.length > 0) {
-            permits.forEach(p => {
-                const billNo = p.bill_no || p.billNo; // Backend uses bill_no
-                if (billNo && billNo.startsWith('TRP/')) {
-                    const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-                    if (match) {
-                        const sequence = parseInt(match[1], 10);
-                        if (sequence > maxSequence) {
-                            maxSequence = sequence;
-                        }
-                    }
+          permits.forEach(p => {
+            const billNo = p.bill_no || p.billNo; // Backend uses bill_no
+            if (billNo && billNo.startsWith('TRP/')) {
+              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
+              if (match) {
+                const sequence = parseInt(match[1], 10);
+                if (sequence > maxSequence) {
+                  maxSequence = sequence;
                 }
-            });
+              }
+            }
+          });
         }
 
         // Check localStorage as fallback/supplement (optional, but good if mixed usage)
         if (this.isBrowser) {
-             const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-             transitList.forEach((permit: any) => {
-                const billNo = permit.billNo;
-                if (billNo && billNo.startsWith('TRP/')) {
-                    const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
-                     if (match) {
-                        const sequence = parseInt(match[1], 10);
-                        if (sequence > maxSequence) {
-                            maxSequence = sequence;
-                        }
-                    }
+          const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
+          transitList.forEach((permit: any) => {
+            const billNo = permit.billNo;
+            if (billNo && billNo.startsWith('TRP/')) {
+              const match = billNo.match(/TRP\/(\d+)\/EXCISE/);
+              if (match) {
+                const sequence = parseInt(match[1], 10);
+                if (sequence > maxSequence) {
+                  maxSequence = sequence;
                 }
-             });
+              }
+            }
+          });
         }
-        
+
         // Set next sequence
         this.formData.billNo = `TRP/${maxSequence + 1}/EXCISE`;
       },
@@ -383,20 +398,20 @@ export class TransitPermitComponent implements OnInit {
       // Save to transitPermitRequests for transit permit dashboard
       const transitKey = 'transitPermitRequests';
       const transitList: any[] = JSON.parse(localStorage.getItem(transitKey) || '[]');
-      const transitEntry = { 
-        ...this.formData, 
+      const transitEntry = {
+        ...this.formData,
         submissionDate: new Date().toISOString(),
         status: 'TRANSIT PERMIT ISSUED',
         totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise(),
         products: this.products.map(p => ({
-            ...p,
-            exfactory_price_rs_per_case: p.exFactoryPrice, // Map mostly for consistency if used elsewhere
-            excise_duty_rs_per_case: p.exciseDuty,
-            education_cess_rs_per_case: p.educationCess,
-            additional_excise_duty_rs_per_case: p.additionalExcise,
-            brand_owner: p.brandOwner,
-            liquor_type: p.liquorType,
-            manufacturing_unit_name: p.manufacturingUnitName
+          ...p,
+          exfactory_price_rs_per_case: p.exFactoryPrice, // Map mostly for consistency if used elsewhere
+          excise_duty_rs_per_case: p.exciseDuty,
+          education_cess_rs_per_case: p.educationCess,
+          additional_excise_duty_rs_per_case: p.additionalExcise,
+          brand_owner: p.brandOwner,
+          liquor_type: p.liquorType,
+          manufacturing_unit_name: p.manufacturingUnitName
         }))
       };
       const transitIdx = transitList.findIndex(r => r.billNo === this.formData.billNo);
@@ -432,7 +447,7 @@ export class TransitPermitComponent implements OnInit {
   payAllItems(): void {
     // Navigate to payment confirmation page
     this.router.navigate(['/dev-payment-confirmation'], {
-      queryParams: { 
+      queryParams: {
         tab: 'transit',
         billNo: this.formData.billNo,
         totalAmount: this.getTotalEducationCess() + this.getTotalExciseDuty() + this.getTotalAdditionalExcise()
@@ -448,7 +463,7 @@ export class TransitPermitComponent implements OnInit {
     this.formData.size = '';
     this.formData.cases = 0;
     this.formData.vehicleNumber = '';
-    
+
     // Clear products and errors
     this.products = [];
     this.validationErrors = [];
