@@ -382,11 +382,14 @@ export class Transitviewlevel1Component implements OnInit {
   }
 
   goBack(): void {
-    // Check if we came from permit section, officer in charge, commissioner, or supply chain
+    // Check if we came from permit section, officer in charge, commissioner, OIC dashboard, or supply chain
     const currentUrl = this.router.url;
-    console.log('Going back from URL:', currentUrl); // Debug log
+    const source = this.route.snapshot.queryParamMap.get('source');
+    console.log('Going back from URL:', currentUrl, 'Source:', source); // Debug log
     
-    if (currentUrl.includes('/app-permit-section/')) {
+    if (source === 'oic-dashboard') {
+      this.router.navigate(['/dev-officer-in-charge']);
+    } else if (currentUrl.includes('/app-permit-section/')) {
       this.router.navigate(['/app-permit-section']);
     } else if (currentUrl.includes('dev-supply-chain-transit-view-level2')) {
       this.router.navigate(['/dev-officer-in-charge']);
@@ -399,9 +402,12 @@ export class Transitviewlevel1Component implements OnInit {
 
   getBackButtonText(): string {
     const currentUrl = this.router.url;
-    console.log('Current URL:', currentUrl); // Debug log
+    const source = this.route.snapshot.queryParamMap.get('source');
+    console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
     
-    if (currentUrl.includes('/app-permit-section/')) {
+    if (source === 'oic-dashboard') {
+      return 'Back to Officer in Charge';
+    } else if (currentUrl.includes('/app-permit-section/')) {
       return 'Back to Permit Section';
     } else if (currentUrl.includes('dev-supply-chain-transit-view-level2')) {
       return 'Back to Officer in Charge';
