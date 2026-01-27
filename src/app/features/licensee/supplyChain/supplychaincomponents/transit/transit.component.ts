@@ -19,6 +19,16 @@ interface TableData {
   permitValidUntil?: string;
 }
 
+interface ProductDetail {
+  brand: string;
+  size_ml: number;
+  cases: number;
+  bottle_type?: string;
+  brand_owner?: string;
+  liquor_type?: string;
+  manufacturing_unit_name?: string;
+}
+
 @Component({
   selector: 'app-transit',
   standalone: true,
@@ -50,6 +60,13 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
+  
+  // Store raw backend data for brand details
+  rawTransitData: any[] = [];
+  
+  // Modal data
+  selectedPermitRef: string = '';
+  selectedBrandDetails: ProductDetail[] = [];
 
   // Sample data for transit permit applications
   transitData: TableData[] = [
@@ -154,6 +171,9 @@ export class TransitComponent implements OnInit {
   loadTransitData(): void {
     this.supplyChainService.getTransitPermits().subscribe({
       next: (data) => {
+        // Store raw data for brand details
+        this.rawTransitData = data;
+        
         // Group by bill_no
         const grouped = new Map<string, any>();
 
@@ -427,5 +447,68 @@ export class TransitComponent implements OnInit {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
+  }
+
+  // Brand Details Methods
+  openBrandDetailsModal(referenceNo: string): void {
+    this.selectedPermitRef = referenceNo;
+    this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
+    
+    // Open the modal using Bootstrap
+    const modalElement = document.getElementById('brandDetailsModal');
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  getBrandCount(referenceNo: string): number {
+    return this.rawTransitData.filter(item => 
+      (item.billNo || item.bill_no) === referenceNo
+    ).length;
+  }
+
+  getBrandDetailsForPermit(referenceNo: string): ProductDetail[] {
+    return this.rawTransitData
+      .filter(item => (item.billNo || item.bill_no) === referenceNo)
+      .map(item => ({
+        brand: item.brand || '',
+        size_ml: item.sizeMl || item.size_ml || 0,
+        cases: item.cases || 0,
+        bottle_type: item.bottleType || item.bottle_type || '',
+        brand_owner: item.brandOwner || item.brand_owner || '',
+        liquor_type: item.liquorType || item.liquor_type || '',
+        manufacturing_unit_name: item.manufacturingUnitName || item.manufacturing_unit_name || ''
+      }));
+  }
+
+  getTotalCases(): number {
+    return this.selectedBrandDetails.reduce((total, product) => total + (product.cases || 0), 0);
+  }
+
+  exportBrandDetails(): void {
+    // Create CSV content
+    const headers = ['Brand', 'Size (ml)', 'Cases', 'Bottle Type', 'Brand Owner', 'Liquor Type', 'Manufacturing Unit'];
+    const csvContent = [
+      headers.join(','),
+      ...this.selectedBrandDetails.map(product => [
+        `"${product.brand}"`,
+        product.size_ml,
+        product.cases,
+        `"${product.bottle_type || 'N/A'}"`,
+        `"${product.brand_owner || 'N/A'}"`,
+        `"${product.liquor_type || 'N/A'}"`,
+        `"${product.manufacturing_unit_name || 'N/A'}"`
+      ].join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `brand-details-${this.selectedPermitRef}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   }
 }
