@@ -6,6 +6,7 @@ import { OfficerinchargehologramreqComponent } from '../HoloGram/officerincharge
 import { HologramMonthlyReportComponent } from '../registers/hologram-monthly-report/hologram-monthly-report.component';
 import { BrandwarehouseComponent } from '../registers/brandwarehouse/brandwarehouse.component';
 import { OicdailyhologramregisterComponent } from '../registers/oicdailyhologramregister/oicdailyhologramregister.component';
+import { OicTransitPermitComponent } from '../supplychaincomponents/oic-transit-permit/oic-transit-permit.component';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -67,7 +68,7 @@ interface BrandRow {
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
-  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, OicdailyhologramregisterComponent, HologramMonthlyReportComponent, BrandwarehouseComponent],
+  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, OicdailyhologramregisterComponent, HologramMonthlyReportComponent, BrandwarehouseComponent, OicTransitPermitComponent],
   templateUrl: './officer-in-charge.component.html',
   styleUrl: './officer-in-charge.component.scss'
 })
