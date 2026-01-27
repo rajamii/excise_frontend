@@ -58,8 +58,7 @@ export class SupplyChainComponent implements OnInit {
   // MOVED TO hologramprocurement.component.ts
   // hologramList: HologramRow[] = [];
 
-  userUnits: any[] = [];
-  showUnitSwitcher = false;
+
 
   constructor(
     private router: Router,
@@ -79,7 +78,7 @@ export class SupplyChainComponent implements OnInit {
         if (res.exists && res.data) {
           this.currentProfile = res.data;
           this.loadingProfile = false;
-          this.loadUserUnits(); // Load other units
+
         } else {
           // If checking profile fails or doesn't exist, redirect to registration
           this.router.navigate(['/licensee/supply-chain-registration']);
@@ -102,47 +101,7 @@ export class SupplyChainComponent implements OnInit {
     }
   }
 
-  loadUserUnits() {
-    this.profileService.getUserUnits().subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.userUnits = res.data;
-        }
-      }
-    });
-  }
 
-  toggleUnitSwitcher() {
-    this.showUnitSwitcher = !this.showUnitSwitcher;
-  }
-
-  switchUnit(licenseeId: string) {
-    if (confirm('Verify switching to this unit?')) {
-      this.profileService.switchUnit(licenseeId).subscribe({
-        next: () => {
-          window.location.reload();
-        },
-        error: (err) => {
-          console.error('Switch failed', err);
-          alert('Failed to switch unit');
-        }
-      })
-    }
-  }
-
-  addNewUnit() {
-    if (confirm('This will take you to registration page to add a NEW unit. Continue?')) {
-      // We do NOT delete the profile, effectively "logging out" of the active session 
-      // but since we want to add *new*, we just go to registration.
-      // However, registration checks "if exists". We might need to clear active session first?
-      // Actually, to add new, we should just go to reg page.
-      // But the backend view checks `if SupplyChainUserProfile.objects.filter(user=request.user).exists(): return error`.
-      // So we DO need to clear the active session to allow "new" registration.
-      this.profileService.resetProfile().subscribe(() => {
-        this.router.navigate(['/licensee/supply-chain-registration']);
-      });
-    }
-  }
 
   setActiveTab(tab: string): void {
     console.log('setActiveTab called with:', tab);

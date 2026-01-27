@@ -49,11 +49,5 @@ export class SupplyChainProfileService {
         return this.http.delete(`${this.apiUrl}/profile/`);
     }
 
-    getUserUnits(): Observable<{ success: boolean, data: SupplyChainProfile[] }> {
-        return this.http.get<{ success: boolean, data: SupplyChainProfile[] }>(`${this.apiUrl}/user-units/`);
-    }
 
-    switchUnit(licenseeId: string): Observable<any> {
-        return this.http.post(`${this.apiUrl}/switch-unit/`, { licensee_id: licenseeId });
-    }
 }
