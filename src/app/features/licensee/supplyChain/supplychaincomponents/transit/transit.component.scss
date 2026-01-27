@@ -257,7 +257,7 @@
 
     .register-table {
       width: 100%;
-      min-width: 1320px;
+      min-width: 1350px;
       border-collapse: collapse;
       font-size: 0.9rem;
       margin: 0;
@@ -300,12 +300,16 @@
           }
 
           &.status {
-            width: 120px;
+            width: 100px;
             text-align: center;
           }
 
           &.brand-details {
             width: 120px;
+          }
+
+          &.depot-address {
+            width: 150px;
           }
 
           &.actions {
@@ -376,34 +380,141 @@
             &.status {
               text-align: center;
 
+              .status-badge-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+              }
+
               .status-badge {
-                padding: 0.5rem 1rem;
-                border-radius: 20px;
-                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+                border-radius: 15px;
+                font-size: 0.7rem;
                 font-weight: 600;
                 display: inline-flex;
                 align-items: center;
-                gap: 0.25rem;
+                gap: 0.3rem;
+                text-transform: uppercase;
+                letter-spacing: 0.3px;
+                min-width: 90px;
+                justify-content: center;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+                border: 1px solid transparent;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
 
+                &::before {
+                  content: '';
+                  position: absolute;
+                  top: 0;
+                  left: -100%;
+                  width: 100%;
+                  height: 100%;
+                  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                  transition: left 0.5s;
+                }
+
+                &:hover::before {
+                  left: 100%;
+                }
+
+                .status-icon {
+                  font-size: 0.75rem;
+                  animation: pulse 2s infinite;
+                }
+
+                // Approved/Success Status - Green
+                &.status-approved {
+                  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                  color: white;
+                  border-color: #047857;
+                  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+                    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                  }
+                }
+
+                // Issued Status - Dark Green
                 &.status-issued {
-                  background: #d1fae5;
-                  color: #065f46;
+                  background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+                  color: white;
+                  border-color: #022c22;
+                  box-shadow: 0 2px 8px rgba(6, 95, 70, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(6, 95, 70, 0.4);
+                    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+                  }
                 }
 
-                &.status-processing {
-                  background: #fef3c7;
-                  color: #92400e;
+                // Rejected/Cancelled Status - Red
+                &.status-rejected {
+                  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+                  color: white;
+                  border-color: #b91c1c;
+                  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+                    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+                  }
                 }
 
+                // Pending Status - Blue
                 &.status-pending {
-                  background: #dbeafe;
-                  color: #1e40af;
+                  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                  color: white;
+                  border-color: #1d4ed8;
+                  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                  }
                 }
 
-                &.status-default {
-                  background: #f3f4f6;
-                  color: #374151;
+                // Processing Status - Orange
+                &.status-processing {
+                  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                  color: white;
+                  border-color: #b45309;
+                  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+                    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+                  }
                 }
+
+                // Default Status - Gray
+                &.status-default {
+                  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+                  color: white;
+                  border-color: #374151;
+                  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+
+                  &:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+                    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+                  }
+                }
+              }
+            }
+
+            &.depot-address {
+              .depot-text {
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 0.9rem;
               }
             }
 
@@ -536,47 +647,191 @@
     }
 
     .register-pagination {
-      background: #f8fafc;
-      border-top: 1px solid #e5e7eb;
-      padding: 1rem 2rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      border-top: 3px solid #3b82f6;
+      padding: 1.5rem 2rem;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
 
       .pagination-info {
         .info-text {
-          color: #6b7280;
-          font-size: 0.9rem;
+          color: #475569;
+          font-size: 0.95rem;
+          font-weight: 600;
+          background: white;
+          padding: 0.75rem 1.25rem;
+          border-radius: 25px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+
+          &::before {
+            content: "📊";
+            font-size: 1rem;
+          }
         }
       }
 
       .pagination-controls {
         .page-size-selector {
+          background: white;
+          padding: 0.75rem 1.25rem;
+          border-radius: 25px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+
           .selector-label {
-            color: #6b7280;
+            color: #475569;
             font-size: 0.9rem;
             font-weight: 600;
+            white-space: nowrap;
           }
 
           .form-select-sm {
             width: auto;
             min-width: 80px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            transition: all 0.3s ease;
+
+            &:focus {
+              border-color: #3b82f6;
+              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+              outline: none;
+              transform: translateY(-1px);
+            }
+
+            &:hover {
+              border-color: #6366f1;
+              transform: translateY(-1px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
           }
         }
 
         .pagination-buttons {
-          .btn {
-            border-color: #d1d5db;
-            color: #6b7280;
+          background: white;
+          padding: 0.5rem;
+          border-radius: 25px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e2e8f0;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
 
-            &:hover:not(:disabled) {
-              background-color: #f3f4f6;
-              border-color: #9ca3af;
+          .btn {
+            border: none;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.6rem 0.9rem;
+            min-width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+
+            &::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: -100%;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+              transition: left 0.5s;
             }
 
-            &.disabled {
-              background-color: #f9fafb;
-              color: #9ca3af;
+            &:hover:not(:disabled) {
+              background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+              color: #1e293b;
+              transform: translateY(-2px);
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+              &::before {
+                left: 100%;
+              }
+            }
+
+            &:active:not(:disabled) {
+              transform: translateY(0);
+              box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            }
+
+            &:disabled {
+              background-color: #f1f5f9;
+              color: #cbd5e1;
+              cursor: not-allowed;
+              transform: none;
+              box-shadow: none;
+            }
+
+            &.btn-primary {
+              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+              color: white;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+
+              &:hover {
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+              }
+
+              &:active {
+                transform: translateY(0);
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+              }
+            }
+
+            i {
+              font-size: 0.85rem;
+              transition: transform 0.3s ease;
+            }
+
+            &:hover:not(:disabled) i {
+              transform: scale(1.1);
+            }
+          }
+
+          .page-numbers {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin: 0 0.5rem;
+
+            .pagination-ellipsis {
+              color: #64748b;
+              font-weight: 700;
+              padding: 0.6rem 0.5rem;
+              font-size: 1rem;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              min-width: 44px;
+              height: 44px;
             }
           }
         }
+      }
+
+      // Hover effects for the entire pagination container
+      &:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #ddd6fe 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       }
     }
 
@@ -721,6 +976,19 @@
               }
             }
           }
+
+          &.status {
+            .status-badge {
+              font-size: 0.65rem;
+              padding: 0.3rem 0.6rem;
+              min-width: 75px;
+              border-radius: 12px;
+
+              .status-icon {
+                font-size: 0.7rem;
+              }
+            }
+          }
         }
       }
 
@@ -736,6 +1004,93 @@
               font-size: 1.25rem;
             }
           }
+        }
+      }
+
+      .register-pagination {
+        padding: 1rem;
+        border-radius: 0 0 12px 12px;
+
+        .d-flex {
+          flex-direction: column;
+          gap: 1rem;
+          align-items: stretch !important;
+        }
+
+        .pagination-info {
+          .info-text {
+            font-size: 0.85rem;
+            padding: 0.6rem 1rem;
+            text-align: center;
+            border-radius: 20px;
+
+            &::before {
+              display: none;
+            }
+          }
+        }
+
+        .pagination-controls {
+          flex-direction: column;
+          gap: 1rem;
+          align-items: stretch !important;
+          width: 100%;
+
+          .page-size-selector {
+            padding: 0.6rem 1rem;
+            border-radius: 20px;
+            justify-content: center;
+
+            .selector-label {
+              font-size: 0.8rem;
+            }
+
+            .form-select-sm {
+              font-size: 0.8rem;
+              min-width: 70px;
+              padding: 0.4rem 0.6rem;
+              border-radius: 10px;
+            }
+          }
+
+          .pagination-buttons {
+            padding: 0.4rem;
+            border-radius: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+
+            .btn {
+              font-size: 0.8rem;
+              padding: 0.5rem 0.7rem;
+              min-width: 38px;
+              height: 38px;
+              border-radius: 10px;
+            }
+
+            .page-numbers {
+              margin: 0 0.25rem;
+
+              .pagination-ellipsis {
+                font-size: 0.85rem;
+                padding: 0.5rem 0.4rem;
+                min-width: 38px;
+                height: 38px;
+              }
+            }
+          }
+        }
+
+        .pagination-info {
+          .info-text {
+            font-size: 0.8rem;
+          }
+        }
+
+        // Remove hover effects on mobile
+        &:hover {
+          transform: none;
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
         }
       }
     }
@@ -982,5 +1337,71 @@
     min-width: 80px;
     font-size: 0.75rem;
     padding: 0.375rem 0.5rem;
+  }
+}
+
+// Pagination Animation Keyframes
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes statusGlow {
+  0%, 100% {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+  }
+}
+
+// Enhanced Pagination Animations
+.transit-register-table .register-container .register-pagination {
+  animation: fadeInUp 0.6s ease-out;
+  
+  .pagination-info .info-text {
+    background: linear-gradient(90deg, #ffffff 0px, #f0f4f8 40px, #ffffff 80px);
+    background-size: 200px 100%;
+    animation: shimmer 3s infinite linear;
+  }
+
+  .pagination-controls {
+    .page-size-selector:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .pagination-buttons:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn.btn-primary {
+      animation: pulse 2s infinite;
+    }
   }
 }

@@ -56,6 +56,8 @@ export class TransitPermitComponent implements OnInit {
   validationErrors: string[] = [];
   isLocked = false;
   isSubmitted = false;
+  isCommonFieldsLocked = false;
+  showUnlockModal = false;
 
   distributors: DistRow[] = [];
   availableDepotAddresses: string[] = [];
@@ -178,6 +180,11 @@ export class TransitPermitComponent implements OnInit {
         // Add to products list
         this.products.push(newProduct);
 
+        // Lock common fields after adding first product
+        if (this.products.length === 1) {
+          this.lockCommonFields();
+        }
+
         // Reset form fields for next product
         this.formData.brand = '';
         this.formData.size = '';
@@ -201,6 +208,12 @@ export class TransitPermitComponent implements OnInit {
   deleteProduct(index: number): void {
     if (confirm('Are you sure you want to delete this product?')) {
       this.products.splice(index, 1);
+      
+      // Unlock common fields if no products remain
+      if (this.products.length === 0) {
+        this.unlockCommonFields();
+      }
+      
       console.log('Product deleted at index:', index);
     }
   }
@@ -469,11 +482,94 @@ export class TransitPermitComponent implements OnInit {
     this.validationErrors = [];
     this.isLocked = false;
     this.isSubmitted = false;
+    this.isCommonFieldsLocked = false;
 
     // Generate new bill number for next application
     this.generateNextBillNumber();
 
     console.log('Form cleared');
+  }
+
+  // Common Fields Locking Methods
+  lockCommonFields(): void {
+    this.isCommonFieldsLocked = true;
+    console.log('Common fields locked after adding first product');
+  }
+
+  confirmUnlockFields(): void {
+    this.showUnlockModal = true;
+  }
+
+  closeUnlockModal(): void {
+    this.showUnlockModal = false;
+  }
+
+  confirmUnlockAction(): void {
+    this.proceedWithUnlock();
+    this.closeUnlockModal();
+    
+    // Show success message
+    this.showSuccessMessage();
+  }
+
+  showSuccessMessage(): void {
+    // Create a temporary success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    successDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 350px;';
+    successDiv.innerHTML = `
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <strong>Fields Unlocked!</strong> Common fields are now editable, product selection cleared, and product details table reset.
+      <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(successDiv);
+    
+    // Auto-remove after 5 seconds (increased time for longer message)
+    setTimeout(() => {
+      if (successDiv.parentElement) {
+        successDiv.remove();
+      }
+    }, 5000);
+  }
+
+  proceedWithUnlock(): void {
+    // Proceed with unlocking common fields and resetting product selection
+    this.unlockCommonFields();
+  }
+
+  unlockCommonFields(): void {
+    this.isCommonFieldsLocked = false;
+    
+    // Clear ALL product selection fields when unlocking
+    this.formData.brand = '';
+    this.formData.size = '';
+    this.formData.cases = 0;
+    this.formData.bottleType = '';
+    this.sizeOptions = [];
+    
+    // IMPORTANT: Clear the products array to avoid data inconsistency
+    // when user changes depot address or distributor
+    this.products = [];
+    
+    // Clear any validation errors
+    this.validationErrors = [];
+    
+    // Force Angular to update the form by triggering change detection
+    setTimeout(() => {
+      // Additional reset to ensure dropdowns are properly cleared
+      const brandSelect = document.querySelector('select[ng-reflect-model="brand"]') as HTMLSelectElement;
+      const sizeSelect = document.querySelector('select[ng-reflect-model="size"]') as HTMLSelectElement;
+      const bottleTypeSelect = document.querySelector('select[ng-reflect-model="bottleType"]') as HTMLSelectElement;
+      const casesInput = document.querySelector('input[ng-reflect-model="cases"]') as HTMLInputElement;
+      
+      if (brandSelect) brandSelect.selectedIndex = 0;
+      if (sizeSelect) sizeSelect.selectedIndex = 0;
+      if (bottleTypeSelect) bottleTypeSelect.selectedIndex = 0;
+      if (casesInput) casesInput.value = '0';
+    }, 50);
+    
+    console.log('Common fields unlocked, product fields cleared, and PRODUCT DETAILS table cleared');
   }
 
   goBack(): void {

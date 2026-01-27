@@ -25,18 +25,24 @@
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Sole Distributor Name:</label>
           <select class="form-control input-field" [(ngModel)]="formData.soleDistributor"
-            (change)="onDistributorChange()">
+            (change)="onDistributorChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>-- Select Distributor --</option>
             <option *ngFor="let distributor of distributors" [value]="distributor.distributorName">
               {{ distributor.distributorName }}
             </option>
           </select>
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Date -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Date:</label>
-          <input type="date" class="form-control" [(ngModel)]="formData.date">
+          <input type="date" class="form-control" [(ngModel)]="formData.date" [disabled]="isCommonFieldsLocked">
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Depot Address -->
@@ -44,7 +50,7 @@
           <label class="form-label fw-bold">Depot Address:</label>
           <!-- Show dropdown if multiple addresses available, otherwise show input -->
           <select *ngIf="availableDepotAddresses.length > 1" class="form-control input-field"
-            [(ngModel)]="formData.depotAddress" (change)="onDepotAddressChange()">
+            [(ngModel)]="formData.depotAddress" (change)="onDepotAddressChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>
               -- Select Depot Address --
             </option>
@@ -53,7 +59,19 @@
             </option>
           </select>
           <input *ngIf="availableDepotAddresses.length <= 1" type="text" class="form-control input-field"
-            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled" />
+            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled" 
+            [disabled]="isCommonFieldsLocked" />
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
+        </div>
+
+        <!-- Section Divider -->
+        <div class="col-12 mb-3">
+          <hr class="section-divider">
+          <div class="section-title">
+            <span class="badge bg-success">Product Information</span>
+          </div>
         </div>
 
         <!-- Brand -->
@@ -90,7 +108,10 @@
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Vehicle Number:</label>
           <input type="text" class="form-control input-field" [(ngModel)]="formData.vehicleNumber"
-            placeholder="Enter Vehicle Number" />
+            placeholder="Enter Vehicle Number" [disabled]="isCommonFieldsLocked" />
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Bottle Type -->
@@ -107,6 +128,19 @@
 
       <!-- Action Buttons -->
       <div class="text-center mt-4">
+        <!-- Locked Fields Indicator -->
+        <div class="locked-fields-indicator mb-3" *ngIf="isCommonFieldsLocked">
+          <div class="alert alert-info d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <span>Common fields are locked. Click "Unlock & Reset" to modify distributor/date/address (will clear current product selection)</span>
+            </div>
+            <button class="btn btn-outline-warning btn-sm" (click)="confirmUnlockFields()" title="Unlock common fields and reset product selection">
+              <i class="bi bi-unlock me-1"></i>Unlock & Reset
+            </button>
+          </div>
+        </div>
+
         <button class="btn btn-primary me-3" (click)="addProduct()">
           Add Product
         </button>
@@ -567,6 +601,56 @@
 
 
 
+    </div>
+  </div>
+</div>
+<!-- Unlock Confirmation Modal -->
+<div class="custom-modal-overlay" id="unlockModalOverlay" [style.display]="showUnlockModal ? 'flex' : 'none'">
+  <div class="custom-modal">
+    <!-- Modal Header -->
+    <div class="custom-modal-header">
+      <h5 class="custom-modal-title">
+        <i class="bi bi-exclamation-triangle me-2"></i>Unlock Fields Confirmation
+      </h5>
+      <button type="button" class="custom-close-btn" (click)="closeUnlockModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="custom-modal-body">
+      <div class="text-center mb-4">
+        <i class="bi bi-unlock-fill text-warning" style="font-size: 3rem;"></i>
+      </div>
+      
+      <h6 class="text-center mb-3">Are you sure you want to unlock the common fields?</h6>
+      
+      <div class="custom-alert">
+        <h6 class="custom-alert-heading">
+          <i class="bi bi-info-circle me-2"></i>What will happen:
+        </h6>
+        <ul class="mb-0">
+          <li>Common fields (Distributor, Date, Depot Address, Vehicle Number) will become editable</li>
+          <li><strong>Your current product selection will be cleared</strong></li>
+          <li><strong>All products in the PRODUCT DETAILS table will be removed</strong></li>
+          <li>You will need to select Brand, Size, Cases, and Bottle Type again</li>
+          <li>You will need to re-add all products to the table</li>
+        </ul>
+      </div>
+
+      <p class="text-muted text-center mb-0">
+        <small>This ensures data consistency when changing depot address or distributor information.</small>
+      </p>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="custom-modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeUnlockModal()">
+        <i class="bi bi-x-circle me-1"></i>Cancel
+      </button>
+      <button type="button" class="btn btn-warning" (click)="confirmUnlockAction()">
+        <i class="bi bi-unlock me-1"></i>Yes, Unlock & Reset
+      </button>
     </div>
   </div>
 </div>
