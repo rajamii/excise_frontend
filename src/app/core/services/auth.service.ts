@@ -11,7 +11,7 @@ import { AccountService } from './account.service';
 })
 export class AuthService {
 
-  private baseUrl = `${environment.apiBaseUrl}/auth/users`;  // ✅ Changed from /user to /auth/users
+  private baseUrl = `${environment.apiBaseUrl}/auth/users`;
 
   constructor(private http: HttpClient, private accountService: AccountService) { }
 

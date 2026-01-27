@@ -25,7 +25,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   objections: Objection[] = [];
   unresolvedObjectionAppIds: Set<string> = new Set();
-  
+
   private destroy$ = new Subject<void>();
 
   @Output() view = new EventEmitter<any>();
@@ -75,7 +75,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   // ============================================================
   // HELPER METHODS FOR TEMPLATE
   // ============================================================
-  
+
   getApplicationId(element: any): string {
     return element?.application_id || element?.applicationId || element?.id || element?.app_id || '';
   }
@@ -87,7 +87,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   // ✅ NEW: Get next level based on current stage
   getNextLevel(element: any): string {
     const currentStage = this.getCurrentStage(element);
-    
+
     const stageToNextLevel: Record<string, string> = {
       'level_1': 'Level 2',
       'level_2': 'Level 3',
@@ -109,41 +109,41 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
       'objection_raised': 'Review',
       'applicant_applied': 'Level 1',
     };
-    
+
     return stageToNextLevel[currentStage] || 'N/A';
   }
 
   getLatestRemarks(element: any): string {
-    return element?.latestTransaction?.remarks || 
-           element?.latest_transaction?.remarks || 
-           element?.remarks || 
-           '';
+    return element?.latestTransaction?.remarks ||
+      element?.latest_transaction?.remarks ||
+      element?.remarks ||
+      '';
   }
 
   getPerformedByUsername(element: any): string {
     return element?.latestTransaction?.performedBy?.username ||
-           element?.latestTransaction?.performed_by?.username ||
-           element?.latest_transaction?.performedBy?.username ||
-           element?.latest_transaction?.performed_by?.username ||
-           '';
+      element?.latestTransaction?.performed_by?.username ||
+      element?.latest_transaction?.performedBy?.username ||
+      element?.latest_transaction?.performed_by?.username ||
+      '';
   }
 
   getPerformedByRole(element: any): string {
     return element?.latestTransaction?.performedBy?.roleName ||
-           element?.latestTransaction?.performedBy?.role_name ||
-           element?.latestTransaction?.performed_by?.roleName ||
-           element?.latestTransaction?.performed_by?.role_name ||
-           element?.latest_transaction?.performedBy?.roleName ||
-           element?.latest_transaction?.performedBy?.role_name ||
-           element?.latest_transaction?.performed_by?.roleName ||
-           element?.latest_transaction?.performed_by?.role_name ||
-           '';
+      element?.latestTransaction?.performedBy?.role_name ||
+      element?.latestTransaction?.performed_by?.roleName ||
+      element?.latestTransaction?.performed_by?.role_name ||
+      element?.latest_transaction?.performedBy?.roleName ||
+      element?.latest_transaction?.performedBy?.role_name ||
+      element?.latest_transaction?.performed_by?.roleName ||
+      element?.latest_transaction?.performed_by?.role_name ||
+      '';
   }
 
   getLatestTimestamp(element: any): string {
     return element?.latestTransaction?.timestamp ||
-           element?.latest_transaction?.timestamp ||
-           '';
+      element?.latest_transaction?.timestamp ||
+      '';
   }
 
   // ============================================================
@@ -161,7 +161,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['dataSource'] && this.dataSource?.data) {
       this.unresolvedObjectionAppIds.clear();
-      
+
       if (Array.isArray(this.dataSource.data) && this.dataSource.data.length > 0) {
         this.loadObjections();
       }
@@ -171,7 +171,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
   private loadObjections(): void {
     this.dataSource.data.forEach(app => {
       const appId = this.getAppId(app);
-      
+
       if (!appId) {
         console.warn('Application missing ID:', app);
         return;
@@ -182,11 +182,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
           .pipe(
             takeUntil(this.destroy$),
             catchError(err => {
-              if (err.status === 404) {
-                console.log(`No objections found for application ${appId}`);
-              } else {
-                console.error(`Error fetching objections for ${appId}:`, err);
-              }
+              console.error(`Error fetching objections for ${appId}:`, err);
               return of([]);
             })
           )
@@ -209,7 +205,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
 
   private shouldFetchObjections(app: LicenseApplication): boolean {
     const currentStage = app.current_stage || (app as any).currentStage;
-    
+
     if (!currentStage) {
       return false;
     }
@@ -227,7 +223,7 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
       'level_5',
       'objection_raised'
     ];
-    
+
     return objectionStages.includes(currentStage);
   }
 
@@ -235,44 +231,36 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
     const appId = this.getAppId(application);
 
     if (!appId) {
-      console.error('❌ Cannot open dialog - no application ID found!');
+      console.error('Cannot open dialog - no application ID found!');
       alert('Error: Application ID is missing. Cannot open review dialog.');
       return;
     }
 
-    console.log('👁️ Opening review dialog for application:', appId);
-
     const dialogRef = this.dialog.open(ReviewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
-      data: { 
-        application: application, 
-        tableType: this.tableType 
+      data: {
+        application: application,
+        tableType: this.tableType
       },
       disableClose: false
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      console.log('🔄 Review dialog closed with result:', result);
-      
+     
       if (result?.success) {
-        console.log('✅ Action successful:', result.action);
-        console.log('📤 Emitting refresh request to dashboard...');
         this.refreshData.emit();
-        console.log('✅ Refresh event emitted successfully');
       }
     });
   }
 
   viewMovement(application: any): void {
     const appId = this.getAppId(application);
-    
+
     if (!appId) {
       console.error('Cannot view movement: application ID is missing');
       return;
     }
-
-    console.log('📊 Opening movement dialog for application:', appId);
 
     this.dialog.open(ApplicationMovementComponent, {
       width: '70vw',

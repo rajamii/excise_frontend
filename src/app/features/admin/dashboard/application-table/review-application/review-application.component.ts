@@ -58,7 +58,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   applicationId: string = '';
   tableType: string = '';
 
-  // ✅ Flag to identify application type
+  // Flag to identify application type
   isSalesmanBarmanApplication: boolean = false;
 
   // Data arrays for display
@@ -122,7 +122,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     licenseCategory: '',
     nextStep: ''
   };
-  
+
   private approvalDialogRef: any = null;
 
   constructor(
@@ -156,28 +156,22 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   }
 
   ngOnInit(): void {
-    console.log('=== REVIEW APPLICATION COMPONENT INIT ===');
-    console.log('Full application object:', this.application);
-    console.log('Table type:', this.tableType);
-
     this.applicationId = this.getAppId(this.application);
-    console.log('Application ID:', this.applicationId);
 
-    // ✅ Detect if this is a Salesman/Barman application
+    // Detect if this is a Salesman/Barman application
     this.isSalesmanBarmanApplication = this.applicationId.startsWith('SBM/');
-    console.log('🎯 Is Salesman/Barman Application:', this.isSalesmanBarmanApplication);
 
     this.loadApplicationData();
     this.loadObjections();
     this.buildObjectionFields();
     this.loadNextStages();
 
-    // ✅ Only load location fees for Level 1 non-Salesman/Barman applications
+    // Only load location fees for Level 1 non-Salesman/Barman applications
     if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication) {
       this.loadLocationFees();
     }
-    
-    // ✅ Only load license categories for Level 2 non-Salesman/Barman applications
+
+    // Only load license categories for Level 2 non-Salesman/Barman applications
     if (this.accountService.hasAnyRole('level_2') && !this.isSalesmanBarmanApplication) {
       this.loadLicenseCategories();
     }
@@ -187,7 +181,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     const appId = this.applicationId;
 
     if (appId.startsWith('SBM/')) {
-      console.log('🎯 Detected: Salesman/Barman Application - Using Workflow Service');
       return {
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
@@ -206,7 +199,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         type: 'salesman_barman'
       };
     } else if (appId.startsWith('NLI/') || appId.startsWith('NEW/')) {
-      console.log('🎯 Detected: New License Application');
       return {
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
@@ -225,7 +217,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         type: 'new_license'
       };
     } else if (appId.startsWith('LIC/')) {
-      console.log('🎯 Detected: License Application');
       return {
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
@@ -244,7 +235,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         type: 'license'
       };
     } else {
-      console.warn('⚠️ Unknown application type, defaulting to license');
+      console.warn('Unknown application type, defaulting to license');
       return {
         getNextStages: (id: string) => this.http.get<NextStage[]>(
           `http://localhost:8000/auth/${id}/next-stages/`
@@ -285,81 +276,59 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   }
 
   private loadNextStages(): void {
-    console.log('📋 Loading next stages for:', this.applicationId);
-    const currentStageId = this.application.current_stage || this.application.currentStage;
-    console.log('🎯 Current stage ID:', currentStageId);
-
     const serviceMethods = this.getApplicationServiceMethods();
     const nextStagesObservable = serviceMethods.getNextStages(this.applicationId);
 
     nextStagesObservable.subscribe({
       next: (stages: NextStage[]) => {
-        console.log('✅ Next stages loaded:', stages);
         this.nextStages = stages;
 
         if (serviceMethods.type === 'salesman_barman') {
           stages.forEach(stage => {
             const stageName = stage.name.toLowerCase();
-            console.log('🔍 Checking Salesman/Barman stage:', stageName, 'ID:', stage.id);
 
             if (stageName === 'approved' || stageName === 'awaiting_payment') {
               this.approveStageId = stage.id;
-              console.log('✅ Found FINAL approve stage:', stage.name, stage.id);
             }
             else if (!this.approveStageId && stageName.match(/^level_\d+$/)) {
               this.approveStageId = stage.id;
-              console.log('✅ Found NEXT LEVEL approve stage:', stage.name, stage.id);
             }
             else if (stageName === 'rejected' || stageName.includes('reject')) {
               this.rejectStageId = stage.id;
-              console.log('✅ Found reject stage:', stage.name, stage.id);
             }
             else if (stageName === 'objection_raised' || stageName.includes('objection')) {
               this.objectionStageId = stage.id;
-              console.log('✅ Found objection stage:', stage.name, stage.id);
             }
           });
         } else {
           stages.forEach(stage => {
             const stageName = stage.name.toLowerCase();
-            console.log('🔍 Checking stage:', stageName, 'ID:', stage.id);
 
             if (stageName === 'approved' || stageName === 'awaiting_payment' || stageName === 'payment_pending') {
               this.approveStageId = stage.id;
-              console.log('✅ Found FINAL approve stage:', stage.name, stage.id);
             }
             else if (!this.approveStageId &&
               stageName.match(/^level_\d+$/) &&
               !stageName.includes('objection') &&
               !stageName.includes('rejected')) {
               this.approveStageId = stage.id;
-              console.log('✅ Found NEXT LEVEL approve stage:', stage.name, stage.id);
             }
             else if (stageName.includes('rejected')) {
               this.rejectStageId = stage.id;
-              console.log('✅ Found reject stage:', stage.name, stage.id);
             }
             else if (stageName.includes('objection')) {
               this.objectionStageId = stage.id;
-              console.log('✅ Found objection stage:', stage.name, stage.id);
             }
           });
         }
 
-        console.log('✅ Stage IDs identified:', {
-          approveStageId: this.approveStageId,
-          rejectStageId: this.rejectStageId,
-          objectionStageId: this.objectionStageId
-        });
-
         if (!this.approveStageId && stages.length > 0) {
-          console.warn('⚠️ No approve stage found! Available stages:', stages);
+          console.warn('No approve stage found! Available stages:', stages);
           this.approveStageId = stages[0].id;
-          console.log('⚠️ Using fallback stage:', stages[0].name, stages[0].id);
         }
       },
       error: (err: any) => {
-        console.error('❌ Error loading next stages:', err);
+        console.error('Error loading next stages:', err);
         console.error('Error details:', {
           status: err.status,
           statusText: err.statusText,
@@ -524,10 +493,9 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       .subscribe({
         next: (fees: any) => {
           this.locationFees = fees;
-          console.log('📍 Location fees loaded:', fees);
         },
         error: (err: any) => {
-          console.error('❌ Error loading fees:', err);
+          console.error('Error loading fees:', err);
           this.showError('Failed to load location fees. Please try again or contact support.');
           this.locationFees = [];
         }
@@ -536,7 +504,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
   onLocationChange(location: any): void {
     this.selectedLocation = location;
-    console.log('📍 Location selected:', location);
   }
 
   private loadLicenseCategories(): void {
@@ -566,13 +533,8 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
   }
 
   private submitApproval(): void {
-    console.log('🚀 ============ SUBMIT APPROVAL START ============');
-    console.log('📋 Application ID:', this.applicationId);
-    console.log('🎯 Current Stage:', this.application.current_stage || this.application.currentStage);
-    console.log('🎯 Approve Stage ID:', this.approveStageId);
-    console.log('📋 All Available Next Stages:', this.nextStages);
 
-    // ✅ Validation only for non-Salesman/Barman applications
+    // Validation only for non-Salesman/Barman applications
     if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication) {
       if (!this.feeForm.valid || !this.selectedLocation) {
         this.showError('Please select a location before approving');
@@ -581,7 +543,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     }
 
     if (!this.approveStageId) {
-      console.error('❌ CRITICAL ERROR: No approve stage ID found!');
+      console.error('CRITICAL ERROR: No approve stage ID found!');
       console.error('Available stages:', this.nextStages);
       this.showError('No valid approval stage found. Please refresh and try again.');
       return;
@@ -594,14 +556,14 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       remarks: this.remarksForm.value.remarks
     };
 
-    // ✅ Only add location data for non-Salesman/Barman applications
+    // Only add location data for non-Salesman/Barman applications
     if (this.accountService.hasAnyRole('level_1') && !this.isSalesmanBarmanApplication && this.selectedLocation) {
       contextData.location_id = this.selectedLocation.id;
       contextData.location_name = this.selectedLocation.locationName;
       contextData.fee_amount = this.selectedLocation.feeAmount;
     }
 
-    // ✅ Only add license category and site enquiry for Level 2 non-Salesman/Barman applications
+    // Only add license category and site enquiry for Level 2 non-Salesman/Barman applications
     if (this.accountService.hasAnyRole('level_2') && !this.isSalesmanBarmanApplication) {
       if (this.licenseCategoryForm.value.licenseCategory) {
         contextData.license_category_id = this.licenseCategoryForm.value.licenseCategory;
@@ -616,15 +578,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
         const siteData = this.siteEnquiryComponent.getSiteEnquiryData();
         if (siteData) {
           contextData.site_enquiry = siteData;
-          console.log('✅ Site enquiry data captured:', siteData);
         } else {
           console.warn('⚠️ Site enquiry form is invalid');
         }
       }
     }
-
-    console.log('📦 Context Data:', contextData);
-    console.log('🚀 Making API call to advanceApplication...');
 
     const serviceMethods = this.getApplicationServiceMethods();
 
@@ -632,23 +590,13 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       .pipe(
         finalize(() => {
           this.isSubmitting = false;
-          console.log('✓ API call finished');
         })
       )
       .subscribe({
         next: (response: any) => {
-          console.log('✅ ============ APPROVAL SUCCESS ============');
-          console.log('Response:', response);
-          
           this.showApprovalDialog(response);
         },
         error: (error: any) => {
-          console.error('❌ ============ APPROVAL FAILED ============');
-          console.error('Full error object:', error);
-          console.error('Error status:', error.status);
-          console.error('Error message:', error.message);
-          console.error('Error detail:', error?.error?.detail);
-
           const errorMessage = error?.error?.detail ||
             error?.error?.message ||
             error?.message ||
@@ -660,10 +608,10 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
 
   private showApprovalDialog(response: any): void {
     this.approvalDialogData.message = 'The application has been successfully approved and moved to the next stage.';
-    
+
     if (this.accountService.hasAnyRole('level_1')) {
       this.approvalDialogData.level = 'Level 1';
-      // ✅ Only show fee amount for non-Salesman/Barman applications
+      // Only show fee amount for non-Salesman/Barman applications
       if (!this.isSalesmanBarmanApplication && this.selectedLocation?.feeAmount) {
         this.approvalDialogData.feeAmount = this.selectedLocation.feeAmount;
       }
@@ -673,7 +621,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       if (!this.isSalesmanBarmanApplication && this.selectedCategory) {
         this.approvalDialogData.licenseCategory = this.selectedCategory.licenseCategory;
       }
-      this.approvalDialogData.nextStep = this.isSalesmanBarmanApplication 
+      this.approvalDialogData.nextStep = this.isSalesmanBarmanApplication
         ? 'Application will proceed to next level'
         : 'Application is now pending payment';
     } else if (this.accountService.hasAnyRole('level_3')) {
@@ -692,7 +640,7 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
     if (this.approvalDialogRef) {
       this.approvalDialogRef.close();
     }
-    
+
     this.dialogRef.close({ success: true, action: 'approved' });
   }
 
@@ -709,8 +657,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       remarks: this.remarksForm.value.remarks
     };
 
-    console.log('🚀 Submitting rejection with contextData:', contextData);
-
     const serviceMethods = this.getApplicationServiceMethods();
 
     serviceMethods.advanceApplication(this.applicationId, this.rejectStageId, contextData)
@@ -721,12 +667,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       )
       .subscribe({
         next: (response: any) => {
-          console.log('✅ Rejection Success:', response);
           this.showSuccess('Application rejected successfully');
           this.dialogRef.close({ success: true, action: 'rejected' });
         },
         error: (error: any) => {
-          console.error('❌ Rejection Error:', error);
+          console.error('Rejection Error:', error);
           const errorMessage = error?.error?.detail ||
             error?.error?.message ||
             'Failed to reject application';
@@ -756,9 +701,6 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       };
     });
 
-    console.log('🚀 Submitting objections:', objections);
-    console.log('🎯 Target objection stage ID:', this.objectionStageId);
-
     const serviceMethods = this.getApplicationServiceMethods();
 
     serviceMethods.raiseObjection(
@@ -774,12 +716,11 @@ export class ReviewApplicationComponent extends BaseComponent implements OnInit 
       )
       .subscribe({
         next: (response: any) => {
-          console.log('✅ Objection Success:', response);
           this.showSuccess('Objection raised successfully');
           this.dialogRef.close({ success: true, action: 'objection' });
         },
         error: (error: any) => {
-          console.error('❌ Objection Error:', error);
+          console.error('Objection Error:', error);
           const errorMessage = error?.error?.detail ||
             error?.error?.message ||
             'Failed to raise objection';
