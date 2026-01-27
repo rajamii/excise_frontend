@@ -201,6 +201,10 @@
             <button mat-icon-button color="primary" (click)="onView(element)" matTooltip="View">
               <mat-icon>visibility</mat-icon>
             </button>
+            <button mat-icon-button color="primary" (click)="onViewFinalPermit(element)" matTooltip="View Permit"
+              *ngIf="element.status_code === 'TRP_03' || element.status.toLowerCase().includes('approved')">
+              <mat-icon>assignment</mat-icon>
+            </button>
             <button mat-icon-button color="accent" (click)="onApprove(element)" matTooltip="Approve"
               *ngIf="element.status_code === 'TRP_02' || element.status.toLowerCase().includes('payment')">
               <mat-icon>check_circle</mat-icon>

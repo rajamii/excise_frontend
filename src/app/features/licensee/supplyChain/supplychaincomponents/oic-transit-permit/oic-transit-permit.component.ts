@@ -180,13 +180,13 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
 
   onView(element: GroupedTransitPermit): void {
     console.log('View clicked for:', element);
-    
+
     // Save the transit permit data to localStorage for the letter view to access
     const transitList: any[] = JSON.parse(localStorage.getItem('transitPermitRequests') || '[]');
-    
+
     // Check if this permit already exists in localStorage
     const existingIndex = transitList.findIndex((r: any) => r.billNo === element.bill_no);
-    
+
     // Prepare the transit data with all brand details
     const transitData = {
       billNo: element.bill_no,
@@ -208,7 +208,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
       created_at: element.created_at,
       updated_at: element.updated_at
     };
-    
+
     if (existingIndex >= 0) {
       // Update existing entry
       transitList[existingIndex] = transitData;
@@ -216,17 +216,27 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
       // Add new entry
       transitList.push(transitData);
     }
-    
+
     // Save back to localStorage
     localStorage.setItem('transitPermitRequests', JSON.stringify(transitList));
-    
+
     // Navigate to transit permit letter view with reference number and source
     this.router.navigate(['/dev-transit-permit-letter-view'], {
-      queryParams: { 
+      queryParams: {
         ref: element.bill_no,
         source: 'oic-dashboard'
       }
     });
+  }
+
+  onViewFinalPermit(element: GroupedTransitPermit): void {
+    console.log('View Final Permit clicked for:', element);
+
+    // Save the transit permit data to localStorage
+    localStorage.setItem('finalTransitPermitData', JSON.stringify(element));
+
+    // Navigate to final permit view
+    this.router.navigate(['/dev-final-transit-permit-view']);
   }
 
   onEdit(element: GroupedTransitPermit): void {

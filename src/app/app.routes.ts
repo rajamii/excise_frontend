@@ -265,6 +265,13 @@ export const routes: Routes = [
       ).then((m) => m.Transitviewlevel1Component),
   },
   {
+    path: "dev-final-transit-permit-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
     path: "dev-final-requisition-letters",
     loadComponent: () =>
       import(
