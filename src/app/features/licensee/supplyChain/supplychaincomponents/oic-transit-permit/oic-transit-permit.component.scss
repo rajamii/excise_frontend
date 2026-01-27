@@ -246,6 +246,46 @@
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     overflow: hidden;
+    min-height: 300px;
+    
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      
+      mat-progress-spinner {
+        margin-bottom: 20px;
+      }
+      
+      p {
+        color: #666;
+        font-size: 14px;
+      }
+    }
+    
+    .no-data {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      color: #999;
+      
+      mat-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+      
+      p {
+        font-size: 16px;
+        margin: 0;
+      }
+    }
     
     .transit-permit-table {
       width: 100%;

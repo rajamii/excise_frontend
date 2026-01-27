@@ -1,23 +1,13 @@
-import { Component, OnInit, Inject } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, Inject, Optional } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
+import { MatTableDataSource } from '@angular/material/table';
+import { OicTransitPermitService, GroupedTransitPermit } from '../../services/oic-transit-permit.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { trigger, state, style, transition, animate } from '@angular/animations';
-
-interface TransitPermitApplication {
-  slNo: number;
-  refNo: string;
-  appDate: string;
-  licensee: string;
-  destination: string;
-  vehicleNo: string;
-  depotAddress: string;
-  amount: number;
-  brandDetails: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  brands: BrandDetail[];
-}
 
 interface BrandDetail {
   slNo: number;
@@ -36,74 +26,34 @@ interface BrandDetail {
   templateUrl: './oic-transit-permit.component.html',
   styleUrl: './oic-transit-permit.component.scss'
 })
-export class OicTransitPermitComponent implements OnInit {
-  
+export class OicTransitPermitComponent implements OnInit, AfterViewInit {
+
   filterForm: FormGroup;
-  
+
   // Statistics
-  pendingApplications = 1;
-  approvedApplications = 1;
+  pendingApplications = 0;
+  approvedApplications = 0;
   rejectedApplications = 0;
-  totalApplications = 2;
-  
+  totalApplications = 0;
+
   // Table data
   displayedColumns: string[] = [
-    'slNo', 'refNo', 'appDate', 'licensee', 'destination', 
+    'slNo', 'refNo', 'appDate', 'licensee', 'destination',
     'vehicleNo', 'depotAddress', 'amount', 'brandDetails', 'status', 'actions'
   ];
-  
-  dataSource: TransitPermitApplication[] = [
-    {
-      slNo: 1,
-      refNo: 'TP-2024-001',
-      appDate: '15/01/2024',
-      licensee: 'ABC Distillery Pvt Ltd (DL-2023-001)',
-      destination: 'Mumbai Warehouse',
-      vehicleNo: 'MH-01-AB-1234',
-      depotAddress: 'Plot No. 123, Industrial Area, Mumbai - 400001',
-      amount: 225000.00,
-      brandDetails: 'Brande 30',
-      status: 'PENDING',
-      brands: [
-        {
-          slNo: 1,
-          brand: 'Sikkim Deluxe Musk Brandy',
-          size: '180ml',
-          cases: 1,
-          bottleType: 'Glass',
-          brandOwner: 'M/s Sikkim Distilleries Ltd',
-          liquorType: 'Brandy',
-          manufacturingUnit: 'M/s Sikkim Distilleries Ltd'
-        }
-      ]
-    },
-    {
-      slNo: 2,
-      refNo: 'TP-2024-002',
-      appDate: '16/01/2024',
-      licensee: 'XYZ Beverages Ltd (DL-2023-002)',
-      destination: 'Delhi Distribution Center',
-      vehicleNo: 'DL-05-CD-5678',
-      depotAddress: 'Sector 16, Industrial Area, Delhi - 110001',
-      amount: 318500.00,
-      brandDetails: 'Brand2 30',
-      status: 'APPROVED',
-      brands: [
-        {
-          slNo: 1,
-          brand: 'Premium Whisky Gold',
-          size: '750ml',
-          cases: 2,
-          bottleType: 'Glass',
-          brandOwner: 'XYZ Beverages Ltd',
-          liquorType: 'Whisky',
-          manufacturingUnit: 'XYZ Beverages Ltd'
-        }
-      ]
-    }
-  ];
-  
-  constructor(private fb: FormBuilder, private dialog: MatDialog) {
+
+  dataSource = new MatTableDataSource<GroupedTransitPermit>([]);
+  allPermits: GroupedTransitPermit[] = [];
+  isLoading = false;
+
+  @ViewChild(MatPaginator) paginator!: MatPaginator;
+
+  constructor(
+    private fb: FormBuilder,
+    private dialog: MatDialog,
+    private transitPermitService: OicTransitPermitService,
+    private snackBar: MatSnackBar
+  ) {
     this.filterForm = this.fb.group({
       referenceNumber: [''],
       status: ['All Status'],
@@ -111,11 +61,102 @@ export class OicTransitPermitComponent implements OnInit {
       toDate: ['']
     });
   }
-  
+
   ngOnInit(): void {
-    // Initialize component
+    this.loadTransitPermits();
+    this.setupFilterListener();
   }
-  
+
+  ngAfterViewInit() {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  loadTransitPermits(): void {
+    this.isLoading = true;
+
+    this.transitPermitService.getOICTransitPermits().subscribe({
+      next: (permits) => {
+        this.allPermits = permits;
+        this.dataSource.data = permits;
+        this.updateStatistics();
+        this.isLoading = false;
+
+        // Apply any existing filters
+        this.applyFilters();
+      },
+      error: (error) => {
+        console.error('Error loading transit permits:', error);
+        this.snackBar.open('Error loading transit permits: ' + (error.error?.message || error.message), 'Close', { duration: 5000 });
+        this.isLoading = false;
+      }
+    });
+  }
+
+  updateStatistics(): void {
+    this.transitPermitService.getOICStatistics().subscribe({
+      next: (stats) => {
+        this.pendingApplications = stats.pending;
+        this.approvedApplications = stats.approved;
+        this.rejectedApplications = stats.rejected;
+        this.totalApplications = stats.total;
+      },
+      error: (error) => {
+        console.error('Error loading statistics:', error);
+      }
+    });
+  }
+
+  setupFilterListener(): void {
+    this.filterForm.valueChanges.subscribe(() => {
+      this.applyFilters();
+    });
+  }
+
+  applyFilters(): void {
+    const filters = this.filterForm.value;
+    let filtered = [...this.allPermits];
+
+    // Filter by reference number
+    if (filters.referenceNumber) {
+      filtered = filtered.filter(permit =>
+        permit.bill_no.toLowerCase().includes(filters.referenceNumber.toLowerCase())
+      );
+    }
+
+    // Filter by status
+    if (filters.status && filters.status !== 'All Status') {
+      filtered = filtered.filter(permit => {
+        const status = permit.status.toLowerCase();
+        const statusCode = permit.status_code;
+
+        if (filters.status === 'PENDING') {
+          return statusCode === 'TRP_02' || status.includes('payment') && status.includes('successful');
+        } else if (filters.status === 'APPROVED') {
+          return statusCode === 'TRP_03' || status.includes('approved');
+        } else if (filters.status === 'REJECTED') {
+          return statusCode === 'TRP_04' || status.includes('cancelled') || status.includes('rejected');
+        }
+        return false;
+      });
+    }
+
+    // Filter by date range
+    if (filters.fromDate) {
+      const fromDate = new Date(filters.fromDate);
+      filtered = filtered.filter(permit => new Date(permit.date) >= fromDate);
+    }
+
+    if (filters.toDate) {
+      const toDate = new Date(filters.toDate);
+      filtered = filtered.filter(permit => new Date(permit.date) <= toDate);
+    }
+
+    this.dataSource.data = filtered;
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
+  }
+
   onClear(): void {
     this.filterForm.reset({
       referenceNumber: '',
@@ -123,26 +164,74 @@ export class OicTransitPermitComponent implements OnInit {
       fromDate: '',
       toDate: ''
     });
+    this.dataSource.data = this.allPermits;
+    if (this.dataSource.paginator) {
+      this.dataSource.paginator.firstPage();
+    }
   }
-  
+
   onExport(): void {
     // Export functionality
     console.log('Export clicked');
+    this.snackBar.open('Export functionality coming soon', 'Close', { duration: 3000 });
   }
-  
-  onView(element: TransitPermitApplication): void {
+
+  onView(element: GroupedTransitPermit): void {
     console.log('View clicked for:', element);
+    this.snackBar.open('View functionality coming soon', 'Close', { duration: 2000 });
   }
-  
-  onEdit(element: TransitPermitApplication): void {
+
+  onEdit(element: GroupedTransitPermit): void {
     console.log('Edit clicked for:', element);
+    this.snackBar.open('Edit functionality coming soon', 'Close', { duration: 2000 });
   }
-  
-  onDelete(element: TransitPermitApplication): void {
-    console.log('Delete clicked for:', element);
+
+  onApprove(element: GroupedTransitPermit): void {
+    if (confirm(`Are you sure you want to approve transit permit ${element.bill_no}?`)) {
+      // Get the first brand's ID to perform action
+      const permitId = element.brands[0].id;
+      this.transitPermitService.performAction(permitId, 'APPROVE').subscribe({
+        next: (response) => {
+          this.snackBar.open('Transit permit approved successfully', 'Close', { duration: 3000 });
+          this.loadTransitPermits();
+        },
+        error: (error) => {
+          console.error('Error approving transit permit:', error);
+          this.snackBar.open('Error approving transit permit', 'Close', { duration: 3000 });
+        }
+      });
+    }
   }
-  
-  onShowBrandDetails(element: TransitPermitApplication): void {
+
+  onReject(element: GroupedTransitPermit): void {
+    if (confirm(`Are you sure you want to reject transit permit ${element.bill_no}?`)) {
+      // Get the first brand's ID to perform action
+      const permitId = element.brands[0].id;
+      this.transitPermitService.performAction(permitId, 'REJECT').subscribe({
+        next: (response) => {
+          this.snackBar.open('Transit permit rejected successfully', 'Close', { duration: 3000 });
+          this.loadTransitPermits();
+        },
+        error: (error) => {
+          console.error('Error rejecting transit permit:', error);
+          this.snackBar.open('Error rejecting transit permit', 'Close', { duration: 3000 });
+        }
+      });
+    }
+  }
+
+  onShowBrandDetails(element: GroupedTransitPermit): void {
+    const brandDetails: BrandDetail[] = element.brands.map((brand: any, index) => ({
+      slNo: index + 1,
+      brand: brand.brand,
+      size: `${brand.size_ml || brand.sizeMl || 0}ml`,
+      cases: brand.cases,
+      bottleType: brand.bottle_type || brand.bottleType || '',
+      brandOwner: brand.brand_owner || brand.brandOwner || '',
+      liquorType: brand.liquor_type || brand.liquorType || '',
+      manufacturingUnit: brand.manufacturing_unit_name || brand.manufacturingUnitName || brand.manufacturingUnit || ''
+    }));
+
     const dialogRef = this.dialog.open(BrandDetailsDialogComponent, {
       width: '90%',
       maxWidth: '1200px',
@@ -150,10 +239,10 @@ export class OicTransitPermitComponent implements OnInit {
       enterAnimationDuration: '400ms',
       exitAnimationDuration: '300ms',
       data: {
-        refNo: element.refNo,
-        brands: element.brands,
-        totalProducts: element.brands.length,
-        totalCases: element.brands.reduce((sum, brand) => sum + brand.cases, 0)
+        refNo: element.bill_no,
+        brands: brandDetails,
+        totalProducts: element.total_products,
+        totalCases: element.total_cases
       }
     });
 
@@ -161,24 +250,51 @@ export class OicTransitPermitComponent implements OnInit {
       console.log('Brand details dialog was closed');
     });
   }
-  
-  getStatusClass(status: string): string {
-    switch (status) {
-      case 'PENDING':
-        return 'status-pending';
-      case 'APPROVED':
-        return 'status-approved';
-      case 'REJECTED':
-        return 'status-rejected';
-      default:
-        return '';
+
+  getStatusClass(statusCode: string): string {
+    // Handle both status_code and status string
+    if (statusCode === 'TRP_02' || statusCode.toLowerCase().includes('payment')) {
+      return 'status-pending';
+    } else if (statusCode === 'TRP_03' || statusCode.toLowerCase().includes('approved')) {
+      return 'status-approved';
+    } else if (statusCode === 'TRP_04' || statusCode.toLowerCase().includes('cancelled') || statusCode.toLowerCase().includes('rejected')) {
+      return 'status-rejected';
     }
+    return '';
+  }
+
+  getStatusLabel(statusCode: string): string {
+    // Handle both status_code and status string
+    if (statusCode === 'TRP_02' || statusCode.toLowerCase().includes('payment')) {
+      return 'PAYMENT SUCCESSFUL & FORWARDED';
+    } else if (statusCode === 'TRP_03' || statusCode.toLowerCase().includes('approved')) {
+      return 'APPROVED';
+    } else if (statusCode === 'TRP_04' || statusCode.toLowerCase().includes('cancelled') || statusCode.toLowerCase().includes('rejected')) {
+      return 'REJECTED';
+    }
+    return statusCode;
+  }
+
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB');
   }
 }
 
 // Brand Details Dialog Component
 @Component({
   selector: 'app-brand-details-dialog',
+  standalone: true,
+  imports: [MaterialModule, CommonModule],
+  animations: [
+    trigger('fadeInUp', [
+      state('in', style({ opacity: 1, transform: 'translateY(0)' })),
+      transition('void => *', [
+        style({ opacity: 0, transform: 'translateY(20px)' }),
+        animate('0.4s cubic-bezier(0.25, 0.8, 0.25, 1)')
+      ])
+    ])
+  ],
   template: `
     <div class="brand-details-dialog">
       <div class="dialog-header">
@@ -797,17 +913,7 @@ export class OicTransitPermitComponent implements OnInit {
         }
       }
     }
-  `],
-  animations: [
-    trigger('fadeInUp', [
-      state('in', style({opacity: 1, transform: 'translateY(0)'})),
-      transition('void => *', [
-        style({opacity: 0, transform: 'translateY(30px)'}),
-        animate('0.6s ease-out')
-      ])
-    ])
-  ],
-  imports: [MaterialModule, CommonModule]
+  `]
 })
 export class BrandDetailsDialogComponent {
   displayedColumns: string[] = ['slNo', 'brand', 'size', 'cases', 'bottleType', 'brandOwner', 'liquorType', 'manufacturingUnit'];
@@ -815,8 +921,8 @@ export class BrandDetailsDialogComponent {
   constructor(
     public dialogRef: MatDialogRef<BrandDetailsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: any
-  ) {}
-  
+  ) { }
+
   getLiquorTypeClass(liquorType: string): string {
     return liquorType.toLowerCase().replace(/\s+/g, '-');
   }

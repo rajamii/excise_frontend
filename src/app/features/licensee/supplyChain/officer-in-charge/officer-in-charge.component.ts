@@ -322,9 +322,7 @@ export class OfficerInChargeComponent implements OnInit {
     this.applyBrandFilters();
   }
 
-  getCurrentDateTime(): string {
-    return new Date().toLocaleString();
-  }
+  currentDateTime: string = new Date().toLocaleString();
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
