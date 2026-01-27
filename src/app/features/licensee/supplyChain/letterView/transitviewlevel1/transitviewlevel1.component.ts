@@ -382,36 +382,47 @@ export class Transitviewlevel1Component implements OnInit {
   }
 
   goBack(): void {
-    // Check if we came from permit section, officer in charge, commissioner, OIC dashboard, or supply chain
-    const currentUrl = this.router.url;
+    // Check source parameter first, then fall back to URL-based detection
     const source = this.route.snapshot.queryParamMap.get('source');
+    const currentUrl = this.router.url;
     console.log('Going back from URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
     if (source === 'oic-dashboard') {
       this.router.navigate(['/dev-officer-in-charge']);
-    } else if (currentUrl.includes('/app-permit-section/')) {
+      return;
+    }
+    
+    // Priority 2: Check URL patterns
+    if (currentUrl.includes('/app-permit-section/')) {
       this.router.navigate(['/app-permit-section']);
     } else if (currentUrl.includes('dev-supply-chain-transit-view-level2')) {
       this.router.navigate(['/dev-officer-in-charge']);
-    } else if (currentUrl.includes('dev-transit-permit-letter-view')) {
+    } else if (currentUrl.includes('source=commissioner') || currentUrl.includes('dev-commissioner-dashboard')) {
       this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
+      // Default: go back to supply chain
       this.router.navigate(["/dev-supply-chain"]);
     }
   }
 
   getBackButtonText(): string {
-    const currentUrl = this.router.url;
+    // Check source parameter first, then fall back to URL-based detection
     const source = this.route.snapshot.queryParamMap.get('source');
+    const currentUrl = this.router.url;
     console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
     if (source === 'oic-dashboard') {
       return 'Back to Officer in Charge';
-    } else if (currentUrl.includes('/app-permit-section/')) {
+    }
+    
+    // Priority 2: Check URL patterns
+    if (currentUrl.includes('/app-permit-section/')) {
       return 'Back to Permit Section';
     } else if (currentUrl.includes('dev-supply-chain-transit-view-level2')) {
       return 'Back to Officer in Charge';
-    } else if (currentUrl.includes('dev-transit-permit-letter-view')) {
+    } else if (currentUrl.includes('source=commissioner') || currentUrl.includes('dev-commissioner-dashboard')) {
       return 'Back to Commissioner Dashboard';
     } else {
       return 'Back to Supply Chain';

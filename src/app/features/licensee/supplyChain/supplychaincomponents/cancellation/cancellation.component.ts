@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
+import { AccountService } from "../../../../../core/services/account.service";
 
 interface TableData {
   id?: string | number;
@@ -114,7 +115,8 @@ export class CancellationComponent implements OnInit {
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) platformId: Object,
-    private supplyChainService: SupplyChainService
+    private supplyChainService: SupplyChainService,
+    private accountService: AccountService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
@@ -206,9 +208,22 @@ export class CancellationComponent implements OnInit {
 
   // Action methods
   reviewCancellation(item: TableData): void {
+    // Determine the source based on user type
+    const userType = this.getUserType();
+    let source = 'licensee-dashboard';
+    
+    if (userType === 'commissioner') {
+      source = 'commissioner-dashboard';
+    } else if (userType === 'permit-section') {
+      source = 'permit-section';
+    }
+    
     // Navigate to cancellation letter view with reference number
     this.router.navigate(['/dev-cancellation-letter-view'], {
-      queryParams: { ref: item.referenceNo }
+      queryParams: { 
+        ref: item.referenceNo,
+        source: source
+      }
     });
   }
 
@@ -303,5 +318,22 @@ export class CancellationComponent implements OnInit {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
+  }
+
+  // Role detection methods
+  isCommissioner(): boolean {
+    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
+    const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
+    return hasRole || isCommissionerRoute;
+  }
+
+  isPermitSection(): boolean {
+    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
+  }
+
+  getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
   }
 }

@@ -243,9 +243,23 @@ export class RevalidationComponent implements OnInit {
       event.preventDefault();
       event.stopPropagation();
     }
+    
+    // Determine the source based on user type
+    const userType = this.getUserType();
+    let source = 'licensee-dashboard';
+    
+    if (userType === 'commissioner') {
+      source = 'commissioner-dashboard';
+    } else if (userType === 'permit-section') {
+      source = 'permit-section';
+    }
+    
     const refNo = item.referenceNo;
     this.router.navigate(["/dev-supply-chain-revalidation-view"], {
-      queryParams: { ref: refNo },
+      queryParams: { 
+        ref: refNo,
+        source: source
+      },
     });
   }
 

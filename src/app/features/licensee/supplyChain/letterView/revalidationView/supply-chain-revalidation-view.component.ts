@@ -260,26 +260,53 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
   }
 
   goBack(): void {
-    // Check if we came from permit section, commissioner dashboard, or supply chain
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Going back from URL:', currentUrl); // Debug log
+    console.log('Going back from URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+      return;
+    } else if (source === 'permit-section') {
+      this.router.navigate(['/app-permit-section']);
+      return;
+    } else if (source === 'licensee-dashboard') {
+      this.router.navigate(['/dev-supply-chain']);
+      return;
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       this.router.navigate(['/app-permit-section']);
-    } else if (currentUrl.includes('dev-revalidation-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
+      // Default: go back to supply chain
       this.router.navigate(['/dev-supply-chain']);
     }
   }
 
   getBackButtonText(): string {
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Current URL:', currentUrl); // Debug log
+    console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      return 'Back to Commissioner Dashboard';
+    } else if (source === 'permit-section') {
+      return 'Back to Permit Section';
+    } else if (source === 'licensee-dashboard') {
+      return 'Back to Supply Chain';
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       return 'Back to Permit Section';
-    } else if (currentUrl.includes('dev-revalidation-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       return 'Back to Commissioner Dashboard';
     } else {
       return 'Back to Supply Chain';

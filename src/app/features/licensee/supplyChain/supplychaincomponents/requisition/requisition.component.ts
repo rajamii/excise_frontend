@@ -266,8 +266,53 @@ export class RequisitionComponent implements OnInit {
 
   // Navigation methods
   viewRequisitionApplication(item: TableData): void {
-    this.router.navigate(["/dev-supply-chain-application-view"], {
-      queryParams: { ref: item.referenceNo }
+    // Save requisition data to localStorage for the letter view to access
+    if (this.isBrowser) {
+      const requisitionList: any[] = JSON.parse(localStorage.getItem('requisitionRequests') || '[]');
+      
+      // Check if this requisition already exists in localStorage
+      const existingIndex = requisitionList.findIndex((r: any) => r.refNo === item.referenceNo);
+      
+      // Prepare the requisition data
+      const requisitionData = {
+        refNo: item.referenceNo,
+        referenceNo: item.referenceNo,
+        date: item.submissionDate,
+        submissionDate: item.submissionDate,
+        distilleryName: item.distilleryName,
+        status: item.status,
+        brAmount: parseFloat(item.amount || '0'),
+        amount: parseFloat(item.amount || '0')
+      };
+      
+      if (existingIndex >= 0) {
+        // Update existing entry
+        requisitionList[existingIndex] = requisitionData;
+      } else {
+        // Add new entry
+        requisitionList.push(requisitionData);
+      }
+      
+      // Save back to localStorage
+      localStorage.setItem('requisitionRequests', JSON.stringify(requisitionList));
+    }
+    
+    // Determine the source based on user type
+    const userType = this.getUserType();
+    let source = 'licensee-dashboard';
+    
+    if (userType === 'commissioner') {
+      source = 'commissioner-dashboard';
+    } else if (userType === 'permit-section') {
+      source = 'permit-section';
+    }
+    
+    // Navigate to requisition letter view
+    this.router.navigate(["/dev-requisition-letter-view"], {
+      queryParams: { 
+        ref: item.referenceNo,
+        source: source
+      }
     });
   }
 
