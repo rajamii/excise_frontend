@@ -1,7 +1,8 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 @Component({
   selector: 'app-hologramrequest',
@@ -20,14 +21,20 @@ export class HologramrequestComponent implements OnInit {
   dateFilter: string = '';
   monthFilter: string = '';
   statusFilter: string = '';
-  
+
   showRequestModal = false;
   selectedRequest: any = null;
+
+  // Rolls Assigned Modal
+  showRollsModal = false;
+  selectedRequestForRolls: any = null;
 
   // Pagination state
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize: number = 5;
   currentPage: number = 1;
+
+  private hologramService = inject(HologramDataService);
 
   constructor(
     private router: Router,
@@ -41,56 +48,60 @@ export class HologramrequestComponent implements OnInit {
   }
 
   loadHologramRequests(): void {
-    if (!this.isBrowser) {
-      this.hologramRequestList = [];
-      return;
-    }
+    this.hologramService.getRequests().subscribe({
+      next: (data) => {
+        console.log('📦 Loading hologram requests from API:', data.length, 'items');
 
-    // Load hologram requests from localStorage
-    let storedRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+        let mapped = data.map((item: any) => {
+          return {
+            ...item,
+            // UI compatibility mapping
+            refNumber: item.refNo, // Template uses refNumber
+            totalHolograms: item.quantity, // Template uses totalHolograms
+            hologramType: item.hologram_type || item.hologramType || 'LOCAL', // Use backend type
+          };
+        });
 
-    // Sort by submission date (newest first)
-    this.hologramRequestList = storedRequests.sort((a: any, b: any) => {
-      const dateA = new Date(a.submissionDate).getTime();
-      const dateB = new Date(b.submissionDate).getTime();
-      return dateB - dateA; // Newest first
+        // Sort by submission date (newest first)
+        mapped.sort((a: any, b: any) => {
+          const dateA = new Date(a.submissionDate || '').getTime();
+          const dateB = new Date(b.submissionDate || '').getTime();
+          return dateB - dateA; // Newest first
+        });
+
+        this.hologramRequestList = mapped;
+        this.filteredHologramRequestList = [...this.hologramRequestList];
+      },
+      error: (err) => {
+        console.error('Error loading hologram requests', err);
+      }
     });
-
-    // Initialize filtered list
-    this.filteredHologramRequestList = [...this.hologramRequestList];
   }
 
   navigateToHologramRequest(): void {
     this.router.navigate(['/dev-hologramrequestlevel1']);
   }
 
-  getBrandLabel(brandValue: string): string {
-    const brandMap: { [key: string]: string } = {
-      'sikkim-supreme': 'Sikkim Supreme Whisky',
-      'himalayan-gold': 'Himalayan Gold Rum',
-      'royal-sikkim': 'Royal Sikkim Brandy',
-      'mountain-dew': 'Mountain Dew Vodka',
-      'gangtok-special': 'Gangtok Special Whisky',
-      'teesta-valley': 'Teesta Valley Rum',
-      'khangchendzonga': 'Khangchendzonga Premium',
-      'yuksom-heritage': 'Yuksom Heritage Whisky'
-    };
-    return brandMap[brandValue] || brandValue;
-  }
+
 
   getRequestStatusClass(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'bg-warning-subtle text-warning';
-      case 'APPROVED':
-        return 'bg-success-subtle text-success';
-      case 'REJECTED':
-        return 'bg-danger-subtle text-danger';
-      case 'PROCESSING':
-        return 'bg-info-subtle text-info';
-      default:
-        return 'bg-secondary-subtle text-secondary';
-    }
+    // Basic mapping, assuming backend returns standard statuses
+    // Backend statuses: Submitted, Approved by Permit Section, etc.
+    // Frontend expects: PENDING, APPROVED, REJECTED, PROCESSING
+
+    const s = (status || '').toUpperCase();
+    if (s.includes('APPROVED')) return 'bg-success-subtle text-success';
+    if (s.includes('REJECTED')) return 'bg-danger-subtle text-danger';
+    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bg-warning-subtle text-warning';
+    return 'bg-secondary-subtle text-secondary';
+  }
+
+  getStatusIcon(status: string): string {
+    const s = (status || '').toUpperCase();
+    if (s.includes('APPROVED')) return 'bi-check-circle-fill';
+    if (s.includes('REJECTED')) return 'bi-x-circle-fill';
+    if (s.includes('SUBMITTED') || s.includes('PENDING')) return 'bi-clock-fill';
+    return 'bi-info-circle-fill';
   }
 
   viewHologramRequestApplication(request: any): void {
@@ -112,14 +123,13 @@ export class HologramrequestComponent implements OnInit {
   private generateRequestApplicationTemplate(request: any): string {
     const submissionDate = new Date(request.submissionDate).toLocaleDateString('en-IN');
     const usageDate = new Date(request.usageDate).toLocaleDateString('en-IN');
-    const brandLabel = this.getBrandLabel(request.brandName);
 
     return `
-HOLOGRAM REQUEST APPLICATION
-============================
-
-Reference Number: ${request.refNumber}
-Application Date: ${submissionDate}
+      HOLOGRAM REQUEST APPLICATION
+      ============================
+      
+      Reference Number: ${request.refNumber}
+      Application Date: ${submissionDate}
 
 APPLICANT DETAILS:
 ------------------
@@ -132,11 +142,10 @@ Email: info@sikkimdistilleries.com
 REQUEST DETAILS:
 ----------------
 Date to Use Hologram in Factory: ${usageDate}
-Brand Name: ${brandLabel}
-Bottle Size: ${request.bottleSize}
 Total Number of Holograms Required: ${request.totalHolograms.toLocaleString('en-IN')}
 
-${request.remarks ? `Additional Information:\n${request.remarks}\n` : ''}
+
+
 
 DECLARATION:
 ------------
@@ -258,20 +267,7 @@ End of Application
     this.applyFilters();
   }
 
-  getStatusIcon(status: string): string {
-    switch (status?.toUpperCase()) {
-      case 'PENDING':
-        return 'bi bi-clock';
-      case 'APPROVED':
-        return 'bi bi-check-circle';
-      case 'REJECTED':
-        return 'bi bi-x-circle';
-      case 'PROCESSING':
-        return 'bi bi-hourglass-split';
-      default:
-        return 'bi bi-question-circle';
-    }
-  }
+
 
   // Pagination methods
   getCurrentPage(): number {
@@ -309,7 +305,7 @@ End of Application
 
     // Get all applications with the same reference number
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    
+
     // Mark this specific application as paid
     const updatedApplications = applications.map((app: any) => {
       if (app.refNo === refNo) {
@@ -339,8 +335,51 @@ End of Application
     localStorage.setItem('hologramRequests', JSON.stringify(updatedRequests));
 
     alert(`Payment marked as completed for ${refNo}.`);
-    
+
     // Refresh the list
     this.loadHologramRequests();
+  }
+
+  // Rolls Assigned Methods
+  hasRollsAssigned(request: any): boolean {
+    // Check if request has rolls_assigned or rollsAssigned property with data
+    const rolls = request.rolls_assigned || request.rollsAssigned || [];
+    return Array.isArray(rolls) && rolls.length > 0;
+  }
+
+  viewRollsAssigned(request: any): void {
+    this.selectedRequestForRolls = request;
+    this.showRollsModal = true;
+  }
+
+  closeRollsModal(): void {
+    this.showRollsModal = false;
+    this.selectedRequestForRolls = null;
+  }
+
+  getRollsAssigned(request: any): any[] {
+    if (!request) return [];
+    
+    // CRITICAL FIX: Use rolls_assigned which contains the actual allocated ranges from backend
+    // rolls_assigned is populated during allocation with the exact ranges that were allocated (e.g., 4-4, 7-7)
+    // available_cartons contains full roll ranges from procurement (e.g., 101-101, 102-102) - NOT what we want
+    const rollsAssigned = request.rolls_assigned || request.rollsAssigned || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(rollsAssigned)) return [];
+    
+    console.log('✅ getRollsAssigned - using rolls_assigned:', rollsAssigned);
+    
+    return rollsAssigned.map((roll: any) => ({
+      cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
+      fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
+      toSerial: roll.toSerial || roll.to_serial || 'N/A',
+      quantity: roll.quantity || 0
+    }));
+  }
+
+  getTotalRollsQuantity(request: any): number {
+    const rolls = this.getRollsAssigned(request);
+    return rolls.reduce((total, roll) => total + (roll.quantity || 0), 0);
   }
 }

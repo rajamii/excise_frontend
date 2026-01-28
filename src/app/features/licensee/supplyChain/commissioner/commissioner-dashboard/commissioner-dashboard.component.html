@@ -39,7 +39,8 @@
               <strong>Overdue Hologram Processing Alert!</strong>
             </h5>
             <p class="mb-2">
-              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the 5 PM deadline and are still under process.
+              {{ overdueHologramEntries.length }} hologram request(s) have exceeded the 5 PM deadline and are still
+              under process.
               Immediate action required to complete the workflow.
             </p>
             <button class="btn btn-sm btn-outline-danger" (click)="viewDailyRegister()">
@@ -84,7 +85,8 @@
               </button>
             </li>
             <li class="nav-item">
-              <button class="nav-link" [class.active]="activeTab === 'daily-register'" (click)="setActiveTab('daily-register')">
+              <button class="nav-link" [class.active]="activeTab === 'daily-register'"
+                (click)="setActiveTab('daily-register')">
                 <i class="bi bi-journal-text me-2"></i>
                 DAILY HOLOGRAM REGISTER
                 <span *ngIf="overdueHologramEntries.length > 0" class="badge bg-danger ms-2">
@@ -103,7 +105,7 @@
 
             <!-- Requisition Tab Content -->
             @if (activeTab === "requisition") {
-              <app-requisition></app-requisition>
+            <app-requisition></app-requisition>
             }
 
             <!-- Revalidation Tab Content -->
@@ -317,6 +319,8 @@
                   </table>
                 </div>
 
+
+
                 <!-- Empty State -->
                 <div class="empty-state" *ngIf="filteredRevalidationData.length === 0">
                   <div class="empty-icon">
@@ -327,18 +331,67 @@
                     No revalidation applications match your current filter criteria.
                   </p>
                 </div>
+
+                <!-- Pagination Controls -->
+                <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3"
+                  *ngIf="filteredRevalidationData.length > 0">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Show:</span>
+                    <select class="form-select form-select-sm" style="width: 70px"
+                      [ngModel]="getPageSize('revalidation')" (ngModelChange)="changePageSize('revalidation', $event)">
+                      <option [value]="5">5</option>
+                      <option [value]="10">10</option>
+                      <option [value]="15">15</option>
+                      <option [value]="20">20</option>
+                    </select>
+                    <span class="text-muted small">entries</span>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted small">
+                      Showing {{ (getCurrentPage('revalidation') - 1) * getPageSize('revalidation') + 1 }}
+                      to {{ Math.min(getCurrentPage('revalidation') * getPageSize('revalidation'),
+                      filteredRevalidationData.length) }}
+                      of {{ filteredRevalidationData.length }} entries
+                    </span>
+
+                    <nav aria-label="Page navigation">
+                      <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" [class.disabled]="getCurrentPage('revalidation') === 1">
+                          <button class="page-link"
+                            (click)="goToPage('revalidation', getCurrentPage('revalidation') - 1, filteredRevalidationData)">
+                            <i class="bi bi-chevron-left"></i>
+                          </button>
+                        </li>
+                        <li class="page-item disabled">
+                          <span class="page-link">
+                            Page {{ getCurrentPage('revalidation') }} of {{ getTotalPages(filteredRevalidationData,
+                            'revalidation') }}
+                          </span>
+                        </li>
+                        <li class="page-item"
+                          [class.disabled]="getCurrentPage('revalidation') === getTotalPages(filteredRevalidationData, 'revalidation')">
+                          <button class="page-link"
+                            (click)="goToPage('revalidation', getCurrentPage('revalidation') + 1, filteredRevalidationData)">
+                            <i class="bi bi-chevron-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
               </div>
             </div>
             }
 
             <!-- Cancellation Tab Content -->
             @if (activeTab === "cancellation") {
-              <app-cancellation></app-cancellation>
+            <app-cancellation></app-cancellation>
             }
 
             <!-- Transit Tab Content -->
             @if (activeTab === "transit") {
-              <app-transit></app-transit>
+            <app-transit [userRole]="'commissioner'"></app-transit>
             }
 
             <!-- Hologram Register Table -->
@@ -403,17 +456,22 @@
                           <div class="action-buttons">
                             <!-- View Payment Receipt - Show for APPROVED/COMPLETED applications -->
                             <button class="btn btn-outline-success btn-sm" (click)="viewPaymentSlip(item)"
-                              title="View Payment Receipt" *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
+                              title="View Payment Receipt"
+                              *ngIf="item.status === 'APPROVED' || item.status === 'PAYMENT COMPLETED'">
                               <i class="bi bi-receipt"></i>
                             </button>
-                            
+
                             <button class="btn btn-outline-primary btn-sm" (click)="reviewHologram(item)"
                               title="Review Application">
                               <i class="bi bi-eye"></i>
                             </button>
                             <button class="btn btn-outline-success btn-sm" (click)="approveHologram(item)"
-                              title="Approve" *ngIf="item.status === 'PENDING'">
+                              title="Approve" *ngIf="item.allowedActions?.includes('approve')">
                               <i class="bi bi-check"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-sm" (click)="rejectHologram(item)" title="Reject"
+                              *ngIf="item.allowedActions?.includes('reject')">
+                              <i class="bi bi-x"></i>
                             </button>
                           </div>
                         </td>
@@ -422,6 +480,8 @@
                     </tbody>
                   </table>
                 </div>
+
+
 
                 <!-- Empty State -->
                 <div class="empty-state" *ngIf="filteredHologramData.length === 0">
@@ -433,6 +493,56 @@
                     No hologram applications match your current filter criteria.
                   </p>
                 </div>
+
+                <!-- Pagination Controls -->
+                <div class="d-flex justify-content-between align-items-center mt-3 border-top pt-3"
+                  *ngIf="filteredHologramData.length > 0">
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Show:</span>
+                    <select class="form-select form-select-sm" style="width: 70px" [ngModel]="getPageSize('hologram')"
+                      (ngModelChange)="changePageSize('hologram', $event)">
+                      <option [value]="5">5</option>
+                      <option [value]="10">10</option>
+                      <option [value]="15">15</option>
+                      <option [value]="20">20</option>
+                    </select>
+                    <span class="text-muted small">entries</span>
+                  </div>
+
+                  <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted small">
+                      Showing {{ (getCurrentPage('hologram') - 1) * getPageSize('hologram') + 1 }}
+                      to {{ Math.min(getCurrentPage('hologram') * getPageSize('hologram'), filteredHologramData.length)
+                      }}
+                      of {{ filteredHologramData.length }} entries
+                    </span>
+
+                    <nav aria-label="Page navigation">
+                      <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" [class.disabled]="getCurrentPage('hologram') === 1">
+                          <button class="page-link"
+                            (click)="goToPage('hologram', getCurrentPage('hologram') - 1, filteredHologramData)">
+                            <i class="bi bi-chevron-left"></i>
+                          </button>
+                        </li>
+                        <li class="page-item disabled">
+                          <span class="page-link">
+                            Page {{ getCurrentPage('hologram') }} of {{ getTotalPages(filteredHologramData, 'hologram')
+                            }}
+                          </span>
+                        </li>
+                        <li class="page-item"
+                          [class.disabled]="getCurrentPage('hologram') === getTotalPages(filteredHologramData, 'hologram')">
+                          <button class="page-link"
+                            (click)="goToPage('hologram', getCurrentPage('hologram') + 1, filteredHologramData)">
+                            <i class="bi bi-chevron-right"></i>
+                          </button>
+                        </li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -514,7 +624,8 @@
             </div>
             <div class="col-md-6" *ngIf="selectedApplication.cancellationReason">
               <strong>Cancellation Reason:</strong>
-              <span class="reason-badge" [class.text-danger]="selectedApplication.cancellationReason === 'Non-Compliance' || selectedApplication.cancellationReason === 'Regulatory Violation'">
+              <span class="reason-badge"
+                [class.text-danger]="selectedApplication.cancellationReason === 'Non-Compliance' || selectedApplication.cancellationReason === 'Regulatory Violation'">
                 {{ selectedApplication.cancellationReason }}
               </span>
             </div>
@@ -622,20 +733,12 @@
 
 
 <!-- Hologram Details Modal (Compact - Fits in Single Screen) -->
-<app-hologram-details-view
-  [isVisible]="showHologramDetailsModal"
-  [application]="selectedHologramApplication"
-  (close)="closeHologramDetailsModal()"
-  (approve)="onHologramApprove($event)"
-  (dataUpdated)="onHologramDataUpdated()">
+<app-hologram-details-view [isVisible]="showHologramDetailsModal" [application]="selectedHologramApplication"
+  (close)="closeHologramDetailsModal()" (approve)="onHologramApprove($event)" (dataUpdated)="onHologramDataUpdated()">
 </app-hologram-details-view>
 
 
 <!-- Payment Slips View Modal (Separate from Hologram Details) -->
-<app-payment-slips-view
-  [isVisible]="showPaymentSlipsModal"
-  [application]="selectedApplicationForSlips"
-  (close)="closePaymentSlipsModal()"
-  (approve)="onPaymentSlipsApprove($event)"
-  (reject)="onPaymentSlipsReject($event)">
+<app-payment-slips-view [isVisible]="showPaymentSlipsModal" [application]="selectedApplicationForSlips"
+  (close)="closePaymentSlipsModal()" (approve)="onPaymentSlipsApprove($event)" (reject)="onPaymentSlipsReject($event)">
 </app-payment-slips-view>

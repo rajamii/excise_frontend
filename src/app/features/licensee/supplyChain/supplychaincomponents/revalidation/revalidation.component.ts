@@ -84,17 +84,27 @@ export class RevalidationComponent implements OnInit {
 
       console.log('DEBUG: Raw Response:', response);
 
-      this.revlidationData = (response || []).map((item: any) => ({
-        id: item.id, // Map ID
-        referenceNo: item.ourRefNo,
-        submissionDate: new Date(item.revalidationDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
-        distilleryName: item.distilleryName,
-        status: item.status,
-        amount: item.revalidationBrAmount || '0.00',
-        isLive: !item.status.includes('INVALID') && !item.status.includes('EXPIRED'),
-        isInvalid: item.status.includes('INVALID') || item.status.includes('EXPIRED'),
-        allowedActions: item.allowedActions || item.allowed_actions || [] // Map allowed_actions from backend (snake_case or camelCase)
-      }));
+      this.revlidationData = (response || []).map((item: any) => {
+        const dateVal = item.revalidationDate || item.revalidation_date;
+        let formattedDate = '';
+        try {
+          formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-') : '';
+        } catch (e) {
+          formattedDate = '';
+        }
+
+        return {
+          id: item.id, // Map ID
+          referenceNo: item.ourRefNo || item.our_ref_no,
+          submissionDate: formattedDate,
+          distilleryName: item.distilleryName || item.distillery_name,
+          status: item.status,
+          amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
+          isLive: !item.status?.includes('INVALID') && !item.status?.includes('EXPIRED'),
+          isInvalid: item.status?.includes('INVALID') || item.status?.includes('EXPIRED'),
+          allowedActions: item.allowedActions || item.allowed_actions || []
+        }
+      });
 
       // Freeze objects to prevent mutations
       this.revlidationData.forEach(item => {
@@ -107,7 +117,7 @@ export class RevalidationComponent implements OnInit {
       this.filteredRevalidationData.forEach(item => {
         console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
       });
-      
+
       console.log('DEBUG: revlidationData[0] reference check:');
       console.log('  revlidationData[0]:', this.revlidationData[0]);
       console.log('  filteredRevalidationData[0]:', this.filteredRevalidationData[0]);
@@ -125,7 +135,7 @@ export class RevalidationComponent implements OnInit {
     this.revlidationData.forEach(item => {
       console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions);
     });
-    
+
     console.log('Applying revalidation filters:', {
       dateFilter: this.revalidationDateFilter,
       monthFilter: this.revalidationMonthFilter,
@@ -233,9 +243,23 @@ export class RevalidationComponent implements OnInit {
       event.preventDefault();
       event.stopPropagation();
     }
+    
+    // Determine the source based on user type
+    const userType = this.getUserType();
+    let source = 'licensee-dashboard';
+    
+    if (userType === 'commissioner') {
+      source = 'commissioner-dashboard';
+    } else if (userType === 'permit-section') {
+      source = 'permit-section';
+    }
+    
     const refNo = item.referenceNo;
     this.router.navigate(["/dev-supply-chain-revalidation-view"], {
-      queryParams: { ref: refNo },
+      queryParams: { 
+        ref: refNo,
+        source: source
+      },
     });
   }
 
@@ -312,8 +336,8 @@ export class RevalidationComponent implements OnInit {
       return;
     }
 
-    const role = this.getUserType();
-    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', role).subscribe({
+    // Pass generic remarks or prompt user
+    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'Approved from Revalidation Component').subscribe({
       next: (response) => {
         alert(`Action successful! Status updated to: ${response.status}`);
         this.fetchRevalidationData(); // Reload data
@@ -331,8 +355,7 @@ export class RevalidationComponent implements OnInit {
       return;
     }
 
-    const role = this.getUserType();
-    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', role).subscribe({
+    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', 'Rejected from Revalidation Component').subscribe({
       next: (response) => {
         alert(`Action successful! Status updated to: ${response.status}`);
         this.fetchRevalidationData(); // Reload data
@@ -364,5 +387,5 @@ export class RevalidationComponent implements OnInit {
     }
     console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
     return false;
-  } 
+  }
 }

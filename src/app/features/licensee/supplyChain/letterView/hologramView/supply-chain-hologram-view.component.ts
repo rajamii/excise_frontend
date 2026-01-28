@@ -1,6 +1,7 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, OnInit, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 interface HologramFormData {
   refNo: string;
@@ -39,6 +40,9 @@ interface HologramFormData {
 export class SupplyChainHologramViewComponent implements OnInit {
   submittedData?: HologramFormData;
   private isBrowser = false;
+  private hologramService = inject(HologramDataService);
+  isLoading = false;
+  errorMessage = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -58,35 +62,120 @@ export class SupplyChainHologramViewComponent implements OnInit {
       this.from = this.route.snapshot.queryParamMap.get('from') || 'supplychain';
       
       if (ref) {
-        const list: any[] = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-        
-        // Find by both refNo and procurementType
-        let found = list.find(r => r.refNo === ref && (!type || r.procurementType === type));
-
-        // Fallback: if type not found, try without type filter (for old data)
-        if (!found && type) {
-          found = list.find(r => r.refNo === ref);
-          
-          // If found but doesn't have the specific type, filter the quantities
-          if (found) {
-            found = this.filterByType(found, type);
-          }
-        }
-
-        if (!found) {
-          // If not found in localStorage, create sample data for demonstration
-          found = this.createSampleHologramData(ref, type);
-        }
-
-        this.submittedData = found;
-        
-        // Check if upload slip is enabled (only after commissioner approval)
-        this.uploadSlipEnabled = found.uploadSlipEnabled || false;
+        // CRITICAL FIX: Load data directly from backend API instead of localStorage
+        this.loadFromBackendAPI(ref, type);
       } else {
         // If no ref provided, redirect back based on 'from' parameter
         this.goBack();
       }
     }
+  }
+
+  private loadFromBackendAPI(ref: string, type: 'Local' | 'Export' | 'Defence' | null): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    // Fetch hologram requests from backend
+    this.hologramService.getRequests().subscribe({
+      next: (requests) => {
+        // Find the request by reference number
+        const found = requests.find((r: any) => r.refNo === ref);
+        
+        if (found) {
+          // Map backend data to frontend format
+          const qty = found.quantity || 0;
+          const hologramType = (found.hologramType || type || 'LOCAL').toUpperCase();
+          
+          // Create the display data with correct quantity mapping
+          this.submittedData = {
+            refNo: found.refNo || '',
+            date: found.submissionDate || new Date().toISOString(),
+            companyName: found.licenseeName || 'Sikkim Distilleries Ltd',
+            // CRITICAL: Map quantity to the correct field based on hologram type
+            localQtyLakh: hologramType === 'LOCAL' ? qty : 0,
+            exportQtyLakh: hologramType === 'EXPORT' ? qty : 0,
+            defenceQtyLakh: hologramType === 'DEFENCE' ? qty : 0,
+            procurementType: hologramType === 'LOCAL' ? 'Local' : hologramType === 'EXPORT' ? 'Export' : 'Defence'
+          };
+          
+          // Check if upload slip is enabled based on workflow stage
+          const currentStage: any = found.currentStage;
+          const status = found.status || (currentStage && typeof currentStage === 'object' ? currentStage.name : '') || '';
+          this.uploadSlipEnabled = status.toLowerCase().includes('approved');
+          
+          this.isLoading = false;
+        } else {
+          // Fallback: Try procurement endpoint
+          this.loadFromProcurementAPI(ref, type);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading hologram request:', err);
+        // Fallback: Try procurement endpoint
+        this.loadFromProcurementAPI(ref, type);
+      }
+    });
+  }
+
+  private loadFromProcurementAPI(ref: string, type: 'Local' | 'Export' | 'Defence' | null): void {
+    // Try loading from procurement endpoint as fallback
+    this.hologramService.getProcurements().subscribe({
+      next: (procurements) => {
+        const found: any = procurements.find((p: any) => p.refNo === ref);
+        
+        if (found) {
+          // CRITICAL FIX: Convert string values to numbers (handle both string and number types)
+          const localQty = typeof found.localQty === 'string' ? parseFloat(found.localQty) : (found.localQty || 0);
+          const exportQty = typeof found.exportQty === 'string' ? parseFloat(found.exportQty) : (found.exportQty || 0);
+          const defenceQty = typeof found.defenceQty === 'string' ? parseFloat(found.defenceQty) : (found.defenceQty || 0);
+          
+          // Check if there's edit history from Commissioner
+          const hasEditHistory = found.editHistory || found.edit_history;
+          
+          // Map procurement data
+          this.submittedData = {
+            refNo: found.refNo || '',
+            date: found.date || new Date().toISOString(),
+            companyName: found.licenseeName || 'Sikkim Distilleries Ltd',
+            localQtyLakh: localQty,
+            exportQtyLakh: exportQty,
+            defenceQtyLakh: defenceQty,
+            procurementType: type || 'Local',
+            editedByCommissioner: !!hasEditHistory,
+            editHistory: hasEditHistory ? {
+              editedBy: hasEditHistory.editedBy || hasEditHistory.edited_by || 'Commissioner',
+              editedDate: hasEditHistory.editedDate || hasEditHistory.edited_date,
+              originalQuantities: hasEditHistory.originalQuantities || hasEditHistory.original_quantities || {
+                local: 0,
+                export: 0,
+                defence: 0,
+                total: 0
+              },
+              updatedQuantities: hasEditHistory.updatedQuantities || hasEditHistory.updated_quantities || {
+                local: 0,
+                export: 0,
+                defence: 0,
+                total: 0
+              }
+            } : undefined
+          };
+          
+          const currentStage: any = found.currentStage;
+          const status = found.status || (currentStage && typeof currentStage === 'object' ? currentStage.name : '') || '';
+          this.uploadSlipEnabled = status.toLowerCase().includes('approved');
+          
+          this.isLoading = false;
+        } else {
+          this.errorMessage = 'Hologram request not found. Please check the reference number.';
+          this.isLoading = false;
+        }
+      },
+      error: (err) => {
+        console.error('Error loading hologram procurement:', err);
+        this.errorMessage = 'Failed to load hologram request data. Please try again.';
+        this.isLoading = false;
+      }
+    });
   }
 
   private filterByType(data: HologramFormData, type: 'Local' | 'Export' | 'Defence'): HologramFormData {
@@ -98,111 +187,6 @@ export class SupplyChainHologramViewComponent implements OnInit {
       exportQtyLakh: type === 'Export' ? data.exportQtyLakh : 0,
       defenceQtyLakh: type === 'Defence' ? data.defenceQtyLakh : 0
     };
-  }
-
-  private createSampleHologramData(refNo: string, type?: 'Local' | 'Export' | 'Defence' | null): HologramFormData {
-    // Create sample data for demonstration purposes (includes both supply chain and commissioner data)
-    const sampleData: { [key: string]: HologramFormData } = {
-      'YB/1/BREW/24': {
-        refNo: 'YB/1/BREW/24',
-        date: '2025-01-13',
-        companyName: 'Yuksom Breweries Ltd.',
-        localQtyLakh: 1500000,
-        exportQtyLakh: 0,
-        defenceQtyLakh: 0,
-        procurementType: 'Local'
-      },
-      'YB/2/BREW/24': {
-        refNo: 'YB/2/BREW/24',
-        date: '2025-01-13',
-        companyName: 'Yuksom Breweries Ltd.',
-        localQtyLakh: 1000000,
-        exportQtyLakh: 200000,
-        defenceQtyLakh: 0,
-        procurementType: 'Local'
-      },
-      'YB/4/BREW/25': {
-        refNo: 'YB/4/BREW/25',
-        date: '2025-01-15',
-        companyName: 'Sikkim Breweries Ltd.',
-        localQtyLakh: 2000000,
-        exportQtyLakh: 800000,
-        defenceQtyLakh: 300000,
-        procurementType: 'Local'
-      },
-      // Commissioner dashboard sample data
-      'HOL/BF901': {
-        refNo: 'HOL/BF901',
-        date: '2025-09-23',
-        companyName: 'Sikkim Distilleries Ltd',
-        localQtyLakh: 250000,
-        exportQtyLakh: 100000,
-        defenceQtyLakh: 50000,
-        procurementType: 'Local'
-      },
-      'HOL/BF902': {
-        refNo: 'HOL/BF902',
-        date: '2025-09-22',
-        companyName: 'Himalayan Distilleries Pvt Ltd',
-        localQtyLakh: 320000,
-        exportQtyLakh: 180000,
-        defenceQtyLakh: 0,
-        procurementType: 'Local'
-      },
-      'HOL/BF903': {
-        refNo: 'HOL/BF903',
-        date: '2025-09-21',
-        companyName: 'Royal Sikkim Brewery',
-        localQtyLakh: 280000,
-        exportQtyLakh: 70000,
-        defenceQtyLakh: 100000,
-        procurementType: 'Local'
-      },
-      'HOL/BF904': {
-        refNo: 'HOL/BF904',
-        date: '2025-09-20',
-        companyName: 'Mountain View Distilleries',
-        localQtyLakh: 200000,
-        exportQtyLakh: 50000,
-        defenceQtyLakh: 0,
-        procurementType: 'Local'
-      },
-      'HOL/BF905': {
-        refNo: 'HOL/BF905',
-        date: '2025-09-19',
-        companyName: 'Eastern Himalaya Distillery',
-        localQtyLakh: 400000,
-        exportQtyLakh: 200000,
-        defenceQtyLakh: 50000,
-        procurementType: 'Local'
-      },
-      'HOL/BF906': {
-        refNo: 'HOL/BF906',
-        date: '2025-09-18',
-        companyName: 'Gangtok Premium Spirits',
-        localQtyLakh: 150000,
-        exportQtyLakh: 0,
-        defenceQtyLakh: 0,
-        procurementType: 'Local'
-      }
-    };
-
-    let data = sampleData[refNo] || {
-      refNo: refNo,
-      date: new Date().toISOString().split('T')[0],
-      companyName: 'Sikkim Distilleries Ltd',
-      localQtyLakh: 2500000,
-      exportQtyLakh: 500000,
-      defenceQtyLakh: 200000,
-      procurementType: type || 'Local'
-    };
-
-    // Filter by type if specified
-    if (type) {
-      data = this.filterByType(data, type);
-    }
-
-    return data;
   }
 
   getBackButtonText(): string {
@@ -249,34 +233,16 @@ export class SupplyChainHologramViewComponent implements OnInit {
     if (this.from === 'itcell') {
       // IT Cell approval - forward to commissioner
       if (confirm('Approve and forward this application to Commissioner?')) {
-        const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-        const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
-        if (index !== -1) {
-          hologramRequests[index].itCellStatus = 'Approved';
-          hologramRequests[index].commissionerStatus = 'Pending';
-          hologramRequests[index].status = 'Under Review';
-          hologramRequests[index].reviewedBy = 'IT Cell';
-          hologramRequests[index].reviewedDate = new Date().toISOString().split('T')[0];
-          localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-          alert('Application approved and forwarded to Commissioner');
-          this.goBack();
-        }
+        // TODO: Implement backend API call for IT Cell approval
+        alert('IT Cell approval feature will be implemented with backend API');
+        // this.hologramService.performAction('request', requestId, 'approve_itcell', 'Approved by IT Cell').subscribe(...)
       }
     } else if (this.from === 'commissioner') {
       // Commissioner approval - enable upload slip
       if (confirm('Approve this hologram application? This will enable the supply chain user to upload payment slip.')) {
-        const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-        const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
-        if (index !== -1) {
-          hologramRequests[index].commissionerStatus = 'Approved';
-          hologramRequests[index].uploadSlipEnabled = true;
-          hologramRequests[index].status = 'Approved';
-          hologramRequests[index].approvedBy = 'Commissioner';
-          hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
-          localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-          alert('Application approved. Supply chain user can now upload payment slip.');
-          this.goBack();
-        }
+        // TODO: Implement backend API call for Commissioner approval
+        alert('Commissioner approval feature will be implemented with backend API');
+        // this.hologramService.performAction('request', requestId, 'approve_commissioner', 'Approved by Commissioner').subscribe(...)
       }
     }
   }
@@ -286,17 +252,9 @@ export class SupplyChainHologramViewComponent implements OnInit {
 
     const reason = prompt('Enter rejection reason:');
     if (reason) {
-      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const index = hologramRequests.findIndex((req: any) => req.refNo === this.submittedData!.refNo);
-      if (index !== -1) {
-        hologramRequests[index].status = 'Rejected';
-        hologramRequests[index].rejectedBy = this.from === 'itcell' ? 'IT Cell' : 'Commissioner';
-        hologramRequests[index].rejectedDate = new Date().toISOString().split('T')[0];
-        hologramRequests[index].rejectionReason = reason;
-        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-        alert('Application rejected');
-        this.goBack();
-      }
+      // TODO: Implement backend API call for rejection
+      alert('Rejection feature will be implemented with backend API');
+      // this.hologramService.performAction('request', requestId, 'reject', reason).subscribe(...)
     }
   }
 

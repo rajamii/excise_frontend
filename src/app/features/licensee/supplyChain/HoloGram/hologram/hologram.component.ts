@@ -1,7 +1,8 @@
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HologramDataService, HologramProcurement } from '../../services/hologram-data.service';
 
 interface HologramFormData {
   refNo: string;
@@ -29,6 +30,8 @@ export class HologramComponent {
   showSuccessMessage = false;
   selectedPaymentSlipFile: File | null = null;
   paymentRemarks: string = '';
+
+  private hologramService = inject(HologramDataService);
 
   formData: HologramFormData = {
     refNo: '',
@@ -123,10 +126,10 @@ export class HologramComponent {
 
   viewApplicationDetails(): void {
     if (!this.submittedData) return;
-    
+
     // Navigate to unified hologram view
     this.router.navigate(['/dev-supply-chain-hologram-view'], {
-      queryParams: { 
+      queryParams: {
         ref: this.submittedData.refNo,
         from: 'supplychain'
       }
@@ -142,9 +145,9 @@ export class HologramComponent {
 
   getSeriesRowNumber(series: 'local' | 'export' | 'defence'): number {
     if (!this.submittedData) return 0;
-    
+
     let rowNumber = 0;
-    
+
     // Count rows before this series
     if (series === 'local') {
       rowNumber = 1;
@@ -156,7 +159,7 @@ export class HologramComponent {
       if (this.submittedData.localQtyLakh && this.submittedData.localQtyLakh > 0) rowNumber++;
       if (this.submittedData.exportQtyLakh && this.submittedData.exportQtyLakh > 0) rowNumber++;
     }
-    
+
     return rowNumber;
   }
 
@@ -191,124 +194,46 @@ export class HologramComponent {
       return;
     }
 
-    // Lock the submitted data for preview/print and mark as submitted
-    this.submittedData = { ...this.formData };
-    this.isSubmitted = true;
-    this.showSuccessMessage = true;
-    this.showPreview = true;
+    // Prepare API Payload
+    // Backend expects snake_case for fields
+    const payload: any = {
+      local_qty: this.formData.localQtyLakh || 0,
+      export_qty: this.formData.exportQtyLakh || 0,
+      defence_qty: this.formData.defenceQtyLakh || 0,
+    };
 
-    // Persist to list as forwarded to IT Cell
-    if (this.isBrowser) {
-      const key = 'hologramRequests';
-      const list: any[] = JSON.parse(localStorage.getItem(key) || '[]');
-      const newRequest = {
-        ...this.submittedData,
-        status: 'Forwarded to IT Cell', // Initial status - forwarded to IT Cell for review
-        submittedDate: new Date().toISOString().split('T')[0],
-        itCellStatus: 'Pending', // IT Cell review status
-        uploadSlipEnabled: false // Upload slip disabled until IT Cell approves
-      };
-      list.unshift(newRequest);
-      localStorage.setItem(key, JSON.stringify(list));
+    this.hologramService.createProcurement(payload).subscribe({
+      next: (res) => {
+        // Lock the submitted data for preview/print and mark as submitted
+        // Use response refNo if available, or fallback
+        this.submittedData = {
+          ...this.formData,
+          refNo: res.refNo || this.formData.refNo
+        };
+        this.isSubmitted = true;
+        this.showSuccessMessage = true;
+        this.showPreview = true;
 
-      // Also register in hologram dashboard/daily register
-      this.registerInHologramDashboard();
-    }
+        console.log('✅ Application submitted successfully via API:', res);
 
-    // Only after successful submit, advance the sequence for the next request
-    this.incrementSequenceNumber();
-    // Do not overwrite fields used in the preview; regenerate ref for next entry but
-    // keep current input values visible until the user edits/clears
-    this.formData.refNo = `YB/${this.getNextSequenceNumber()}/BREW/${String(new Date().getFullYear()).slice(-2)}`;
+        // Scroll to government form
+        setTimeout(() => {
+          document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      },
+      error: (err) => {
+        console.error('Error submitting application', err);
+        alert('Failed to submit application. Please try again.');
+      }
+    });
 
-    // Scroll to government form
-    setTimeout(() => {
-      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    // Only after successful submit, sequence logic handled by backend now
+    // But we clear form or handle sequences for UI if needed
   }
 
+  // Deprecated: No longer used in API flow
   private registerInHologramDashboard(): void {
-    if (!this.submittedData || !this.isBrowser) return;
-
-    // Save to both storage keys for compatibility
-
-    // 1. Save to hologramApplications (new format) - Create separate rows for each type
-    // NOTE: After IT Cell approval and Commissioner approval, supply chain must upload payment slip
-    // before Officer in Charge can update arrival details. The paymentSlipUploaded flag controls this.
-    const dashboardKey = 'hologramApplications';
-    const applications = JSON.parse(localStorage.getItem(dashboardKey) || '[]');
-
-    const baseTimestamp = Date.now();
-    const types: Array<{ type: 'Local' | 'Export' | 'Defence', qty: number }> = [];
-
-    // Collect types with quantities
-    if (this.submittedData.localQtyLakh && this.submittedData.localQtyLakh > 0) {
-      types.push({ type: 'Local', qty: this.submittedData.localQtyLakh });
-    }
-    if (this.submittedData.exportQtyLakh && this.submittedData.exportQtyLakh > 0) {
-      types.push({ type: 'Export', qty: this.submittedData.exportQtyLakh });
-    }
-    if (this.submittedData.defenceQtyLakh && this.submittedData.defenceQtyLakh > 0) {
-      types.push({ type: 'Defence', qty: this.submittedData.defenceQtyLakh });
-    }
-
-    console.log('📊 Creating separate rows for types:', types);
-
-    // Create separate application for each type with same Ref. No
-    types.forEach((typeInfo, index) => {
-      const newApplication = {
-        id: (baseTimestamp + index).toString(),
-        refNo: this.submittedData!.refNo,
-        date: this.submittedData!.date,
-        companyName: this.submittedData!.companyName,
-        procurementType: typeInfo.type, // Add type field
-        localQtyLakh: typeInfo.type === 'Local' ? typeInfo.qty : 0,
-        exportQtyLakh: typeInfo.type === 'Export' ? typeInfo.qty : 0,
-        defenceQtyLakh: typeInfo.type === 'Defence' ? typeInfo.qty : 0,
-        totalQtyLakh: typeInfo.qty,
-        status: 'Forwarded to IT Cell', // Initial status - needs IT Cell approval
-        submittedAt: new Date().toISOString(),
-        type: 'Hologram Application',
-        itCellStatus: 'Pending',
-        uploadSlipEnabled: false,
-        paymentSlipUploaded: false, // Track if payment slip is uploaded for this type
-        paymentSlipUploadDate: null,
-        paymentSlipFileName: null
-      };
-
-      applications.unshift(newApplication);
-      console.log(`  ✓ Added ${typeInfo.type} row:`, newApplication);
-    });
-
-    localStorage.setItem(dashboardKey, JSON.stringify(applications));
-
-    // Initialize payment slip tracking for this reference number
-    const slipTrackingKey = 'hologramPaymentSlipTracking';
-    const slipTracking = JSON.parse(localStorage.getItem(slipTrackingKey) || '{}');
-    
-    slipTracking[this.submittedData.refNo] = {
-      refNo: this.submittedData.refNo,
-      companyName: this.submittedData.companyName,
-      date: this.submittedData.date,
-      totalTypes: types.length,
-      requiredTypes: types.map(t => t.type),
-      uploadedTypes: [],
-      allSlipsUploaded: false,
-      commissionerVisible: false, // Only visible when all slips uploaded
-      slipDetails: {}
-    };
-    
-    localStorage.setItem(slipTrackingKey, JSON.stringify(slipTracking));
-
-    console.log('✅ Application registered with separate rows for each type:', {
-      refNo: this.submittedData.refNo,
-      date: this.submittedData.date,
-      company: this.submittedData.companyName,
-      types: types.map(t => `${t.type}: ${t.qty}`).join(', '),
-      totalRows: types.length
-    });
-    
-    console.log('📦 Final hologramApplications (first 5):', applications.slice(0, 5));
+    console.warn('registerInHologramDashboard is deprecated. Implementation moved to backend.');
   }
 
   openPrintPreview(): void {
@@ -661,20 +586,20 @@ export class HologramComponent {
 
   calculateTotalAmount(): number {
     if (!this.submittedData) return 0;
-    
+
     const localAmount = this.submittedData.localQtyLakh ? this.calculateAmount(this.submittedData.localQtyLakh) : 0;
     const exportAmount = this.submittedData.exportQtyLakh ? this.calculateAmount(this.submittedData.exportQtyLakh) : 0;
     const defenceAmount = this.submittedData.defenceQtyLakh ? this.calculateAmount(this.submittedData.defenceQtyLakh) : 0;
-    
+
     return localAmount + exportAmount + defenceAmount;
   }
 
   getTotalQuantityLakh(): number {
     if (!this.submittedData) return 0;
-    
-    return (this.submittedData.localQtyLakh || 0) + 
-           (this.submittedData.exportQtyLakh || 0) + 
-           (this.submittedData.defenceQtyLakh || 0);
+
+    return (this.submittedData.localQtyLakh || 0) +
+      (this.submittedData.exportQtyLakh || 0) +
+      (this.submittedData.defenceQtyLakh || 0);
   }
 
   // Payment slip upload methods
@@ -736,14 +661,14 @@ export class HologramComponent {
 
     // In a real application, you would upload the file to a server here
     // For now, we'll just store the file information
-    
+
     // Show success message
     alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nTotal Amount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}\n\nYour payment has been recorded and will be verified by the department.`);
 
     // Reset file input
     this.selectedPaymentSlipFile = null;
     this.paymentRemarks = '';
-    
+
     // Clear the file input
     const fileInput = document.getElementById('paymentSlipFile') as HTMLInputElement;
     if (fileInput) {

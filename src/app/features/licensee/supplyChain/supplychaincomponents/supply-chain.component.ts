@@ -8,6 +8,7 @@ import { CancellationComponent } from "./cancellation/cancellation.component";
 import { TransitComponent } from "./transit/transit.component";
 import { HologramrequestComponent } from "./hologramrequest/hologramrequest.component";
 import { HologramprocurementComponent } from "./hologramprocurement/hologramprocurement.component";
+import { SupplyChainProfileService } from "../../../../core/services/supply-chain-profile.service";
 
 interface TableData {
   referenceNo: string;
@@ -51,25 +52,19 @@ export class SupplyChainComponent implements OnInit {
   activeTab = "requisition";
   sidebarHidden = true;
   private isBrowser = false;
-  
+  currentProfile: any = null;
+  loadingProfile = true;
+
   // MOVED TO hologramprocurement.component.ts
   // hologramList: HologramRow[] = [];
-  // filteredHologramData: any[] = [];
-  // showHologramModal = false;
-  // showMultiTypePaymentModal = false;
-  // selectedPaymentHologram: HologramRow | null = null;
-  // paymentRemarks: string = '';
-  // multiTypePaymentItems: HologramRow[] = [];
-  // hologramDateFilter: string = '';
-  // hologramMonthFilter: string = '';
-  // hologramYearFilter: string = '';
-  // hologramStatusFilter: string = '';
-  // selectedHologram: HologramRow | null = null;
+
+
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     @Inject(PLATFORM_ID) platformId: Object,
+    private profileService: SupplyChainProfileService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     // MOVED TO hologramprocurement.component.ts
@@ -77,6 +72,26 @@ export class SupplyChainComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Check for profile first
+    this.profileService.getProfile().subscribe({
+      next: (res) => {
+        if (res.exists && res.data) {
+          this.currentProfile = res.data;
+          this.loadingProfile = false;
+
+        } else {
+          // If checking profile fails or doesn't exist, redirect to registration
+          this.router.navigate(['/licensee/supply-chain-registration']);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to fetch profile', err);
+        // On error, also redirect? Or show error?
+        // Safer to redirect or stay loading
+        this.router.navigate(['/licensee/supply-chain-registration']);
+      }
+    });
+
     // Check for tab query parameter
     if (this.isBrowser) {
       const tab = this.route.snapshot.queryParamMap.get('tab');
@@ -86,10 +101,14 @@ export class SupplyChainComponent implements OnInit {
     }
   }
 
+
+
   setActiveTab(tab: string): void {
     console.log('setActiveTab called with:', tab);
     this.activeTab = tab;
   }
+
+
 
   viewWallet(): void {
     this.router.navigate(["/dev-payment-confirmation"]);
