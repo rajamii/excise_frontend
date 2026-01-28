@@ -962,3 +962,382 @@ small.text-muted {
     opacity: 1;
   }
 }
+
+
+// ============================================
+// Enhanced Stock Summary Card Styling - COMPACT VERSION
+// ============================================
+
+.stock-summary-card-compact {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  border: 2px solid #e0f2fe;
+  margin-bottom: 1.5rem;
+}
+
+.stock-summary-header-compact {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: white;
+  padding: 0.75rem 1rem;
+  border-bottom: 2px solid #0369a1;
+
+  h6 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.3px;
+  }
+
+  small {
+    font-size: 0.75rem;
+    opacity: 0.9;
+    font-weight: 500;
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 15px;
+    box-shadow: 0 2px 6px rgba(255, 255, 255, 0.2);
+    animation: pulse 2s infinite;
+
+    &.bg-white {
+      background-color: white !important;
+      color: #0ea5e9 !important;
+    }
+  }
+
+  .bi-box-seam-fill {
+    font-size: 1.1rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  }
+
+  .bi-check-circle-fill {
+    font-size: 0.75rem;
+    animation: pulse 2s infinite;
+  }
+}
+
+.stock-summary-body-compact {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.stock-item-compact {
+  background: white;
+  border-radius: 10px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  border: 2px solid #e2e8f0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.5s ease-out backwards;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+    transition: all 0.3s ease;
+  }
+
+  &.stock-available {
+    border-color: #86efac;
+    
+    &::before {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    &:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.15);
+      border-color: #10b981;
+    }
+  }
+
+  &.stock-empty {
+    border-color: #fca5a5;
+    opacity: 0.7;
+
+    &::before {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.12);
+    }
+  }
+}
+
+.stock-item-header-compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+
+  .size-badge-compact {
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: white;
+    padding: 0.3rem 0.7rem;
+    border-radius: 15px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 6px rgba(100, 116, 139, 0.25);
+  }
+
+  .stock-status-icon-compact {
+    font-size: 1rem;
+    animation: fadeIn 0.5s ease;
+
+    .bi-check-circle-fill {
+      color: #10b981;
+      filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3));
+    }
+
+    .bi-x-circle-fill {
+      color: #ef4444;
+      filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.3));
+    }
+  }
+}
+
+.stock-item-body-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 0.25rem 0;
+}
+
+.stock-pieces-compact {
+  margin-bottom: 0.5rem;
+
+  .pieces-number-compact {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+    display: block;
+    margin-bottom: 0.2rem;
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 2px 4px rgba(14, 165, 233, 0.2));
+  }
+
+  .pieces-label-compact {
+    font-size: 0.65rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+}
+
+.stock-cases-compact {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  padding: 0.35rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  .bi-box {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+}
+
+// Animations
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Responsive Design for Compact Stock Summary
+@media (max-width: 992px) {
+  .stock-summary-card-compact {
+    margin-bottom: 1.25rem;
+  }
+
+  .stock-summary-header-compact {
+    padding: 0.65rem 0.875rem;
+
+    h6 {
+      font-size: 0.9rem;
+    }
+
+    small {
+      font-size: 0.7rem;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 0.3rem 0.65rem;
+    }
+  }
+
+  .stock-summary-body-compact {
+    padding: 0.875rem;
+  }
+
+  .stock-item-compact {
+    padding: 0.65rem;
+  }
+
+  .stock-pieces-compact {
+    .pieces-number-compact {
+      font-size: 1.35rem;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .stock-summary-header-compact {
+    .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start !important;
+    }
+
+    .badge {
+      align-self: flex-start;
+    }
+  }
+
+  .stock-summary-body-compact {
+    padding: 0.75rem;
+
+    .row {
+      gap: 0.5rem;
+    }
+  }
+
+  .stock-item-compact {
+    margin-bottom: 0.5rem;
+  }
+
+  .stock-pieces-compact {
+    .pieces-number-compact {
+      font-size: 1.25rem;
+    }
+  }
+
+  .stock-cases-compact {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.65rem;
+  }
+}
+
+// Print Styles for Compact Stock Summary
+@media print {
+  .stock-summary-card-compact {
+    box-shadow: none;
+    border: 2px solid #000;
+    page-break-inside: avoid;
+  }
+
+  .stock-summary-header-compact {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    border-bottom: 2px solid #000;
+
+    .badge {
+      background-color: #fff !important;
+      color: #000 !important;
+      border: 1px solid #000;
+    }
+  }
+
+  .stock-summary-body-compact {
+    background: #fff !important;
+  }
+
+  .stock-item-compact {
+    box-shadow: none;
+    border: 1px solid #000;
+
+    &::before {
+      display: none;
+    }
+
+    &.stock-available {
+      border-color: #000;
+    }
+
+    &.stock-empty {
+      opacity: 1;
+      border-style: dashed;
+    }
+  }
+
+  .stock-pieces-compact {
+    .pieces-number-compact {
+      -webkit-text-fill-color: #000;
+      color: #000;
+      filter: none;
+    }
+  }
+
+  .stock-cases-compact {
+    background: #f0f0f0 !important;
+    color: #000 !important;
+    box-shadow: none;
+  }
+}

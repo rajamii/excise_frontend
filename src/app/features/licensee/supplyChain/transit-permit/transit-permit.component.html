@@ -67,31 +67,60 @@
         </div>
 
         <!-- Section Divider -->
-        <div class="col-12 mb-3">
+        <div class="col-12 mb-4">
           <hr class="section-divider">
+        </div>
 
-          <!-- Stock Summary Box -->
-          <div class="card bg-light border-info mb-3" *ngIf="selectedBrandStockSummary.length > 0">
-            <div class="card-header bg-info text-white py-2">
-              <h6 class="mb-0 small fw-bold">
-                <i class="bi bi-box-seam me-2"></i>Available Stock Summary: {{ formData.brand }}
-              </h6>
+        <!-- Stock Summary Box - Enhanced Design with Smooth Animation -->
+        <div class="col-12 mb-3" *ngIf="selectedBrandStockSummary.length > 0" [@slideInAnimation]>
+          <div class="stock-summary-card-compact">
+            <div class="stock-summary-header-compact">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-box-seam-fill me-2"></i>
+                  <div>
+                    <h6 class="mb-0 fw-bold">Available Stock Summary</h6>
+                    <small class="opacity-75">{{ formData.brand }}</small>
+                  </div>
+                </div>
+                <span class="badge bg-white text-primary px-2 py-1">
+                  <i class="bi bi-check-circle-fill me-1"></i>Live Stock
+                </span>
+              </div>
             </div>
-            <div class="card-body p-2">
+            <div class="stock-summary-body-compact">
               <div class="row g-2">
-                <div class="col-md-4 col-sm-6" *ngFor="let stock of selectedBrandStockSummary">
-                  <div class="d-flex justify-content-between align-items-center border rounded p-2 bg-white">
-                    <span class="badge bg-secondary">{{ stock.size }}ml</span>
-                    <div class="text-end lh-1">
-                      <div class="fw-bold text-success small">{{ stock.pieces }} pcs</div>
-                      <div class="text-muted" style="font-size: 0.75rem;">(≈ {{ stock.approxCases }} cases)</div>
+                <div class="col-lg-4 col-md-6" *ngFor="let stock of selectedBrandStockSummary; let i = index">
+                  <div class="stock-item-compact" [class.stock-available]="stock.pieces > 0" [class.stock-empty]="stock.pieces === 0" 
+                       [style.animation-delay.ms]="i * 100">
+                    <div class="stock-item-header-compact">
+                      <span class="size-badge-compact">{{ stock.size }}ml</span>
+                      <span class="stock-status-icon-compact" *ngIf="stock.pieces > 0">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                      </span>
+                      <span class="stock-status-icon-compact" *ngIf="stock.pieces === 0">
+                        <i class="bi bi-x-circle-fill text-danger"></i>
+                      </span>
+                    </div>
+                    <div class="stock-item-body-compact">
+                      <div class="stock-pieces-compact">
+                        <span class="pieces-number-compact">{{ stock.pieces }}</span>
+                        <span class="pieces-label-compact">pieces</span>
+                      </div>
+                      <div class="stock-cases-compact">
+                        <i class="bi bi-box me-1"></i>
+                        <span>≈ {{ stock.approxCases }} cases</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
+        <!-- Product Information Section -->
+        <div class="col-12 mb-3">
           <div class="section-title">
             <span class="badge bg-success">Product Information</span>
           </div>

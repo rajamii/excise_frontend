@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
+import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 
 interface FormData {
   billNo: string;
@@ -37,7 +38,18 @@ interface Product {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transit-permit.component.html',
-  styleUrls: ['./transit-permit.component.scss']
+  styleUrls: ['./transit-permit.component.scss'],
+  animations: [
+    trigger('slideInAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-20px)' }),
+        animate('400ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('250ms ease-in', style({ opacity: 0, transform: 'translateY(-15px)' }))
+      ])
+    ])
+  ]
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
@@ -191,18 +203,35 @@ export class TransitPermitComponent implements OnInit {
     this.availableStockPieces = 0;
     this.stockError = '';
     this.currentStockStatus = '';
+    this.selectedBrandStockSummary = [];
+
+    console.log('onBrandChange called with brand:', this.formData.brand);
 
     const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
+    console.log('selectedBrandBasic:', selectedBrandBasic);
 
     // FETCH STOCK SPECIFICALLY FOR THIS BRAND
     console.log('Fetching specific stock for brand:', this.formData.brand);
     // Pass empty distillery name to ignore that filter, and pass brand name
     this.supplyChainService.getBrandWarehouseStock('', this.formData.brand).subscribe(data => {
-      console.log('Stock Data for Brand:', data);
+      console.log('Stock Data for Brand (raw response):', data);
       this.brandWarehouseData = data;
+
+      // Log each entry to see what we got - USE CAMELCASE FIELD NAMES
+      data.forEach((entry, index) => {
+        console.log(`Entry ${index}:`, {
+          brandDetails: entry.brandDetails,
+          capacitySize: entry.capacitySize,
+          currentStock: entry.currentStock,
+          status: entry.status
+        });
+      });
 
       // After fetching, update the summary logic
       this.updateStockSummary(selectedBrandBasic);
+    }, error => {
+      console.error('Error fetching brand warehouse stock:', error);
+      this.selectedBrandStockSummary = [];
     });
   }
 
@@ -210,22 +239,31 @@ export class TransitPermitComponent implements OnInit {
     // Filter available sizes from warehouse data (loose match just in case, though API should handle it)
     const searchBrand = this.formData.brand.toLowerCase().trim();
 
-    // Check if we have any data
+    console.log('updateStockSummary called with brand:', this.formData.brand);
+    console.log('brandWarehouseData:', this.brandWarehouseData);
+
+    // Check if we have any data - USE CAMELCASE FIELD NAMES
     const warehouseEntries = this.brandWarehouseData.filter(item => {
-      if (!item.brand_details) return false;
-      const dbBrand = item.brand_details.toLowerCase().trim();
-      return dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+      if (!item.brandDetails) return false;
+      const dbBrand = item.brandDetails.toLowerCase().trim();
+      const matches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+      console.log(`Comparing "${dbBrand}" with "${searchBrand}": ${matches}`);
+      return matches;
     });
+
+    console.log('Filtered warehouse entries:', warehouseEntries);
 
     if (selectedBrandBasic) {
       // Use all defined sizes for the brand as the base
       this.sizeOptions = selectedBrandBasic.sizes.map((s: number) => s.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
-      // Generate summary for ALL sizes
+      // Generate summary for ALL sizes - USE CAMELCASE FIELD NAMES
       this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
         // Check if we have stock for this size
-        const stockEntry = warehouseEntries.find(we => we.capacity_size === size);
-        const pieces = stockEntry ? stockEntry.current_stock : 0;
+        const stockEntry = warehouseEntries.find(we => we.capacitySize === size);
+        const pieces = stockEntry ? (stockEntry.currentStock || 0) : 0;
+
+        console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
 
         // Find conversion
         const conv = this.brandMlConversionData.find(c => c.ml === size);
@@ -236,23 +274,29 @@ export class TransitPermitComponent implements OnInit {
       }).sort((a: any, b: any) => a.size - b.size);
 
     } else {
-      // Fallback if brand not found in basic list
+      // Fallback if brand not found in basic list - USE CAMELCASE FIELD NAMES
       if (warehouseEntries.length > 0) {
-        this.sizeOptions = warehouseEntries.map(item => item.capacity_size.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+        this.sizeOptions = warehouseEntries.map(item => item.capacitySize.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
 
         this.selectedBrandStockSummary = warehouseEntries.map(entry => {
-          const size = entry.capacity_size;
-          const pieces = entry.current_stock;
+          const size = entry.capacitySize;
+          const pieces = entry.currentStock || 0;
           const conv = this.brandMlConversionData.find(c => c.ml === size);
           const factor = conv ? conv.pieces_in_case : 0;
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+          
+          console.log(`Fallback - Size ${size}ml: pieces=${pieces}, approxCases=${approxCases}`);
+          
           return { size, pieces, approxCases };
         }).sort((a: any, b: any) => a.size - b.size);
       } else {
+        console.log('No warehouse entries found for brand');
         this.sizeOptions = [];
         this.selectedBrandStockSummary = [];
       }
     }
+
+    console.log('Final selectedBrandStockSummary:', this.selectedBrandStockSummary);
   }
 
   onSizeChange(): void {
@@ -264,24 +308,38 @@ export class TransitPermitComponent implements OnInit {
 
     if (!sizeMl || !this.formData.brand) return;
 
+    console.log('onSizeChange called with size:', sizeMl, 'brand:', this.formData.brand);
+    console.log('brandWarehouseData:', this.brandWarehouseData);
+
     // 1. Get Conversion Factor
     const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
     if (conversionEntry) {
       this.conversionFactor = conversionEntry.pieces_in_case;
+      console.log('Conversion factor found:', this.conversionFactor);
     } else {
       console.warn(`No conversion factor found for ${sizeMl}ml`);
       this.conversionFactor = 0; // Handle error or default?
     }
 
-    // 2. Get Available Stock
-    const stockEntry = this.brandWarehouseData.find(
-      x => x.brand_details === this.formData.brand && x.capacity_size === sizeMl
-    );
+    // 2. Get Available Stock - use loose matching for brand name - USE CAMELCASE FIELD NAMES
+    const searchBrand = this.formData.brand.toLowerCase().trim();
+    const stockEntry = this.brandWarehouseData.find(x => {
+      if (!x.brandDetails) return false;
+      const dbBrand = x.brandDetails.toLowerCase().trim();
+      const brandMatches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+      const sizeMatches = x.capacitySize === sizeMl;
+      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${x.capacitySize} vs ${sizeMl} (${sizeMatches})`);
+      return brandMatches && sizeMatches;
+    });
+
+    console.log('Stock entry found:', stockEntry);
 
     if (stockEntry) {
-      this.availableStockPieces = stockEntry.current_stock;
+      this.availableStockPieces = stockEntry.currentStock || 0;
+      console.log('Available stock pieces:', this.availableStockPieces);
       this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${Math.floor(this.availableStockPieces / (this.conversionFactor || 1))} cases)`;
     } else {
+      console.warn('No stock entry found for brand:', this.formData.brand, 'size:', sizeMl);
       this.currentStockStatus = 'No stock information available';
       this.availableStockPieces = 0;
     }

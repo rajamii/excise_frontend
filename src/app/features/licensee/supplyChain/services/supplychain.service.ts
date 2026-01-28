@@ -307,13 +307,23 @@ export class SupplyChainService {
     if (distilleryName) params.distillery_name = distilleryName;
     if (brandName) params.brand_name = brandName;
 
+    console.log('getBrandWarehouseStock called with params:', params);
+
     return this.http.get<any[]>(
       `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`,
       { params }
     ).pipe(
       map((response: any) => {
-        if (Array.isArray(response)) return response;
-        if (response?.results) return response.results;
+        console.log('getBrandWarehouseStock raw response:', response);
+        if (Array.isArray(response)) {
+          console.log('Response is array, length:', response.length);
+          return response;
+        }
+        if (response?.results) {
+          console.log('Response has results, length:', response.results.length);
+          return response.results;
+        }
+        console.log('Response format not recognized, returning empty array');
         return [];
       }),
       catchError((error) => {
