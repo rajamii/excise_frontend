@@ -66,10 +66,10 @@ export class RequisitionComponent implements OnInit {
     this.loadRequisitionData();
   }
 
-  navigateTo(route: string){
-        this.router.navigate(["/dev-import-permit"]);  
-    }
-  
+  navigateTo(route: string) {
+    this.router.navigate(["/dev-import-permit"]);
+  }
+
   private loadRequisitionData(): void {
     if (!this.isBrowser) {
       return;
@@ -78,7 +78,7 @@ export class RequisitionComponent implements OnInit {
     this.enaRequisitionService.getRequisitions().subscribe({
       next: (data: any[]) => {
         console.log('Raw backend data:', data); // Debug log
-        
+
         // Sort by submission time (newest first)
         data.sort((a: any, b: any) => {
           const dateA = new Date(a.requisitionDate || a.requisition_date || a.createdAt || a.created_at).getTime();
@@ -90,11 +90,11 @@ export class RequisitionComponent implements OnInit {
         const mappedData: TableData[] = data.map((item: any) => {
           const refNo = item.ourRefNo || item.our_ref_no || 'N/A';
           const reqDate = item.requisitionDate || item.requisition_date;
-          const distilleryName = item.liftedFromDistilleryName || item.lifted_from_distillery_name || 
-                                 item.liftedFrom || item.lifted_from || 'Unknown';
+          const distilleryName = item.liftedFromDistilleryName || item.lifted_from_distillery_name ||
+            item.liftedFrom || item.lifted_from || 'Unknown';
           const status = item.status || 'Pending';
           const amount = item.totalbl || item.totalBl || item.brAmount || item.br_amount || '0.00';
-          
+
           // Map allowed actions from backend
           const allowedActions = item.allowedActions || item.allowed_actions || [];
 
@@ -108,7 +108,7 @@ export class RequisitionComponent implements OnInit {
             commissionerStatus: status,
             forwardedToCommissioner: true,
             allowedActions: allowedActions,
-            canCancel: item.canInitiateCancellation || item.can_initiate_cancellation || false
+            canCancel: (status.toUpperCase() === 'APPROVED') || item.canInitiateCancellation || item.can_initiate_cancellation || false
           };
         });
 
@@ -141,7 +141,7 @@ export class RequisitionComponent implements OnInit {
 
   getRequisitionStatusCount(status: string): number {
     const targetStatus = status.toUpperCase();
-    
+
     // Strict check for APPROVED to avoid counting 'ApprovedByCommissioner'
     if (targetStatus === 'APPROVED') {
       return this.filteredRequisitionData.filter(item =>
@@ -154,7 +154,7 @@ export class RequisitionComponent implements OnInit {
         item.status.toUpperCase() === targetStatus
       ).length;
     }
-    
+
     return this.filteredRequisitionData.filter(item =>
       item.status.toLowerCase().includes(status.toLowerCase())
     ).length;
@@ -163,7 +163,7 @@ export class RequisitionComponent implements OnInit {
   getPriority(item: TableData): string {
     const submissionDate = new Date(item.submissionDate.split('/').reverse().join('-'));
     const daysSinceSubmission = Math.floor((new Date().getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (item.status.toUpperCase() === 'PENDING' && daysSinceSubmission > 7) {
       return 'urgent';
     } else if (item.status.toUpperCase() === 'PENDING' && daysSinceSubmission > 3) {
@@ -306,7 +306,8 @@ export class RequisitionComponent implements OnInit {
     this.enaRequisitionService.performAction((item as any).id, 'APPROVE').subscribe({
       next: (response) => {
         alert(`Action successful! Status updated to: ${response.data.status}`);
-        this.loadRequisitionData(); // Reload data
+        // Update local item
+        this.updateLocalItem(response.data);
       },
       error: (error) => {
         console.error('Error performing action:', error);
@@ -324,7 +325,8 @@ export class RequisitionComponent implements OnInit {
     this.enaRequisitionService.performAction((item as any).id, 'REJECT').subscribe({
       next: (response) => {
         alert(`Action successful! Status updated to: ${response.data.status}`);
-        this.loadRequisitionData(); // Reload data
+        // Update local item
+        this.updateLocalItem(response.data);
       },
       error: (error) => {
         console.error('Error performing action:', error);
@@ -338,8 +340,8 @@ export class RequisitionComponent implements OnInit {
   }
 
   isForwardedToCommissioner(item: TableData): boolean {
-    return item.status.toLowerCase().includes('forwarded') || 
-           item.status.toLowerCase().includes('commissioner');
+    return item.status.toLowerCase().includes('forwarded') ||
+      item.status.toLowerCase().includes('commissioner');
   }
 
   canPerformAction(item: TableData): boolean {
@@ -383,9 +385,9 @@ export class RequisitionComponent implements OnInit {
       }
     });
   }
-  
+
   clearAllRequisitionData(): void {
-      alert('Clear data functionality is disabled for backend data.');
+    alert('Clear data functionality is disabled for backend data.');
   }
 
   requestCancellation(item: TableData): void {
@@ -404,5 +406,36 @@ export class RequisitionComponent implements OnInit {
     this.selectedRequisitionRef = '';
     // Refresh data in case cancellation was submitted
     this.loadRequisitionData();
+  }
+
+  private updateLocalItem(updatedItem: any) {
+    if (!updatedItem) return;
+
+    // Find item by ID
+    const index = this.requisitionData.findIndex(item => item.id === updatedItem.id);
+    if (index !== -1) {
+      // Map backend response to TableData
+      // We reuse the mapping logic roughly
+      const mappedItem: TableData = {
+        id: updatedItem.id,
+        referenceNo: updatedItem.ourRefNo || updatedItem.our_ref_no || this.requisitionData[index].referenceNo,
+        submissionDate: this.requisitionData[index].submissionDate, // Keep original or re-parse updatedItem.created_at
+        distilleryName: this.requisitionData[index].distilleryName, // Keep original
+        status: updatedItem.status || this.requisitionData[index].status,
+        amount: this.requisitionData[index].amount, // Keep original
+        commissionerStatus: updatedItem.status,
+        forwardedToCommissioner: true,
+        allowedActions: updatedItem.allowedActions || updatedItem.allowed_actions || [],
+        canCancel: (updatedItem.status.toUpperCase() === 'APPROVED')
+      };
+
+      // Update list
+      this.requisitionData[index] = mappedItem;
+
+      // Re-apply filters to update view
+      this.applyRequisitionFilters();
+
+      console.log('Updated local item:', mappedItem);
+    }
   }
 }

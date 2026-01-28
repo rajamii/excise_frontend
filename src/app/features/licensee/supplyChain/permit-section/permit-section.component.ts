@@ -8,6 +8,7 @@ import { RequisitionComponent } from "../supplychaincomponents/requisition/requi
 import { RevalidationComponent } from "../supplychaincomponents/revalidation/revalidation.component";
 import { SupplyChainService } from "../services/supplychain.service";
 
+
 interface PermitData {
   referenceNo: string;
   submissionDate: Date;
@@ -15,8 +16,11 @@ interface PermitData {
   status: string;
   amount: number;
   type: "requisition" | "revalidation" | "cancellation" | "transit";
+
   allowedActions?: string[];
-  id?: number; // Added to support actions requiring ID
+  id?: number;
+  originalId?: number; // For mapping backend ID
+  details?: any; // To store full object if needed
 }
 
 @Component({
@@ -29,6 +33,7 @@ interface PermitData {
 export class PermitSectionComponent implements OnInit, OnDestroy {
   activeTab = "requisition";
   searchName = "";
+  // ... existing properties ...
   selectedDate = "";
   selectedMonth = "";
   selectedYear = "";
@@ -37,31 +42,27 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
   isViewingApplication = false;
   private routerSubscription?: Subscription;
 
-  // Sample data matching the .NET dashboard image
-  // Requisition data is now handled by the shared RequisitionComponent
-  // This array only contains data for other permit types (revalidation, cancellation, transit)
   allPermits: PermitData[] = [];
 
   constructor(
     private router: Router,
-    private supplyChainService: SupplyChainService
-  ) {}
+    private supplyChainService: SupplyChainService,
+  ) { }
 
   ngOnInit(): void {
-    // Listen to router events to determine if we're viewing an individual application
+    // ... existing router logic ...
     this.routerSubscription = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        // Check if the current URL contains child routes (indicating an individual application view)
         this.isViewingApplication =
           event.urlAfterRedirects.includes("/app-permit-section/") &&
           (event.urlAfterRedirects.includes("/requisition/") ||
             event.urlAfterRedirects.includes("/revalidation/") ||
             event.urlAfterRedirects.includes("/cancellation/") ||
-            event.urlAfterRedirects.includes("/transit/"));
+            event.urlAfterRedirects.includes("/transit/")
+          );
       });
 
-    // Check initial route
     this.isViewingApplication =
       this.router.url.includes("/app-permit-section/") &&
       (this.router.url.includes("/requisition/") ||
@@ -70,9 +71,12 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
         this.router.url.includes("/transit/"));
 
     this.loadCancellationData();
+    this.loadCancellationData();
   }
 
+
   loadCancellationData() {
+    // ... existing cancellation load logic ...
     this.supplyChainService.getCancellations().subscribe({
       next: (data) => {
         const cancellations: PermitData[] = data.map((item: any) => ({
@@ -85,19 +89,17 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
           allowedActions: item.allowedActions || item.allowed_actions || [],
           id: item.id
         }));
-        console.log("Mapped Cancellations:", cancellations);
-        
-        // Merge or replace cancellation data in allPermits
-        // For now, we'll replace the static sample data with this real data + other static samples if needed
-        // Assuming we only want real cancellation data for now or appending it
+
         this.allPermits = [
-          ...this.allPermits.filter(p => p.type !== 'cancellation'), // Remove old cancellation mock data
+          ...this.allPermits.filter(p => p.type !== 'cancellation'),
           ...cancellations
         ];
       },
       error: (err) => console.error('Error fetching cancellations', err)
     });
   }
+
+
 
   ngOnDestroy(): void {
     if (this.routerSubscription) {
@@ -107,6 +109,7 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
 
   setActiveTab(tab: string): void {
     this.activeTab = tab;
+    this.resetPagination();
   }
   getFilteredData(): PermitData[] {
     let filtered = this.allPermits.filter(
@@ -170,16 +173,17 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     this.selectedYear = "";
     this.selectedDistillery = "";
     this.selectedStatus = "";
+    this.resetPagination();
   }
 
   approveCancellation(permit: PermitData): void {
     if (!permit.id) {
-        console.error('Permit ID missing for approval');
-        return;
+      console.error('Permit ID missing for approval');
+      return;
     }
-    
+
     if (confirm('Are you sure you want to approve this cancellation request?')) {
-      this.supplyChainService.performCancellationAction(permit.id, 'APPROVE', 'permit-section')
+      this.supplyChainService.performCancellationAction(permit.id, 'APPROVE', 'Approved by Permit Section')
         .subscribe({
           next: (res) => {
             alert('Cancellation approved successfully');
@@ -194,9 +198,12 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
   viewPermitSlip(permit: PermitData): void {
     console.log("Viewing permit slip for:", permit.referenceNo);
-    alert(`Viewing permit slip for ${permit.referenceNo}`);
+    alert(`Viewing permit slip for ${permit.referenceNo
+      }`);
   }
 
   printApproval(permit: PermitData): void {
@@ -278,21 +285,22 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
       requisition: "Requisition",
       revalidation: "Revalidation",
       cancellation: "Cancellation",
-      transit: "Transit",
+      transit: "Transit"
+
     };
     return titles[this.activeTab] || "Permit";
   }
 
   // Summary card methods
   getPendingCount(): number {
-    return this.getFilteredData().filter(permit => 
+    return this.getFilteredData().filter(permit =>
       permit.status.toLowerCase().includes('pending')
     ).length;
   }
 
   getApprovedCount(): number {
-    return this.getFilteredData().filter(permit => 
-      permit.status.toLowerCase().includes('approved') || 
+    return this.getFilteredData().filter(permit =>
+      permit.status.toLowerCase().includes('approved') ||
       permit.status.toLowerCase().includes('generated')
     ).length;
   }
@@ -338,5 +346,45 @@ export class PermitSectionComponent implements OnInit, OnDestroy {
 
   getTotalCountForActiveTab(): number {
     return this.allPermits.filter(permit => permit.type === this.activeTab).length;
+  }
+
+  // Pagination Logic
+  Math = Math;
+  pageSizeOptions: number[] = [5, 10, 15, 20];
+  currentPage: number = 1;
+  pageSize: number = 10;
+
+  getCurrentPage(): number {
+    return this.currentPage;
+  }
+
+  getPageSize(): number {
+    return this.pageSize;
+  }
+
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil((this.getFilteredData()?.length || 0) / this.pageSize));
+  }
+
+  getPaged(): PermitData[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return (this.getFilteredData() || []).slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    const total = this.getTotalPages();
+    if (page < 1 || page > total) return;
+    this.currentPage = page;
+  }
+
+  changePageSize(size: string | number): void {
+    const s = typeof size === "string" ? parseInt(size, 10) : size;
+    if (!s) return;
+    this.pageSize = s;
+    this.currentPage = 1;
+  }
+
+  resetPagination(): void {
+    this.currentPage = 1;
   }
 }

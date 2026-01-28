@@ -20,13 +20,17 @@
             <div class="col">
               <h1 class="h3 mb-1 fw-bold">Dashboard</h1>
               <p class="mb-0 small opacity-75">
-                Licensees: Sikkim Distilleries Ltd (01202506012)
+                Licensees: {{ currentProfile?.manufacturingUnitName || 'Loading...' }} ({{ currentProfile?.licenseeId
+                || '...' }})
               </p>
+            </div>
+            <div class="col-md-4 d-flex justify-content-end align-items-center position-relative">
+              <!-- Switch Unit Removed as per request -->
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
                 <button class="btn btn-light bg-success btn-sm text-white">
-                  Distillery
+                  {{ currentProfile?.licenseType || 'Distillery' }}
                 </button>
                 <button class="btn btn-sm bg-success text-white" (click)="viewWallet()">
                   <i class="bi bi-grid-3x3-gap me-1"></i> View Wallet
@@ -88,34 +92,34 @@
           <div class="table-responsive">
             <!-- Requisition Tab Content -->
             @if (activeTab === "requisition") {
-              <app-requisition></app-requisition>
+            <app-requisition></app-requisition>
             }
 
             <!-- Revalidation Tab Content -->
             @if (activeTab === "revalidation") {
-              <app-revalidation></app-revalidation>
+            <app-revalidation></app-revalidation>
             }
 
             <!-- Cancellation Tab Content -->
             @if (activeTab === "cancellation") {
-              <app-cancellation></app-cancellation>
+            <app-cancellation></app-cancellation>
             }
 
             <!-- Transit Tab Content -->
             @if (activeTab === "transit") {
-              <app-transit></app-transit>
+            <app-transit></app-transit>
             }
 
             <!-- Hologram Tab Content -->
             @if (activeTab === "hologram") {
-              <app-hologramprocurement></app-hologramprocurement>
+            <app-hologramprocurement></app-hologramprocurement>
             }
 
             <!-- OLD HOLOGRAM CODE REMOVED - NOW IN hologramprocurement component -->
 
             <!-- Hologram Request Tab Content -->
             @if (activeTab === "hologram-request") {
-              <app-hologramrequest></app-hologramrequest>
+            <app-hologramrequest></app-hologramrequest>
             }
 
           </div>

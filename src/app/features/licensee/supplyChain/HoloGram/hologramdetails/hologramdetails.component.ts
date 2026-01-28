@@ -1,7 +1,8 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HologramDataService } from '../../services/hologram-data.service';
 
 export interface HologramRecord {
   id: number;
@@ -12,11 +13,12 @@ export interface HologramRecord {
   toSerial: string;
   numberOfHolograms: number;
   remarks?: string;
-  status: 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL';
+  status: 'PENDING_ARRIVAL' | 'ARRIVED' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' | 'Cartoon Assigned' | 'Completed' | string;
   approvedDate?: string;
   arrivedDate?: string;
   procurementType?: 'Local' | 'Export' | 'Defence'; // Add procurement type
   supplyChainData?: any;
+  carton_details?: any[]; // Raw backend data
 }
 
 
@@ -54,23 +56,36 @@ export class HologramdetailsComponent implements OnInit {
   // Update arrival properties
   showUpdateModal: boolean = false;
   selectedRecordForUpdate: HologramRecord | null = null;
-  
+
+  // Roll Details Modal properties
+  showRollDetailsModal: boolean = false;
+  selectedRecordForRollDetails: HologramRecord | null = null;
+
   // Saved cartons list
   savedCartons: Array<{
+    cartoonNumber: string;
+    baseCartoonNumber?: string; // Original carton number without suffix
+    fromSerial: string;
+    toSerial: string;
+    numberOfHolograms: number;
+    type?: string;  // Hologram type (LOCAL, EXPORT, DEFENCE)
+  }> = [];
+
+  // Current carton being entered
+  currentCarton: {
     cartoonNumber: string;
     fromSerial: string;
     toSerial: string;
     numberOfHolograms: number;
-  }> = [];
-  
-  // Current carton being entered
-  currentCarton = {
-    cartoonNumber: '',
-    fromSerial: '',
-    toSerial: '',
-    numberOfHolograms: 0
-  };
-  
+    type: string;  // Hologram type (LOCAL, EXPORT, DEFENCE)
+  } = {
+      cartoonNumber: '',
+      fromSerial: '',
+      toSerial: '',
+      numberOfHolograms: 0,
+      type: ''
+    };
+
   serialRangeValidationError: string = '';
   totalCalculatedHolograms: number = 0;
 
@@ -96,353 +111,83 @@ export class HologramdetailsComponent implements OnInit {
     this.selectedYear = '';
   }
 
+  private hologramService = inject(HologramDataService);
+
   ngOnInit() {
     this.loadHologramRecords();
-    this.addTestDataForArrivalTesting();
   }
 
   loadHologramRecords() {
-    // Load hologram requests from supply chain and officer approvals
-    this.loadSupplyChainHologramRequests();
-    this.applyFilters();
-  }
+    this.hologramService.getProcurements().subscribe({
+      next: (procurements) => {
+        // Filter for OIC relevant items:
+        // 1. Payment Completed (New/Pending Assignment)
+        // 2. Cartoon Assigned / Arrived (Already in register)
 
-  loadSupplyChainHologramRequests() {
-    // Load hologram requests from supply chain (dev-hologram page)
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const hologramApplications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+        // We might also want to include 'Approved by Commissioner' if that implies payment is next/done?
+        // But user said "When payment is completed".
 
-    // Load approved entries from officer in-charge
-    const approvedEntries = JSON.parse(localStorage.getItem('approvedHologramEntries') || '[]');
+        const relevantRecords = procurements.filter(p =>
+          p.status === 'Payment Completed' ||
+          p.status === 'Cartoon Assigned' ||
+          p.status === 'ARRIVED' ||
+          p.paymentStatus === 'Success' // Fallback check
+        );
 
-    // FILTER: Only include YB (Hologram Procurement) entries, exclude HRQ (Hologram Request) entries
-    // This component shows PROCUREMENT register, not REQUEST register
-    console.log('📋 Total hologramRequests before filter:', hologramRequests.length);
-    console.log('📋 Total hologramApplications before filter:', hologramApplications.length);
-    
-    const filteredRequests = hologramRequests.filter((item: any) => {
-      const refNo = item.refNo || item.referenceNo || '';
-      const isYB = refNo.startsWith('YB/');
-      
-      if (!isYB && refNo) {
-        console.log(`🚫 Filtering out hologramRequest: ${refNo} (not YB - not procurement)`);
-      }
-      
-      return isYB;
-    });
-    
-    const filteredApplications = hologramApplications.filter((item: any) => {
-      const refNo = item.refNo || item.referenceNo || '';
-      const isYB = refNo.startsWith('YB/');
-      
-      if (!isYB && refNo) {
-        console.log(`🚫 Filtering out hologramApplication: ${refNo} (not YB - not procurement)`);
-      }
-      
-      return isYB;
-    });
-    
-    console.log('✅ Filtered hologramRequests (YB only):', filteredRequests.length);
-    console.log('✅ Filtered hologramApplications (YB only):', filteredApplications.length);
-
-    // Convert supply chain hologram data to register format
-    // CRITICAL FIX: Create separate records for each type (Local, Export, Defence) that has quantity > 0
-    const supplyChainRecords: HologramRecord[] = [];
-    
-    // USE FILTERED ARRAYS - NOT THE ORIGINAL ONES!
-    [...filteredRequests, ...filteredApplications].forEach((item: any, index: number) => {
-      const baseRefNo = item.refNo || item.referenceNo || `HRQ/${new Date().getFullYear()}/${String(index + 1).padStart(3, '0')}`;
-      const baseDate = item.date || new Date().toISOString().split('T')[0];
-      const companyName = item.companyName || 'Unknown Company';
-      
-      // Create separate record for LOCAL if quantity > 0
-      if (item.localQtyLakh && item.localQtyLakh > 0) {
-        supplyChainRecords.push({
-          id: (1000 + index) * 10 + 1, // Unique ID for LOCAL
-          date: baseDate,
-          ourRefNo: baseRefNo,
-          cartoonNumber: item.cartoonNumber || '',
-          fromSerial: item.fromSerial || '',
-          toSerial: item.toSerial || '',
-          numberOfHolograms: item.localQtyLakh,
-          remarks: `Supply chain hologram request - ${companyName} (Local)`,
-          status: this.determineStatus(item),
-          approvedDate: item.approvedDate,
-          arrivedDate: item.arrivedDate,
-          procurementType: 'Local',
-          supplyChainData: {
-            ...item,
-            procurementType: 'Local',
-            localQtyLakh: item.localQtyLakh,
-            exportQtyLakh: 0,
-            defenceQtyLakh: 0,
-            // Ensure payment flags exist (default to false if not set)
-            paymentSlipUploaded: item.paymentSlipUploaded === true,
-            paymentCompleted: item.paymentCompleted === true
+        this.hologramRecords = relevantRecords.map(p => {
+          // Determine internal status based on backend status
+          let internalStatus: 'PENDING_ARRIVAL' | 'ARRIVED' = 'PENDING_ARRIVAL';
+          if (p.status === 'Cartoon Assigned' || p.status === 'ARRIVED') {
+            internalStatus = 'ARRIVED';
           }
+
+          // Map procurement type from quantities (heuristic if not explicit)
+          let pType: 'Local' | 'Export' | 'Defence' = 'Local';
+          if (Number(p.exportQty) > 0) pType = 'Export';
+          else if (Number(p.defenceQty) > 0) pType = 'Defence';
+
+          // Flatten carton details if present
+          // Backend might send `carton_details` as a list of assigned cartons.
+          // For the main table, we show summary or specific fields.
+          // If status is ARRIVED, we might want to show details.
+
+          // Ensure we capture carton details regardless of naming variation
+          const rawDetails = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
+          if (rawDetails.length > 0) {
+            console.log(`Debug Mapping [${p.refNo}]: Found details. Length=${rawDetails.length}`, rawDetails);
+          } else {
+            console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
+          }
+
+          return {
+            id: p.id!,
+            date: p.date!,
+            ourRefNo: p.refNo!,
+            cartoonNumber: rawDetails[0]?.cartoonNumber || rawDetails[0]?.cartoon_number || '', // Handle both camelCase and snake_case keys
+            fromSerial: rawDetails[0]?.fromSerial || rawDetails[0]?.from_serial || '',
+            toSerial: rawDetails[0]?.toSerial || rawDetails[0]?.to_serial || '',
+            // Use dynamic available count if present (from backend serializer), otherwise fall back to calculated total
+            numberOfHolograms: (p as any).total_available_holograms !== undefined ? (p as any).total_available_holograms : (Number(p.localQty) + Number(p.exportQty) + Number(p.defenceQty)),
+            remarks: p.remarks || `Hologram procurement (${pType})`,
+            status: internalStatus,
+            approvedDate: p.date,
+            arrivedDate: (p as any).updated_at,
+            procurementType: pType,
+            carton_details: rawDetails,
+            supplyChainData: {
+              ...p,
+              paymentCompleted: true
+            }
+          };
         });
-      }
-      
-      // Create separate record for EXPORT if quantity > 0
-      if (item.exportQtyLakh && item.exportQtyLakh > 0) {
-        supplyChainRecords.push({
-          id: (1000 + index) * 10 + 2, // Unique ID for EXPORT
-          date: baseDate,
-          ourRefNo: baseRefNo,
-          cartoonNumber: item.cartoonNumber || '',
-          fromSerial: item.fromSerial || '',
-          toSerial: item.toSerial || '',
-          numberOfHolograms: item.exportQtyLakh,
-          remarks: `Supply chain hologram request - ${companyName} (Export)`,
-          status: this.determineStatus(item),
-          approvedDate: item.approvedDate,
-          arrivedDate: item.arrivedDate,
-          procurementType: 'Export',
-          supplyChainData: {
-            ...item,
-            procurementType: 'Export',
-            localQtyLakh: 0,
-            exportQtyLakh: item.exportQtyLakh,
-            defenceQtyLakh: 0,
-            // Ensure payment flags exist (default to false if not set)
-            paymentSlipUploaded: item.paymentSlipUploaded === true,
-            paymentCompleted: item.paymentCompleted === true
-          }
-        });
-      }
-      
-      // Create separate record for DEFENCE if quantity > 0
-      if (item.defenceQtyLakh && item.defenceQtyLakh > 0) {
-        supplyChainRecords.push({
-          id: (1000 + index) * 10 + 3, // Unique ID for DEFENCE
-          date: baseDate,
-          ourRefNo: baseRefNo,
-          cartoonNumber: item.cartoonNumber || '',
-          fromSerial: item.fromSerial || '',
-          toSerial: item.toSerial || '',
-          numberOfHolograms: item.defenceQtyLakh,
-          remarks: `Supply chain hologram request - ${companyName} (Defence)`,
-          status: this.determineStatus(item),
-          approvedDate: item.approvedDate,
-          arrivedDate: item.arrivedDate,
-          procurementType: 'Defence',
-          supplyChainData: {
-            ...item,
-            procurementType: 'Defence',
-            localQtyLakh: 0,
-            exportQtyLakh: 0,
-            defenceQtyLakh: item.defenceQtyLakh,
-            // Ensure payment flags exist (default to false if not set)
-            paymentSlipUploaded: item.paymentSlipUploaded === true,
-            paymentCompleted: item.paymentCompleted === true
-          }
-        });
+
+        this.applyFilters();
+        console.log('Loaded hologram records from backend:', this.hologramRecords);
+      },
+      error: (err) => {
+        console.error('Error loading holograms:', err);
       }
     });
-
-    // Convert officer approved entries - FILTER to only include YB (procurement) entries
-    const officerRecords = approvedEntries
-      .filter((entry: any) => {
-        const refNo = entry.ourRefNo || '';
-        const isYB = refNo.startsWith('YB/');
-        
-        if (!isYB && refNo) {
-          console.log(`🚫 Filtering out officer entry: ${refNo} (not YB - not procurement)`);
-        }
-        
-        return isYB;
-      })
-      .map((entry: any) => ({
-        id: entry.id,
-        date: entry.date,
-        ourRefNo: entry.ourRefNo,
-        cartoonNumber: entry.cartoonNumber || '',
-        fromSerial: entry.fromSerial || '',
-        toSerial: entry.toSerial || '',
-        numberOfHolograms: entry.numberOfHolograms,
-        remarks: entry.remarks,
-        status: entry.status,
-        approvedDate: entry.approvedDate,
-        arrivedDate: entry.arrivedDate
-      }));
-
-    // Combine and deduplicate records based on ourRefNo + procurementType
-    const allRecords = [...supplyChainRecords, ...officerRecords];
-    const uniqueRecordsMap = new Map();
-
-    // Deduplicate by ourRefNo + procurementType, keeping the most recent/complete record
-    allRecords.forEach(record => {
-      const recordKey = this.getRecordKey(record);
-      const existingRecord = uniqueRecordsMap.get(recordKey);
-
-      if (!existingRecord) {
-        // No existing record, add this one
-        uniqueRecordsMap.set(recordKey, record);
-      } else {
-        // Record exists, keep the one with more complete data or higher status
-        const shouldReplace = this.shouldReplaceRecord(existingRecord, record);
-        if (shouldReplace) {
-          uniqueRecordsMap.set(recordKey, record);
-        }
-      }
-    });
-
-    // Convert map back to array
-    this.hologramRecords = Array.from(uniqueRecordsMap.values());
-    
-    // FINAL FILTER: Ensure no HRQ (request) entries slip through
-    // Only keep YB (procurement) entries - this is the PROCUREMENT register
-    const beforeFinalFilter = this.hologramRecords.length;
-    this.hologramRecords = this.hologramRecords.filter(record => {
-      const refNo = record.ourRefNo || '';
-      const isYB = refNo.startsWith('YB/');
-      
-      if (!isYB) {
-        console.log(`🚫 FINAL FILTER: Removing non-YB entry: ${refNo} (not procurement)`);
-      }
-      
-      return isYB;
-    });
-    
-    console.log(`✅ Final records count: ${this.hologramRecords.length} (filtered out ${beforeFinalFilter - this.hologramRecords.length} non-YB entries)`);
-
-    // Add sample data if no records exist (ensure unique reference numbers)
-    // Sample data for PROCUREMENT register (YB/ prefix)
-    if (this.hologramRecords.length === 0) {
-      const sampleRecords = [
-        {
-          id: 1,
-          date: '2024-11-03',
-          ourRefNo: 'YB/1/BREW/25',
-          cartoonNumber: '',
-          fromSerial: '',
-          toSerial: '',
-          numberOfHolograms: 1000, // 1000 units - Ready for update
-          remarks: 'Hologram procurement for Premium Whisky production - Approved by Commissioner - PAYMENT COMPLETED ✅',
-          status: 'PENDING_ARRIVAL' as const,
-          approvedDate: '2024-11-03',
-          supplyChainData: {
-            refNo: 'YB/1/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 1000, // 1000 units (field name is misleading)
-            exportQtyLakh: 0,
-            defenceQtyLakh: 0,
-            status: 'APPROVED',
-            paymentSlipUploaded: true,  // Payment slip uploaded
-            paymentCompleted: true      // ✅ PAYMENT COMPLETED - Button will be ENABLED
-          }
-        },
-        {
-          id: 2,
-          date: '2024-11-02',
-          ourRefNo: 'YB/2/BREW/25',
-          cartoonNumber: '',
-          fromSerial: '',
-          toSerial: '',
-          numberOfHolograms: 5000, // 5000 units - Ready for update
-          remarks: 'Hologram procurement for Export Rum - Approved by Commissioner',
-          status: 'PENDING_ARRIVAL' as const,
-          approvedDate: '2024-11-02',
-          supplyChainData: {
-            refNo: 'YB/2/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 0,
-            exportQtyLakh: 5000, // 5000 units (field name is misleading)
-            defenceQtyLakh: 0,
-            status: 'APPROVED'
-          }
-        },
-        {
-          id: 3,
-          date: '2024-11-01',
-          ourRefNo: 'YB/3/BREW/25',
-          cartoonNumber: 'CTN001',
-          fromSerial: 'HG001001',
-          toSerial: 'HG002000',
-          numberOfHolograms: 2000, // 2000 units - Already arrived
-          remarks: 'Hologram procurement for Local Beer production - Completed',
-          status: 'ARRIVED' as const,
-          approvedDate: '2024-11-01',
-          arrivedDate: '2024-11-01',
-          supplyChainData: {
-            refNo: 'YB/3/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 2000, // 2000 units (field name is misleading)
-            exportQtyLakh: 0,
-            defenceQtyLakh: 0,
-            status: 'APPROVED'
-          }
-        },
-        {
-          id: 4,
-          date: '2024-10-30',
-          ourRefNo: 'YB/4/BREW/25',
-          cartoonNumber: '',
-          fromSerial: '',
-          toSerial: '',
-          numberOfHolograms: 1500, // 1500 units - Ready for update
-          remarks: 'Hologram procurement for Defence supplies - Approved by Commissioner',
-          status: 'PENDING_ARRIVAL' as const,
-          approvedDate: '2024-10-30',
-          supplyChainData: {
-            refNo: 'YB/4/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 0,
-            exportQtyLakh: 0,
-            defenceQtyLakh: 1500, // 1500 units (field name is misleading)
-            status: 'APPROVED'
-          }
-        },
-        {
-          id: 5,
-          date: '2024-10-28',
-          ourRefNo: 'YB/5/BREW/25',
-          cartoonNumber: 'CTN002',
-          fromSerial: 'HG003001',
-          toSerial: 'HG003500',
-          numberOfHolograms: 500, // 500 units - Already arrived
-          remarks: 'Hologram procurement for Special Edition Vodka - Completed',
-          status: 'ARRIVED' as const,
-          approvedDate: '2024-10-28',
-          arrivedDate: '2024-10-29',
-          supplyChainData: {
-            refNo: 'YB/5/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 500, // 500 units (field name is misleading)
-            exportQtyLakh: 0,
-            defenceQtyLakh: 0,
-            status: 'APPROVED'
-          }
-        },
-        {
-          id: 6,
-          date: '2024-10-25',
-          ourRefNo: 'YB/6/BREW/25',
-          cartoonNumber: '',
-          fromSerial: '',
-          toSerial: '',
-          numberOfHolograms: 1000, // 1000 units - Waiting for approval
-          remarks: 'Hologram procurement for Premium Gin production - Waiting for Commissioner Approval',
-          status: 'PENDING_APPROVAL' as const,
-          supplyChainData: {
-            refNo: 'YB/6/BREW/25',
-            companyName: 'Yuksom Breweries Ltd.',
-            localQtyLakh: 1000, // 1000 units (field name is misleading)
-            exportQtyLakh: 0,
-            defenceQtyLakh: 0,
-            status: 'Submitted'
-          }
-        }
-      ];
-
-      // Apply deduplication to sample data as well
-      const uniqueSampleMap = new Map();
-      sampleRecords.forEach(record => {
-        uniqueSampleMap.set(record.ourRefNo, record);
-      });
-
-      this.hologramRecords = Array.from(uniqueSampleMap.values());
-    }
   }
 
   calculateTotalHolograms(item: any): number {
@@ -504,8 +249,8 @@ export class HologramdetailsComponent implements OnInit {
       'REJECTED': 0
     };
 
-    const existingPriority = statusPriority[existing.status] || 0;
-    const newPriority = statusPriority[newRecord.status] || 0;
+    const existingPriority = (statusPriority as any)[existing.status] || 0;
+    const newPriority = (statusPriority as any)[newRecord.status] || 0;
 
     // Keep the record with higher status priority
     if (newPriority > existingPriority) {
@@ -586,66 +331,106 @@ export class HologramdetailsComponent implements OnInit {
     // Button should only be active if:
     // 1. Status is PENDING_ARRIVAL (approved by commissioner)
     // 2. Payment has been COMPLETED (not just slip uploaded)
-    if (record.status !== 'PENDING_ARRIVAL') {
+    // 3. Status is NOT 'ARRIVED', 'Cartoon Assigned' or 'Completed' (already processed)
+    //    UNLESS data is missing (cartonNumber is empty/null/-)
+
+    const status = record.status;
+    if (status === 'ARRIVED' || status === 'Cartoon Assigned' || status === 'Completed') {
+      const hasDetails = record.carton_details && record.carton_details.length > 0;
+      console.log(`Debug Button [${record.ourRefNo}]: Status=${status}, HasDetails=${hasDetails}, Len=${record.carton_details?.length}`);
+
+      // Fix for missing data: If arrived but NO carton details are present in the list
+      // stricter check than just cartoonNumber string
+      if (!hasDetails) {
+        return true;
+      }
       return false;
     }
-    
+
+    if (status !== 'PENDING_ARRIVAL') {
+      return false;
+    }
+
     // Check if payment has been completed for this record
     return this.isPaymentCompleted(record);
   }
-  
+
   // Check if payment has been COMPLETED for this hologram record
   // This is different from paymentSlipUploaded - payment must be actually made
   private isPaymentCompleted(record: HologramRecord): boolean {
-    console.log(`🔍 Checking payment completion for ${record.ourRefNo} (${record.procurementType})`);
-    
+    // console.log(`🔍 Checking payment completion for ${record.ourRefNo} (${record.procurementType})`);
+
     // Check in supply chain data if payment is completed
     if (record.supplyChainData) {
-      console.log(`  - supplyChainData.paymentCompleted:`, record.supplyChainData.paymentCompleted);
+      // console.log(`  - supplyChainData.paymentCompleted:`, record.supplyChainData.paymentCompleted);
       // Check if paymentCompleted flag is set
       if (record.supplyChainData.paymentCompleted === true) {
-        console.log(`  ✅ Payment completed (from supplyChainData)`);
+        // console.log(`  ✅ Payment completed (from supplyChainData)`);
         return true;
       }
     }
-    
-    // Also check in hologramApplications storage
-    const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const matchingApp = applications.find((app: any) => 
-      app.refNo === record.ourRefNo && 
-      app.procurementType === record.procurementType
-    );
-    
-    console.log(`  - hologramApplications match:`, matchingApp ? 'found' : 'not found');
-    if (matchingApp) {
-      console.log(`    - paymentSlipUploaded:`, matchingApp.paymentSlipUploaded);
-      console.log(`    - paymentCompleted:`, matchingApp.paymentCompleted);
+
+    // Check local storage if available (browser only)
+    if (typeof localStorage !== 'undefined') {
+      // Also check in hologramApplications storage
+      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
+      const matchingApp = applications.find((app: any) =>
+        app.refNo === record.ourRefNo &&
+        app.procurementType === record.procurementType
+      );
+
+      // console.log(`  - hologramApplications match:`, matchingApp ? 'found' : 'not found');
+
+      // ONLY check paymentCompleted flag (not paymentSlipUploaded)
+      if (matchingApp && matchingApp.paymentCompleted === true) {
+        // console.log(`  ✅ Payment completed (from hologramApplications)`);
+        return true;
+      }
+
+      // Check in hologramRequests storage
+      const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
+      const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
+
+      // console.log(`  - hologramRequests match:`, matchingReq ? 'found' : 'not found');
+
+      // ONLY check paymentCompleted flag (not paymentSlipUploaded)
+      if (matchingReq && matchingReq.paymentCompleted === true) {
+        // console.log(`  ✅ Payment completed (from hologramRequests)`);
+        return true;
+      }
     }
-    
-    // ONLY check paymentCompleted flag (not paymentSlipUploaded)
-    if (matchingApp && matchingApp.paymentCompleted === true) {
-      console.log(`  ✅ Payment completed (from hologramApplications)`);
-      return true;
-    }
-    
-    // Check in hologramRequests storage
-    const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    const matchingReq = requests.find((req: any) => req.refNo === record.ourRefNo);
-    
-    console.log(`  - hologramRequests match:`, matchingReq ? 'found' : 'not found');
-    if (matchingReq) {
-      console.log(`    - paymentSlipUploaded:`, matchingReq.paymentSlipUploaded);
-      console.log(`    - paymentCompleted:`, matchingReq.paymentCompleted);
-    }
-    
-    // ONLY check paymentCompleted flag (not paymentSlipUploaded)
-    if (matchingReq && matchingReq.paymentCompleted === true) {
-      console.log(`  ✅ Payment completed (from hologramRequests)`);
-      return true;
-    }
-    
-    console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
+
+    // console.log(`  ❌ Payment NOT completed - button should be DISABLED`);
     return false;
+  }
+
+  // Track locked carton number and suffix counter
+  lockedCartonNumber: string = '';
+  cartonSuffixCounter: number = 0;
+
+  // Unlock carton number for editing
+  unlockCartonNumber(): void {
+    if (this.savedCartons.length > 0) {
+      const confirmUnlock = confirm(
+        `⚠️ Warning: Unlocking will remove all ${this.savedCartons.length} saved roll(s).\n\n` +
+        `This action cannot be undone. Do you want to continue?`
+      );
+      
+      if (!confirmUnlock) {
+        return;
+      }
+      
+      // Clear all saved cartons
+      this.savedCartons = [];
+      this.calculateTotalFromSavedCartons();
+    }
+    
+    // Unlock the carton
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
+    this.currentCarton.cartoonNumber = '';
+    
+    alert('✅ Carton number unlocked! You can now enter a new carton number.');
   }
 
   updateArrivalDetails(record: HologramRecord) {
@@ -656,29 +441,33 @@ export class HologramdetailsComponent implements OnInit {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: ''
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.showUpdateModal = true;
   }
 
   // Calculate hologram count for current carton being entered
   calculateCurrentCartonCount() {
     this.serialRangeValidationError = '';
-    
+
     if (this.currentCarton.fromSerial && this.currentCarton.toSerial) {
       const fromNum = this.extractSerialNumber(this.currentCarton.fromSerial);
       const toNum = this.extractSerialNumber(this.currentCarton.toSerial);
 
       if (fromNum && toNum && toNum >= fromNum) {
         this.currentCarton.numberOfHolograms = toNum - fromNum + 1;
-        
+
         // Real-time validation: Check if this would exceed the expected quantity
         if (this.selectedRecordForUpdate) {
           const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
           const newTotal = this.totalCalculatedHolograms + this.currentCarton.numberOfHolograms;
-          
+
           if (newTotal > expectedQuantity) {
             const remaining = expectedQuantity - this.totalCalculatedHolograms;
             this.serialRangeValidationError = `❌ This carton has ${this.currentCarton.numberOfHolograms.toLocaleString()} holograms, but only ${remaining.toLocaleString()} remaining! Total would be ${newTotal.toLocaleString()} which exceeds expected ${expectedQuantity.toLocaleString()}.`;
@@ -695,13 +484,25 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  // Helper to get suffix letter (a, b, c, ... z, aa, ab, etc.)
+  getSuffixLetter(index: number): string {
+    let suffix = '';
+    let num = index;
+    while (num >= 0) {
+      suffix = String.fromCharCode(97 + (num % 26)) + suffix;
+      num = Math.floor(num / 26) - 1;
+    }
+    return suffix;
+  }
+
   // Save current carton to the list
   saveCurrentCarton() {
-    // Validate current carton
-    if (!this.currentCarton.cartoonNumber.trim()) {
+    // First entry: validate carton number
+    if (!this.lockedCartonNumber && !this.currentCarton.cartoonNumber.trim()) {
       alert('Please enter carton number');
       return;
     }
+    
     if (!this.currentCarton.fromSerial.trim()) {
       alert('Please enter from serial number');
       return;
@@ -719,39 +520,70 @@ export class HologramdetailsComponent implements OnInit {
     if (this.selectedRecordForUpdate) {
       const expectedQuantity = this.selectedRecordForUpdate.numberOfHolograms;
       const newTotal = this.totalCalculatedHolograms + this.currentCarton.numberOfHolograms;
-      
+
       if (newTotal > expectedQuantity) {
         alert(`Cannot add this carton. Total would be ${newTotal.toLocaleString()} which exceeds expected ${expectedQuantity.toLocaleString()} holograms.`);
         return;
       }
     }
 
-    // Add to saved cartons
+    // Lock carton number on first save
+    if (!this.lockedCartonNumber) {
+      this.lockedCartonNumber = this.currentCarton.cartoonNumber.trim();
+      this.cartonSuffixCounter = 0;
+    }
+
+    // Generate suffix for this roll
+    const suffix = this.getSuffixLetter(this.cartonSuffixCounter);
+    const displayCartoonNumber = `${this.lockedCartonNumber}(${suffix})`;
+
+    // Add to saved cartons (include type and display name with suffix)
     this.savedCartons.push({
-      cartoonNumber: this.currentCarton.cartoonNumber,
+      cartoonNumber: displayCartoonNumber, // Display name with suffix
+      baseCartoonNumber: this.lockedCartonNumber, // Original base name
       fromSerial: this.currentCarton.fromSerial,
       toSerial: this.currentCarton.toSerial,
-      numberOfHolograms: this.currentCarton.numberOfHolograms
+      numberOfHolograms: this.currentCarton.numberOfHolograms,
+      type: this.currentCarton.type || this.getDefaultHologramType()
     });
+
+    // Increment suffix counter for next roll
+    this.cartonSuffixCounter++;
 
     // Update total
     this.calculateTotalFromSavedCartons();
 
-    // Reset current carton for next entry
+    // Reset only serial numbers for next entry (keep carton locked)
     this.currentCarton = {
-      cartoonNumber: '',
+      cartoonNumber: this.lockedCartonNumber, // Keep locked carton number
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: this.currentCarton.type || '' // Keep type if selected
     };
 
-    // Show success message
-    alert(`Carton saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
+    // Show success message with suffix
+    alert(`Roll ${displayCartoonNumber} saved successfully! Total: ${this.totalCalculatedHolograms.toLocaleString()} / ${this.selectedRecordForUpdate?.numberOfHolograms.toLocaleString()}`);
   }
 
   // Remove a saved carton
   removeSavedCarton(index: number) {
     this.savedCartons.splice(index, 1);
+    
+    // If all cartons removed, unlock the carton number
+    if (this.savedCartons.length === 0) {
+      this.lockedCartonNumber = '';
+      this.cartonSuffixCounter = 0;
+      this.currentCarton.cartoonNumber = '';
+    } else {
+      // Recalculate suffixes for remaining cartons
+      this.savedCartons.forEach((carton, idx) => {
+        const suffix = this.getSuffixLetter(idx);
+        carton.cartoonNumber = `${carton.baseCartoonNumber || this.lockedCartonNumber}(${suffix})`;
+      });
+      this.cartonSuffixCounter = this.savedCartons.length;
+    }
+    
     this.calculateTotalFromSavedCartons();
   }
 
@@ -774,11 +606,16 @@ export class HologramdetailsComponent implements OnInit {
 
   // Check if can save current carton
   canSaveCurrentCarton(): boolean {
+    const types = this.getAvailableHologramTypes();
+    // Only require type selection if multiple types are available
+    const typeValid = types.length <= 1 || this.currentCarton.type.trim() !== '';
+
     return this.currentCarton.cartoonNumber.trim() !== '' &&
-           this.currentCarton.fromSerial.trim() !== '' &&
-           this.currentCarton.toSerial.trim() !== '' &&
-           this.currentCarton.numberOfHolograms > 0 &&
-           this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
+      this.currentCarton.fromSerial.trim() !== '' &&
+      this.currentCarton.toSerial.trim() !== '' &&
+      this.currentCarton.numberOfHolograms > 0 &&
+      typeValid &&
+      this.serialRangeValidationError === ''; // Don't allow save if there's a validation error
   }
 
   extractSerialNumber(serial: string): number | null {
@@ -788,64 +625,55 @@ export class HologramdetailsComponent implements OnInit {
 
   saveArrivalUpdate() {
     if (this.selectedRecordForUpdate && this.validateUpdateForm()) {
-      // Store allocation data for this reference number
-      const allocationData = {
-        refNo: this.selectedRecordForUpdate.ourRefNo,
-        expectedQuantity: this.selectedRecordForUpdate.numberOfHolograms,
-        allocatedCartoons: this.savedCartons.map(carton => ({
-          cartoonNumber: carton.cartoonNumber,
-          allocatedRanges: [{
-            fromSerial: carton.fromSerial,
-            toSerial: carton.toSerial,
-            count: carton.numberOfHolograms
-          }]
-        })),
-        totalAllocated: this.totalCalculatedHolograms,
-        allocationDate: new Date().toISOString()
-      };
+      // Capture the current timestamp when officer saves the arrival
+      const currentTimestamp = new Date().toISOString();
       
-      localStorage.setItem(
-        `hologramAllocation_${this.selectedRecordForUpdate.ourRefNo}`,
-        JSON.stringify(allocationData)
-      );
+      // Prepare payload for backend
+      // We need to send 'carton_details' which seems to be what we want to save
+      // The backend expects 'carton_details' JSON.
+      // IMPORTANT: Include type for each carton to support multi-type procurements
 
-      // Process each carton separately
-      this.savedCartons.forEach((carton, index) => {
-        // Create a copy of the record for each carton
-        const cartonRecord = {
-          ...this.selectedRecordForUpdate!,
-          id: this.selectedRecordForUpdate!.id + index * 0.1, // Unique ID for each carton
-          cartoonNumber: carton.cartoonNumber,
-          fromSerial: carton.fromSerial,
-          toSerial: carton.toSerial,
-          numberOfHolograms: carton.numberOfHolograms,
-          status: 'ARRIVED' as const,
-          arrivedDate: new Date().toISOString().split('T')[0]
-        };
+      const cartonDetails = this.savedCartons.map(carton => ({
+        cartoonNumber: carton.cartoonNumber,
+        fromSerial: carton.fromSerial,
+        toSerial: carton.toSerial,
+        type: carton.type || this.getDefaultHologramType(),  // Include type for backend
+        arrivedDate: currentTimestamp, // Capture when officer saved this carton
+        processedBy: this.currentOfficer.name, // Track which officer processed this
+        processedAt: currentTimestamp // When it was processed
+      }));
 
-        // Add each carton to hologram overview rolls data
-        this.addToHologramOverviewRolls(cartonRecord);
-      });
+      // We use 'assign_cartons' action as per views.py update or 'carton_assigned'
+      const action = 'assign_cartons';
+      const remarks = `Cartons Assigned: ${this.savedCartons.length} cartons. Processed by ${this.currentOfficer.name} on ${new Date(currentTimestamp).toLocaleDateString('en-GB')}.`;
 
-      // Update the main record status
-      this.selectedRecordForUpdate.status = 'ARRIVED';
-      this.selectedRecordForUpdate.arrivedDate = new Date().toISOString().split('T')[0];
-      this.selectedRecordForUpdate.cartoonNumber = this.savedCartons.map(c => c.cartoonNumber).join(', ');
-      this.selectedRecordForUpdate.fromSerial = this.savedCartons[0].fromSerial;
-      this.selectedRecordForUpdate.toSerial = this.savedCartons[this.savedCartons.length - 1].toSerial;
-
-      // Update in storage
-      this.updateHologramRecordInStorage(this.selectedRecordForUpdate);
-
-      this.closeUpdateModal();
-      this.applyFilters();
-
-      alert(`Hologram ${this.selectedRecordForUpdate.ourRefNo} marked as arrived successfully with ${this.savedCartons.length} carton(s) and added to Rolls & Available Hologram Data!`);
+      this.hologramService.performAction('procurement', this.selectedRecordForUpdate.id, action, remarks, { 
+        carton_details: cartonDetails,
+        arrival_processed_date: currentTimestamp, // Overall processing timestamp
+        processed_by_officer: this.currentOfficer.name
+      })
+        .subscribe({
+          next: (res) => {
+            alert(`Hologram ${this.selectedRecordForUpdate?.ourRefNo} marked as arrived successfully with ${this.savedCartons.length} carton(s)!`);
+            this.closeUpdateModal();
+            this.loadHologramRecords(); // Refresh from backend
+            
+            // Notify monthly statement component to refresh after a short delay
+            // This ensures backend has finished processing the request
+            setTimeout(() => {
+              this.hologramService.notifyArrivalUpdate();
+            }, 500);
+          },
+          error: (err) => {
+            console.error('Error assigning cartons:', err);
+            alert('Failed to save carton details. Please try again.');
+          }
+        });
     }
   }
-
-  // Add new method to save data to hologram overview rolls, available data, and serial numbers data
   addToHologramOverviewRolls(record: HologramRecord) {
+    if (typeof localStorage === 'undefined') return;
+
     // Get existing data from localStorage
     const existingRolls = JSON.parse(localStorage.getItem('hologramOverviewRolls') || '[]');
     const existingAvailable = JSON.parse(localStorage.getItem('hologramOverviewAvailable') || '[]');
@@ -867,18 +695,18 @@ export class HologramdetailsComponent implements OnInit {
     const allocationData = JSON.parse(
       localStorage.getItem(`hologramAllocation_${record.ourRefNo}`) || '{}'
     );
-    
+
     console.log('📦 Loading allocation data for', record.ourRefNo, ':', allocationData);
-    
+
     // Find allocated ranges for this cartoon
     const cartoonAllocation = allocationData.allocatedCartoons?.find(
       (c: any) => c.cartoonNumber === record.cartoonNumber
     );
-    
+
     let allocatedRanges = cartoonAllocation?.allocatedRanges || [];
-    
+
     console.log('🎯 Found allocated ranges for', record.cartoonNumber, ':', allocatedRanges);
-    
+
     // If no allocated ranges found, create from fromSerial/toSerial (backward compatibility)
     if (allocatedRanges.length === 0) {
       allocatedRanges = [{
@@ -906,7 +734,7 @@ export class HologramdetailsComponent implements OnInit {
       isNew: true, // Flag to highlight as new
       newUntil: Date.now() + (24 * 60 * 60 * 1000) // Mark as new for 24 hours
     };
-    
+
     console.log('✅ Created roll with allocated ranges:', newRoll);
 
     // Create new available entry for Available Hologram Data tab
@@ -973,14 +801,60 @@ export class HologramdetailsComponent implements OnInit {
     this.showUpdateModal = false;
     this.selectedRecordForUpdate = null;
     this.savedCartons = [];
+    // Reset locked carton state
+    this.lockedCartonNumber = '';
+    this.cartonSuffixCounter = 0;
     this.currentCarton = {
       cartoonNumber: '',
       fromSerial: '',
       toSerial: '',
-      numberOfHolograms: 0
+      numberOfHolograms: 0,
+      type: ''
     };
     this.totalCalculatedHolograms = 0;
     this.serialRangeValidationError = '';
+  }
+
+  // Get available hologram types from the selected record for multi-type procurements
+  getAvailableHologramTypes(): string[] {
+    const types: string[] = [];
+
+    if (!this.selectedRecordForUpdate) {
+      return types;
+    }
+
+    // Check supplyChainData for quantities (this contains the original procurement data)
+    const data = this.selectedRecordForUpdate.supplyChainData;
+    if (data) {
+      // Check all possible field name variations
+      const localQty = Number(data.localQty || data.localQtyLakh || data.local_qty || 0);
+      const exportQty = Number(data.exportQty || data.exportQtyLakh || data.export_qty || 0);
+      const defenceQty = Number(data.defenceQty || data.defenceQtyLakh || data.defence_qty || 0);
+
+      if (localQty > 0) {
+        types.push('LOCAL');
+      }
+      if (exportQty > 0) {
+        types.push('EXPORT');
+      }
+      if (defenceQty > 0) {
+        types.push('DEFENCE');
+      }
+    }
+
+    // If nothing found, return single type based on procurementType
+    if (types.length === 0 && this.selectedRecordForUpdate.procurementType) {
+      types.push(this.selectedRecordForUpdate.procurementType.toUpperCase());
+    }
+
+    // Final fallback to LOCAL
+    return types.length > 0 ? types : ['LOCAL'];
+  }
+
+  // Get default hologram type for single-type procurements
+  getDefaultHologramType(): string {
+    const types = this.getAvailableHologramTypes();
+    return types.length > 0 ? types[0] : 'LOCAL';
   }
 
   // Status related methods
@@ -1092,6 +966,36 @@ export class HologramdetailsComponent implements OnInit {
     }
   }
 
+  // Returns array of all hologram types present in the record
+  getHologramTypes(record: HologramRecord): string[] {
+    const types: string[] = [];
+
+    // Check supply chain data for quantities
+    if (record.supplyChainData) {
+      const localQty = record.supplyChainData.localQtyLakh || record.supplyChainData.localQty || 0;
+      const exportQty = record.supplyChainData.exportQtyLakh || record.supplyChainData.exportQty || 0;
+      const defenceQty = record.supplyChainData.defenceQtyLakh || record.supplyChainData.defenceQty || 0;
+
+      if (Number(localQty) > 0) {
+        types.push('LOCAL');
+      }
+      if (Number(exportQty) > 0) {
+        types.push('EXPORT');
+      }
+      if (Number(defenceQty) > 0) {
+        types.push('DEFENCE');
+      }
+    }
+
+    // Fallback to procurementType if no quantities found
+    if (types.length === 0 && record.procurementType) {
+      types.push(record.procurementType.toUpperCase());
+    }
+
+    // Default to LOCAL if nothing found
+    return types.length > 0 ? types : ['LOCAL'];
+  }
+
 
 
 
@@ -1183,12 +1087,12 @@ export class HologramdetailsComponent implements OnInit {
   addTestDataForArrivalTesting(): void {
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const testExists = applications.some((app: any) => app.refNo === 'YB/TEST/2025');
-    
+
     // Only create if doesn't exist
     if (testExists) {
       return;
     }
-    
+
     // Create ONE simple test record with 30 holograms for easy testing
     const testRecord = {
       refNo: 'YB/TEST/2025',
@@ -1205,10 +1109,10 @@ export class HologramdetailsComponent implements OnInit {
       approvedDate: new Date().toISOString().split('T')[0],
       paymentDate: new Date().toISOString().split('T')[0]
     };
-    
+
     applications.push(testRecord);
     localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    
+
     console.log('✅ Test record created: YB/TEST/2025 (30 holograms, Payment Completed)');
   }
 
@@ -1218,30 +1122,228 @@ export class HologramdetailsComponent implements OnInit {
   markPaymentCompleted(refNo: string, procurementType: string): void {
     // Update in hologramApplications
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-    const appIndex = applications.findIndex((app: any) => 
+    const appIndex = applications.findIndex((app: any) =>
       app.refNo === refNo && app.procurementType === procurementType
     );
-    
+
     if (appIndex !== -1) {
       applications[appIndex].paymentCompleted = true;
       applications[appIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramApplications', JSON.stringify(applications));
     }
-    
+
     // Update in hologramRequests
     const requests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
     const reqIndex = requests.findIndex((req: any) => req.refNo === refNo);
-    
+
     if (reqIndex !== -1) {
       requests[reqIndex].paymentCompleted = true;
       requests[reqIndex].paymentDate = new Date().toISOString().split('T')[0];
       localStorage.setItem('hologramRequests', JSON.stringify(requests));
     }
-    
+
     // Reload data to reflect changes
     this.loadHologramRecords();
-    
+
     console.log(`✅ Payment marked as completed for ${refNo} (${procurementType})`);
+  }
+
+  // Roll Details Methods
+  hasRollDetails(record: HologramRecord): boolean {
+    // Check if record has carton details with data
+    const details = record.carton_details || [];
+    return Array.isArray(details) && details.length > 0;
+  }
+
+  viewRollDetails(record: HologramRecord): void {
+    this.selectedRecordForRollDetails = record;
+    this.showRollDetailsModal = true;
+  }
+
+  closeRollDetailsModal(): void {
+    this.showRollDetailsModal = false;
+    this.selectedRecordForRollDetails = null;
+  }
+
+  getRollDetailsForRecord(record: HologramRecord): any[] {
+    if (!record) return [];
+    
+    // Get roll details from carton_details property
+    const details = record.carton_details || [];
+    
+    // Ensure it's an array and normalize the data structure
+    if (!Array.isArray(details)) return [];
+    
+    return details.map((detail: any) => ({
+      cartoonNumber: detail.cartoonNumber || detail.cartoon_number || detail.carton_number || 'N/A',
+      fromSerial: detail.fromSerial || detail.from_serial || 'N/A',
+      toSerial: detail.toSerial || detail.to_serial || 'N/A',
+      quantity: this.calculateQuantityFromSerials(detail.fromSerial || detail.from_serial, detail.toSerial || detail.to_serial),
+      type: detail.type || this.getHologramType(record)
+    }));
+  }
+
+  getTotalRollDetailsQuantity(record: HologramRecord): number {
+    const details = this.getRollDetailsForRecord(record);
+    return details.reduce((total, detail) => total + (detail.quantity || 0), 0);
+  }
+
+  private calculateQuantityFromSerials(fromSerial: string, toSerial: string): number {
+    if (!fromSerial || !toSerial) return 0;
+    
+    const fromNum = this.extractSerialNumber(fromSerial);
+    const toNum = this.extractSerialNumber(toSerial);
+    
+    if (fromNum && toNum && toNum >= fromNum) {
+      return toNum - fromNum + 1;
+    }
+    
+    return 0;
+  }
+
+  // Modern styling methods for the new design
+  getModernStatusClass(status: string): string {
+    switch (status) {
+      case 'ARRIVED':
+        return 'status-arrived';
+      case 'PENDING_ARRIVAL':
+        return 'status-pending';
+      case 'APPROVED':
+        return 'status-approved';
+      case 'REJECTED':
+        return 'status-rejected';
+      default:
+        return 'status-default';
+    }
+  }
+
+  getModernTypeClass(type: string): string {
+    switch (type) {
+      case 'LOCAL':
+        return 'type-local';
+      case 'EXPORT':
+        return 'type-export';
+      case 'DEFENCE':
+        return 'type-defence';
+      default:
+        return 'type-default';
+    }
+  }
+
+  // Get the actual date when officer saved the arrival details
+  getActualArrivalDate(roll: any, record: HologramRecord): string {
+    // First check if there's a specific arrival date for this roll/carton
+    if (roll.arrivedDate) {
+      return new Date(roll.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check if there's a general arrival date for the record (when officer saved)
+    if (record.arrivedDate) {
+      return new Date(record.arrivedDate).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for updated_at timestamp (when the record was last updated by officer)
+    if (record.supplyChainData?.updated_at) {
+      return new Date(record.supplyChainData.updated_at).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // Check for any timestamp indicating when the arrival was processed
+    if (record.supplyChainData?.arrival_processed_date) {
+      return new Date(record.supplyChainData.arrival_processed_date).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    }
+
+    // If no specific date found, return pending
+    return 'Pending';
+  }
+
+  // Clean cartoon number by removing prefixes and keeping only the user-entered part
+  getCleanCartoonNumber(cartoonNumber: string): string {
+    if (!cartoonNumber) return '';
+    
+    // Remove common prefixes like "YB/6/BREW/2024/", "HRQ/", etc.
+    // Keep only the last part after the final slash or the whole string if no slashes
+    const parts = cartoonNumber.split('/');
+    return parts[parts.length - 1] || cartoonNumber;
+  }
+
+  // Get the overall serial range from carton details (first to last)
+  getOverallSerialRange(record: HologramRecord): { fromSerial: string, toSerial: string } {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    let allSerials: number[] = [];
+    
+    // Collect all serial numbers from all carton details
+    for (const carton of record.carton_details) {
+      try {
+        const fromSerial = carton.fromSerial || carton.from_serial;
+        const toSerial = carton.toSerial || carton.to_serial;
+        
+        const fromNum = parseInt(fromSerial);
+        const toNum = parseInt(toSerial);
+        
+        if (!isNaN(fromNum) && !isNaN(toNum)) {
+          // Add the range to our collection
+          for (let i = fromNum; i <= toNum; i++) {
+            allSerials.push(i);
+          }
+        }
+      } catch (e) {
+        // Skip invalid serial numbers
+        continue;
+      }
+    }
+
+    if (allSerials.length === 0) {
+      return { fromSerial: record.fromSerial || '', toSerial: record.toSerial || '' };
+    }
+
+    // Sort and get min/max
+    allSerials.sort((a, b) => a - b);
+    const minSerial = allSerials[0];
+    const maxSerial = allSerials[allSerials.length - 1];
+
+    return {
+      fromSerial: minSerial.toString(),
+      toSerial: maxSerial.toString()
+    };
+  }
+
+  // Get unique cartoon numbers from carton details (cleaned)
+  getUniqueCartoonNumbers(record: HologramRecord): string[] {
+    if (!record.carton_details || record.carton_details.length === 0) {
+      return record.cartoonNumber ? [this.getCleanCartoonNumber(record.cartoonNumber)] : [];
+    }
+    
+    const uniqueNumbers = new Set<string>();
+    record.carton_details.forEach(carton => {
+      const cartoonNumber = carton.cartoonNumber || carton.cartoon_number || carton.carton_number;
+      if (cartoonNumber) {
+        const cleanNumber = this.getCleanCartoonNumber(cartoonNumber);
+        if (cleanNumber) {
+          uniqueNumbers.add(cleanNumber);
+        }
+      }
+    });
+    
+    return Array.from(uniqueNumbers).sort();
   }
 
 

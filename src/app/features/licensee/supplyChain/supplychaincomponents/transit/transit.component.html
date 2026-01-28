@@ -9,6 +9,9 @@
       <p class="register-subtitle">Review and process transit permit applications from licensees</p>
     </div>
     <div class="header-actions">
+      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')">
+        <i class="bi bi-truck me-1"></i> Apply Transit
+      </button>
       <button class="btn btn-success">
         <i class="bi bi-download me-2"></i>
         Export Report
@@ -108,8 +111,7 @@
 
     <!-- Clear Button -->
     <button class="btn btn-outline-danger btn-sm" (click)="clearTransitFilters()"
-      *ngIf="transitDateFilter || transitStatusFilter || transitDestinationFilter"
-      title="Clear all filters">
+      *ngIf="transitDateFilter || transitStatusFilter || transitDestinationFilter" title="Clear all filters">
       <i class="bi bi-x-circle"></i>
       Clear
     </button>
@@ -183,21 +185,24 @@
             </td>
             <td class="actions">
               <div class="action-buttons">
-                <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)"
-                  title="Review Application">
+                <!-- View Button - Always visible -->
+                <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)" title="View Application">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)"
-                  title="Approve" *ngIf="item.status === 'PENDING'">
+                <!-- Pay Button - Only for Licensee when status is Ready for Payment -->
+                <button class="btn btn-success btn-sm" (click)="payTransit(item)" title="Pay Now"
+                  *ngIf="canShowPayButton(item)">
+                  <i class="bi bi-credit-card me-1"></i>Pay
+                </button>
+                <!-- Approve Button - Only for Officers when application is forwarded to their stage -->
+                <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)" title="Approve"
+                  *ngIf="canShowApproveRejectButtons(item)">
                   <i class="bi bi-check"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)"
-                  title="Reject" *ngIf="item.status === 'PENDING'">
+                <!-- Reject Button - Only for Officers when application is forwarded to their stage -->
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)" title="Reject"
+                  *ngIf="canShowApproveRejectButtons(item)">
                   <i class="bi bi-x"></i>
-                </button>
-                <button class="btn btn-outline-info btn-sm" (click)="issueTransit(item)"
-                  title="Issue Permit" *ngIf="item.status === 'APPROVED'">
-                  <i class="bi bi-printer"></i>
                 </button>
               </div>
             </td>

@@ -16,6 +16,7 @@
         <div class="username">
           {{ userName }}
           <!-- Displays the user's name -->
+          <div style="font-size: 10px; color: yellow;">License Active: {{ user?.hasActiveLicense }}</div>
         </div>
         <!-- Button to view the user's profile -->
         <button mat-mini-fab class="view-profile" (click)="viewProfile()" type="button">
@@ -39,43 +40,17 @@
         <mat-list-item (click)="openNewLicenseInfo()" class="nav-header-cus">
           <span class="nav-header-cus">Apply New License</span>
         </mat-list-item>
-    
-        <!-- Accordion Menu for Company Registration/Collaboration -->
-        <mat-accordion>
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              Company
-            </mat-expansion-panel-header>
-            <div class="button-column">
-              <button mat-menu-item
-                routerLink="company-registration-and-collaboration/company-registration/prepare-application"
-                routerLinkActive="active-link">Company Registration</button>
-              <button mat-menu-item
-                routerLink="company-registration-and-collaboration/company-collaboration/prepare-application"
-                routerLinkActive="active-link">Company Collaboration</button>
-            </div>
-          </mat-expansion-panel>
-        </mat-accordion>
-
-        <!-- Simplified Salesman/Barman Registration - Direct Navigation -->
-        <mat-list-item routerLink="salesman-barman/prepare-application" routerLinkActive="active-link">
-          <span class="nav-header-cus">
-            Salesman/Barman Registration
-          </span>
-        </mat-list-item>
-
-        <!-- Apply Supply Chain Link -->
-        <mat-list-item routerLink="supply-chain" routerLinkActive="active-link">
+        @if (user?.hasActiveLicense) {
+        <mat-list-item (click)="openSupplyChain()" class="nav-header-cus">
           <span class="nav-header-cus">Apply Supply Chain</span>
         </mat-list-item>
-
-        <!-- Accordion for Registers Section -->
         <div class="accordion accordion-flush" id="sidebarAccordion">
           <!-- Register Section -->
           <div class="accordion-item">
             <h2 class="accordion-header">
               <button class="accordion-button collapsed text-black fw-semibold" type="button" data-bs-toggle="collapse"
                 data-bs-target="#registerCollapse">
+                <i class="bi bi-journal-text me-2"></i>
                 Register
               </button>
             </h2>
@@ -118,6 +93,48 @@
             </div>
           </div>
         </div>
+        }
+        <!-- Accordion Menu for Company Registration -->
+        <mat-accordion>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              Company Registration
+            </mat-expansion-panel-header>
+            <div class="button-column">
+              <button mat-menu-item routerLink="company/prepare-application" routerLinkActive="active-link">
+                Prepare Application
+              </button>
+              <button mat-menu-item routerLink="company/application-action" routerLinkActive="active-link">
+                Act On Application
+              </button>
+              <button mat-menu-item routerLink="company/print-certificate" routerLinkActive="active-link">
+                Print Certificate
+              </button>
+            </div>
+          </mat-expansion-panel>
+        </mat-accordion>
+        <!-- Accordion Menu for Salesman/Barman Registration -->
+        <mat-accordion>
+          <mat-expansion-panel>
+            <mat-expansion-panel-header>
+              Salesman/Barman Registration
+            </mat-expansion-panel-header>
+            <div class="button-column">
+              <button mat-menu-item routerLink="salesman-barman/prepare-application" routerLinkActive="active-link">
+                Prepare Application
+              </button>
+              <button mat-menu-item routerLink="salesman-barman/application-action" routerLinkActive="active-link">
+                Act On Draft Application
+              </button>
+              <button mat-menu-item routerLink="salesman-barman/print-certificate" routerLinkActive="active-link">
+                Print Certificate
+              </button>
+              <button mat-menu-item routerLink="salesman-barman/application-status" routerLinkActive="active-link">
+                Application Status
+              </button>
+            </div>
+          </mat-expansion-panel>
+        </mat-accordion>
       </mat-nav-list>
       }
     </div>

@@ -15,6 +15,7 @@ export class Account {
   role?: Role;
   createdBy?: string;
   isActive?: boolean;
+  hasActiveLicense?: boolean;
   password?: string;
   confirmPassword?: string;
 }

@@ -13,7 +13,7 @@
   <!-- Transit Permit Form Section -->
   <div class="container">
     <div class="form-section mb-4">
-      <h5 class="text-primary fw-bold mb-3 border-bottom border-primary pb-2 text-center">TRANSIT PERMIT FORM123</h5>
+      <h5 class="text-primary fw-bold mb-3 border-bottom border-primary pb-2 text-center">TRANSIT PERMIT FORM</h5>
       <div class="row">
         <!-- Bill No -->
         <div class="col-md-6 mb-3">
@@ -24,8 +24,13 @@
         <!-- Sole Distributor Name -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Sole Distributor Name:</label>
-          <input type="text" class="form-control" [(ngModel)]="formData.soleDistributor" readonly
-            placeholder="M/s Karma Chopel Bhutia">
+          <select class="form-control input-field" [(ngModel)]="formData.soleDistributor"
+            (change)="onDistributorChange()">
+            <option value="" disabled>-- Select Distributor --</option>
+            <option *ngFor="let distributor of distributors" [value]="distributor.distributorName">
+              {{ distributor.distributorName }}
+            </option>
+          </select>
         </div>
 
         <!-- Date -->
@@ -37,51 +42,65 @@
         <!-- Depot Address -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Depot Address:</label>
-          <select class="form-control" [(ngModel)]="formData.depotAddress">
-            <option value="">-- Select Depot Address --</option>
-            <option value="gangtok">Gangtok</option>
-            <option value="namchi">Namchi</option>
-            <option value="gyalshing">Gyalshing</option>
-            <option value="mangan">Mangan</option>
+          <!-- Show dropdown if multiple addresses available, otherwise show input -->
+          <select *ngIf="availableDepotAddresses.length > 1" class="form-control input-field"
+            [(ngModel)]="formData.depotAddress" (change)="onDepotAddressChange()">
+            <option value="" disabled>
+              -- Select Depot Address --
+            </option>
+            <option *ngFor="let address of availableDepotAddresses" [value]="address">
+              {{ address }}
+            </option>
           </select>
+          <input *ngIf="availableDepotAddresses.length <= 1" type="text" class="form-control input-field"
+            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled" />
         </div>
 
         <!-- Brand -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Brand:</label>
-          <select class="form-control" [(ngModel)]="formData.brand" (change)="onBrandChange()">
+          <select class="form-control input-field" [(ngModel)]="formData.brand" (change)="onBrandChange()"
+            [disabled]="isLocked">
             <option value="">-- Select Brand --</option>
-            <option value="royal-stag">Royal Stag</option>
-            <option value="blenders-pride">Blenders Pride</option>
-            <option value="officers-choice">Officers Choice</option>
-            <option value="imperial-blue">Imperial Blue</option>
+            <option *ngFor="let brand of brandOptions" [value]="brand">
+              {{ brand }}
+            </option>
           </select>
         </div>
 
         <!-- Size -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Size (ml):</label>
-          <select class="form-control" [(ngModel)]="formData.size">
+          <select class="form-control input-field" [(ngModel)]="formData.size" [disabled]="!formData.brand || isLocked">
             <option value="">-- Select Size --</option>
-            <option value="180">180ml</option>
-            <option value="375">375ml</option>
-            <option value="750">750ml</option>
+            <option *ngFor="let size of sizeOptions" [value]="size">
+              {{ size }}ml
+            </option>
           </select>
         </div>
 
         <!-- Cases -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Cases:</label>
-          <input type="number" class="form-control" [(ngModel)]="formData.cases" placeholder="Enter number of cases"
-            min="0">
+          <input type="number" class="form-control input-field" [(ngModel)]="formData.cases"
+            placeholder="Enter number of cases" min="0" />
         </div>
 
         <!-- Vehicle Number -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Vehicle Number:</label>
-          <select class="form-control" [(ngModel)]="formData.vehicleNumber">
-            <option value="">-- Select Vehicle --</option>
-            <option *ngFor="let v of vehicleNumbers" [value]="v">{{ v }}</option>
+          <input type="text" class="form-control input-field" [(ngModel)]="formData.vehicleNumber"
+            placeholder="Enter Vehicle Number" />
+        </div>
+
+        <!-- Bottle Type -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label fw-bold">Bottle Type:</label>
+          <select class="form-control input-field" [(ngModel)]="formData.bottleType">
+            <option value="">-- Select Bottle Type --</option>
+            <option *ngFor="let bt of bottleTypes" [value]="bt.bottleType">
+              {{ bt.bottleType }}
+            </option>
           </select>
         </div>
       </div>
@@ -91,9 +110,13 @@
         <button class="btn btn-primary me-3" (click)="addProduct()">
           Add Product
         </button>
-        <button class="btn btn-success me-3" (click)="submitApplication()" *ngIf="products.length > 0">
+        <button class="btn btn-success me-3" (click)="onPreSubmit()" [disabled]="products.length === 0">
           Submit Application
         </button>
+        <!-- Hidden button to trigger modal programmatically -->
+        <button id="openModalBtn" class="d-none" data-bs-toggle="modal" data-bs-target="#declarationModal">
+        </button>
+
         <button class="btn btn-outline-secondary me-3" (click)="clearForm()">
           Clear Form
         </button>
@@ -159,6 +182,8 @@
       </div>
     </div>
   </div>
+
+
 
   <!-- Generated Bill Section (Only show after submission) -->
   <div class="container" id="transitPermitPrintSection" *ngIf="isSubmitted">
@@ -249,6 +274,11 @@
             <tr>
               <td class="fw-bold text-muted bg-light">Vehicle Number</td>
               <td class="text-dark">{{ formData.vehicleNumber }}</td>
+            </tr>
+            <tr class="bg-light">
+              <td class="fw-bold text-muted">Bottle Type</td>
+              <td class="text-dark">{{ formData.bottleType || (products.length > 0 ? products[0].bottleType : 'N/A') }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -352,6 +382,191 @@
       <button class="btn btn-success btn-lg px-5" (click)="printApplication()">
         <i class="bi bi-printer me-2"></i>Print Transit Permit Application
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Declaration Modal (Moved to end of file for stacking context safety) -->
+<!-- 
+     FIX: 
+     1. data-bs-backdrop="false" -> Disables Bootstrap's body-level backdrop which was covering the modal.
+     2. style="background: rgba(0,0,0,0.6); z-index: 10000;" -> Manually creates the backdrop effect on the modal container itself and forces it to top.
+     3. pointer-events: auto -> Ensures clicks are captured.
+-->
+<div class="modal fade" id="declarationModal" tabindex="-1" aria-labelledby="declarationModalLabel" aria-hidden="true"
+  data-bs-backdrop="false" data-bs-keyboard="false" style="background-color: rgba(0, 0, 0, 0.6); z-index: 10000;">
+  <!-- pointer-events: auto ensures clicks work even if container has issues -->
+  <div class="modal-dialog modal-xl modal-dialog-centered" style="pointer-events: auto;">
+    <div class="modal-content border-0 shadow-lg bg-white">
+
+      <!-- Header -->
+      <!-- <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold" id="declarationModalLabel">
+          <i class="fas fa-clipboard-check me-2"></i>CONFIRM SUBMISSION
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" (click)="cancelDeclaration()"></button>
+      </div> -->
+
+      <!-- Body -->
+      <div class="modal-body p-4 p-md-5" style="background-color: #f8f9fa;">
+
+        <!-- Top Section Row -->
+        <div class="row g-4 mb-4">
+          <!-- Bill Summary Card -->
+          <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+              <div class="card-header border-0 text-white p-3"
+                style="background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%);">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-receipt fs-5 me-2"></i>
+                  <h6 class="mb-0 fw-bold text-uppercase tracking-wide" style="letter-spacing: 0.5px;">Bill Summary</h6>
+                </div>
+              </div>
+              <div class="card-body bg-white p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                  <span class="text-secondary fw-semibold small text-uppercase">Bill Number</span>
+                  <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm"
+                    style="font-size: 0.95rem; font-weight: 600;">
+                    {{ formData.billNo }}
+                  </span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light">
+                  <span class="text-secondary fw-semibold small text-uppercase">Total Products</span>
+                  <span class="fw-bold text-dark">{{ products.length }} <span
+                      class="text-muted fw-normal">items</span></span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-secondary fw-semibold small text-uppercase">Distributor</span>
+                  <span class="fw-bold text-dark text-end" style="max-width: 60%;">{{ formData.soleDistributor }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Important Notice Card -->
+          <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100"
+              style="background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 12px;">
+              <div class="card-body p-4 d-flex flex-column justify-content-center">
+                <h6 class="fw-bold mb-3" style="color: #856404;">
+                  <i class="bi bi-exclamation-triangle-fill me-2"></i>Important Notice
+                </h6>
+                <p class="mb-0 small" style="color: #856404; line-height: 1.6;">
+                  Once you proceed, this bill will be <strong class="text-dark">permanently locked</strong> and cannot
+                  be modified. Please review all information carefully before submission.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official Declaration Form -->
+        <div class="card border-0 shadow-sm mb-4 overflow-hidden" style="border-radius: 12px;">
+          <div class="card-body p-0">
+            <div class="d-flex">
+              <!-- Blue Stripe -->
+              <div style="width: 6px; background-color: #0d6efd;"></div>
+              <!-- Content -->
+              <div class="p-4 w-100 bg-white">
+                <h6 class="text-primary fw-bold mb-3 text-uppercase">
+                  <i class="bi bi-pen-fill me-2"></i>Official Declaration
+                </h6>
+                <p class="small text-secondary fw-bold mb-4">
+                  I, as an authorized representative, hereby declare and acknowledge that:
+                </p>
+
+                <div class="row g-4">
+                  <!-- Left Col -->
+                  <div class="col-md-6">
+                    <ul class="list-unstyled mb-0">
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">I have thoroughly reviewed all data entered for Bill No:
+                          <strong class="text-dark">{{ formData.billNo }}</strong></span>
+                      </li>
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">All product information, quantities, and details are accurate
+                          and complete</span>
+                      </li>
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">The distributor information is correct and verified</span>
+                      </li>
+                      <li class="d-flex">
+                        <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">I am authorized to submit this bill on behalf of the
+                          organization</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <!-- Right Col -->
+                  <div class="col-md-6">
+                    <ul class="list-unstyled mb-0">
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">Once locked, <strong class="text-dark">NO FURTHER
+                            MODIFICATIONS</strong> will be allowed</span>
+                      </li>
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">This action is <strong
+                            class="text-dark">IRREVERSIBLE</strong> and will affect payment processing</span>
+                      </li>
+                      <li class="d-flex mb-3">
+                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">The bill will be <strong class="text-dark">permanently
+                            locked</strong> and cannot be unlocked</span>
+                      </li>
+                      <li class="d-flex">
+                        <i class="bi bi-lock-fill text-warning mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-secondary">This serves as final confirmation of all entered data</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Critical Warning -->
+        <div class="alert fade show border-0 shadow-sm d-flex align-items-center p-3" role="alert"
+          style="background-color: #f8d7da; border-radius: 12px; border-left: 6px solid #dc3545;">
+          <div class="me-4 text-center" style="min-width: 50px;">
+            <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
+          </div>
+          <div>
+            <h6 class="alert-heading fw-bold text-danger mb-1">CRITICAL WARNING</h6>
+            <p class="mb-0 small text-danger" style="opacity: 0.9;">
+              This action cannot be undone. Please ensure all data is correct before proceeding.
+              Once confirmed, the bill will be locked and ready for payment processing.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer bg-light border-top-0 p-4 rounded-bottom">
+        <div class="d-flex justify-content-between w-100">
+          <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal"
+            (click)="cancelDeclaration()">
+            <i class="bi bi-x-lg me-2"></i>Cancel & Continue Editing
+          </button>
+
+          <button type="button" class="btn btn-success btn-lg px-5 fw-bold" style="background-color: #198754;"
+            (click)="acceptDeclaration()">
+            I ACCEPT
+          </button>
+        </div>
+
+        <!-- Hidden button to close modal programmatically -->
+        <button id="closeModalBtn" class="d-none" data-bs-dismiss="modal"></button>
+      </div>
+
+
+
     </div>
   </div>
 </div>

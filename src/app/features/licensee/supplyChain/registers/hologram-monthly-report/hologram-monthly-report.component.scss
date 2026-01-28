@@ -1,148 +1,413 @@
-// Hologram Monthly Report Component - Minimal SCSS (Most styling moved to Bootstrap classes)
+// Custom tab styling for active state
+.nav-tabs .nav-link {
+  border: none;
+  color: #6c757d;
+  transition: all 0.3s ease;
 
-// Only essential custom styles that can't be achieved with Bootstrap
-
-// Custom 5-column grid for summary cards (20% width each)
-.col-lg-2-4 {
-  @media (min-width: 992px) {
-    flex: 0 0 auto;
-    width: 20%;
+  &:hover {
+    color: #dc3545;
+    border: none;
   }
+
+  &.active {
+    background-color: #fff;
+    border: none;
+    border-bottom: 3px solid #dc3545 !important;
+    color: #dc3545 !important;
+    font-weight: bold;
+
+    &:hover {
+      color: #dc3545 !important;
+    }
+  }
+}
+
+// Enhanced red styling for active tabs
+.nav-tabs .nav-link.text-danger {
+  color: #dc3545 !important;
+  font-weight: bold;
+
+  i {
+    color: #dc3545 !important;
+  }
+}
+
+// Add subtle background for active tab
+.nav-tabs .nav-link.active {
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+/* Highlight brand cells that were edited by officer */
+.edited-cell {
+  background: #fff3cd !important; /* bootstrap warning bg */
+  box-shadow: inset 0 -2px 0 #ffc107; /* visual underline */
+}
+
+/* Custom table header styling to match commissioner dashboard */
+.table thead {
+  background: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);
+}
+
+.table thead tr {
+  background: linear-gradient(135deg, #a8e6cf 0%, #7fcdcd 100%);
+}
+
+.table thead th {
+  background: transparent !important;
+  color: #2c3e50 !important;
+  border-bottom: 2px solid #7fcdcd !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  font-weight: 600;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* Ensure no gaps between header cells */
+.table thead tr th:first-child {
+  border-left: none !important;
+}
+
+.table thead tr th:last-child {
+  border-right: none !important;
+}
+
+/* Monthly Report Table Styling - Match localStorage version */
+
+/* Black header with white text */
+.table thead {
+  background: #000000 !important;
+}
+
+.table thead tr {
+  background: #000000 !important;
+}
+
+.table thead th {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #333333 !important;
+  font-weight: 600;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* Arrival rows - Light mint/green background */
+.arrival-row {
+  background-color: #c8f5e8 !important;
+}
+
+.arrival-row td {
+  background-color: #c8f5e8 !important;
+  border-color: #a8e6cf !important;
+}
+
+/* Utilization rows - Light blue/cyan background */
+.utilization-row {
+  background-color: #d4f1f4 !important;
+}
+
+.utilization-row td {
+  background-color: #d4f1f4 !important;
+  border-color: #a8dde0 !important;
+}
+
+/* Alternating beige/cream for some rows */
+.utilization-row:nth-child(even) {
+  background-color: #f5f5dc !important;
+}
+
+.utilization-row:nth-child(even) td {
+  background-color: #f5f5dc !important;
+}
+
+/* Table borders */
+.table-bordered {
+  border: 1px solid #dee2e6;
+}
+
+.table-bordered td,
+.table-bordered th {
+  border: 1px solid #dee2e6;
+}
+
+/* Closing balance row - Light green */
+.table-success {
+  background-color: #d4edda !important;
+}
+
+.table-success td {
+  background-color: #d4edda !important;
+  border-color: #c3e6cb !important;
+}
+
+/* Roll-based styling for utilization and wastage boxes */
+.roll-utilization-box,
+.roll-wastage-box {
+  transition: all 0.3s ease;
+  border-width: 2px !important;
   
-  @media (max-width: 991px) {
-    flex: 0 0 auto;
-    width: 50%; // 2 columns on tablets
-  }
-  
-  @media (max-width: 576px) {
-    flex: 0 0 auto;
-    width: 100%; // 1 column on mobile
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   }
 }
 
-// Tab hover effects (Bootstrap doesn't have this specific behavior)
-.nav-link:hover {
-  background-color: #f8f9fa !important;
-}
-
-// Opening stock input special styling for first row
-input.bg-info:focus {
-  background-color: #17a2b8 !important;
-  border-color: #0c5460 !important;
-  box-shadow: 0 0 0 0.2rem rgba(23, 162, 184, 0.25) !important;
-}
-
-// Read-only input styling override
-input[readonly].bg-light {
-  background-color: #e9ecef !important;
-  color: #495057 !important;
-  cursor: not-allowed !important;
-}
-
-// Animation for table rows (Bootstrap doesn't include animations)
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate__animated.animate__fadeIn {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-// Custom scrollbar for table (Bootstrap doesn't style scrollbars)
-.table-responsive::-webkit-scrollbar {
-  height: 8px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-// Responsive adjustments for filter section (Bootstrap responsive utilities don't cover this specific case)
-@media (max-width: 1400px) {
-  .ms-auto {
-    margin-top: 1rem !important;
-    margin-left: 0 !important;
-  }
-
-  .d-flex.justify-content-between {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-  }
-}
-
-// Responsive font size adjustments for mobile (Bootstrap doesn't have these specific sizes)
-@media (max-width: 1200px) {
-  .table {
-    font-size: 0.65rem !important;
-  }
-
-  .table th,
-  .table td {
-    padding: 0.15rem !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .table {
-    font-size: 0.6rem !important;
-  }
-
-  .table th,
-  .table td {
-    padding: 0.1rem !important;
-  }
-}
-
-// Grouped rows styling - remove bottom border for grouped items
-.table tbody tr.border-bottom-0 td {
-  border-bottom: 1px dashed #dee2e6 !important;
-}
-
-// Last row in group has solid border
-.table tbody tr:not(.border-bottom-0) td {
-  border-bottom: 2px solid #dee2e6 !important;
-}
-
-// Calculation box styling
-.table tbody td .border-success {
+.roll-identifier-badge {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.brand-badge,
+.bottle-size-badge {
   transition: all 0.2s ease;
   
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    transform: scale(1.05);
   }
 }
 
-// Calculation box text colors
-.table tbody td .border-success {
-  .text-success {
-    color: #198754 !important;
+.range-info,
+.usage-range,
+.wastage-range {
+  transition: all 0.2s ease;
+  border-width: 1.5px !important;
+  
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.total-utilization-summary,
+.total-wastage-summary {
+  border-width: 3px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-stats .stat-item {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* Enhanced visual hierarchy */
+.roll-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem !important;
+}
+
+.roll-details {
+  padding-top: 0.5rem;
+}
+
+/* Brand cards styling */
+.brands-by-rolls-container {
+  .brands-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 0.5rem;
   }
   
-  .text-primary {
-    color: #0d6efd !important;
+  .rolls-brands-grid {
+    gap: 0.75rem !important;
+  }
+}
+
+.roll-brand-card {
+  transition: all 0.3s ease;
+  border-width: 2px !important;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   }
   
-  .text-danger {
-    color: #dc3545 !important;
+  .roll-brand-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .roll-badge {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+    width: 100%;
+  }
+  
+  .brand-info {
+    .brand-name {
+      font-weight: 600 !important;
+    }
+    
+    .usage-summary {
+      border-width: 1.5px !important;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .roll-utilization-box,
+  .roll-wastage-box {
+    .roll-header .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    
+    .roll-details .d-flex {
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+  }
+  
+  .summary-stats {
+    flex-direction: column;
+    gap: 0.5rem !important;
+  }
+  
+  .rolls-brands-grid {
+    flex-direction: column;
+    
+    .roll-brand-card {
+      min-width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+}
+
+
+/* Ranges Assigned Box Styling */
+.ranges-assigned-box {
+  border: 1px solid #dee2e6 !important;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+  }
+  
+  .range-item {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    
+    &:hover {
+      transform: translateX(3px);
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .roll-name-badge {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+    
+    .range-value {
+      letter-spacing: 0.5px;
+    }
+  }
+}
+
+
+/* Roll Group Box Styling - Brands grouped by roll */
+.roll-group-box {
+  transition: all 0.3s ease;
+  border-width: 2px !important;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  .roll-group-header {
+    border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    
+    .roll-badge {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+  }
+  
+  .brands-in-roll {
+    .brand-item {
+      transition: all 0.2s ease;
+      border-width: 1.5px !important;
+      
+      &:hover {
+        transform: translateX(5px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+      }
+      
+      .brand-number {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.1);
+        }
+      }
+      
+      .brand-name {
+        font-weight: 600;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: translateX(3px);
+        }
+      }
+      
+      .brand-meta {
+        span {
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: scale(1.05);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* Responsive adjustments for roll groups */
+@media (max-width: 768px) {
+  .roll-group-box {
+    .roll-group-header {
+      .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+      }
+    }
+    
+    .brand-item {
+      flex-direction: column;
+      align-items: flex-start !important;
+      
+      .brand-meta {
+        flex-direction: column;
+        gap: 0.25rem !important;
+      }
+    }
   }
 }
