@@ -370,6 +370,12 @@ export class CancellationComponent implements OnInit {
 
     console.log('Approving cancellation with ID:', item.id);
     
+    // Add loading state to button
+    const approveButton = document.querySelector(`[data-item-id="${item.id}"] .btn-outline-success`);
+    if (approveButton) {
+      approveButton.classList.add('loading');
+    }
+    
     // Immediately update UI to prevent duplicate clicks
     const index = this.cancellationData.findIndex(data => data.id === item.id);
     const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
@@ -397,6 +403,13 @@ export class CancellationComponent implements OnInit {
       next: (response) => {
         console.log('Approval response:', response);
         
+        // Remove loading state and add success animation
+        if (approveButton) {
+          approveButton.classList.remove('loading');
+          approveButton.classList.add('success');
+          setTimeout(() => approveButton.classList.remove('success'), 600);
+        }
+        
         // Confirm the status update with API response
         const newStatus = response.new_status || response.status || 'ApprovedCancellationByCommissioner';
         
@@ -416,7 +429,8 @@ export class CancellationComponent implements OnInit {
           this.storeApprovedCancellation(item.id, newStatus);
         }
         
-        alert('Cancellation Request Approved Successfully');
+        // Show success notification
+        this.showNotification('Cancellation Request Approved Successfully', 'success');
         
         // Show success message with next step
         setTimeout(() => {
@@ -427,6 +441,11 @@ export class CancellationComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error approving cancellation:', err);
+        
+        // Remove loading state
+        if (approveButton) {
+          approveButton.classList.remove('loading');
+        }
         
         // Rollback optimistic update on error
         if (index !== -1) {
@@ -462,7 +481,7 @@ export class CancellationComponent implements OnInit {
             this.applyCancellationFilters();
           }
         } else {
-          alert(`Failed to approve cancellation: ${err.message || 'Unknown error'}`);
+          this.showNotification(`Failed to approve cancellation: ${err.message || 'Unknown error'}`, 'error');
         }
       }
     });
@@ -477,6 +496,12 @@ export class CancellationComponent implements OnInit {
     if (!confirm('Are you sure you want to reject this cancellation request?')) return;
 
     console.log('Rejecting cancellation with ID:', item.id);
+
+    // Add loading state to button
+    const rejectButton = document.querySelector(`[data-item-id="${item.id}"] .btn-outline-danger`);
+    if (rejectButton) {
+      rejectButton.classList.add('loading');
+    }
 
     // Immediately update UI to prevent duplicate clicks
     const index = this.cancellationData.findIndex(data => data.id === item.id);
@@ -504,6 +529,13 @@ export class CancellationComponent implements OnInit {
       next: (response) => {
         console.log('Rejection response:', response);
         
+        // Remove loading state and add success animation
+        if (rejectButton) {
+          rejectButton.classList.remove('loading');
+          rejectButton.classList.add('success');
+          setTimeout(() => rejectButton.classList.remove('success'), 600);
+        }
+        
         // Confirm the status update with API response
         const newStatus = response.new_status || response.status || 'RejectedCancellationByCommissioner';
         
@@ -523,13 +555,18 @@ export class CancellationComponent implements OnInit {
           this.storeApprovedCancellation(item.id, newStatus);
         }
         
-        alert('Cancellation Request Rejected');
+        this.showNotification('Cancellation Request Rejected', 'warning');
         
         // Force change detection to update UI immediately
         this.applyCancellationFilters();
       },
       error: (err) => {
         console.error('Error rejecting cancellation:', err);
+        
+        // Remove loading state
+        if (rejectButton) {
+          rejectButton.classList.remove('loading');
+        }
         
         // Rollback optimistic update on error
         if (index !== -1) {
@@ -565,7 +602,7 @@ export class CancellationComponent implements OnInit {
             this.applyCancellationFilters();
           }
         } else {
-          alert(`Failed to reject cancellation: ${err.message || 'Unknown error'}`);
+          this.showNotification(`Failed to reject cancellation: ${err.message || 'Unknown error'}`, 'error');
         }
       }
     });
@@ -587,6 +624,8 @@ export class CancellationComponent implements OnInit {
         return 'processing';
       case 'EXPIRED':
         return 'expired';
+      case 'CANCELLED':
+        return 'cancelled';
       default:
         return 'default';
     }
@@ -824,6 +863,70 @@ export class CancellationComponent implements OnInit {
       this.loadCancellationData();
     } catch (error) {
       console.error('Error clearing stored approvals:', error);
+    }
+  }
+
+  // Enhanced notification system
+  private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
+    if (!this.isBrowser) return;
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <div class="notification-content">
+        <i class="bi ${this.getNotificationIcon(type)}"></i>
+        <span>${message}</span>
+        <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+    `;
+
+    // Add styles
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      min-width: 300px;
+      max-width: 500px;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: slideIn 0.3s ease-out;
+      background: ${this.getNotificationColor(type)};
+      color: white;
+      font-weight: 500;
+    `;
+
+    // Add to body
+    document.body.appendChild(notification);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentElement) {
+        notification.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => notification.remove(), 300);
+      }
+    }, 5000);
+  }
+
+  private getNotificationIcon(type: string): string {
+    switch (type) {
+      case 'success': return 'bi-check-circle-fill';
+      case 'error': return 'bi-x-circle-fill';
+      case 'warning': return 'bi-exclamation-triangle-fill';
+      default: return 'bi-info-circle-fill';
+    }
+  }
+
+  private getNotificationColor(type: string): string {
+    switch (type) {
+      case 'success': return 'linear-gradient(135deg, #10b981, #059669)';
+      case 'error': return 'linear-gradient(135deg, #ef4444, #dc2626)';
+      case 'warning': return 'linear-gradient(135deg, #f59e0b, #d97706)';
+      default: return 'linear-gradient(135deg, #3b82f6, #1d4ed8)';
     }
   }
 }

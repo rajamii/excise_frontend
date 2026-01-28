@@ -188,20 +188,23 @@
               </span>
             </td>
             <td class="actions">
-              <div class="action-buttons">
+              <div class="action-buttons" [attr.data-item-id]="item.id">
                 <button class="btn btn-outline-primary btn-sm" (click)="reviewCancellation(item)"
-                  title="Review Application">
+                  title="Review Application" data-bs-toggle="tooltip" data-bs-placement="top">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)" title="Approve"
+                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)" 
+                  title="Approve Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
                   *ngIf="canApprove(item)">
-                  <i class="bi bi-check"></i>
+                  <i class="bi bi-check-circle"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" title="Reject"
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" 
+                  title="Reject Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
                   *ngIf="canReject(item)">
-                  <i class="bi bi-x"></i>
+                  <i class="bi bi-x-circle"></i>
                 </button>
-                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)" title="Generate Final Letter"
+                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)" 
+                  title="Generate Final Letter" data-bs-toggle="tooltip" data-bs-placement="top"
                   *ngIf="canGenerateFinalLetter(item)">
                   <i class="bi bi-file-earmark-text"></i>
                 </button>
