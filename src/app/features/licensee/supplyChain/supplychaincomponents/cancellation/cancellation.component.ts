@@ -197,6 +197,23 @@ export class CancellationComponent implements OnInit {
 
   // Summary methods
   getCancellationStatusCount(status: string): number {
+    if (status === 'PENDING') {
+      return this.filteredCancellationData.filter(item => 
+        item.status === 'PENDING' || item.status === 'CancellationPending'
+      ).length;
+    } else if (status === 'APPROVED') {
+      return this.filteredCancellationData.filter(item => 
+        item.status === 'APPROVED' || 
+        item.status === 'ApprovedCancellationByCommissioner' ||
+        item.status?.toUpperCase().includes('APPROVED')
+      ).length;
+    } else if (status === 'REJECTED') {
+      return this.filteredCancellationData.filter(item => 
+        item.status === 'REJECTED' || 
+        item.status === 'RejectedCancellationByCommissioner' ||
+        item.status?.toUpperCase().includes('REJECTED')
+      ).length;
+    }
     return this.filteredCancellationData.filter(item => item.status === status).length;
   }
 
@@ -231,9 +248,26 @@ export class CancellationComponent implements OnInit {
     if (!item.id) return;
     if (!confirm('Are you sure you want to approve this cancellation request?')) return;
 
-    this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'Approved from Cancellation Component').subscribe({
-      next: () => {
+    this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'commissioner').subscribe({
+      next: (response) => {
         alert('Cancellation Request Approved Successfully');
+        
+        // Update the item status immediately in the local data
+        const index = this.cancellationData.findIndex(data => data.id === item.id);
+        if (index !== -1) {
+          this.cancellationData[index].status = response.new_status || 'ApprovedCancellationByCommissioner';
+          // Clear allowed actions since it's now approved
+          this.cancellationData[index].allowedActions = [];
+        }
+        
+        // Update filtered data as well
+        const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
+        if (filteredIndex !== -1) {
+          this.filteredCancellationData[filteredIndex].status = response.new_status || 'ApprovedCancellationByCommissioner';
+          this.filteredCancellationData[filteredIndex].allowedActions = [];
+        }
+        
+        // Optionally reload data to ensure consistency
         this.loadCancellationData();
       },
       error: (err) => {
@@ -247,9 +281,26 @@ export class CancellationComponent implements OnInit {
     if (!item.id) return;
     if (!confirm('Are you sure you want to reject this cancellation request?')) return;
 
-    this.supplyChainService.performCancellationAction(item.id, 'REJECT', 'Rejected from Cancellation Component').subscribe({
-      next: () => {
+    this.supplyChainService.performCancellationAction(item.id, 'REJECT', 'commissioner').subscribe({
+      next: (response) => {
         alert('Cancellation Request Rejected');
+        
+        // Update the item status immediately in the local data
+        const index = this.cancellationData.findIndex(data => data.id === item.id);
+        if (index !== -1) {
+          this.cancellationData[index].status = response.new_status || 'RejectedCancellationByCommissioner';
+          // Clear allowed actions since it's now rejected
+          this.cancellationData[index].allowedActions = [];
+        }
+        
+        // Update filtered data as well
+        const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
+        if (filteredIndex !== -1) {
+          this.filteredCancellationData[filteredIndex].status = response.new_status || 'RejectedCancellationByCommissioner';
+          this.filteredCancellationData[filteredIndex].allowedActions = [];
+        }
+        
+        // Optionally reload data to ensure consistency
         this.loadCancellationData();
       },
       error: (err) => {
@@ -263,10 +314,13 @@ export class CancellationComponent implements OnInit {
   getStatusClass(status: string): string {
     switch (status?.toUpperCase()) {
       case 'PENDING':
+      case 'CANCELLATIONPENDING':
         return 'pending';
       case 'APPROVED':
+      case 'APPROVEDCANCELLATIONBYCOMMISSIONER':
         return 'approved';
       case 'REJECTED':
+      case 'REJECTEDCANCELLATIONBYCOMMISSIONER':
         return 'rejected';
       case 'PROCESSING':
         return 'processing';
@@ -275,6 +329,42 @@ export class CancellationComponent implements OnInit {
       default:
         return 'default';
     }
+  }
+
+  // Check if approve/reject buttons should be shown
+  canApproveOrReject(item: TableData): boolean {
+    const status = item.status?.toUpperCase();
+    
+    // Don't show buttons if already approved or rejected
+    if (status?.includes('APPROVED') || status?.includes('REJECTED')) {
+      return false;
+    }
+    
+    // Don't show buttons if allowedActions is empty or doesn't include APPROVE/REJECT
+    if (!item.allowedActions || item.allowedActions.length === 0) {
+      return false;
+    }
+    
+    // Only show if user is commissioner and status allows actions
+    return this.isCommissioner() && (status === 'PENDING' || status === 'CANCELLATIONPENDING' || status === 'PROCESSING');
+  }
+
+  // Check if approve button should be shown
+  canApprove(item: TableData): boolean {
+    return this.canApproveOrReject(item) && 
+           (item.allowedActions?.includes('APPROVE') || 
+            item.allowedActions?.includes('approve') || 
+            !item.allowedActions || 
+            item.allowedActions.length === 0);
+  }
+
+  // Check if reject button should be shown
+  canReject(item: TableData): boolean {
+    return this.canApproveOrReject(item) && 
+           (item.allowedActions?.includes('REJECT') || 
+            item.allowedActions?.includes('reject') || 
+            !item.allowedActions || 
+            item.allowedActions.length === 0);
   }
 
   private parseDate(dateString: string): Date {

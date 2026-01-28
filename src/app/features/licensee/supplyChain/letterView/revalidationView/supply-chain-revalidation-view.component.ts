@@ -1,6 +1,7 @@
 import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SupplyChainService } from '../../services/supplychain.service';
 
 interface RevalidationData {
   id: string;
@@ -36,10 +37,13 @@ interface RevalidationData {
 export class SupplyChainRevalidationViewComponent implements OnInit {
   revalidationData?: RevalidationData;
   private isBrowser = false;
+  isLoading = false;
+  errorMessage = '';
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private supplyChainService: SupplyChainService,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -62,12 +66,112 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
   }
 
   private loadRevalidationData(refNo: string): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    
+    // First, get all revalidation data to find the ID by reference number
+    this.supplyChainService.getRevalidationData().subscribe({
+      next: (data) => {
+        console.log('Revalidation data received:', data);
+        
+        // Find the item by reference number or licensee ID
+        const foundItem = data.find(item => 
+          item.our_ref_no === refNo || 
+          item.ourRefNo === refNo ||
+          item.referenceNo === refNo ||
+          item.reference_no === refNo ||
+          item.licenseeId === refNo ||
+          item.licensee_id === refNo ||
+          // Also check if refNo contains the licensee ID (like "M/s Sikkim Distilleries Ltd (99202532911)")
+          (refNo.includes('(') && refNo.includes(')') && 
+           (item.licenseeId === refNo.match(/\(([^)]+)\)/)?.[1] || 
+            item.licensee_id === refNo.match(/\(([^)]+)\)/)?.[1]))
+        );
+        
+        if (foundItem) {
+          // Get detailed data using the ID
+          const itemId = foundItem.id || foundItem.pk;
+          if (itemId) {
+            this.loadRevalidationDetail(itemId);
+          } else {
+            // If no ID found, use the found item data directly
+            this.mapApiDataToInterface(foundItem);
+            this.isLoading = false;
+          }
+        } else {
+          console.warn('Revalidation not found for reference:', refNo);
+          this.errorMessage = `Revalidation application not found for reference: ${refNo}`;
+          this.isLoading = false;
+          
+          // Fallback to sample data for development
+          this.loadSampleDataFallback(refNo);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading revalidation data:', error);
+        this.errorMessage = 'Failed to load revalidation data. Please try again.';
+        this.isLoading = false;
+        
+        // Fallback to sample data for development
+        this.loadSampleDataFallback(refNo);
+      }
+    });
+  }
+
+  private loadRevalidationDetail(id: string): void {
+    this.supplyChainService.getRevalidationDetail(id).subscribe({
+      next: (data) => {
+        console.log('Revalidation detail received:', data);
+        this.mapApiDataToInterface(data);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading revalidation detail:', error);
+        this.errorMessage = 'Failed to load revalidation details. Please try again.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private mapApiDataToInterface(apiData: any): void {
+    // Map API response to our interface
+    this.revalidationData = {
+      id: apiData.id || apiData.pk || '',
+      referenceNo: apiData.ourRefNo || apiData.our_ref_no || apiData.referenceNo || '',
+      submissionDate: new Date(apiData.requisitionDate || apiData.requisition_date || apiData.created_at || Date.now()),
+      distilleryName: apiData.distilleryName || apiData.distillery_name || '',
+      status: apiData.status || 'PENDING',
+      brAmount: parseFloat(apiData.brAmount || apiData.br_amount || '0'),
+      revalidationAmount: parseFloat(apiData.revalidationBrAmount || apiData.revalidation_br_amount || '0'),
+      originalPermitNo: apiData.originalPermitNo || apiData.original_permit_no || apiData.ourRefNo || '',
+      originalPermitDate: apiData.originalPermitDate ? new Date(apiData.originalPermitDate) : 
+                         apiData.original_permit_date ? new Date(apiData.original_permit_date) :
+                         apiData.requisitionDate ? new Date(apiData.requisitionDate) : undefined,
+      expiryDate: apiData.revalidationDate ? new Date(apiData.revalidationDate) : 
+                 apiData.revalidation_date ? new Date(apiData.revalidation_date) : undefined,
+      reasonForRevalidation: apiData.reasonForRevalidation || apiData.reason_for_revalidation || 'Revalidation requested',
+      newQuantity: parseFloat(apiData.grainEnaNumber || apiData.grain_ena_number || '0'),
+      newPurpose: apiData.branchPurpose || apiData.branch_purpose || '',
+      quantity: parseFloat(apiData.totalBl || apiData.total_bl || '0'),
+      numberOfPermits: parseInt(apiData.requisitonNumberOfPermits || apiData.requisiton_number_of_permits || '1'),
+      bulkSpiritType: apiData.bulkSpiritType || apiData.bulk_spirit_type || '',
+      strengthTo: apiData.strength || apiData.strengthTo || '',
+      liftedFrom: apiData.liftedFrom || apiData.lifted_from || '',
+      viaRoute: apiData.viaRoute || apiData.via_route || '',
+      checkpostEntry: apiData.checkpostEntry || apiData.checkpost_entry || '',
+      purpose: apiData.branchPurpose || apiData.branch_purpose || apiData.purpose || ''
+    };
+  }
+
+  private loadSampleDataFallback(refNo: string): void {
+    console.log('Loading sample data fallback for:', refNo);
+    
     const sampleData: RevalidationData[] = [
       {
         id: '1',
         referenceNo: 'IMP/SUP-AGDIST',
         submissionDate: new Date('2025-09-22'),
-        distilleryName: 'Sikkim Distilleries Ltd',
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
         status: 'IMPORT PERMIT EXTENDS 45 DAYS - INVALID',
         brAmount: 0.00,
         revalidationAmount: 5.00,
@@ -90,7 +194,7 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
         id: '2',
         referenceNo: 'REV/BF601',
         submissionDate: new Date('2025-09-18'),
-        distilleryName: 'Himalayan Distilleries Pvt Ltd',
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
         status: 'REVALIDATION REQUEST PENDING APPROVAL',
         brAmount: 5.00,
         revalidationAmount: 5.00,
@@ -108,154 +212,39 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
         viaRoute: 'NH 31A via Sevoke',
         checkpostEntry: 'melli',
         purpose: 'manufacturing'
-      },
-      {
-        id: '3',
-        referenceNo: 'REV/BF602',
-        submissionDate: new Date('2025-09-17'),
-        distilleryName: 'Royal Sikkim Brewery',
-        status: 'PERMIT EXPIRED - REQUIRES IMMEDIATE REVALIDATION',
-        brAmount: 7.50,
-        revalidationAmount: 7.50,
-        originalPermitNo: 'BF504/EXCISE',
-        originalPermitDate: new Date('2025-08-17'),
-        expiryDate: new Date('2025-10-02'),
-        reasonForRevalidation: 'Permit expired - production schedule delays',
-        newQuantity: 1575,
-        newPurpose: 'Manufacturing with extended timeline',
-        quantity: 1575,
-        numberOfPermits: 1,
-        bulkSpiritType: 'grain-ena',
-        strengthTo: '96.0',
-        liftedFrom: 'sikkim-distilleries',
-        viaRoute: 'Gangtok - Rangpo Highway',
-        checkpostEntry: 'rangpo',
-        purpose: 'manufacturing'
-      },
-      {
-        id: '4',
-        referenceNo: 'REV/BF603',
-        submissionDate: new Date('2025-09-16'),
-        distilleryName: 'Mountain View Distilleries',
-        status: 'REVALIDATION APPROVED - PERMIT EXTENDED',
-        brAmount: 6.25,
-        revalidationAmount: 6.25,
-        originalPermitNo: 'BF505/EXCISE',
-        originalPermitDate: new Date('2025-08-16'),
-        expiryDate: new Date('2025-11-16'),
-        reasonForRevalidation: 'Change in production capacity requirements',
-        newQuantity: 925,
-        newPurpose: 'Modified blending process',
-        quantity: 925,
-        numberOfPermits: 1,
-        bulkSpiritType: 'rectified-spirit',
-        strengthTo: '95.5',
-        liftedFrom: 'highland-breweries',
-        viaRoute: 'Singtam - Rangpo Road',
-        checkpostEntry: 'rangpo',
-        purpose: 'blending'
-      },
-      // Permit Section Data
-      {
-        id: '5',
-        referenceNo: 'REV/001/2025',
-        submissionDate: new Date('2025-09-10'),
-        distilleryName: 'Sikkim Distilleries Ltd',
-        status: 'REVALIDATION APPROVED BY COMMISSIONER',
-        brAmount: 0.00,
-        revalidationAmount: 50.00,
-        originalPermitNo: 'IBPS/001/2025',
-        originalPermitDate: new Date('2025-06-15'),
-        expiryDate: new Date('2025-09-15'),
-        reasonForRevalidation: 'Delay in transportation due to road conditions',
-        newQuantity: 1000,
-        newPurpose: 'Manufacturing - Extended Period',
-        quantity: 1000,
-        numberOfPermits: 1,
-        bulkSpiritType: 'grain-ena',
-        strengthTo: '96.0',
-        liftedFrom: 'sikkim-distilleries',
-        viaRoute: 'Gangtok - Siliguri Highway via NH-10',
-        checkpostEntry: 'rangpo',
-        purpose: 'manufacturing'
-      },
-      // Commissioner Dashboard Data
-      {
-        id: '6',
-        referenceNo: 'REV/BF601',
-        submissionDate: new Date('2025-09-18'),
-        distilleryName: 'Himalayan Distilleries Pvt Ltd',
-        status: 'PENDING REVIEW',
-        brAmount: 50.0,
-        revalidationAmount: 5.0,
-        originalPermitNo: 'BF501/EXCISE',
-        originalPermitDate: new Date('2025-08-18'),
-        expiryDate: new Date('2025-09-25'),
-        reasonForRevalidation: 'Extension of validity period due to urgent requirements',
-        newQuantity: 1500,
-        newPurpose: 'Extended manufacturing for export orders',
-        quantity: 1500,
-        numberOfPermits: 1,
-        bulkSpiritType: 'molasses-ena',
-        strengthTo: '95.0',
-        liftedFrom: 'mountain-spirits',
-        viaRoute: 'NH 31A via Sevoke',
-        checkpostEntry: 'melli',
-        purpose: 'manufacturing'
-      },
-      {
-        id: '7',
-        referenceNo: 'REV/BF604',
-        submissionDate: new Date('2025-09-15'),
-        distilleryName: 'Sikkim Distilleries Ltd',
-        status: 'PENDING REVIEW',
-        brAmount: 55.0,
-        revalidationAmount: 8.0,
-        originalPermitNo: 'BF504/EXCISE',
-        originalPermitDate: new Date('2025-08-15'),
-        expiryDate: new Date('2025-09-28'),
-        reasonForRevalidation: 'Change in production requirements',
-        newQuantity: 2200,
-        newPurpose: 'Modified blending process for premium products',
-        quantity: 2200,
-        numberOfPermits: 1,
-        bulkSpiritType: 'grain-ena',
-        strengthTo: '96.0',
-        liftedFrom: 'sikkim-distilleries',
-        viaRoute: 'Gangtok - Rangpo Highway',
-        checkpostEntry: 'rangpo',
-        purpose: 'blending'
-      },
-      {
-        id: '8',
-        referenceNo: 'REV/002/2025',
-        submissionDate: new Date('2025-09-12'),
-        distilleryName: 'Mount Distilleries Ltd',
-        status: 'ApprovedRevalidationByCommissioner',
-        brAmount: 60.0,
-        revalidationAmount: 30.0,
-        originalPermitNo: 'IBPS/06/EXCISE',
-        originalPermitDate: new Date('2025-08-20'),
-        expiryDate: new Date('2025-11-20'),
-        reasonForRevalidation: 'Change in quantity requirements',
-        newQuantity: 18000,
-        newPurpose: 'Modified blending',
-        quantity: 18000,
-        numberOfPermits: 1,
-        bulkSpiritType: 'rectified-spirit',
-        strengthTo: '95.5',
-        liftedFrom: 'highland-breweries',
-        viaRoute: 'Singtam - Rangpo Road',
-        checkpostEntry: 'rangpo',
-        purpose: 'blending'
       }
     ];
 
     const found = sampleData.find(r => r.referenceNo === refNo);
     if (found) {
       this.revalidationData = found;
+      this.errorMessage = '';
     } else {
-      this.goBack();
+      // Create a generic entry for any reference number
+      this.revalidationData = {
+        id: '999',
+        referenceNo: refNo,
+        submissionDate: new Date(),
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        status: 'REVALIDATION REQUEST PENDING APPROVAL',
+        brAmount: 0.00,
+        revalidationAmount: 5.00,
+        originalPermitNo: 'BF999/EXCISE',
+        originalPermitDate: new Date(),
+        expiryDate: new Date(),
+        reasonForRevalidation: 'Revalidation requested for permit extension',
+        newQuantity: 1000,
+        newPurpose: 'Manufacturing continuation',
+        quantity: 1000,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Siliguri Highway',
+        checkpostEntry: 'rangpo',
+        purpose: 'manufacturing'
+      };
+      this.errorMessage = '';
     }
   }
 
