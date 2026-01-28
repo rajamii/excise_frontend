@@ -265,10 +265,12 @@ export class TransitPermitComponent implements OnInit {
 
         console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
 
-        // Find conversion
+        // Find conversion - check both field name formats
         const conv = this.brandMlConversionData.find(c => c.ml === size);
-        const factor = conv ? conv.pieces_in_case : 0;
+        const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
         const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+
+        console.log(`Size ${size}ml: factor=${factor}, approxCases=${approxCases}`);
 
         return { size, pieces, approxCases };
       }).sort((a: any, b: any) => a.size - b.size);
@@ -282,10 +284,10 @@ export class TransitPermitComponent implements OnInit {
           const size = entry.capacitySize;
           const pieces = entry.currentStock || 0;
           const conv = this.brandMlConversionData.find(c => c.ml === size);
-          const factor = conv ? conv.pieces_in_case : 0;
+          const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
           
-          console.log(`Fallback - Size ${size}ml: pieces=${pieces}, approxCases=${approxCases}`);
+          console.log(`Fallback - Size ${size}ml: pieces=${pieces}, factor=${factor}, approxCases=${approxCases}`);
           
           return { size, pieces, approxCases };
         }).sort((a: any, b: any) => a.size - b.size);
@@ -310,15 +312,26 @@ export class TransitPermitComponent implements OnInit {
 
     console.log('onSizeChange called with size:', sizeMl, 'brand:', this.formData.brand);
     console.log('brandWarehouseData:', this.brandWarehouseData);
+    console.log('brandMlConversionData:', this.brandMlConversionData);
 
-    // 1. Get Conversion Factor
+    // 1. Get Conversion Factor - check both snake_case and camelCase
     const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
+    console.log('Conversion entry found:', conversionEntry);
+    
     if (conversionEntry) {
-      this.conversionFactor = conversionEntry.pieces_in_case;
-      console.log('Conversion factor found:', this.conversionFactor);
+      // Try both field name formats
+      this.conversionFactor = conversionEntry.pieces_in_case || conversionEntry.piecesInCase || 0;
+      console.log('Conversion factor set to:', this.conversionFactor);
     } else {
-      console.warn(`No conversion factor found for ${sizeMl}ml`);
-      this.conversionFactor = 0; // Handle error or default?
+      console.warn(`No conversion entry found for ${sizeMl}ml in brandMlConversionData`);
+      this.conversionFactor = 0;
+    }
+
+    // If conversion factor is still 0, show error
+    if (this.conversionFactor === 0) {
+      console.error('Conversion factor is 0! Available conversion data:', this.brandMlConversionData);
+      this.currentStockStatus = 'Unable to calculate. Conversion data not loaded.';
+      return;
     }
 
     // 2. Get Available Stock - use loose matching for brand name - USE CAMELCASE FIELD NAMES
@@ -337,7 +350,8 @@ export class TransitPermitComponent implements OnInit {
     if (stockEntry) {
       this.availableStockPieces = stockEntry.currentStock || 0;
       console.log('Available stock pieces:', this.availableStockPieces);
-      this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${Math.floor(this.availableStockPieces / (this.conversionFactor || 1))} cases)`;
+      const approxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
+      this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
     } else {
       console.warn('No stock entry found for brand:', this.formData.brand, 'size:', sizeMl);
       this.currentStockStatus = 'No stock information available';
@@ -352,14 +366,53 @@ export class TransitPermitComponent implements OnInit {
 
   onCasesChange(): void {
     this.stockError = '';
-    if (!this.formData.cases || this.formData.cases <= 0) return;
+    
+    if (!this.formData.cases || this.formData.cases <= 0) {
+      return;
+    }
+
+    if (!this.formData.size || !this.formData.brand) {
+      this.stockError = 'Please select brand and size first';
+      return;
+    }
+
+    console.log('onCasesChange called with cases:', this.formData.cases);
+    console.log('Conversion factor:', this.conversionFactor);
+    console.log('Available stock pieces:', this.availableStockPieces);
 
     if (this.conversionFactor > 0) {
       const requiredPieces = this.formData.cases * this.conversionFactor;
+      console.log('Required pieces for', this.formData.cases, 'cases:', requiredPieces);
 
       if (requiredPieces > this.availableStockPieces) {
-        this.stockError = `Insufficient stock! You need ${requiredPieces} pieces for ${this.formData.cases} cases, but only ${this.availableStockPieces} pieces are available.`;
+        const shortfall = requiredPieces - this.availableStockPieces;
+        const maxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
+        
+        this.stockError = `Insufficient stock! You need ${shortfall} more pieces to pack ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} (requires ${requiredPieces} pieces, available ${this.availableStockPieces} pieces). Maximum cases you can pack: ${maxCases}`;
+        
+        console.error('Stock validation failed:', {
+          requestedCases: this.formData.cases,
+          requiredPieces: requiredPieces,
+          availablePieces: this.availableStockPieces,
+          shortfall: shortfall,
+          maxCases: maxCases
+        });
+      } else {
+        // Success - show confirmation message
+        const remainingPieces = this.availableStockPieces - requiredPieces;
+        console.log('Stock validation passed:', {
+          requestedCases: this.formData.cases,
+          requiredPieces: requiredPieces,
+          availablePieces: this.availableStockPieces,
+          remainingPieces: remainingPieces
+        });
+        
+        // Update the current stock status to show calculation
+        this.currentStockStatus = `✓ Valid: ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} = ${requiredPieces} pieces. Remaining stock: ${remainingPieces} pieces`;
       }
+    } else {
+      this.stockError = 'Unable to calculate pieces per case. Please contact administrator.';
+      console.error('Conversion factor not available for size:', this.formData.size);
     }
   }
 
