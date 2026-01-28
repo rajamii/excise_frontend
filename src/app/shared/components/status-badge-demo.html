@@ -1,0 +1,102 @@
+<!-- Status Badge Demo - For testing purposes -->
+<div class="container mt-4">
+  <h2>Status Badge Design Demo</h2>
+  <p>This demonstrates the consistent status badge styling across all components.</p>
+  
+  <div class="row">
+    <div class="col-md-6">
+      <h4>Cancellation Status Examples</h4>
+      <div class="d-flex flex-column gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-approved">Approved</span>
+          <span>ApprovedCancellationByCommissioner</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-rejected">Rejected</span>
+          <span>RejectedCancellationByCommissioner</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-pending">Pending</span>
+          <span>CancellationPending</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-processing">Processing</span>
+          <span>Processing</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-cancelled">Cancelled</span>
+          <span>Cancelled</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-expired">Expired</span>
+          <span>Expired</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-default">Default</span>
+          <span>Unknown Status</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <h4>Size Variants</h4>
+      <div class="d-flex flex-column gap-3">
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-badge-sm status-approved">Small</span>
+          <span>Small size variant</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-approved">Normal</span>
+          <span>Normal size (default)</span>
+        </div>
+        
+        <div class="d-flex align-items-center gap-3">
+          <span class="status-badge status-badge-lg status-approved">Large</span>
+          <span>Large size variant</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-5">
+    <h4>Color Coding Guide</h4>
+    <div class="row">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <span class="status-badge status-approved mb-2">Approved</span>
+            <h6 class="card-title">Green - Success</h6>
+            <p class="card-text small">Used for approved, successful, or completed statuses</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <span class="status-badge status-rejected mb-2">Rejected</span>
+            <h6 class="card-title">Red - Error/Rejection</h6>
+            <p class="card-text small">Used for rejected, cancelled, or error statuses</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <span class="status-badge status-pending mb-2">Pending</span>
+            <h6 class="card-title">Blue - Pending</h6>
+            <p class="card-text small">Used for pending, waiting, or in-review statuses</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

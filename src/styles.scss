@@ -1,5 +1,58 @@
 @import url('https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,900');
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
+// Import shared styles
+@import 'app/shared/styles/status-badges';
+
 * { font-family: 'Poppins', sans-serif; }
 body{ background-color: #EDF7FE; }
+
+// Global notification animations
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+// Notification styles
+.notification {
+  .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    
+    i {
+      font-size: 1.25rem;
+    }
+    
+    .notification-close {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      margin-left: auto;
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}

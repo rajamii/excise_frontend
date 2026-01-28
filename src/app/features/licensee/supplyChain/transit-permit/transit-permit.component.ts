@@ -176,6 +176,13 @@ export class TransitPermitComponent implements OnInit {
   onDistributorChange(): void {
     if (!this.formData.soleDistributor) {
       this.availableDepotAddresses = [];
+      // Clear stock data when distributor is cleared
+      this.selectedBrandStockSummary = [];
+      this.brandWarehouseData = [];
+      this.availableStockPieces = 0;
+      this.conversionFactor = 0;
+      this.currentStockStatus = '';
+      this.stockError = '';
       return;
     }
     // Filter distributors matching the selected name to get their addresses
@@ -765,6 +772,7 @@ export class TransitPermitComponent implements OnInit {
     this.formData.size = '';
     this.formData.cases = 0;
     this.formData.vehicleNumber = '';
+    this.formData.bottleType = '';
 
     // Clear products and errors
     this.products = [];
@@ -773,10 +781,19 @@ export class TransitPermitComponent implements OnInit {
     this.isSubmitted = false;
     this.isCommonFieldsLocked = false;
 
+    // Clear all stock-related data and status
+    this.selectedBrandStockSummary = []; // Clear the Available Stock Summary
+    this.brandWarehouseData = []; // Clear warehouse data
+    this.availableStockPieces = 0;
+    this.conversionFactor = 0;
+    this.currentStockStatus = '';
+    this.stockError = '';
+    this.sizeOptions = []; // Clear size options
+
     // Generate new bill number for next application
     this.generateNextBillNumber();
 
-    console.log('Form cleared');
+    console.log('Form cleared - All data including Available Stock Summary reset');
   }
 
   // Common Fields Locking Methods
@@ -844,6 +861,14 @@ export class TransitPermitComponent implements OnInit {
     // Clear any validation errors
     this.validationErrors = [];
 
+    // Clear all stock-related data when unlocking
+    this.selectedBrandStockSummary = []; // Clear the Available Stock Summary
+    this.brandWarehouseData = []; // Clear warehouse data
+    this.availableStockPieces = 0;
+    this.conversionFactor = 0;
+    this.currentStockStatus = '';
+    this.stockError = '';
+
     // Force Angular to update the form by triggering change detection
     setTimeout(() => {
       // Additional reset to ensure dropdowns are properly cleared
@@ -858,7 +883,7 @@ export class TransitPermitComponent implements OnInit {
       if (casesInput) casesInput.value = '0';
     }, 50);
 
-    console.log('Common fields unlocked, product fields cleared, and PRODUCT DETAILS table cleared');
+    console.log('Common fields unlocked, product fields cleared, PRODUCT DETAILS table cleared, and Available Stock Summary cleared');
   }
 
   goBack(): void {

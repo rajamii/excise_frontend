@@ -85,8 +85,11 @@
         (change)="onCancellationStatusFilterChange()" title="Filter by status">
         <option value="">All Status</option>
         <option value="PENDING">Pending Review</option>
+        <option value="CancellationPending">Cancellation Pending</option>
         <option value="APPROVED">Approved</option>
+        <option value="ApprovedCancellationByCommissioner">Approved by Commissioner</option>
         <option value="REJECTED">Rejected</option>
+        <option value="RejectedCancellationByCommissioner">Rejected by Commissioner</option>
         <option value="PROCESSING">Processing</option>
       </select>
     </div>
@@ -145,7 +148,7 @@
         <tbody>
           @for (
           item of getPaged();
-          track item.referenceNo;
+          track item.id;
           let i = $index
           ) {
           <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
@@ -185,18 +188,25 @@
               </span>
             </td>
             <td class="actions">
-              <div class="action-buttons">
+              <div class="action-buttons" [attr.data-item-id]="item.id">
                 <button class="btn btn-outline-primary btn-sm" (click)="reviewCancellation(item)"
-                  title="Review Application">
+                  title="Review Application" data-bs-toggle="tooltip" data-bs-placement="top">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)" title="Approve"
-                  *ngIf="item.allowedActions?.includes('APPROVE')">
-                  <i class="bi bi-check"></i>
+                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)" 
+                  title="Approve Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
+                  *ngIf="canApprove(item)">
+                  <i class="bi bi-check-circle"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" title="Reject"
-                  *ngIf="item.allowedActions?.includes('REJECT')">
-                  <i class="bi bi-x"></i>
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" 
+                  title="Reject Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
+                  *ngIf="canReject(item)">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)" 
+                  title="Generate Final Letter" data-bs-toggle="tooltip" data-bs-placement="top"
+                  *ngIf="canGenerateFinalLetter(item)">
+                  <i class="bi bi-file-earmark-text"></i>
                 </button>
               </div>
             </td>
