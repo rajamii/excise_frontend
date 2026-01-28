@@ -1389,11 +1389,18 @@ export class OfficerinchargehologramreqComponent implements OnInit {
       console.log(`Performing backend action: ${action} on ID: ${this.selectedRequest.originalId}`);
 
       // Normalize allocations for backend (ensure all formats are included)
-      const normalizedAllocations = this.allocationResult.allocations.map((a: any) => {
-        console.log('🔍 BEFORE normalization - Allocation object:', a);
-        console.log('🔍 remainingInCartoon value:', a.remainingInCartoon, 'Type:', typeof a.remainingInCartoon);
+      const normalizedAllocations = this.allocationResult.allocations.map((a: any, index: number) => {
+        console.log(`🔍 ALLOCATION ${index + 1} - BEFORE normalization:`, {
+          cartoonNumber: a.cartoonNumber,
+          fromSerial: a.fromSerial,
+          toSerial: a.toSerial,
+          quantity: a.quantity,
+          range: a.range,
+          remainingInCartoon: a.remainingInCartoon,
+          fullObject: a
+        });
 
-        return {
+        const normalized = {
           cartoonNumber: a.cartoonNumber,
           cartoon_number: a.cartoonNumber, // Both formats for compatibility
           count: a.quantity,
@@ -1401,16 +1408,22 @@ export class OfficerinchargehologramreqComponent implements OnInit {
           remainingInCartoon: a.remainingInCartoon,
           range: `${a.fromSerial} - ${a.toSerial}`,
           fromSerial: a.fromSerial,
-          toSerial: a.toSerial
+          toSerial: a.toSerial,
+          from_serial: a.fromSerial, // Add snake_case version
+          to_serial: a.toSerial // Add snake_case version
         };
+        
+        console.log(`🔍 ALLOCATION ${index + 1} - AFTER normalization:`, normalized);
+        
+        return normalized;
       });
 
-      console.log('🚀 Sending normalized allocations to backend:', normalizedAllocations);
-      console.log('🚀 Detailed check - First allocation remainingInCartoon:', normalizedAllocations[0]?.remainingInCartoon);
+      console.log('🚀🚀🚀 FINAL normalized allocations being sent to backend:', JSON.stringify(normalizedAllocations, null, 2));
 
       this.hologramService.performAction('request', this.selectedRequest.originalId, action, this.approvalComments, { issued_assets: normalizedAllocations }).subscribe({
         next: (response) => {
-          console.log('Backend updated successfully:', response);
+          console.log('✅ Backend updated successfully:', response);
+          console.log('✅ Response rolls_assigned:', response.rolls_assigned || response.rollsAssigned);
           // Reload inventory to show updated available counts
           this.loadHologramInventory();
           // CRITICAL FIX: Notify Daily Register component to reload data
@@ -1913,13 +1926,17 @@ export class OfficerinchargehologramreqComponent implements OnInit {
     if (!request) return [];
     
     const req = request as any;
-    // Get rolls from either rolls_assigned, rollsAssigned, or allocations property
-    const rolls = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
+    // CRITICAL FIX: Use rolls_assigned which contains the actual allocated ranges from backend
+    // rolls_assigned is populated during allocation with the exact ranges that were allocated (e.g., 4-4, 7-7)
+    // available_cartons contains full roll ranges from procurement (e.g., 101-101, 102-102) - NOT what we want
+    const rollsAssigned = req.rolls_assigned || req.rollsAssigned || req.allocations || [];
     
     // Ensure it's an array and normalize the data structure
-    if (!Array.isArray(rolls)) return [];
+    if (!Array.isArray(rollsAssigned)) return [];
     
-    return rolls.map((roll: any) => ({
+    console.log('✅ getRollsAssigned - using rolls_assigned:', rollsAssigned);
+    
+    return rollsAssigned.map((roll: any) => ({
       cartoonNumber: roll.cartoonNumber || roll.cartoon_number || roll.carton_number || 'N/A',
       fromSerial: roll.fromSerial || roll.from_serial || 'N/A',
       toSerial: roll.toSerial || roll.to_serial || 'N/A',

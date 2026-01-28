@@ -166,8 +166,9 @@ export class HologramdetailsComponent implements OnInit {
             cartoonNumber: rawDetails[0]?.cartoonNumber || rawDetails[0]?.cartoon_number || '', // Handle both camelCase and snake_case keys
             fromSerial: rawDetails[0]?.fromSerial || rawDetails[0]?.from_serial || '',
             toSerial: rawDetails[0]?.toSerial || rawDetails[0]?.to_serial || '',
-            // Use dynamic available count if present (from backend serializer), otherwise fall back to calculated total
-            numberOfHolograms: (p as any).total_available_holograms !== undefined ? (p as any).total_available_holograms : (Number(p.localQty) + Number(p.exportQty) + Number(p.defenceQty)),
+            // Use original procurement quantities instead of calculated available quantities
+            // This ensures we show the actual procured amount (1000) not the available amount (999)
+            numberOfHolograms: (Number(p.localQty) + Number(p.exportQty) + Number(p.defenceQty)),
             remarks: p.remarks || `Hologram procurement (${pType})`,
             status: internalStatus,
             approvedDate: p.date,

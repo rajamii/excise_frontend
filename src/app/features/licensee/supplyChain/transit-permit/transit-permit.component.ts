@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
 import { DistRow, LiquorRates } from '../models/supply-chain.models';
+import { trigger, transition, style, animate, query, stagger } from '@angular/animations';
 
 interface FormData {
   billNo: string;
@@ -37,7 +38,18 @@ interface Product {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transit-permit.component.html',
-  styleUrls: ['./transit-permit.component.scss']
+  styleUrls: ['./transit-permit.component.scss'],
+  animations: [
+    trigger('slideInAnimation', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'translateY(-20px)' }),
+        animate('400ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
+      ]),
+      transition(':leave', [
+        animate('250ms ease-in', style({ opacity: 0, transform: 'translateY(-15px)' }))
+      ])
+    ])
+  ]
 })
 export class TransitPermitComponent implements OnInit {
   formData: FormData = {
@@ -56,6 +68,8 @@ export class TransitPermitComponent implements OnInit {
   validationErrors: string[] = [];
   isLocked = false;
   isSubmitted = false;
+  isCommonFieldsLocked = false;
+  showUnlockModal = false;
 
   distributors: DistRow[] = [];
   availableDepotAddresses: string[] = [];
@@ -65,6 +79,24 @@ export class TransitPermitComponent implements OnInit {
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
 
+  // New properties for stock logic
+  private brandMlConversionData: any[] = [];
+  private brandWarehouseData: any[] = [];
+  availableStockPieces: number = 0;
+  conversionFactor: number = 0;
+  currentStockStatus: string = '';
+  stockError: string = '';
+
+  // Stock Summary Box
+  selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
+
+  // ML Per Case Data for Info Box
+  mlPerCaseData: any[] = [];
+  
+  // Sidebar toggle state - Default to open
+  isMlInfoSidebarExpanded: boolean = true;
+
+
   private isBrowser = false;
   constructor(
     private router: Router,
@@ -73,6 +105,16 @@ export class TransitPermitComponent implements OnInit {
     private supplyChainService: SupplyChainService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+    
+    // Listen for window resize to recalculate sidebar height
+    if (this.isBrowser) {
+      window.addEventListener('resize', () => {
+        // Trigger change detection to recalculate height
+        setTimeout(() => {
+          // Force recalculation by triggering change detection
+        }, 100);
+      });
+    }
   }
 
   ngOnInit(): void {
@@ -103,9 +145,15 @@ export class TransitPermitComponent implements OnInit {
     // Fetch Distributors
     this.supplyChainService.getDistributors().subscribe(data => {
       this.distributors = data;
+
+      // If default distributor is set, trigger change logic to load stock/depots
+      if (this.formData.soleDistributor) {
+        // Use setTimeout to ensure data bindings have settled or just call directly
+        this.onDistributorChange();
+      }
     });
 
-    // Fetch Brands
+    // Fetch Brands - We might fetch this later based on stock, or keep as fallback
     this.supplyChainService.getLiquorBrands().subscribe(data => {
       this.brandsData = data;
       this.brandOptions = data.map(b => b.brandName);
@@ -115,6 +163,13 @@ export class TransitPermitComponent implements OnInit {
     this.supplyChainService.getBottleTypes().subscribe(data => {
       console.log('Bottle Types loaded in component:', data);
       this.bottleTypes = data;
+    });
+
+    // Fetch Brand ML Conversion Data
+    this.supplyChainService.getBrandMlInCases().subscribe(data => {
+      this.brandMlConversionData = data;
+      this.mlPerCaseData = data; // Also populate the info box data
+      console.log('ML Conversion Data:', this.brandMlConversionData);
     });
   }
 
@@ -134,6 +189,24 @@ export class TransitPermitComponent implements OnInit {
     }
 
     // Check if there is an onDepotAddressChange method needed or just simple binding
+
+    // Fetch Warehouse Stock for this distributor
+    if (this.formData.soleDistributor) {
+      // Fetch ALL stock temporarily to debug mismatch between Distributor name and Distillery name in DB
+      this.supplyChainService.getBrandWarehouseStock('').subscribe(data => {
+        console.log(`Stock Data Received (ALL):`, data);
+        this.brandWarehouseData = data;
+
+        // Update brand options based on available stock
+        // Filter unique brands from warehouse data
+        const warehouseBrands = [...new Set(data.map(item => item.brand_details))].filter(b => !!b);
+        if (warehouseBrands.length > 0) {
+          this.brandOptions = warehouseBrands;
+        }
+        // If no stock data, maybe fallback to getLiquorBrands? 
+        // For now, let's assume if distributor has stock, we use that.
+      });
+    }
   }
 
   onDepotAddressChange(): void {
@@ -143,8 +216,221 @@ export class TransitPermitComponent implements OnInit {
   onBrandChange(): void {
     // Reset size when brand changes
     this.formData.size = '';
-    const selectedBrand = this.brandsData.find(b => b.brandName === this.formData.brand);
-    this.sizeOptions = selectedBrand ? selectedBrand.sizes.map(s => s.toString()) : [];
+    this.formData.cases = 0;
+    this.availableStockPieces = 0;
+    this.stockError = '';
+    this.currentStockStatus = '';
+    this.selectedBrandStockSummary = [];
+
+    console.log('onBrandChange called with brand:', this.formData.brand);
+
+    const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
+    console.log('selectedBrandBasic:', selectedBrandBasic);
+
+    // FETCH STOCK SPECIFICALLY FOR THIS BRAND
+    console.log('Fetching specific stock for brand:', this.formData.brand);
+    // Pass empty distillery name to ignore that filter, and pass brand name
+    this.supplyChainService.getBrandWarehouseStock('', this.formData.brand).subscribe(data => {
+      console.log('Stock Data for Brand (raw response):', data);
+      this.brandWarehouseData = data;
+
+      // Log each entry to see what we got - USE CAMELCASE FIELD NAMES
+      data.forEach((entry, index) => {
+        console.log(`Entry ${index}:`, {
+          brandDetails: entry.brandDetails,
+          capacitySize: entry.capacitySize,
+          currentStock: entry.currentStock,
+          status: entry.status
+        });
+      });
+
+      // After fetching, update the summary logic
+      this.updateStockSummary(selectedBrandBasic);
+    }, error => {
+      console.error('Error fetching brand warehouse stock:', error);
+      this.selectedBrandStockSummary = [];
+    });
+  }
+
+  updateStockSummary(selectedBrandBasic: any): void {
+    // Filter available sizes from warehouse data (loose match just in case, though API should handle it)
+    const searchBrand = this.formData.brand.toLowerCase().trim();
+
+    console.log('updateStockSummary called with brand:', this.formData.brand);
+    console.log('brandWarehouseData:', this.brandWarehouseData);
+
+    // Check if we have any data - USE CAMELCASE FIELD NAMES
+    const warehouseEntries = this.brandWarehouseData.filter(item => {
+      if (!item.brandDetails) return false;
+      const dbBrand = item.brandDetails.toLowerCase().trim();
+      const matches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+      console.log(`Comparing "${dbBrand}" with "${searchBrand}": ${matches}`);
+      return matches;
+    });
+
+    console.log('Filtered warehouse entries:', warehouseEntries);
+
+    if (selectedBrandBasic) {
+      // Use all defined sizes for the brand as the base
+      this.sizeOptions = selectedBrandBasic.sizes.map((s: number) => s.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+
+      // Generate summary for ALL sizes - USE CAMELCASE FIELD NAMES
+      this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
+        // Check if we have stock for this size
+        const stockEntry = warehouseEntries.find(we => we.capacitySize === size);
+        const pieces = stockEntry ? (stockEntry.currentStock || 0) : 0;
+
+        console.log(`Size ${size}ml: stockEntry=`, stockEntry, `pieces=${pieces}`);
+
+        // Find conversion - check both field name formats
+        const conv = this.brandMlConversionData.find(c => c.ml === size);
+        const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
+        const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+
+        console.log(`Size ${size}ml: factor=${factor}, approxCases=${approxCases}`);
+
+        return { size, pieces, approxCases };
+      }).sort((a: any, b: any) => a.size - b.size);
+
+    } else {
+      // Fallback if brand not found in basic list - USE CAMELCASE FIELD NAMES
+      if (warehouseEntries.length > 0) {
+        this.sizeOptions = warehouseEntries.map(item => item.capacitySize.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+
+        this.selectedBrandStockSummary = warehouseEntries.map(entry => {
+          const size = entry.capacitySize;
+          const pieces = entry.currentStock || 0;
+          const conv = this.brandMlConversionData.find(c => c.ml === size);
+          const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
+          const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+          
+          console.log(`Fallback - Size ${size}ml: pieces=${pieces}, factor=${factor}, approxCases=${approxCases}`);
+          
+          return { size, pieces, approxCases };
+        }).sort((a: any, b: any) => a.size - b.size);
+      } else {
+        console.log('No warehouse entries found for brand');
+        this.sizeOptions = [];
+        this.selectedBrandStockSummary = [];
+      }
+    }
+
+    console.log('Final selectedBrandStockSummary:', this.selectedBrandStockSummary);
+  }
+
+  onSizeChange(): void {
+    const sizeMl = parseInt(this.formData.size || '0', 10);
+    this.availableStockPieces = 0;
+    this.conversionFactor = 0;
+    this.stockError = '';
+    this.currentStockStatus = '';
+
+    if (!sizeMl || !this.formData.brand) return;
+
+    console.log('onSizeChange called with size:', sizeMl, 'brand:', this.formData.brand);
+    console.log('brandWarehouseData:', this.brandWarehouseData);
+    console.log('brandMlConversionData:', this.brandMlConversionData);
+
+    // 1. Get Conversion Factor - check both snake_case and camelCase
+    const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
+    console.log('Conversion entry found:', conversionEntry);
+    
+    if (conversionEntry) {
+      // Try both field name formats
+      this.conversionFactor = conversionEntry.pieces_in_case || conversionEntry.piecesInCase || 0;
+      console.log('Conversion factor set to:', this.conversionFactor);
+    } else {
+      console.warn(`No conversion entry found for ${sizeMl}ml in brandMlConversionData`);
+      this.conversionFactor = 0;
+    }
+
+    // If conversion factor is still 0, show error
+    if (this.conversionFactor === 0) {
+      console.error('Conversion factor is 0! Available conversion data:', this.brandMlConversionData);
+      this.currentStockStatus = 'Unable to calculate. Conversion data not loaded.';
+      return;
+    }
+
+    // 2. Get Available Stock - use loose matching for brand name - USE CAMELCASE FIELD NAMES
+    const searchBrand = this.formData.brand.toLowerCase().trim();
+    const stockEntry = this.brandWarehouseData.find(x => {
+      if (!x.brandDetails) return false;
+      const dbBrand = x.brandDetails.toLowerCase().trim();
+      const brandMatches = dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+      const sizeMatches = x.capacitySize === sizeMl;
+      console.log(`Checking: "${dbBrand}" vs "${searchBrand}" (${brandMatches}) and ${x.capacitySize} vs ${sizeMl} (${sizeMatches})`);
+      return brandMatches && sizeMatches;
+    });
+
+    console.log('Stock entry found:', stockEntry);
+
+    if (stockEntry) {
+      this.availableStockPieces = stockEntry.currentStock || 0;
+      console.log('Available stock pieces:', this.availableStockPieces);
+      const approxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
+      this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${approxCases} case${approxCases !== 1 ? 's' : ''})`;
+    } else {
+      console.warn('No stock entry found for brand:', this.formData.brand, 'size:', sizeMl);
+      this.currentStockStatus = 'No stock information available';
+      this.availableStockPieces = 0;
+    }
+
+    // Re-validate cases if already entered
+    if (this.formData.cases > 0) {
+      this.onCasesChange();
+    }
+  }
+
+  onCasesChange(): void {
+    this.stockError = '';
+    
+    if (!this.formData.cases || this.formData.cases <= 0) {
+      return;
+    }
+
+    if (!this.formData.size || !this.formData.brand) {
+      this.stockError = 'Please select brand and size first';
+      return;
+    }
+
+    console.log('onCasesChange called with cases:', this.formData.cases);
+    console.log('Conversion factor:', this.conversionFactor);
+    console.log('Available stock pieces:', this.availableStockPieces);
+
+    if (this.conversionFactor > 0) {
+      const requiredPieces = this.formData.cases * this.conversionFactor;
+      console.log('Required pieces for', this.formData.cases, 'cases:', requiredPieces);
+
+      if (requiredPieces > this.availableStockPieces) {
+        const shortfall = requiredPieces - this.availableStockPieces;
+        const maxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
+        
+        this.stockError = `Insufficient stock! You need ${shortfall} more pieces to pack ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} (requires ${requiredPieces} pieces, available ${this.availableStockPieces} pieces). Maximum cases you can pack: ${maxCases}`;
+        
+        console.error('Stock validation failed:', {
+          requestedCases: this.formData.cases,
+          requiredPieces: requiredPieces,
+          availablePieces: this.availableStockPieces,
+          shortfall: shortfall,
+          maxCases: maxCases
+        });
+      } else {
+        // Success - show confirmation message
+        const remainingPieces = this.availableStockPieces - requiredPieces;
+        console.log('Stock validation passed:', {
+          requestedCases: this.formData.cases,
+          requiredPieces: requiredPieces,
+          availablePieces: this.availableStockPieces,
+          remainingPieces: remainingPieces
+        });
+        
+        // Update the current stock status to show calculation
+        this.currentStockStatus = `✓ Valid: ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} = ${requiredPieces} pieces. Remaining stock: ${remainingPieces} pieces`;
+      }
+    } else {
+      this.stockError = 'Unable to calculate pieces per case. Please contact administrator.';
+      console.error('Conversion factor not available for size:', this.formData.size);
+    }
   }
 
   addProduct(): void {
@@ -178,6 +464,11 @@ export class TransitPermitComponent implements OnInit {
         // Add to products list
         this.products.push(newProduct);
 
+        // Lock common fields after adding first product
+        if (this.products.length === 1) {
+          this.lockCommonFields();
+        }
+
         // Reset form fields for next product
         this.formData.brand = '';
         this.formData.size = '';
@@ -201,6 +492,12 @@ export class TransitPermitComponent implements OnInit {
   deleteProduct(index: number): void {
     if (confirm('Are you sure you want to delete this product?')) {
       this.products.splice(index, 1);
+
+      // Unlock common fields if no products remain
+      if (this.products.length === 0) {
+        this.unlockCommonFields();
+      }
+
       console.log('Product deleted at index:', index);
     }
   }
@@ -225,6 +522,11 @@ export class TransitPermitComponent implements OnInit {
     }
     if (!this.formData.bottleType) {
       errors.push('Bottle Type is required');
+    }
+
+    // Add stock validation error
+    if (this.stockError) {
+      errors.push(this.stockError);
     }
 
     this.validationErrors = errors;
@@ -469,11 +771,94 @@ export class TransitPermitComponent implements OnInit {
     this.validationErrors = [];
     this.isLocked = false;
     this.isSubmitted = false;
+    this.isCommonFieldsLocked = false;
 
     // Generate new bill number for next application
     this.generateNextBillNumber();
 
     console.log('Form cleared');
+  }
+
+  // Common Fields Locking Methods
+  lockCommonFields(): void {
+    this.isCommonFieldsLocked = true;
+    console.log('Common fields locked after adding first product');
+  }
+
+  confirmUnlockFields(): void {
+    this.showUnlockModal = true;
+  }
+
+  closeUnlockModal(): void {
+    this.showUnlockModal = false;
+  }
+
+  confirmUnlockAction(): void {
+    this.proceedWithUnlock();
+    this.closeUnlockModal();
+
+    // Show success message
+    this.showSuccessMessage();
+  }
+
+  showSuccessMessage(): void {
+    // Create a temporary success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show position-fixed';
+    successDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 350px;';
+    successDiv.innerHTML = `
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <strong>Fields Unlocked!</strong> Common fields are now editable, product selection cleared, and product details table reset.
+      <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+
+    document.body.appendChild(successDiv);
+
+    // Auto-remove after 5 seconds (increased time for longer message)
+    setTimeout(() => {
+      if (successDiv.parentElement) {
+        successDiv.remove();
+      }
+    }, 5000);
+  }
+
+  proceedWithUnlock(): void {
+    // Proceed with unlocking common fields and resetting product selection
+    this.unlockCommonFields();
+  }
+
+  unlockCommonFields(): void {
+    this.isCommonFieldsLocked = false;
+
+    // Clear ALL product selection fields when unlocking
+    this.formData.brand = '';
+    this.formData.size = '';
+    this.formData.cases = 0;
+    this.formData.bottleType = '';
+    this.sizeOptions = [];
+
+    // IMPORTANT: Clear the products array to avoid data inconsistency
+    // when user changes depot address or distributor
+    this.products = [];
+
+    // Clear any validation errors
+    this.validationErrors = [];
+
+    // Force Angular to update the form by triggering change detection
+    setTimeout(() => {
+      // Additional reset to ensure dropdowns are properly cleared
+      const brandSelect = document.querySelector('select[ng-reflect-model="brand"]') as HTMLSelectElement;
+      const sizeSelect = document.querySelector('select[ng-reflect-model="size"]') as HTMLSelectElement;
+      const bottleTypeSelect = document.querySelector('select[ng-reflect-model="bottleType"]') as HTMLSelectElement;
+      const casesInput = document.querySelector('input[ng-reflect-model="cases"]') as HTMLInputElement;
+
+      if (brandSelect) brandSelect.selectedIndex = 0;
+      if (sizeSelect) sizeSelect.selectedIndex = 0;
+      if (bottleTypeSelect) bottleTypeSelect.selectedIndex = 0;
+      if (casesInput) casesInput.value = '0';
+    }, 50);
+
+    console.log('Common fields unlocked, product fields cleared, and PRODUCT DETAILS table cleared');
   }
 
   goBack(): void {
@@ -529,5 +914,30 @@ export class TransitPermitComponent implements OnInit {
       win.print();
       win.close();
     };
+  }
+
+  toggleMlInfoSidebar(): void {
+    this.isMlInfoSidebarExpanded = !this.isMlInfoSidebarExpanded;
+  }
+
+  // Calculate dynamic height based on content - More compact
+  calculateSidebarHeight(): string {
+    if (!this.mlPerCaseData || this.mlPerCaseData.length === 0) {
+      return 'auto';
+    }
+    
+    // Reduced base height for header and footer
+    const baseHeight = 100; // Header (50px) + Footer (50px) - more compact
+    
+    // Reduced height per item (card + margin)
+    const itemHeight = 90; // Each card is approximately 90px including margin - more compact
+    
+    // Calculate total height
+    const totalHeight = baseHeight + (this.mlPerCaseData.length * itemHeight);
+    
+    // Ensure it doesn't exceed 85% of viewport height (reduced from 90%)
+    const maxHeight = window.innerHeight * 0.85;
+    
+    return Math.min(totalHeight, maxHeight) + 'px';
   }
 }

@@ -265,6 +265,13 @@ export const routes: Routes = [
       ).then((m) => m.Transitviewlevel1Component),
   },
   {
+    path: "dev-final-transit-permit-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/finaltransitpermit/finaltransitpermit.component"
+      ).then((m) => m.FinaltransitpermitComponent),
+  },
+  {
     path: "dev-final-requisition-letters",
     loadComponent: () =>
       import(
@@ -306,13 +313,7 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/registers/hologram-daily-register/hologram-daily-register.component"
       ).then((m) => m.HologramDailyRegisterComponent),
   },
-  {
-    path: "dev-hologram-manufacturing-register",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component"
-      ).then((m) => m.HologramManufacturingRegisterComponent),
-  },
+
   {
     path: "dev-hologram-overview",
     loadComponent: () =>

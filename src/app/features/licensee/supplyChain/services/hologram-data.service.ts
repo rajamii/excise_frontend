@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, map, forkJoin } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, BehaviorSubject, map, forkJoin, of, catchError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 
 export interface HologramIssuedEntry {
@@ -151,6 +151,18 @@ export interface HologramArrivalRecord {
   toSerial?: string;
 }
 
+// Liquor Data Interfaces for brand and size dropdowns
+export interface LiquorBrandSize {
+  brandName: string;
+  sizes: number[];
+  manufacturingUnit?: string;
+}
+
+export interface LiquorBrandsResponse {
+  success: boolean;
+  data: LiquorBrandSize[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -173,6 +185,10 @@ export class HologramDataService {
   // Subject for notifying when daily register entries are updated (save, approve, etc.)
   private dailyRegisterUpdateSubject = new BehaviorSubject<void>(undefined);
   public dailyRegisterUpdate$ = this.dailyRegisterUpdateSubject.asObservable();
+
+  // Subject for notifying when monthly statement needs to be refreshed
+  private monthlyStatementUpdateSubject = new BehaviorSubject<void>(undefined);
+  public monthlyStatementUpdate$ = this.monthlyStatementUpdateSubject.asObservable();
 
   private readonly APPROVED_ENTRIES_KEY = 'approvedHologramEntries';
   private readonly INITIAL_OPENING_KEY = 'hologramInitialOpeningStock';
@@ -282,6 +298,37 @@ export class HologramDataService {
   notifyDailyRegisterUpdate(): void {
     this.dailyRegisterUpdateSubject.next(undefined);
     console.log('📢 Daily register update notification sent');
+  }
+
+  // --- Liquor Data API for Brand and Size Dropdowns ---
+
+  /**
+   * Fetches liquor brands and their available sizes from liquor_data_details table
+   * Filtered for Sikkim Distilleries Ltd brands only
+   */
+  getLiquorBrandsAndSizes(): Observable<LiquorBrandSize[]> {
+    // Add distillery filter to only get Sikkim Distilleries Ltd brands
+    const params = new HttpParams().set('distillery', 'Sikkim Distilleries Ltd');
+    
+    return this.http.get<LiquorBrandsResponse>(`${environment.apiBaseUrl}/masters/supply_chain/liquor-data/brands/`, { params })
+      .pipe(
+        map(response => {
+          if (response.success && response.data) {
+            // Additional client-side filtering to ensure only Sikkim Distilleries Ltd brands
+            return response.data.filter(brand =>
+              brand.brandName && 
+              // Ensure it's from Sikkim Distilleries Ltd (not other Sikkim companies)
+              (brand.manufacturingUnit?.includes('Sikkim Distilleries Ltd') || 
+               brand.brandName.toLowerCase().includes('sikkim'))
+            );
+          }
+          return [];
+        }),
+        catchError(error => {
+          console.error('Error fetching liquor brands:', error);
+          return of([]);
+        })
+      );
   }
 
   private loadFromStorage(): void {
@@ -886,7 +933,7 @@ export class HologramDataService {
   getRollsDetails(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/rolls-details/`);
   }
-  
+
   getSerialRanges(rollId: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/rolls-details/${rollId}/serial_ranges/`);
   }
@@ -899,12 +946,12 @@ export class HologramDataService {
     const t = new Date().getTime();
     console.log('🔍 Fetching requests from API...');
     console.log('API URL:', `${this.apiUrl}/request/?_t=${t}`);
-    
+
     return this.http.get<any[]>(`${this.apiUrl}/request/?_t=${t}`).pipe(
       map((requests: any[]) => {
         console.log('📦 Received requests from API:', requests.length);
         console.log('📦 Full API Response:', JSON.stringify(requests, null, 2));
-        
+
         // Log all requests for debugging
         requests.forEach((req: any, index: number) => {
           console.log(`API Request ${index + 1}:`, {
@@ -928,26 +975,26 @@ export class HologramDataService {
             has_rollsAssigned: !!(req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
           });
         });
-        
+
         // Try filtering by BOTH snake_case AND camelCase (API might return either format)
-        const filteredByRollsAssigned = requests.filter(req => 
+        const filteredByRollsAssigned = requests.filter(req =>
           (req.rolls_assigned && Array.isArray(req.rolls_assigned) && req.rolls_assigned.length > 0) ||
           (req.rollsAssigned && Array.isArray(req.rollsAssigned) && req.rollsAssigned.length > 0)
         );
-        
-        const filteredByIssuedAssets = requests.filter(req => 
+
+        const filteredByIssuedAssets = requests.filter(req =>
           (req.issued_assets && Array.isArray(req.issued_assets) && req.issued_assets.length > 0) ||
           (req.issuedAssets && Array.isArray(req.issuedAssets) && req.issuedAssets.length > 0)
         );
-        
+
         console.log('✅ Filtered by rolls_assigned/rollsAssigned:', filteredByRollsAssigned.length);
         console.log('✅ Filtered by issued_assets/issuedAssets:', filteredByIssuedAssets.length);
-        
+
         // Use rolls_assigned if available, otherwise fall back to issued_assets
         const filtered = filteredByRollsAssigned.length > 0 ? filteredByRollsAssigned : filteredByIssuedAssets;
-        
+
         console.log('✅ Final filtered requests:', filtered.length);
-        
+
         return filtered;
       })
     );
@@ -1138,7 +1185,7 @@ export class HologramDataService {
       year: year,
       hologram_type: hologramType
     };
-    
+
     return this.http.get(`${this.apiUrl}/monthly-report/generate_report/`, { params });
   }
 }

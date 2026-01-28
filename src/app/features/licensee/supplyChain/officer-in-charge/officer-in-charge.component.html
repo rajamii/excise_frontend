@@ -14,7 +14,7 @@
         <div class="col-auto">
           <div class="badge bg-light text-dark fs-6">
             <i class="bi bi-clock me-1"></i>
-            {{ getCurrentDateTime() }}
+            {{ currentDateTime }}
           </div>
         </div>
       </div>
@@ -38,20 +38,23 @@
           </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link fw-bold" [class.active]="activeTab === 'holograms'"
-            [class.text-danger]="activeTab === 'holograms'" (click)="setActiveTab('holograms')" type="button">
-            <i class="bi bi-shield-check me-2"></i>Daily Hologram Manufacturing Register
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'monthly-statement'"
+            [class.text-danger]="activeTab === 'monthly-statement'" (click)="setActiveTab('monthly-statement')"
+            type="button">
+            <i class="bi bi-file-earmark-text me-2"></i> Monthly Hologram Statement
           </button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-register'"
-            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')" type="button">
+            [class.text-danger]="activeTab === 'hologram-register'" (click)="setActiveTab('hologram-register')"
+            type="button">
             <i class="bi bi-shield-plus me-2"></i> HOLOGRAM REGISTER
           </button>
         </li>
         <li class="nav-item" role="presentation">
           <button class="nav-link fw-bold" [class.active]="activeTab === 'hologram-daily-entry'"
-            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')" type="button">
+            [class.text-danger]="activeTab === 'hologram-daily-entry'" (click)="setActiveTab('hologram-daily-entry')"
+            type="button">
             <i class="bi bi-calendar-check me-2"></i> HOLOGRAM DAILY ENTRY
           </button>
         </li>
@@ -59,6 +62,13 @@
           <button class="nav-link fw-bold" [class.active]="activeTab === 'register'"
             [class.text-danger]="activeTab === 'register'" (click)="setActiveTab('register')" type="button">
             <i class="bi bi-journal-text me-2"></i> OFFICER REGISTER
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link fw-bold" [class.active]="activeTab === 'brand-warehouse'"
+            [class.text-danger]="activeTab === 'brand-warehouse'" (click)="setActiveTab('brand-warehouse')"
+            type="button">
+            <i class="bi bi-building me-2"></i> BRAND WAREHOUSE
           </button>
         </li>
       </ul>
@@ -70,140 +80,7 @@
     <!-- Applications Tab -->
     <div class="tab-pane fade" [class.show]="activeTab === 'applications'"
       [class.active]="activeTab === 'applications'">
-      <!-- Filter Section -->
-      <div class="bg-light border-bottom p-2">
-        <div class="container-fluid">
-          <div class="row g-2 align-items-end">
-            <div class="col-md-3 col-sm-6">
-              <label class="form-label small text-muted mb-1">Reference Number</label>
-              <input type="text" class="form-control form-control-sm" placeholder="Enter reference number"
-                [(ngModel)]="filters.referenceNumber" (input)="applyFilters()">
-            </div>
-            <div class="col-md-2 col-sm-6">
-              <label class="form-label small text-muted mb-1">Status</label>
-              <select class="form-select form-select-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
-                <option value="">All Status</option>
-                <option value="PENDING_APPROVAL">Pending Approval</option>
-                <option value="APPROVED">Approved</option>
-                <option value="TERMINATED">Terminated</option>
-              </select>
-            </div>
-            <div class="col-md-2 col-sm-6">
-              <label class="form-label small text-muted mb-1">Date From</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateFrom"
-                (change)="applyFilters()">
-            </div>
-            <div class="col-md-2 col-sm-6">
-              <label class="form-label small text-muted mb-1">Date To</label>
-              <input type="date" class="form-control form-control-sm" [(ngModel)]="filters.dateTo"
-                (change)="applyFilters()">
-            </div>
-            <div class="col-md-3">
-              <div class="d-flex gap-2">
-                <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
-                  <i class="bi bi-arrow-clockwise me-1"></i>
-                  Clear
-                </button>
-                <button class="btn btn-outline-primary btn-sm" (click)="exportData()">
-                  <i class="bi bi-download me-1"></i>
-                  Export
-                </button>
-                <div class="ms-auto d-flex align-items-center">
-                  <span class="small text-muted me-1">Records:</span>
-                  <span class="badge bg-info">{{ filteredData.length }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Data Table Section -->
-      <div class="bg-white">
-        <div class="container-fluid p-3">
-          <div class="table-responsive">
-            <table class="table table-hover table-striped">
-              <thead>
-                <tr>
-                  <th scope="col">Reference No.</th>
-                  <th scope="col">Submission Date</th>
-                  <th scope="col">Payment Status</th>
-                  <th scope="col">Amount</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let record of paginatedData">
-                  <td>
-                    <span class="fw-semibold text-primary">{{ record.referenceNo }}</span>
-                  </td>
-                  <td>{{ record.submissionDate }}</td>
-                  <td>
-                    <span [class]="getPaymentStatusClass(record.paymentStatus)" class="badge">
-                      <i [class]="getPaymentStatusIcon(record.paymentStatus)" class="me-1"></i>
-                      {{ record.paymentStatus }}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="fw-semibold text-success">₹{{ record.amount }}</span>
-                  </td>
-                  <td>
-                    <span [class]="getStatusClass(record.status)" class="badge">
-                      <i [class]="getStatusIcon(record.status)" class="me-1"></i>
-                      {{ record.status }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="btn-group btn-group-sm" role="group">
-                      <button class="btn btn-outline-primary" (click)="viewDetails(record)" title="View Details">
-                        <i class="bi bi-eye"></i>
-                      </button>
-                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-success"
-                        (click)="approveApplication(record)" title="Approve Application">
-                        <i class="bi bi-check-circle"></i>
-                      </button>
-                      <button *ngIf="record.status === 'PENDING_APPROVAL'" class="btn btn-outline-danger"
-                        (click)="terminateApplication(record)" title="Terminate Application">
-                        <i class="bi bi-x-circle"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-
-          <!-- Pagination -->
-          <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-              <span class="text-muted">
-                Showing {{ (currentPage - 1) * pageSize + 1 }} to
-                {{ Math.min(currentPage * pageSize, filteredData.length) }} of
-                {{ filteredData.length }} entries
-              </span>
-            </div>
-            <nav>
-              <ul class="pagination pagination-sm mb-0">
-                <li class="page-item" [class.disabled]="currentPage === 1">
-                  <button class="page-link" (click)="goToPage(currentPage - 1)">
-                    <i class="bi bi-chevron-left"></i>
-                  </button>
-                </li>
-                <li *ngFor="let page of getPageNumbers()" class="page-item" [class.active]="page === currentPage">
-                  <button class="page-link" (click)="goToPage(page)">{{ page }}</button>
-                </li>
-                <li class="page-item" [class.disabled]="currentPage === totalPages">
-                  <button class="page-link" (click)="goToPage(currentPage + 1)">
-                    <i class="bi bi-chevron-right"></i>
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <app-oic-transit-permit></app-oic-transit-permit>
     </div>
 
     <!-- Brands Details Tab -->
@@ -374,10 +251,12 @@
                       <button class="btn btn-danger" (click)="cancelEditBrand(brand)" *ngIf="brand.editing">
                         <i class="bi bi-x-lg"></i>
                       </button>
-                      <button class="btn btn-outline-success" (click)="approveBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-success" (click)="approveBrand(brand)"
+                        [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-check-circle"></i>
                       </button>
-                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)" [disabled]="brand.status !== 'PENDING'">
+                      <button class="btn btn-outline-danger" (click)="rejectBrand(brand)"
+                        [disabled]="brand.status !== 'PENDING'">
                         <i class="bi bi-x-circle"></i>
                       </button>
                     </div>
@@ -391,13 +270,14 @@
     </div>
 
     <!-- Hologram Register Tab -->
-    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'" [class.active]="activeTab === 'hologram-register'">
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-register'"
+      [class.active]="activeTab === 'hologram-register'">
       <div class="bg-white">
         <!-- Show Hologram Requests Component if activated -->
         <div *ngIf="showHologramRequests">
           <app-officerinchargehologramreq (backToRegister)="closeHologramRequests()"></app-officerinchargehologramreq>
         </div>
-        
+
         <!-- Show Hologram Details Component by default -->
         <div *ngIf="!showHologramRequests">
           <app-hologramdetails (hologramRequestsClicked)="openHologramRequests()"></app-hologramdetails>
@@ -475,28 +355,16 @@
       </div>
     </div>
 
-    <!-- Daily Hologram Manufacturing Register Tab -->
-    <div class="tab-pane fade" [class.show]="activeTab === 'holograms'" [class.active]="activeTab === 'holograms'">
-      <div class="bg-light p-3 border-bottom">
-        <div class="container-fluid">
-          <div class="alert alert-info mb-0">
-            <h6 class="alert-heading">
-              <i class="bi bi-info-circle me-2"></i>
-              Daily Hologram Manufacturing Register - Officer In-Charge
-            </h6>
-            <p class="mb-0">
-              <strong>Purpose:</strong> Manually enter production details for approved hologram requests. 
-              Record which brands were manufactured, quantities produced, and any wastage/damage.
-              This register tracks the actual usage of allocated holograms in production.
-            </p>
-          </div>
-        </div>
-      </div>
-      <app-hologram-manufacturing-register></app-hologram-manufacturing-register>
+
+    <!-- Monthly Hologram Statement Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'monthly-statement'"
+      [class.active]="activeTab === 'monthly-statement'">
+      <app-hologram-monthly-report></app-hologram-monthly-report>
     </div>
 
     <!-- Hologram Daily Entry Tab -->
-    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'" [class.active]="activeTab === 'hologram-daily-entry'">
+    <div class="tab-pane fade" [class.show]="activeTab === 'hologram-daily-entry'"
+      [class.active]="activeTab === 'hologram-daily-entry'">
       <div class="bg-light p-3 border-bottom">
         <div class="container-fluid">
           <div class="alert alert-primary mb-0">
@@ -505,14 +373,34 @@
               Hologram Daily Entry Register - Officer In-Charges
             </h6>
             <p class="mb-0">
-              <strong>Purpose:</strong> Daily entry register for hologram usage tracking. 
-              Record daily hologram consumption, production details, and maintain accurate records 
+              <strong>Purpose:</strong> Daily entry register for hologram usage tracking.
+              Record daily hologram consumption, production details, and maintain accurate records
               of hologram utilization in the manufacturing process.
             </p>
           </div>
         </div>
       </div>
       <app-oicdailyhologramregister></app-oicdailyhologramregister>
+    </div>
+
+    <!-- Brand Warehouse Tab -->
+    <div class="tab-pane fade" [class.show]="activeTab === 'brand-warehouse'"
+      [class.active]="activeTab === 'brand-warehouse'">
+      <div class="bg-light p-3 border-bottom">
+        <div class="container-fluid">
+          <div class="alert alert-info mb-0">
+            <h6 class="alert-heading">
+              <i class="bi bi-building me-2"></i>
+              Brand Warehouse Management - Officer In-Charge
+            </h6>
+            <p class="mb-0">
+              <strong>Purpose:</strong> Manage and monitor brand warehouse operations, inventory tracking,
+              and warehouse-related activities for the distillery.
+            </p>
+          </div>
+        </div>
+      </div>
+      <app-brandwarehouse></app-brandwarehouse>
     </div>
   </div>
 </div>

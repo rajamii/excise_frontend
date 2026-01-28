@@ -108,7 +108,6 @@ export class SupplyChainService {
         })
       );
   }
-
   getBottleTypes(): Observable<any[]> {
     return this.http
       .get<any>(
@@ -130,7 +129,6 @@ export class SupplyChainService {
         })
       );
   }
-
   getDistributors(): Observable<DistRow[]> {
     const dataUrl = `${environment.apiBaseUrl}/masters/supply_chain/distributor-data/`;
 
@@ -279,6 +277,58 @@ export class SupplyChainService {
       catchError((error) => {
         console.error('performTransitPermitAction error', error);
         throw error;
+      })
+    );
+  }
+
+  getBrandMlInCases(): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.apiBaseUrl}/masters/supply_chain/transit-permit/brand-ml-in-cases/`
+    ).pipe(
+      map((response: any) => {
+        if (Array.isArray(response)) return response;
+        if (response?.results) return response.results;
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getBrandMlInCases error', error);
+        // Fallback for demo
+        return of([
+          { ml: 750, pieces_in_case: 12 },
+          { ml: 375, pieces_in_case: 24 },
+          { ml: 180, pieces_in_case: 48 }
+        ]);
+      })
+    );
+  }
+
+  getBrandWarehouseStock(distilleryName: string, brandName?: string): Observable<any[]> {
+    const params: any = {};
+    if (distilleryName) params.distillery_name = distilleryName;
+    if (brandName) params.brand_name = brandName;
+
+    console.log('getBrandWarehouseStock called with params:', params);
+
+    return this.http.get<any[]>(
+      `${environment.apiBaseUrl}/transactional/supply_chain/brand-warehouse/brand-warehouse/`,
+      { params }
+    ).pipe(
+      map((response: any) => {
+        console.log('getBrandWarehouseStock raw response:', response);
+        if (Array.isArray(response)) {
+          console.log('Response is array, length:', response.length);
+          return response;
+        }
+        if (response?.results) {
+          console.log('Response has results, length:', response.results.length);
+          return response.results;
+        }
+        console.log('Response format not recognized, returning empty array');
+        return [];
+      }),
+      catchError((error) => {
+        console.error('getBrandWarehouseStock error', error);
+        return of([]);
       })
     );
   }

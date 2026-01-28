@@ -2499,3 +2499,170 @@
   text-overflow: clip !important;
   padding: 0.75rem 0.5rem !important;
 }
+/* Multi-brand indicator for ROLL/RANGE column */
+.multi-brand-indicator {
+  margin-top: 0.25rem;
+  
+  small {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 0.75rem;
+    background-color: #f8f9fa;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+  }
+}
+
+/* Brand badges for showing Brand 1, Brand 2, etc. */
+.brands-indicator {
+  margin-top: 0.375rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.brand-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  border-radius: 0.375rem;
+  border: 1px solid;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Enhanced brand details display in BRAND DETAILS column */
+.enhanced-brand-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.brand-detail-item {
+  border: 1px solid;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.brand-header {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.brand-info {
+  .brand-name {
+    font-size: 0.75rem;
+    color: #495057;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+  }
+  
+  .brand-quantities {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+}
+
+.qty-badge {
+  font-size: 0.65rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  &.issued {
+    opacity: 0.9;
+  }
+  
+  &.wastage {
+    opacity: 0.7;
+    position: relative;
+    
+    &::before {
+      content: '⚠';
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+/* Enhanced roll-range-display for better visual hierarchy */
+.roll-range-display {
+  .roll-name-text {
+    strong {
+      color: #2c3e50;
+      font-size: 0.9rem;
+    }
+  }
+  
+  .range-text {
+    color: #495057;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+/* Liquid Quantity Display Styles */
+.liquid-quantity-info {
+  margin-top: 0.5rem;
+  
+  .liquid-quantity-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+    border: 1px solid #c3e6cb;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    color: #155724;
+    gap: 0.25rem;
+    
+    .liquid-qty-label {
+      font-weight: 500;
+    }
+    
+    .liquid-qty-value {
+      font-weight: 700;
+      color: #0d4f1c;
+    }
+    
+    i {
+      color: #28a745;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+/* Responsive adjustments for liquid quantity */
+@media (max-width: 768px) {
+  .liquid-quantity-info {
+    .liquid-quantity-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      
+      .liquid-qty-label {
+        display: none; // Hide label on mobile to save space
+      }
+    }
+  }
+}

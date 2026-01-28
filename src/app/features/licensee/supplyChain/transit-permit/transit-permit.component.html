@@ -25,18 +25,24 @@
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Sole Distributor Name:</label>
           <select class="form-control input-field" [(ngModel)]="formData.soleDistributor"
-            (change)="onDistributorChange()">
+            (change)="onDistributorChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>-- Select Distributor --</option>
             <option *ngFor="let distributor of distributors" [value]="distributor.distributorName">
               {{ distributor.distributorName }}
             </option>
           </select>
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Date -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Date:</label>
-          <input type="date" class="form-control" [(ngModel)]="formData.date">
+          <input type="date" class="form-control" [(ngModel)]="formData.date" [disabled]="isCommonFieldsLocked">
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Depot Address -->
@@ -44,7 +50,7 @@
           <label class="form-label fw-bold">Depot Address:</label>
           <!-- Show dropdown if multiple addresses available, otherwise show input -->
           <select *ngIf="availableDepotAddresses.length > 1" class="form-control input-field"
-            [(ngModel)]="formData.depotAddress" (change)="onDepotAddressChange()">
+            [(ngModel)]="formData.depotAddress" (change)="onDepotAddressChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>
               -- Select Depot Address --
             </option>
@@ -53,7 +59,71 @@
             </option>
           </select>
           <input *ngIf="availableDepotAddresses.length <= 1" type="text" class="form-control input-field"
-            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled" />
+            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled"
+            [disabled]="isCommonFieldsLocked" />
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
+        </div>
+
+        <!-- Section Divider -->
+        <div class="col-12 mb-4">
+          <hr class="section-divider">
+        </div>
+
+        <!-- Stock Summary Box - Enhanced Design with Smooth Animation -->
+        <div class="col-12 mb-3" *ngIf="selectedBrandStockSummary.length > 0" [@slideInAnimation]>
+          <div class="stock-summary-card-compact">
+            <div class="stock-summary-header-compact">
+              <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-box-seam-fill me-2"></i>
+                  <div>
+                    <h6 class="mb-0 fw-bold">Available Stock Summary</h6>
+                    <small class="opacity-75">{{ formData.brand }}</small>
+                  </div>
+                </div>
+                <span class="badge bg-white text-primary px-2 py-1">
+                  <i class="bi bi-check-circle-fill me-1"></i>Live Stock
+                </span>
+              </div>
+            </div>
+            <div class="stock-summary-body-compact">
+              <div class="row g-2">
+                <div class="col-lg-4 col-md-6" *ngFor="let stock of selectedBrandStockSummary; let i = index">
+                  <div class="stock-item-compact" [class.stock-available]="stock.pieces > 0" [class.stock-empty]="stock.pieces === 0" 
+                       [style.animation-delay.ms]="i * 100">
+                    <div class="stock-item-header-compact">
+                      <span class="size-badge-compact">{{ stock.size }}ml</span>
+                      <span class="stock-status-icon-compact" *ngIf="stock.pieces > 0">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                      </span>
+                      <span class="stock-status-icon-compact" *ngIf="stock.pieces === 0">
+                        <i class="bi bi-x-circle-fill text-danger"></i>
+                      </span>
+                    </div>
+                    <div class="stock-item-body-compact">
+                      <div class="stock-pieces-compact">
+                        <span class="pieces-number-compact">{{ stock.pieces }}</span>
+                        <span class="pieces-label-compact">pieces</span>
+                      </div>
+                      <div class="stock-cases-compact">
+                        <i class="bi bi-box me-1"></i>
+                        <span>≈ {{ stock.approxCases }} cases</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Information Section -->
+        <div class="col-12 mb-3">
+          <div class="section-title">
+            <span class="badge bg-success">Product Information</span>
+          </div>
         </div>
 
         <!-- Brand -->
@@ -71,26 +141,50 @@
         <!-- Size -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Size (ml):</label>
-          <select class="form-control input-field" [(ngModel)]="formData.size" [disabled]="!formData.brand || isLocked">
+          <select class="form-control input-field" [(ngModel)]="formData.size" [disabled]="!formData.brand || isLocked"
+            (change)="onSizeChange()">
             <option value="">-- Select Size --</option>
             <option *ngFor="let size of sizeOptions" [value]="size">
               {{ size }}ml
             </option>
           </select>
+          <small class="text-info" *ngIf="currentStockStatus">
+            <i class="bi bi-info-circle-fill me-1"></i>{{ currentStockStatus }}
+          </small>
         </div>
 
         <!-- Cases -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Cases:</label>
           <input type="number" class="form-control input-field" [(ngModel)]="formData.cases"
-            placeholder="Enter number of cases" min="0" />
+            placeholder="Enter number of cases" min="0" (input)="onCasesChange()" 
+            [class.is-invalid]="stockError" [class.is-valid]="!stockError && formData.cases > 0 && conversionFactor > 0" />
+          
+          <!-- Success Message -->
+          <div *ngIf="!stockError && formData.cases > 0 && conversionFactor > 0 && currentStockStatus.includes('✓')" 
+               class="text-success mt-2 small fw-bold">
+            <i class="bi bi-check-circle-fill me-1"></i>{{ currentStockStatus }}
+          </div>
+          
+          <!-- Error Message -->
+          <div *ngIf="stockError" class="invalid-feedback d-block mt-2">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ stockError }}
+          </div>
+          
+          <!-- Calculation Helper -->
+          <small class="text-muted d-block mt-1" *ngIf="conversionFactor > 0 && formData.size">
+            <i class="bi bi-info-circle me-1"></i>1 case = {{ conversionFactor }} pieces ({{ formData.size }}ml bottles)
+          </small>
         </div>
 
         <!-- Vehicle Number -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Vehicle Number:</label>
           <input type="text" class="form-control input-field" [(ngModel)]="formData.vehicleNumber"
-            placeholder="Enter Vehicle Number" />
+            placeholder="Enter Vehicle Number" [disabled]="isCommonFieldsLocked" />
+          <small class="text-muted" *ngIf="isCommonFieldsLocked">
+            <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
+          </small>
         </div>
 
         <!-- Bottle Type -->
@@ -107,6 +201,21 @@
 
       <!-- Action Buttons -->
       <div class="text-center mt-4">
+        <!-- Locked Fields Indicator -->
+        <div class="locked-fields-indicator mb-3" *ngIf="isCommonFieldsLocked">
+          <div class="alert alert-info d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <span>Common fields are locked. Click "Unlock & Reset" to modify distributor/date/address (will clear
+                current product selection)</span>
+            </div>
+            <button class="btn btn-outline-warning btn-sm" (click)="confirmUnlockFields()"
+              title="Unlock common fields and reset product selection">
+              <i class="bi bi-unlock me-1"></i>Unlock & Reset
+            </button>
+          </div>
+        </div>
+
         <button class="btn btn-primary me-3" (click)="addProduct()">
           Add Product
         </button>
@@ -386,6 +495,73 @@
   </div>
 </div>
 
+<!-- ML Per Case Information Sidebar - Fixed to right side of screen -->
+<div class="ml-info-sidebar" *ngIf="mlPerCaseData.length > 0">
+  <div class="ml-info-sidebar-content" 
+       [class.expanded]="isMlInfoSidebarExpanded"
+       [style.height]="calculateSidebarHeight()">
+    <div class="ml-info-sidebar-header">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="header-icon-wrapper">
+            <i class="bi bi-info-circle-fill"></i>
+          </div>
+          <div class="header-text">
+            <h6 class="mb-0 fw-bold">ML Per Case Information</h6>
+            <small class="text-muted">Reference guide for packaging</small>
+          </div>
+        </div>
+        <button class="ml-info-close-btn" (click)="toggleMlInfoSidebar()" title="Close sidebar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="ml-info-sidebar-body">
+      <div class="ml-info-sidebar-item" *ngFor="let item of mlPerCaseData; let i = index">
+        <div class="item-card">
+          <div class="item-header">
+            <div class="size-badge-wrapper">
+              <span class="size-badge-sidebar">{{ item.ml }}ml</span>
+              <div class="size-badge-glow"></div>
+            </div>
+          </div>
+          <div class="item-content">
+            <div class="pieces-display">
+              <span class="pieces-number-sidebar">{{ item.pieces_in_case || item.piecesInCase }}</span>
+              <span class="pieces-label-sidebar">pieces per case</span>
+            </div>
+            <div class="calculation-info">
+              <i class="bi bi-calculator-fill"></i>
+              <span>1 case = {{ item.pieces_in_case || item.piecesInCase }} bottles</span>
+            </div>
+          </div>
+          <div class="item-decoration" [style.animation-delay.ms]="i * 100"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="ml-info-sidebar-footer">
+      <div class="footer-content">
+        <div class="footer-icon">
+          <i class="bi bi-lightbulb-fill"></i>
+        </div>
+        <div class="footer-text">
+          <strong>Quick Tip:</strong> Use this information when calculating cases for your transit permit application
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Minimized state toggle (only show when collapsed) -->
+  <div class="ml-info-toggle" *ngIf="!isMlInfoSidebarExpanded" (click)="toggleMlInfoSidebar()">
+    <div class="toggle-content">
+      <i class="bi bi-info-circle-fill"></i>
+      <span class="ml-info-toggle-text">ML Info</span>
+    </div>
+  </div>
+</div>
+
 <!-- Declaration Modal (Moved to end of file for stacking context safety) -->
 <!-- 
      FIX: 
@@ -567,6 +743,56 @@
 
 
 
+    </div>
+  </div>
+</div>
+<!-- Unlock Confirmation Modal -->
+<div class="custom-modal-overlay" id="unlockModalOverlay" [style.display]="showUnlockModal ? 'flex' : 'none'">
+  <div class="custom-modal">
+    <!-- Modal Header -->
+    <div class="custom-modal-header">
+      <h5 class="custom-modal-title">
+        <i class="bi bi-exclamation-triangle me-2"></i>Unlock Fields Confirmation
+      </h5>
+      <button type="button" class="custom-close-btn" (click)="closeUnlockModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="custom-modal-body">
+      <div class="text-center mb-4">
+        <i class="bi bi-unlock-fill text-warning" style="font-size: 3rem;"></i>
+      </div>
+
+      <h6 class="text-center mb-3">Are you sure you want to unlock the common fields?</h6>
+
+      <div class="custom-alert">
+        <h6 class="custom-alert-heading">
+          <i class="bi bi-info-circle me-2"></i>What will happen:
+        </h6>
+        <ul class="mb-0">
+          <li>Common fields (Distributor, Date, Depot Address, Vehicle Number) will become editable</li>
+          <li><strong>Your current product selection will be cleared</strong></li>
+          <li><strong>All products in the PRODUCT DETAILS table will be removed</strong></li>
+          <li>You will need to select Brand, Size, Cases, and Bottle Type again</li>
+          <li>You will need to re-add all products to the table</li>
+        </ul>
+      </div>
+
+      <p class="text-muted text-center mb-0">
+        <small>This ensures data consistency when changing depot address or distributor information.</small>
+      </p>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="custom-modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeUnlockModal()">
+        <i class="bi bi-x-circle me-1"></i>Cancel
+      </button>
+      <button type="button" class="btn btn-warning" (click)="confirmUnlockAction()">
+        <i class="bi bi-unlock me-1"></i>Yes, Unlock & Reset
+      </button>
     </div>
   </div>
 </div>

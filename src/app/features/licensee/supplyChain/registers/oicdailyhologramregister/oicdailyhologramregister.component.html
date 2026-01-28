@@ -296,30 +296,52 @@
                         <!-- Legacy single brand mode -->
                         <div class="row g-3">
                           <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.brandDetails"
-                              [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                              placeholder="Enter brand details"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
-                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                            @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <!-- Show readonly text when locked -->
+                            <input type="text" class="form-control form-control-sm" [value]="rollInput.brandDetails"
+                              readonly
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                            } @else {
+                            <!-- Show dropdown when not locked -->
+                            <select class="form-select form-select-sm" [(ngModel)]="rollInput.brandDetails"
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              <option value="">Select brand...</option>
+                              @for (brand of liquorBrands; track brand.brandName) {
+                              <option [value]="brand.brandName">{{ brand.brandName }}</option>
+                              }
+                            </select>
+                            }
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
                               } @else {
-                              Enter brand name for this roll
+                              Select brand name for this roll
                               }
                             </small>
                           </div>
                           <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm" [(ngModel)]="rollInput.bottleSize"
-                              [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                              placeholder="e.g., 750ml"
-                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))"
-                              (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                            @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                            <!-- Show readonly text when locked -->
+                            <input type="text" class="form-control form-control-sm" [value]="rollInput.bottleSize"
+                              readonly
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                            } @else {
+                            <!-- Show dropdown when not locked -->
+                            <select class="form-select form-select-sm" [(ngModel)]="rollInput.bottleSize"
+                              [style.border-color]="getRollColor(getCurrentRollIndex(selectedEntryForRollsView))">
+                              <option value="">Select size...</option>
+                              @if (rollInput.brandDetails) {
+                              @for (size of getBottleSizesForBrand(rollInput.brandDetails); track size) {
+                              <option [value]="formatBottleSize(size)">{{ formatBottleSize(size) }}</option>
+                              }
+                              }
+                            </select>
+                            }
                             <small class="text-muted">
                               @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
                               <i class="bi bi-lock me-1"></i>Read-only (locked)
                               } @else {
-                              Enter bottle size for this roll
+                              Select bottle size for this roll
                               }
                             </small>
                           </div>
@@ -350,17 +372,39 @@
                             <!-- Brand Name and Bottle Size -->
                             <div class="row g-2 mb-2">
                               <div class="col-6">
-                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.brandName"
-                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="Brand name" [style.border-color]="getBrandColor(brand.colorIndex)"
-                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                                @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                                <!-- Show readonly text when locked -->
+                                <input type="text" class="form-control form-control-sm" [value]="brand.brandName"
+                                  readonly [style.border-color]="getBrandColor(brand.colorIndex)">
+                                } @else {
+                                <!-- Show dropdown when not locked -->
+                                <select class="form-select form-select-sm" [(ngModel)]="brand.brandName"
+                                  [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  <option value="">Select brand...</option>
+                                  @for (liquorBrand of liquorBrands; track liquorBrand.brandName) {
+                                  <option [value]="liquorBrand.brandName">{{ liquorBrand.brandName }}</option>
+                                  }
+                                </select>
+                                }
                                 <small class="text-muted d-block">Brand name</small>
                               </div>
                               <div class="col-6">
-                                <input type="text" class="form-control form-control-sm" [(ngModel)]="brand.bottleSize"
-                                  [readonly]="selectedEntryForRollsView.currentRollSelection?.isLocked"
-                                  placeholder="e.g., 750ml" [style.border-color]="getBrandColor(brand.colorIndex)"
-                                  (keyup.enter)="lockRollForEntry(selectedEntryForRollsView)">
+                                @if (selectedEntryForRollsView.currentRollSelection?.isLocked) {
+                                <!-- Show readonly text when locked -->
+                                <input type="text" class="form-control form-control-sm" [value]="brand.bottleSize"
+                                  readonly [style.border-color]="getBrandColor(brand.colorIndex)">
+                                } @else {
+                                <!-- Show dropdown when not locked -->
+                                <select class="form-select form-select-sm" [(ngModel)]="brand.bottleSize"
+                                  [style.border-color]="getBrandColor(brand.colorIndex)">
+                                  <option value="">Select size...</option>
+                                  @if (brand.brandName) {
+                                  @for (size of getBottleSizesForBrand(brand.brandName); track size) {
+                                  <option [value]="formatBottleSize(size)">{{ formatBottleSize(size) }}</option>
+                                  }
+                                  }
+                                </select>
+                                }
                                 <small class="text-muted d-block">Bottle size</small>
                               </div>
                             </div>
@@ -673,66 +717,109 @@
                 </div>
               </td>
 
-              <!-- Roll & Range Info -->
+              <!-- Roll & Range Info - Beautified Display -->
               <td class="roll-range locked-field">
                 @if (!entry.isFixed) {
-                <!-- Show current selected roll with its allocated range -->
-                @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                <!-- Show all rolls beautifully -->
+                <div class="roll-ranges-container">
+                  <!-- Current selected roll (only if not already in locked rolls) -->
+                  @if (getCurrentSelectedRoll(entry) && getCurrentRollInput(entry); as rollInput) {
+                  <div class="roll-range-item" 
+                       [style.border-color]="getRollColor((getCurrentSelectedRoll(entry) || '').split('_')[0])"
+                       [style.background-color]="getRollBackgroundColor((getCurrentSelectedRoll(entry) || '').split('_')[0])">
+                    <div class="roll-badge" [style.background-color]="getRollColor((getCurrentSelectedRoll(entry) || '').split('_')[0])">
+                      <i class="bi bi-box-seam me-1"></i>
+                      <strong>{{ (getCurrentSelectedRoll(entry) || '').split('_')[0] }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ rollInput.serialRange }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (isMultiBrandMode(rollInput)) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ rollInput.brands?.length || 0 }} Brands</span>
+                    </div>
+                    }
                   </div>
-                  <div class="range-text">
-                    {{ rollInput.serialRange }}
+                  }
+                  
+                  <!-- Show locked rolls (grouped by base cartoon number to avoid duplicates) -->
+                  @for (lockedRoll of getUniqueLockedRollsForEntry(entry); track lockedRoll.baseCartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(lockedRoll.baseCartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(lockedRoll.baseCartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(lockedRoll.baseCartoonNumber)">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      <strong>{{ lockedRoll.baseCartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ lockedRoll.serialRange || '-' }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (lockedRoll.brandCount > 1) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ lockedRoll.brandCount }} Brands</span>
+                    </div>
+                    }
                   </div>
+                  }
+                  
+                  <!-- Show remaining allocated ranges (not yet selected) -->
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges || []).length > 0) {
+                  @for (allocated of (entry.allocatedRanges || []); track allocated.cartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(allocated.cartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(allocated.cartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(allocated.cartoonNumber)">
+                      <i class="bi bi-box me-1"></i>
+                      <strong>{{ allocated.cartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      @if (allocated.fromSerial && allocated.toSerial) {
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ allocated.fromSerial }} - {{ allocated.toSerial }}</span>
+                      } @else {
+                      <span class="range-label text-muted small">Range not available</span>
+                      }
+                    </div>
+                  </div>
+                  }
+                  }
+                  
+                  <!-- Empty state -->
+                  @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0 && (entry.allocatedRanges?.length || 0) === 0) {
+                  <span class="text-muted">-</span>
+                  }
                 </div>
-                }
-                <!-- Show locked rolls with their allocated ranges -->
-                @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ lockedRoll.cartoonNumber.split('_')[0] }}</strong>
-                  </div>
-                  <div class="range-text">
-                    {{ lockedRoll.serialRange }}
-                  </div>
-                </div>
-                }
-                @if (!getCurrentSelectedRoll(entry) && getLockedRollsForEntry(entry).length === 0) {
-                <!-- Auto-display Allocated Ranges for Pending Entries -->
-                @for (allocated of (entry.allocatedRanges || []); track allocated.cartoonNumber) {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ allocated.cartoonNumber }}</strong>
-                  </div>
-                  @if (allocated.fromSerial && allocated.toSerial) {
-                  <div class="range-text">
-                    {{ allocated.fromSerial }} - {{ allocated.toSerial }}
-                  </div>
-                  } @else {
-                  <div class="range-text text-muted small">
-                    Range not available
+                } @else {
+                <!-- For saved entries, show all locked rolls beautifully (grouped by base cartoon number) -->
+                <div class="roll-ranges-container saved-view">
+                  @for (lockedRoll of getUniqueLockedRollsForEntry(entry); track lockedRoll.baseCartoonNumber) {
+                  <div class="roll-range-item"
+                       [style.border-color]="getRollColor(lockedRoll.baseCartoonNumber)"
+                       [style.background-color]="getRollBackgroundColor(lockedRoll.baseCartoonNumber)">
+                    <div class="roll-badge" [style.background-color]="getRollColor(lockedRoll.baseCartoonNumber)">
+                      <i class="bi bi-check-circle-fill me-1"></i>
+                      <strong>{{ lockedRoll.baseCartoonNumber }}</strong>
+                    </div>
+                    <div class="range-info">
+                      <span class="range-label">Range:</span>
+                      <span class="range-value">{{ lockedRoll.serialRange || '-' }}</span>
+                    </div>
+                    <!-- Show brand count if multi-brand -->
+                    @if (lockedRoll.brandCount > 1) {
+                    <div class="brands-indicator-small">
+                      <i class="bi bi-tags-fill me-1"></i>
+                      <span>{{ lockedRoll.brandCount }} Brands</span>
+                    </div>
+                    }
                   </div>
                   }
                 </div>
-                }
-                @if ((entry.allocatedRanges?.length || 0) === 0) {
-                <span class="text-muted">-</span>
-                }
-                }
-                } @else {
-                <!-- For saved entries, show all locked rolls with their ranges -->
-                @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId || $index)
-                {
-                <div class="roll-range-display">
-                  <div class="roll-name-text">
-                    <strong>{{ (lockedRoll.cartoonNumber || lockedRoll.displayName || 'ROLL').split('_')[0] }}</strong>
-                  </div>
-                  <div class="range-text">
-                    {{ lockedRoll.serialRange || '-' }}
-                  </div>
-                </div>
-                }
                 }
               </td>
 
@@ -793,9 +880,9 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.cartoonNumber.split('_')[0] }}
                     </div>
                     <div class="brand-value">
@@ -805,24 +892,39 @@
                   }
                 </div>
                 } @else {
-                <!-- Saved Entry Display - Grouped by Roll -->
-                <div class="saved-entries">
-                  @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId ||
-                  $index) {
-                  <div class="saved-roll-group"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber || lockedRoll.displayName)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
-                    <div class="roll-group-label"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
-                      {{ (lockedRoll.cartoonNumber || lockedRoll.displayName || 'ROLL').split('_')[0] }}
+                <!-- Saved Entry Display - Enhanced Brand Details with Quantities -->
+                @if (getEnhancedBrandDetails(entry); as brandDetails) {
+                @if (brandDetails.length > 0) {
+                <div class="enhanced-brand-display">
+                  @for (brand of brandDetails; track brand.brandLabel) {
+                  <div class="brand-detail-item" [style.background-color]="brand.color + '15'"
+                    [style.border-color]="brand.color">
+                    <div class="brand-header" [style.color]="brand.color">
+                      <i class="bi bi-tag-fill me-1"></i>
+                      <strong>{{ brand.brandLabel }}</strong>
                     </div>
-                    <div class="brand-value"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
-                      {{ lockedRoll.brandDetails || '-' }}
+                    <div class="brand-info">
+                      <div class="brand-name">{{ brand.brandName }}</div>
+                      <div class="brand-quantities">
+                        <span class="qty-badge issued" [style.background-color]="brand.color">
+                          Issued: {{ brand.issuedQty | number }}
+                        </span>
+                        @if (brand.wastageQty > 0) {
+                        <span class="qty-badge wastage" [style.background-color]="brand.color">
+                          Wastage: {{ brand.wastageQty | number }}
+                        </span>
+                        }
+                      </div>
                     </div>
                   </div>
                   }
                 </div>
+                } @else {
+                <span class="text-muted">No brand details</span>
+                }
+                } @else {
+                <span class="text-muted">-</span>
+                }
                 }
               </td>
 
@@ -869,9 +971,9 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.cartoonNumber.split('_')[0] }}
                     </div>
                     <div class="bottle-value">
@@ -886,14 +988,14 @@
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId ||
                   $index) {
                   <div class="saved-roll-group"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber || lockedRoll.displayName)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                    [style.background-color]="getRollBackgroundColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])"
+                    [style.border-color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                     <div class="roll-group-label"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                      [style.color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                       {{ (lockedRoll.cartoonNumber || lockedRoll.displayName || 'ROLL').split('_')[0] }}
                     </div>
                     <div class="bottle-value"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                      [style.color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                       {{ lockedRoll.bottleSize || '-' }}
                     </div>
                   </div>
@@ -988,15 +1090,16 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.cartoonNumber.split('_')[0] }}
                     </div>
                     <div class="roll-values">
                       @for (range of lockedRoll.issuedRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
-                        [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                        [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.fromSerial }}
                       </span>
                       }
@@ -1088,12 +1191,13 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.issuedRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
-                        [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                        [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.toSerial }}
                       </span>
                       }
@@ -1186,7 +1290,8 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item">
-                    <span class="qty-badge" [style.background-color]="getRollColor(lockedRoll.cartoonNumber)">
+                    <span class="qty-badge"
+                      [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.issuedQty | number }}
                     </span>
                   </div>
@@ -1299,12 +1404,13 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.wastageRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
-                        [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                        [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.fromSerial || '-' }}
                       </span>
                       }
@@ -1396,12 +1502,13 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                     <div class="roll-values">
                       @for (range of lockedRoll.wastageRanges || []; track $index) {
-                      <span class="value-badge" [style.border-color]="getRollColor(lockedRoll.cartoonNumber)"
-                        [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                      <span class="value-badge"
+                        [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])"
+                        [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                         {{ range.toSerial || '-' }}
                       </span>
                       }
@@ -1494,7 +1601,8 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber; let i = $index) {
                   <div class="locked-roll-item">
-                    <span class="qty-badge" [style.background-color]="getRollColor(lockedRoll.cartoonNumber)">
+                    <span class="qty-badge"
+                      [style.background-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.wastageQty | number }}
                     </span>
                   </div>
@@ -1556,9 +1664,9 @@
                   <!-- Locked Rolls Display -->
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.cartoonNumber) {
                   <div class="locked-roll-item"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber)">
-                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber)">
+                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber.split('_')[0])"
+                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
+                    <div class="roll-name" [style.color]="getRollColor(lockedRoll.cartoonNumber.split('_')[0])">
                       {{ lockedRoll.cartoonNumber.split('_')[0] }}
                     </div>
                     <div class="damage-reason-text">
@@ -1573,14 +1681,14 @@
                   @for (lockedRoll of getLockedRollsForEntry(entry); track lockedRoll.id || lockedRoll.rangeId ||
                   $index) {
                   <div class="saved-roll-group"
-                    [style.background-color]="getRollBackgroundColor(lockedRoll.cartoonNumber || lockedRoll.displayName)"
-                    [style.border-color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                    [style.background-color]="getRollBackgroundColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])"
+                    [style.border-color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                     <div class="roll-group-label"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                      [style.color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                       {{ (lockedRoll.cartoonNumber || lockedRoll.displayName || 'ROLL').split('_')[0] }}
                     </div>
                     <div class="damage-reason-text"
-                      [style.color]="getRollColor(lockedRoll.cartoonNumber || lockedRoll.displayName)">
+                      [style.color]="getRollColor((lockedRoll.cartoonNumber || lockedRoll.displayName || '').split('_')[0])">
                       {{ lockedRoll.damageReason || 'No damage reason provided' }}
                     </div>
                   </div>
@@ -1600,9 +1708,15 @@
                   </button>
                   }
                   @if (getLockedRollsForEntry(entry).length > 0) {
-                  <button class="btn-action save" (click)="saveEntry(entry)" [disabled]="!canSaveEntry(entry)"
-                    [title]="canSaveEntry(entry) ? 'Save Entry' : 'Lock all ranges before saving'">
-                    <i class="bi bi-check-circle"></i>
+                  <button class="btn-action save" 
+                    (click)="saveEntry(entry)" 
+                    [disabled]="!canSaveEntry(entry) || (isSaving && savingEntryId === entry.id)"
+                    [title]="isSaving && savingEntryId === entry.id ? 'Saving...' : (canSaveEntry(entry) ? 'Save Entry' : 'Lock all ranges before saving')">
+                    @if (isSaving && savingEntryId === entry.id) {
+                      <i class="bi bi-hourglass-split"></i>
+                    } @else {
+                      <i class="bi bi-check-circle"></i>
+                    }
                   </button>
                   }
                   } @else {
@@ -1724,7 +1838,7 @@
           <div class="roll-tabs">
             @for (roll of getLockedRollsForEntry(selectedEntryForDetails); track roll.cartoonNumber; let i = $index) {
             <button class="roll-tab-button" [class.active]="selectedRollTabIndex === i"
-              [style.border-bottom-color]="selectedRollTabIndex === i ? getRollColor(roll.cartoonNumber) : 'transparent'"
+              [style.border-bottom-color]="selectedRollTabIndex === i ? getRollColor(roll.cartoonNumber.split('_')[0]) : 'transparent'"
               (click)="selectRollTab(i)">
               <div class="tab-header">
                 <i class="bi bi-box-seam"></i>
@@ -1740,7 +1854,7 @@
                   {{ roll.bottleSize || 'N/A' }}
                 </span>
               </div>
-              <div class="tab-qty-badge" [style.background-color]="getRollColor(roll.cartoonNumber)">
+              <div class="tab-qty-badge" [style.background-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
                 <i class="bi bi-layers me-1"></i>
                 {{ roll.availableCount | number }} units
               </div>
@@ -1766,9 +1880,10 @@
         <!-- Roll Tab Content -->
         @for (roll of getLockedRollsForEntry(selectedEntryForDetails); track roll.cartoonNumber; let i = $index) {
         @if (selectedRollTabIndex === i) {
-        <div class="roll-detail-card" [style.border-left-color]="getRollColor(roll.cartoonNumber)">
-          <div class="roll-detail-header" [style.background-color]="getRollBackgroundColor(roll.cartoonNumber)">
-            <div class="roll-name-badge" [style.background-color]="getRollColor(roll.cartoonNumber)">
+        <div class="roll-detail-card" [style.border-left-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
+          <div class="roll-detail-header"
+            [style.background-color]="getRollBackgroundColor(roll.cartoonNumber.split('_')[0])">
+            <div class="roll-name-badge" [style.background-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
               <i class="bi bi-box-seam me-2"></i>
               {{ roll.cartoonNumber.split('_')[0] }}
             </div>
@@ -1815,7 +1930,7 @@
               </div>
               <div class="range-display">
                 <span class="range-text">{{ roll.serialRange || (roll.fromSerial + ' - ' + roll.toSerial) }}</span>
-                <span class="range-qty-badge" [style.background-color]="getRollColor(roll.cartoonNumber)">
+                <span class="range-qty-badge" [style.background-color]="getRollColor(roll.cartoonNumber.split('_')[0])">
                   {{ roll.availableCount | number }} units
                 </span>
               </div>

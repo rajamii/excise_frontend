@@ -33,6 +33,8 @@ import { MatIcon } from '@angular/material/icon';
 import { MatPaginator } from '@angular/material/paginator';
 import {MatSlideToggleModule} from '@angular/material/slide-toggle';
 import {  MatTableDataSource } from '@angular/material/table';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 //import { FormsModule, ReactiveFormsModule, FormBuilder, Validators} from '@angular/forms';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { MarkdownModule } from 'ngx-markdown';
@@ -79,7 +81,9 @@ import { RouterModule } from '@angular/router';
     MatDividerModule,
     MarkdownModule,
     RouterModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   exports: [
     CommonModule,
@@ -114,7 +118,9 @@ import { RouterModule } from '@angular/router';
     MatStepperModule,
     MatDividerModule,
     MarkdownModule,
-    MatDialogModule
+    MatDialogModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   providers: [
     MatNativeDateModule,
