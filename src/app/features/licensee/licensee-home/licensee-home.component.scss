@@ -95,7 +95,8 @@ mat-nav-list {
             background-color: #f4feff;
             border-left: 4px solid #005CBB;
             color: #005CBB;
-            font-weight: 600;
+            font-weight: 500; // Ensure this matches other navigation items
+            font-size: 16px; // Added consistent font size
           }
           
           mat-icon {

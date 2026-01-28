@@ -6,9 +6,11 @@
     </mat-card-header>
 
     <mat-card-content>
+      <!-- ==================== PERSONAL INFORMATION ==================== -->
+      <h5 class="section-title">Personal Information</h5>
       <div class="form-field-container">
-
-        <!-- Status Dropdown -->
+        
+        <!-- Status -->
         <mat-form-field appearance="outline">
           <mat-label>Status</mat-label>
           <mat-select formControlName="status" required>
@@ -16,36 +18,42 @@
               <mat-option [value]="status">{{ status }}</mat-option>
             }
           </mat-select>
-          @if (memberDetailsForm.controls['status'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('status') }}
-            </mat-error>
+          @if (memberDetailsForm.controls['status'].touched && memberDetailsForm.controls['status'].invalid) {
+            <mat-error>{{ getErrorMessage('status') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Member Name Input -->
+        <!-- Member Name -->
         <mat-form-field appearance="outline">
           <mat-label>Member Name</mat-label>
-          <input matInput placeholder="Enter Your Name" type="text" formControlName="member_name"/>
-          @if (memberDetailsForm.controls['member_name'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('member_name') }}
-            </mat-error>
+          <input matInput placeholder="Enter Member Name" type="text" formControlName="member_name" required />
+          @if (memberDetailsForm.controls['member_name'].touched && memberDetailsForm.controls['member_name'].invalid) {
+            <mat-error>{{ getErrorMessage('member_name') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Father's / Husband's Name Input -->
+        <!-- Father's / Husband's Name -->
         <mat-form-field appearance="outline">
           <mat-label>Father's / Husband's Name</mat-label>
-          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="father_husband_name"/>
-          @if (memberDetailsForm.controls['father_husband_name'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('father_husband_name') }}
-            </mat-error>
+          <input matInput placeholder="Enter Father's / Husband's Name" type="text" formControlName="father_husband_name" required />
+          @if (memberDetailsForm.controls['father_husband_name'].touched && memberDetailsForm.controls['father_husband_name'].invalid) {
+            <mat-error>{{ getErrorMessage('father_husband_name') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Nationality Dropdown -->
+        <!-- Gender (Radio Group) -->
+        <div class="radio-group-container">
+          <label class="field-label">Gender <span class="required">*</span></label>
+          <mat-radio-group formControlName="gender" required>
+            <mat-radio-button value="Male">Male</mat-radio-button>
+            <mat-radio-button value="Female">Female</mat-radio-button>
+          </mat-radio-group>
+          @if (memberDetailsForm.controls['gender'].touched && memberDetailsForm.controls['gender'].invalid) {
+            <mat-error class="radio-error">{{ getErrorMessage('gender') }}</mat-error>
+          }
+        </div>
+
+        <!-- Nationality -->
         <mat-form-field appearance="outline">
           <mat-label>Nationality</mat-label>
           <mat-select formControlName="nationality" required>
@@ -53,81 +61,85 @@
               <mat-option [value]="nationality">{{ nationality }}</mat-option>
             }
           </mat-select>
-          @if (memberDetailsForm.controls['nationality'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('nationality') }}
-            </mat-error>
+          @if (memberDetailsForm.controls['nationality'].touched && memberDetailsForm.controls['nationality'].invalid) {
+            <mat-error>{{ getErrorMessage('nationality') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Gender Radio Buttons -->
-        <mat-radio-group aria-label="Gender" formControlName="gender" required>
-          <mat-radio-button value="Male">Male</mat-radio-button>
-          <mat-radio-button value="Female">Female</mat-radio-button>
-          @if (memberDetailsForm.controls['gender'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('gender') }}
-            </mat-error>
-          }
-        </mat-radio-group>
-
-        <!-- PAN Input -->
+        <!-- PAN -->
         <mat-form-field appearance="outline">
           <mat-label>PAN</mat-label>
-          <input matInput placeholder="Enter PAN" type="text" formControlName="pan"/>
-          @if (memberDetailsForm.controls['pan'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('pan') }}
-            </mat-error>
+          <input matInput placeholder="Enter PAN" type="text" formControlName="pan" required />
+          @if (memberDetailsForm.controls['pan'].touched && memberDetailsForm.controls['pan'].invalid) {
+            <mat-error>{{ getErrorMessage('pan') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Phone Number Input -->
+        <!-- Phone Number -->
         <mat-form-field appearance="outline">
-          <mat-label>Enter Phone Number</mat-label>
-          <input matInput placeholder="Enter Phone Number" type="tel" formControlName="member_mobile_number"/>
-          @if (memberDetailsForm.controls['member_mobile_number'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('member_mobile_number') }}
-            </mat-error>
+          <mat-label>Phone Number</mat-label>
+          <input matInput placeholder="Enter 10-digit mobile number" type="tel" formControlName="member_mobile_number" required maxlength="10" />
+          @if (memberDetailsForm.controls['member_mobile_number'].touched && memberDetailsForm.controls['member_mobile_number'].invalid) {
+            <mat-error>{{ getErrorMessage('member_mobile_number') }}</mat-error>
           }
         </mat-form-field>
 
-        <!-- Email ID Input -->
+        <!-- Email -->
         <mat-form-field appearance="outline">
           <mat-label>Email Id</mat-label>
-          <input matInput placeholder="Enter Email" type="email" formControlName="member_email"/>
-          @if (memberDetailsForm.controls['member_email'].invalid) {
-            <mat-error>
-              {{ getErrorMessage('member_email') }}
-            </mat-error>
+          <input matInput placeholder="Enter email address" type="email" formControlName="member_email" required />
+          @if (memberDetailsForm.controls['member_email'].touched && memberDetailsForm.controls['member_email'].invalid) {
+            <mat-error>{{ getErrorMessage('member_email') }}</mat-error>
           }
         </mat-form-field>
 
-        <div class="upload-section">
-          <label for="photoUpload">Passport Size Photo <span>(png, jpg)</span></label>
-          <input
-            type="file"
-            id="photoUpload"
-            (change)="onPhotoSelect($event)"
-            accept=".png,.jpg,.jpeg"
-            />
+      </div>
+
+      <!-- ==================== UPLOAD DOCUMENT ==================== -->
+      <h5 class="section-title">Upload Document</h5>
+      <div class="documents-upload-container">
+        <div class="document-upload-row">
+          <div class="document-info">
+            <span class="document-label">
+              Passport Size Photo
+              <span class="required">*</span>
+            </span>
+            <span class="document-formats">Supported File Formats: .png, .jpg, .jpeg</span>
+          </div>
+          <div class="document-actions">
+            <input type="file"
+                   id="passportPhoto"
+                   (change)="onPhotoSelect($event)"
+                   accept=".png,.jpg,.jpeg"
+                   style="display:none"/>
+            <label for="passportPhoto" mat-raised-button color="primary"
+                   style="cursor:pointer;margin:0;display:inline-flex;align-items:center;">
+              <mat-icon style="margin-right:4px;">upload_file</mat-icon>
+              Choose File
+            </label>
 
             @if (passPhoto.fileUrl) {
-              <button mat-icon-button (click)="viewPhoto()" aria-label="View Uploaded Photo">
+              <button mat-icon-button color="accent"
+                      (click)="viewPhoto()" type="button">
                 <mat-icon>visibility</mat-icon>
               </button>
             }
+            @if (passPhoto.file) {
+              <span class="file-name">{{ passPhoto.file.name }}</span>
+            }
           </div>
-
         </div>
-      </mat-card-content>
+      </div>
+    </mat-card-content>
 
-      <mat-card-actions>
-        <button matButton="outlined" (click)="goBack()">Back</button>
-        <button matButton="filled" color="warn" (click)="resetForm()">Reset</button>
-        <button matButton="filled" color="primary" (click)="proceedToNext()" [disabled]="!memberDetailsForm.valid || !isPhotoUploaded()">Next</button>
-      </mat-card-actions>
-
-    </mat-card>
-  </form>
+    <!-- ==================== ACTIONS ==================== -->
+    <mat-card-actions>
+      <button mat-stroked-button (click)="goBack()" type="button">Back</button>
+      <button mat-stroked-button color="warn" (click)="resetForm()" type="button">Reset</button>
+      <button mat-flat-button color="primary"
+              (click)="proceedToNext()"
+              [disabled]="!memberDetailsForm.valid || !isPhotoUploaded()"
+              type="button">Next</button>
+    </mat-card-actions>
+  </mat-card>
+</form>

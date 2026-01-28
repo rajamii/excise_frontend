@@ -95,7 +95,6 @@ export class HomeComponent extends BaseComponent implements OnInit, OnDestroy {
 
     // Optional: handle dialog close event
     dialogRef.afterClosed().subscribe(result => {
-      console.log('Dialog closed', result);
       // Refresh user data if needed
       if (result === true) {
         // Reload user data

@@ -1,0 +1,121 @@
+.beer-production-register {
+  min-height: 100vh;
+
+  .header-section {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .card { border: none; }
+
+  .table {
+    font-size: 0.9rem;
+    
+    th { font-weight: 600; }
+
+    td { vertical-align: middle; }
+
+    .record-row {
+      &:hover {
+        background-color: #f8f9fa;
+      }
+      &.sunday-row {
+        background-color: #f3f4f6;
+      }
+      &.current-date-row {
+        background-color: #e8f5e8 !important;
+        border-left: 4px solid #28a745;
+        
+        &:hover {
+          background-color: #d4edda !important;
+        }
+      }
+      &.disabled-row {
+        background-color: #f8f9fa;
+        opacity: 0.7;
+        
+        input {
+          background-color: #e9ecef !important;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    input[type="number"] { width: 100%; }
+
+    .badge {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+    }
+
+    tfoot th { font-weight: 700; }
+  }
+
+  .form-control-sm {
+    font-size: 0.85rem;
+  }
+
+  .btn-sm { font-size: 0.8rem; }
+
+  // Print styles
+  @media print {
+    .btn { display: none !important; }
+    .header-section, .container-fluid.mb-4, .container-fluid.mt-4 { display: none !important; }
+    .card-header .bi { display: none !important; }
+    .card { border: none !important; box-shadow: none !important; }
+    .card-header { background: transparent !important; color: #000 !important; border: none !important; padding: 0 0 8px 0 !important; }
+    .print-header { display: block !important; text-align: center; font-weight: 700; margin-bottom: 8px; }
+    th:last-child, td:last-child { display: none; } // hide Action column
+    @page { size: A4 landscape; margin: 12mm; }
+  }
+
+  // Hidden by default; only visible in print
+  .print-header { display: none; }
+
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .table-responsive {
+      font-size: 0.8rem;
+    }
+
+    .table th,
+    .table td {
+      padding: 6px 4px;
+    }
+
+    .btn-sm {
+      padding: 2px 4px;
+      font-size: 0.75rem;
+    }
+  }
+
+  // Animation for record updates
+  .record-row {
+    transition: background-color 0.2s ease;
+  }
+
+  // Color coding for different values
+  .text-primary { color: var(--bs-primary) !important; }
+  .text-danger { color: var(--bs-danger) !important; }
+  .text-success { color: var(--bs-success) !important; }
+  .text-info { color: var(--bs-info) !important; }
+
+  // Form styling
+  .form-label {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  // form controls inherit global styles
+
+  // Card header styling
+  .card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+    font-weight: 600;
+  }
+
+  // Badge styling
+  .badge {
+    border-radius: 6px;
+    font-weight: 500;
+  }
+}

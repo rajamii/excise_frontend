@@ -34,7 +34,7 @@ export class ApplicationMovementComponent {
 
     // ✅ FIXED: Use application_id instead of applicationId
     const transactions: Transaction[] = apps.flatMap(app =>
-      (app.transactions || []).map(txn => ({
+      (app.transactions || []).map((txn: Transaction) => ({
         ...txn,
         applicationId: app.application_id, // Changed from app.applicationId
       }))

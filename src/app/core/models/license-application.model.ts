@@ -1,281 +1,208 @@
-import { Account } from "./account.model";
-import { District } from "./district.model";
-import { LicenseCategory } from "./license-category.model";
-import { LicenseType } from "./license-type.model";
-import { PoliceStation } from "./policestation.model";
-import { Subdivision } from "./subdivision.model";
+// ================================================================================================
+// FILE: core/models/license-application.model.ts
+// COMPLETE CORRECTED VERSION
+// ================================================================================================
 
 /**
- * Transaction Model
- */
-export class Transaction {
-  id!: number;
-  licenseApplication!: string | LicenseApplication;
-  performedBy!: number | any;
-  forwardedBy!: number | any;
-  forwardedTo!: number | any;
-  stage!: string;
-  remarks?: string;
-  timestamp!: string;
-}
-
-/**
- * Objection Model
- */
-export class Objection {
-  id?: number;
-  application!: string;
-  fieldName!: string;
-  remarks!: string;
-  raisedBy!: Account | null;
-  isResolved!: boolean;
-  raisedOn!: string;
-  resolvedOn?: string | null;
-}
-
-/**
- * License Application Model
- * This interface uses snake_case to match backend serializer exactly
- * Use this for API requests/responses
+ * Main License Application interface
+ * Note: Backend uses snake_case, so we define properties accordingly
  */
 export interface LicenseApplication {
-  // Read-only fields (returned by backend)
-  application_id?: string;
-  current_stage?: string;
-  is_approved?: boolean;
-  transactions?: Transaction[];
-  latest_transaction?: any;
-  objections?: Objection[];
+  // Primary identifier - MUST match backend field name
+  application_id: string;
 
-  // Step 1: Select License
-  excise_district?: number;           // ID of District (ForeignKey)
-  license_category?: number;          // ID of LicenseCategory (ForeignKey)
-  license_sub_category?: number;
-  excise_subdivision?: number;        // ID of Subdivision (ForeignKey)
+  // Application basic info
   license?: string;
-
-  // Step 2: Key Info
-  license_type?: number;              // ID of LicenseType (ForeignKey)
+  licenseName?: string;
+  license_type?: string;
+  licenseTypeName?: string;
+  license_category?: number;
+  licenseCategoryName?: string;
+  establishment?: string;
   establishment_name?: string;
-  location_district?: number;
-  site_type?: string;
-  mobile_number?: number;             // Integer (not string)
+
+  // Contact information
+  mobile_number?: string;
   email?: string;
-  license_no?: number;                // Integer (not string)
-  initial_grant_date?: string;        // Date in YYYY-MM-DD format
-  renewed_from?: string;              // Date in YYYY-MM-DD format
-  valid_up_to?: string;               // Date in YYYY-MM-DD format
-  yearly_license_fee?: string;
+
+  // License details
+  license_no?: string;
+  initial_grant_date?: string;
+  renewed_from?: string;
+  valid_up_to?: string;
+  yearly_license_fee?: number;
   license_nature?: string;
   functioning_status?: string;
   mode_of_operation?: string;
 
-  // Step 3: Address/Site Details
-  site_district?: number;             // ID of District (ForeignKey)
-  site_subdivision?: number;          // ID of Subdivision (ForeignKey)
-  police_station?: number;            // ID of PoliceStation (ForeignKey)
+  // Location information
+  excise_district?: number;
+  excise_district_name?: string;
+  excise_subdivision?: number;
+  excise_subdivision_name?: string;
+  site_subdivision?: string;
+  police_station?: number;
+  police_station_name?: string;
   location_category?: string;
   location_name?: string;
   ward_name?: string;
   business_address?: string;
   road_name?: string;
-  pin_code?: number;                  // Integer (not string)
-  latitude?: number;                  // Float
-  longitude?: number;                 // Float
-  construction_type?: string;
-  length?: number;
-  breadth?: number;
-  site_owned?: string;
-  noc_obtained?: string;
-  trade_license_covered?: string;
+  pin_code?: string;
+  latitude?: string;
+  longitude?: string;
 
-  // Step 4: Unit Details (only if license_type = Company)
+  // Company/Unit details
   company_name?: string;
   company_address?: string;
   company_pan?: string;
   company_cin?: string;
-  incorporation_date?: string;        // Date in YYYY-MM-DD format
-  company_phone_number?: number;      // Integer (not string)
+  incorporation_date?: string;
+  company_phone_number?: string;
   company_email?: string;
 
-  // Step 5: Applicant/Member Details
+  // Member details
   status?: string;
-  applicant_name?: string;
   member_name?: string;
   father_husband_name?: string;
   nationality?: string;
   gender?: string;
   pan?: string;
-  applicant_mobile_number?: number;   // Integer (not string)
-  member_mobile_number?: number;      // Integer (not string)
-  applicant_email?: string;
+  member_mobile_number?: string;
   member_email?: string;
-  dob?: string;                       // Date in YYYY-MM-DD format
+  photo?: string;
 
-  // Document
-  photo?: File;                       // File upload
+  // Workflow status
+  current_stage?: string;
+  current_stageName?: string;
+  submitted_by?: string;
+  submitted_byName?: string;
 
-  // Additional backend fields
-  print_count?: number;
-  is_print_fee_paid?: boolean;
+  // Timestamps
+  created_at?: string;
+  updated_at?: string;
+  submitted_at?: string;
+
+  // Additional metadata
+  remarks?: string;
+  fee_amount?: number;
   is_fee_calculated?: boolean;
-  is_license_category_updated?: boolean;
-}
 
-/**
- * License Application Display Model
- * This interface uses camelCase for frontend display purposes
- * Use this for binding to Angular forms and displaying data
- */
-export interface LicenseApplicationDisplay {
-  // Read-only fields
-  applicationId?: string;
-  currentStage?: string;
-  isApproved?: boolean;
+  // Additional properties from errors
+  print_count?: number;
   transactions?: Transaction[];
-  latestTransaction?: any;
-  objections?: Objection[];
-
-  // Step 1: Select License
-  exciseDistrict?: District | number;
-  licenseCategory?: LicenseCategory | number;
-  licenseSubCategory?: number;
-  exciseSubdivision?: Subdivision | number;
-  license?: string;
-
-  // Step 2: Key Info
-  licenseType?: LicenseType | number;
-  establishmentName?: string;
-  locationDistrict?: number;
-  siteType?: string;
-  mobileNumber?: number;
-  email?: string;
-  licenseNo?: number;
-  initialGrantDate?: string;
-  renewedFrom?: string;
-  validUpTo?: string;
-  yearlyLicenseFee?: string;
-  licenseNature?: string;
-  functioningStatus?: string;
-  modeOfOperation?: string;
-
-  // Step 3: Address/Site Details
-  siteDistrict?: District | number;
-  siteSubdivision?: Subdivision | number;
-  policeStation?: PoliceStation | number;
-  locationCategory?: string;
-  locationName?: string;
-  wardName?: string;
-  businessAddress?: string;
-  roadName?: string;
-  pinCode?: number;
-  latitude?: number;
-  longitude?: number;
-  constructionType?: string;
-  length?: number;
-  breadth?: number;
-  siteOwned?: string;
-  nocObtained?: string;
-  tradeLicenseCovered?: string;
-
-  // Step 4: Unit Details
-  companyName?: string;
-  companyAddress?: string;
-  companyPan?: string;
-  companyCin?: string;
-  incorporationDate?: string;
-  companyPhoneNumber?: number;
-  companyEmail?: string;
-
-  // Step 5: Applicant/Member Details
-  status?: string;
-  applicantName?: string;
-  memberName?: string;
-  fatherHusbandName?: string;
-  nationality?: string;
-  gender?: string;
-  pan?: string;
-  applicantMobileNumber?: number;
-  memberMobileNumber?: number;
-  applicantEmail?: string;
-  memberEmail?: string;
-  dob?: string;
-
-  // Document
-  photo?: File;
-
-  // Additional fields
-  printCount?: number;
-  isPrintFeePaid?: boolean;
-  isFeeCalculated?: boolean;
-  isLicenseCategoryUpdated?: boolean;
 }
 
 /**
- * Utility class to convert between camelCase and snake_case
+ * Transaction interface
  */
-export class LicenseApplicationMapper {
-  
-  /**
-   * Convert camelCase to snake_case
-   */
-  static toSnakeCase(str: string): string {
-    return str.replace(/([A-Z])/g, '_$1').toLowerCase();
-  }
+export interface Transaction {
+  id?: number;
+  application?: string;
+  amount?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
-  /**
-   * Convert snake_case to camelCase
-   */
-  static toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-  }
+/**
+ * Objection interface
+ */
+export interface Objection {
+  id?: number;
+  application?: string;
+  fieldName: string;
+  remarks: string;
+  raisedBy?: string;
+  raisedByName?: string;
+  raisedAt?: string;
+  isResolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolvedByName?: string;
+}
 
-  /**
-   * Convert LicenseApplicationDisplay (camelCase) to LicenseApplication (snake_case)
-   * Use this before sending data to backend
-   */
-  static toBackendFormat(display: LicenseApplicationDisplay): Partial<LicenseApplication> {
-    const backend: any = {};
+/**
+ * Application Movement/History interface
+ */
+export interface ApplicationMovement {
+  id?: number;
+  application?: string;
+  from_stage?: string;
+  from_stageName?: string;
+  to_stage?: string;
+  to_stageName?: string;
+  moved_by?: string;
+  moved_byName?: string;
+  moved_at?: string;
+  remarks?: string;
+  action?: string;
+}
 
-    for (const [key, value] of Object.entries(display)) {
-      if (value === undefined || value === null) continue;
+/**
+ * Dashboard Statistics interface
+ */
+export interface DashboardStats {
+  pending: number;
+  approved: number;
+  rejected: number;
+  under_review: number;
+  total: number;
+}
 
-      const snakeKey = this.toSnakeCase(key);
+/**
+ * Application Filter interface
+ */
+export interface ApplicationFilter {
+  application_id?: string;
+  licenseType?: string;
+  exciseDistrict?: number;
+  exciseSubdivision?: number;
+  current_stage?: string;
+  submitted_by?: string;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+}
 
-      // Extract IDs from objects for ForeignKey fields
-      if (typeof value === 'object' && value !== null && !(value instanceof File) && !(value instanceof Date)) {
-        if ('id' in value) {
-          backend[snakeKey] = value.id;
-        } else if ('districtCode' in value) {
-          backend[snakeKey] = value.districtCode;
-        } else if ('subdivisionCode' in value) {
-          backend[snakeKey] = value.subdivisionCode;
-        } else if ('policeStationCode' in value) {
-          backend[snakeKey] = value.policeStationCode;
-        } else {
-          backend[snakeKey] = value;
-        }
-      } else {
-        backend[snakeKey] = value;
-      }
-    }
+/**
+ * Utility type for handling field name variations
+ * Use this when you're unsure which naming convention the data uses
+ */
+export type FlexibleLicenseApplication = LicenseApplication & {
+  // Camel case alternatives (in case backend changes)
+  applicationId?: string;
+  id?: string;
+  app_id?: string;
+};
 
-    return backend as Partial<LicenseApplication>;
-  }
+/**
+ * Helper function to safely get application ID from any naming variation
+ * @param app - Application object that might use different field names
+ * @returns The application ID or undefined
+ */
+export function getApplicationId(app: any): string | undefined {
+  return app?.application_id ||
+    app?.applicationId ||
+    app?.id ||
+    app?.app_id;
+}
 
-  /**
-   * Convert LicenseApplication (snake_case) to LicenseApplicationDisplay (camelCase)
-   * Use this when receiving data from backend
-   */
-  static toDisplayFormat(backend: LicenseApplication): Partial<LicenseApplicationDisplay> {
-    const display: any = {};
+/**
+ * Helper function to check if an application has a valid ID
+ * @param app - Application object to check
+ * @returns true if application has a valid ID
+ */
+export function hasValidApplicationId(app: any): boolean {
+  const id = getApplicationId(app);
+  return !!id && id !== 'undefined' && id !== 'null';
+}
 
-    for (const [key, value] of Object.entries(backend)) {
-      if (value === undefined || value === null) continue;
-      const camelKey = this.toCamelCase(key);
-      display[camelKey] = value;
-    }
-
-    return display as Partial<LicenseApplicationDisplay>;
-  }
+/**
+ * Type guard to check if an object is a valid LicenseApplication
+ * @param obj - Object to check
+ * @returns true if object is a valid LicenseApplication
+ */
+export function isLicenseApplication(obj: any): obj is LicenseApplication {
+  return obj && hasValidApplicationId(obj);
 }

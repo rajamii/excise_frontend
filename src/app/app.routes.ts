@@ -1,80 +1,368 @@
-import { Routes } from '@angular/router';
-import { LoginComponent } from './features/login/login.component';
-import { Authority } from './shared/constants/authority.enum';
-import { UserRouteAccessService } from './core/config/user-route-access.service';
-import { HomeComponent } from './layouts/landing/home/home.component';
-import { HomeLinksComponent } from './layouts/landing/home/home-links/home-links.component';
-import { InfoPagesComponent } from './layouts/info-pages/info-pages.component';
-import { PageNotFoundComponent } from './shared/components/page-not-found/page-not-found.component';
+import { Routes } from "@angular/router";
+import { LoginComponent } from "./features/login/login.component";
+import { Authority } from "./shared/constants/authority.enum";
+import { UserRouteAccessService } from "./core/config/user-route-access.service";
+import { HomeComponent } from "./layouts/landing/home/home.component";
+import { HomeLinksComponent } from "./layouts/landing/home/home-links/home-links.component";
+import { InfoPagesComponent } from "./layouts/info-pages/info-pages.component";
+import { PageNotFoundComponent } from "./shared/components/page-not-found/page-not-found.component";
 
 export const routes: Routes = [
   // Landing layout with nested children
   {
-    path: '',
+    path: "",
     children: [
       {
-        path: '',
+        path: "",
         component: HomeComponent,
-        data: { showCarousel: true }
+        data: { showCarousel: true },
       },
       {
-        path: 'home/:page',
-        component: HomeLinksComponent
-      }
-    ]
+        path: "home/:page",
+        component: HomeLinksComponent,
+      },
+    ],
   },
 
   // Information pages (about-us, contact-us, etc.)
   {
-    path: 'info',
+    path: "info",
     children: [
       {
-        path: ':page', // Dynamic info pages
-        component: InfoPagesComponent
-      }
-    ]
+        path: ":page", // Dynamic info pages
+        component: InfoPagesComponent,
+      },
+    ],
   },
 
   // Login route
   {
-    path: 'login',
-    component: LoginComponent
+    path: "login",
+    component: LoginComponent,
+  },
+
+  // Development routes - bypasses authentication
+  {
+    path: "dev-supply-chain",
+    loadComponent: () =>
+      import("./features/licensee/supplyChain/supplychaincomponents/supply-chain.component").then(
+        (m) => m.SupplyChainComponent,
+      ),
+  },
+  {
+    path: "dev-payment-confirmation",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component"
+      ).then((m) => m.PaymentConfirmationComponent),
+  },
+  {
+    path: "dev-local-sales-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/breweryRegisters/local-sales-register/local-sales-register.component"
+      ).then((m) => m.LocalSalesRegisterComponent),
+  },
+  {
+    path: "dev-payment-receipt",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/payments/payment-receipt/payment-receipt.component"
+      ).then((m) => m.PaymentReceiptComponent),
+  },
+  {
+    path: "dev-import-permit",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/import-permit/import-permit.component"
+      ).then((m) => m.ImportPermitComponent),
+  },
+  {
+    path: "dev-supply-chain-application-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
+      ).then((m) => m.SupplyChainRequisitionViewComponent),
+  },
+  {
+    path: "dev-supply-chain-revalidation-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
+      ).then((m) => m.SupplyChainRevalidationViewComponent),
+  },
+  {
+    path: "dev-supply-chain-revalidation-request",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/revalidation-request/revalidation-request.component"
+      ).then((m) => m.RevalidationRequestComponent),
+  },
+  {
+    path: "dev-supply-chain-cancellation-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
+      ).then((m) => m.SupplyChainCancellationViewComponent),
+  },
+  {
+    path: "dev-supply-chain-transit-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/transitView/supply-chain-transit-view.component"
+      ).then((m) => m.SupplyChainTransitViewComponent),
+  },
+  {
+    path: "dev-supply-chain-transit-view-level1",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
+  },
+  {
+    path: "dev-supply-chain-transit-view-level2",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
+  },
+
+  {
+    path: "dev-supply-chain-hologram-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/hologramView/supply-chain-hologram-view.component"
+      ).then((m) => m.SupplyChainHologramViewComponent),
+  },
+
+  {
+    path: "dev-transit-permit",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/transit-permit/transit-permit.component"
+      ).then((m) => m.TransitPermitComponent),
+  },
+  {
+    path: "dev-transit-permit-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/transit-permit-register/transit-permit-register.component"
+      ).then((m) => m.TransitPermitRegisterComponent),
+  },
+  {
+    path: "dev-hologram",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologram/hologram.component"
+      ).then((m) => m.HologramComponent),
+  },
+  {
+    path: "dev-hologramrequestlevel1",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component"
+      ).then((m) => m.Hologramrequestlevel1Component),
+  },
+  {
+    path: "dev-daily-record-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/daily-record-register/daily-record-register.component"
+      ).then((m) => m.DailyRecordRegisterComponent),
+  },
+  {
+    path: "dev-daily-production-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component"
+      ).then((m) => m.BeerProductionRegisterComponent),
+  },
+  {
+    path: "dev-beer-production-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/beer-production-register/beer-production-register.component"
+      ).then((m) => m.BeerProductionRegisterComponent),
+  },
+  {
+    path: "dev-brands-details",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/brands-details/brands-details.component"
+      ).then((m) => m.BrandsDetailsComponent),
+  },
+  {
+    path: "app-permit-section",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/permit-section/permit-section.component"
+      ).then((m) => m.PermitSectionComponent),
+    children: [
+      {
+        path: "requisition/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
+          ).then((m) => m.SupplyChainRequisitionViewComponent),
+      },
+      {
+        path: "revalidation/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
+          ).then((m) => m.SupplyChainRevalidationViewComponent),
+      },
+      {
+        path: "cancellation/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
+          ).then((m) => m.SupplyChainCancellationViewComponent),
+      },
+      {
+        path: "transit/:ref",
+        loadComponent: () =>
+          import(
+            "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+          ).then((m) => m.Transitviewlevel1Component),
+      },
+    ],
+  },
+  {
+    path: "dev-commissioner-dashboard",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/commissioner/commissioner-dashboard/commissioner-dashboard.component"
+      ).then((m) => m.CommissionerDashboardComponent),
+  },
+
+  {
+    path: "dev-requisition-letter-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
+      ).then((m) => m.SupplyChainRequisitionViewComponent),
+  },
+  {
+    path: "dev-revalidation-letter-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
+      ).then((m) => m.SupplyChainRevalidationViewComponent),
+  },
+  {
+    path: "dev-cancellation-letter-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
+      ).then((m) => m.SupplyChainCancellationViewComponent),
+  },
+  {
+    path: "dev-transit-permit-letter-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
+      ).then((m) => m.Transitviewlevel1Component),
+  },
+  {
+    path: "dev-final-requisition-letters",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/finalrequistionletters/finalrequistionletters.component"
+      ).then((m) => m.FinalrequistionlettersComponent),
+  },
+  {
+    path: "dev-officer-in-charge",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component"
+      ).then((m) => m.OfficerInChargeComponent),
+  },
+  {
+    path: "dev-itcell",
+    loadComponent: () =>
+      import("./features/licensee/supplyChain/itcell/itcell.component").then(
+        (m) => m.ITCELLComponent,
+      ),
+  },
+  {
+    path: "dev-payslip",
+    loadComponent: () =>
+      import("./features/licensee/supplyChain/letterView/payslip/payslip.component").then(
+        (m) => m.PayslipComponent,
+      ),
+  },
+  {
+    path: "dev-hologram-monthly-report",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
+      ).then((m) => m.HologramMonthlyReportComponent),
+  },
+  {
+    path: "dev-hologram-daily-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/hologram-daily-register/hologram-daily-register.component"
+      ).then((m) => m.HologramDailyRegisterComponent),
+  },
+  {
+    path: "dev-hologram-manufacturing-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component"
+      ).then((m) => m.HologramManufacturingRegisterComponent),
+  },
+  {
+    path: "dev-hologram-overview",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologramoveriew/hologramoveriew.component"
+      ).then((m) => m.HologramoveriewComponent),
+  },
+  {
+    path: "dev/monthlyhologramstatement-oic",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
+      ).then((m) => m.HologramMonthlyReportComponent),
   },
 
   // Role Protected modules
   {
-    path: 'admin',
+    path: "admin",
     canActivate: [UserRouteAccessService],
     data: {
       authorities: [
-        Authority.SITE_ADMIN, 
-        Authority.LEVEL_1, 
+        Authority.SITE_ADMIN,
+        Authority.LEVEL_1,
         Authority.LEVEL_2,
-        Authority.LEVEL_3, 
-        Authority.LEVEL_4, 
-        Authority.LEVEL_5
-      ]
+        Authority.LEVEL_3,
+        Authority.LEVEL_4,
+        Authority.LEVEL_5,
+      ],
     },
-    loadChildren: () => import('./features/admin/admin.routes')
+    loadChildren: () => import("./features/admin/admin.routes"),
   },
 
   // Licensee feature module
   {
-    path: 'licensee',
+    path: "licensee",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.LICENSEE]
+      authorities: [Authority.LICENSEE],
     },
     loadChildren: () =>
-      import('./features/licensee/licensee.routes').then((m) => m.licenseeRoutes)
-    
+      import("./features/licensee/licensee.routes").then(
+        (m) => m.licenseeRoutes,
+      ),
   },
 
   // Wildcard fallback
   {
-    path: '**',
-    component: PageNotFoundComponent
-  }
+    path: "**",
+    component: PageNotFoundComponent,
+  },
 ];
 
 export default routes;

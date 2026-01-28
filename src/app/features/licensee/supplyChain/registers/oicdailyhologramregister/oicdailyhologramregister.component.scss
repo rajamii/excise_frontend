@@ -1,0 +1,3342 @@
+/* Daily Register Styles */
+.daily-register-header {
+  .register-title {
+    color: #2c3e50;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  .header-actions {
+    .btn {
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+}
+
+/* Summary Cards */
+.summary-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .card-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+  }
+
+  .card-content {
+    flex: 1;
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: #2c3e50;
+    }
+
+    .card-label {
+      font-size: 0.875rem;
+      color: #6c757d;
+      margin-bottom: 0;
+      font-weight: 500;
+    }
+  }
+
+  &.total-entries {
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+    border-color: #b3d9ff;
+    .card-icon { background: linear-gradient(135deg, #007bff, #0056b3); }
+  }
+
+  &.auto-generated {
+    background: linear-gradient(135deg, #f0fdff 0%, #e6fcff 100%);
+    border-color: #b3f0f7;
+    .card-icon { background: linear-gradient(135deg, #17a2b8, #138496); }
+  }
+
+  &.pending-entries {
+    background: linear-gradient(135deg, #fffbf0 0%, #fff8e6 100%);
+    border-color: #ffe6b3;
+    .card-icon { background: linear-gradient(135deg, #ffc107, #e0a800); }
+  }
+
+  &.total-holograms {
+    background: linear-gradient(135deg, #f0fff4 0%, #e6ffe9 100%);
+    border-color: #b3f0c4;
+    .card-icon { background: linear-gradient(135deg, #28a745, #1e7e34); }
+  }
+}
+
+/* Filter Section */
+.compact-filter-section {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  .filter-label-text {
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .compact-filter {
+    min-width: 120px;
+    
+    .form-label {
+      font-weight: 500;
+      color: #495057;
+      margin-bottom: 0.25rem;
+    }
+    
+    .form-select, .form-control {
+      font-size: 0.875rem;
+      border-color: #ced4da;
+      
+      &:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+    }
+    
+    .btn {
+      margin-top: 1.5rem;
+    }
+  }
+}
+
+/* Hologram Type Tabs */
+.hologram-type-tabs {
+  .nav-pills {
+    .nav-link {
+      color: #6c757d;
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      margin: 0 0.25rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #e9ecef;
+        color: #495057;
+      }
+
+      &.active {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border-color: #007bff;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+      }
+    }
+  }
+}
+
+/* Register Container */
+.register-container {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    
+    &::-webkit-scrollbar {
+      height: 12px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 6px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 6px;
+      
+      &:hover {
+        background: #555;
+      }
+    }
+  }
+
+  .register-header-bar {
+    background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .register-table-title {
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0;
+    }
+
+    .register-info {
+      .entries-count {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+}
+
+/* Register Table */
+.register-table {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  table-layout: fixed;
+  min-width: 2500px;
+
+  thead th {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0.75rem 0.5rem;
+    border-bottom: 2px solid #dee2e6;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #dee2e6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  tbody {
+    .register-row {
+      transition: all 0.2s ease;
+      border-bottom: 1px solid #e9ecef;
+
+      &:hover {
+        background-color: #f8f9fa;
+      }
+
+      &.saved-row {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-left: 4px solid #28a745;
+      }
+
+      td {
+        padding: 0.75rem 0.5rem;
+        vertical-align: middle;
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  .sl-no {
+    width: 50px;
+    text-align: center;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .ref-number {
+    width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .roll-range {
+    width: 180px;
+  }
+
+  .dates-column {
+    width: 140px;
+    padding: 0.5rem 0.4rem !important;
+  }
+
+  .brand-details {
+    width: 120px;
+    font-size: 0.75rem;
+  }
+
+  .bottle-size {
+    width: 90px;
+    text-align: center;
+    font-size: 0.75rem;
+  }
+
+  .rolls-assigned {
+    width: 150px;
+    
+    .rolls-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+    }
+  }
+
+  .hologram-qty {
+    width: 80px;
+    text-align: center;
+  }
+
+  .issued-from, .issued-to, .wastage-from, .wastage-to {
+    width: 150px;
+    
+    .serial-input {
+      font-size: 0.75rem;
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.25rem;
+      width: 100%;
+
+      &.editable {
+        border-color: #007bff;
+        background: #f8f9ff;
+
+        &:focus {
+          border-color: #0056b3;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+      }
+
+      &[readonly] {
+        background: #f8f9fa;
+        border-color: #e9ecef;
+        color: #6c757d;
+      }
+    }
+  }
+
+  .issued-qty, .wastage-qty {
+    width: 110px;
+  }
+
+  .left-over {
+    width: 80px;
+  }
+
+  .total-calc {
+    width: 100px;
+    
+    &.total-match {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      border-left: 3px solid #28a745;
+    }
+    
+    &.total-mismatch {
+      background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+      border-left: 3px solid #ffc107;
+    }
+    
+    .total-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.5rem;
+      
+      .qty-number {
+        font-size: 1rem;
+        font-weight: 700;
+        
+        &.text-success {
+          color: #28a745;
+        }
+        
+        &.text-danger {
+          color: #dc3545;
+        }
+        
+        &.text-warning {
+          color: #ffc107;
+        }
+      }
+      
+      .total-formula {
+        font-size: 0.65rem;
+        color: #6c757d;
+        text-align: center;
+      }
+      
+      .validation-success,
+      .validation-error,
+      .validation-warning {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.7rem;
+        
+        i {
+          font-size: 0.8rem;
+        }
+      }
+    }
+  }
+
+  .damage-reason {
+    width: 180px;
+
+    .reason-input {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.5rem;
+      border-radius: 0.25rem;
+      min-height: 60px;
+      resize: vertical;
+      width: 100%;
+
+      &.editable {
+        border-color: #007bff;
+        background: #f8f9ff;
+
+        &:focus {
+          border-color: #0056b3;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+      }
+
+      &[readonly] {
+        background: #f8f9fa;
+        border-color: #e9ecef;
+        color: #6c757d;
+      }
+    }
+    
+    .damage-reason-text {
+      font-size: 0.75rem;
+      color: #495057;
+      line-height: 1.4;
+      padding: 0.375rem 0.5rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0.25rem;
+      min-height: 40px;
+      word-wrap: break-word;
+      white-space: normal;
+    }
+  }
+
+  .actions {
+    width: 90px;
+    text-align: center;
+
+    .action-buttons {
+      display: flex;
+      gap: 0.25rem;
+      justify-content: center;
+      align-items: center;
+
+      .btn-action {
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &.lock {
+          background: #ffc107;
+          color: #000;
+
+          &:hover:not(:disabled) {
+            background: #e0a800;
+            transform: scale(1.1);
+          }
+
+          &:disabled {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+          }
+        }
+
+        &.save {
+          background: #28a745;
+          color: white;
+
+          &:hover:not(:disabled) {
+            background: #218838;
+            transform: scale(1.1);
+          }
+
+          &:disabled {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+          }
+        }
+      }
+
+      .status-badge {
+        &.saved {
+          background: #d4edda;
+          color: #155724;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          font-size: 0.75rem;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+}
+
+/* Dates column styling */
+.dates-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  
+  .date-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    
+    .date-label {
+      font-size: 0.65rem;
+      color: #6c757d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .date-value {
+      font-size: 0.8rem;
+      color: #2c3e50;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+  }
+}
+
+/* Auto-calculated quantity styling */
+.auto-calculated {
+  background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+  border: 1px solid #c3e6cb;
+  border-radius: 0.25rem;
+  
+  .qty-number {
+    color: #155724;
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: block;
+    text-align: center;
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+  border-radius: 0.5rem;
+  border: 1px solid #e9ecef;
+  margin: 1rem;
+
+  .empty-icon {
+    font-size: 4rem;
+    color: #6c757d;
+    margin-bottom: 1rem;
+  }
+
+  .empty-title {
+    color: #495057;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-message {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+}
+
+/* Pagination */
+.register-pagination {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f4 100%);
+  border-top: 1px solid #e9ecef;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+
+  .pagination-info {
+    .info-text {
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+  }
+
+  .pagination-controls {
+    .page-info {
+      font-size: 0.875rem;
+      color: #495057;
+      font-weight: 500;
+    }
+
+    .btn {
+      font-size: 0.875rem;
+      padding: 0.375rem 0.75rem;
+    }
+  }
+}
+
+/* Allocated Ranges Display - Blue Boxes */
+.allocated-ranges-display {
+  margin-top: 0.5rem;
+  
+  .allocated-ranges-label {
+    font-size: 0.7rem;
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+  
+  .allocated-range-box {
+    background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+    border: 2px solid #007bff;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.15);
+    
+    .range-serials {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #0056b3;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .range-qty-small {
+      font-size: 0.7rem;
+      color: #495057;
+      font-weight: 500;
+    }
+  }
+}
+
+/* Roll Range Display in ROLL/RANGE column */
+.roll-range-display {
+  margin-bottom: 0.5rem;
+  padding: 0.25rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 0.25rem;
+  border-left: 3px solid #007bff;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  .roll-name-text {
+    font-size: 0.75rem;
+    color: #0056b3;
+    font-weight: 700;
+    margin-bottom: 0.15rem;
+  }
+  
+  .range-text {
+    font-size: 0.7rem;
+    color: #495057;
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+  }
+}
+
+/* Selected Range Info */
+.selected-range-info {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border: 1px solid #ffc107;
+  border-radius: 0.375rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  
+  .range-info-label {
+    font-size: 0.7rem;
+    color: #856404;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #ffc107;
+    }
+  }
+  
+  .range-info-value {
+    font-size: 0.75rem;
+    color: #495057;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .range-qty-badge {
+      background: #ffc107;
+      color: #000;
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.65rem;
+      font-weight: 700;
+    }
+  }
+}
+
+/* Allocated Range Info inside Locked Rolls */
+.allocated-range-info {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 0.25rem;
+  
+  .allocated-range-label {
+    font-size: 0.65rem;
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+  
+  .allocated-range-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    .range-item {
+      font-size: 0.7rem;
+      color: #0056b3;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);
+      border: 1px solid #007bff;
+      border-radius: 0.25rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+}
+
+/* Locked Roll Badge Wrapper */
+.locked-roll-badge-wrapper {
+  position: relative;
+  margin-bottom: 0.5rem;
+  
+  .locked-roll-badge {
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    border: 2px solid;
+    
+    .roll-name-badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: white;
+      border: 2px solid;
+    }
+  }
+  
+  .btn-unlock {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #dc3545;
+    color: white;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    
+    &:hover {
+      background: #c82333;
+      transform: scale(1.1);
+    }
+  }
+}
+
+/* ========================================
+   RANGE INPUT CONTAINER - Main Structure
+   ======================================== */
+.range-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  min-height: 60px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   CURRENT ROLL SECTION - Active Input
+   ======================================== */
+.current-roll-section {
+  background: #f8f9fa;
+  border: 2px solid #007bff;
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+
+  .roll-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #007bff;
+    margin-bottom: 0.375rem;
+    text-transform: uppercase;
+
+    i {
+      font-size: 0.875rem;
+    }
+
+    span {
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+    }
+  }
+
+  .ranges-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .range-input-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-bottom: 0.4rem;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      position: relative;
+      z-index: 1;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+
+    .form-control {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: calc(100% - 36px);
+      width: 100%;
+      height: 32px;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.5rem;
+      border: 1px solid #ced4da;
+      border-radius: 0.25rem;
+      font-family: 'Courier New', monospace;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+      background-color: #fff;
+      position: relative;
+      z-index: 1;
+      pointer-events: auto;
+      cursor: text;
+      line-height: 1.5;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        outline: none;
+        background-color: #fff;
+        z-index: 2;
+      }
+
+      &::placeholder {
+        color: #adb5bd;
+        font-size: 0.75rem;
+      }
+
+      &[readonly],
+      &[disabled] {
+        background-color: #e9ecef;
+        opacity: 1;
+        cursor: not-allowed;
+      }
+      
+      &.form-control-sm {
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0.4rem 0.5rem !important;
+        font-size: 0.8rem !important;
+      }
+
+      &.is-invalid {
+        border-color: #dc3545;
+        padding-right: calc(1.5em + 0.75rem);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 3.6 .4.4.4-.4m0 4.8h-.8'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.1875rem) center;
+        background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+        background-color: #fff;
+
+        &:focus {
+          border-color: #dc3545;
+          box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+          background-color: #fff;
+        }
+      }
+    }
+
+    .invalid-feedback {
+      display: block;
+      width: 100%;
+      margin-top: 0;
+      font-size: 0.7rem;
+      color: #dc3545;
+      line-height: 1.2;
+      word-wrap: break-word;
+      white-space: normal;
+      padding: 0.125rem 0.25rem;
+      min-height: 1.2em;
+    }
+
+    .btn-remove {
+      flex-shrink: 0 !important;
+      flex-grow: 0 !important;
+      margin: 0 !important;
+      margin-left: auto !important;
+    }
+  }
+
+  .roll-subtotal {
+    margin-top: 0.375rem;
+    padding-top: 0.375rem;
+    border-top: 2px solid #dee2e6;
+    text-align: center;
+
+    strong {
+      font-size: 0.8125rem;
+      color: #495057;
+    }
+  }
+}
+
+/* ========================================
+   LOCKED ROLL ITEMS - Completed Rolls
+   ======================================== */
+.locked-roll-item {
+  background: #e7f5e7;
+  border: 1px solid #28a745;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.5rem;
+
+  .roll-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #28a745;
+    text-transform: uppercase;
+    min-width: 50px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
+  }
+
+  .roll-values {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .value-badge {
+    background: #fff;
+    border: 1px solid #28a745;
+    color: #28a745;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.375rem;
+    border-radius: 0.2rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+  }
+}
+
+/* ========================================
+   QUANTITY CONTAINER - Qty Display
+   ======================================== */
+.quantity-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+
+  .qty-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 28px;
+  }
+
+  .qty-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    color: #fff;
+
+    &.primary {
+      background: #007bff;
+    }
+
+    &.success {
+      background: #28a745;
+    }
+
+    &.warning {
+      background: #ffc107;
+      color: #000;
+    }
+
+    &.secondary {
+      background: #6c757d;
+    }
+  }
+
+  .roll-subtotal {
+    margin-top: 0.375rem;
+    padding-top: 0.375rem;
+    border-top: 2px solid #dee2e6;
+    text-align: center;
+
+    strong {
+      font-size: 0.8125rem;
+      color: #495057;
+      font-weight: 800;
+    }
+  }
+
+  .grand-total {
+    margin-top: 0.375rem;
+    padding-top: 0.375rem;
+    border-top: 2px solid #495057;
+    text-align: center;
+
+    strong {
+      font-size: 0.8125rem;
+      color: #212529;
+      font-weight: 800;
+    }
+  }
+}
+
+/* ========================================
+   SAVED ENTRIES - Grouped Display
+   ======================================== */
+.saved-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+
+  .saved-roll-group {
+    border: 2px solid;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+
+    .roll-group-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+    }
+
+    .range-value {
+      font-size: 0.7rem;
+      font-family: 'Courier New', monospace;
+      font-weight: 600;
+      padding: 0.25rem 0.375rem;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 0.25rem;
+    }
+
+    .range-qty {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 24px;
+
+      .qty-badge-small {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+      }
+    }
+
+    .roll-subtotal {
+      margin-top: 0.25rem;
+      padding-top: 0.25rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      text-align: center;
+
+      strong {
+        font-size: 0.75rem;
+        font-weight: 800;
+      }
+    }
+  }
+
+  .grand-total {
+    margin-top: 0.375rem;
+    padding: 0.5rem;
+    border-top: 3px solid #495057;
+    text-align: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 0.375rem;
+
+    strong {
+      font-size: 0.875rem;
+      color: #212529;
+      font-weight: 800;
+    }
+  }
+}
+
+/* ========================================
+   BUTTONS - Remove & Add Range
+   ======================================== */
+.btn-remove {
+  background: #fff;
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  width: 28px !important;
+  min-width: 28px !important;
+  max-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 !important;
+  border-radius: 0.25rem;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  flex-basis: 28px !important;
+
+  i {
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: #dc3545;
+    color: #fff;
+    transform: scale(1.05);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.btn-add {
+  background: #fff;
+  border: 1px dashed #28a745;
+  color: #28a745;
+  font-size: 0.7rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+
+  i {
+    font-size: 0.875rem;
+  }
+
+  &:hover {
+    background: #28a745;
+    color: #fff;
+    border-style: solid;
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.btn-add-range-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px dashed;
+  border-radius: 0.375rem;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0.375rem auto 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+
+  i {
+    font-size: 1.125rem;
+  }
+
+  &:hover {
+    border-style: solid;
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Locked field styling */
+.locked-field {
+  cursor: not-allowed;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  font-weight: 500;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* Hologram Qty Simple Display */
+.hologram-qty-simple {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem;
+
+  .qty-number {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #495057;
+    font-family: 'Courier New', monospace;
+  }
+}
+
+/* Rolls Assigned Section - Above Table */
+.rolls-assigned-section {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #007bff;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rolls-assigned-header {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  padding: 1.25rem 1.5rem;
+  
+  h5 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    
+    i {
+      font-size: 1.5rem;
+      vertical-align: middle;
+    }
+  }
+  
+  .btn-outline-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+.rolls-assigned-body {
+  padding: 1.5rem;
+}
+
+.roll-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-left-width: 4px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+  
+  &.roll-card-current {
+    border-style: dashed;
+    border-width: 2px;
+    border-left-width: 4px;
+  }
+}
+
+.roll-card-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.roll-name-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.roll-stats {
+  .badge {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+  }
+}
+
+.roll-card-body {
+  padding: 1.25rem;
+}
+
+.allocated-ranges-section {
+  .section-label {
+    font-size: 0.875rem;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.ranges-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.range-box {
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border: 2px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: #007bff;
+    background: linear-gradient(135deg, #e7f3ff 0%, #f8f9fa 100%);
+    transform: translateX(4px);
+  }
+}
+
+.range-serials {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  
+  i {
+    color: #007bff;
+    margin-right: 0.5rem;
+  }
+}
+
+.range-quantity {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.available-section {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
+  border: 1px solid #b3d9ff;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  
+  .section-label {
+    font-size: 0.875rem;
+    color: #495057;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.available-badge {
+  background: #007bff;
+  color: white;
+  padding: 0.375rem 1rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.empty-rolls-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  
+  i {
+    opacity: 0.3;
+  }
+  
+  p {
+    font-size: 1rem;
+  }
+}
+
+/* Button to view rolls in table */
+.btn-view-rolls {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 123, 255, 0.3);
+  }
+}
+
+/* Entry Rolls Section */
+.entry-rolls-section {
+  border-bottom: 2px dashed #dee2e6;
+  padding-bottom: 1.5rem;
+  
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.entry-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border-left: 4px solid #007bff;
+  
+  h6 {
+    font-size: 1rem;
+    color: #2c3e50;
+    
+    i {
+      color: #007bff;
+    }
+    
+    .text-primary {
+      color: #007bff !important;
+      font-weight: 700;
+    }
+  }
+}
+
+/* Reference Number with Use Button */
+.ref-number-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ref-number-text {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9rem;
+}
+
+.btn-use-rolls {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  font-weight: 600;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+  }
+  
+  i {
+    font-size: 0.875rem;
+  }
+}
+
+/* Available and Assigned Rolls Sections */
+.available-rolls-section,
+.assigned-rolls-section {
+  .section-title {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+.available-roll-card {
+  border-left-color: #28a745 !important;
+  
+  .roll-card-header {
+    background-color: rgba(40, 167, 69, 0.1) !important;
+  }
+  
+  .roll-name-badge {
+    background-color: #28a745 !important;
+  }
+}
+
+/* Roll Selection Dropdown */
+.roll-selection-container {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px dashed #007bff;
+  border-radius: 0.5rem;
+  text-align: center;
+  
+  .form-select {
+    max-width: 300px;
+    margin: 0 auto;
+    font-weight: 600;
+    border-color: #007bff;
+    
+    &:focus {
+      border-color: #0056b3;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+  }
+  
+  small {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+}
+
+/* Two-column layout for rolls */
+.assigned-rolls-panel {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  border: 2px solid #28a745;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  min-height: 400px;
+  
+  .section-title {
+    color: #155724;
+    border-bottom-color: #28a745;
+  }
+}
+
+.rolls-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #28a745;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #218838;
+    }
+  }
+}
+
+.selected-roll-panel {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  min-height: 400px;
+  
+  .section-title {
+    color: #856404;
+    border-bottom-color: #ffc107;
+  }
+  
+  .roll-card-selected {
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    border-width: 3px;
+  }
+}
+
+.empty-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0.5rem;
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  min-height: 300px;
+  
+  i {
+    opacity: 0.3;
+  }
+  
+  p {
+    font-size: 0.95rem;
+  }
+}
+
+/* Brand Details and Bottle Size Inputs in Roll Details */
+.roll-details-inputs {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  
+  .form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    
+    i {
+      font-size: 0.875rem;
+    }
+  }
+  
+  .form-control {
+    border-width: 2px;
+    transition: all 0.2s ease;
+    
+    &:focus {
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
+    }
+  }
+  
+  small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Brand Details and Bottle Size Display in Table */
+.brand-details, .bottle-size {
+  .brand-value, .bottle-value {
+    padding: 0.25rem 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-align: center;
+    border-radius: 0.25rem;
+    background: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+  
+  .current-roll-section {
+    border: 1.5px solid;
+    border-radius: 0.375rem;
+    padding: 0.4rem;
+    margin-bottom: 0.35rem;
+    
+    .roll-label {
+      font-weight: 600;
+      font-size: 0.65rem;
+      margin-bottom: 0.3rem;
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      
+      i {
+        font-size: 0.7rem;
+      }
+    }
+  }
+  
+  .locked-roll-item {
+    border: 1.5px solid;
+    border-radius: 0.375rem;
+    padding: 0.4rem;
+    margin-bottom: 0.35rem;
+    
+    .roll-name {
+      font-weight: 600;
+      font-size: 0.65rem;
+      margin-bottom: 0.3rem;
+    }
+  }
+  
+  .saved-roll-group {
+    border: 1.5px solid;
+    border-radius: 0.375rem;
+    padding: 0.4rem;
+    margin-bottom: 0.35rem;
+    
+    .roll-group-label {
+      font-weight: 600;
+      font-size: 0.65rem;
+      margin-bottom: 0.3rem;
+    }
+  }
+}
+
+/* ========================================
+   USAGE PANEL - Right Side Box
+   ======================================== */
+.usage-panel {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 2px solid #4caf50;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  min-height: 400px;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+  
+  .section-title {
+    color: #2e7d32;
+    border-bottom: 2px solid #4caf50;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    
+    i {
+      color: #4caf50;
+    }
+  }
+}
+
+.usage-card {
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.usage-card-body {
+  padding: 1.25rem;
+}
+
+/* Usage Stats Section */
+.usage-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.usage-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  border-radius: 0.5rem;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  
+  &.issued {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+  }
+  
+  &.damaged {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+  }
+}
+
+.stat-content {
+  flex: 1;
+  
+  .stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #2c3e50;
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+  }
+}
+
+/* Leftover Hologram Section */
+.leftover-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border: 2px solid #ffc107;
+  border-radius: 0.5rem;
+}
+
+.leftover-header {
+  font-size: 0.95rem;
+  color: #856404;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(133, 100, 4, 0.2);
+  
+  i {
+    color: #ffc107;
+    font-size: 1.1rem;
+  }
+}
+
+.leftover-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.leftover-ranges-list {
+  margin-bottom: 0.75rem;
+  
+  .range-label {
+    font-size: 0.75rem;
+    color: #856404;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    
+    i {
+      color: #ffc107;
+    }
+  }
+}
+
+.leftover-range {
+  background: white;
+  border: 1px solid #ffc107;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  .range-value {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    flex: 1;
+  }
+  
+  .range-qty-badge {
+    background: #ffc107;
+    color: #000;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    margin-left: 0.5rem;
+  }
+}
+
+.leftover-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border: 1px solid #ffc107;
+  border-radius: 0.375rem;
+  
+  .total-label {
+    font-size: 0.875rem;
+    color: #856404;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
+  .total-value {
+    .badge {
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+    }
+  }
+}
+
+.leftover-empty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #6c757d;
+  font-size: 0.875rem;
+  
+  i {
+    font-size: 1.5rem;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+}
+
+/* Roll Selection Panel */
+.roll-selection-panel {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 2px solid #2196f3;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+  
+  .section-title {
+    color: #1565c0;
+    border-bottom: 2px solid #2196f3;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    
+    i {
+      color: #2196f3;
+    }
+  }
+  
+  .form-select {
+    border: 2px solid #2196f3;
+    font-weight: 600;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    
+    &:focus {
+      border-color: #1565c0;
+      box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.25);
+    }
+  }
+  
+  small {
+    font-size: 0.8rem;
+    color: #1565c0;
+    font-weight: 500;
+    
+    i {
+      color: #2196f3;
+    }
+  }
+}
+
+/* Locked Roll Read-Only State */
+.usage-panel-locked {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+  border-color: #28a745 !important;
+  
+  .section-title {
+    color: #155724 !important;
+    border-bottom-color: #28a745 !important;
+  }
+}
+
+.selected-roll-panel {
+  .form-control[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+}
+
+/* Read-only badge in usage box */
+.usage-panel {
+  .section-title {
+    display: flex;
+    align-items: center;
+    
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+  }
+}
+
+/* ========================================
+   LEFTOVER RANGE USE BUTTON
+   ======================================== */
+.leftover-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #f0fff4 0%, #e6ffe9 100%);
+  border: 1px solid #28a745;
+  border-radius: 0.375rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 6px rgba(40, 167, 69, 0.2);
+  }
+
+  .range-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #155724;
+    font-family: 'Courier New', monospace;
+    flex: 1;
+  }
+
+  .range-qty-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .btn-use-leftover {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+
+    i {
+      font-size: 0.875rem;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
+      transform: none;
+    }
+  }
+}
+
+.leftover-ranges-list {
+  margin-bottom: 1rem;
+
+  .range-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    i {
+      color: #28a745;
+    }
+  }
+}
+
+.leftover-section {
+  background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+  border: 2px solid #28a745;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-top: 1rem;
+
+  .leftover-header {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #155724;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #c3e6cb;
+
+    i {
+      font-size: 1rem;
+    }
+  }
+
+  .leftover-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .leftover-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 0.375rem;
+    border: 1px solid #c3e6cb;
+
+    .total-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .total-value {
+      .badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+        font-weight: 700;
+      }
+    }
+  }
+
+  .leftover-empty {
+    padding: 1rem;
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.875rem;
+
+    i {
+      font-size: 1.25rem;
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+/* ========================================
+   LEFTOVER RANGE SELECTED DISPLAY
+   ======================================== */
+.leftover-range-selected-display {
+  .alert {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border: 2px solid #17a2b8;
+    border-radius: 0.5rem;
+    padding: 1rem;
+
+    i.bi-recycle {
+      font-size: 1.25rem;
+      color: #17a2b8;
+    }
+
+    strong {
+      color: #0c5460;
+      font-size: 0.95rem;
+    }
+
+    .btn-outline-secondary {
+      border-color: #6c757d;
+      color: #6c757d;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+
+      &:hover {
+        background: #6c757d;
+        color: white;
+      }
+    }
+
+    small {
+      display: block;
+      color: #0c5460;
+      line-height: 1.4;
+    }
+  }
+}
+
+/* ========================================
+   LEFTOVER USAGE HISTORY
+   ======================================== */
+.leftover-usage-history {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+  border: 2px solid #ffc107;
+  border-radius: 0.5rem;
+  padding: 1rem;
+
+  .usage-history-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #856404;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #ffc107;
+
+    i {
+      font-size: 0.9rem;
+    }
+  }
+
+  .usage-history-item {
+    background: white;
+    border: 1px solid #ffc107;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .usage-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e9ecef;
+
+      .usage-brand {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #495057;
+      }
+
+      .usage-bottle-size {
+        font-size: 0.75rem;
+        color: #6c757d;
+        background: #f8f9fa;
+        padding: 0.2rem 0.5rem;
+        border-radius: 0.25rem;
+      }
+    }
+
+    .usage-item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+
+      .usage-detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+
+        .detail-label {
+          font-weight: 600;
+          color: #6c757d;
+          min-width: 100px;
+        }
+
+        .detail-value {
+          font-family: 'Courier New', monospace;
+          font-weight: 600;
+          text-align: right;
+          flex: 1;
+
+          &.text-success {
+            color: #28a745;
+          }
+
+          &.text-danger {
+            color: #dc3545;
+          }
+
+          &.text-primary {
+            color: #007bff;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+/* ========================================
+   USAGE DETAILS MODAL
+   ======================================== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.usage-details-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+.modal-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.modal-header-section {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #0056b3;
+  flex-shrink: 0;
+  
+  .modal-title-area {
+    flex: 1;
+    
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      
+      i {
+        font-size: 1.75rem;
+        vertical-align: middle;
+      }
+    }
+    
+    .modal-subtitle {
+      font-size: 0.95rem;
+      margin: 0;
+      opacity: 0.9;
+      
+      strong {
+        font-weight: 600;
+        text-decoration: underline;
+      }
+    }
+  }
+  
+  .btn-close-modal {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    
+    i {
+      font-size: 1.25rem;
+    }
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: scale(1.1);
+    }
+  }
+}
+
+.modal-body-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem;
+  background: #f8f9fa;
+  
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 5px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 5px;
+    
+    &:hover {
+      background: #555;
+    }
+  }
+}
+
+.modal-footer-section {
+  background: white;
+  padding: 1rem 2rem;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-shrink: 0;
+  
+  .btn {
+    padding: 0.625rem 1.5rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+/* Details Summary Card */
+.details-summary-card {
+  background: white;
+  border: 2px solid #007bff;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+  
+  .summary-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .summary-item {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    
+    .summary-label {
+      font-size: 0.75rem;
+      color: #6c757d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .summary-value {
+      font-size: 1rem;
+      color: #2c3e50;
+      font-weight: 700;
+      
+      &.badge-type {
+        display: inline-block;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        width: fit-content;
+      }
+    }
+  }
+}
+
+/* Rolls Details Section */
+.rolls-details-section {
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+    
+    i {
+      color: #007bff;
+    }
+  }
+}
+
+/* Roll Tabs Container */
+.roll-tabs-container {
+  margin-bottom: 1.5rem;
+  background: white;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.roll-tabs {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  background: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+    
+    &:hover {
+      background: #555;
+    }
+  }
+}
+
+.roll-tab-button {
+  flex: 1;
+  min-width: 220px;
+  padding: 1rem 1.25rem;
+  background: #f8f9fa;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  position: relative;
+  
+  &:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.active {
+    background: white;
+    border-bottom-width: 3px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+    
+    .tab-roll-name {
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    
+    .tab-brand-info {
+      opacity: 1;
+    }
+  }
+  
+  .tab-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    i {
+      font-size: 1.25rem;
+      color: #6c757d;
+    }
+    
+    .tab-roll-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #495057;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+    }
+  }
+  
+  .tab-brand-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+    
+    .tab-brand {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #2c3e50;
+      text-align: center;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      
+      i {
+        font-size: 1rem;
+        color: #007bff;
+        flex-shrink: 0;
+      }
+    }
+    
+    .tab-bottle {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #6c757d;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      
+      i {
+        font-size: 0.875rem;
+        color: #17a2b8;
+        flex-shrink: 0;
+      }
+    }
+  }
+  
+  .tab-qty-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: white;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    
+    i {
+      font-size: 0.875rem;
+    }
+  }
+  
+  .tab-stats {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    
+    .tab-stat {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      color: white;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      
+      i {
+        font-size: 0.875rem;
+      }
+      
+      &.issued {
+        background: #28a745;
+      }
+      
+      &.damaged {
+        background: #dc3545;
+      }
+      
+      &.leftover {
+        background: #17a2b8;
+      }
+    }
+  }
+}
+
+/* Roll Detail Card */
+.roll-detail-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-left-width: 5px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.roll-detail-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  
+  .roll-name-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    
+    i {
+      font-size: 1.25rem;
+    }
+  }
+  
+  .roll-stats-badges {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    
+    .stat-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      
+      i {
+        font-size: 1rem;
+      }
+      
+      &.issued {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      
+      &.damaged {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      
+      &.leftover {
+        background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+    }
+  }
+}
+
+.roll-detail-body {
+  padding: 1.5rem;
+  
+  .info-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .info-item {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    
+    .info-label {
+      font-size: 0.75rem;
+      color: #6c757d;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      
+      i {
+        color: #007bff;
+      }
+    }
+    
+    .info-value {
+      font-size: 0.95rem;
+      color: #2c3e50;
+      font-weight: 600;
+    }
+  }
+  
+  .info-section {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-header {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #495057;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      
+      i {
+        font-size: 1rem;
+      }
+    }
+  }
+  
+  .range-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 0.75rem 1rem;
+    border-radius: 0.375rem;
+    border: 2px solid #007bff;
+    
+    .range-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #0056b3;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .range-qty-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: white;
+    }
+  }
+  
+  .ranges-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .range-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.375rem;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: #007bff;
+      box-shadow: 0 2px 6px rgba(0, 123, 255, 0.15);
+    }
+    
+    .range-serials {
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      
+      i {
+        font-size: 1rem;
+      }
+    }
+    
+    .range-qty {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #6c757d;
+    }
+    
+    &.issued {
+      border-left: 4px solid #28a745;
+      
+      .range-serials {
+        color: #155724;
+      }
+    }
+    
+    &.wastage {
+      border-left: 4px solid #dc3545;
+      
+      .range-serials {
+        color: #721c24;
+      }
+    }
+    
+    &.leftover {
+      border-left: 4px solid #17a2b8;
+      
+      .range-serials {
+        color: #0c5460;
+      }
+    }
+  }
+  
+  .damage-reason-box {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 0.375rem;
+    
+    .reason-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #856404;
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.375rem;
+      
+      i {
+        color: #ffc107;
+      }
+    }
+    
+    .reason-text {
+      font-size: 0.875rem;
+      color: #495057;
+      line-height: 1.5;
+    }
+  }
+  
+  .damage-reason-section {
+    background: #fff9e6 !important;
+    border: 2px solid #ffc107 !important;
+    
+    .section-header {
+      color: #856404 !important;
+      
+      i {
+        color: #ffc107 !important;
+      }
+    }
+  }
+  
+  .damage-reason-box-modal {
+    background: white;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border-left: 4px solid #ffc107;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    
+    .reason-text {
+      font-size: 0.9375rem;
+      color: #2c3e50;
+      line-height: 1.6;
+      margin: 0;
+      font-weight: 500;
+      
+      &.text-muted {
+        color: #6c757d;
+        font-style: italic;
+        font-weight: 400;
+      }
+      
+      i {
+        color: #17a2b8;
+      }
+    }
+  }
+}
+
+/* Usage History */
+.usage-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.usage-history-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-left: 4px solid #17a2b8;
+  border-radius: 0.375rem;
+  padding: 0.875rem;
+  
+  .usage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.625rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+    
+    .usage-brand {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #2c3e50;
+    }
+    
+    .usage-bottle {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #6c757d;
+    }
+  }
+  
+  .usage-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  
+  .usage-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8125rem;
+    
+    .detail-label {
+      font-weight: 600;
+      color: #6c757d;
+    }
+    
+    .detail-value {
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+  }
+}
+
+/* Reference Number Container */
+.ref-number-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  
+  .ref-number-text {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #2c3e50;
+    text-align: center;
+  }
+  
+  .btn-use-rolls,
+  .btn-view-details {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    
+    i {
+      font-size: 0.875rem;
+    }
+    
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+  }
+  
+  .btn-view-details {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    border-color: #17a2b8;
+    color: white;
+    
+    &:hover {
+      background: linear-gradient(135deg, #138496, #117a8b);
+      border-color: #138496;
+    }
+  }
+}
+
+/* Brand and Bottle Value Styling */
+.brand-value,
+.bottle-value {
+  font-size: 0.8125rem;
+  color: #495057;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 0.25rem;
+  text-align: center;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .usage-details-modal {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .modal-header-section {
+    padding: 1rem 1.5rem;
+    
+    .modal-title {
+      font-size: 1.25rem;
+    }
+  }
+  
+  .modal-body-section {
+    padding: 1rem;
+  }
+  
+  .details-summary-card {
+    .summary-row {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .summary-item {
+      min-width: 100%;
+    }
+  }
+  
+  .roll-detail-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+    
+    .roll-stats-badges {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
+  
+  .info-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}

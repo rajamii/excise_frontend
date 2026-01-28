@@ -10,6 +10,12 @@ import { Router } from '@angular/router';
   providedIn: 'root',
 })
 export class AccountService {
+  getCurrentUser() {
+    throw new Error('Method not implemented.');
+  }
+  getCurrentUserRoles() {
+    throw new Error('Method not implemented.');
+  }
   private baseUrl = `${environment.apiBaseUrl}/auth/users`;
   private userIdentity: Account | null = null;
   private authenticationState = new ReplaySubject<Account | null>(1);
@@ -37,11 +43,17 @@ export class AccountService {
           const access = localStorage.getItem('access');
           const expiry = access ? TokenUtil.getTokenExpiry(access) : null;
           if (expiry) {
-            const timeout = expiry - Date.now();
-            this.logoutTimer = setTimeout(() => {
+            const timeout = Math.max(0, expiry - Date.now());  // Ensure non-negative
+            if (timeout > 0) {  // Only set if there's actual time left
+              this.logoutTimer = setTimeout(() => {
+                this.clearAppData();
+                this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
+              }, timeout);
+            } else {
+              // Token already expired -> logout immediately (graceful)
               this.clearAppData();
               this.router.navigate(['/login'], { queryParams: { sessionExpired: true } });
-            }, timeout);
+            }
           }
         }),
         shareReplay()
@@ -72,14 +84,11 @@ export class AccountService {
       : roles.toLowerCase().trim() === userRole;
   }
 
-  // NOTE: Password change endpoint not available in backend
-  // Backend user URLs only provide: register, login, logout, detail, list, update, delete, roles
-  // Password change functionality needs to be implemented in backend if required
   changePassword(userId: number, old_password: string, new_password: string): Observable<any> {
-    console.warn('Password change endpoint not available in backend. This feature needs backend implementation.');
-    return this.http.put(`${this.baseUrl}/${userId}/update/`, { 
+    console.warn('Password change endpoint not Available.');
+    return this.http.put(`${this.baseUrl}/${userId}/update/`, {
       password: new_password,
-      old_password: old_password 
+      old_password: old_password
     });
   }
 

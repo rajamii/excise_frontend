@@ -56,7 +56,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
       financialYear: [this.getCurrentFinancialYear(), Validators.required],
       district: [stored['district'], Validators.required],
       licenseCategory: [stored['licenseCategory'], Validators.required],
-      licensee: [{value: stored['license'], disabled: true}, Validators.required],
+      licensee: [{value: stored['licensee'], disabled: true}, Validators.required],
       modeOfOperation: [stored['modeOfOperation'] || '', Validators.required]
     });
 
@@ -91,9 +91,6 @@ export class LicenseComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.districts = data;
         console.log('🏛️ Loaded districts:', data);
-        if (data.length > 0) {
-          console.log('First district sample:', data[0]);
-        }
       },
       error: (e) => console.error('Districts error', e)
     });
@@ -105,6 +102,8 @@ export class LicenseComponent implements OnInit, OnDestroy {
   }
 
   private setupFormSubscriptions(): void {
+    // ✅ FIX: Only filter licensees by district and category
+    // Mode of operation is NOT a licensee property
     this.applicationForm.get('district')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchLicensees());
@@ -112,44 +111,73 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.applicationForm.get('licenseCategory')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.fetchLicensees());
-
-    this.applicationForm.get('modeOfOperation')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.fetchLicensees());
+    
+    // Mode of operation doesn't affect licensee filtering
+    // It's only used for the salesman/barman registration itself
   }
 
   private fetchLicensees(): void {
-    const districtCode = this.applicationForm.get('district')?.value;
+    const districtId = this.applicationForm.get('district')?.value;
     const licenseCategory = this.applicationForm.get('licenseCategory')?.value;
-    const modeOfOperation = this.applicationForm.get('modeOfOperation')?.value;
 
-    if (!districtCode) {
+    console.log('🔍 Fetching licensees with:', {
+      districtId,
+      licenseCategory
+    });
+
+    if (!districtId) {
+      console.log('⚠️ No district selected, clearing licensees');
       this.filteredLicensees = [];
       this.applicationForm.get('licensee')?.setValue('');
       this.applicationForm.get('licensee')?.disable();
       return;
     }
 
+    // Get the district object to extract districtCode
+    const selectedDistrict = this.districts.find(d => d.id === districtId);
+    const districtCode = selectedDistrict?.districtCode;
+
+    if (!districtCode) {
+      console.error('❌ District code not found for district ID:', districtId);
+      this.filteredLicensees = [];
+      this.applicationForm.get('licensee')?.disable();
+      return;
+    }
+
+    console.log('📍 District Code:', districtCode, 'District Name:', selectedDistrict?.district);
+    console.log('📋 License Category ID:', licenseCategory);
+
+    // ✅ FIX: Pass districtCode (not districtId) to the API
     this.licenseService
-      .getActiveLicensees(districtCode, licenseCategory, modeOfOperation)
+      .getActiveLicensees(districtCode.toString(), licenseCategory)
       .subscribe({
         next: (data) => {
-          console.log('Fetched licensees:', data);
+          console.log('✅ Fetched licensees:', data);
+          console.log('📊 Total licensees found:', data.length);
+          
           this.filteredLicensees = data;
           
           if (data.length > 0) {
             this.applicationForm.get('licensee')?.enable();
+            console.log('✅ Licensee dropdown enabled');
           } else {
             this.applicationForm.get('licensee')?.disable();
+            console.log('⚠️ No licensees found, dropdown disabled');
           }
           
           const currentLicensee = this.applicationForm.get('licensee')?.value;
-          if (currentLicensee && !data.some((l) => l.id === currentLicensee)) {
+          if (currentLicensee && !data.some((l) => (l.licenseeId || l.id) == currentLicensee)) {
             this.applicationForm.get('licensee')?.setValue('');
+            console.log('🔄 Cleared previous licensee selection');
           }
         },
         error: (e) => {
-          console.error('Licensee fetch error', e);
+          console.error('❌ Licensee fetch error:', e);
+          console.error('Error details:', {
+            status: e.status,
+            message: e.message,
+            error: e.error
+          });
           this.filteredLicensees = [];
           this.applicationForm.get('licensee')?.disable();
         }
@@ -198,49 +226,40 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
     const form = this.applicationForm.value;
     
-    // 🔴 FIX: Get districtCode from selected district
     const selectedDistrict = this.districts.find(d => d.id === form.district);
     const districtCode = selectedDistrict?.districtCode;
 
     if (!districtCode) {
       console.error('❌ District code not found for district ID:', form.district);
-      console.error('Available districts:', this.districts);
-      console.error('Selected district:', selectedDistrict);
       alert('Error: District code not found. Please select a district again.');
       return;
     }
 
-    // 🔴 CRITICAL: Store in EXACT format backend expects
+    const selectedLicensee = this.filteredLicensees.find(l => l.licenseeId == form.licensee);
+    
+    if (!selectedLicensee) {
+      console.error('❌ Licensee not found:', form.licensee);
+      console.error('Available licensees:', this.filteredLicensees.map(l => ({ id: l.licenseeId, name: l.establishmentName })));
+      alert('Error: Please select a valid licensee.');
+      return;
+    }
+
     const backendFormat = {
-      // Backend CodeRelatedField expects districtCode as string (e.g., "101")
       district: districtCode.toString(),
-      
-      // Backend expects license_category as Category ID (integer)
       licenseCategory: form.licenseCategory,
-      
-      // Backend expects license as License ID (string like "LIC/101/2025-26/0001")
-      licensee: form.licensee,
-      
-      // Role: "Salesman" or "Barman" (exact capitalization)
+      licensee: selectedLicensee.licenseeId,
       role: form.modeOfOperation === 'salesman' ? 'Salesman' : 'Barman',
-      
-      // Keep for display purposes
       modeOfOperation: form.modeOfOperation,
       financialYear: form.financialYear,
-      
-      // Store names for display
       districtName: this.getDistrictName(form.district),
       categoryName: this.getLicenseCategoryName(form.licenseCategory),
-      licenseeName: this.getLicenseeName(form.licensee)
+      licenseeName: selectedLicensee.establishmentName,
+      licenseeApplicationId: selectedLicensee.id
     };
 
     sessionStorage.setItem('licenseDetails', JSON.stringify(backendFormat));
     
     console.log('✅ Stored License Details (Backend Format):', backendFormat);
-    console.log('🔑 District Code (for backend):', districtCode.toString());
-    console.log('📋 Category ID:', form.licenseCategory);
-    console.log('📄 License Application ID:', form.licensee);
-    console.log('👤 Role:', backendFormat.role);
     
     this.next.emit();
   }
@@ -258,20 +277,20 @@ export class LicenseComponent implements OnInit, OnDestroy {
     return mode === 'salesman' || mode === 'barman' ? 500 : 500;
   }
 
-  getDistrictName(id: string): string {
-    return this.districts.find((d) => d.id?.toString() === id)?.district ?? '';
+  getDistrictName(id: string | number): string {
+    return this.districts.find((d) => d.id?.toString() === id.toString())?.district ?? '';
   }
 
-  getLicenseCategoryName(id: string): string {
-    return this.licenseCategories.find((c) => c.id?.toString() === id)?.licenseCategory ?? '';
+  getLicenseCategoryName(id: string | number): string {
+    return this.licenseCategories.find((c) => c.id?.toString() === id.toString())?.licenseCategory ?? '';
   }
 
-  getLicenseeName(id: string): string {
-    return this.filteredLicensees.find((l) => l.id === id)?.establishment_name ?? '';
+  getLicenseeName(licensee_id: string | number): string {
+    return this.filteredLicensees.find((l) => l.licenseeId == licensee_id)?.establishmentName ?? '';
   }
 
-  getLicenseeDetails(id: string): Licensee | null {
-    return this.filteredLicensees.find((l) => l.id === id) ?? null;
+  getLicenseeDetails(licensee_id: string | number): Licensee | null {
+    return this.filteredLicensees.find((l) => l.licenseeId == licensee_id) ?? null;
   }
 
   getModeOfOperationLabel(val: string): string {

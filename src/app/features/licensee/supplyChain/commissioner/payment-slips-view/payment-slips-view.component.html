@@ -1,0 +1,213 @@
+<!-- Payment Slips View Modal -->
+<div class="modal fade show" tabindex="-1" style="display: block; background: rgba(0, 0, 0, 0.5)"
+  *ngIf="isVisible && application">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content shadow-lg border-0">
+      <div class="modal-header bg-primary text-white">
+        <div class="d-flex align-items-center">
+          <i class="bi bi-file-earmark-pdf-fill me-2 fs-4"></i>
+          <h5 class="modal-title mb-0 fw-bold">Uploaded Payment Slips</h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="onClose()"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Application Info -->
+        <div class="alert alert-info border-info mb-4">
+          <div class="row">
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="bi bi-info-circle me-2"></i>Application Details
+              </h6>
+              <p class="mb-1"><strong>Reference:</strong> {{ application.referenceNo }}</p>
+              <p class="mb-1"><strong>Company:</strong> {{ application.distilleryName }}</p>
+              <p class="mb-0"><strong>Date:</strong> {{ application.submissionDate }}</p>
+            </div>
+            <div class="col-md-6">
+              <h6 class="fw-bold mb-2">
+                <i class="bi bi-boxes me-2"></i>Quantity Details
+              </h6>
+              <p class="mb-1"><strong>Total Quantity:</strong> {{ application.totalQtyLakh | number:'1.0-0' }} pieces</p>
+              <p class="mb-1">
+                <span class="badge bg-success me-1" *ngIf="application.localQtyLakh && application.localQtyLakh > 0">
+                  Local: {{ application.localQtyLakh | number:'1.0-0' }}
+                </span>
+                <span class="badge bg-dark me-1" *ngIf="application.exportQtyLakh && application.exportQtyLakh > 0">
+                  Export: {{ application.exportQtyLakh | number:'1.0-0' }}
+                </span>
+                <span class="badge bg-warning text-dark" *ngIf="application.defenceQtyLakh && application.defenceQtyLakh > 0">
+                  Defence: {{ application.defenceQtyLakh | number:'1.0-0' }}
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Status Summary -->
+        <div class="card border-success mb-4">
+          <div class="card-header bg-success text-white">
+            <h6 class="mb-0">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              Upload Status: ALL SLIPS UPLOADED
+            </h6>
+          </div>
+          <div class="card-body">
+            <p class="mb-2">
+              <strong>Required Types:</strong> {{ application.requiredTypes?.length || 0 }}
+            </p>
+            <p class="mb-0">
+              <strong>Uploaded Types:</strong> {{ application.uploadedTypes?.length || 0 }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Uploaded Slips by Type -->
+        <h6 class="fw-bold mb-3">
+          <i class="bi bi-file-earmark-check me-2"></i>
+          Uploaded Payment Slips by Type
+        </h6>
+
+        <div class="row g-3">
+          <!-- Local Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(application, 'Local')">
+            <div class="card border-success h-100">
+              <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Local Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(application, 'Local') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(application, 'Local')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(application, 'Local')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Export Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(application, 'Export')">
+            <div class="card border-dark h-100">
+              <div class="card-header bg-dark text-white">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Export Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(application, 'Export') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(application, 'Export')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(application, 'Export')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Defence Type Slip -->
+          <div class="col-md-4" *ngIf="hasSlipForType(application, 'Defence')">
+            <div class="card border-warning h-100">
+              <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>
+                  Defence Type
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="slip-details" *ngIf="getSlipDetailsForType(application, 'Defence') as slipDetails">
+                  <p class="mb-2">
+                    <i class="bi bi-file-earmark-text me-2 text-primary"></i>
+                    <strong>File:</strong><br>
+                    <small class="text-muted">{{ slipDetails.fileName }}</small>
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-hdd me-2 text-info"></i>
+                    <strong>Size:</strong> {{ getFormattedFileSize(slipDetails.fileSize) }}
+                  </p>
+                  <p class="mb-2">
+                    <i class="bi bi-calendar-check me-2 text-success"></i>
+                    <strong>Uploaded:</strong><br>
+                    <small>{{ slipDetails.uploadDate | date:'dd MMM yyyy, hh:mm a' }}</small>
+                  </p>
+                  <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary btn-sm" (click)="viewSlipInNewWindow(application, 'Defence')">
+                      <i class="bi bi-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" (click)="downloadSlip(application, 'Defence')">
+                      <i class="bi bi-download me-1"></i>Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Note -->
+        <div class="alert alert-warning border-warning mt-4 mb-0">
+          <h6 class="fw-bold mb-2">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            Verification Required
+          </h6>
+          <p class="mb-0">
+            Please verify all uploaded payment slips before approving this application. 
+            Ensure that the payment amounts and details match the application requirements.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="onClose()">
+          <i class="bi bi-x-circle me-1"></i>
+          Close
+        </button>
+        <button type="button" class="btn btn-success" (click)="onApprove()">
+          <i class="bi bi-check-circle me-1"></i>
+          Approve Application
+        </button>
+        <button type="button" class="btn btn-danger" (click)="onReject()">
+          <i class="bi bi-x-circle me-1"></i>
+          Reject Application
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

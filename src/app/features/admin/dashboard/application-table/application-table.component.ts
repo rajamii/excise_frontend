@@ -18,23 +18,21 @@ import { of } from 'rxjs';
   styleUrl: './application-table.component.scss'
 })
 export class ApplicationTableComponent extends BaseComponent implements OnChanges, OnDestroy {
-  // Input properties to receive data from parent component
   @Input() title!: string;
   @Input() displayedColumns!: string[];
   @Input() dataSource!: MatTableDataSource<LicenseApplication>;
-  @Input() tableType!: string; // For conditional rendering of action buttons
+  @Input() tableType!: string;
 
   objections: Objection[] = [];
   unresolvedObjectionAppIds: Set<string> = new Set();
-  
-  // Subject for managing subscriptions
+
   private destroy$ = new Subject<void>();
 
-  // Output events to notify parent components on certain actions
   @Output() view = new EventEmitter<any>();
   @Output() print = new EventEmitter<any>();
   @Output() payment = new EventEmitter<any>();
   @Output() movement = new EventEmitter<any>();
+  @Output() refreshData = new EventEmitter<void>();
 
   constructor(
     public deps: BaseDependency,
@@ -43,31 +41,28 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
     super(deps);
   }
 
-  // Mapping of internal application stages to user-friendly display strings
   stageDisplayMapping: Record<string, string> = {
     level_1: 'Under Review by Level 1',
     level_2: 'Under Review by Level 2',
     level_3: 'Under Review by Level 3',
     level_4: 'Under Review by Level 4',
     level_5: 'Under Review by Level 5',
-
     level_1_objection: 'Objection Raised by Level 1',
     level_2_objection: 'Objection Raised by Level 2',
     level_3_objection: 'Objection Raised by Level 3',
     level_4_objection: 'Objection Raised by Level 4',
     level_5_objection: 'Objection Raised by Level 5',
-
     rejected_by_level_1: 'Rejected by Level 1',
     rejected_by_level_2: 'Rejected by Level 2',
     rejected_by_level_3: 'Rejected by Level 3',
     rejected_by_level_4: 'Rejected by Level 4',
     rejected_by_level_5: 'Rejected by Level 5',
-    
     approved: 'Application Approved',
     rejected: 'Application Rejected',
+    objection_raised: 'Objection Raised',
+    applicant_applied: 'Application Submitted',
   };
 
-  // Mapping for displaying roles
   roleDisplayMapping: Record<string, string> = {
     level_1: 'Level 1',
     level_2: 'Level 2',
@@ -77,77 +72,144 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
     licensee: 'Licensee',
   };
 
-  // Utility method to check if the table has any data to display
+  // ============================================================
+  // HELPER METHODS FOR TEMPLATE
+  // ============================================================
+
+  getApplicationId(element: any): string {
+    return element?.application_id || element?.applicationId || element?.id || element?.app_id || '';
+  }
+
+  getCurrentStage(element: any): string {
+    return element?.current_stage || element?.currentStage || '';
+  }
+
+  // ✅ NEW: Get next level based on current stage
+  getNextLevel(element: any): string {
+    const currentStage = this.getCurrentStage(element);
+
+    const stageToNextLevel: Record<string, string> = {
+      'level_1': 'Level 2',
+      'level_2': 'Level 3',
+      'level_3': 'Level 4',
+      'level_4': 'Level 5',
+      'level_5': 'Approval',
+      'approved': 'Completed',
+      'rejected': 'Closed',
+      'rejected_by_level_1': 'Closed',
+      'rejected_by_level_2': 'Closed',
+      'rejected_by_level_3': 'Closed',
+      'rejected_by_level_4': 'Closed',
+      'rejected_by_level_5': 'Closed',
+      'level_1_objection': 'Level 1 Review',
+      'level_2_objection': 'Level 2 Review',
+      'level_3_objection': 'Level 3 Review',
+      'level_4_objection': 'Level 4 Review',
+      'level_5_objection': 'Level 5 Review',
+      'objection_raised': 'Review',
+      'applicant_applied': 'Level 1',
+    };
+
+    return stageToNextLevel[currentStage] || 'N/A';
+  }
+
+  getLatestRemarks(element: any): string {
+    return element?.latestTransaction?.remarks ||
+      element?.latest_transaction?.remarks ||
+      element?.remarks ||
+      '';
+  }
+
+  getPerformedByUsername(element: any): string {
+    return element?.latestTransaction?.performedBy?.username ||
+      element?.latestTransaction?.performed_by?.username ||
+      element?.latest_transaction?.performedBy?.username ||
+      element?.latest_transaction?.performed_by?.username ||
+      '';
+  }
+
+  getPerformedByRole(element: any): string {
+    return element?.latestTransaction?.performedBy?.roleName ||
+      element?.latestTransaction?.performedBy?.role_name ||
+      element?.latestTransaction?.performed_by?.roleName ||
+      element?.latestTransaction?.performed_by?.role_name ||
+      element?.latest_transaction?.performedBy?.roleName ||
+      element?.latest_transaction?.performedBy?.role_name ||
+      element?.latest_transaction?.performed_by?.roleName ||
+      element?.latest_transaction?.performed_by?.role_name ||
+      '';
+  }
+
+  getLatestTimestamp(element: any): string {
+    return element?.latestTransaction?.timestamp ||
+      element?.latest_transaction?.timestamp ||
+      '';
+  }
+
+  // ============================================================
+  // COMPONENT METHODS
+  // ============================================================
+
+  private getAppId(app: any): string | undefined {
+    return app?.application_id || app?.applicationId || app?.id || app?.app_id;
+  }
+
   hasData(): boolean {
     return !!this.dataSource?.data?.length;
   }
 
-  // Angular lifecycle hook that runs when input properties change
   ngOnChanges(changes: SimpleChanges): void {
-    // Only process if dataSource actually changed and has data
     if (changes['dataSource'] && this.dataSource?.data) {
       this.unresolvedObjectionAppIds.clear();
-      
-      // Safety check: ensure data is an array and has length
+
       if (Array.isArray(this.dataSource.data) && this.dataSource.data.length > 0) {
         this.loadObjections();
       }
     }
   }
 
-  // Separate method to load objections with proper error handling
   private loadObjections(): void {
     this.dataSource.data.forEach(app => {
-      // Safety check: ensure application has an ID
-      if (!app?.application_id) {
-        console.warn('Application missing application_id:', app);
+      const appId = this.getAppId(app);
+
+      if (!appId) {
+        console.warn('Application missing ID:', app);
         return;
       }
 
-      // Only fetch objections if application is in a state where they might exist
       if (this.shouldFetchObjections(app)) {
-        this.licenseAppService.getObjections(app.application_id)
+        this.licenseAppService.getObjections(appId)
           .pipe(
             takeUntil(this.destroy$),
             catchError(err => {
-              // Handle 404 errors silently (no objections found)
-              if (err.status === 404) {
-                console.log(`No objections found for application ${app.application_id}`);
-              } else {
-                console.error(`Error fetching objections for ${app.application_id}:`, err);
-              }
-              // Return empty array on error
+              console.error(`Error fetching objections for ${appId}:`, err);
               return of([]);
             })
           )
           .subscribe({
             next: (objections) => {
-              // Safety check: ensure objections is an array
               if (Array.isArray(objections) && objections.length > 0) {
                 const hasUnresolved = objections.some(obj => obj?.isResolved === false);
-                if (hasUnresolved && app.application_id) {
-                  // ✅ FIXED Line 129: Type assertion since we already checked it's not undefined
-                  this.unresolvedObjectionAppIds.add(app.application_id as string);
+                if (hasUnresolved && appId) {
+                  this.unresolvedObjectionAppIds.add(appId);
                 }
               }
             },
             error: (err) => {
-              // This shouldn't be reached due to catchError, but just in case
-              console.error(`Unexpected error for ${app.application_id}:`, err);
+              console.error(`Unexpected error for ${appId}:`, err);
             }
           });
       }
     });
   }
 
-  // Helper method to determine if objections should be fetched
   private shouldFetchObjections(app: LicenseApplication): boolean {
-    // ✅ FIXED Line 158: Check if current_stage exists before using it
-    if (!app.current_stage) {
+    const currentStage = app.current_stage || (app as any).currentStage;
+
+    if (!currentStage) {
       return false;
     }
 
-    // Only fetch objections if application is in a state where they might exist
     const objectionStages = [
       'level_1_objection',
       'level_2_objection',
@@ -158,32 +220,45 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
       'level_2',
       'level_3',
       'level_4',
-      'level_5'
+      'level_5',
+      'objection_raised'
     ];
-    
-    return objectionStages.includes(app.current_stage);
+
+    return objectionStages.includes(currentStage);
   }
 
-  // Method to view application details
   onView(application: any): void {
+    const appId = this.getAppId(application);
+
+    if (!appId) {
+      console.error('Cannot open dialog - no application ID found!');
+      alert('Error: Application ID is missing. Cannot open review dialog.');
+      return;
+    }
+
     const dialogRef = this.dialog.open(ReviewApplicationComponent, {
       width: '550px',
       maxHeight: '100%',
-      data: { application, tableType: this.tableType }
+      data: {
+        application: application,
+        tableType: this.tableType
+      },
+      disableClose: false
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result === true) {
-        this.view.emit(application);
+     
+      if (result?.success) {
+        this.refreshData.emit();
       }
     });
   }
 
-  // Opens a dialog to show the movement history of the selected application
   viewMovement(application: any): void {
-    // Added null check and type assertion for application_id
-    if (!application?.application_id) {
-      console.error('Cannot view movement: application_id is missing');
+    const appId = this.getAppId(application);
+
+    if (!appId) {
+      console.error('Cannot view movement: application ID is missing');
       return;
     }
 
@@ -197,7 +272,6 @@ export class ApplicationTableComponent extends BaseComponent implements OnChange
     });
   }
 
-  // Cleanup subscriptions on component destroy
   override ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();

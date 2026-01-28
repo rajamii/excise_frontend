@@ -45,6 +45,9 @@ export class BaseDependency {
     public licenseAppService: LicenseApplicationService,
     public infoPagesService: InfoPagesService,
     public salesmanBarmanService: SalesmanBarmanRegistrationService,
-    public companyRegistrationService: CompanyRegistrationService
+    public companyRegistrationService: CompanyRegistrationService,
+    
+    // ✅ ADDED: New License Application Service (uses same service instance)
+    public newLicenseAppService: LicenseApplicationService
   ) {}
 }

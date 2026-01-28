@@ -1,181 +1,138 @@
+// licensee-dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
-import { MaterialModule } from '../../../shared/material.module'; 
+import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
-import { ApplicationStatus, DashboardCount } from '../../../core/models/dashboard.model';
-import { LicenseApplicationService } from '../../../core/services/license-application.service';
-import { MatDialog } from '@angular/material/dialog';
+import { DashboardCount } from '../../../core/models/dashboard.model';
 import { ApplicationTableComponent } from './application-table/application-table.component';
-import { LicenseApplication } from '../../../core/models/license-application.model';
-import { of, forkJoin } from 'rxjs';
-import { catchError, finalize } from 'rxjs/operators';
-
-type ApplicationType = 'license' | 'new_license';
-
-interface ApplicationTypeOption {
-  value: ApplicationType;
-  label: string;
-}
+import { forkJoin } from 'rxjs';
+import { finalize } from 'rxjs/operators';
+import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
+import { UnifiedApplication } from '../../../core/models/unified-application.model';
+import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
+import Swal from 'sweetalert2';
 
 @Component({
-  selector: 'app-licensee-dashboard', 
-  standalone: true, 
-  imports: [ 
-    MaterialModule, 
-    ApplicationTableComponent 
+  selector: 'app-licensee-dashboard',
+  standalone: true,
+  imports: [
+    MaterialModule,
+    ApplicationTableComponent
   ],
   templateUrl: './licensee-dashboard.component.html',
-  styleUrl: './licensee-dashboard.component.scss'   
+  styleUrl: './licensee-dashboard.component.scss'
 })
 export class LicenseeDashboardComponent implements OnInit {
-  // Dashboard counts for applied, pending, approved, and rejected applications
-  dashboardCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
+    applied: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    awaitingPayment: 0
+  };
 
-  // Arrays to store applications
-  appliedApplications: ApplicationStatus[] = [];
-  pendingApplications: ApplicationStatus[] = [];
-  approvedApplications: ApplicationStatus[] = [];
-  rejectedApplications: ApplicationStatus[] = [];
-
-  // Application Type Filter
-  selectedApplicationType: ApplicationType = 'license';
-  applicationTypes: ApplicationTypeOption[] = [
-    { value: 'license', label: 'License Application' },
-    { value: 'new_license', label: 'New License Application' }
-  ];
-
-  // Loading state
+  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'all';
   isLoading = false;
 
-  constructor(
-    protected licenseAppService: LicenseApplicationService,
-    private dialog: MatDialog
-  ) { }
+  appliedDataSource = new MatTableDataSource<UnifiedApplication>();
+  pendingDataSource = new MatTableDataSource<UnifiedApplication>();
+  approvedDataSource = new MatTableDataSource<UnifiedApplication>();
+  rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
-  // Table Data Sources
-  appliedDataSource = new MatTableDataSource<LicenseApplication>();
-  pendingDataSource = new MatTableDataSource<LicenseApplication>();
-  approvedDataSource = new MatTableDataSource<LicenseApplication>();
-  rejectedDataSource = new MatTableDataSource<LicenseApplication>();
-  
-  // Columns to be displayed in the tables
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-
-  // Active table to display
   activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
 
-  // Method to switch to a specific table
+  constructor(
+    private salesmanBarmanService: SalesmanBarmanRegistrationService,
+    private unifiedDashboardService: UnifiedDashboardService,
+  ) { }
+
   showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
     this.activeTable = table;
   }
 
-  // Method to go back to the default page
   goBack() {
     this.activeTable = 'default';
   }
 
-  // Lifecycle hook to initialize data
   ngOnInit(): void {
     this.loadDashboardData();
   }
 
-  // Method to handle application type change
   onApplicationTypeChange(): void {
     this.activeTable = 'default';
     this.loadDashboardData();
   }
 
-  // Load dashboard data based on selected application type
   loadDashboardData(): void {
     this.isLoading = true;
 
-    const countsObservable = this.getCountsObservable();
-    const applicationsObservable = this.getApplicationsObservable();
-
     forkJoin({
-      counts: countsObservable,
-      applications: applicationsObservable
+      counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
+      applications: this.unifiedDashboardService.getUnifiedApplicationsByStatus()
     })
-    .pipe(
-      finalize(() => {
-        this.isLoading = false;
-      })
-    )
-    .subscribe({
-      next: (result) => {
-        this.dashboardCounts = {
-          applied: result.counts.applied || 0,
-          pending: result.counts.pending || 0,
-          approved: result.counts.approved || 0,
-          rejected: result.counts.rejected || 0
-        };
-        this.updateDataSources(result.applications);
-        console.log(`${this.getApplicationTypeLabel()} data loaded:`, result);
-      },
-      error: (error) => {
-        console.error('Error loading dashboard data:', error);
-        this.dashboardCounts = { applied: 0, pending: 0, approved: 0, rejected: 0 };
-        this.clearDataSources();
-      }
-    });
+      .pipe(finalize(() => { this.isLoading = false; }))
+      .subscribe({
+        next: (result) => {
+
+          let filteredApplications = {
+            applied: result.applications.applied || [],
+            pending: result.applications.pending || [],
+            awaitingPayment: result.applications.awaitingPayment || [],
+            approved: result.applications.approved || [],
+            rejected: result.applications.rejected || []
+          };
+
+          if (this.selectedApplicationType !== 'all') {
+
+            filteredApplications = {
+              applied: filteredApplications.applied.filter(app => app.type === this.selectedApplicationType),
+              pending: filteredApplications.pending.filter(app => app.type === this.selectedApplicationType),
+              awaitingPayment: filteredApplications.awaitingPayment.filter(app => app.type === this.selectedApplicationType),
+              approved: filteredApplications.approved.filter(app => app.type === this.selectedApplicationType),
+              rejected: filteredApplications.rejected.filter(app => app.type === this.selectedApplicationType)
+            };
+          }
+
+
+          // Store counts separately but combine pending display
+          this.dashboardCounts = {
+            applied: filteredApplications.applied.length,
+            pending: filteredApplications.pending.length,
+            awaitingPayment: filteredApplications.awaitingPayment.length,
+            approved: filteredApplications.approved.length,
+            rejected: filteredApplications.rejected.length
+          };
+
+
+          // Combine pending and awaiting payment into one datasource
+          this.updateDataSources({
+            applied: filteredApplications.applied,
+            pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
+            approved: filteredApplications.approved,
+            rejected: filteredApplications.rejected
+          });
+        },
+        error: (error) => {
+          console.error('❌ Error loading dashboard data:', error);
+          this.dashboardCounts = { applied: 0, pending: 0, awaitingPayment: 0, approved: 0, rejected: 0 };
+          this.clearDataSources();
+        }
+      });
   }
 
-  // Get counts observable based on selected application type
-  private getCountsObservable() {
-    switch (this.selectedApplicationType) {
-      case 'license':
-        return this.licenseAppService.getDashboardCounts().pipe(
-          catchError(err => {
-            console.error('Failed to fetch license application counts:', err);
-            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-          })
-        );
-      
-      case 'new_license':
-        return this.licenseAppService.getNewLicenseDashboardCounts().pipe(
-          catchError(err => {
-            console.error('Failed to fetch new license application counts:', err);
-            return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-          })
-        );
-      
-      default:
-        return of({ applied: 0, pending: 0, approved: 0, rejected: 0 });
-    }
+  // Modified signature to accept combined pending data
+  private updateDataSources(result: {
+    applied: UnifiedApplication[];
+    pending: UnifiedApplication[];
+    approved: UnifiedApplication[];
+    rejected: UnifiedApplication[];
+  }): void {
+    this.appliedDataSource.data = result.applied || [];
+    this.pendingDataSource.data = result.pending || []; // ✅ Now contains both pending + awaiting payment
+    this.approvedDataSource.data = result.approved || [];
+    this.rejectedDataSource.data = result.rejected || [];
   }
 
-  // Get applications observable based on selected application type  
-  private getApplicationsObservable() {
-    switch (this.selectedApplicationType) {
-      case 'license':
-        return this.licenseAppService.getApplicationsByStatus().pipe(
-          catchError(err => {
-            console.error('Failed to fetch license applications:', err);
-            return of({ applied: [], pending: [], approved: [], rejected: [] });
-          })
-        );
-      
-      case 'new_license':
-        return this.licenseAppService.getNewLicenseApplicationsByStatus().pipe(
-          catchError(err => {
-            console.error('Failed to fetch new license applications:', err);
-            return of({ applied: [], pending: [], approved: [], rejected: [] });
-          })
-        );
-      
-      default:
-        return of({ applied: [], pending: [], approved: [], rejected: [] });
-    }
-  }
-
-  // Update data sources with fetched applications
-  private updateDataSources(applications: any): void {
-    this.appliedDataSource.data = applications.applied || [];
-    this.pendingDataSource.data = applications.pending || [];
-    this.approvedDataSource.data = applications.approved || [];
-    this.rejectedDataSource.data = applications.rejected || [];
-  }
-
-  // Clear all data sources
   private clearDataSources(): void {
     this.appliedDataSource.data = [];
     this.pendingDataSource.data = [];
@@ -183,9 +140,68 @@ export class LicenseeDashboardComponent implements OnInit {
     this.rejectedDataSource.data = [];
   }
 
-  // Get human-readable label for current application type
-  getApplicationTypeLabel(): string {
-    const option = this.applicationTypes.find(t => t.value === this.selectedApplicationType);
-    return option ? option.label : 'Application';
+  onPaymentConfirmed(application: UnifiedApplication): void {
+      Swal.fire({
+      title: 'Confirm Payment Receipt',
+      text: `Have you received the payment for application ${application.applicationId}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Payment Received',
+      cancelButtonText: 'Cancel'
+    }).then(result => {
+      if (result.isConfirmed) {
+        this.processPayment(application);
+      }
+    });
+  }
+
+  private processPayment(application: UnifiedApplication): void {
+    Swal.fire({
+      title: 'Processing...',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+    });
+
+    // Use salesmanBarmanService for ALL types since they all use same workflow endpoint
+    this.salesmanBarmanService.getNextStages(application.applicationId).subscribe({
+      next: (stages: any[]) => {
+        // Find the approved stage
+        const approvalStage = stages.find(s => {
+          const stageName = (s.name || s.stage_name || '').toLowerCase();
+          const stageId = s.id || s.stage_id;
+          return stageName === 'approved' || stageId === 12 || stageId === 16;
+        });
+
+        if (!approvalStage) {
+          console.error('❌ No approval stage found in:', stages);
+          Swal.fire('Error', 'No approval stage found. Available stages: ' + stages.map(s => s.name || s.id).join(', '), 'error');
+          return;
+        }
+
+        const stageId = approvalStage.id || approvalStage.stage_id;
+        this.salesmanBarmanService.advanceStage(application.applicationId, stageId, {
+          payment_confirmed: true,
+          remarks: 'Payment received and confirmed'
+        }).subscribe({
+          next: (response) => {
+            Swal.fire({
+              title: 'Success!',
+              text: 'Payment confirmed and application approved.',
+              icon: 'success'
+            }).then(() => {
+              this.loadDashboardData();
+            });
+          },
+          error: (err) => {
+            console.error('❌ Error advancing application:', err);
+            Swal.fire('Error', err?.error?.detail || 'Failed to process payment.', 'error');
+          }
+        });
+      },
+      error: (err) => {
+        console.error('❌ Error fetching stages:', err);
+        Swal.fire('Error', 'Failed to fetch approval stages: ' + (err?.error?.detail || err?.message || 'Unknown error'), 'error');
+      }
+    });
   }
 }

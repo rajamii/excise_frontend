@@ -123,7 +123,6 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     this.applicantDetailsForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.saveToSessionStorage();
         this.updateAllErrorMessages();
       });
   }
@@ -150,49 +149,54 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   private saveToSessionStorage(): void {
     const raw = this.applicantDetailsForm.getRawValue();
 
-    // ✅ Build applicant_name (required by backend)
+    // Build applicant_name (required by backend)
     const parts = [raw.firstName, raw.middleName, raw.lastName].filter(Boolean);
     raw.applicant_name = parts.join(' ');
 
-    // ✅ father_husband_name (backend field name)
+    // father_husband_name (backend field name)
     raw.father_husband_name = raw.fatherHusbandName;
 
-    // ✅ Clean mobile number (CharField but numeric)
+    // Clean mobile number (CharField but numeric)
     if (raw.applicantMobileNumber) {
       raw.mobile_number = String(raw.applicantMobileNumber).replace(/\D/g, '');
     }
 
-    // ✅ Email field
+    // Email field
     if (raw.email) {
       raw.email = raw.email;
     }
 
-    // ✅ Marital status
+    if (raw.dob) {
+    const dobDate = new Date(raw.dob);
+    raw.dob = dobDate.toISOString().split('T')[0];
+  }
+
+    // Marital status
     if (raw.maritalStatus) {
       raw.marital_status = raw.maritalStatus;
     }
 
-    // ✅ Residential status
+    // Residential status
     if (raw.residentialStatus) {
       raw.residential_status = raw.residentialStatus;
     }
 
-    // ✅ Present and permanent addresses
+    // Present and permanent addresses
     raw.present_address = raw.presentAddress;
     raw.permanent_address = raw.permanentAddress;
 
-    // ✅ Mode of operation
+    // Mode of operation
     if (raw.modeOfOperation) {
       raw.mode_of_operation = raw.modeOfOperation;
     }
 
-    // ✅ Yes/No fields (backend ChoiceFields expect "Yes"/"No" strings)
+    // Yes/No fields (backend ChoiceFields expect "Yes"/"No" strings)
     raw.has_sikkim_certificate = raw.hasSikkimCertificate;
     raw.has_excise_license = raw.hasExciseLicense;
     raw.family_excise_license = raw.familyExciseLicense;
     raw.criminal_conviction = raw.criminalConviction;
 
-    console.log('💾 Saving Applicant Details:', raw);
+    console.log('Saving Applicant Details:', raw);
     sessionStorage.setItem('applicantDetailsData', JSON.stringify(raw));
   }
 
@@ -250,10 +254,8 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
     
     if (docName === 'passportPhoto') {
       this.licenseSrv.setPassPhoto(file);
-      console.log('✅ Passport photo set:', file.name);
     } else {
       this.licenseSrv.setSiteDocument(docName, file);
-      console.log(`✅ Document ${docName} set:`, file.name);
     }
     
     this.cdr.detectChanges();
@@ -332,6 +334,7 @@ export class ApplicantDetailsComponent implements OnInit, OnDestroy {
   /* --------------------------------------------------------------- */
   proceedToNext(): void {
     if (this.applicantDetailsForm.valid && this.areRequiredDocumentsUploaded()) {
+      this.saveToSessionStorage();
       this.next.emit();
     } else {
       Object.keys(this.applicantDetailsForm.controls)

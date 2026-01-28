@@ -17,7 +17,7 @@
           <mat-label>District <span class="required"></span></mat-label>
           <mat-select formControlName="siteDistrict" required (selectionChange)="onDistrictChange($event.value)">
             @for (district of districts; track district.id) {
-            <mat-option [value]="district.districtCode">
+            <mat-option [value]="district.id">
               {{ district.district }}
             </mat-option>
             }
@@ -38,7 +38,7 @@
             <mat-option disabled>Please select district first</mat-option>
             }
             @for (subdivision of siteSubdivisions; track subdivision.id) {
-            <mat-option [value]="subdivision.subdivisionCode">
+            <mat-option [value]="subdivision.id">
               {{ subdivision.subdivision }}
             </mat-option>
             }
@@ -60,7 +60,7 @@
             <mat-option disabled>Please select subdivision first</mat-option>
             }
             @for (policeStation of sitePoliceStations; track policeStation.id) {
-            <mat-option [value]="policeStation.policeStationCode">
+            <mat-option [value]="policeStation.id">
               {{ policeStation.policeStation }}
             </mat-option>
             }
@@ -126,7 +126,7 @@
           }
         </mat-form-field>
 
-        <!-- ROAD (filtered by district) -->
+        <!-- ✅ FIXED: ROAD (filtered by district) -->
         <mat-form-field appearance="outline">
           <mat-label>Road Name <span class="required"></span></mat-label>
           <mat-select formControlName="roadName" required>
@@ -136,8 +136,8 @@
             @if (roadNames.length === 0 && !siteDetailsForm.get('siteDistrict')?.value) {
             <mat-option disabled>Please select district first</mat-option>
             }
-            @for (road of roadNames; track road) {
-            <mat-option [value]="road">{{ road }}</mat-option>
+            @for (road of roadNames; track road.id) {
+            <mat-option [value]="road.id">{{ road.roadName }}</mat-option>
             }
           </mat-select>
           @if (siteDetailsForm.controls['roadName'].invalid && siteDetailsForm.controls['roadName'].touched) {

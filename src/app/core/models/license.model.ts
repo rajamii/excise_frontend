@@ -1,3 +1,28 @@
+// license.model.ts - Licensee Interface
+// 🔴 CRITICAL: Backend actually returns camelCase (from your logs)
+// But keeping snake_case aliases for compatibility
+
+export interface Licensee {
+  // Primary identifiers (backend returns camelCase)
+  id: string;                      // "LIC/101/2025-26/0001"
+  licenseeId?: string;             // Backend returns this in camelCase
+  licensee_id?: string;            // Keep for compatibility
+  
+  // Establishment details
+  establishmentName?: string;      // Backend returns camelCase
+  establishment_name?: string;     // Keep for compatibility
+  
+  // Category and location
+  licenseCategory?: string;        // Backend returns camelCase
+  license_category?: string;       // Keep for compatibility
+  
+  district?: string;               // Both versions
+  districtCode?: number;           // Backend returns camelCase  
+  district_code?: number;          // Keep for compatibility
+  
+  status?: string;
+}
+
 export class License {
   // select license
   application_id!: string;
@@ -55,14 +80,4 @@ export class License {
   photo!: File;
 
   print_count?: number;
-}
-
-export interface Licensee {
-  id: string;                // license_id
-  licensee_id: string;       // same as id – keep for backward compat
-  establishment_name: string;
-  license_category: string;  // "Individual", "Company", …
-  district: string;
-  district_code: number;     // NOTE: number, not string
-  status: string;
 }

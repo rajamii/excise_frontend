@@ -14,45 +14,30 @@ export class CarouselComponent{
   
   slides = [
     {
-      src: './assets/images/carousel/carousel1.jpg',
+      src: 'assets/images/carousel/carousel2.jpg',
       title: 'State Excise',
       subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
     },
     {
-      src: './assets/images/carousel/carousel2.jpg',
+      src: 'assets/images/carousel/carousel4.jpg',
       title: 'State Excise',
       subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
     },
     {
-      src: './assets/images/carousel/carousel3.jpg',
+      src: 'assets/images/carousel/carousel5.jpg',
       title: 'State Excise',
       subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
     },
     {
-      src: './assets/images/carousel/carousel4.jpg',
+      src: 'assets/images/carousel/carousel6.jpg',
       title: 'State Excise',
       subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
     },
     {
-      src: './assets/images/carousel/carousel5.jpg',
+      src: 'assets/images/carousel/carousel8.jpg',
       title: 'State Excise',
       subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
     },
-    {
-      src: './assets/images/carousel/carousel6.jpg',
-      title: 'State Excise',
-      subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
-    },
-    {
-      src: './assets/images/carousel/carousel7.jpg',
-      title: 'State Excise',
-      subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
-    },
-    {
-      src: './assets/images/carousel/carousel8.jpg',
-      title: 'State Excise',
-      subtitle: 'Ensuring Public Health through Regulation and Intelligence, Enforcement Measures'
-    }
   ];
 
 }

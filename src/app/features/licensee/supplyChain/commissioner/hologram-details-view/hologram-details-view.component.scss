@@ -1,0 +1,22 @@
+/* Hologram Details View Styles */
+.modal-header {
+  border-bottom: 0;
+}
+
+.modal-footer {
+  border-top: 0;
+  background-color: #f8f9fa;
+}
+
+.card {
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.5em 0.8em;
+}
