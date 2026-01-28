@@ -1,7 +1,7 @@
 /* Professional Business Table Design */
 
 // Import production modal styles
-@import './production-modal.scss';
+@use './production-modal.scss';
 
 /* Main Container with Light Professional Background */
 .warehouse-container {
