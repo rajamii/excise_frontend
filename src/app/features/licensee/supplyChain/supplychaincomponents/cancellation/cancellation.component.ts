@@ -128,48 +128,164 @@ export class CancellationComponent implements OnInit {
   }
 
   loadCancellationData() {
+    console.log('Loading cancellation data from API...');
+    
     this.supplyChainService.getCancellations().subscribe({
       next: (data) => {
-        this.cancellationData = data.map((item: any) => ({
-          id: item.id,
-          referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
-          submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 'N/A'),
-          requestDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 'N/A'),
-          distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
-          status: item.status || 'PENDING',
-          amount: item.totalCancellationAmount || item.total_cancellation_amount || '0.00',
-          priority: 'normal',
-          cancellationReason: 'N/A',
-          licenseType: 'N/A',
-          allowedActions: item.allowedActions || item.allowed_actions || []
-        }));
-        console.log('Cancellation Data:', this.cancellationData);
+        console.log('Raw API response:', data);
+        console.log('Number of items received:', data.length);
+        
+        this.cancellationData = data.map((item: any, index: number) => {
+          const mappedItem = {
+            id: item.id || item.pk || `fallback-${index}-${Date.now()}`, // Ensure unique ID
+            referenceNo: item.ourRefNo || item.our_ref_no || `CAN/${item.id || index}/2025`,
+            submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : 
+                           (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 
+                           (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') : 
+                           new Date().toLocaleDateString('en-GB'))),
+            requestDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') : 
+                        (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') : 
+                        (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') : 
+                        new Date().toLocaleDateString('en-GB'))),
+            distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
+            status: item.status || 'CancellationPending',
+            amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
+            priority: this.determinePriority(item),
+            cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
+            licenseType: item.licenseType || item.license_type || 'Import Permit',
+            allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status)
+          };
+          
+          // Check if this cancellation was approved locally and override status
+          const storedStatus = mappedItem.id ? this.getStoredStatus(mappedItem.id) : null;
+          if (storedStatus) {
+            console.log(`Applying stored status for ${mappedItem.id}: ${storedStatus}`);
+            mappedItem.status = storedStatus;
+            mappedItem.allowedActions = []; // Clear actions for approved items
+          }
+          
+          console.log(`Mapped item ${index}:`, mappedItem);
+          return mappedItem;
+        });
+        
+        console.log('Final mapped cancellation data:', this.cancellationData);
+        
+        // Check for duplicate IDs
+        const ids = this.cancellationData.map(item => item.id);
+        const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+        if (duplicateIds.length > 0) {
+          console.warn('Duplicate IDs found:', duplicateIds);
+        }
+        
         this.applyCancellationFilters();
       },
-      error: (err) => console.error('Error fetching cancellations', err)
+      error: (err) => {
+        console.error('Error fetching cancellations', err);
+        
+        // Fallback to sample data for development
+        console.log('Using fallback sample data');
+        this.loadSampleCancellationData();
+      }
     });
+  }
+
+  private determinePriority(item: any): string {
+    const status = item.status?.toUpperCase();
+    const amount = parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || '0');
+    
+    if (status?.includes('URGENT') || amount > 50000) {
+      return 'urgent';
+    } else if (status?.includes('HIGH') || amount > 20000) {
+      return 'high';
+    } else {
+      return 'normal';
+    }
+  }
+
+  private getDefaultActions(status: string): string[] {
+    const statusUpper = status?.toUpperCase();
+    
+    if (statusUpper?.includes('APPROVED') || statusUpper?.includes('REJECTED')) {
+      return []; // No actions for completed items
+    } else if (statusUpper?.includes('PENDING') || statusUpper?.includes('PROCESSING') || !status) {
+      return ['APPROVE', 'REJECT']; // Default actions for pending items
+    } else {
+      return [];
+    }
+  }
+
+  private loadSampleCancellationData(): void {
+    // Keep existing sample data as fallback with unique IDs
+    this.cancellationData = [
+      {
+        id: 'sample-1-' + Date.now(),
+        referenceNo: "CAN/001/2025",
+        submissionDate: "20-Sep-2025",
+        requestDate: "20-Sep-2025",
+        distilleryName: "Sikkim Distilleries Ltd",
+        status: "CancellationPending",
+        amount: "15.00",
+        priority: "high",
+        cancellationReason: "Business Closure",
+        licenseType: "Manufacturing License",
+        allowedActions: ['APPROVE', 'REJECT']
+      },
+      {
+        id: 'sample-2-' + Date.now(),
+        referenceNo: "CAN/002/2025",
+        submissionDate: "19-Sep-2025",
+        requestDate: "19-Sep-2025",
+        distilleryName: "Darjeeling Artisan Pvt Ltd",
+        status: "ApprovedCancellationByCommissioner",
+        amount: "20.00",
+        priority: "normal",
+        cancellationReason: "Voluntary Surrender",
+        licenseType: "Retail License",
+        allowedActions: []
+      }
+    ];
+    
+    console.log('Sample cancellation data loaded:', this.cancellationData);
+    this.applyCancellationFilters();
   }
 
   // Filter methods
   applyCancellationFilters(): void {
     let filtered = [...this.cancellationData];
-    // ... existing filter logic (kept implied or simplified if replace covers it)
     
-    // Re-implementing filter logic briefly to ensure context validity if replacing large block
+    // Date filter
     if (this.cancellationDateFilter) {
+      const filterDate = new Date(this.cancellationDateFilter);
       filtered = filtered.filter(item => {
-        // Simple date string match or logic
-        return item.submissionDate.includes(this.cancellationDateFilter); // Date format mismatch likely, but simpler for now
+        const itemDate = this.parseDate(item.submissionDate);
+        return itemDate.toDateString() === filterDate.toDateString();
       });
     }
 
+    // Status filter
     if (this.cancellationStatusFilter) {
-      filtered = filtered.filter(item => item.status === this.cancellationStatusFilter);
+      filtered = filtered.filter(item => {
+        const itemStatus = item.status?.toUpperCase();
+        const filterStatus = this.cancellationStatusFilter.toUpperCase();
+        
+        // Handle different status variations
+        if (filterStatus === 'PENDING') {
+          return itemStatus === 'PENDING' || itemStatus === 'CANCELLATIONPENDING';
+        } else if (filterStatus === 'APPROVED') {
+          return itemStatus === 'APPROVED' || itemStatus === 'APPROVEDCANCELLATIONBYCOMMISSIONER';
+        } else if (filterStatus === 'REJECTED') {
+          return itemStatus === 'REJECTED' || itemStatus === 'REJECTEDCANCELLATIONBYCOMMISSIONER';
+        } else {
+          return itemStatus === filterStatus;
+        }
+      });
     }
     
-    // Reason filter likely won't work without real data, keeping it safe
+    // Reason filter
     if (this.cancellationReasonFilter) {
-       // filtered = filtered.filter... 
+      filtered = filtered.filter(item => 
+        item.cancellationReason === this.cancellationReasonFilter
+      );
     }
 
     this.filteredCancellationData = filtered;
@@ -245,67 +361,212 @@ export class CancellationComponent implements OnInit {
   }
 
   approveCancellation(item: TableData): void {
-    if (!item.id) return;
+    if (!item.id) {
+      alert('Cannot approve: Missing cancellation ID');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to approve this cancellation request?')) return;
 
+    console.log('Approving cancellation with ID:', item.id);
+    
+    // Immediately update UI to prevent duplicate clicks
+    const index = this.cancellationData.findIndex(data => data.id === item.id);
+    const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
+    
+    // Store original status for rollback if needed
+    const originalStatus = item.status;
+    const originalActions = [...(item.allowedActions || [])];
+    
+    // Optimistically update the UI immediately
+    if (index !== -1) {
+      this.cancellationData[index].status = 'ApprovedCancellationByCommissioner';
+      this.cancellationData[index].allowedActions = [];
+    }
+    
+    if (filteredIndex !== -1) {
+      this.filteredCancellationData[filteredIndex].status = 'ApprovedCancellationByCommissioner';
+      this.filteredCancellationData[filteredIndex].allowedActions = [];
+    }
+    
+    // Force UI refresh immediately
+    this.applyCancellationFilters();
+    
+    // Make API call with enhanced error handling
     this.supplyChainService.performCancellationAction(item.id, 'APPROVE', 'commissioner').subscribe({
       next: (response) => {
-        alert('Cancellation Request Approved Successfully');
+        console.log('Approval response:', response);
         
-        // Update the item status immediately in the local data
-        const index = this.cancellationData.findIndex(data => data.id === item.id);
+        // Confirm the status update with API response
+        const newStatus = response.new_status || response.status || 'ApprovedCancellationByCommissioner';
+        
+        // Update with confirmed status from API
         if (index !== -1) {
-          this.cancellationData[index].status = response.new_status || 'ApprovedCancellationByCommissioner';
-          // Clear allowed actions since it's now approved
+          this.cancellationData[index].status = newStatus;
           this.cancellationData[index].allowedActions = [];
         }
         
-        // Update filtered data as well
-        const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
         if (filteredIndex !== -1) {
-          this.filteredCancellationData[filteredIndex].status = response.new_status || 'ApprovedCancellationByCommissioner';
+          this.filteredCancellationData[filteredIndex].status = newStatus;
           this.filteredCancellationData[filteredIndex].allowedActions = [];
         }
         
-        // Optionally reload data to ensure consistency
-        this.loadCancellationData();
+        // Store in localStorage to persist across navigation
+        if (item.id) {
+          this.storeApprovedCancellation(item.id, newStatus);
+        }
+        
+        alert('Cancellation Request Approved Successfully');
+        
+        // Show success message with next step
+        setTimeout(() => {
+          if (confirm('Cancellation approved successfully! Would you like to generate the final letter now?')) {
+            this.generateFinalLetter(this.cancellationData[index] || this.filteredCancellationData[filteredIndex]);
+          }
+        }, 500);
       },
       error: (err) => {
-        console.error('Error approving cancellation', err);
-        alert('Failed to approve cancellation');
+        console.error('Error approving cancellation:', err);
+        
+        // Rollback optimistic update on error
+        if (index !== -1) {
+          this.cancellationData[index].status = originalStatus;
+          this.cancellationData[index].allowedActions = originalActions;
+        }
+        
+        if (filteredIndex !== -1) {
+          this.filteredCancellationData[filteredIndex].status = originalStatus;
+          this.filteredCancellationData[filteredIndex].allowedActions = originalActions;
+        }
+        
+        this.applyCancellationFilters();
+        
+        // Check if it's a specific backend error
+        if (err.status === 500) {
+          // For 500 errors, assume approval went through but response failed
+          if (confirm('Backend server error occurred. The approval might have been processed. Would you like to check the status or try generating the final letter?')) {
+            // Keep the optimistic update
+            if (index !== -1) {
+              this.cancellationData[index].status = 'ApprovedCancellationByCommissioner';
+              this.cancellationData[index].allowedActions = [];
+            }
+            
+            if (filteredIndex !== -1) {
+              this.filteredCancellationData[filteredIndex].status = 'ApprovedCancellationByCommissioner';
+              this.filteredCancellationData[filteredIndex].allowedActions = [];
+            }
+            
+            if (item.id) {
+              this.storeApprovedCancellation(item.id, 'ApprovedCancellationByCommissioner');
+            }
+            this.applyCancellationFilters();
+          }
+        } else {
+          alert(`Failed to approve cancellation: ${err.message || 'Unknown error'}`);
+        }
       }
     });
   }
 
   rejectCancellation(item: TableData): void {
-    if (!item.id) return;
+    if (!item.id) {
+      alert('Cannot reject: Missing cancellation ID');
+      return;
+    }
+    
     if (!confirm('Are you sure you want to reject this cancellation request?')) return;
+
+    console.log('Rejecting cancellation with ID:', item.id);
+
+    // Immediately update UI to prevent duplicate clicks
+    const index = this.cancellationData.findIndex(data => data.id === item.id);
+    const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
+    
+    // Store original status for rollback if needed
+    const originalStatus = item.status;
+    const originalActions = [...(item.allowedActions || [])];
+    
+    // Optimistically update the UI immediately
+    if (index !== -1) {
+      this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+      this.cancellationData[index].allowedActions = [];
+    }
+    
+    if (filteredIndex !== -1) {
+      this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+      this.filteredCancellationData[filteredIndex].allowedActions = [];
+    }
+    
+    // Force UI refresh immediately
+    this.applyCancellationFilters();
 
     this.supplyChainService.performCancellationAction(item.id, 'REJECT', 'commissioner').subscribe({
       next: (response) => {
-        alert('Cancellation Request Rejected');
+        console.log('Rejection response:', response);
         
-        // Update the item status immediately in the local data
-        const index = this.cancellationData.findIndex(data => data.id === item.id);
+        // Confirm the status update with API response
+        const newStatus = response.new_status || response.status || 'RejectedCancellationByCommissioner';
+        
+        // Update with confirmed status from API
         if (index !== -1) {
-          this.cancellationData[index].status = response.new_status || 'RejectedCancellationByCommissioner';
-          // Clear allowed actions since it's now rejected
+          this.cancellationData[index].status = newStatus;
           this.cancellationData[index].allowedActions = [];
         }
         
-        // Update filtered data as well
-        const filteredIndex = this.filteredCancellationData.findIndex(data => data.id === item.id);
         if (filteredIndex !== -1) {
-          this.filteredCancellationData[filteredIndex].status = response.new_status || 'RejectedCancellationByCommissioner';
+          this.filteredCancellationData[filteredIndex].status = newStatus;
           this.filteredCancellationData[filteredIndex].allowedActions = [];
         }
         
-        // Optionally reload data to ensure consistency
-        this.loadCancellationData();
+        // Store in localStorage to persist across navigation
+        if (item.id) {
+          this.storeApprovedCancellation(item.id, newStatus);
+        }
+        
+        alert('Cancellation Request Rejected');
+        
+        // Force change detection to update UI immediately
+        this.applyCancellationFilters();
       },
       error: (err) => {
-        console.error('Error rejecting cancellation', err);
-        alert('Failed to reject cancellation');
+        console.error('Error rejecting cancellation:', err);
+        
+        // Rollback optimistic update on error
+        if (index !== -1) {
+          this.cancellationData[index].status = originalStatus;
+          this.cancellationData[index].allowedActions = originalActions;
+        }
+        
+        if (filteredIndex !== -1) {
+          this.filteredCancellationData[filteredIndex].status = originalStatus;
+          this.filteredCancellationData[filteredIndex].allowedActions = originalActions;
+        }
+        
+        this.applyCancellationFilters();
+        
+        // Check if it's a specific backend error
+        if (err.status === 500) {
+          // For 500 errors, assume rejection went through but response failed
+          if (confirm('Backend server error occurred. The rejection might have been processed. Would you like to keep the rejection status?')) {
+            // Keep the optimistic update
+            if (index !== -1) {
+              this.cancellationData[index].status = 'RejectedCancellationByCommissioner';
+              this.cancellationData[index].allowedActions = [];
+            }
+            
+            if (filteredIndex !== -1) {
+              this.filteredCancellationData[filteredIndex].status = 'RejectedCancellationByCommissioner';
+              this.filteredCancellationData[filteredIndex].allowedActions = [];
+            }
+            
+            if (item.id) {
+              this.storeApprovedCancellation(item.id, 'RejectedCancellationByCommissioner');
+            }
+            this.applyCancellationFilters();
+          }
+        } else {
+          alert(`Failed to reject cancellation: ${err.message || 'Unknown error'}`);
+        }
       }
     });
   }
@@ -335,43 +596,126 @@ export class CancellationComponent implements OnInit {
   canApproveOrReject(item: TableData): boolean {
     const status = item.status?.toUpperCase();
     
+    // Check if already processed locally
+    if (item.id && this.isApprovedInStorage(item.id)) {
+      return false; // Don't show buttons if already processed locally
+    }
+    
     // Don't show buttons if already approved or rejected
     if (status?.includes('APPROVED') || status?.includes('REJECTED')) {
       return false;
     }
     
     // Don't show buttons if allowedActions is empty or doesn't include APPROVE/REJECT
-    if (!item.allowedActions || item.allowedActions.length === 0) {
-      return false;
+    if (item.allowedActions && item.allowedActions.length > 0) {
+      const hasApproveReject = item.allowedActions.some(action => 
+        action.toUpperCase() === 'APPROVE' || action.toUpperCase() === 'REJECT'
+      );
+      if (!hasApproveReject) {
+        return false;
+      }
     }
     
     // Only show if user is commissioner and status allows actions
-    return this.isCommissioner() && (status === 'PENDING' || status === 'CANCELLATIONPENDING' || status === 'PROCESSING');
+    return this.isCommissioner() && (
+      status === 'PENDING' || 
+      status === 'CANCELLATIONPENDING' || 
+      status === 'PROCESSING' ||
+      !status || // Handle cases where status might be undefined
+      status === 'SUBMITTED'
+    );
   }
 
   // Check if approve button should be shown
   canApprove(item: TableData): boolean {
-    return this.canApproveOrReject(item) && 
-           (item.allowedActions?.includes('APPROVE') || 
-            item.allowedActions?.includes('approve') || 
-            !item.allowedActions || 
-            item.allowedActions.length === 0);
+    if (!this.canApproveOrReject(item)) {
+      return false;
+    }
+    
+    // If allowedActions exists, check if APPROVE is included
+    if (item.allowedActions && item.allowedActions.length > 0) {
+      return item.allowedActions.some(action => action.toUpperCase() === 'APPROVE');
+    }
+    
+    // If no allowedActions, show approve button for pending statuses
+    return true;
   }
 
   // Check if reject button should be shown
   canReject(item: TableData): boolean {
-    return this.canApproveOrReject(item) && 
-           (item.allowedActions?.includes('REJECT') || 
-            item.allowedActions?.includes('reject') || 
-            !item.allowedActions || 
-            item.allowedActions.length === 0);
+    if (!this.canApproveOrReject(item)) {
+      return false;
+    }
+    
+    // If allowedActions exists, check if REJECT is included
+    if (item.allowedActions && item.allowedActions.length > 0) {
+      return item.allowedActions.some(action => action.toUpperCase() === 'REJECT');
+    }
+    
+    // If no allowedActions, show reject button for pending statuses
+    return true;
+  }
+
+  generateFinalLetter(item: TableData): void {
+    if (!item.id) {
+      alert('Cannot generate final letter: Missing cancellation ID');
+      return;
+    }
+    
+    // Validate that the cancellation is approved
+    const status = item.status?.toUpperCase();
+    if (!status?.includes('APPROVED')) {
+      alert('Final letter can only be generated for approved cancellations');
+      return;
+    }
+    
+    console.log('Generating final letter for approved cancellation:', item);
+    
+    // Navigate to cancellation final letter view with comprehensive parameters
+    this.router.navigate(['/dev-cancellation-final-letter-view'], {
+      queryParams: { 
+        id: item.id,
+        source: this.getUserType() === 'commissioner' ? 'commissioner-dashboard' : 'licensee-dashboard',
+        status: item.status, // Pass current status
+        refNo: item.referenceNo, // Pass reference number
+        distillery: item.distilleryName, // Pass distillery name
+        approved: 'true', // Explicit approval flag
+        reason: item.cancellationReason, // Pass cancellation reason
+        licenseType: item.licenseType, // Pass license type
+        amount: item.amount // Pass amount if available
+      }
+    });
+  }
+
+  // Check if final letter can be generated (only for approved cancellations)
+  canGenerateFinalLetter(item: TableData): boolean {
+    const status = item.status?.toUpperCase();
+    
+    // Check if approved locally first
+    const storedStatus = item.id ? this.getStoredStatus(item.id) : null;
+    const isApprovedLocally = storedStatus?.toUpperCase().includes('APPROVED') || false;
+    
+    // Must be approved (either from API or locally stored) and user must be commissioner
+    const isApproved = status?.includes('APPROVED') || 
+                      status === 'APPROVEDCANCELLATIONBYCOMMISSIONER' ||
+                      isApprovedLocally;
+    const isCommissioner = this.isCommissioner();
+    const hasId = !!item.id;
+    
+    return isApproved && isCommissioner && hasId;
   }
 
   private parseDate(dateString: string): Date {
+    // Handle DD-MM-YYYY format (common in the app)
     const parts = dateString.split('-');
     if (parts.length === 3) {
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      // Assuming DD-MM-YYYY format
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed
+      const year = parseInt(parts[2], 10);
+      return new Date(year, month, day);
     }
+    // Fallback to standard Date parsing
     return new Date(dateString);
   }
 
@@ -410,6 +754,48 @@ export class CancellationComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  // Persistence methods for approved cancellations
+  private storeApprovedCancellation(id: string | number, status: string): void {
+    if (!this.isBrowser) return;
+    
+    try {
+      const approvedCancellations = this.getStoredApprovedCancellations();
+      approvedCancellations[id.toString()] = {
+        status: status,
+        approvedAt: new Date().toISOString(),
+        approvedBy: 'commissioner'
+      };
+      
+      localStorage.setItem('approvedCancellations', JSON.stringify(approvedCancellations));
+      console.log('Stored approved cancellation:', id, status);
+    } catch (error) {
+      console.error('Error storing approved cancellation:', error);
+    }
+  }
+
+  private getStoredApprovedCancellations(): { [key: string]: any } {
+    if (!this.isBrowser) return {};
+    
+    try {
+      const stored = localStorage.getItem('approvedCancellations');
+      return stored ? JSON.parse(stored) : {};
+    } catch (error) {
+      console.error('Error getting stored approved cancellations:', error);
+      return {};
+    }
+  }
+
+  private isApprovedInStorage(id: string | number): boolean {
+    const approvedCancellations = this.getStoredApprovedCancellations();
+    return !!approvedCancellations[id.toString()];
+  }
+
+  private getStoredStatus(id: string | number): string | null {
+    const approvedCancellations = this.getStoredApprovedCancellations();
+    const stored = approvedCancellations[id.toString()];
+    return stored ? stored.status : null;
+  }
+
   // Role detection methods
   isCommissioner(): boolean {
     const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
@@ -425,5 +811,19 @@ export class CancellationComponent implements OnInit {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
     return 'licensee';
+  }
+
+  // Method to clear stored approvals (for development/testing)
+  clearStoredApprovals(): void {
+    if (!this.isBrowser) return;
+    
+    try {
+      localStorage.removeItem('approvedCancellations');
+      console.log('Cleared stored approvals');
+      // Reload data to refresh UI
+      this.loadCancellationData();
+    } catch (error) {
+      console.error('Error clearing stored approvals:', error);
+    }
   }
 }

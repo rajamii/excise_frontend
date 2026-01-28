@@ -258,6 +258,20 @@ export const routes: Routes = [
       ).then((m) => m.SupplyChainCancellationViewComponent),
   },
   {
+    path: "dev-cancellation-final-letter-view/:id",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/cancellationfinalletterview/cancellationfinalletterview.component"
+      ).then((m) => m.CancellationfinalletterviewComponent),
+  },
+  {
+    path: "dev-cancellation-final-letter-view",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/letterView/cancellationfinalletterview/cancellationfinalletterview.component"
+      ).then((m) => m.CancellationfinalletterviewComponent),
+  },
+  {
     path: "dev-transit-permit-letter-view",
     loadComponent: () =>
       import(

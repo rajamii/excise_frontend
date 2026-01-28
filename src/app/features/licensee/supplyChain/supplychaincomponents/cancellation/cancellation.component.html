@@ -148,7 +148,7 @@
         <tbody>
           @for (
           item of getPaged();
-          track item.referenceNo;
+          track item.id;
           let i = $index
           ) {
           <tr class="register-row" [class.urgent-row]="item.priority === 'urgent'">
@@ -200,6 +200,10 @@
                 <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" title="Reject"
                   *ngIf="canReject(item)">
                   <i class="bi bi-x"></i>
+                </button>
+                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)" title="Generate Final Letter"
+                  *ngIf="canGenerateFinalLetter(item)">
+                  <i class="bi bi-file-earmark-text"></i>
                 </button>
               </div>
             </td>

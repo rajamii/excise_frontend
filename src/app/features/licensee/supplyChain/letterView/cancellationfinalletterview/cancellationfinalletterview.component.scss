@@ -1,0 +1,383 @@
+/* Cancellation Final Letter View Styles */
+.cancellation-final-letter-view {
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 20px;
+}
+
+/* Header Section */
+.header-section {
+  background: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Letter Container */
+.letter-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+/* Final Letter Content */
+.final-letter-container {
+  background: white;
+  padding: 60px 80px;
+  font-family: 'Times New Roman', serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #000;
+  min-height: 900px;
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+/* Letter Header */
+.letter-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 25px;
+  border-bottom: 3px double #000;
+}
+
+.seal-container {
+  margin-bottom: 20px;
+}
+
+.govt-seal {
+  height: 80px;
+  width: auto;
+  filter: grayscale(100%);
+}
+
+.dept-title {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 12px 0 8px 0;
+  letter-spacing: 2px;
+  color: #000;
+}
+
+.dept-subtitle {
+  font-size: 20px;
+  font-weight: bold;
+  margin: 8px 0;
+  letter-spacing: 1px;
+  color: #000;
+}
+
+.dept-address {
+  font-size: 14px;
+  margin: 8px 0;
+  font-weight: 500;
+  color: #333;
+}
+
+.dept-contact {
+  font-size: 12px;
+  margin-top: 15px;
+  color: #555;
+}
+
+.dept-contact div {
+  margin: 3px 0;
+}
+
+/* Letter Meta */
+.letter-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 35px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.letter-number {
+  text-align: left;
+  flex: 1;
+}
+
+.letter-date {
+  text-align: right;
+  flex: 1;
+}
+
+/* Addressee Section */
+.addressee-section {
+  margin: 40px 0;
+  text-align: left;
+}
+
+.to-line {
+  font-size: 14px;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.addressee-details {
+  margin-left: 50px;
+  line-height: 2;
+}
+
+.addressee-name, .company-name, .company-address {
+  font-size: 14px;
+  margin: 8px 0;
+  color: #000;
+}
+
+/* Subject Section */
+.subject-section {
+  margin: 40px 0;
+}
+
+.subject-line {
+  font-size: 14px;
+  text-decoration: underline;
+  font-weight: bold;
+  line-height: 1.8;
+  text-align: center;
+  padding: 10px 0;
+}
+
+/* Letter Body */
+.letter-body {
+  margin: 50px 0 100px 0; /* Added bottom margin since no signature section */
+  text-align: justify;
+}
+
+.body-text {
+  font-size: 14px;
+  line-height: 2;
+  margin: 25px 0;
+  text-indent: 60px;
+  text-align: justify;
+}
+
+/* Action Buttons */
+.action-buttons-section {
+  padding: 40px 30px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+}
+
+.btn-lg {
+  padding: 15px 35px;
+  font-size: 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-lg:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  border: none;
+}
+
+.btn-outline-secondary {
+  border: 2px solid #6c757d;
+  color: #6c757d;
+  background: white;
+}
+
+.btn-outline-secondary:hover {
+  background: #6c757d;
+  color: white;
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .cancellation-final-letter-view {
+    background: white !important;
+    padding: 0 !important;
+  }
+  
+  .letter-container {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  
+  .final-letter-container {
+    padding: 25mm 20mm;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    background: white !important;
+    font-size: 12px;
+    max-width: none;
+    min-height: auto;
+  }
+  
+  .letter-header {
+    border-bottom: 3px double #000;
+    margin-bottom: 30mm;
+  }
+  
+  .govt-seal {
+    height: 60px;
+  }
+  
+  .dept-title {
+    font-size: 18px;
+  }
+  
+  .dept-subtitle {
+    font-size: 16px;
+  }
+  
+  .letter-meta {
+    margin: 25mm 0;
+  }
+  
+  .addressee-section {
+    margin: 30mm 0;
+  }
+  
+  .subject-section {
+    margin: 25mm 0;
+  }
+  
+  .letter-body {
+    margin: 30mm 0 50mm 0; /* Added bottom margin for print */
+  }
+  
+  .body-text {
+    line-height: 1.8;
+    text-indent: 50px;
+  }
+  
+  /* Ensure proper page breaks */
+  .final-letter-container {
+    page-break-inside: avoid;
+  }
+  
+  .letter-header {
+    page-break-after: avoid;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .cancellation-final-letter-view {
+    padding: 10px;
+  }
+  
+  .final-letter-container {
+    padding: 30px 20px;
+    font-size: 13px;
+    max-width: 100%;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .letter-meta {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .addressee-details {
+    margin-left: 30px;
+  }
+  
+  .govt-seal {
+    height: 60px;
+  }
+  
+  .dept-title {
+    font-size: 18px;
+  }
+  
+  .dept-subtitle {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .final-letter-container {
+    padding: 20px 15px;
+    font-size: 12px;
+  }
+  
+  .dept-title {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+  
+  .dept-subtitle {
+    font-size: 14px;
+  }
+  
+  .addressee-details {
+    margin-left: 20px;
+  }
+  
+  .body-text {
+    text-indent: 30px;
+  }
+}
+
+/* Loading and Error States */
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+.alert {
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px;
+}
+
+/* Animation for smooth loading */
+.final-letter-container {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
