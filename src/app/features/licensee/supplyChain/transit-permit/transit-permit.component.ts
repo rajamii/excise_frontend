@@ -85,14 +85,15 @@ export class TransitPermitComponent implements OnInit {
   availableStockPieces: number = 0;
   conversionFactor: number = 0;
   currentStockStatus: string = '';
-  stockError: string = '';
+  stockError: string | null = null;
+  paymentAgreed: boolean = false; // For payment confirmation modal
 
   // Stock Summary Box
   selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
 
   // ML Per Case Data for Info Box
   mlPerCaseData: any[] = [];
-  
+
   // Sidebar toggle state - Default to open
   isMlInfoSidebarExpanded: boolean = true;
 
@@ -105,7 +106,7 @@ export class TransitPermitComponent implements OnInit {
     private supplyChainService: SupplyChainService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
-    
+
     // Listen for window resize to recalculate sidebar height
     if (this.isBrowser) {
       window.addEventListener('resize', () => {
@@ -310,9 +311,9 @@ export class TransitPermitComponent implements OnInit {
           const conv = this.brandMlConversionData.find(c => c.ml === size);
           const factor = conv ? (conv.pieces_in_case || conv.piecesInCase || 0) : 0;
           const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
-          
+
           console.log(`Fallback - Size ${size}ml: pieces=${pieces}, factor=${factor}, approxCases=${approxCases}`);
-          
+
           return { size, pieces, approxCases };
         }).sort((a: any, b: any) => a.size - b.size);
       } else {
@@ -341,7 +342,7 @@ export class TransitPermitComponent implements OnInit {
     // 1. Get Conversion Factor - check both snake_case and camelCase
     const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
     console.log('Conversion entry found:', conversionEntry);
-    
+
     if (conversionEntry) {
       // Try both field name formats
       this.conversionFactor = conversionEntry.pieces_in_case || conversionEntry.piecesInCase || 0;
@@ -390,7 +391,7 @@ export class TransitPermitComponent implements OnInit {
 
   onCasesChange(): void {
     this.stockError = '';
-    
+
     if (!this.formData.cases || this.formData.cases <= 0) {
       return;
     }
@@ -411,9 +412,9 @@ export class TransitPermitComponent implements OnInit {
       if (requiredPieces > this.availableStockPieces) {
         const shortfall = requiredPieces - this.availableStockPieces;
         const maxCases = Math.floor(this.availableStockPieces / this.conversionFactor);
-        
+
         this.stockError = `Insufficient stock! You need ${shortfall} more pieces to pack ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} (requires ${requiredPieces} pieces, available ${this.availableStockPieces} pieces). Maximum cases you can pack: ${maxCases}`;
-        
+
         console.error('Stock validation failed:', {
           requestedCases: this.formData.cases,
           requiredPieces: requiredPieces,
@@ -430,7 +431,7 @@ export class TransitPermitComponent implements OnInit {
           availablePieces: this.availableStockPieces,
           remainingPieces: remainingPieces
         });
-        
+
         // Update the current stock status to show calculation
         this.currentStockStatus = `✓ Valid: ${this.formData.cases} case${this.formData.cases > 1 ? 's' : ''} = ${requiredPieces} pieces. Remaining stock: ${remainingPieces} pieces`;
       }
@@ -754,6 +755,29 @@ export class TransitPermitComponent implements OnInit {
 
 
   payAllItems(): void {
+    // Reset agreement
+    this.paymentAgreed = false;
+
+    // Open the Payment Confirmation Modal
+    // Using bootstrap JS since we don't have direct access here easily without ViewChild for now
+    // In a real angular way we should use ViewChild or NgbModal, but for consistency with this file:
+    const modalElement = document.getElementById('paymentConfirmationModal');
+    if (modalElement) {
+      // @ts-ignore
+      const modal = new bootstrap.Modal(modalElement);
+      modal.show();
+    }
+  }
+
+  proceedToPayment(): void {
+    // Close modal first
+    const modalElement = document.getElementById('paymentConfirmationModal');
+    if (modalElement) {
+      // @ts-ignore
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      if (modal) modal.hide();
+    }
+
     // Navigate to payment confirmation page
     this.router.navigate(['/dev-payment-confirmation'], {
       queryParams: {
@@ -950,19 +974,19 @@ export class TransitPermitComponent implements OnInit {
     if (!this.mlPerCaseData || this.mlPerCaseData.length === 0) {
       return 'auto';
     }
-    
+
     // Reduced base height for header and footer
     const baseHeight = 100; // Header (50px) + Footer (50px) - more compact
-    
+
     // Reduced height per item (card + margin)
     const itemHeight = 90; // Each card is approximately 90px including margin - more compact
-    
+
     // Calculate total height
     const totalHeight = baseHeight + (this.mlPerCaseData.length * itemHeight);
-    
+
     // Ensure it doesn't exceed 85% of viewport height (reduced from 90%)
     const maxHeight = window.innerHeight * 0.85;
-    
+
     return Math.min(totalHeight, maxHeight) + 'px';
   }
 }
