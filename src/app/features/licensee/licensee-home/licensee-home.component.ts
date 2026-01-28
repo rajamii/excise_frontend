@@ -18,6 +18,7 @@ import { SupplyChainProfileService } from '../../../core/services/supply-chain-p
   imports: [RouterModule, RouterOutlet, MaterialModule, MatMenuModule], // Modules needed for this component
   templateUrl: './licensee-home.component.html', // Path to the component’s HTML template
   styleUrl: './licensee-home.component.scss', // Path to the component’s SCSS styles
+  // Re-trigger build
 })
 export class LicenseeHomeComponent extends BaseComponent {
   account: any; // Raw account object (can be removed if not used)

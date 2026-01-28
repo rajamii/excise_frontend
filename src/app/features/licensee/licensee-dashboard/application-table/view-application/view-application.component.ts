@@ -312,15 +312,16 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
           this.buildDisplaySections();
           this.fetchObjections();
-        });
-        this.isLoading = false;
-      },
-      error: (err) => {
-        console.error('Failed to fetch application details', err);
-        Swal.fire('Error', 'Failed to load application details.', 'error');
-        this.isLoading = false;
-        this.dialogRef.close();
-      }
+
+          this.isLoading = false;
+        },
+        error: (err) => {
+          console.error('Failed to fetch application details', err);
+          Swal.fire('Error', 'Failed to load application details.', 'error');
+          this.isLoading = false;
+          this.dialogRef.close();
+        }
+      });
     });
   }
 
@@ -394,34 +395,11 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     return s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
   }
 
-  getFieldDisplayList(fields: string[]): FieldDisplay[] {
-    return fields.map(field => {
-      const camelField = this.toCamelCase(field);
-      const value = this.application[field] || this.application[camelField];
 
-      // ✅ Get display name for dropdown fields
-      let displayValue = value;
-      const meta = this.fieldMetaMap[camelField];
-      
-      if (meta?.type === 'dropdown' && value) {
-        displayValue = this.getDisplayName(camelField, value);
-      } else if (meta?.type === 'date' && value) {
-        displayValue = new Date(value).toLocaleDateString();
-      } else if (!value) {
-        displayValue = '-';
-      }
-
-      return {
-        key: this.fieldLabelMap[camelField] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        field: field,
-        value: displayValue
-      };
-    });
-  }
 
   getOptionLabel(field: string, option: any): string {
     if (typeof option === 'string') return option;
-    
+
     switch (field) {
       case 'licenseCategory':
         return option.licenseCategory || option.license_category || option.name;
@@ -448,7 +426,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     return option?.[meta?.submitKey] ?? option?.id;
   }
 
-  getFieldDisplayList(fields: string[]): FieldDisplay[] {
+  getFieldDisplayList(fields: string[]) {
     return fields.map(field => {
       // Helper to convert snake_case to camelCase
       const toCamel = (s: string) => s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
@@ -483,7 +461,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       return;
     }
 
-    this.unifiedService.getObjections(this.application.application_id, this.application.type).subscribe({
+    this.unifiedService.getObjections(this.application.application_id).subscribe({
       next: (data) => {
         this.objections = data;
         this.initializeResolveForm();
@@ -497,7 +475,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
   }
 
   initializeResolveForm(): void {
-    const group: { [key: string]: FormControl } = {};
+    const group: any = {};
 
     for (const obj of this.objections.filter(o => !o.isResolved)) {
       const meta = this.fieldMetaMap[obj.fieldName] || {};
@@ -667,7 +645,6 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
             }
 
             const stageId = approvalStage.id || approvalStage.stage_id;
-            console.log('✅ Advancing to stage:', stageId);
 
             // ✅ Select the correct advance method based on application type
             let advance$: Observable<any>;
