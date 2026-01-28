@@ -495,6 +495,73 @@
   </div>
 </div>
 
+<!-- ML Per Case Information Sidebar - Fixed to right side of screen -->
+<div class="ml-info-sidebar" *ngIf="mlPerCaseData.length > 0">
+  <div class="ml-info-sidebar-content" 
+       [class.expanded]="isMlInfoSidebarExpanded"
+       [style.height]="calculateSidebarHeight()">
+    <div class="ml-info-sidebar-header">
+      <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center">
+          <div class="header-icon-wrapper">
+            <i class="bi bi-info-circle-fill"></i>
+          </div>
+          <div class="header-text">
+            <h6 class="mb-0 fw-bold">ML Per Case Information</h6>
+            <small class="text-muted">Reference guide for packaging</small>
+          </div>
+        </div>
+        <button class="ml-info-close-btn" (click)="toggleMlInfoSidebar()" title="Close sidebar">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="ml-info-sidebar-body">
+      <div class="ml-info-sidebar-item" *ngFor="let item of mlPerCaseData; let i = index">
+        <div class="item-card">
+          <div class="item-header">
+            <div class="size-badge-wrapper">
+              <span class="size-badge-sidebar">{{ item.ml }}ml</span>
+              <div class="size-badge-glow"></div>
+            </div>
+          </div>
+          <div class="item-content">
+            <div class="pieces-display">
+              <span class="pieces-number-sidebar">{{ item.pieces_in_case || item.piecesInCase }}</span>
+              <span class="pieces-label-sidebar">pieces per case</span>
+            </div>
+            <div class="calculation-info">
+              <i class="bi bi-calculator-fill"></i>
+              <span>1 case = {{ item.pieces_in_case || item.piecesInCase }} bottles</span>
+            </div>
+          </div>
+          <div class="item-decoration" [style.animation-delay.ms]="i * 100"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="ml-info-sidebar-footer">
+      <div class="footer-content">
+        <div class="footer-icon">
+          <i class="bi bi-lightbulb-fill"></i>
+        </div>
+        <div class="footer-text">
+          <strong>Quick Tip:</strong> Use this information when calculating cases for your transit permit application
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Minimized state toggle (only show when collapsed) -->
+  <div class="ml-info-toggle" *ngIf="!isMlInfoSidebarExpanded" (click)="toggleMlInfoSidebar()">
+    <div class="toggle-content">
+      <i class="bi bi-info-circle-fill"></i>
+      <span class="ml-info-toggle-text">ML Info</span>
+    </div>
+  </div>
+</div>
+
 <!-- Declaration Modal (Moved to end of file for stacking context safety) -->
 <!-- 
      FIX: 

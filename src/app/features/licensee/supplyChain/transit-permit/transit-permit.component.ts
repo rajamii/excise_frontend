@@ -90,6 +90,12 @@ export class TransitPermitComponent implements OnInit {
   // Stock Summary Box
   selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
 
+  // ML Per Case Data for Info Box
+  mlPerCaseData: any[] = [];
+  
+  // Sidebar toggle state - Default to open
+  isMlInfoSidebarExpanded: boolean = true;
+
 
   private isBrowser = false;
   constructor(
@@ -99,6 +105,16 @@ export class TransitPermitComponent implements OnInit {
     private supplyChainService: SupplyChainService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+    
+    // Listen for window resize to recalculate sidebar height
+    if (this.isBrowser) {
+      window.addEventListener('resize', () => {
+        // Trigger change detection to recalculate height
+        setTimeout(() => {
+          // Force recalculation by triggering change detection
+        }, 100);
+      });
+    }
   }
 
   ngOnInit(): void {
@@ -152,6 +168,7 @@ export class TransitPermitComponent implements OnInit {
     // Fetch Brand ML Conversion Data
     this.supplyChainService.getBrandMlInCases().subscribe(data => {
       this.brandMlConversionData = data;
+      this.mlPerCaseData = data; // Also populate the info box data
       console.log('ML Conversion Data:', this.brandMlConversionData);
     });
   }
@@ -897,5 +914,30 @@ export class TransitPermitComponent implements OnInit {
       win.print();
       win.close();
     };
+  }
+
+  toggleMlInfoSidebar(): void {
+    this.isMlInfoSidebarExpanded = !this.isMlInfoSidebarExpanded;
+  }
+
+  // Calculate dynamic height based on content - More compact
+  calculateSidebarHeight(): string {
+    if (!this.mlPerCaseData || this.mlPerCaseData.length === 0) {
+      return 'auto';
+    }
+    
+    // Reduced base height for header and footer
+    const baseHeight = 100; // Header (50px) + Footer (50px) - more compact
+    
+    // Reduced height per item (card + margin)
+    const itemHeight = 90; // Each card is approximately 90px including margin - more compact
+    
+    // Calculate total height
+    const totalHeight = baseHeight + (this.mlPerCaseData.length * itemHeight);
+    
+    // Ensure it doesn't exceed 85% of viewport height (reduced from 90%)
+    const maxHeight = window.innerHeight * 0.85;
+    
+    return Math.min(totalHeight, maxHeight) + 'px';
   }
 }
