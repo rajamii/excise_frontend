@@ -59,7 +59,7 @@
             </option>
           </select>
           <input *ngIf="availableDepotAddresses.length <= 1" type="text" class="form-control input-field"
-            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled" 
+            [(ngModel)]="formData.depotAddress" readonly placeholder="Depot address will be auto-filled"
             [disabled]="isCommonFieldsLocked" />
           <small class="text-muted" *ngIf="isCommonFieldsLocked">
             <i class="bi bi-lock-fill me-1"></i>Locked after adding first product
@@ -69,6 +69,29 @@
         <!-- Section Divider -->
         <div class="col-12 mb-3">
           <hr class="section-divider">
+
+          <!-- Stock Summary Box -->
+          <div class="card bg-light border-info mb-3" *ngIf="selectedBrandStockSummary.length > 0">
+            <div class="card-header bg-info text-white py-2">
+              <h6 class="mb-0 small fw-bold">
+                <i class="bi bi-box-seam me-2"></i>Available Stock Summary: {{ formData.brand }}
+              </h6>
+            </div>
+            <div class="card-body p-2">
+              <div class="row g-2">
+                <div class="col-md-4 col-sm-6" *ngFor="let stock of selectedBrandStockSummary">
+                  <div class="d-flex justify-content-between align-items-center border rounded p-2 bg-white">
+                    <span class="badge bg-secondary">{{ stock.size }}ml</span>
+                    <div class="text-end lh-1">
+                      <div class="fw-bold text-success small">{{ stock.pieces }} pcs</div>
+                      <div class="text-muted" style="font-size: 0.75rem;">(≈ {{ stock.approxCases }} cases)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="section-title">
             <span class="badge bg-success">Product Information</span>
           </div>
@@ -89,19 +112,26 @@
         <!-- Size -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Size (ml):</label>
-          <select class="form-control input-field" [(ngModel)]="formData.size" [disabled]="!formData.brand || isLocked">
+          <select class="form-control input-field" [(ngModel)]="formData.size" [disabled]="!formData.brand || isLocked"
+            (change)="onSizeChange()">
             <option value="">-- Select Size --</option>
             <option *ngFor="let size of sizeOptions" [value]="size">
               {{ size }}ml
             </option>
           </select>
+          <small class="text-info" *ngIf="currentStockStatus">
+            <i class="bi bi-info-circle-fill me-1"></i>{{ currentStockStatus }}
+          </small>
         </div>
 
         <!-- Cases -->
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Cases:</label>
           <input type="number" class="form-control input-field" [(ngModel)]="formData.cases"
-            placeholder="Enter number of cases" min="0" />
+            placeholder="Enter number of cases" min="0" (input)="onCasesChange()" />
+          <div *ngIf="stockError" class="text-danger mt-1 small">
+            <i class="bi bi-exclamation-circle-fill me-1"></i>{{ stockError }}
+          </div>
         </div>
 
         <!-- Vehicle Number -->
@@ -133,9 +163,11 @@
           <div class="alert alert-info d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center">
               <i class="bi bi-info-circle-fill me-2"></i>
-              <span>Common fields are locked. Click "Unlock & Reset" to modify distributor/date/address (will clear current product selection)</span>
+              <span>Common fields are locked. Click "Unlock & Reset" to modify distributor/date/address (will clear
+                current product selection)</span>
             </div>
-            <button class="btn btn-outline-warning btn-sm" (click)="confirmUnlockFields()" title="Unlock common fields and reset product selection">
+            <button class="btn btn-outline-warning btn-sm" (click)="confirmUnlockFields()"
+              title="Unlock common fields and reset product selection">
               <i class="bi bi-unlock me-1"></i>Unlock & Reset
             </button>
           </div>
@@ -622,9 +654,9 @@
       <div class="text-center mb-4">
         <i class="bi bi-unlock-fill text-warning" style="font-size: 3rem;"></i>
       </div>
-      
+
       <h6 class="text-center mb-3">Are you sure you want to unlock the common fields?</h6>
-      
+
       <div class="custom-alert">
         <h6 class="custom-alert-heading">
           <i class="bi bi-info-circle me-2"></i>What will happen:

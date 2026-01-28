@@ -67,6 +67,18 @@ export class TransitPermitComponent implements OnInit {
   /* vehicleNumbers: string[] = []; */
   private brandsData: { brandName: string; sizes: number[] }[] = [];
 
+  // New properties for stock logic
+  private brandMlConversionData: any[] = [];
+  private brandWarehouseData: any[] = [];
+  availableStockPieces: number = 0;
+  conversionFactor: number = 0;
+  currentStockStatus: string = '';
+  stockError: string = '';
+
+  // Stock Summary Box
+  selectedBrandStockSummary: { size: number, pieces: number, approxCases: number }[] = [];
+
+
   private isBrowser = false;
   constructor(
     private router: Router,
@@ -105,9 +117,15 @@ export class TransitPermitComponent implements OnInit {
     // Fetch Distributors
     this.supplyChainService.getDistributors().subscribe(data => {
       this.distributors = data;
+
+      // If default distributor is set, trigger change logic to load stock/depots
+      if (this.formData.soleDistributor) {
+        // Use setTimeout to ensure data bindings have settled or just call directly
+        this.onDistributorChange();
+      }
     });
 
-    // Fetch Brands
+    // Fetch Brands - We might fetch this later based on stock, or keep as fallback
     this.supplyChainService.getLiquorBrands().subscribe(data => {
       this.brandsData = data;
       this.brandOptions = data.map(b => b.brandName);
@@ -117,6 +135,12 @@ export class TransitPermitComponent implements OnInit {
     this.supplyChainService.getBottleTypes().subscribe(data => {
       console.log('Bottle Types loaded in component:', data);
       this.bottleTypes = data;
+    });
+
+    // Fetch Brand ML Conversion Data
+    this.supplyChainService.getBrandMlInCases().subscribe(data => {
+      this.brandMlConversionData = data;
+      console.log('ML Conversion Data:', this.brandMlConversionData);
     });
   }
 
@@ -136,6 +160,24 @@ export class TransitPermitComponent implements OnInit {
     }
 
     // Check if there is an onDepotAddressChange method needed or just simple binding
+
+    // Fetch Warehouse Stock for this distributor
+    if (this.formData.soleDistributor) {
+      // Fetch ALL stock temporarily to debug mismatch between Distributor name and Distillery name in DB
+      this.supplyChainService.getBrandWarehouseStock('').subscribe(data => {
+        console.log(`Stock Data Received (ALL):`, data);
+        this.brandWarehouseData = data;
+
+        // Update brand options based on available stock
+        // Filter unique brands from warehouse data
+        const warehouseBrands = [...new Set(data.map(item => item.brand_details))].filter(b => !!b);
+        if (warehouseBrands.length > 0) {
+          this.brandOptions = warehouseBrands;
+        }
+        // If no stock data, maybe fallback to getLiquorBrands? 
+        // For now, let's assume if distributor has stock, we use that.
+      });
+    }
   }
 
   onDepotAddressChange(): void {
@@ -145,8 +187,122 @@ export class TransitPermitComponent implements OnInit {
   onBrandChange(): void {
     // Reset size when brand changes
     this.formData.size = '';
-    const selectedBrand = this.brandsData.find(b => b.brandName === this.formData.brand);
-    this.sizeOptions = selectedBrand ? selectedBrand.sizes.map(s => s.toString()) : [];
+    this.formData.cases = 0;
+    this.availableStockPieces = 0;
+    this.stockError = '';
+    this.currentStockStatus = '';
+
+    const selectedBrandBasic = this.brandsData.find(b => b.brandName === this.formData.brand);
+
+    // FETCH STOCK SPECIFICALLY FOR THIS BRAND
+    console.log('Fetching specific stock for brand:', this.formData.brand);
+    // Pass empty distillery name to ignore that filter, and pass brand name
+    this.supplyChainService.getBrandWarehouseStock('', this.formData.brand).subscribe(data => {
+      console.log('Stock Data for Brand:', data);
+      this.brandWarehouseData = data;
+
+      // After fetching, update the summary logic
+      this.updateStockSummary(selectedBrandBasic);
+    });
+  }
+
+  updateStockSummary(selectedBrandBasic: any): void {
+    // Filter available sizes from warehouse data (loose match just in case, though API should handle it)
+    const searchBrand = this.formData.brand.toLowerCase().trim();
+
+    // Check if we have any data
+    const warehouseEntries = this.brandWarehouseData.filter(item => {
+      if (!item.brand_details) return false;
+      const dbBrand = item.brand_details.toLowerCase().trim();
+      return dbBrand.includes(searchBrand) || searchBrand.includes(dbBrand);
+    });
+
+    if (selectedBrandBasic) {
+      // Use all defined sizes for the brand as the base
+      this.sizeOptions = selectedBrandBasic.sizes.map((s: number) => s.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+
+      // Generate summary for ALL sizes
+      this.selectedBrandStockSummary = selectedBrandBasic.sizes.map((size: number) => {
+        // Check if we have stock for this size
+        const stockEntry = warehouseEntries.find(we => we.capacity_size === size);
+        const pieces = stockEntry ? stockEntry.current_stock : 0;
+
+        // Find conversion
+        const conv = this.brandMlConversionData.find(c => c.ml === size);
+        const factor = conv ? conv.pieces_in_case : 0;
+        const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+
+        return { size, pieces, approxCases };
+      }).sort((a: any, b: any) => a.size - b.size);
+
+    } else {
+      // Fallback if brand not found in basic list
+      if (warehouseEntries.length > 0) {
+        this.sizeOptions = warehouseEntries.map(item => item.capacity_size.toString()).sort((a: any, b: any) => parseInt(a) - parseInt(b));
+
+        this.selectedBrandStockSummary = warehouseEntries.map(entry => {
+          const size = entry.capacity_size;
+          const pieces = entry.current_stock;
+          const conv = this.brandMlConversionData.find(c => c.ml === size);
+          const factor = conv ? conv.pieces_in_case : 0;
+          const approxCases = factor > 0 ? Math.floor(pieces / factor) : 0;
+          return { size, pieces, approxCases };
+        }).sort((a: any, b: any) => a.size - b.size);
+      } else {
+        this.sizeOptions = [];
+        this.selectedBrandStockSummary = [];
+      }
+    }
+  }
+
+  onSizeChange(): void {
+    const sizeMl = parseInt(this.formData.size || '0', 10);
+    this.availableStockPieces = 0;
+    this.conversionFactor = 0;
+    this.stockError = '';
+    this.currentStockStatus = '';
+
+    if (!sizeMl || !this.formData.brand) return;
+
+    // 1. Get Conversion Factor
+    const conversionEntry = this.brandMlConversionData.find(x => x.ml === sizeMl);
+    if (conversionEntry) {
+      this.conversionFactor = conversionEntry.pieces_in_case;
+    } else {
+      console.warn(`No conversion factor found for ${sizeMl}ml`);
+      this.conversionFactor = 0; // Handle error or default?
+    }
+
+    // 2. Get Available Stock
+    const stockEntry = this.brandWarehouseData.find(
+      x => x.brand_details === this.formData.brand && x.capacity_size === sizeMl
+    );
+
+    if (stockEntry) {
+      this.availableStockPieces = stockEntry.current_stock;
+      this.currentStockStatus = `Available: ${this.availableStockPieces} pieces (Approx. ${Math.floor(this.availableStockPieces / (this.conversionFactor || 1))} cases)`;
+    } else {
+      this.currentStockStatus = 'No stock information available';
+      this.availableStockPieces = 0;
+    }
+
+    // Re-validate cases if already entered
+    if (this.formData.cases > 0) {
+      this.onCasesChange();
+    }
+  }
+
+  onCasesChange(): void {
+    this.stockError = '';
+    if (!this.formData.cases || this.formData.cases <= 0) return;
+
+    if (this.conversionFactor > 0) {
+      const requiredPieces = this.formData.cases * this.conversionFactor;
+
+      if (requiredPieces > this.availableStockPieces) {
+        this.stockError = `Insufficient stock! You need ${requiredPieces} pieces for ${this.formData.cases} cases, but only ${this.availableStockPieces} pieces are available.`;
+      }
+    }
   }
 
   addProduct(): void {
@@ -208,12 +364,12 @@ export class TransitPermitComponent implements OnInit {
   deleteProduct(index: number): void {
     if (confirm('Are you sure you want to delete this product?')) {
       this.products.splice(index, 1);
-      
+
       // Unlock common fields if no products remain
       if (this.products.length === 0) {
         this.unlockCommonFields();
       }
-      
+
       console.log('Product deleted at index:', index);
     }
   }
@@ -238,6 +394,11 @@ export class TransitPermitComponent implements OnInit {
     }
     if (!this.formData.bottleType) {
       errors.push('Bottle Type is required');
+    }
+
+    // Add stock validation error
+    if (this.stockError) {
+      errors.push(this.stockError);
     }
 
     this.validationErrors = errors;
@@ -507,7 +668,7 @@ export class TransitPermitComponent implements OnInit {
   confirmUnlockAction(): void {
     this.proceedWithUnlock();
     this.closeUnlockModal();
-    
+
     // Show success message
     this.showSuccessMessage();
   }
@@ -522,9 +683,9 @@ export class TransitPermitComponent implements OnInit {
       <strong>Fields Unlocked!</strong> Common fields are now editable, product selection cleared, and product details table reset.
       <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
     `;
-    
+
     document.body.appendChild(successDiv);
-    
+
     // Auto-remove after 5 seconds (increased time for longer message)
     setTimeout(() => {
       if (successDiv.parentElement) {
@@ -540,21 +701,21 @@ export class TransitPermitComponent implements OnInit {
 
   unlockCommonFields(): void {
     this.isCommonFieldsLocked = false;
-    
+
     // Clear ALL product selection fields when unlocking
     this.formData.brand = '';
     this.formData.size = '';
     this.formData.cases = 0;
     this.formData.bottleType = '';
     this.sizeOptions = [];
-    
+
     // IMPORTANT: Clear the products array to avoid data inconsistency
     // when user changes depot address or distributor
     this.products = [];
-    
+
     // Clear any validation errors
     this.validationErrors = [];
-    
+
     // Force Angular to update the form by triggering change detection
     setTimeout(() => {
       // Additional reset to ensure dropdowns are properly cleared
@@ -562,13 +723,13 @@ export class TransitPermitComponent implements OnInit {
       const sizeSelect = document.querySelector('select[ng-reflect-model="size"]') as HTMLSelectElement;
       const bottleTypeSelect = document.querySelector('select[ng-reflect-model="bottleType"]') as HTMLSelectElement;
       const casesInput = document.querySelector('input[ng-reflect-model="cases"]') as HTMLInputElement;
-      
+
       if (brandSelect) brandSelect.selectedIndex = 0;
       if (sizeSelect) sizeSelect.selectedIndex = 0;
       if (bottleTypeSelect) bottleTypeSelect.selectedIndex = 0;
       if (casesInput) casesInput.value = '0';
     }, 50);
-    
+
     console.log('Common fields unlocked, product fields cleared, and PRODUCT DETAILS table cleared');
   }
 
