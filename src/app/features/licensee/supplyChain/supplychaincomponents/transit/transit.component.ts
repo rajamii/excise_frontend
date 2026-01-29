@@ -60,209 +60,16 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
-  
+
   // Store raw backend data for brand details
   rawTransitData: any[] = [];
-  
+
   // Modal data
   selectedPermitRef: string = '';
   selectedBrandDetails: ProductDetail[] = [];
 
   // Sample data for transit permit applications
-  transitData: TableData[] = [
-    {
-      referenceNo: "TRN/BF801",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "2500.00",
-      destination: "Delhi",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "SK01AB1234",
-      permitValidUntil: "30-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF802",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "APPROVED",
-      amount: "3200.00",
-      destination: "Mumbai",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MH12CD5678",
-      permitValidUntil: "28-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF803",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "ISSUED",
-      amount: "1800.00",
-      destination: "Kolkata",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "WB03EF9012",
-      permitValidUntil: "25-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF804",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PROCESSING",
-      amount: "2100.00",
-      destination: "Bangalore",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "KA05GH3456",
-      permitValidUntil: "27-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF805",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PENDING",
-      amount: "2800.00",
-      destination: "Chennai",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "TN09IJ7890",
-      permitValidUntil: "26-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF806",
-      submissionDate: "17-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "REJECTED",
-      amount: "1500.00",
-      destination: "Guwahati",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "AS01KL2345",
-      permitValidUntil: "24-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF807",
-      submissionDate: "16-Sep-2025",
-      distilleryName: "Sikkim Highland Distillery",
-      status: "PENDING",
-      amount: "2200.00",
-      destination: "Pune",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MH14PQ6789",
-      permitValidUntil: "23-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF808",
-      submissionDate: "15-Sep-2025",
-      distilleryName: "Himalayan Peak Spirits",
-      status: "APPROVED",
-      amount: "2900.00",
-      destination: "Hyderabad",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "TS07RS1234",
-      permitValidUntil: "22-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF809",
-      submissionDate: "14-Sep-2025",
-      distilleryName: "Eastern Spirits Ltd",
-      status: "ISSUED",
-      amount: "3100.00",
-      destination: "Ahmedabad",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "GJ01TU5678",
-      permitValidUntil: "21-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF810",
-      submissionDate: "13-Sep-2025",
-      distilleryName: "Mountain Brew Company",
-      status: "PROCESSING",
-      amount: "2600.00",
-      destination: "Jaipur",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "RJ14VW9012",
-      permitValidUntil: "20-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF811",
-      submissionDate: "12-Sep-2025",
-      distilleryName: "Sikkim Valley Distillery",
-      status: "PENDING",
-      amount: "2400.00",
-      destination: "Lucknow",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "UP32XY3456",
-      permitValidUntil: "19-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF812",
-      submissionDate: "11-Sep-2025",
-      distilleryName: "Royal Mountain Spirits",
-      status: "APPROVED",
-      amount: "2700.00",
-      destination: "Bhopal",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MP09ZA7890",
-      permitValidUntil: "18-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF813",
-      submissionDate: "10-Sep-2025",
-      distilleryName: "Himalayan Gold Distillery",
-      status: "ISSUED",
-      amount: "3300.00",
-      destination: "Chandigarh",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "CH01BC1234",
-      permitValidUntil: "17-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF814",
-      submissionDate: "09-Sep-2025",
-      distilleryName: "Eastern Crown Spirits",
-      status: "PROCESSING",
-      amount: "2000.00",
-      destination: "Patna",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "BR01DE5678",
-      permitValidUntil: "16-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF815",
-      submissionDate: "08-Sep-2025",
-      distilleryName: "Sikkim Premium Distillery",
-      status: "PENDING",
-      amount: "2800.00",
-      destination: "Raipur",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "CG04FG9012",
-      permitValidUntil: "15-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF816",
-      submissionDate: "07-Sep-2025",
-      distilleryName: "Mountain Crest Spirits",
-      status: "REJECTED",
-      amount: "1900.00",
-      destination: "Bhubaneswar",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "OD05HI3456",
-      permitValidUntil: "14-Sep-2025"
-    }
-  ];
+  transitData: TableData[] = [];
 
   constructor(
     private router: Router,
@@ -276,7 +83,7 @@ export class TransitComponent implements OnInit {
   ngOnInit(): void {
     // Initialize with sample data first
     this.filteredTransitData = [...this.transitData];
-    
+
     if (this.isBrowser) {
       this.loadTransitData();
     } else {
@@ -299,7 +106,7 @@ export class TransitComponent implements OnInit {
       next: (data) => {
         // Store raw data for brand details
         this.rawTransitData = data;
-        
+
         if (!data || data.length === 0) {
           this.applyTransitFilters();
           return;
@@ -678,7 +485,7 @@ export class TransitComponent implements OnInit {
   openBrandDetailsModal(referenceNo: string): void {
     this.selectedPermitRef = referenceNo;
     this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
-    
+
     // Open the modal using Bootstrap
     const modalElement = document.getElementById('brandDetailsModal');
     if (modalElement) {
@@ -688,7 +495,7 @@ export class TransitComponent implements OnInit {
   }
 
   getBrandCount(referenceNo: string): number {
-    return this.rawTransitData.filter(item => 
+    return this.rawTransitData.filter(item =>
       (item.billNo || item.bill_no) === referenceNo
     ).length;
   }

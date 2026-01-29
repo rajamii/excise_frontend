@@ -536,8 +536,8 @@
         </div>
       </div>
 
-      <div class="permits-table-container">
-        <table class="permits-table">
+      <div class="permits-table-container" *ngIf="!isLoadingPermits; else loadingPermits">
+        <table class="permits-table" *ngIf="selectedTransitPermits.length > 0">
           <thead>
             <tr>
               <th>Permit No</th>
@@ -583,15 +583,24 @@
             </tr>
           </tbody>
         </table>
+
+        <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
+          <div class="empty-icon">
+            <i class="bi bi-truck"></i>
+          </div>
+          <h3>No Transit Permits</h3>
+          <p>No transit permits found for this brand</p>
+        </div>
       </div>
 
-      <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-truck"></i>
+      <ng-template #loadingPermits>
+        <div class="loading-container" style="padding: 40px; text-align: center;">
+          <div class="loading-spinner">
+            <i class="bi bi-arrow-repeat spin" style="font-size: 2rem; color: #666;"></i>
+          </div>
+          <p style="margin-top: 15px; color: #666;">Loading transit permits...</p>
         </div>
-        <h3>No Transit Permits</h3>
-        <p>No transit permits found for this brand</p>
-      </div>
+      </ng-template>
     </div>
   </div>
 </div>
@@ -622,11 +631,13 @@
           [class.timeline-production]="entry.type === 'PRODUCTION'"
           [class.timeline-consumption]="entry.type === 'CONSUMPTION'"
           [class.timeline-adjustment]="entry.type === 'ADJUSTMENT'"
-          [class.timeline-transit]="entry.type === 'TRANSIT_PERMIT'">
+          [class.timeline-transit]="entry.type === 'TRANSIT_PERMIT'"
+          [class.timeline-cancellation]="entry.type === 'CANCELLATION'">
 
           <div class="timeline-marker">
             <i class="fas" [class.fa-plus]="entry.type === 'PRODUCTION'" [class.fa-minus]="entry.type === 'CONSUMPTION'"
-              [class.fa-edit]="entry.type === 'ADJUSTMENT'" [class.fa-truck]="entry.type === 'TRANSIT_PERMIT'"></i>
+              [class.fa-edit]="entry.type === 'ADJUSTMENT'" [class.fa-truck]="entry.type === 'TRANSIT_PERMIT'"
+              [class.fa-undo]="entry.type === 'CANCELLATION'"></i>
           </div>
 
           <div class="timeline-content">
@@ -646,9 +657,10 @@
                 </div>
                 <div class="quantity-change">
                   <span class="label">Quantity:</span>
-                  <span class="value" [class.positive]="entry.type === 'PRODUCTION'"
+                  <span class="value" [class.positive]="entry.type === 'PRODUCTION' || entry.type === 'CANCELLATION'"
                     [class.negative]="entry.type === 'CONSUMPTION' || entry.type === 'TRANSIT_PERMIT'">
-                    {{ entry.type === 'PRODUCTION' ? '+' : '-' }}{{ entry.quantity | number }}
+                    {{ (entry.type === 'PRODUCTION' || entry.type === 'CANCELLATION') ? '+' : '-' }}{{ entry.quantity |
+                    number }}
                   </span>
                 </div>
                 <div class="stock-change">
@@ -710,10 +722,9 @@
           Available Pack Sizes:
         </div>
         <div class="pack-sizes-list">
-          <span *ngFor="let packSizeKey of getPackSizeKeys(selectedBrand.packSizes)" 
-                class="pack-size-badge"
-                [class.active]="selectedBrand.packSizes[packSizeKey].id === getCurrentPackSizeId()"
-                (click)="switchPackSize(selectedBrand.packSizes[packSizeKey].id)">
+          <span *ngFor="let packSizeKey of getPackSizeKeys(selectedBrand.packSizes)" class="pack-size-badge"
+            [class.active]="selectedBrand.packSizes[packSizeKey].id === getCurrentPackSizeId()"
+            (click)="switchPackSize(selectedBrand.packSizes[packSizeKey].id)">
             {{ selectedBrand.packSizes[packSizeKey].capacitySize }}ml
             <small>({{ selectedBrand.packSizes[packSizeKey].currentStock }} units)</small>
           </span>

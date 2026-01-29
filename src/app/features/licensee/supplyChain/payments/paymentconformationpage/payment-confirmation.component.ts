@@ -96,6 +96,7 @@ export class PaymentConfirmationComponent implements OnInit {
   transitItemCount = 0;
   transitBillStatus = 'Ready for Payment';
   transitId: string = '';
+  transitPaymentAgreed = false; // Added for modal agreement
 
   // Sample Data
   requisitionData: PaymentItem[] = [
@@ -515,7 +516,7 @@ export class PaymentConfirmationComponent implements OnInit {
 
   loadTransitData(): void {
     this.showTransitPayment = true;
-    
+
     // Fetch from backend to get the ID and current status
     this.supplyChainService.getTransitPermits(this.transitBillNo).subscribe({
       next: (permits) => {
@@ -524,35 +525,35 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Check for both snake_case and camelCase
         const found = permits.find(p => (p.bill_no === this.transitBillNo) || (p.billNo === this.transitBillNo));
-        
+
         if (found) {
-            console.log('Transit Permit Found:', found);
-            this.transitId = found.id;
-            this.transitBillStatus = found.status;
-            // Map backend fields to frontend model
-            this.transitData = [{
-              id: found.id,
-              billNumber: found.bill_no || found.billNo,
-              serialNo: found.bill_no || found.billNo, 
-              quantity: found.cases || 0, 
-              portions: 0,
-              nips: (found.size_ml || found.size) + 'ml',
-              licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
-              status: found.status,
-              paymentDate: null,
-              totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
-            }];
-            this.transitTotalAmount = parseFloat(found.total_amount || found.totalAmount || 0);
-            this.transitEducationCess = parseFloat(found.total_education_cess || found.totalEducationCess || found.educationCess || 0);
-            this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
-            this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
-            this.transitItemCount = 1; 
+          console.log('Transit Permit Found:', found);
+          this.transitId = found.id;
+          this.transitBillStatus = found.status;
+          // Map backend fields to frontend model
+          this.transitData = [{
+            id: found.id,
+            billNumber: found.bill_no || found.billNo,
+            serialNo: found.bill_no || found.billNo,
+            quantity: found.cases || 0,
+            portions: 0,
+            nips: (found.size_ml || found.size) + 'ml',
+            licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
+            status: found.status,
+            paymentDate: null,
+            totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
+          }];
+          this.transitTotalAmount = parseFloat(found.total_amount || found.totalAmount || 0);
+          this.transitEducationCess = parseFloat(found.total_education_cess || found.totalEducationCess || found.educationCess || 0);
+          this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
+          this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
+          this.transitItemCount = 1;
         } else {
-             console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
-             alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
-             
-             // Fallback to sample/params if not found (e.g. before backend sync) or handle error
-             this.transitTotalAmount = 1500.00; // Default dummy
+          console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
+          alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
+
+          // Fallback to sample/params if not found (e.g. before backend sync) or handle error
+          this.transitTotalAmount = 1500.00; // Default dummy
         }
       },
       error: (err) => {
@@ -570,33 +571,49 @@ export class PaymentConfirmationComponent implements OnInit {
     }
 
     if (!this.transitId) {
-        // Use alert to make sure user sees it
-        alert("Transit Permit ID not found. Cannot proceed with payment.");
-        this.showErrorMessage("Transit Permit ID not found. Cannot proceed.");
-        return;
+      alert("Transit Permit ID not found. Cannot proceed with payment.");
+      this.showErrorMessage("Transit Permit ID not found. Cannot proceed.");
+      return;
+    }
+
+    // Open confirmation modal
+    this.transitPaymentAgreed = false;
+    const modal = document.getElementById('transitPaymentModal');
+    if (modal) {
+      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
+      bootstrapModal.show();
+    }
+  }
+
+  confirmTransitPayment(): void {
+    // Close modal
+    const modal = document.getElementById('transitPaymentModal');
+    if (modal) {
+      const bootstrapModal = (window as any).bootstrap.Modal.getInstance(modal);
+      bootstrapModal?.hide();
     }
 
     // Process payment via API
     this.supplyChainService.performTransitPermitAction(this.transitId, 'PAY', 'licensee').subscribe({
-        next: (response) => {
-             console.log('Payment successful', response);
-             this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
-             alert('Payment successful! Forwarded to Officer in Charge.'); // Immediate feedback
-             this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
-             
-             // Update wallet balance locally for display
-             this.educationCessBalance -= this.transitEducationCess;
-             this.exciseWalletBalance -= (this.transitExciseDuty + this.transitAdditionalExcise);
+      next: (response) => {
+        console.log('Payment successful', response);
+        this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
+        alert('Payment successful! Forwarded to Officer in Charge.');
+        this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
 
-             // Refresh data
-             this.loadTransitData();
-        },
-        error: (err) => {
-            console.error('Payment failed', err);
-            const msg = err.error?.message || err.message || 'Unknown error';
-            this.showErrorMessage(`Payment failed: ${msg}`);
-            alert(`Payment failed: ${msg}`);
-        }
+        // Update wallet balance locally
+        this.educationCessBalance -= this.transitEducationCess;
+        this.exciseWalletBalance -= (this.transitExciseDuty + this.transitAdditionalExcise);
+
+        // Refresh data
+        this.loadTransitData();
+      },
+      error: (err) => {
+        console.error('Payment failed', err);
+        const msg = err.error?.message || err.message || 'Unknown error';
+        this.showErrorMessage(`Payment failed: ${msg}`);
+        alert(`Payment failed: ${msg}`);
+      }
     });
   }
 

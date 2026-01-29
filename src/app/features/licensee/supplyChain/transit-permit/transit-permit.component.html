@@ -91,8 +91,8 @@
             <div class="stock-summary-body-compact">
               <div class="row g-2">
                 <div class="col-lg-4 col-md-6" *ngFor="let stock of selectedBrandStockSummary; let i = index">
-                  <div class="stock-item-compact" [class.stock-available]="stock.pieces > 0" [class.stock-empty]="stock.pieces === 0" 
-                       [style.animation-delay.ms]="i * 100">
+                  <div class="stock-item-compact" [class.stock-available]="stock.pieces > 0"
+                    [class.stock-empty]="stock.pieces === 0" [style.animation-delay.ms]="i * 100">
                     <div class="stock-item-header-compact">
                       <span class="size-badge-compact">{{ stock.size }}ml</span>
                       <span class="stock-status-icon-compact" *ngIf="stock.pieces > 0">
@@ -157,20 +157,20 @@
         <div class="col-md-6 mb-3">
           <label class="form-label fw-bold">Cases:</label>
           <input type="number" class="form-control input-field" [(ngModel)]="formData.cases"
-            placeholder="Enter number of cases" min="0" (input)="onCasesChange()" 
-            [class.is-invalid]="stockError" [class.is-valid]="!stockError && formData.cases > 0 && conversionFactor > 0" />
-          
+            placeholder="Enter number of cases" min="0" (input)="onCasesChange()" [class.is-invalid]="stockError"
+            [class.is-valid]="!stockError && formData.cases > 0 && conversionFactor > 0" />
+
           <!-- Success Message -->
-          <div *ngIf="!stockError && formData.cases > 0 && conversionFactor > 0 && currentStockStatus.includes('✓')" 
-               class="text-success mt-2 small fw-bold">
+          <div *ngIf="!stockError && formData.cases > 0 && conversionFactor > 0 && currentStockStatus.includes('✓')"
+            class="text-success mt-2 small fw-bold">
             <i class="bi bi-check-circle-fill me-1"></i>{{ currentStockStatus }}
           </div>
-          
+
           <!-- Error Message -->
           <div *ngIf="stockError" class="invalid-feedback d-block mt-2">
             <i class="bi bi-exclamation-circle-fill me-1"></i>{{ stockError }}
           </div>
-          
+
           <!-- Calculation Helper -->
           <small class="text-muted d-block mt-1" *ngIf="conversionFactor > 0 && formData.size">
             <i class="bi bi-info-circle me-1"></i>1 case = {{ conversionFactor }} pieces ({{ formData.size }}ml bottles)
@@ -497,9 +497,8 @@
 
 <!-- ML Per Case Information Sidebar - Fixed to right side of screen -->
 <div class="ml-info-sidebar" *ngIf="mlPerCaseData.length > 0">
-  <div class="ml-info-sidebar-content" 
-       [class.expanded]="isMlInfoSidebarExpanded"
-       [style.height]="calculateSidebarHeight()">
+  <div class="ml-info-sidebar-content" [class.expanded]="isMlInfoSidebarExpanded"
+    [style.height]="calculateSidebarHeight()">
     <div class="ml-info-sidebar-header">
       <div class="d-flex align-items-center justify-content-between">
         <div class="d-flex align-items-center">
@@ -516,7 +515,7 @@
         </button>
       </div>
     </div>
-    
+
     <div class="ml-info-sidebar-body">
       <div class="ml-info-sidebar-item" *ngFor="let item of mlPerCaseData; let i = index">
         <div class="item-card">
@@ -525,22 +524,45 @@
               <span class="size-badge-sidebar">{{ item.ml }}ml</span>
               <div class="size-badge-glow"></div>
             </div>
+
+            <!-- Edit Button (only visible if not editing any item or editing this one) -->
+            <button class="btn btn-sm btn-link text-white p-0" *ngIf="editingMlId !== item.id"
+              (click)="startEditingMl(item)" title="Edit Pieces Per Case">
+              <i class="bi bi-pencil-square"></i>
+            </button>
           </div>
+
           <div class="item-content">
-            <div class="pieces-display">
-              <span class="pieces-number-sidebar">{{ item.pieces_in_case || item.piecesInCase }}</span>
+            <!-- VIEW MODE -->
+            <div class="pieces-display" *ngIf="editingMlId !== item.id">
+              <span class="pieces-number-sidebar">{{ item.pieces_in_case }}</span>
               <span class="pieces-label-sidebar">pieces per case</span>
             </div>
+
+            <!-- EDIT MODE -->
+            <div class="pieces-edit-mode" *ngIf="editingMlId === item.id" style="margin-bottom: 5px;">
+              <input type="number" class="form-control form-control-sm mb-2" [(ngModel)]="tempPieces" min="1"
+                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; text-align: center;">
+              <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-sm btn-success py-0 px-2" (click)="saveMlItem(item)" title="Save">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button class="btn btn-sm btn-secondary py-0 px-2" (click)="cancelEditingMl()" title="Cancel">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+
             <div class="calculation-info">
               <i class="bi bi-calculator-fill"></i>
-              <span>1 case = {{ item.pieces_in_case || item.piecesInCase }} bottles</span>
+              <span>1 case = {{ item.pieces_in_case }} bottles</span>
             </div>
           </div>
           <div class="item-decoration" [style.animation-delay.ms]="i * 100"></div>
         </div>
       </div>
     </div>
-    
+
     <div class="ml-info-sidebar-footer">
       <div class="footer-content">
         <div class="footer-icon">
@@ -552,7 +574,7 @@
       </div>
     </div>
   </div>
-  
+
   <!-- Minimized state toggle (only show when collapsed) -->
   <div class="ml-info-toggle" *ngIf="!isMlInfoSidebarExpanded" (click)="toggleMlInfoSidebar()">
     <div class="toggle-content">
@@ -673,6 +695,14 @@
                         <i class="bi bi-check-circle-fill text-success mt-1 me-3 flex-shrink-0"></i>
                         <span class="small text-secondary">I am authorized to submit this bill on behalf of the
                           organization</span>
+                      </li>
+                      <li class="d-flex mt-3 p-2 bg-light border rounded">
+                        <i class="bi bi-info-circle-fill text-primary mt-1 me-3 flex-shrink-0"></i>
+                        <span class="small text-dark fw-bold">
+                          Inventory Update: Stock (pieces) for the {{ products.length }} item(s) in this application
+                          will be actively deducted from the Brand Warehouse ONLY upon successful payment of this
+                          permit.
+                        </span>
                       </li>
                     </ul>
                   </div>
