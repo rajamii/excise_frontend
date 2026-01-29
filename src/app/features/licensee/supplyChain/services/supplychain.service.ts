@@ -229,6 +229,24 @@ export class SupplyChainService {
     );
   }
 
+  getCancellationById(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`).pipe(
+      catchError((error) => {
+        console.error('getCancellationById error', error);
+        throw error;
+      })
+    );
+  }
+
+  getCancellationLetterData(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/generate_final_letter/`).pipe(
+      catchError((error) => {
+        console.error('getCancellationLetterData error', error);
+        throw error;
+      })
+    );
+  }
+
   performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT', role: string = 'permit-section'): Observable<any> {
     return this.http.post<any>(
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
@@ -240,6 +258,8 @@ export class SupplyChainService {
       })
     );
   }
+
+
 
   getTransitPermits(billNo?: string): Observable<any[]> {
     let url = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/`;

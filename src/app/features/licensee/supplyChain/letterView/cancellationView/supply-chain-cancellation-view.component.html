@@ -17,33 +17,133 @@
   <div class="application-container">
     <!-- Loading State -->
     @if (isLoading) {
-      <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="mt-3 text-muted">Loading cancellation application details...</p>
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <p class="mt-3 text-muted">Loading cancellation application details...</p>
+    </div>
     }
-    
+
     <!-- Error State -->
     @else if (errorMessage) {
-      <div class="alert alert-warning text-center">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        {{ errorMessage }}
-        <div class="mt-3">
-          <button class="btn btn-outline-primary me-2" (click)="goBack()">
-            <i class="bi bi-arrow-left me-1"></i>Go Back
-          </button>
-          <button class="btn btn-primary" (click)="ngOnInit()">
-            <i class="bi bi-arrow-clockwise me-1"></i>Retry
-          </button>
-        </div>
+    <div class="alert alert-warning text-center">
+      <i class="bi bi-exclamation-triangle me-2"></i>
+      {{ errorMessage }}
+      <div class="mt-3">
+        <button class="btn btn-outline-primary me-2" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>Go Back
+        </button>
+        <button class="btn btn-primary" (click)="ngOnInit()">
+          <i class="bi bi-arrow-clockwise me-1"></i>Retry
+        </button>
       </div>
+    </div>
     }
-    
+
     <!-- Application Data -->
     @else if (cancellationData) {
     <div id="cancellationPrintSection" class="card shadow-sm border-0 printable-content">
+      <!-- Check if this is a letter view (has letterNumber) or application view -->
+      @if (cancellationData.letterNumber) {
+      <!-- Formal Letter Format -->
+      <div class="letter-format">
+        <!-- Letter Header -->
+        <div class="letter-header text-center mb-4">
+          <div class="d-flex align-items-center justify-content-center gap-3 mb-3">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal"
+              style="height: 80px; width: auto" />
+            <div class="header-text">
+              <h3 class="mb-1 fw-bold">GOVERNMENT OF SIKKIM</h3>
+              <h4 class="mb-1 fw-bold">SIKKIM EXCISE DEPARTMENT</h4>
+              <p class="mb-0">MG MARG, GANGTOK-737101</p>
+              <div class="contact-info mt-2">
+                <p class="mb-0 small">Website: www.excise.sikkim.gov.in</p>
+                <p class="mb-0 small">E-mail: excise.dept&#64;sikkim.gov.in</p>
+              </div>
+            </div>
+          </div>
+          <hr class="border-dark border-2">
+        </div>
+
+        <!-- Letter Details -->
+        <div class="letter-details mb-4">
+          <div class="row">
+            <div class="col-6">
+              <p class="mb-0"><strong>{{ cancellationData.letterNumber || 'No.279/Excise' }}</strong></p>
+            </div>
+            <div class="col-6 text-end">
+              <p class="mb-0"><strong>Dated: {{ cancellationData.letterDate || (cancellationData.cancellationDate |
+                  date: 'dd/MM/yyyy') }}</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Addressee -->
+        <div class="addressee mb-4">
+          <p class="mb-1"><strong>To,</strong></p>
+          <div class="ms-4">
+            <p class="mb-1">{{ cancellationData.addressee?.title || 'The Excise Officer-in-Charge,' }}</p>
+            <p class="mb-1">{{ cancellationData.addressee?.company_name || cancellationData.distilleryName }}</p>
+            <p class="mb-1">{{ cancellationData.addressee?.address || 'Majhitar, East Sikkim - 737132.' }}</p>
+          </div>
+        </div>
+
+        <!-- Subject -->
+        <div class="subject mb-4">
+          <p class="mb-2">
+            <strong><u>Sub: Cancellation of Import Permit nos.
+                {{ cancellationData.subject?.permit_numbers?.join(' & ') || cancellationData.originalPermitNo || '002 &
+                003' }}/Excise,
+                both dated {{ cancellationData.subject?.permit_date || (cancellationData.originalPermitDate | date:
+                'dd.MM.yyyy') || '29.10.2025' }}.
+              </u></strong>
+          </p>
+        </div>
+
+        <!-- Reference -->
+        <div class="reference mb-4">
+          <p class="mb-0">
+            Reference your letter dated <strong>{{ cancellationData.reference?.letter_date ||
+              (cancellationData.cancellationDate | date: 'dd.MM.yyyy') || '22.01.2026' }}</strong>
+            on the subject cited above, I have been directed to inform you that the aforementioned permits stand
+            cancelled.
+          </p>
+        </div>
+
+        <!-- Additional Content -->
+        <div class="letter-content mb-4">
+          <p class="mb-3">
+            This cancellation is effective from {{ (cancellationData.cancellationDate | date: 'dd.MM.yyyy') || 'the date
+            of this letter' }}.
+          </p>
+
+          @if (cancellationData.refundAmount && cancellationData.refundAmount > 0) {
+          <p class="mb-3">
+            A refund amount of ₹{{ cancellationData.refundAmount }} will be processed as per the department's refund
+            policy.
+          </p>
+          }
+        </div>
+
+        <!-- Signature Section -->
+        <div class="signature-section mt-5">
+          <div class="row">
+            <div class="col-6">
+              <!-- Left side can be empty or contain additional info -->
+            </div>
+            <div class="col-6 text-end">
+              <p class="mb-1">Yours faithfully,</p>
+              <div class="mt-4">
+                <p class="mb-0 fw-bold">{{ cancellationData.authorizedBy || 'Commissioner of Excise' }}</p>
+                <p class="mb-0">Government of Sikkim</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      } @else {
+      <!-- Application View Format (existing) -->
       <div class="application-header text-center fw-bold mb-3 fs-5">
         <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
           <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
@@ -213,6 +313,7 @@
           </button>
         </div>
       </div>
+      }
     </div>
     } @else {
     <div class="alert alert-warning text-center">
