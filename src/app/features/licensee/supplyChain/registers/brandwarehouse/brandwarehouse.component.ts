@@ -21,7 +21,7 @@ interface TransitPermitDetail {
 interface LastEntryDetail {
   id: string;
   date: string;
-  type: 'PRODUCTION' | 'CONSUMPTION' | 'ADJUSTMENT' | 'TRANSIT_PERMIT';
+  type: 'PRODUCTION' | 'CONSUMPTION' | 'ADJUSTMENT' | 'TRANSIT_PERMIT' | 'CANCELLATION';
   quantity: number;
   previousStock: number;
   newStock: number;
@@ -559,10 +559,10 @@ export class BrandwarehouseComponent implements OnInit {
 
     console.log('Loading recent entries for brand warehouse IDs:', brandWarehouseIds);
 
-    // Fetch arrivals and utilizations for all pack sizes
+    // Fetch arrivals, utilizations, and cancellations for all pack sizes
     const allEntries: LastEntryDetail[] = [];
     let completedRequests = 0;
-    const totalRequests = brandWarehouseIds.length * 2; // arrivals + utilizations for each pack size
+    const totalRequests = brandWarehouseIds.length * 3; // arrivals + utilizations + cancellations
 
     brandWarehouseIds.forEach(brandWarehouseId => {
       // Fetch arrivals (production, stock additions)
@@ -624,6 +624,39 @@ export class BrandwarehouseComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error loading utilizations:', error);
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        }
+      });
+
+      // Fetch cancellations
+      this.brandWarehouseService.getCancellations(brandWarehouseId).subscribe({
+        next: (cancellations: any[]) => {
+          cancellations.forEach((cancel: any) => {
+            const packSize = this.getPackSizeFromId(brand, brandWarehouseId.toString());
+            allEntries.push({
+              id: `cancel-${cancel.id}`,
+              date: cancel.cancellation_date,
+              type: 'CANCELLATION',
+              quantity: cancel.bottles_reversed,
+              previousStock: 0,
+              newStock: 0,
+              referenceNo: cancel.permit_no,
+              description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
+              transitPermitNo: cancel.permit_no,
+              packSize: packSize
+            });
+          });
+
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeLastEntries(allEntries);
+          }
+        },
+        error: (error) => {
+          console.error('Error loading cancellations:', error);
           completedRequests++;
           if (completedRequests === totalRequests) {
             this.finalizeLastEntries(allEntries);
