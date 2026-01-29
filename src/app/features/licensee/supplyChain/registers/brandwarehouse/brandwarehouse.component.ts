@@ -608,8 +608,8 @@ export class BrandwarehouseComponent implements OnInit {
               date: util.date,
               type: 'TRANSIT_PERMIT',
               quantity: util.quantity,
-              previousStock: 0, // Will be calculated
-              newStock: 0, // Will be calculated
+              previousStock: util.previousStock || 0,
+              newStock: util.newStock || 0,
               referenceNo: util.permit_no || util.permitNo,
               description: `Transit to ${util.distributor} - ${packSize}ml`,
               transitPermitNo: util.permit_no || util.permitNo,
@@ -641,8 +641,8 @@ export class BrandwarehouseComponent implements OnInit {
               date: cancel.cancellation_date,
               type: 'CANCELLATION',
               quantity: cancel.bottles_reversed,
-              previousStock: 0,
-              newStock: 0,
+              previousStock: cancel.previousStock || 0,
+              newStock: cancel.newStock || 0,
               referenceNo: cancel.permit_no,
               description: `Cancelled Permit - Restored Stock - ${packSize}ml (Reason: ${cancel.remarks || 'N/A'})`,
               transitPermitNo: cancel.permit_no,
