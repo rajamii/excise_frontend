@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BrandWarehouseService } from '../../services/brand-warehouse.service';
+import { BrandWarehouseService, BrandWarehouseUtilization } from '../../services/brand-warehouse.service';
 import { ProductionService, ProductionBatch } from '../../services/production.service';
 
 interface TransitPermitDetail {
@@ -479,56 +479,91 @@ export class BrandwarehouseComponent implements OnInit {
     });
   }
 
+  isLoadingPermits = false;
+
   viewTransitPermits(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
-    // Sample transit permits data
-    this.selectedTransitPermits = [
-      {
-        permitNo: 'TP-2024-001',
-        date: '2024-01-20',
-        distributorName: 'ABC Distributors Pvt Ltd',
-        depotAddress: 'Sector 5, Industrial Area, Gangtok',
-        vehicleNumber: 'SK-01-AB-1234',
-        cases: 50,
-        bottlesPerCase: 12,
-        totalBottles: 600,
-        status: 'DELIVERED',
-        approvedBy: 'John Doe',
-        approvalDate: '2024-01-19'
-      },
-      {
-        permitNo: 'TP-2024-002',
-        date: '2024-01-22',
-        distributorName: 'XYZ Wine Shop',
-        depotAddress: 'MG Road, Gangtok',
-        vehicleNumber: 'SK-02-CD-5678',
-        cases: 25,
-        bottlesPerCase: 12,
-        totalBottles: 300,
-        status: 'IN_TRANSIT',
-        approvedBy: 'Jane Smith',
-        approvalDate: '2024-01-21'
-      }
-    ];
+    this.selectedTransitPermits = [];
+    this.isLoadingPermits = true;
     this.showTransitPermitsModal = true;
+
+    // Get all pack size IDs for this brand
+    const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
+    const brandWarehouseIds = packSizeKeys.map(key => parseInt(brand.packSizes[key].id));
+
+    console.log('Loading transit permits for brand warehouse IDs:', brandWarehouseIds);
+
+    const allPermits: TransitPermitDetail[] = [];
+    let completedRequests = 0;
+    const totalRequests = brandWarehouseIds.length;
+
+    if (totalRequests === 0) {
+      this.isLoadingPermits = false;
+      return;
+    }
+
+    brandWarehouseIds.forEach(brandWarehouseId => {
+      this.brandWarehouseService.getUtilizations(brandWarehouseId).subscribe({
+        next: (utilizations: BrandWarehouseUtilization[]) => {
+          utilizations.forEach((util: any) => {
+            // Map API response to TransitPermitDetail
+            // Handle potential differences in field names between API and interface
+            allPermits.push({
+              permitNo: util.permit_no || util.permitNo,
+              date: util.date,
+              distributorName: util.distributor,
+              depotAddress: util.depot_address || util.depotAddress,
+              vehicleNumber: util.vehicle,
+              cases: util.cases,
+              bottlesPerCase: util.bottles_per_case || util.bottlesPerCase || 12, // Default if missing
+              totalBottles: (util.cases * (util.bottles_per_case || util.bottlesPerCase || 12)) || util.quantity,
+              status: util.status,
+              approvedBy: util.approved_by || util.approvedBy,
+              approvalDate: util.approval_date || util.approvalDate
+            });
+          });
+
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeTransitPermits(allPermits);
+          }
+        },
+        error: (error) => {
+          console.error(`Error loading utilizations for warehouse ${brandWarehouseId}:`, error);
+          completedRequests++;
+          if (completedRequests === totalRequests) {
+            this.finalizeTransitPermits(allPermits);
+          }
+        }
+      });
+    });
+  }
+
+  finalizeTransitPermits(permits: TransitPermitDetail[]): void {
+    // Sort by date descending (most recent first)
+    permits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    this.selectedTransitPermits = permits;
+    this.isLoadingPermits = false;
+    console.log('Finalized transit permits:', this.selectedTransitPermits);
   }
 
   viewLastEntries(brand: GroupedBrandStock): void {
     this.selectedBrand = brand;
     this.isLoadingLastEntries = true;
     this.selectedLastEntries = [];
-    
+
     // Get all pack size IDs for this brand
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
     const brandWarehouseIds = packSizeKeys.map(key => parseInt(brand.packSizes[key].id));
-    
+
     console.log('Loading recent entries for brand warehouse IDs:', brandWarehouseIds);
-    
+
     // Fetch arrivals and utilizations for all pack sizes
     const allEntries: LastEntryDetail[] = [];
     let completedRequests = 0;
     const totalRequests = brandWarehouseIds.length * 2; // arrivals + utilizations for each pack size
-    
+
     brandWarehouseIds.forEach(brandWarehouseId => {
       // Fetch arrivals (production, stock additions)
       this.brandWarehouseService.getArrivals(brandWarehouseId, { limit: 10 }).subscribe({
@@ -548,7 +583,7 @@ export class BrandwarehouseComponent implements OnInit {
               packSize: packSize
             });
           });
-          
+
           completedRequests++;
           if (completedRequests === totalRequests) {
             this.finalizeLastEntries(allEntries);
@@ -562,7 +597,7 @@ export class BrandwarehouseComponent implements OnInit {
           }
         }
       });
-      
+
       // Fetch utilizations (transit permits, stock reductions)
       this.brandWarehouseService.getUtilizations(brandWarehouseId, { limit: 10 }).subscribe({
         next: (utilizations: any[]) => {
@@ -581,7 +616,7 @@ export class BrandwarehouseComponent implements OnInit {
               packSize: packSize
             });
           });
-          
+
           completedRequests++;
           if (completedRequests === totalRequests) {
             this.finalizeLastEntries(allEntries);
@@ -596,10 +631,10 @@ export class BrandwarehouseComponent implements OnInit {
         }
       });
     });
-    
+
     this.showLastEntriesModal = true;
   }
-  
+
   getPackSizeFromId(brand: GroupedBrandStock, brandWarehouseId: string): number {
     const packSizeKeys = this.getPackSizeKeys(brand.packSizes);
     for (const key of packSizeKeys) {
@@ -609,15 +644,15 @@ export class BrandwarehouseComponent implements OnInit {
     }
     return 0;
   }
-  
+
   finalizeLastEntries(entries: LastEntryDetail[]): void {
     // Sort by date descending (most recent first)
     entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
+
     // Take only the most recent 10 entries
     this.selectedLastEntries = entries.slice(0, 10);
     this.isLoadingLastEntries = false;
-    
+
     console.log('Finalized recent entries:', this.selectedLastEntries);
   }
 
@@ -629,7 +664,7 @@ export class BrandwarehouseComponent implements OnInit {
 
   loadProductionData(brand: GroupedBrandStock): void {
     this.isLoadingProduction = true;
-    
+
     // Initialize with empty data
     this.productionHistory = [];
     this.productionSummary = {
@@ -651,7 +686,7 @@ export class BrandwarehouseComponent implements OnInit {
 
     const firstPackSize = brand.packSizes[packSizeKeys[0]];
     const brandWarehouseId = parseInt(firstPackSize.id);
-    
+
     // Store current pack size ID for highlighting
     this.currentPackSizeId = firstPackSize.id;
 
@@ -659,11 +694,11 @@ export class BrandwarehouseComponent implements OnInit {
     this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
       next: (response) => {
         console.log('Production history response:', response);
-        
+
         if (response && response.success) {
           // Backend returns camelCase
           this.productionHistory = response.productionHistory || [];
-          
+
           console.log('Production history array:', this.productionHistory);
           console.log('Production history length:', this.productionHistory.length);
 
@@ -731,7 +766,7 @@ export class BrandwarehouseComponent implements OnInit {
     console.log('switchPackSize called with:', packSizeId);
     console.log('Current pack size ID:', this.currentPackSizeId);
     console.log('Selected brand:', this.selectedBrand);
-    
+
     if (!this.selectedBrand || packSizeId === this.currentPackSizeId) {
       console.log('Returning early - same pack size or no brand selected');
       return;
@@ -749,10 +784,10 @@ export class BrandwarehouseComponent implements OnInit {
     this.productionService.getProductionHistory(brandWarehouseId, 10, 30).subscribe({
       next: (response) => {
         console.log('Production history response for pack size:', response);
-        
+
         if (response && response.success) {
           this.productionHistory = response.productionHistory || [];
-          
+
           if (this.productionHistory && this.productionHistory.length > 0) {
             const firstBatch = this.productionHistory[0];
             this.productionSummary = {
@@ -775,7 +810,7 @@ export class BrandwarehouseComponent implements OnInit {
                   break;
                 }
               }
-              
+
               this.productionSummary = {
                 todayProduction: 0,
                 stockBefore: currentStock,

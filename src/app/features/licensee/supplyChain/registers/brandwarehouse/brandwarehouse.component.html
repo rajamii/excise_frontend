@@ -536,8 +536,8 @@
         </div>
       </div>
 
-      <div class="permits-table-container">
-        <table class="permits-table">
+      <div class="permits-table-container" *ngIf="!isLoadingPermits; else loadingPermits">
+        <table class="permits-table" *ngIf="selectedTransitPermits.length > 0">
           <thead>
             <tr>
               <th>Permit No</th>
@@ -583,15 +583,24 @@
             </tr>
           </tbody>
         </table>
+      
+        <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
+            <div class="empty-icon">
+            <i class="bi bi-truck"></i>
+            </div>
+            <h3>No Transit Permits</h3>
+            <p>No transit permits found for this brand</p>
+        </div>
       </div>
 
-      <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
-        <div class="empty-icon">
-          <i class="bi bi-truck"></i>
+      <ng-template #loadingPermits>
+        <div class="loading-container" style="padding: 40px; text-align: center;">
+            <div class="loading-spinner">
+                <i class="bi bi-arrow-repeat spin" style="font-size: 2rem; color: #666;"></i>
+            </div>
+            <p style="margin-top: 15px; color: #666;">Loading transit permits...</p>
         </div>
-        <h3>No Transit Permits</h3>
-        <p>No transit permits found for this brand</p>
-      </div>
+      </ng-template>
     </div>
   </div>
 </div>
