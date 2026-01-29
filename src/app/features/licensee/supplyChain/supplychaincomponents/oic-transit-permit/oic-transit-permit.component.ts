@@ -907,8 +907,8 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
               }
             }
           }
-        </div>
-      </div>
+        }
+      }
       
       .dialog-footer {
         display: flex;
