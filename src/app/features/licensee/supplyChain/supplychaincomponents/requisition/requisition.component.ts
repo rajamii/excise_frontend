@@ -18,6 +18,15 @@ interface TableData {
   forwardedToCommissioner?: boolean;
   canCancel?: boolean;
   allowedActions?: string[]; // Dynamic actions from backend
+  // Extended properties for view
+  quantity?: number;
+  numberOfPermits?: number;
+  bulkSpiritType?: string;
+  strengthTo?: string;
+  liftedFrom?: string;
+  viaRoute?: string;
+  checkpostEntry?: string;
+  purpose?: string;
 }
 
 @Component({
@@ -108,7 +117,16 @@ export class RequisitionComponent implements OnInit {
             commissionerStatus: status,
             forwardedToCommissioner: true,
             allowedActions: allowedActions,
-            canCancel: (status.toUpperCase() === 'APPROVED') || item.canInitiateCancellation || item.can_initiate_cancellation || false
+            canCancel: (status.toUpperCase() === 'APPROVED') || item.canInitiateCancellation || item.can_initiate_cancellation || false,
+            // Extended properties mapping
+            quantity: item.totalbl || item.quantity,
+            numberOfPermits: item.numberOfPermits || item.number_of_permits || 1,
+            bulkSpiritType: item.bulkSpiritType || item.bulk_spirit_type || 'N/A',
+            strengthTo: item.strength || item.strengthTo || 'N/A',
+            liftedFrom: item.liftedFrom || item.lifted_from,
+            viaRoute: item.viaRoute || item.via_route || 'N/A',
+            checkpostEntry: item.checkpostEntry || item.checkpost_entry || 'N/A',
+            purpose: item.purpose || 'N/A'
           };
         });
 
@@ -269,10 +287,10 @@ export class RequisitionComponent implements OnInit {
     // Save requisition data to localStorage for the letter view to access
     if (this.isBrowser) {
       const requisitionList: any[] = JSON.parse(localStorage.getItem('requisitionRequests') || '[]');
-      
+
       // Check if this requisition already exists in localStorage
       const existingIndex = requisitionList.findIndex((r: any) => r.refNo === item.referenceNo);
-      
+
       // Prepare the requisition data
       const requisitionData = {
         refNo: item.referenceNo,
@@ -282,9 +300,18 @@ export class RequisitionComponent implements OnInit {
         distilleryName: item.distilleryName,
         status: item.status,
         brAmount: parseFloat(item.amount || '0'),
-        amount: parseFloat(item.amount || '0')
+        amount: parseFloat(item.amount || '0'),
+        // Pass extended properties
+        quantity: item.quantity,
+        numberOfPermits: item.numberOfPermits,
+        bulkSpiritType: item.bulkSpiritType,
+        strengthTo: item.strengthTo,
+        liftedFrom: item.liftedFrom,
+        viaRoute: item.viaRoute,
+        checkpostEntry: item.checkpostEntry,
+        purpose: item.purpose
       };
-      
+
       if (existingIndex >= 0) {
         // Update existing entry
         requisitionList[existingIndex] = requisitionData;
@@ -292,24 +319,24 @@ export class RequisitionComponent implements OnInit {
         // Add new entry
         requisitionList.push(requisitionData);
       }
-      
+
       // Save back to localStorage
       localStorage.setItem('requisitionRequests', JSON.stringify(requisitionList));
     }
-    
+
     // Determine the source based on user type
     const userType = this.getUserType();
     let source = 'licensee-dashboard';
-    
+
     if (userType === 'commissioner') {
       source = 'commissioner-dashboard';
     } else if (userType === 'permit-section') {
       source = 'permit-section';
     }
-    
+
     // Navigate to requisition letter view
     this.router.navigate(["/dev-requisition-letter-view"], {
-      queryParams: { 
+      queryParams: {
         ref: item.referenceNo,
         source: source
       }
@@ -409,6 +436,30 @@ export class RequisitionComponent implements OnInit {
   // Deprecated: Use canPerformAction instead
   isPendingCommissionerApproval(item: TableData): boolean {
     return this.canPerformAction(item);
+  }
+
+  shouldShowPermitSlip(item: TableData): boolean {
+    const status = item.status ? item.status.toUpperCase() : '';
+    console.log('Checking Permit Slip Visibility for:', item.referenceNo, 'Status:', status);
+
+    // 1. Licensee should NEVER see the permit slip in this view (per user request)
+    // It should only be shown in Commissioner Dashboard (and potentially Permit Section)
+    if (!this.isCommissioner() && !this.isPermitSection()) {
+      return false;
+    }
+
+    // 2. Explicitly BLOCK "Approved By Commissioner" or "Commissioner" related statuses
+    if (status.includes('COMMISSIONER') || status.includes('APPROVEDBY')) {
+      return false;
+    }
+
+    // 3. Allow Final "APPROVED" status
+    if (status.includes('APPROVED')) {
+      return true;
+    }
+
+    // 4. Allow explicit final statuses
+    return status.includes('ISSUED') || status.includes('GENERATED') || status.includes('COMPLETED');
   }
 
   payForRequisition(item: TableData): void {
