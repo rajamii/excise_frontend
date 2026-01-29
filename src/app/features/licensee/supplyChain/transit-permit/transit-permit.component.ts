@@ -167,10 +167,57 @@ export class TransitPermitComponent implements OnInit {
     });
 
     // Fetch Brand ML Conversion Data
+    this.loadMlConversionData();
+  }
+
+  loadMlConversionData(): void {
     this.supplyChainService.getBrandMlInCases().subscribe(data => {
       this.brandMlConversionData = data;
-      this.mlPerCaseData = data; // Also populate the info box data
+      // Also populate the info box data - map correctly
+      this.mlPerCaseData = data.map(item => ({
+        ...item,
+        isEditing: false,
+        pieces_in_case: item.pieces_in_case || item.piecesInCase
+      }));
       console.log('ML Conversion Data:', this.brandMlConversionData);
+
+      // If we have selected a size, re-trigger calculation just in case data changed
+      if (this.formData.size && this.formData.brand) {
+        this.onSizeChange();
+      }
+    });
+  }
+
+  // Edit Logic for ML Sidebar
+  editingMlId: number | null = null;
+  tempPieces: number = 0;
+
+  startEditingMl(item: any): void {
+    this.editingMlId = item.id;
+    this.tempPieces = item.pieces_in_case;
+  }
+
+  cancelEditingMl(): void {
+    this.editingMlId = null;
+    this.tempPieces = 0;
+  }
+
+  saveMlItem(item: any): void {
+    if (!this.tempPieces || this.tempPieces <= 0) {
+      alert('Please enter a valid number of pieces.');
+      return;
+    }
+
+    this.supplyChainService.updateBrandMlInCases(item.id, this.tempPieces).subscribe({
+      next: (res) => {
+        console.log('Updated ML item:', res);
+        this.editingMlId = null;
+        this.loadMlConversionData(); // Reload data to refresh UI and conversion factors
+      },
+      error: (err) => {
+        console.error('Failed to update ML item', err);
+        alert('Failed to update. Please try again.');
+      }
     });
   }
 

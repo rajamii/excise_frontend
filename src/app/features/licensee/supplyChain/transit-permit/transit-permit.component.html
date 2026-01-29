@@ -524,15 +524,38 @@
               <span class="size-badge-sidebar">{{ item.ml }}ml</span>
               <div class="size-badge-glow"></div>
             </div>
+
+            <!-- Edit Button (only visible if not editing any item or editing this one) -->
+            <button class="btn btn-sm btn-link text-white p-0" *ngIf="editingMlId !== item.id"
+              (click)="startEditingMl(item)" title="Edit Pieces Per Case">
+              <i class="bi bi-pencil-square"></i>
+            </button>
           </div>
+
           <div class="item-content">
-            <div class="pieces-display">
-              <span class="pieces-number-sidebar">{{ item.pieces_in_case || item.piecesInCase }}</span>
+            <!-- VIEW MODE -->
+            <div class="pieces-display" *ngIf="editingMlId !== item.id">
+              <span class="pieces-number-sidebar">{{ item.pieces_in_case }}</span>
               <span class="pieces-label-sidebar">pieces per case</span>
             </div>
+
+            <!-- EDIT MODE -->
+            <div class="pieces-edit-mode" *ngIf="editingMlId === item.id" style="margin-bottom: 5px;">
+              <input type="number" class="form-control form-control-sm mb-2" [(ngModel)]="tempPieces" min="1"
+                style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; text-align: center;">
+              <div class="d-flex justify-content-center gap-2">
+                <button class="btn btn-sm btn-success py-0 px-2" (click)="saveMlItem(item)" title="Save">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button class="btn btn-sm btn-secondary py-0 px-2" (click)="cancelEditingMl()" title="Cancel">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+
             <div class="calculation-info">
               <i class="bi bi-calculator-fill"></i>
-              <span>1 case = {{ item.pieces_in_case || item.piecesInCase }} bottles</span>
+              <span>1 case = {{ item.pieces_in_case }} bottles</span>
             </div>
           </div>
           <div class="item-decoration" [style.animation-delay.ms]="i * 100"></div>

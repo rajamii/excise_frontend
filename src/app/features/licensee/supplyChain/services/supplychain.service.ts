@@ -302,6 +302,18 @@ export class SupplyChainService {
     );
   }
 
+  updateBrandMlInCases(id: number, piecesInCase: number): Observable<any> {
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}/masters/supply_chain/transit-permit/brand-ml-in-cases/${id}/`,
+      { pieces_in_case: piecesInCase }
+    ).pipe(
+      catchError((error) => {
+        console.error('updateBrandMlInCases error', error);
+        throw error;
+      })
+    );
+  }
+
   getBrandWarehouseStock(distilleryName: string, brandName?: string): Observable<any[]> {
     const params: any = {};
     if (distilleryName) params.distillery_name = distilleryName;
