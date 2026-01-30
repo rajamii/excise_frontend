@@ -298,6 +298,11 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
+  goBack() {
+    // Navigate back to the previous page
+    window.history.back();
+  }
+
   loadRollsData() {
     // Load data from API (database) first
     this.hologramService.getRollsDetails().subscribe({
@@ -915,6 +920,9 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
 
   // Serial Details Modal Methods
   openSerialDetailsModal(availableData: AvailableHologram): void {
+    // Refresh data to ensure we have the latest information
+    console.log('🔍 Opening serial details modal for:', availableData.cartoonNumber);
+    
     // Generate detailed serial numbers data
     this.selectedSerialData = this.generateSerialNumbersData(availableData);
     this.serialViewMode = 'all';
@@ -923,6 +931,22 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.brandReferenceNoSuggestions = [];
     this.brandNameSuggestions = [];
     this.showSerialDetailsModal = true;
+
+    // Log the generated data for debugging
+    console.log('📊 Generated serial data:', this.selectedSerialData);
+    if (this.selectedSerialData?.serialRanges) {
+      console.log('📋 Serial ranges:', this.selectedSerialData.serialRanges.length);
+      this.selectedSerialData.serialRanges.forEach((range, index) => {
+        console.log(`Range ${index + 1}:`, {
+          status: range.status,
+          fromSerial: range.fromSerial,
+          toSerial: range.toSerial,
+          count: range.count,
+          brandDetails: range.brandDetails,
+          referenceNo: range.referenceNo
+        });
+      });
+    }
   }
 
   closeSerialDetailsModal(): void {
@@ -1950,6 +1974,36 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
     // Use a Set to track unique ranges and prevent duplicates
     const processedRanges = new Set<string>();
 
+    // Helper method to get brand information from issued/history data as fallback
+    const getBrandInfoFromIssuedData = (referenceNo: string): { brandName: string, bottleSize: string } => {
+      // Try to find brand info from issued data (requests)
+      const issuedEntry = this.issuedData.find(issued => 
+        issued.referenceNo === referenceNo || 
+        issued.requestReference === referenceNo
+      );
+      
+      if (issuedEntry && issuedEntry.brandName && issuedEntry.brandName !== 'N/A') {
+        return { 
+          brandName: issuedEntry.brandName, 
+          bottleSize: '' // Issued data doesn't have bottle size
+        };
+      }
+
+      // Try to find brand info from history data
+      const historyEntry = this.historyData.find(history => 
+        history.requestReference === referenceNo
+      );
+      
+      if (historyEntry) {
+        return { 
+          brandName: historyEntry.brandName || 'N/A', 
+          bottleSize: historyEntry.bottleSize || ''
+        };
+      }
+
+      return { brandName: 'N/A', bottleSize: '' };
+    };
+
     // Process usage history from roll (from API/database)
     if (roll && roll.usageHistory && roll.usageHistory.length > 0) {
       console.log('✅ Using usage history from API:', roll.usageHistory.length, 'entries');
@@ -1992,6 +2046,22 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
           if (!processedRanges.has(rangeKey)) {
             processedRanges.add(rangeKey);
 
+            // Get brand information with multiple fallbacks
+            let brandDetails = historyEntry.brandDetails || historyEntry.brandName || historyEntry.brand_name || historyEntry.brand_details || '';
+            let bottleSize = historyEntry.bottleSize || historyEntry.bottle_size || '';
+            let referenceNo = historyEntry.referenceNo || historyEntry.refNo || historyEntry.ref_no || 'N/A';
+
+            // If brand details are missing, try to get from issued/history data
+            if (!brandDetails || brandDetails === 'N/A' || brandDetails.trim() === '') {
+              const brandInfo = getBrandInfoFromIssuedData(referenceNo);
+              if (brandInfo.brandName !== 'N/A') {
+                brandDetails = brandInfo.brandName;
+                if (!bottleSize && brandInfo.bottleSize) {
+                  bottleSize = brandInfo.bottleSize;
+                }
+              }
+            }
+
             if (historyEntry.type === 'ISSUED') {
               ranges.push({
                 fromSerial: fromSerial,
@@ -2000,28 +2070,28 @@ ${issued.cartoonNumber ? `Cartoon Number: ${issued.cartoonNumber}` : ''}
                 status: 'USED',
                 description: `Production batch - Used on ${new Date(historyEntry.date || historyEntry.approvedAt).toLocaleDateString()}`,
                 usedDate: historyEntry.date || historyEntry.approvedAt,
-                referenceNo: historyEntry.referenceNo || 'N/A',
-                productionLine: historyEntry.brandName || 'N/A',
-                brandDetails: historyEntry.brandDetails || historyEntry.brandName || '',
-                bottleSize: historyEntry.bottleSize || ''
+                referenceNo: referenceNo,
+                productionLine: historyEntry.productionLine || historyEntry.brandName || historyEntry.brand_name || 'N/A',
+                brandDetails: brandDetails || 'N/A',
+                bottleSize: bottleSize
               });
-              console.log('✅ Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+              console.log('✅ Added USED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'brand:', brandDetails);
             } else {
               ranges.push({
                 fromSerial: fromSerial,
                 toSerial: toSerial,
                 count: quantity,
                 status: 'DAMAGED',
-                description: historyEntry.damageReason || 'Damaged during production',
+                description: historyEntry.damageReason || historyEntry.damage_reason || 'Damaged during production',
                 damageDate: historyEntry.date || historyEntry.approvedAt,
-                damageReason: historyEntry.damageReason || 'Not specified',
-                reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || 'System',
-                referenceNo: historyEntry.referenceNo || 'N/A',
-                productionLine: historyEntry.brandName || 'N/A',
-                brandDetails: historyEntry.brandDetails || '',
-                bottleSize: historyEntry.bottleSize || ''
+                damageReason: historyEntry.damageReason || historyEntry.damage_reason || 'Not specified',
+                reportedBy: historyEntry.approvedBy || historyEntry.reportedBy || historyEntry.reported_by || 'System',
+                referenceNo: referenceNo,
+                productionLine: historyEntry.productionLine || historyEntry.brandName || historyEntry.brand_name || 'N/A',
+                brandDetails: brandDetails || 'N/A',
+                bottleSize: bottleSize
               });
-              console.log('✅ Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity);
+              console.log('✅ Added DAMAGED range:', fromSerial, '-', toSerial, 'quantity:', quantity, 'brand:', brandDetails);
             }
           }
         } else {

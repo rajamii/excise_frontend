@@ -9,7 +9,7 @@
       <p class="register-subtitle">Review and process transit permit applications from licensees</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')">
+      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')" *ngIf="userRole !== 'commissioner'">
         <i class="bi bi-truck me-1"></i> Apply Transit
       </button>
       <button class="btn btn-success">
@@ -138,7 +138,7 @@
             <th class="sl-no">Sl.</th>
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">App. Date</th>
-            <th class="licensee-name">Licensee</th>
+            <th class="licensee-name">DISTRIBUTOR NAME</th>
             <th class="destination">Destination</th>
             <th class="vehicle-number">Vehicle No</th>
             <th class="depot-address">Depot Address</th>
@@ -163,7 +163,7 @@
               <span class="date-text">{{ item.submissionDate }}</span>
             </td>
             <td class="licensee-name">
-              <span class="company-name">{{ item.distilleryName }}</span>
+              <span class="company-name">{{ getFormattedDistributorName(item.distilleryName) }}</span>
             </td>
             <td class="destination">
               <span class="destination-text">{{ item.destination }}</span>
@@ -317,104 +317,103 @@
   </div>
 </div>
 
-<!-- Brand Details Modal -->
-<div class="modal fade" id="brandDetailsModal" tabindex="-1" aria-labelledby="brandDetailsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <!-- Modal Header -->
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title fw-bold" id="brandDetailsModalLabel">
-          <i class="bi bi-box-seam me-2"></i>Brand Details for {{ selectedPermitRef }}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+<!-- Brand Details Slide Panel -->
+<div class="brand-details-panel" [class.show]="showBrandDetailsPanel" *ngIf="showBrandDetailsPanel">
+  <div class="panel-overlay" (click)="closeBrandDetailsPanel()"></div>
+  <div class="panel-content">
+    <!-- Panel Header -->
+    <div class="panel-header">
+      <h5 class="panel-title">
+        <i class="bi bi-box-seam me-2"></i>Brand Details for {{ selectedPermitRef }}
+      </h5>
+      <button type="button" class="btn-close-panel" (click)="closeBrandDetailsPanel()" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
 
-      <!-- Modal Body -->
-      <div class="modal-body p-0">
-        <div class="brand-details-modal-container">
-          <!-- Summary Header -->
-          <div class="summary-header p-4 bg-light border-bottom">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <div class="summary-item">
-                  <div class="summary-label">Reference Number</div>
-                  <div class="summary-value text-primary">{{ selectedPermitRef }}</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="summary-item">
-                  <div class="summary-label">Total Products</div>
-                  <div class="summary-value text-success">{{ selectedBrandDetails.length }}</div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="summary-item">
-                  <div class="summary-label">Total Cases</div>
-                  <div class="summary-value text-info">{{ getTotalCases() }}</div>
-                </div>
-              </div>
+    <!-- Panel Body -->
+    <div class="panel-body">
+      <!-- Summary Header -->
+      <div class="summary-header">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="summary-item">
+              <div class="summary-label">Reference Number</div>
+              <div class="summary-value text-primary">{{ selectedPermitRef }}</div>
             </div>
           </div>
-
-          <!-- Products Table -->
-          <div class="table-container p-4">
-            <div class="table-responsive">
-              <table class="table table-hover brand-details-modal-table">
-                <thead class="table-primary">
-                  <tr>
-                    <th class="text-center">#</th>
-                    <th>Brand</th>
-                    <th class="text-center">Size (ml)</th>
-                    <th class="text-center">Cases</th>
-                    <th>Bottle Type</th>
-                    <th>Brand Owner</th>
-                    <th>Liquor Type</th>
-                    <th>Manufacturing Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let product of selectedBrandDetails; let i = index" class="product-row">
-                    <td class="text-center fw-bold text-muted">{{ i + 1 }}</td>
-                    <td>
-                      <div class="brand-info">
-                        <div class="brand-name fw-bold text-primary">{{ product.brand }}</div>
-                      </div>
-                    </td>
-                    <td class="text-center">
-                      <span class="badge bg-secondary">{{ product.size_ml }}ml</span>
-                    </td>
-                    <td class="text-center">
-                      <span class="badge bg-success">{{ product.cases }}</span>
-                    </td>
-                    <td>
-                      <span class="bottle-type">{{ product.bottle_type || 'N/A' }}</span>
-                    </td>
-                    <td>
-                      <span class="brand-owner">{{ product.brand_owner || 'N/A' }}</span>
-                    </td>
-                    <td>
-                      <span class="liquor-type">{{ product.liquor_type || 'N/A' }}</span>
-                    </td>
-                    <td>
-                      <span class="manufacturing-unit">{{ product.manufacturing_unit_name || 'N/A' }}</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+          <div class="col-md-4">
+            <div class="summary-item">
+              <div class="summary-label">Total Products</div>
+              <div class="summary-value text-success">{{ selectedBrandDetails.length }}</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="summary-item">
+              <div class="summary-label">Total Cases</div>
+              <div class="summary-value text-info">{{ getTotalCases() }}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="modal-footer bg-light">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Close
-        </button>
-        <button type="button" class="btn btn-primary" (click)="exportBrandDetails()">
-          <i class="bi bi-download me-1"></i>Export Details
-        </button>
+      <!-- Products Table -->
+      <div class="table-container">
+        <div class="table-responsive">
+          <table class="table table-hover brand-details-table">
+            <thead class="table-primary">
+              <tr>
+                <th class="text-center">#</th>
+                <th>Brand</th>
+                <th class="text-center">Size (ml)</th>
+                <th class="text-center">Cases</th>
+                <th>Bottle Type</th>
+                <th>Brand Owner</th>
+                <th>Liquor Type</th>
+                <th>Manufacturing Unit</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let product of selectedBrandDetails; let i = index" class="product-row">
+                <td class="text-center fw-bold text-muted">{{ i + 1 }}</td>
+                <td>
+                  <div class="brand-info">
+                    <div class="brand-name fw-bold text-primary">{{ product.brand }}</div>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-secondary">{{ product.size_ml }}ml</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge bg-success">{{ product.cases }}</span>
+                </td>
+                <td>
+                  <span class="bottle-type">{{ product.bottle_type || 'N/A' }}</span>
+                </td>
+                <td>
+                  <span class="brand-owner">{{ product.brand_owner || 'N/A' }}</span>
+                </td>
+                <td>
+                  <span class="liquor-type">{{ product.liquor_type || 'N/A' }}</span>
+                </td>
+                <td>
+                  <span class="manufacturing-unit">{{ product.manufacturing_unit_name || 'N/A' }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
+
+    <!-- Panel Footer -->
+    <div class="panel-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeBrandDetailsPanel()">
+        <i class="bi bi-x-circle me-1"></i>Close
+      </button>
+      <button type="button" class="btn btn-primary" (click)="exportBrandDetails()">
+        <i class="bi bi-download me-1"></i>Export Details
+      </button>
     </div>
   </div>
 </div>

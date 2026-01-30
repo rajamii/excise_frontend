@@ -571,9 +571,15 @@ export class CommissionerDashboardComponent implements OnInit {
 
   // Action methods
   reviewRevalidation(item: any): void {
-    // Navigate to revalidation letter view with reference number
+    console.log('reviewRevalidation called with item:', item); // Debug log
+    // Navigate to revalidation letter view with reference number and source
     this.router.navigate(['/dev-revalidation-letter-view'], {
-      queryParams: { ref: item.referenceNo }
+      queryParams: { 
+        ref: item.referenceNo,
+        source: 'commissioner-dashboard'
+      }
+    }).then(() => {
+      console.log('Navigation completed to revalidation view with source: commissioner-dashboard'); // Debug log
     });
   }
 
@@ -832,7 +838,8 @@ export class CommissionerDashboardComponent implements OnInit {
     this.router.navigate(['/dev-payslip'], {
       queryParams: {
         ref: item.referenceNo,
-        type: 'HOLOGRAM'
+        type: 'HOLOGRAM',
+        source: 'commissioner-dashboard'
       }
     });
   }
