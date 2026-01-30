@@ -281,23 +281,29 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
     // Check source parameter first, then fall back to URL-based detection
     const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
+    console.log('getBackButtonText - Current URL:', currentUrl, 'Source:', source); // Enhanced debug log
     
     // Priority 1: Check source query parameter
     if (source === 'commissioner-dashboard') {
+      console.log('Returning: Back to Commissioner Dashboard'); // Debug log
       return 'Back to Commissioner Dashboard';
     } else if (source === 'permit-section') {
+      console.log('Returning: Back to Permit Section'); // Debug log
       return 'Back to Permit Section';
     } else if (source === 'licensee-dashboard') {
+      console.log('Returning: Back to Supply Chain'); // Debug log
       return 'Back to Supply Chain';
     }
     
     // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
+      console.log('Returning: Back to Permit Section (URL-based)'); // Debug log
       return 'Back to Permit Section';
     } else if (currentUrl.includes('commissioner')) {
+      console.log('Returning: Back to Commissioner Dashboard (URL-based)'); // Debug log
       return 'Back to Commissioner Dashboard';
     } else {
+      console.log('Returning: Back to Supply Chain (default)'); // Debug log
       return 'Back to Supply Chain';
     }
   }
