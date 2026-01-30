@@ -481,17 +481,18 @@ export class TransitComponent implements OnInit {
     return pages;
   }
 
+  // Brand Details Panel
+  showBrandDetailsPanel: boolean = false;
+
   // Brand Details Methods
   openBrandDetailsModal(referenceNo: string): void {
     this.selectedPermitRef = referenceNo;
     this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
+    this.showBrandDetailsPanel = true;
+  }
 
-    // Open the modal using Bootstrap
-    const modalElement = document.getElementById('brandDetailsModal');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
-    }
+  closeBrandDetailsPanel(): void {
+    this.showBrandDetailsPanel = false;
   }
 
   getBrandCount(referenceNo: string): number {
