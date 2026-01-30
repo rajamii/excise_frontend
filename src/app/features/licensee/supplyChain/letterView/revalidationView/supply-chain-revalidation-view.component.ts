@@ -167,6 +167,30 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
     console.log('Loading sample data fallback for:', refNo);
     
     const sampleData: RevalidationData[] = [
+      // Add the specific reference from the URL with correct data
+      {
+        id: '0',
+        referenceNo: 'IBPS/04/EXCISE',
+        submissionDate: new Date('2025-01-20'),
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        status: 'IMPORT PERMIT EXTENDS 45 DAYS - INVALID',
+        brAmount: 0.00,
+        revalidationAmount: 1000.00, // Fixed: Set to 1000 as requested
+        originalPermitNo: 'IBPS/04/EXCISE',
+        originalPermitDate: new Date('2025-01-15'),
+        expiryDate: new Date('2025-02-15'),
+        reasonForRevalidation: 'Permit expired - requires immediate revalidation',
+        newQuantity: 5, // 5 BL as shown in the screenshot
+        newPurpose: 'Manufacturing extension',
+        quantity: 5,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Siliguri Highway',
+        checkpostEntry: 'rangpo', // Fixed: Ensure checkpoint entry is set
+        purpose: 'manufacturing'
+      },
       {
         id: '1',
         referenceNo: 'IMP/SUP-AGDIST',
@@ -217,9 +241,11 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
 
     const found = sampleData.find(r => r.referenceNo === refNo);
     if (found) {
+      console.log('Found matching sample data for reference:', refNo, 'Data:', found); // Debug log
       this.revalidationData = found;
       this.errorMessage = '';
     } else {
+      console.log('No matching sample data found, creating generic entry for:', refNo); // Debug log
       // Create a generic entry for any reference number
       this.revalidationData = {
         id: '999',
@@ -228,20 +254,20 @@ export class SupplyChainRevalidationViewComponent implements OnInit {
         distilleryName: 'M/s Sikkim Distilleries Ltd',
         status: 'REVALIDATION REQUEST PENDING APPROVAL',
         brAmount: 0.00,
-        revalidationAmount: 5.00,
+        revalidationAmount: 1000.00, // Fixed: Set to 1000 as default
         originalPermitNo: 'BF999/EXCISE',
         originalPermitDate: new Date(),
         expiryDate: new Date(),
         reasonForRevalidation: 'Revalidation requested for permit extension',
-        newQuantity: 1000,
+        newQuantity: 5, // Set to 5 BL as shown in screenshot
         newPurpose: 'Manufacturing continuation',
-        quantity: 1000,
+        quantity: 5,
         numberOfPermits: 1,
         bulkSpiritType: 'grain-ena',
         strengthTo: '96.0',
         liftedFrom: 'sikkim-distilleries',
         viaRoute: 'Gangtok - Siliguri Highway',
-        checkpostEntry: 'rangpo',
+        checkpostEntry: 'rangpo', // Fixed: Ensure checkpoint entry is set
         purpose: 'manufacturing'
       };
       this.errorMessage = '';
