@@ -1878,3 +1878,18 @@ Details Modal Styling
     }
   }
 }
+
+// Simple brand highlighting - clean and light
+.range-details {
+  .detail-item {
+    margin-bottom: 0.3rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .fw-bold {
+      font-weight: 600;
+    }
+  }
+}
