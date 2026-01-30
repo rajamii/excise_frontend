@@ -424,87 +424,87 @@
                   animation: pulse 2s infinite;
                 }
 
-                // Approved/Success Status - Green
+                // Approved/Success Status - Light Green
                 &.status-approved {
-                  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                  color: white;
-                  border-color: #047857;
-                  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+                  background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+                  color: #065f46;
+                  border-color: #10b981;
+                  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-                    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                    box-shadow: 0 4px 12px rgba(52, 211, 153, 0.4);
+                    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
                   }
                 }
 
-                // Issued Status - Dark Green
+                // Issued Status - Light Emerald Green
                 &.status-issued {
-                  background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
-                  color: white;
-                  border-color: #022c22;
-                  box-shadow: 0 2px 8px rgba(6, 95, 70, 0.3);
+                  background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+                  color: #047857;
+                  border-color: #059669;
+                  box-shadow: 0 2px 8px rgba(110, 231, 183, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(6, 95, 70, 0.4);
-                    background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+                    box-shadow: 0 4px 12px rgba(110, 231, 183, 0.4);
+                    background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
                   }
                 }
 
-                // Rejected/Cancelled Status - Red
+                // Rejected/Cancelled Status - Light Red
                 &.status-rejected {
-                  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                  color: white;
-                  border-color: #b91c1c;
-                  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+                  background: linear-gradient(135deg, #fca5a5 0%, #f87171 100%);
+                  color: #991b1b;
+                  border-color: #dc2626;
+                  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-                    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+                    box-shadow: 0 4px 12px rgba(248, 113, 113, 0.4);
+                    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
                   }
                 }
 
-                // Pending Status - Blue
+                // Pending Status - Light Blue
                 &.status-pending {
-                  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                  color: white;
-                  border-color: #1d4ed8;
-                  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                  background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
+                  color: #1e40af;
+                  border-color: #3b82f6;
+                  box-shadow: 0 2px 8px rgba(96, 165, 250, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
+                    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
                   }
                 }
 
-                // Processing Status - Orange
+                // Processing Status - Light Orange
                 &.status-processing {
-                  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                  color: white;
-                  border-color: #b45309;
-                  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+                  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+                  color: #92400e;
+                  border-color: #f59e0b;
+                  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-                    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+                    box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+                    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
                   }
                 }
 
-                // Default Status - Gray
+                // Default Status - Light Gray
                 &.status-default {
-                  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-                  color: white;
-                  border-color: #374151;
-                  box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+                  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+                  color: #1f2937;
+                  border-color: #6b7280;
+                  box-shadow: 0 2px 8px rgba(156, 163, 175, 0.3);
 
                   &:hover {
                     transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
-                    background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+                    box-shadow: 0 4px 12px rgba(156, 163, 175, 0.4);
+                    background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
                   }
                 }
               }
