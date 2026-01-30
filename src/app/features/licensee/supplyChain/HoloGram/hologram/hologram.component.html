@@ -74,16 +74,13 @@
               </div>
 
               <div class="d-flex justify-content-center mt-4 gap-2">
-                <button class="btn btn-primary" (click)="saveDraft()">
-                  <i class="bi bi-save me-1"></i>Save
-                </button>
-                <button class="btn btn-success" (click)="submitForm()">
+                <button type="button" class="btn btn-success" (click)="submitForm()">
                   <i class="bi bi-check-circle me-1"></i>Submit
                 </button>
-                <button class="btn btn-outline-warning" (click)="clearForm()">
+                <button type="button" class="btn btn-outline-warning" (click)="clearForm()">
                   <i class="bi bi-eraser me-1"></i>Clear
                 </button>
-                <button class="btn btn-outline-secondary" (click)="goBack()">
+                <button type="button" class="btn btn-outline-secondary" (click)="goBack()">
                   <i class="bi bi-arrow-left me-1"></i>Back
                 </button>
               </div>
@@ -258,7 +255,7 @@
                 </p>
                 <ol class="mb-0 text-start" style="padding-left: 1.5rem;">
                   <li><strong>IT Cell Review:</strong> Application is currently with IT Cell for verification</li>
-                  <li><strong>Payment Upload:</strong> After IT Cell approval, you can upload the payment slip</li>
+                  
                 </ol>
               </div>
             </div>
@@ -366,63 +363,179 @@
               </div>
             </div>
 
-            <!-- Upload Payment Slip Section -->
-            <div class="card border-success">
-              <div class="card-header bg-success text-white">
-                <h6 class="mb-0">
-                  <i class="bi bi-upload me-2"></i>
-                  Upload Payment Slip
-                </h6>
-              </div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label for="paymentSlipFile" class="form-label">
-                    Select Payment Slip (PDF, JPG, PNG)
-                    <span class="text-danger">*</span>
-                  </label>
-                  <input 
-                    type="file" 
-                    class="form-control" 
-                    id="paymentSlipFile"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    (change)="onPaymentSlipFileSelected($event)">
-                  <small class="text-muted">Maximum file size: 5MB</small>
-                </div>
-                
-                @if (selectedPaymentSlipFile) {
-                <div class="alert alert-success mb-3">
-                  <i class="bi bi-file-earmark-check me-2"></i>
-                  <strong>Selected File:</strong> {{ selectedPaymentSlipFile.name }} 
-                  ({{ (selectedPaymentSlipFile.size / 1024).toFixed(2) }} KB)
-                </div>
-                }
 
-                <div class="mb-3">
-                  <label for="paymentRemarks" class="form-label">Remarks (Optional)</label>
-                  <textarea 
-                    class="form-control" 
-                    id="paymentRemarks"
-                    rows="3"
-                    [(ngModel)]="paymentRemarks"
-                    placeholder="Enter any additional remarks about the payment..."></textarea>
-                </div>
-
-                <div class="d-grid gap-2">
-                  <button 
-                    type="button" 
-                    class="btn btn-success btn-lg" 
-                    (click)="uploadPaymentSlip()"
-                    [disabled]="!selectedPaymentSlipFile">
-                    <i class="bi bi-upload me-2"></i>
-                    Upload Payment Slip
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
         }
 
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div class="custom-modal-overlay" *ngIf="showConfirmationModal" (click)="closeConfirmationModal()">
+    <div class="custom-modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-icon">
+          <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <h4 class="modal-title">Hologram Procurement Submission</h4>
+        <button class="modal-close-btn" (click)="closeConfirmationModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="confirmation-content">
+          <div class="info-section">
+            <h5><i class="bi bi-clipboard-data me-2"></i>Application Details</h5>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Reference No:</span>
+                <span class="value">{{ formData.refNo }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Date:</span>
+                <span class="value">{{ formData.date | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Company:</span>
+                <span class="value">{{ formData.companyName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <h5><i class="bi bi-bar-chart-fill me-2"></i>Quantity Summary</h5>
+            <div class="quantity-grid">
+              <div class="quantity-item" *ngIf="formData.localQtyLakh && formData.localQtyLakh > 0">
+                <span class="series-badge local">Local</span>
+                <span class="quantity">{{ formData.localQtyLakh | number:'1.0-0' }} pieces</span>
+              </div>
+              <div class="quantity-item" *ngIf="formData.exportQtyLakh && formData.exportQtyLakh > 0">
+                <span class="series-badge export">Export</span>
+                <span class="quantity">{{ formData.exportQtyLakh | number:'1.0-0' }} pieces</span>
+              </div>
+              <div class="quantity-item" *ngIf="formData.defenceQtyLakh && formData.defenceQtyLakh > 0">
+                <span class="series-badge defence">Defence</span>
+                <span class="quantity">{{ formData.defenceQtyLakh | number:'1.0-0' }} pieces</span>
+              </div>
+              <div class="quantity-total">
+                <span class="total-label">Total Holograms:</span>
+                <span class="total-value">{{ totalQtyLakh | number:'1.0-0' }} pieces</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <h5><i class="bi bi-currency-rupee me-2"></i>Payment Information</h5>
+            <div class="payment-info">
+              <div class="payment-calculation">
+                <span class="calc-label">{{ totalQtyLakh | number:'1.0-0' }} pieces × ₹0.15 =</span>
+                <span class="calc-amount">₹{{ (totalQtyLakh * 0.15).toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="warning-section">
+            <div class="warning-box">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <div class="warning-text">
+                <strong>Important Declaration:</strong>
+                <p>Once submitted, this application will be forwarded to IT Cell for verification and approval. You will not be able to modify the quantities after submission.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeConfirmationModal()">
+          <i class="bi bi-x-circle me-2"></i>Cancel
+        </button>
+        <button class="btn btn-success" (click)="confirmSubmission()">
+          <i class="bi bi-check-circle me-2"></i>Confirm & Submit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Success Modal -->
+  <div class="custom-modal-overlay success-overlay" *ngIf="showSuccessModal" (click)="closeSuccessModal()">
+    <div class="custom-modal-container success-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header success-header">
+        <div class="modal-icon success-icon">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <h4 class="modal-title">Application Submitted Successfully!</h4>
+        <button class="modal-close-btn" (click)="closeSuccessModal()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="success-content">
+          <div class="celebration-section">
+            <div class="celebration-icon">
+              <i class="bi bi-party-popper"></i>
+            </div>
+            <p class="celebration-text">Your hologram procurement application has been submitted and forwarded to IT Cell for verification.</p>
+          </div>
+
+          <div class="success-details">
+            <h5><i class="bi bi-info-circle me-2"></i>Submission Details</h5>
+            <div class="details-grid">
+              <div class="detail-item">
+                <span class="detail-label">Reference Number:</span>
+                <span class="detail-value highlight">{{ submittedRefNo }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Total Holograms:</span>
+                <span class="detail-value">{{ submittedQuantity | number:'1.0-0' }} pieces</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Estimated Payment:</span>
+                <span class="detail-value">₹{{ submittedAmount }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Submission Time:</span>
+                <span class="detail-value">{{ submittedTime }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="next-steps">
+            <h5><i class="bi bi-list-check me-2"></i>Next Steps</h5>
+            <div class="steps-list">
+              <div class="step-item">
+                <span class="step-number">1</span>
+                <span class="step-text">IT Cell will review your application</span>
+              </div>
+              <div class="step-item">
+                <span class="step-number">2</span>
+                <span class="step-text">After approval, you can proceed with wallet payment</span>
+              </div>
+              <div class="step-item">
+                <span class="step-number">3</span>
+                <span class="step-text">You can track your application status in the dashboard</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="print-reminder">
+            <i class="bi bi-printer me-2"></i>
+            <span>You can now print your application form for your records.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline-primary" (click)="printApplication()">
+          <i class="bi bi-printer me-2"></i>Print Application
+        </button>
+        <button class="btn btn-primary" (click)="closeSuccessModal()">
+          <i class="bi bi-check me-2"></i>Continue
+        </button>
       </div>
     </div>
   </div>

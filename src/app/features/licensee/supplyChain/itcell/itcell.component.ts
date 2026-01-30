@@ -217,10 +217,12 @@ export class ITCELLComponent implements OnInit {
 
   calculateWalletPayment(hologram: any): number {
     if (!hologram) return 0;
-    // Mock calculation or use actual amount if available
-    // Assuming each hologram costs something, or just return a mock total
-    // If backend provides 'amount', use that.
-    return 15000; // Mock amount for now to fix error
+    
+    // Calculate total holograms
+    const totalHolograms = this.getTotalHolograms(hologram);
+    
+    // Calculate payment at ₹0.15 per hologram
+    return totalHolograms * 0.15;
   }
 
   closeModal(): void {
