@@ -518,6 +518,49 @@ export class TransitComponent implements OnInit {
     return this.selectedBrandDetails.reduce((total, product) => total + (product.cases || 0), 0);
   }
 
+  /**
+   * Formats distributor names to show proper company names
+   * Shows full company names like "Sikkim Distilleries Ltd" for all user roles
+   */
+  getFormattedDistributorName(distilleryName: string): string {
+    if (!distilleryName) return 'N/A';
+
+    // Map common distillery names to their full company names
+    const companyNameMap: { [key: string]: string } = {
+      'sikkim': 'Sikkim Distilleries Ltd',
+      'sikkim distillery': 'Sikkim Distilleries Ltd',
+      'sikkim distilleries': 'Sikkim Distilleries Ltd',
+      'himalayan': 'Himalayan Distilleries Pvt Ltd',
+      'himalayan distillery': 'Himalayan Distilleries Pvt Ltd',
+      'royal': 'Royal Distilleries & Breweries Ltd',
+      'royal distillery': 'Royal Distilleries & Breweries Ltd',
+      'united': 'United Breweries Ltd',
+      'united breweries': 'United Breweries Ltd',
+      'mcleod': 'McLeod Russel India Ltd',
+      'mcleod russel': 'McLeod Russel India Ltd'
+    };
+
+    const lowerName = distilleryName.toLowerCase().trim();
+    
+    // Check for exact matches first
+    if (companyNameMap[lowerName]) {
+      return companyNameMap[lowerName];
+    }
+
+    // Check for partial matches
+    for (const key in companyNameMap) {
+      if (lowerName.includes(key)) {
+        return companyNameMap[key];
+      }
+    }
+
+    // If no mapping found, format the existing name to look more professional
+    return distilleryName
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ') + (distilleryName.toLowerCase().includes('ltd') || distilleryName.toLowerCase().includes('pvt') ? '' : ' Ltd');
+  }
+
   exportBrandDetails(): void {
     // Create CSV content
     const headers = ['Brand', 'Size (ml)', 'Cases', 'Bottle Type', 'Brand Owner', 'Liquor Type', 'Manufacturing Unit'];

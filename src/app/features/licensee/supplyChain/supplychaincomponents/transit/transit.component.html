@@ -9,7 +9,7 @@
       <p class="register-subtitle">Review and process transit permit applications from licensees</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')">
+      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')" *ngIf="userRole !== 'commissioner'">
         <i class="bi bi-truck me-1"></i> Apply Transit
       </button>
       <button class="btn btn-success">
@@ -138,7 +138,7 @@
             <th class="sl-no">Sl.</th>
             <th class="ref-number">Ref. No</th>
             <th class="submission-date">App. Date</th>
-            <th class="licensee-name">Licensee</th>
+            <th class="licensee-name">DISTRIBUTOR NAME</th>
             <th class="destination">Destination</th>
             <th class="vehicle-number">Vehicle No</th>
             <th class="depot-address">Depot Address</th>
@@ -163,7 +163,7 @@
               <span class="date-text">{{ item.submissionDate }}</span>
             </td>
             <td class="licensee-name">
-              <span class="company-name">{{ item.distilleryName }}</span>
+              <span class="company-name">{{ getFormattedDistributorName(item.distilleryName) }}</span>
             </td>
             <td class="destination">
               <span class="destination-text">{{ item.destination }}</span>
