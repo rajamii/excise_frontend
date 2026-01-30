@@ -298,6 +298,11 @@ export class HologramoveriewComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
+  goBack() {
+    // Navigate back to the previous page
+    window.history.back();
+  }
+
   loadRollsData() {
     // Load data from API (database) first
     this.hologramService.getRollsDetails().subscribe({

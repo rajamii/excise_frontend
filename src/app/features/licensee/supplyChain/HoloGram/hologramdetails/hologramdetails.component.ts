@@ -1080,8 +1080,8 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   openHologramOverview(): void {
-    // Navigate to hologram overview page in a new tab/window for better user experience
-    window.open('/dev-hologram-overview', '_blank');
+    // Navigate to hologram overview page in the same tab
+    this.router.navigate(['/dev-hologram-overview']);
   }
 
   // Add test data for arrival testing - Simple 30 holograms for easy testing
