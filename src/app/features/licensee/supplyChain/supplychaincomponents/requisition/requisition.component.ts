@@ -344,9 +344,18 @@ export class RequisitionComponent implements OnInit {
   }
 
   viewSlip(item: TableData): void {
+    // Determine source based on current route
+    const currentUrl = this.isBrowser ? window.location.pathname : '';
+    let source = 'permit-section'; // default
+    
+    if (currentUrl.includes('commissioner') || this.isCommissioner()) {
+      source = 'commissioner';
+    }
+    
     this.router.navigate(["/dev-final-requisition-letters"], {
       queryParams: {
         ref: item.referenceNo,
+        source: source
       },
     });
   }

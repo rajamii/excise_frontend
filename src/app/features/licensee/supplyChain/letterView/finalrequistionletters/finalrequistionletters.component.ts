@@ -120,12 +120,19 @@ export class FinalrequistionlettersComponent implements OnInit {
 
   copyNames: string[] = ["ORIGINAL", "DUPLICATE", "TRIPLICATE", "QUADRUPLICATE"];
 
+  // Dynamic back button properties
+  backButtonText: string = "Back to Permit Section Dashboard";
+  backRoute: string = "/app-permit-section";
+
   constructor(
     private router: Router,
     private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
+    // Determine the source dashboard and set appropriate back button
+    this.setBackButtonBasedOnSource();
+    
     // Get data from query parameters or route state
     this.route.queryParams.subscribe((params) => {
       if (params["ref"]) {
@@ -135,6 +142,26 @@ export class FinalrequistionlettersComponent implements OnInit {
 
     // Load sample data for now
     this.loadSampleData();
+  }
+
+  private setBackButtonBasedOnSource(): void {
+    // Check the current URL or referrer to determine source
+    const currentUrl = window.location.href;
+    const referrer = document.referrer;
+    
+    // Check query parameters for source
+    this.route.queryParams.subscribe((params) => {
+      const source = params['source'];
+      
+      if (source === 'commissioner' || referrer.includes('dev-commissioner-dashboard') || currentUrl.includes('source=commissioner')) {
+        this.backButtonText = "Back to Commissioner Dashboard";
+        this.backRoute = "/dev-commissioner-dashboard";
+      } else {
+        // Default to permit section dashboard
+        this.backButtonText = "Back to Permit Section Dashboard";
+        this.backRoute = "/app-permit-section";
+      }
+    });
   }
 
   private loadForwardingLetterData(referenceNo: string): void {
@@ -418,7 +445,7 @@ export class FinalrequistionlettersComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(["/dev-commissioner-dashboard"]);
+    this.router.navigate([this.backRoute]);
   }
 
   generatePermitCopies(): any[] {
