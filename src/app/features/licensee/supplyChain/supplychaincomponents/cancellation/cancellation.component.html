@@ -193,20 +193,23 @@
                   title="Review Application" data-bs-toggle="tooltip" data-bs-placement="top">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)" 
+                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)"
                   title="Approve Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
                   *ngIf="canApprove(item)">
                   <i class="bi bi-check-circle"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)" 
-                  title="Reject Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
-                  *ngIf="canReject(item)">
+                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)"
+                  title="Reject Cancellation" data-bs-toggle="tooltip" data-bs-placement="top" *ngIf="canReject(item)">
                   <i class="bi bi-x-circle"></i>
                 </button>
-                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)" 
+                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)"
                   title="Generate Final Letter" data-bs-toggle="tooltip" data-bs-placement="top"
                   *ngIf="canGenerateFinalLetter(item)">
                   <i class="bi bi-file-earmark-text"></i>
+                </button>
+                <button class="btn btn-outline-warning btn-sm" (click)="navigateToPayment(item)"
+                  title="Pay Cancellation Fee" data-bs-toggle="tooltip" data-bs-placement="top" *ngIf="canPay(item)">
+                  <i class="bi bi-credit-card"></i>
                 </button>
               </div>
             </td>

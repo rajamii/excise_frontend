@@ -222,6 +222,8 @@ export class PaymentConfirmationComponent implements OnInit {
   ngOnInit(): void {
     // Load hologram data from API
     this.loadHologramDataFromApi();
+    // Load cancellation data from API
+    this.loadCancellationDataFromApi();
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
@@ -235,30 +237,35 @@ export class PaymentConfirmationComponent implements OnInit {
       }
       // Handle hologram payment navigation
       if (params['refNo'] && params['action'] === 'makePayment') {
-        this.activeTab = 'hologram';
-        // Optionally highlight or scroll to the specific hologram item
-        setTimeout(() => {
-          // If type is provided, scroll to specific type
-          if (params['type']) {
-            const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              element.classList.add('highlight-row');
-              setTimeout(() => element.classList.remove('highlight-row'), 3000);
-            }
-          } else {
-            // If no type, find first matching refNo and scroll to it
-            const matchingItem = this.hologramData.find(h => h.referenceNo === params['refNo']);
-            if (matchingItem) {
-              const element = document.getElementById(`hologram-${matchingItem.referenceNo}-${matchingItem.procurementType}`);
+        // Only default to hologram if no tab is specified or if tab is hologram
+        if (!params['tab'] || params['tab'] === 'hologram') {
+          this.activeTab = 'hologram';
+
+          // Optionally highlight or scroll to the specific hologram item
+          setTimeout(() => {
+            // ... (existing scrolling logic)
+            // If type is provided, scroll to specific type
+            if (params['type']) {
+              const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
               if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 element.classList.add('highlight-row');
                 setTimeout(() => element.classList.remove('highlight-row'), 3000);
               }
+            } else {
+              // If no type, find first matching refNo and scroll to it
+              const matchingItem = this.hologramData.find(h => h.referenceNo === params['refNo']);
+              if (matchingItem) {
+                const element = document.getElementById(`hologram-${matchingItem.referenceNo}-${matchingItem.procurementType}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  element.classList.add('highlight-row');
+                  setTimeout(() => element.classList.remove('highlight-row'), 3000);
+                }
+              }
             }
-          }
-        }, 500);
+          }, 500);
+        }
       }
     });
 
@@ -280,7 +287,6 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Filter for items approved by commissioner
         // Also include items already paid if we want to show history, but usually payment page shows pending
-        // The prompt implies we want to show items ready for payment.
         // Backend "Approved by Commissioner" -> "Payment Pending" effectively
 
         this.hologramData = data
@@ -306,6 +312,39 @@ export class PaymentConfirmationComponent implements OnInit {
           });
       },
       error: (err) => console.error('Error fetching hologram payments:', err)
+    });
+  }
+
+  loadCancellationDataFromApi(): void {
+    this.supplyChainService.getCancellations().subscribe({
+      next: (data) => {
+        console.log('Fetched Cancellation Data:', data);
+        // Map backend data to PaymentItem interface
+        this.cancellationData = data.filter(item =>
+          item.status === 'ApprovedCancellationByCommissioner' ||
+          item.status === 'ForwardedCancellationPaySLipToCommissioner'
+        ).map(item => ({
+          id: item.id,
+          referenceNo: item.ourRefNo || item.our_ref_no,
+          amount: parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || 0),
+          hoa: '0039-00-105-45-03', // Static HOA for cancellation
+          status: item.status
+        }));
+
+        // Check if we need to auto-select an item based on query params
+        const params = this.route.snapshot.queryParams; // Accessing snapshot for immediate check
+        if (params['tab'] === 'cancellation' && params['id']) {
+          const item = this.cancellationData.find(d => d.id == params['id']);
+          if (item && params['action'] === 'makePayment') {
+            // Optionally scroll or highlight
+            setTimeout(() => {
+              this.selectedItem = item;
+              // this.payItem(item); // Auto-open modal if desired
+            }, 500);
+          }
+        }
+      },
+      error: (err) => console.error('Error fetching cancellation data', err)
     });
   }
 
@@ -472,6 +511,20 @@ export class PaymentConfirmationComponent implements OnInit {
         error: (err) => {
           console.error('Payment failed:', err);
           alert('Payment failed API call');
+        }
+      });
+    } else if (this.activeTab === 'cancellation') {
+      // Cancellation Payment Logic
+      this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
+        next: (res) => {
+          this.showSuccessMessage(`Cancellation Payment of ₹${item.amount} processed successfully!`);
+          item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
+          // Optionally reload data if we switch to loading from API
+          this.loadCancellationDataFromApi();
+        },
+        error: (err) => {
+          console.error('Cancellation Payment failed:', err);
+          this.showErrorMessage(`Cancellation Payment failed: ${err.error?.error || err.message}`);
         }
       });
     } else {

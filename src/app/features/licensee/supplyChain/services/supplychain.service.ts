@@ -247,7 +247,7 @@ export class SupplyChainService {
     );
   }
 
-  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT', role: string = 'permit-section'): Observable<any> {
+  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT' | 'SubmitPayslip' | 'ApprovePayslip' | 'RejectPayslip', role: string = 'permit-section'): Observable<any> {
     return this.http.post<any>(
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
       { action, role }
