@@ -3,8 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HologramdetailsComponent } from '../HoloGram/hologramdetails/hologramdetails.component';
 import { OfficerinchargehologramreqComponent } from '../HoloGram/officerinchargehologramreq/officerinchargehologramreq.component';
-import { HologramManufacturingRegisterComponent } from '../HoloGram/hologram-manufacturing-register/hologram-manufacturing-register.component';
+import { HologramMonthlyReportComponent } from '../registers/hologram-monthly-report/hologram-monthly-report.component';
+import { BrandwarehouseComponent } from '../registers/brandwarehouse/brandwarehouse.component';
 import { OicdailyhologramregisterComponent } from '../registers/oicdailyhologramregister/oicdailyhologramregister.component';
+import { OicTransitPermitComponent } from '../supplychaincomponents/oic-transit-permit/oic-transit-permit.component';
 
 interface TransitPermitRecord {
   referenceNo: string;
@@ -66,7 +68,7 @@ interface BrandRow {
 @Component({
   selector: 'app-officer-in-charge',
   standalone: true,
-  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, HologramManufacturingRegisterComponent, OicdailyhologramregisterComponent],
+  imports: [CommonModule, FormsModule, HologramdetailsComponent, OfficerinchargehologramreqComponent, OicdailyhologramregisterComponent, HologramMonthlyReportComponent, BrandwarehouseComponent, OicTransitPermitComponent],
   templateUrl: './officer-in-charge.component.html',
   styleUrl: './officer-in-charge.component.scss'
 })
@@ -320,9 +322,7 @@ export class OfficerInChargeComponent implements OnInit {
     this.applyBrandFilters();
   }
 
-  getCurrentDateTime(): string {
-    return new Date().toLocaleString();
-  }
+  currentDateTime: string = new Date().toLocaleString();
 
   setActiveTab(tab: string) {
     this.activeTab = tab;

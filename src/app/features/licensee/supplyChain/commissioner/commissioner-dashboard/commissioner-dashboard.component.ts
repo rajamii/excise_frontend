@@ -13,6 +13,7 @@ import { CancellationComponent } from "../../supplychaincomponents/cancellation/
 import { TransitComponent } from "../../supplychaincomponents/transit/transit.component";
 import { PaymentSlipsViewComponent } from "../payment-slips-view/payment-slips-view.component";
 import { HologramDetailsViewComponent } from "../hologram-details-view/hologram-details-view.component";
+import { HologramDataService } from "../../services/hologram-data.service";
 
 
 export interface CommissionerTableData {
@@ -65,6 +66,8 @@ export interface CommissionerTableData {
       defence: number;
       total: number;
     };
+    originalPayment: number;
+    updatedPayment: number;
   };
   // Commissioner status tracking
   commissionerStatus?: string;
@@ -104,7 +107,7 @@ export class CommissionerDashboardComponent implements OnInit {
   // Hologram details modal properties
   showHologramDetailsModal = false;
   selectedHologramApplication: CommissionerTableData | null = null;
-  
+
   // Payment slips modal properties (separate from hologram details)
   showPaymentSlipsModal = false;
   selectedApplicationForSlips: CommissionerTableData | null = null;
@@ -180,7 +183,7 @@ export class CommissionerDashboardComponent implements OnInit {
   pageSizeOptions: number[] = [5, 10, 15];
   pageSizeByTab: Record<string, number> = {
     requisition: 5,
-    revalidation: 5,
+    revalidation: 10,
     cancellation: 5,
     transit: 5,
     hologram: 5,
@@ -198,21 +201,22 @@ export class CommissionerDashboardComponent implements OnInit {
     private route: ActivatedRoute,
     private http: HttpClient,
     private supplyChainService: SupplyChainService,
+    private hologramService: HologramDataService,
     @Inject(PLATFORM_ID) platformId: Object,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
-    // Load hologram applications from IT Cell
-    this.loadHologramApplicationsFromITCell();
-    
+    // Load hologram applications from Backend
+    this.loadHologramApplications();
+
     // Fetch real revalidation data from backend
     this.fetchRevalidationData();
 
     // Initialize filtered data
     this.filteredRevalidationData = []; // Will be populated by fetchRevalidationData
-    this.filteredHologramData = [...this.hologramData];
+    this.filteredHologramData = [];
 
     // Check for tab query parameter
     if (this.isBrowser) {
@@ -235,91 +239,54 @@ export class CommissionerDashboardComponent implements OnInit {
         this.loadOverdueEntries();
       }, 60000);
 
-      // Auto-refresh hologram data when storage changes (from IT Cell or other tabs)
-      window.addEventListener('storage', (event) => {
-        if (event.key === 'hologramRequests' || 
-            event.key === 'hologramPaymentSlipTracking' || 
-            event.key === 'hologramApplications') {
-          console.log('🔄 Storage changed, refreshing Commissioner hologram data...');
-          this.loadHologramApplicationsFromITCell();
-        }
-      });
-
-      // Refresh data when tab becomes visible
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && this.activeTab === 'hologram') {
-          console.log('🔄 Tab became visible, refreshing Commissioner hologram data...');
-          this.loadHologramApplicationsFromITCell();
-        }
-      });
-
       // Refresh hologram data every 30 seconds when on hologram tab
       setInterval(() => {
         if (this.activeTab === 'hologram') {
           console.log('🔄 Auto-refresh: Reloading Commissioner hologram data...');
-          this.loadHologramApplicationsFromITCell();
+          this.loadHologramApplications();
         }
       }, 30000); // 30 seconds
     }
   }
 
-  loadHologramApplicationsFromITCell(): void {
-    if (!this.isBrowser) return;
+  loadHologramApplications(): void {
+    this.hologramService.getProcurements().subscribe({
+      next: (data) => {
+        console.log('Fetched Hologram Procurements for Commissioner:', data);
 
-    // Load hologram requests from IT Cell
-    const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-    
-    // Filter those that have been forwarded by IT Cell to Commissioner
-    // In the new flow: IT Cell forwards directly to Commissioner (no payment slip upload required)
-    const applicationsForCommissioner = hologramRequests.filter((req: any) => {
-      // Must be forwarded by IT Cell to Commissioner
-      if (req.itCellStatus === 'Forwarded' && req.commissionerStatus === 'Pending') {
-        return true;
+        const convertedData: CommissionerTableData[] = data.map((item: any) => {
+          let displayStatus = item.status;
+
+          return {
+            id: item.id,
+            referenceNo: item.refNo,
+            submissionDate: item.date,
+            distilleryName: item.licenseeName || item.manufacturingUnit,
+            status: displayStatus,
+            amount: this.calculateHologramAmount({
+              localQtyLakh: Number(item.localQty),
+              exportQtyLakh: Number(item.exportQty),
+              defenceQtyLakh: Number(item.defenceQty)
+            }).toString(),
+            priority: item.status === 'Forwarded to Commissioner' ? 'high' : 'normal',
+            localQtyLakh: Number(item.localQty),
+            exportQtyLakh: Number(item.exportQty),
+            defenceQtyLakh: Number(item.defenceQty),
+            totalQtyLakh: Number(item.localQty) + Number(item.exportQty) + Number(item.defenceQty),
+            hologramType: 'Security Hologram',
+            allowedActions: item.allowedActions || item.allowed_actions || [],
+            editHistory: item.editHistory || item.edit_history || null
+          };
+        });
+
+        this.hologramData = convertedData;
+        this.filteredHologramData = [...this.hologramData];
+        this.applyHologramFilters();
+      },
+      error: (err) => {
+        console.error('Error fetching hologram procurements:', err);
       }
-      
-      // Also include already approved/rejected by Commissioner
-      if (req.commissionerStatus === 'Approved' || req.commissionerStatus === 'Rejected') {
-        return true;
-      }
-      
-      return false;
     });
-
-    // Convert to commissioner table format
-    const convertedData: CommissionerTableData[] = applicationsForCommissioner.map((req: any) => {
-      // Determine status based on payment and approval stages
-      let displayStatus = 'PENDING';
-      
-      // Check payment completion first
-      if (req.paymentCompleted === true) {
-        displayStatus = 'PAYMENT COMPLETED';
-      }
-      // Then check commissioner approval
-      else if (req.commissionerStatus === 'Approved') {
-        displayStatus = 'APPROVED';
-      } else if (req.commissionerStatus === 'Rejected') {
-        displayStatus = 'REJECTED';
-      }
-
-      return {
-        referenceNo: req.refNo,
-        submissionDate: req.date || req.submittedDate,
-        distilleryName: req.companyName,
-        status: displayStatus,
-        amount: this.calculateHologramAmount(req).toString(),
-        priority: req.commissionerStatus === 'Pending' ? 'high' : 'normal',
-        localQtyLakh: req.localQtyLakh || 0,
-        exportQtyLakh: req.exportQtyLakh || 0,
-        defenceQtyLakh: req.defenceQtyLakh || 0,
-        totalQtyLakh: (req.localQtyLakh || 0) + (req.exportQtyLakh || 0) + (req.defenceQtyLakh || 0),
-        hologramType: 'Security Hologram'
-      };
-    });
-
-    // Replace sample data with real data (show applications forwarded by IT Cell)
-    this.hologramData = convertedData;
-    this.filteredHologramData = [...this.hologramData];
-  
   }
 
   calculateHologramAmount(req: any): number {
@@ -389,7 +356,7 @@ export class CommissionerDashboardComponent implements OnInit {
     const now = new Date();
     const month = now.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
     const year = now.getFullYear().toString();
-    
+
     this.router.navigate(['/dev/monthlyhologramstatement-oic'], {
       queryParams: {
         month: month,
@@ -401,12 +368,12 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   // Status count methods
-  getRevalidationStatusCount(status: string): number{
+  getRevalidationStatusCount(status: string): number {
     return this.filteredRevalidationData.filter(item => item.status === status).length;
   }
 
   getUrgentRevalidationCount(): number {
-    return this.filteredRevalidationData.filter(item => 
+    return this.filteredRevalidationData.filter(item =>
       item.priority === 'urgent' || item.isExpired || (item.daysLeft !== undefined && item.daysLeft <= 7)
     ).length;
   }
@@ -416,7 +383,7 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   getUrgentHologramCount(): number {
-    return this.filteredHologramData.filter(item => 
+    return this.filteredHologramData.filter(item =>
       item.priority === 'urgent' || item.priority === 'high'
     ).length;
   }
@@ -545,25 +512,25 @@ export class CommissionerDashboardComponent implements OnInit {
       if (this.supplyChainService) {
         response = await firstValueFrom(this.supplyChainService.getRevalidationData());
       } else {
-         // Fallback manual fetch if service issue (unlikely)
-         console.warn('Service unavailable, trying manual fetch');
-         // const url = ...
-         return; 
+        // Fallback manual fetch if service issue (unlikely)
+        console.warn('Service unavailable, trying manual fetch');
+        // const url = ...
+        return;
       }
 
       console.log('Header/Data response:', response);
-      
+
       const rawData = Array.isArray(response) ? response : (response?.results || []);
 
       this.revalidationData = rawData.map((item: any) => {
         // Calculate days left and status info
         // Assuming backend gives us revalidationDate and we assume 30 days validity or getting it from item
-        
+
         // Parsing dates
         const subDate = new Date(item.revalidationDate || item.revalidation_date || item.created_at);
         const expiryDate = new Date(subDate);
         expiryDate.setDate(subDate.getDate() + 30); // Defaulting to 30 days validity assumption if not provided
-        
+
         const now = new Date();
         const diffTime = expiryDate.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -571,7 +538,7 @@ export class CommissionerDashboardComponent implements OnInit {
 
         // Map status
         // Use backend status directly as requested
-        const status = item.status; 
+        const status = item.status;
 
         // Determine priority based on expiry/status
         let priority = 'normal';
@@ -590,7 +557,7 @@ export class CommissionerDashboardComponent implements OnInit {
           daysLeft: diffDays,
           // Store original ID for actions
           id: item.id,
-          allowedActions: item.allowedActions || item.allowed_actions || [] 
+          allowedActions: item.allowedActions || item.allowed_actions || []
         } as any; // Cast to any to allow extra fields like ID
       });
 
@@ -603,7 +570,7 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   // Action methods
-  reviewRevalidation(item: any): void{
+  reviewRevalidation(item: any): void {
     // Navigate to revalidation letter view with reference number
     this.router.navigate(['/dev-revalidation-letter-view'], {
       queryParams: { ref: item.referenceNo }
@@ -613,7 +580,7 @@ export class CommissionerDashboardComponent implements OnInit {
   reviewHologram(item: CommissionerTableData): void {
     // Navigate to supply chain hologram view with reference number and from parameter
     this.router.navigate(['/dev-supply-chain-hologram-view'], {
-      queryParams: { 
+      queryParams: {
         ref: item.referenceNo,
         from: 'commissioner'
       }
@@ -622,38 +589,38 @@ export class CommissionerDashboardComponent implements OnInit {
 
   approveRevalidation(item: any): void {
     if (!item.id) {
-        console.error('No ID found for action');
-        return;
+      console.error('No ID found for action');
+      return;
     }
-    
+
     // Call API
-    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'commissioner').subscribe({
-        next: (res: any) => {
-            alert('Revalidation Approved Successfully');
-            this.fetchRevalidationData(); // Refresh
-        },
-        error: (err: any) => {
-            console.error('Approval failed', err);
-            alert('Approval Failed: ' + (err.error?.error || err.message));
-        }
+    this.supplyChainService.performRevalidationAction(item.id, 'APPROVE', 'Approved by Commissioner').subscribe({
+      next: (res: any) => {
+        alert('Revalidation Approved Successfully');
+        this.fetchRevalidationData(); // Refresh
+      },
+      error: (err: any) => {
+        console.error('Approval failed', err);
+        alert('Approval Failed: ' + (err.error?.error || err.message));
+      }
     });
   }
 
   rejectRevalidation(item: any): void {
     if (!item.id) {
-        console.error('No ID found for action');
-        return;
+      console.error('No ID found for action');
+      return;
     }
 
-    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', 'commissioner').subscribe({
-        next: (res: any) => {
-            alert('Revalidation Rejected');
-            this.fetchRevalidationData(); // Refresh
-        },
-        error: (err: any) => {
-            console.error('Rejection failed', err);
-            alert('Rejection Failed: ' + (err.error?.error || err.message));
-        }
+    this.supplyChainService.performRevalidationAction(item.id, 'REJECT', 'Rejected by Commissioner').subscribe({
+      next: (res: any) => {
+        alert('Revalidation Rejected');
+        this.fetchRevalidationData(); // Refresh
+      },
+      error: (err: any) => {
+        console.error('Rejection failed', err);
+        alert('Rejection Failed: ' + (err.error?.error || err.message));
+      }
     });
   }
 
@@ -671,81 +638,37 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   approveHologram(item: CommissionerTableData): void {
-    item.status = 'APPROVED';
-    
-    
-    // Update in hologramRequests storage to enable payment (no slip upload needed in new flow)
-    if (this.isBrowser) {
-      const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
-      const index = hologramRequests.findIndex((req: any) => req.refNo === item.referenceNo);
-      if (index !== -1) {
-        hologramRequests[index].commissionerStatus = 'Approved';
-        hologramRequests[index].paymentEnabled = true; // Enable payment after Commissioner approval
-        hologramRequests[index].status = 'Approved by Commissioner - Ready for Payment';
-        hologramRequests[index].approvedBy = 'Commissioner';
-        hologramRequests[index].approvedDate = new Date().toISOString().split('T')[0];
-        
-        // If there's a pending edit, now apply the quantities and make it visible
-        if (hologramRequests[index].hasUnapprovedEdit && hologramRequests[index].pendingEditHistory) {
-          // Apply the pending quantities
-          if (hologramRequests[index].pendingQuantities) {
-            hologramRequests[index].localQtyLakh = hologramRequests[index].pendingQuantities.local;
-            hologramRequests[index].exportQtyLakh = hologramRequests[index].pendingQuantities.export;
-            hologramRequests[index].defenceQtyLakh = hologramRequests[index].pendingQuantities.defence;
-            delete hologramRequests[index].pendingQuantities;
-          }
-          // Make edit history visible
-          hologramRequests[index].editedByCommissioner = true;
-          hologramRequests[index].editHistory = hologramRequests[index].pendingEditHistory;
-          delete hologramRequests[index].pendingEditHistory;
-          delete hologramRequests[index].hasUnapprovedEdit;
-        }
-        
-        localStorage.setItem('hologramRequests', JSON.stringify(hologramRequests));
-      }
+    if (!item.id) { console.error('No ID for hologram approval'); return; }
 
-      // Also update hologramApplications (used by supply chain dashboard)
-      const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
-      // Update all rows with the same refNo
-      applications.forEach((app: any) => {
-        if (app.refNo === item.referenceNo) {
-          app.status = 'Approved by Commissioner - Ready for Payment';
-          app.commissionerStatus = 'Approved';
-          app.paymentEnabled = true; // Enable payment after Commissioner approval
-          app.approvedBy = 'Commissioner';
-          app.approvedDate = new Date().toISOString().split('T')[0];
-          
-          // If there's a pending edit, now apply the quantities and make it visible
-          if (app.hasUnapprovedEdit && app.pendingEditHistory) {
-            // Apply the pending quantities
-            if (app.pendingQuantities) {
-              app.localQtyLakh = app.pendingQuantities.local;
-              app.exportQtyLakh = app.pendingQuantities.export;
-              app.defenceQtyLakh = app.pendingQuantities.defence;
-              delete app.pendingQuantities;
-            }
-            // Make edit history visible
-            app.editedByCommissioner = true;
-            app.editHistory = app.pendingEditHistory;
-            delete app.pendingEditHistory;
-            delete app.hasUnapprovedEdit;
-          }
-        }
-      });
-      localStorage.setItem('hologramApplications', JSON.stringify(applications));
-    }
-    
-    // Reload hologram data to reflect changes
-    this.loadHologramApplicationsFromITCell();
-    this.applyHologramFilters();
-    
-    console.log('Approved hologram application:', item.referenceNo);
-    alert('Hologram application approved by Commissioner. Supply chain user can now proceed with payment.');
+    if (!confirm('Are you sure you want to approve this hologram procurement request?')) return;
+
+    this.hologramService.performAction('procurement', Number(item.id), 'approve', 'Approved by Commissioner').subscribe({
+      next: (res) => {
+        alert('Hologram application approved successfully.');
+        this.loadHologramApplications();
+      },
+      error: (err) => {
+        console.error('Error approving hologram:', err);
+        alert('Failed to approve hologram application.');
+      }
+    });
   }
 
   rejectHologram(item: CommissionerTableData): void {
-    item.status = 'REJECTED';
-    console.log('Rejected hologram application:', item.referenceNo);
+    if (!item.id) { console.error('No ID for hologram rejection'); return; }
+
+    if (!confirm('Are you sure you want to REJECT this hologram procurement request?')) return;
+
+    this.hologramService.performAction('procurement', Number(item.id), 'reject', 'Rejected by Commissioner').subscribe({
+      next: (res) => {
+        alert('Hologram application rejected.');
+        this.loadHologramApplications();
+      },
+      error: (err) => {
+        console.error('Error rejecting hologram:', err);
+        alert('Failed to reject hologram application.');
+      }
+    });
   }
 
   issueHologram(item: CommissionerTableData): void {
@@ -802,12 +725,12 @@ export class CommissionerDashboardComponent implements OnInit {
   // Hologram details modal methods
   viewHologramDetails(item: CommissionerTableData): void {
     console.log('viewHologramDetails called with:', item);
-    
+
     // Load full details from hologramRequests
     if (this.isBrowser) {
       const hologramRequests = JSON.parse(localStorage.getItem('hologramRequests') || '[]');
       const fullDetails = hologramRequests.find((req: any) => req.refNo === item.referenceNo);
-      
+
       if (fullDetails) {
         // Merge full details with table data
         this.selectedHologramApplication = {
@@ -824,10 +747,10 @@ export class CommissionerDashboardComponent implements OnInit {
     } else {
       this.selectedHologramApplication = item;
     }
-    
+
     // Reset edit mode
     // this.isEditingQuantity = false; // Moved to component
-    
+
     this.showHologramDetailsModal = true;
     console.log('Modal should be visible now:', this.showHologramDetailsModal);
     console.log('Selected hologram details:', this.selectedHologramApplication);
@@ -838,7 +761,7 @@ export class CommissionerDashboardComponent implements OnInit {
     this.showHologramDetailsModal = false;
     this.selectedHologramApplication = null;
   }
-  
+
   // Handle events from hologram details modal
   onHologramApprove(application: CommissionerTableData): void {
     this.approveHologram(application);
@@ -846,10 +769,10 @@ export class CommissionerDashboardComponent implements OnInit {
   }
 
   onHologramDataUpdated(): void {
-    this.loadHologramApplicationsFromITCell();
+    this.loadHologramApplications();
     this.applyHologramFilters();
   }
-  
+
 
 
   // Pagination methods
@@ -893,13 +816,13 @@ export class CommissionerDashboardComponent implements OnInit {
   // Check if payment is completed for hologram (ALL types with same ref must be paid)
   isPaymentCompleted(item: CommissionerTableData): boolean {
     if (!this.isBrowser) return false;
-    
+
     // Check if ALL applications with the same reference number have payment completed
     const applications = JSON.parse(localStorage.getItem('hologramApplications') || '[]');
     const sameRefApplications = applications.filter((app: any) => app.refNo === item.referenceNo);
-    
+
     if (sameRefApplications.length === 0) return false;
-    
+
     // All applications with this ref must have paymentCompleted = true
     return sameRefApplications.every((app: any) => app.paymentCompleted === true);
   }

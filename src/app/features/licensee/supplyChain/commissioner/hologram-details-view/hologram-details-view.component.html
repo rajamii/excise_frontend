@@ -112,90 +112,141 @@
         <!-- Edit History Section (if edited) -->
         <div class="row g-2 mt-2" *ngIf="application.editHistory">
           <div class="col-12">
-            <div class="card border-warning">
-              <div class="card-header bg-warning py-1">
-                <small class="fw-bold"><i class="bi bi-pencil-square me-1"></i>Quantity Edit History</small>
+            <div class="card border-warning shadow-sm">
+              <div class="card-header bg-warning py-2">
+                <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Quantity Edit History</h6>
               </div>
-              <div class="card-body p-2">
+              <div class="card-body p-3">
+                <div class="alert alert-info mb-3" style="font-size: 0.85rem;">
+                  <i class="bi bi-info-circle me-1"></i>
+                  <strong>Commissioner {{ application.editHistory.editedBy }}</strong> updated the quantities on 
+                  <strong>{{ application.editHistory.editedDate | date:'dd-MMM-yyyy' }}</strong>
+                </div>
+
                 <div class="row">
+                  <!-- Original Quantities -->
                   <div class="col-md-6">
-                    <h6 class="text-danger mb-1" style="font-size: 0.8rem;">Original Quantities</h6>
-                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
-                      <tbody>
-                        @if (application.editHistory.originalQuantities.local > 0) {
-                          <tr><td>Local:</td><td class="text-end">{{ application.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.export > 0) {
-                          <tr><td>Export:</td><td class="text-end">{{ application.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.defence > 0) {
-                          <tr><td>Defence:</td><td class="text-end">{{ application.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">{{ application.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td></tr>
-                      </tbody>
-                    </table>
+                    <div class="card border-danger mb-2">
+                      <div class="card-header bg-danger text-white py-1">
+                        <small class="fw-bold">Original Request</small>
+                      </div>
+                      <div class="card-body p-2">
+                        <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
+                          <tbody>
+                            @if (application.editHistory.originalQuantities.local > 0) {
+                              <tr><td>Local:</td><td class="text-end fw-bold">{{ application.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td></tr>
+                            }
+                            @if (application.editHistory.originalQuantities.export > 0) {
+                              <tr><td>Export:</td><td class="text-end fw-bold">{{ application.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td></tr>
+                            }
+                            @if (application.editHistory.originalQuantities.defence > 0) {
+                              <tr><td>Defence:</td><td class="text-end fw-bold">{{ application.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td></tr>
+                            }
+                            <tr class="border-top">
+                              <td class="fw-bold">Total:</td>
+                              <td class="text-end fw-bold text-danger">{{ application.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td>
+                            </tr>
+                            <tr class="border-top bg-light">
+                              <td class="fw-bold"><i class="bi bi-currency-rupee"></i> Payment:</td>
+                              <td class="text-end fw-bold text-danger">₹{{ application.editHistory.originalPayment | number:'1.2-2' }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-6">
-                    <h6 class="text-success mb-1" style="font-size: 0.8rem;">Updated Quantities</h6>
-                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
-                      <tbody>
-                        @if (application.editHistory.originalQuantities.local > 0) {
-                          <tr><td>Local:</td><td class="text-end">{{ application.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.export > 0) {
-                          <tr><td>Export:</td><td class="text-end">{{ application.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.defence > 0) {
-                          <tr><td>Defence:</td><td class="text-end">{{ application.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td></tr>
-                        }
-                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">{{ application.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
 
-                <!-- Amount Comparison -->
-                <div class="row mt-2">
+                  <!-- Updated Quantities -->
                   <div class="col-md-6">
-                    <h6 class="text-danger mb-1" style="font-size: 0.8rem;"><i class="bi bi-currency-rupee me-1"></i>Original Amount</h6>
-                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
-                      <tbody>
-                        @if (application.editHistory.originalQuantities.local > 0) {
-                          <tr><td>Local:</td><td class="text-end">₹{{ (application.editHistory.originalQuantities.local * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.export > 0) {
-                          <tr><td>Export:</td><td class="text-end">₹{{ (application.editHistory.originalQuantities.export * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.defence > 0) {
-                          <tr><td>Defence:</td><td class="text-end">₹{{ (application.editHistory.originalQuantities.defence * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold">₹{{ (application.editHistory.originalQuantities.total * 0.15) | number:'1.2-2' }}</td></tr>
-                      </tbody>
-                    </table>
+                    <div class="card border-success mb-2">
+                      <div class="card-header bg-success text-white py-1">
+                        <small class="fw-bold">Updated by Commissioner</small>
+                      </div>
+                      <div class="card-body p-2">
+                        <table class="table table-sm table-borderless mb-0" style="font-size: 0.85rem;">
+                          <tbody>
+                            @if (application.editHistory.originalQuantities.local > 0) {
+                              <tr>
+                                <td>Local:</td>
+                                <td class="text-end fw-bold">
+                                  {{ application.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces
+                                  @if (application.editHistory.updatedQuantities.local !== application.editHistory.originalQuantities.local) {
+                                    <span class="badge bg-success ms-1" style="font-size: 0.7rem;">
+                                      @if (application.editHistory.updatedQuantities.local > application.editHistory.originalQuantities.local) {
+                                        +{{ (application.editHistory.updatedQuantities.local - application.editHistory.originalQuantities.local) | number:'1.0-0' }}
+                                      } @else {
+                                        {{ (application.editHistory.updatedQuantities.local - application.editHistory.originalQuantities.local) | number:'1.0-0' }}
+                                      }
+                                    </span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                            @if (application.editHistory.originalQuantities.export > 0) {
+                              <tr>
+                                <td>Export:</td>
+                                <td class="text-end fw-bold">
+                                  {{ application.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces
+                                  @if (application.editHistory.updatedQuantities.export !== application.editHistory.originalQuantities.export) {
+                                    <span class="badge bg-success ms-1" style="font-size: 0.7rem;">
+                                      @if (application.editHistory.updatedQuantities.export > application.editHistory.originalQuantities.export) {
+                                        +{{ (application.editHistory.updatedQuantities.export - application.editHistory.originalQuantities.export) | number:'1.0-0' }}
+                                      } @else {
+                                        {{ (application.editHistory.updatedQuantities.export - application.editHistory.originalQuantities.export) | number:'1.0-0' }}
+                                      }
+                                    </span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                            @if (application.editHistory.originalQuantities.defence > 0) {
+                              <tr>
+                                <td>Defence:</td>
+                                <td class="text-end fw-bold">
+                                  {{ application.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces
+                                  @if (application.editHistory.updatedQuantities.defence !== application.editHistory.originalQuantities.defence) {
+                                    <span class="badge bg-success ms-1" style="font-size: 0.7rem;">
+                                      @if (application.editHistory.updatedQuantities.defence > application.editHistory.originalQuantities.defence) {
+                                        +{{ (application.editHistory.updatedQuantities.defence - application.editHistory.originalQuantities.defence) | number:'1.0-0' }}
+                                      } @else {
+                                        {{ (application.editHistory.updatedQuantities.defence - application.editHistory.originalQuantities.defence) | number:'1.0-0' }}
+                                      }
+                                    </span>
+                                  }
+                                </td>
+                              </tr>
+                            }
+                            <tr class="border-top">
+                              <td class="fw-bold">Total:</td>
+                              <td class="text-end fw-bold text-success">
+                                {{ application.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces
+                                <span class="badge bg-success ms-1" style="font-size: 0.7rem;">
+                                  @if (application.editHistory.updatedQuantities.total > application.editHistory.originalQuantities.total) {
+                                    +{{ (application.editHistory.updatedQuantities.total - application.editHistory.originalQuantities.total) | number:'1.0-0' }}
+                                  } @else {
+                                    {{ (application.editHistory.updatedQuantities.total - application.editHistory.originalQuantities.total) | number:'1.0-0' }}
+                                  }
+                                </span>
+                              </td>
+                            </tr>
+                            <tr class="border-top bg-light">
+                              <td class="fw-bold"><i class="bi bi-currency-rupee"></i> Payment:</td>
+                              <td class="text-end fw-bold text-success">
+                                ₹{{ application.editHistory.updatedPayment | number:'1.2-2' }}
+                                <span class="badge bg-success ms-1" style="font-size: 0.7rem;">
+                                  @if (application.editHistory.updatedPayment > application.editHistory.originalPayment) {
+                                    +₹{{ (application.editHistory.updatedPayment - application.editHistory.originalPayment) | number:'1.2-2' }}
+                                  } @else {
+                                    -₹{{ (application.editHistory.originalPayment - application.editHistory.updatedPayment) | number:'1.2-2' }}
+                                  }
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
-                  <div class="col-md-6">
-                    <h6 class="text-success mb-1" style="font-size: 0.8rem;"><i class="bi bi-currency-rupee me-1"></i>Updated Amount</h6>
-                    <table class="table table-sm table-borderless mb-0" style="font-size: 0.75rem;">
-                      <tbody>
-                        @if (application.editHistory.originalQuantities.local > 0) {
-                          <tr><td>Local:</td><td class="text-end text-success">₹{{ (application.editHistory.updatedQuantities.local * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.export > 0) {
-                          <tr><td>Export:</td><td class="text-end text-success">₹{{ (application.editHistory.updatedQuantities.export * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        @if (application.editHistory.originalQuantities.defence > 0) {
-                          <tr><td>Defence:</td><td class="text-end text-success">₹{{ (application.editHistory.updatedQuantities.defence * 0.15) | number:'1.2-2' }}</td></tr>
-                        }
-                        <tr class="border-top"><td class="fw-bold">Total:</td><td class="text-end fw-bold text-success">₹{{ (application.editHistory.updatedQuantities.total * 0.15) | number:'1.2-2' }}</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div class="mt-2 pt-2 border-top">
-                  <small class="text-muted">
-                    <i class="bi bi-person me-1"></i>Edited by: <strong>{{ application.editHistory.editedBy }}</strong> on {{ application.editHistory.editedDate | date:'dd-MMM-yyyy' }}
-                  </small>
                 </div>
               </div>
             </div>
@@ -226,8 +277,8 @@
           </div>
         </div>
 
-        <!-- Approval Actions (if pending) -->
-        <div class="mt-3" *ngIf="application.status === 'PENDING' || application.commissionerStatus === 'Pending'">
+        <!-- Approval Actions (if pending or forwarded to commissioner) -->
+        <div class="mt-3" *ngIf="application.status === 'PENDING' || application.status === 'Forwarded to Commissioner' || application.commissionerStatus === 'Pending'">
           <div class="alert alert-info py-2 mb-2" style="background-color: #e7f3ff; border-color: #b3d9ff;">
             <small>
               <i class="bi bi-info-circle me-1"></i>

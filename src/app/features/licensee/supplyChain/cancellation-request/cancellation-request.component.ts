@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { SupplyChainService } from '../services/supplychain.service';
+import { SupplyChainProfileService } from '../../../../core/services/supply-chain-profile.service';
 import { environment } from '../../../../../environments/environment';
 
 interface Permit {
@@ -58,17 +59,22 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // File upload
   uploadedFiles: any[] = [];
 
+  // Profile Data
+  currentLicenseeId: string = '';
+
   constructor(
     private http: HttpClient,
     private router: Router,
-    private supplyChainService: SupplyChainService
-  ) {}
+    private supplyChainService: SupplyChainService,
+    private profileService: SupplyChainProfileService
+  ) { }
 
   ngOnInit() {
     console.log('CancellationRequestComponent: ngOnInit, refNo:', this.referenceNo);
     if (this.referenceNo) {
       this.loadData();
     }
+    this.fetchProfile();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -78,18 +84,32 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     }
   }
 
+  fetchProfile() {
+    this.profileService.getProfile().subscribe({
+      next: (res) => {
+        if (res.exists && res.data) {
+          this.currentLicenseeId = res.data.licenseeId;
+          console.log('Fetched Licensee ID:', this.currentLicenseeId);
+        } else {
+          console.warn('Profile not found, defaulting loop or error?');
+        }
+      },
+      error: (err) => console.error('Error fetching profile', err)
+    });
+  }
+
   loadData() {
     console.log('CancellationRequestComponent: loading data for', this.referenceNo);
     this.isLoading = true;
     this.errorMessage = '';
-    
+
     // 1. Fetch Requisition Data
     this.http.get<any[]>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/?our_ref_no=${this.referenceNo}`).subscribe({
       next: (reqData) => {
         console.log('CancellationRequestComponent: req Data loaded', reqData);
         if (reqData && reqData.length > 0) {
           this.requisitionData = reqData[0];
-          
+
           // 2. Fetch Existing Cancellations to mark cancelled permits
           this.fetchExistingCancellations();
         } else {
@@ -112,13 +132,13 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         const cancelledNumbers = new Set<string>();
         if (cancelData) {
           if (Array.isArray(cancelData)) {
-             cancelData.forEach(c => {
-               if (c.cancelled_permit_number) {
-                 c.cancelled_permit_number.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
-               }
-             });
+            cancelData.forEach(c => {
+              if (c.cancelled_permit_number) {
+                c.cancelled_permit_number.split(',').forEach((num: string) => cancelledNumbers.add(num.trim()));
+              }
+            });
           } else {
-             console.warn('Cancel Data is not an array:', cancelData);
+            console.warn('Cancel Data is not an array:', cancelData);
           }
         }
         console.log('Generating permits with count:', this.requisitionData.requisitonNumberOfPermits);
@@ -143,7 +163,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
       const numStr = i.toString();
       this.permits.push({
         number: numStr,
-        amount: 1000, 
+        amount: 1000,
         isCancelled: cancelledSet.has(numStr)
       });
     }
@@ -160,7 +180,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     // Better: Update the 'permits' model with a 'isSelected' property or similar, but interface is fixed.
     // I shall check the checkboxes via querySelector or bind to a local map if I can't change template.
     // Actually, I can allow the user to select multiple.
-    
+
     // NOTE: The current template logic in the prompt:
     // <input ... [checked]="permit.isCancelled" ... (change)="onPermitSelectionChange()" />
     // It binds checked to isCancelled which is for EXISTING. 
@@ -173,7 +193,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   // Helper to handle selection since template is not fully binded in the snippet provided
   togglePermit(permit: Permit, event: any) {
     if (permit.isCancelled) return;
-    
+
     // Update newlySelectedPermits for submission logic
     if (event.target.checked) {
       this.newlySelectedPermits.push(permit.number);
@@ -186,23 +206,23 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     }
     // Sort visually
     this.selectedPermits.sort((a, b) => Number(a) - Number(b));
-  } 
+  }
 
   getTotalBalance(): number {
     // grainEnaNumber * newlySelectedPermits.length
     if (this.requisitionData && this.requisitionData.grainEnaNumber) {
-        return Number(this.requisitionData.grainEnaNumber) * this.newlySelectedPermits.length;
+      return Number(this.requisitionData.grainEnaNumber) * this.newlySelectedPermits.length;
     }
     return 0;
   }
 
 
   loadPermitNumbers() {
-     // Replaced by loadData flow
+    // Replaced by loadData flow
   }
 
   loadCancellationData() {
-     // Replaced by loadData flow
+    // Replaced by loadData flow
   }
 
   onFileSelected(event: any, fileType: string) {
@@ -239,10 +259,15 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
   confirmCancellation() {
     this.showDeclarationModal = false;
 
+    if (!this.currentLicenseeId) {
+      alert('Licensee Profile not loaded. Cannot submit cancellation.');
+      return;
+    }
+
     const payload = {
       referenceNo: this.referenceNo,
       permitNumbers: this.newlySelectedPermits,
-      licenseeId: this.getLicenseeIdFromSession(),
+      licenseeId: this.currentLicenseeId,
     };
 
     this.supplyChainService.submitCancellation(payload).subscribe({
@@ -250,7 +275,7 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
         this.showSuccessModal = true;
         this.successMessage = response.message;
         // Refresh data to show updated status
-        this.loadData(); 
+        this.loadData();
         this.newlySelectedPermits = [];
       },
       error: (error) => {
@@ -260,9 +285,8 @@ export class CancellationRequestComponent implements OnInit, OnChanges {
     });
   }
 
-  getLicenseeIdFromSession(): string {
-    return localStorage.getItem('licensee_id') || 'LIC-001'; // Default for testing
-  }
+  // Helper removed as we use service now
+  // getLicenseeIdFromSession()...
 
   redirectToDashboard() {
     this.close.emit();

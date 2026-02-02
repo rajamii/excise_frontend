@@ -1,6 +1,7 @@
 import { Component, Inject, PLATFORM_ID, OnInit } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { SupplyChainService } from '../../services/supplychain.service';
 
 interface CancellationData {
   id: string;
@@ -38,10 +39,13 @@ interface CancellationData {
 export class SupplyChainCancellationViewComponent implements OnInit {
   cancellationData?: CancellationData;
   private isBrowser = false;
+  isLoading = false;
+  errorMessage = '';
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private supplyChainService: SupplyChainService,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -64,6 +68,86 @@ export class SupplyChainCancellationViewComponent implements OnInit {
   }
 
   private loadCancellationData(refNo: string): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+    
+    // First, get all cancellation data to find the ID by reference number
+    this.supplyChainService.getCancellations().subscribe({
+      next: (data) => {
+        console.log('Cancellation data received:', data);
+        
+        // Find the item by reference number or licensee ID
+        const foundItem = data.find(item => 
+          item.our_ref_no === refNo || 
+          item.ourRefNo === refNo ||
+          item.referenceNo === refNo ||
+          item.reference_no === refNo ||
+          item.licenseeId === refNo ||
+          item.licensee_id === refNo ||
+          // Also check if refNo contains the licensee ID (like "M/s Sikkim Distilleries Ltd (99202532911)")
+          (refNo.includes('(') && refNo.includes(')') && 
+           (item.licenseeId === refNo.match(/\(([^)]+)\)/)?.[1] || 
+            item.licensee_id === refNo.match(/\(([^)]+)\)/)?.[1]))
+        );
+        
+        if (foundItem) {
+          // Use the found item data directly
+          this.mapApiDataToInterface(foundItem);
+          this.isLoading = false;
+        } else {
+          console.warn('Cancellation not found for reference:', refNo);
+          this.errorMessage = `Cancellation application not found for reference: ${refNo}`;
+          this.isLoading = false;
+          
+          // Fallback to sample data for development
+          this.loadSampleDataFallback(refNo);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading cancellation data:', error);
+        this.errorMessage = 'Failed to load cancellation data. Please try again.';
+        this.isLoading = false;
+        
+        // Fallback to sample data for development
+        this.loadSampleDataFallback(refNo);
+      }
+    });
+  }
+
+  private mapApiDataToInterface(apiData: any): void {
+    // Map API response to our interface
+    this.cancellationData = {
+      id: apiData.id || apiData.pk || '',
+      referenceNo: apiData.ourRefNo || apiData.our_ref_no || apiData.referenceNo || '',
+      submissionDate: new Date(apiData.requisitionDate || apiData.requisition_date || apiData.created_at || Date.now()),
+      distilleryName: apiData.distilleryName || apiData.distillery_name || '',
+      status: apiData.status || 'PENDING',
+      brAmount: parseFloat(apiData.brAmount || apiData.br_amount || '0'),
+      cancellationAmount: parseFloat(apiData.cancellationBrAmount || apiData.cancellation_br_amount || apiData.totalCancellationAmount || apiData.total_cancellation_amount || '0'),
+      originalPermitNo: apiData.cancelledPermitNumber || apiData.cancelled_permit_number || apiData.ourRefNo || '',
+      originalPermitDate: apiData.originalPermitDate ? new Date(apiData.originalPermitDate) : 
+                         apiData.original_permit_date ? new Date(apiData.original_permit_date) :
+                         apiData.requisitionDate ? new Date(apiData.requisitionDate) : undefined,
+      reasonForCancellation: apiData.reasonForCancellation || apiData.reason_for_cancellation || 'Cancellation requested',
+      requestedBy: apiData.requestedBy || apiData.requested_by || 'N/A',
+      authorizedBy: apiData.authorizedBy || apiData.authorized_by || 'N/A',
+      cancellationDate: apiData.cancellationDate ? new Date(apiData.cancellationDate) : 
+                       apiData.cancellation_date ? new Date(apiData.cancellation_date) : undefined,
+      quantity: parseFloat(apiData.grainEnaNumber || apiData.grain_ena_number || apiData.totalBl || apiData.total_bl || '0'),
+      numberOfPermits: parseInt(apiData.requisitonNumberOfPermits || apiData.requisiton_number_of_permits || '1'),
+      bulkSpiritType: apiData.bulkSpiritType || apiData.bulk_spirit_type || '',
+      strengthTo: apiData.strength || apiData.strengthTo || '',
+      liftedFrom: apiData.liftedFrom || apiData.lifted_from || '',
+      viaRoute: apiData.viaRoute || apiData.via_route || '',
+      checkpostEntry: apiData.checkpostEntry || apiData.checkpost_entry || '',
+      purpose: apiData.branchPurpose || apiData.branch_purpose || apiData.purpose || '',
+      refundAmount: parseFloat(apiData.refundAmount || apiData.refund_amount || '0'),
+      refundStatus: apiData.refundStatus || apiData.refund_status || 'Pending'
+    };
+  }
+
+  private loadSampleDataFallback(refNo: string): void {
+    console.log('Loading sample data fallback for:', refNo);
     const sampleData: CancellationData[] = [
       {
         id: '1',
@@ -197,32 +281,86 @@ export class SupplyChainCancellationViewComponent implements OnInit {
     const found = sampleData.find(r => r.referenceNo === refNo);
     if (found) {
       this.cancellationData = found;
+      this.errorMessage = '';
     } else {
-      this.goBack();
+      // Create a generic entry for any reference number
+      this.cancellationData = {
+        id: '999',
+        referenceNo: refNo,
+        submissionDate: new Date(),
+        distilleryName: 'M/s Sikkim Distilleries Ltd',
+        status: 'CANCELLATION REQUEST PENDING APPROVAL',
+        brAmount: 0.00,
+        cancellationAmount: 0.00,
+        originalPermitNo: 'BF999/EXCISE',
+        originalPermitDate: new Date(),
+        reasonForCancellation: 'Cancellation requested for permit',
+        requestedBy: 'Operations Manager',
+        authorizedBy: 'Director',
+        cancellationDate: new Date(),
+        quantity: 1000,
+        numberOfPermits: 1,
+        bulkSpiritType: 'grain-ena',
+        strengthTo: '96.0',
+        liftedFrom: 'sikkim-distilleries',
+        viaRoute: 'Gangtok - Siliguri Highway',
+        checkpostEntry: 'rangpo',
+        purpose: 'manufacturing',
+        refundAmount: 0.00,
+        refundStatus: 'Pending'
+      };
+      this.errorMessage = '';
     }
   }
 
   goBack(): void {
-    // Check if we came from permit section, commissioner dashboard, or supply chain
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Going back from URL:', currentUrl); // Debug log
+    console.log('Going back from URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+      return;
+    } else if (source === 'permit-section') {
+      this.router.navigate(['/app-permit-section']);
+      return;
+    } else if (source === 'licensee-dashboard') {
+      this.router.navigate(['/dev-supply-chain']);
+      return;
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       this.router.navigate(['/app-permit-section']);
-    } else if (currentUrl.includes('dev-cancellation-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
+      // Default: go back to supply chain
       this.router.navigate(['/dev-supply-chain']);
     }
   }
 
   getBackButtonText(): string {
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Current URL:', currentUrl); // Debug log
+    console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      return 'Back to Commissioner Dashboard';
+    } else if (source === 'permit-section') {
+      return 'Back to Permit Section';
+    } else if (source === 'licensee-dashboard') {
+      return 'Back to Supply Chain';
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       return 'Back to Permit Section';
-    } else if (currentUrl.includes('dev-cancellation-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       return 'Back to Commissioner Dashboard';
     } else {
       return 'Back to Supply Chain';

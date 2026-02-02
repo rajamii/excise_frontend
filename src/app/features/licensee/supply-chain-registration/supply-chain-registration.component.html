@@ -1,0 +1,42 @@
+<div class="registration-container">
+    <div class="card registration-card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Supply Chain Registration</h4>
+            <p class="mb-0 small">Please confirm your manufacturing unit details to proceed.</p>
+        </div>
+        <div class="card-body">
+            <form [formGroup]="registrationForm" (ngSubmit)="onSubmit()">
+
+                <div class="mb-3">
+                    <label class="form-label">Select Manufacturing Unit/Entity</label>
+                    <select class="form-select" formControlName="selectedUnit">
+                        <option value="">-- Select Unit --</option>
+                        <option *ngFor="let unit of manufacturingUnits" [value]="unit.name">
+                            {{ unit.name }} ({{ unit.type }})
+                        </option>
+                    </select>
+                    <div class="form-text text-muted">
+                        This will link your account to the selected Distillery/Brewery permanently.
+                    </div>
+
+                    <div *ngIf="registrationForm.get('selectedUnit')?.value" class="mt-2 alert alert-info">
+                        Selected ID: <strong>{{ selectedLicenseeId }}</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Address (Optional)</label>
+                    <textarea class="form-control" formControlName="address" rows="3"></textarea>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary" [disabled]="registrationForm.invalid || submitting">
+                        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-2" role="status"
+                            aria-hidden="true"></span>
+                        {{ submitting ? 'Registering...' : 'Confirm & Proceed to Dashboard' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

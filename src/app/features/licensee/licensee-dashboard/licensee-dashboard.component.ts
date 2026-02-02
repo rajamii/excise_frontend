@@ -3,8 +3,6 @@ import { Component, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { DashboardCount } from '../../../core/models/dashboard.model';
-import { LicenseApplicationService } from '../../../core/services/license-application.service';
-import { MatDialog } from '@angular/material/dialog';
 import { ApplicationTableComponent } from './application-table/application-table.component';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -24,10 +22,10 @@ import Swal from 'sweetalert2';
   styleUrl: './licensee-dashboard.component.scss'
 })
 export class LicenseeDashboardComponent implements OnInit {
-  dashboardCounts: DashboardCount & { awaitingPayment?: number } = { 
-    applied: 0, 
-    pending: 0, 
-    approved: 0, 
+  dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
+    applied: 0,
+    pending: 0,
+    approved: 0,
     rejected: 0,
     awaitingPayment: 0
   };
@@ -36,7 +34,7 @@ export class LicenseeDashboardComponent implements OnInit {
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
-  pendingDataSource = new MatTableDataSource<UnifiedApplication>(); // ✅ Now includes awaiting payment
+  pendingDataSource = new MatTableDataSource<UnifiedApplication>();
   approvedDataSource = new MatTableDataSource<UnifiedApplication>();
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
@@ -44,10 +42,8 @@ export class LicenseeDashboardComponent implements OnInit {
   activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
 
   constructor(
-    private licenseAppService: LicenseApplicationService,
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private unifiedDashboardService: UnifiedDashboardService,
-    private dialog: MatDialog
   ) { }
 
   showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
@@ -77,8 +73,7 @@ export class LicenseeDashboardComponent implements OnInit {
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (result) => {
-          console.log('📊 Raw data from API:', result);
-          
+
           let filteredApplications = {
             applied: result.applications.applied || [],
             pending: result.applications.pending || [],
@@ -86,9 +81,9 @@ export class LicenseeDashboardComponent implements OnInit {
             approved: result.applications.approved || [],
             rejected: result.applications.rejected || []
           };
-          
+
           if (this.selectedApplicationType !== 'all') {
-            console.log('🔍 Filtering by type:', this.selectedApplicationType);
+
             filteredApplications = {
               applied: filteredApplications.applied.filter(app => app.type === this.selectedApplicationType),
               pending: filteredApplications.pending.filter(app => app.type === this.selectedApplicationType),
@@ -97,25 +92,22 @@ export class LicenseeDashboardComponent implements OnInit {
               rejected: filteredApplications.rejected.filter(app => app.type === this.selectedApplicationType)
             };
           }
-          
-          console.log('✅ Filtered applications:', filteredApplications);
-          console.log('💳 Awaiting Payment count:', filteredApplications.awaitingPayment.length);
 
-          // ✅ CRITICAL CHANGE: Store counts separately but combine pending display
+
+          // Store counts separately but combine pending display
           this.dashboardCounts = {
             applied: filteredApplications.applied.length,
-            pending: filteredApplications.pending.length, // Still track separately
-            awaitingPayment: filteredApplications.awaitingPayment.length, // Still track separately
+            pending: filteredApplications.pending.length,
+            awaitingPayment: filteredApplications.awaitingPayment.length,
             approved: filteredApplications.approved.length,
             rejected: filteredApplications.rejected.length
           };
-          
-          console.log('📈 Dashboard counts:', this.dashboardCounts);
-          
-          // ✅ CRITICAL CHANGE: Combine pending and awaiting payment into one datasource
+
+
+          // Combine pending and awaiting payment into one datasource
           this.updateDataSources({
             applied: filteredApplications.applied,
-            pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment], // Combined!
+            pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
             approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
@@ -128,28 +120,17 @@ export class LicenseeDashboardComponent implements OnInit {
       });
   }
 
-  // ✅ UPDATED: Modified signature to accept combined pending data
+  // Modified signature to accept combined pending data
   private updateDataSources(result: {
     applied: UnifiedApplication[];
-    pending: UnifiedApplication[]; // Now includes both pending AND awaiting payment
+    pending: UnifiedApplication[];
     approved: UnifiedApplication[];
     rejected: UnifiedApplication[];
   }): void {
-    console.log('📋 Updating data sources...');
-    console.log('  - Applied:', result.applied.length);
-    console.log('  - Pending (combined):', result.pending.length);
-    console.log('  - Approved:', result.approved.length);
-    console.log('  - Rejected:', result.rejected.length);
-
     this.appliedDataSource.data = result.applied || [];
     this.pendingDataSource.data = result.pending || []; // ✅ Now contains both pending + awaiting payment
     this.approvedDataSource.data = result.approved || [];
     this.rejectedDataSource.data = result.rejected || [];
-    
-    // Log the actual data
-    if (result.pending.length > 0) {
-      console.log('📋 Pending applications (including awaiting payment):', result.pending);
-    }
   }
 
   private clearDataSources(): void {
@@ -160,9 +141,7 @@ export class LicenseeDashboardComponent implements OnInit {
   }
 
   onPaymentConfirmed(application: UnifiedApplication): void {
-    console.log('💳 Payment confirmation for:', application);
-    
-    Swal.fire({
+      Swal.fire({
       title: 'Confirm Payment Receipt',
       text: `Have you received the payment for application ${application.applicationId}?`,
       icon: 'question',
@@ -183,17 +162,9 @@ export class LicenseeDashboardComponent implements OnInit {
       didOpen: () => { Swal.showLoading(); }
     });
 
-    const appId = application.applicationId;
-    const appType = application.type;
-
-    console.log('🚀 Processing payment for:', application.applicationId);
-    console.log('📦 Type:', appType);
-
-    // ✅ Use salesmanBarmanService for ALL types since they all use same workflow endpoint
+    // Use salesmanBarmanService for ALL types since they all use same workflow endpoint
     this.salesmanBarmanService.getNextStages(application.applicationId).subscribe({
       next: (stages: any[]) => {
-        console.log('✅ Next stages received:', stages);
-        
         // Find the approved stage
         const approvalStage = stages.find(s => {
           const stageName = (s.name || s.stage_name || '').toLowerCase();
@@ -208,15 +179,11 @@ export class LicenseeDashboardComponent implements OnInit {
         }
 
         const stageId = approvalStage.id || approvalStage.stage_id;
-        console.log('✅ Found approval stage:', approvalStage);
-        console.log('✅ Advancing to stage ID:', stageId);
-        
         this.salesmanBarmanService.advanceStage(application.applicationId, stageId, {
           payment_confirmed: true,
           remarks: 'Payment received and confirmed'
         }).subscribe({
           next: (response) => {
-            console.log('✅ Payment processed successfully:', response);
             Swal.fire({
               title: 'Success!',
               text: 'Payment confirmed and application approved.',

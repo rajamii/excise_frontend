@@ -13,17 +13,8 @@
             </div>
             <div class="col-auto">
               <div class="d-flex gap-2">
-                <button class="btn btn-success btn-sm" (click)="goToDailyRegister()" title="Go to Daily Register">
-                  <i class="bi bi-calendar-day me-1"></i>Daily Register
-                </button>
                 <button class="btn btn-info btn-sm" (click)="autoCalculateFromDaily()" title="Refresh data from daily register">
                   <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                </button>
-                <button class="btn btn-warning btn-sm" (click)="goToMonthlyReport()" title="View Monthly Report for Distilleries and Breweries">
-                  <i class="bi bi-file-earmark-text me-1"></i>Monthly Report
-                </button>
-                <button class="btn btn-outline-primary btn-sm" (click)="goBack()">
-                  <i class="bi bi-arrow-left me-1"></i>Back
                 </button>
               </div>
             </div>
@@ -215,26 +206,6 @@
           </div>
           }
 
-          <!-- Debug Panel -->
-          <div class="mb-3 p-2 bg-light border rounded d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-              <small class="text-muted">
-                <strong>Integration Debug:</strong>
-                Approved Entries: {{ approvedEntriesCount }} |
-                Fresh Arrival={{ getFreshArrival() | number }} |
-                Utilized={{ getMonthlyTotalsFromDailyRegister().totalIssued | number }} |
-                Wastage={{ getMonthlyTotalsFromDailyRegister().totalWastage | number }}
-              </small>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              @if (isLoading) {
-              <span class="small text-muted">Refreshing…</span>
-              }
-              <button class="btn btn-sm btn-outline-info" (click)="autoCalculateFromDaily()">
-                Test Integration
-              </button>
-            </div>
-          </div>
           <!-- Month Summary Above Table -->
           @if (overviewSummary) {
           <div class="bg-success bg-opacity-10 border border-success border-2 rounded p-3 mb-3">
@@ -310,19 +281,56 @@
                 <tr [ngClass]="getRowClass(row)">
                   <td class="p-2 align-middle fw-bold" style="font-size: 0.875rem;">
                     {{ row.label }}
-                    @if (row.meta?.notes) {
-                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
-                      {{ row.meta?.notes }}
+                    @if (row.meta && row.meta.referenceNo) {
+                    <small class="d-block text-info fw-semibold" style="font-size: 0.7rem;">
+                      Ref: {{ row.meta.referenceNo }}
                     </small>
                     }
-                    @if (row.meta?.cartoonNumber) {
-                    <small class="d-block text-primary fw-semibold" style="font-size: 0.75rem;">
-                      Carton: {{ row.meta?.cartoonNumber }}
+                    @if (row.meta && row.meta.notes) {
+                    <small class="d-block text-success fw-semibold" style="font-size: 0.7rem;">
+                      {{ row.meta.notes }}
                     </small>
                     }
                   </td>
-                  <td colspan="9" class="text-center text-muted p-2 align-middle" style="font-size: 0.875rem;">
-                    <i class="bi bi-box-seam me-1"></i>Fresh Arrival: <strong class="text-success">{{ row.freshArrival | number }}</strong>
+                  <td colspan="2" class="text-center p-2 align-middle" style="font-size: 0.875rem;">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                      <i class="bi bi-box-seam text-success"></i>
+                      <span class="text-muted">Fresh Arrival:</span>
+                      <strong class="text-success fs-5">{{ row.freshArrival | number }}</strong>
+                    </div>
+                  </td>
+                  <!-- Carton Ranges Display Box -->
+                  <td colspan="7" class="p-2 align-middle">
+                    @if (row.meta && row.meta.cartonRanges && row.meta.cartonRanges.length > 0) {
+                      <div class="border border-success rounded p-2 bg-light">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                          <i class="bi bi-boxes text-success"></i>
+                          <strong class="text-success" style="font-size: 0.8rem;">
+                            {{ row.meta.cartonRanges.length }} Roll{{ row.meta.cartonRanges.length > 1 ? 's' : '' }} Arrived
+                          </strong>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                          @for (carton of row.meta.cartonRanges; track carton.cartoonNumber) {
+                            <div class="badge bg-success bg-opacity-10 border border-success text-dark p-2" 
+                                 style="font-size: 0.75rem; min-width: 150px;">
+                              <div class="fw-bold text-success mb-1">
+                                <i class="bi bi-box-seam me-1"></i>{{ carton.cartoonNumber }}
+                              </div>
+                              <div class="text-muted" style="font-size: 0.7rem; font-family: 'Courier New', monospace;">
+                                {{ carton.fromSerial }} → {{ carton.toSerial }}
+                              </div>
+                              <div class="text-primary fw-semibold mt-1" style="font-size: 0.7rem;">
+                                {{ carton.quantity | number }} units
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="text-center text-muted">
+                        <i class="bi bi-box-seam me-1"></i>No carton details available
+                      </div>
+                    }
                   </td>
                   <td class="text-end fw-bold text-primary bg-light p-2 align-middle" style="font-size: 0.875rem;">
                     @if (row.closingBalance !== null && row.closingBalance !== undefined) {
@@ -368,94 +376,386 @@
                       Ref: {{ row.meta?.referenceNo }}
                     </small>
                     }
-                    @if (row.meta?.cartoonNumber) {
-                    <small class="d-block text-primary fw-semibold" style="font-size: 0.75rem;">
-                      Roll: {{ row.meta?.cartoonNumber }}
+                    @if (row.meta?.entryCount && (row.meta?.entryCount ?? 0) > 1) {
+                      <small class="d-block text-primary fw-semibold" style="font-size: 0.7rem;">
+                        <i class="bi bi-layers me-1"></i>{{ row.meta?.entryCount }} entries
+                      </small>
+                    }
+                    @if (row.meta?.isNotInUse) {
+                    <small class="d-block text-warning fw-semibold" style="font-size: 0.7rem;">
+                      <i class="bi bi-pause-circle me-1"></i>Not In Use
                     </small>
                     }
-                    @if (row.meta?.serialRange) {
-                    <small class="d-block text-muted" style="font-size: 0.7rem; font-family: 'Courier New', monospace;">
-                      Range: {{ row.meta?.serialRange }}
-                    </small>
+                    @if (getAssignedRollsRanges(row); as rollsRanges) {
+                      @if (rollsRanges.length > 0) {
+                        <div class="ranges-assigned-box mt-2 p-2 border rounded bg-light">
+                          <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-list-check text-primary" style="font-size: 0.9rem;"></i>
+                            <strong class="text-primary" style="font-size: 0.8rem;">Ranges Assigned:</strong>
+                          </div>
+                          <div class="d-flex flex-column gap-1">
+                            @for (rollRange of rollsRanges; track rollRange.rollName + rollRange.range; let idx = $index) {
+                              <div class="range-item d-flex align-items-center gap-2 p-1 rounded"
+                                   [style.background-color]="getRollBackgroundColor(rollRange.rollAssignmentIndex)"
+                                   [style.border-left]="'3px solid ' + getRollBorderColor(rollRange.rollAssignmentIndex)">
+                                <span class="roll-name-badge badge text-white px-2 py-1"
+                                      [style.background-color]="getRollBorderColor(rollRange.rollAssignmentIndex)"
+                                      style="font-size: 0.7rem; min-width: 60px;">
+                                  <i class="bi bi-box-seam me-1"></i>{{ rollRange.rollName }}
+                                </span>
+                                <span class="range-value text-dark fw-bold" 
+                                      style="font-size: 0.75rem; font-family: 'Courier New', monospace;">
+                                  {{ rollRange.range }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
                     }
                   </td>
-                  <td class="p-2 align-middle" style="font-size: 0.875rem;">
-                    <span class="text-dark fw-semibold">{{ row.brandDetails || '-' }}</span>
-                  </td>
-                  <td class="p-2 align-middle text-center" style="font-size: 0.875rem;">
-                    @if (row.bottleSize && row.bottleSize !== '-') {
-                      <span class="badge bg-info text-white">
-                        {{ row.bottleSize }}{{ row.bottleSize.toLowerCase().includes('ml') || row.bottleSize.toLowerCase().includes('l') ? '' : ' ml' }}
-                      </span>
-                    } @else {
-                      <span class="badge bg-secondary text-white">-</span>
-                    }
-                  </td>
-                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.utilizationDetails?.length) {
-                    <div class="d-flex flex-column gap-1 text-start">
-                      @for (detail of row.utilizationDetails; track detail.rollName) {
-                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                      <div>
-                        {{ range.from || '-' }}
+                  <td class="p-2 align-middle" style="font-size: 0.875rem; min-width: 300px;" colspan="2">
+                    @if (row.utilizationDetails && row.utilizationDetails.length > 0) {
+                      <!-- Show brands grouped by rolls -->
+                      <div class="brands-by-rolls-container">
+                        <div class="brands-header mb-3">
+                          <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-tags text-info fs-5"></i>
+                            <strong class="text-info" style="font-size: 0.9rem;">
+                              {{ getUniqueRollsCount(row.utilizationDetails) }} Roll{{ getUniqueRollsCount(row.utilizationDetails) > 1 ? 's' : '' }} with {{ row.utilizationDetails.length }} Brand{{ row.utilizationDetails.length > 1 ? 's' : '' }}
+                            </strong>
+                          </div>
+                        </div>
+                        
+                        <!-- Group brands by roll assignment (not just roll name) -->
+                        <div class="rolls-groups d-flex flex-column gap-3">
+                          @for (rollGroup of getBrandsByRoll(row.utilizationDetails); track rollGroup.rollAssignmentKey; let rollIndex = $index) {
+                            <div class="roll-group-box border-2 rounded p-3 shadow-sm"
+                                 [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                 [style.background-color]="getRollBackgroundColor(rollGroup.rollAssignmentIndex)"
+                                 [style.border-left]="'4px solid ' + getRollBorderColor(rollGroup.rollAssignmentIndex)">
+                              
+                              <!-- Roll Header with Assignment Number -->
+                              <div class="roll-group-header mb-3 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                  <div class="roll-badge text-white fw-bold px-3 py-2 rounded"
+                                       [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                       style="font-size: 0.85rem;">
+                                    <i class="bi bi-box-seam me-2"></i>
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                  </div>
+                                  <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                    {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <!-- Brands in this roll assignment -->
+                              <div class="brands-in-roll d-flex flex-column gap-2">
+                                @for (brand of rollGroup.brands; track brand.brandName; let brandIdx = $index) {
+                                  <div class="brand-item d-flex align-items-center gap-3 p-2 bg-white rounded border"
+                                       [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
+                                    <div class="brand-number text-white fw-bold rounded-circle d-flex align-items-center justify-content-center"
+                                         [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                         style="width: 28px; height: 28px; font-size: 0.75rem;">
+                                      {{ brandIdx + 1 }}
+                                    </div>
+                                    <div class="brand-details flex-grow-1">
+                                      <div class="brand-name fw-bold mb-1" 
+                                           [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)" 
+                                           style="font-size: 0.85rem;">
+                                        <i class="bi bi-tag-fill me-1"></i>
+                                        @if (brand.brandNumber) {
+                                          Brand {{ brand.brandNumber }}: {{ brand.brandName }}
+                                        } @else {
+                                          {{ brand.brandName }}
+                                        }
+                                      </div>
+                                      <div class="brand-meta d-flex gap-3">
+                                        <span class="text-muted" style="font-size: 0.75rem;">
+                                          <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
+                                        </span>
+                                        <span class="text-primary fw-semibold" style="font-size: 0.75rem;">
+                                          <i class="bi bi-calculator me-1"></i>{{ brand.totalQty | number }} units
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                }
+                              </div>
+                            </div>
+                          }
+                        </div>
                       </div>
-                      }
-                      }
-                    </div>
                     } @else {
-                    <div class="text-center">{{ row.utilizationFrom || '-' }}</div>
+                      <span class="text-dark fw-semibold">{{ row.brandDetails || '-' }}</span>
                     }
                   </td>
-                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.utilizationDetails?.length) {
-                    <div class="d-flex flex-column gap-1 text-start">
-                      @for (detail of row.utilizationDetails; track detail.rollName) {
-                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                      <div>
-                        {{ range.to || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
+                    @if (row.utilizationDetails?.length && row.utilizationQty && row.utilizationQty > 0) {
+                      <div class="d-flex flex-column gap-3">
+                        @for (rollGroup of getBrandsByRoll(row.utilizationDetails || []); track rollGroup.rollAssignmentKey; let rollIndex = $index) {
+                          <div class="roll-utilization-box border rounded p-3 shadow-sm"
+                               [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                               [style.background-color]="getRollBackgroundColor(rollGroup.rollAssignmentIndex)">
+                            <div class="roll-header mb-3">
+                              <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                  <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
+                                       [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                       style="font-size: 0.8rem;">
+                                    <i class="bi bi-box-seam me-1"></i>
+                                    Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                  </div>
+                                  <div class="brands-count-badge bg-white border px-2 py-1 rounded"
+                                       [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                       [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                       style="font-size: 0.75rem; font-weight: 600;">
+                                    <i class="bi bi-tags me-1"></i>
+                                    {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
+                                  </div>
+                                </div>
+                                <div class="roll-stats">
+                                  <span class="badge text-white fw-bold px-3 py-2"
+                                        [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                        style="font-size: 0.85rem;">
+                                    <i class="bi bi-calculator me-1"></i>
+                                    {{ rollGroup.totalQty | number }} units
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <!-- Brands and their ranges consolidated inside this roll -->
+                            <div class="brands-in-roll d-flex flex-column gap-3">
+                              @for (brand of rollGroup.brands; track brand.brandName; let brandIdx = $index) {
+                                <div class="brand-section border rounded p-2 bg-white"
+                                     [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
+                                  <!-- Brand Header -->
+                                  <div class="brand-header d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                      <div class="brand-number text-white fw-bold rounded-circle d-flex align-items-center justify-content-center"
+                                           [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                           style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                        {{ brandIdx + 1 }}
+                                      </div>
+                                      <div class="brand-info">
+                                        <div class="brand-name fw-bold" 
+                                             [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)" 
+                                             style="font-size: 0.8rem;">
+                                          <i class="bi bi-tag-fill me-1"></i>
+                                          @if (brand.brandNumber) {
+                                            Brand {{ brand.brandNumber }}: {{ brand.brandName }}
+                                          } @else {
+                                            {{ brand.brandName }}
+                                          }
+                                        </div>
+                                        <div class="brand-meta text-muted" style="font-size: 0.7rem;">
+                                          <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div class="brand-total">
+                                      <span class="badge bg-primary text-white fw-bold" style="font-size: 0.75rem;">
+                                        {{ brand.totalQty | number }} units
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  <!-- Ranges used by this brand - CONSOLIDATED DISPLAY -->
+                                  <div class="ranges-used">
+                                    <div class="ranges-header mb-2">
+                                      <span class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                                        <i class="bi bi-list-ol me-1"></i>Ranges Used:
+                                      </span>
+                                    </div>
+                                    <div class="ranges-list d-flex flex-wrap gap-2">
+                                      @for (range of brand.allRanges; track range.from + range.to) {
+                                        <div class="range-item bg-light border rounded px-2 py-1"
+                                             [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                             style="font-family: 'Courier New', monospace; font-size: 0.75rem;">
+                                          <div class="range-display text-center">
+                                            <div class="fw-bold" [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
+                                              {{ range.from }} → {{ range.to }}
+                                            </div>
+                                            <div class="small text-muted">Used: {{ range.qty | number }}</div>
+                                          </div>
+                                        </div>
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                        
+                        <!-- Compact Total Summary Row -->
+                        <div class="total-utilization-summary border border-success rounded p-2 bg-success bg-opacity-10">
+                          <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                              <i class="bi bi-calculator-fill text-success fs-6"></i>
+                              <span class="fw-bold text-success" style="font-size: 0.8rem;">Total Summary:</span>
+                            </div>
+                            <div class="summary-stats d-flex gap-2">
+                              <div class="stat-item text-center">
+                                <div class="small text-muted" style="font-size: 0.65rem;">Rolls</div>
+                                <div class="badge bg-success text-white fw-bold" style="font-size: 0.7rem; padding: 3px 6px;">
+                                  {{ getUniqueRollsCount(row.utilizationDetails) }}
+                                </div>
+                              </div>
+                              <div class="stat-item text-center">
+                                <div class="small text-muted" style="font-size: 0.65rem;">Units</div>
+                                <div class="badge bg-success text-white fw-bold" style="font-size: 0.7rem; padding: 3px 6px;">
+                                  {{ row.utilizationQty | number }}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      }
-                      }
-                    </div>
                     } @else {
-                    <div class="text-center">{{ row.utilizationTo || '-' }}</div>
-                    }
-                  </td>
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.utilizationQty !== null && row.utilizationQty !== undefined ? (row.utilizationQty | number) : '-' }}
-                  </td>
-                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.wastageDetails?.length) {
-                    <div class="d-flex flex-column gap-1 text-start">
-                      @for (detail of row.wastageDetails; track detail.rollName) {
-                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                      <div>
-                        {{ range.from || '-' }}
+                      <div class="text-center text-muted p-3 bg-light rounded border border-secondary">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span style="font-size: 0.85rem;">No Usage Done</span>
                       </div>
-                      }
-                      }
-                    </div>
-                    } @else {
-                    <div class="text-center">{{ row.wastageFrom || '-' }}</div>
                     }
                   </td>
-                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem;">
-                    @if (row.wastageDetails?.length) {
-                    <div class="d-flex flex-column gap-1 text-start">
-                      @for (detail of row.wastageDetails; track detail.rollName) {
-                      @for (range of detail.ranges; track range.from + range.to + range.qty) {
-                      <div>
-                        {{ range.to || '-' }}
+                  <td class="p-2 align-middle fw-semibold" style="font-size: 0.875rem; min-width: 450px;" colspan="3">
+                    @if (row.wastageDetails?.length && row.wastageQty && row.wastageQty > 0) {
+                      <div class="d-flex flex-column gap-3">
+                        @for (rollGroup of getBrandsByRoll(row.wastageDetails || []); track rollGroup.rollAssignmentKey; let rollIndex = $index) {
+                          @if (rollGroup.totalQty > 0) {
+                            <div class="roll-wastage-box border rounded p-3 shadow-sm"
+                                 [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                 [style.background-color]="getRollBackgroundColor(rollGroup.rollAssignmentIndex)">
+                              <div class="roll-header mb-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                  <div class="d-flex align-items-center gap-2">
+                                    <div class="roll-identifier-badge text-white fw-bold px-3 py-1 rounded"
+                                         [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                         style="font-size: 0.8rem;">
+                                      <i class="bi bi-box-seam me-1"></i>
+                                      Roll {{ rollGroup.rollName }} - Assignment #{{ rollGroup.rollAssignmentIndex + 1 }}
+                                    </div>
+                                    <div class="brands-count-badge bg-white border px-2 py-1 rounded"
+                                         [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                         [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                         style="font-size: 0.75rem; font-weight: 600;">
+                                      <i class="bi bi-tags me-1"></i>
+                                      {{ rollGroup.brands.length }} Brand{{ rollGroup.brands.length > 1 ? 's' : '' }}
+                                    </div>
+                                  </div>
+                                  <div class="roll-stats">
+                                    <span class="badge bg-danger text-white fw-bold px-3 py-2" style="font-size: 0.85rem;">
+                                      <i class="bi bi-exclamation-triangle me-1"></i>
+                                      {{ rollGroup.totalQty | number }} damaged
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <!-- Brands and their wastage ranges consolidated inside this roll -->
+                              <div class="brands-in-roll d-flex flex-column gap-3">
+                                @for (brand of rollGroup.brands; track brand.brandName; let brandIdx = $index) {
+                                  @if (brand.totalQty > 0) {
+                                    <div class="brand-section border rounded p-2 bg-white"
+                                         [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)">
+                                      <!-- Brand Header -->
+                                      <div class="brand-header d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                          <div class="brand-number text-white fw-bold rounded-circle d-flex align-items-center justify-content-center"
+                                               [style.background-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                               style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                            {{ brandIdx + 1 }}
+                                          </div>
+                                          <div class="brand-info">
+                                            <div class="brand-name fw-bold" 
+                                                 [style.color]="getRollBorderColor(rollGroup.rollAssignmentIndex)" 
+                                                 style="font-size: 0.8rem;">
+                                              <i class="bi bi-tag-fill me-1"></i>
+                                              @if (brand.brandNumber) {
+                                                Brand {{ brand.brandNumber }}: {{ brand.brandName }}
+                                              } @else {
+                                                {{ brand.brandName }}
+                                              }
+                                            </div>
+                                            <div class="brand-meta text-muted" style="font-size: 0.7rem;">
+                                              <i class="bi bi-cup-straw me-1"></i>{{ brand.bottleSize }}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div class="brand-total">
+                                          <span class="badge bg-danger text-white fw-bold" style="font-size: 0.75rem;">
+                                            {{ brand.totalQty | number }} damaged
+                                          </span>
+                                        </div>
+                                      </div>
+                                      
+                                      <!-- Wastage ranges used by this brand - CONSOLIDATED DISPLAY -->
+                                      <div class="ranges-damaged">
+                                        <div class="ranges-header mb-2">
+                                          <span class="text-muted fw-semibold" style="font-size: 0.75rem;">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>Damaged Ranges:
+                                          </span>
+                                        </div>
+                                        <div class="ranges-list d-flex flex-wrap gap-2">
+                                          @for (range of brand.allRanges; track range.from + range.to + range.qty) {
+                                            @if (range.qty > 0) {
+                                              <div class="range-item bg-light border border-danger rounded px-2 py-1"
+                                                   [style.border-color]="getRollBorderColor(rollGroup.rollAssignmentIndex)"
+                                                   style="font-family: 'Courier New', monospace; font-size: 0.75rem;">
+                                                <div class="range-display text-center">
+                                                  <div class="fw-bold text-danger">
+                                                    {{ range.from }} → {{ range.to }}
+                                                  </div>
+                                                  <div class="small text-muted">Damaged: {{ range.qty | number }}</div>
+                                                </div>
+                                              </div>
+                                            }
+                                          }
+                                        </div>
+                                      </div>
+                                    </div>
+                                  }
+                                }
+                              </div>
+                            </div>
+                          }
+                        }
+                        
+                        <!-- Compact Total Wastage Summary Row - Only show if there are rolls with actual wastage -->
+                        @if (getUniqueRollsCount(row.wastageDetails) > 0) {
+                          <div class="total-wastage-summary border border-danger rounded p-2 bg-danger bg-opacity-10">
+                            <div class="d-flex align-items-center justify-content-between">
+                              <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill text-danger fs-6"></i>
+                                <span class="fw-bold text-danger" style="font-size: 0.8rem;">Total Wastage:</span>
+                              </div>
+                              <div class="summary-stats d-flex gap-2">
+                                <div class="stat-item text-center">
+                                  <div class="small text-muted" style="font-size: 0.65rem;">Rolls</div>
+                                  <div class="badge bg-danger text-white fw-bold" style="font-size: 0.7rem; padding: 3px 6px;">
+                                    {{ getUniqueRollsCount(row.wastageDetails) }}
+                                  </div>
+                                </div>
+                                <div class="stat-item text-center">
+                                  <div class="small text-muted" style="font-size: 0.65rem;">Damaged</div>
+                                  <div class="badge bg-danger text-white fw-bold" style="font-size: 0.7rem; padding: 3px 6px;">
+                                    {{ row.wastageQty | number }}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        }
                       </div>
-                      }
-                      }
-                    </div>
                     } @else {
-                    <div class="text-center">{{ row.wastageTo || '-' }}</div>
+                      <div class="text-center text-muted p-3 bg-light rounded border border-secondary">
+                        <i class="bi bi-check-circle me-2 text-success"></i>
+                        <span style="font-size: 0.85rem;">No Wastage Done</span>
+                      </div>
                     }
-                  </td>
-                  <td class="text-end fw-bold bg-light p-2 align-middle" style="font-size: 0.875rem;">
-                    {{ row.wastageQty !== null && row.wastageQty !== undefined ? (row.wastageQty | number) : '-' }}
                   </td>
                   <td class="text-center fw-bold p-2 align-middle" style="font-size: 0.875rem;">
                     {{ row.leftOver !== null && row.leftOver !== undefined ? (row.leftOver | number) : '-' }}
@@ -538,9 +838,6 @@
                     <h6 class="mb-2">No Daily Register Data Found</h6>
                     <p class="mb-0">No daily hologram entries found for {{ getCurrentHologramTypeDisplay() }}.</p>
                     <p class="small text-muted">Please add entries in the Daily Hologram Manufacturing Register first.</p>
-                    <button class="btn btn-primary btn-sm mt-2" (click)="goToDailyRegister()">
-                      <i class="bi bi-calendar-day me-1"></i>Go to Daily Register
-                    </button>
                   </td>
                 </tr>
                 }

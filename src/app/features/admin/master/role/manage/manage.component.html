@@ -7,12 +7,7 @@
       <!-- Role Name -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Role Name</mat-label>
-        <input 
-          matInput 
-          [(ngModel)]="role.name" 
-          name="name" required 
-          #roleModel="ngModel" 
-        />
+        <input matInput [(ngModel)]="role.name" name="name" required #roleModel="ngModel" />
         <mat-error *ngIf="roleModel.invalid && roleModel.touched">
           Role name is required
         </mat-error>
@@ -21,25 +16,21 @@
       <!-- Role Precedence -->
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Role Precedence</mat-label>
-        <input 
-          matInput type="number"
-          [(ngModel)]="role.rolePrecedence"
-          name="rolePrecedence" 
-          required
-          min="0" max="9"
-          #precedenceModel="ngModel" 
-        />        
+        <input matInput type="number" [(ngModel)]="role.rolePrecedence" name="rolePrecedence" required min="0" max="100"
+          #precedenceModel="ngModel" />
         <mat-error *ngIf="precedenceModel.errors?.['required']">
           Precedence is required
         </mat-error>
         <mat-error *ngIf="precedenceModel.errors?.['min'] || precedenceModel.errors?.['max']">
-          Precedence must be between 0 and 9
+          Precedence must be between 0 and 100
         </mat-error>
       </mat-form-field>
 
       <!-- Permissions -->
       <div>
-        <label><h6>Can View</h6></label>
+        <label>
+          <h6>Can View</h6>
+        </label>
         <div *ngFor="let app of appLabels">
           <mat-checkbox [(ngModel)]="canViewMap[app]" [name]="'canView_' + app">
             {{ appDisplayMap[app] || app }}
@@ -48,7 +39,9 @@
       </div>
 
       <div class="mt-2">
-        <label><h6>Can Add</h6></label>
+        <label>
+          <h6>Can Add</h6>
+        </label>
         <div *ngFor="let app of appLabels">
           <mat-checkbox [(ngModel)]="canAddMap[app]" [name]="'canAdd_' + app">
             {{ appDisplayMap[app] || app }}
@@ -57,7 +50,9 @@
       </div>
 
       <div class="mt-2">
-        <label><h6>Can Update</h6></label>
+        <label>
+          <h6>Can Update</h6>
+        </label>
         <div *ngFor="let app of appLabels">
           <mat-checkbox [(ngModel)]="canUpdateMap[app]" [name]="'canUpdate_' + app">
             {{ appDisplayMap[app] || app }}
@@ -66,7 +61,9 @@
       </div>
 
       <div class="mt-2">
-        <label><h6>Can Delete</h6></label>
+        <label>
+          <h6>Can Delete</h6>
+        </label>
         <div *ngFor="let app of appLabels">
           <mat-checkbox [(ngModel)]="canDeleteMap[app]" [name]="'canDelete_' + app">
             {{ appDisplayMap[app] || app }}

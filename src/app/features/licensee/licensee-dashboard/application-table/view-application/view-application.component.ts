@@ -37,6 +37,8 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
   photoUrl: string | null = null;
   isObjectionLoaded = false;
+  protected environment = environment;
+
   objections: Objection[] = [];
 
   // Data arrays for display sections
@@ -307,6 +309,10 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
             this.buildDisplaySections();
             this.fetchObjections();
           }
+
+          this.buildDisplaySections();
+          this.fetchObjections();
+
           this.isLoading = false;
         },
         error: (err) => {
@@ -319,170 +325,81 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     });
   }
 
-  // ✅ NEW: Get display name from master data
-  getDisplayName(fieldName: string, value: any): string {
-    if (!value) return '-';
-
-    const camelField = this.toCamelCase(fieldName);
-    
-    switch (camelField) {
-      case 'exciseDistrict':
-      case 'siteDistrict':
-        const district = this.masterData.districts.find((d: any) => 
-          d.id === value || d.districtCode === value || d.district_code === value
-        );
-        return district?.district || district?.name || value;
-
-      case 'licenseCategory':
-        const category = this.masterData.licenseCategories.find((c: any) => 
-          c.id === value
-        );
-        return category?.licenseCategory || category?.license_category || category?.name || value;
-
-      case 'exciseSubdivision':
-      case 'siteSubdivision':
-        const subdivision = this.masterData.subdivisions.find((s: any) => 
-          s.id === value || s.subdivisionCode === value || s.subdivision_code === value
-        );
-        return subdivision?.subdivision || subdivision?.name || value;
-
-      case 'policeStation':
-        const station = this.masterData.policeStations.find((p: any) => 
-          p.id === value || p.policeStationCode === value || p.police_station_code === value
-        );
-        return station?.policeStation || station?.police_station || station?.name || value;
-
-      case 'licenseType':
-        const type = this.masterData.licenseTypes.find((t: any) => 
-          t.id === value
-        );
-        return type?.licenseType || type?.license_type || type?.name || value;
-
-      case 'licenseSubCategory':
-        const subcat = this.masterData.licenseSubCategories.find((sc: any) => 
-          sc.id === value
-        );
-        return subcat?.licenseSubCategory || subcat?.license_sub_category || subcat?.name || value;
-
-      case 'gender':
-        return value === 'M' || value === 'Male' ? 'Male' : value === 'F' || value === 'Female' ? 'Female' : value;
-
-      case 'functioningStatus':
-      case 'siteOwned':
-      case 'nocObtained':
-      case 'hasSikkimCertificate':
-      case 'hasExciseLicense':
-      case 'familyExciseLicense':
-      case 'criminalConviction':
-      case 'sikkimSubject':
-        return value === true || value === 'true' || value === 'Yes' ? 'Yes' : 'No';
-
-      default:
-        return value;
-    }
-  }
-
-  // ✅ Helper: Convert snake_case to camelCase
-  private toCamelCase(str: string): string {
-    return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-  }
+  // Dynamic data array to replace specific sections
+  dynamicDisplayData: FieldDisplay[] = [];
 
   private buildDisplaySections(): void {
-    if (this.application.type === 'license-renewal') {
-      this.licenseData = this.getFieldDisplayList([
-        'excise_district', 'license_category', 'excise_subdivision', 'license'
-      ]);
-      this.keyInfoData = this.getFieldDisplayList([
-        'license_type', 'establishment_name', 'mobile_number', 'email', 'license_no',
-        'initial_grant_date', 'renewed_from', 'valid_up_to', 'yearly_license_fee',
-        'license_nature', 'functioning_status', 'mode_of_operation'
-      ]);
-      this.addressData = this.getFieldDisplayList([
-        'site_subdivision', 'police_station', 'location_category', 'location_name',
-        'ward_name', 'business_address', 'road_name', 'pin_code', 'latitude', 'longitude'
-      ]);
-      this.unitDetailsData = this.getFieldDisplayList([
-        'company_name', 'company_address', 'company_pan', 'company_cin',
-        'incorporation_date', 'company_phone_number', 'company_email'
-      ]);
-      this.memberDetailsData = this.getFieldDisplayList([
-        'status', 'member_name', 'father_husband_name', 'nationality',
-        'gender', 'pan', 'member_mobile_number', 'member_email'
-      ]);
-      this.memberDetailsData.push({
-        key: 'Photo',
-        field: 'photo',
-        value: this.photoUrl || 'N/A'
-      });
-    } else if (this.application.type === 'new-license') {
-      this.basicInfoData = this.getFieldDisplayList([
-        'license_type', 'license_category', 'license_sub_category', 'establishment_name', 'site_type'
-      ]);
-      this.applicantDetailsData = this.getFieldDisplayList([
-        'applicant_name', 'father_husband_name', 'dob', 'gender', 'nationality', 'residential_status',
-        'present_address', 'permanent_address', 'pan', 'email', 'mobile_number', 'mode_of_operation',
-        'has_sikkim_certificate', 'has_excise_license', 'family_excise_license', 'criminal_conviction'
-      ]);
-      this.siteDetailsData = this.getFieldDisplayList([
-        'site_district', 'site_subdivision', 'police_station', 'location_category', 'location_name',
-        'ward_name', 'business_address', 'road_name', 'pin_code', 'construction_type', 'length',
-        'breadth', 'site_owned', 'noc_obtained'
-      ]);
-      this.companyDetailsData = this.getFieldDisplayList([
-        'company_name', 'company_address', 'company_pan', 'company_cin',
-        'incorporation_date', 'company_phone_number', 'company_email'
-      ]);
-      this.documentsData = this.getFieldDisplayList([
-        'pass_photo', 'pan_card', 'sikkim_certificate', 'dob_proof', 'noc_landlord'
-      ]).map(item => ({
-        ...item,
-        value: item.value && item.value !== '-' ? `${environment.apiBaseUrl}/${item.value}` : null
-      }));
-    } else if (this.application.type === 'salesman-barman') {
-      this.licenseDetailsData = this.getFieldDisplayList([
-        'excise_district', 'license_category', 'license'
-      ]);
-      this.personalDetailsData = this.getFieldDisplayList([
-        'role', 'first_name', 'middle_name', 'last_name', 'father_husband_name', 'gender', 'dob',
-        'nationality', 'address', 'pan', 'aadhaar', 'mobile_number', 'email_id', 'sikkim_subject'
-      ]);
-      this.documentsData = this.getFieldDisplayList([
-        'pass_photo', 'aadhaar_card', 'residential_certificate', 'dateof_birth_proof'
-      ]).map(item => ({
-        ...item,
-        value: item.value && item.value !== '-' ? `${environment.apiBaseUrl}/${item.value}` : null
-      }));
-    }
+    // Generate dynamic data from the application object
+    this.dynamicDisplayData = this.generateDynamicDisplayData();
   }
 
-  getFieldDisplayList(fields: string[]): FieldDisplay[] {
-    return fields.map(field => {
-      const camelField = this.toCamelCase(field);
-      const value = this.application[field] || this.application[camelField];
+  private generateDynamicDisplayData(): FieldDisplay[] {
+    if (!this.application) return [];
 
-      // ✅ Get display name for dropdown fields
-      let displayValue = value;
-      const meta = this.fieldMetaMap[camelField];
-      
-      if (meta?.type === 'dropdown' && value) {
-        displayValue = this.getDisplayName(camelField, value);
-      } else if (meta?.type === 'date' && value) {
-        displayValue = new Date(value).toLocaleDateString();
-      } else if (!value) {
-        displayValue = '-';
+    const excludedKeys = [
+      'id', 'application_id', 'applicationId', 'created_at', 'updated_at',
+      'is_approved', 'print_count', 'is_print_fee_paid', 'workflow',
+      'current_stage', 'applicant', 'transactions', 'objections', 'type'
+    ];
+
+    const displayList: FieldDisplay[] = [];
+    const keys = Object.keys(this.application);
+
+    keys.forEach(key => {
+      // Skip excluded keys, internal keys (_), or empty values if desired
+      if (excludedKeys.includes(key) || key.startsWith('_')) return;
+
+      // Skip keys that are foreign key IDs if a corresponding _name or object exists
+      // (Simple heuristic: if 'foo_id' exists, maybe skip it? keeping it simple for now)
+
+      let value = this.application[key];
+
+      // Handle nested objects by converting to string or skipping
+      if (typeof value === 'object' && value !== null) {
+        if (Array.isArray(value)) return; // Skip arrays (transactions, etc)
+        // For objects, maybe try to show 'name' or 'district' property?
+        // Or just skip for flat display
+        return;
       }
 
-      return {
-        key: this.fieldLabelMap[camelField] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        field: field,
-        value: displayValue
-      };
+      // Use robust lookup logic (reusing getFieldDisplayList logic implicitly or explicitly)
+      // Actually, since we are iterating keys, 'value' is already here.
+      // But we might want the 'Display Name' if this is a code field.
+      // E.g. key='license_category' value=1. We want 'license_category_name'.
+
+      // Check if there is a corresponding 'Name' field for this key
+      if (keys.includes(key + '_name') || keys.includes(key.replace(/_id$/, '') + '_name') || keys.includes(key + 'Name')) {
+        return; // Skip the ID field, let the Name field show instead
+      }
+
+      // Use the existing label map or beautify the key
+      const label = this.fieldLabelMap[key] ||
+        this.fieldLabelMap[key.replace(/Name$/, '')] ||
+        this.fieldLabelMap[this.toCamelCase(key)] ||
+        key.replace(/([A-Z])/g, ' $1')
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase())
+          .trim();
+
+      displayList.push({
+        key: label,
+        field: key,
+        value: (value !== undefined && value !== null && value !== '') ? value : '-'
+      });
     });
+
+    return displayList;
   }
+
+  private toCamelCase(s: string) {
+    return s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+  }
+
+
 
   getOptionLabel(field: string, option: any): string {
     if (typeof option === 'string') return option;
-    
+
     switch (field) {
       case 'licenseCategory':
         return option.licenseCategory || option.license_category || option.name;
@@ -509,13 +426,42 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     return option?.[meta?.submitKey] ?? option?.id;
   }
 
+  getFieldDisplayList(fields: string[]) {
+    return fields.map(field => {
+      // Helper to convert snake_case to camelCase
+      const toCamel = (s: string) => s.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+
+      const snakeName = field + '_name';
+      const camelKey = toCamel(field);
+      const camelName = camelKey + 'Name';
+      const camelNameLower = camelKey + 'name'; // Edge case licensecategoryname vs licenseCategoryName
+      const camelFullName = camelKey.replace('Name', '') + 'FullName'; // fallback for applicantName -> applicantFullName
+
+      // Lookup strategy:
+      const value =
+        this.application[snakeName] ??
+        this.application[camelName] ??
+        this.application[camelKey] ??
+        this.application[camelFullName] ??
+        this.application[camelNameLower] ??
+        this.application[field.replace(/([A-Z])/g, '_$1').toLowerCase()] ??
+        this.application[field];
+
+      return {
+        key: this.fieldLabelMap[camelKey] || this.fieldLabelMap[field] || field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        field, // Keep original field for objection matching
+        value: (value !== undefined && value !== null && value !== '') ? value : '-'
+      };
+    });
+  }
+
   fetchObjections() {
     if (!this.application || !this.application.application_id) {
       console.warn('Application not loaded yet, skipping objection fetch');
       return;
     }
-    
-    this.unifiedService.getObjections(this.application.application_id, this.application.type).subscribe({
+
+    this.unifiedService.getObjections(this.application.application_id).subscribe({
       next: (data) => {
         this.objections = data;
         this.initializeResolveForm();
@@ -529,7 +475,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
   }
 
   initializeResolveForm(): void {
-    const group: { [key: string]: FormControl } = {};
+    const group: any = {};
 
     for (const obj of this.objections.filter(o => !o.isResolved)) {
       const meta = this.fieldMetaMap[obj.fieldName] || {};
@@ -597,7 +543,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
       Swal.fire('Error', 'Application data not loaded yet.', 'error');
       return;
     }
-    
+
     Swal.fire({
       title: 'Are you sure?',
       text: 'You are about to submit corrected information to resolve objections.',
@@ -672,7 +618,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
         });
 
         let getNextStages$: Observable<any[]>;
-        
+
         if (appType === 'salesman-barman') {
           getNextStages$ = this.salesmanBarmanService.getNextStages(appId);
         } else if (appType === 'new-license') {
@@ -683,8 +629,11 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
         getNextStages$.subscribe({
           next: (stages: any[]) => {
-            const approvalStage = stages.find(s => 
-              s.name === 'approved' || 
+            console.log('✅ Next stages:', stages);
+
+            // Find the "approved" stage
+            const approvalStage = stages.find(s =>
+              s.name === 'approved' ||
               s.stage_name === 'approved' ||
               s.id === 'approved' ||
               String(s.id).toLowerCase() === 'approved'
@@ -696,9 +645,10 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
             }
 
             const stageId = approvalStage.id || approvalStage.stage_id;
-            
+
+            // ✅ Select the correct advance method based on application type
             let advance$: Observable<any>;
-            
+
             if (appType === 'salesman-barman') {
               advance$ = this.salesmanBarmanService.advanceStage(appId, stageId, {
                 payment_confirmed: true,

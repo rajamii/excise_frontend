@@ -1855,58 +1855,91 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     if (allocationData && allocationData.allocatedCartoons && allocationData.allocatedCartoons.length > 0) {
       console.log('✅ Using allocation data for roll names:', allocationData.allocatedCartoons);
       
-      // CRITICAL FIX: Create SEPARATE dropdown entries for each range
-      // Instead of grouping multiple ranges into one roll, each range gets its own entry
-      // Example: Roll "1" with 2 ranges becomes:
-      //   - "1 - Range 1 (000001-000049): 49 units"
-      //   - "1 - Range 2 (000100-000500): 401 units"
+      // CRITICAL FIX: Group by cartoon number first to avoid duplicate roll entries
+      // Only create multiple range entries if the SAME cartoon has multiple DIFFERENT ranges
+      // Example: If "t1" appears once with range 1-200, show only ONE dropdown entry
+      //          If "t1" appears twice with ranges 1-100 and 101-200, show TWO entries
       
-      const separateRangeEntries: any[] = [];
-      const rangeCountPerRoll = new Map<string, number>(); // Track how many ranges each roll has
+      const cartoonGroups = new Map<string, any[]>();
       
+      // Group allocations by cartoon number
       allocationData.allocatedCartoons.forEach((cartoon: any) => {
         const cartoonNumber = cartoon.cartoonNumber;
-        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
-        const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
-        const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
-        const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
-        const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
-        const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
-        
-        // Increment range count for this roll
-        const currentRangeCount = rangeCountPerRoll.get(cartoonNumber) || 0;
-        rangeCountPerRoll.set(cartoonNumber, currentRangeCount + 1);
-        const rangeIndex = currentRangeCount + 1;
-        
-        // Create a unique identifier for this specific range
-        const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
-        
-        // Create separate entry for this range
-        separateRangeEntries.push({
-          cartoonNumber: cartoonNumber,
-          rangeId: rangeId, // Unique ID for this specific range
-          rangeIndex: rangeIndex, // Which range number (1, 2, 3, etc.)
-          displayName: rangeCountPerRoll.get(cartoonNumber)! > 1 || currentRangeCount > 0 
-            ? `${cartoonNumber} - Range ${rangeIndex}` 
-            : cartoonNumber, // Show "1 - Range 1" if multiple ranges exist
-          allocatedQuantity,
-          availableCount: allocatedQuantity,
-          remainingInCartoon,
-          serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
-          totalCount,
-          fromSerial: fromSerial,
-          toSerial: toSerial,
-          type: actualRollData?.type || cartoon.type || entry.hologramType,
-          status: actualRollData?.status || cartoon.status || 'ALLOCATED',
-          actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
-          // Store this as a single range (not an array)
-          isSingleRange: true,
-          originalCartoonNumber: cartoonNumber // Store original cartoon number for reference
-        });
+        if (!cartoonGroups.has(cartoonNumber)) {
+          cartoonGroups.set(cartoonNumber, []);
+        }
+        cartoonGroups.get(cartoonNumber)!.push(cartoon);
       });
       
-      console.log('✅ Separate range entries (each range is independent):', separateRangeEntries);
-      console.log('📊 Ranges per roll:', Array.from(rangeCountPerRoll.entries()));
+      console.log('📦 Grouped by cartoon number:', Array.from(cartoonGroups.entries()).map(([cn, items]) => `${cn}: ${items.length} range(s)`));
+      
+      const separateRangeEntries: any[] = [];
+      
+      // Process each cartoon group
+      cartoonGroups.forEach((cartoons, cartoonNumber) => {
+        const actualRollData = allOverviewRolls.find((r: any) => r.cartoonNumber === cartoonNumber);
+        
+        // If only ONE allocation for this cartoon, show it without "Range X" suffix
+        if (cartoons.length === 1) {
+          const cartoon = cartoons[0];
+          const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+          const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+          const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+          const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+          const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
+          
+          separateRangeEntries.push({
+            cartoonNumber: cartoonNumber,
+            rangeId: cartoonNumber, // Use cartoon number as ID for single range
+            rangeIndex: 1,
+            displayName: cartoonNumber, // Just show cartoon number (no "Range 1")
+            allocatedQuantity,
+            availableCount: allocatedQuantity,
+            remainingInCartoon,
+            serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
+            totalCount,
+            fromSerial: fromSerial,
+            toSerial: toSerial,
+            type: actualRollData?.type || cartoon.type || entry.hologramType,
+            status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+            actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+            isSingleRange: true,
+            originalCartoonNumber: cartoonNumber
+          });
+        } else {
+          // Multiple ranges for same cartoon - show each with "Range X" suffix
+          cartoons.forEach((cartoon, index) => {
+            const rangeIndex = index + 1;
+            const allocatedQuantity = this.getAllocatedQuantityFromCartoon(cartoon, actualRollData);
+            const remainingInCartoon = this.getRemainingQuantityAfterAllocation(cartoon, actualRollData);
+            const totalCount = actualRollData?.totalCount || cartoon.totalCount || allocatedQuantity;
+            const fromSerial = cartoon.fromSerial || actualRollData?.fromSerial || '';
+            const toSerial = cartoon.toSerial || actualRollData?.toSerial || '';
+            const rangeId = `${cartoonNumber}_RANGE_${rangeIndex}`;
+            
+            separateRangeEntries.push({
+              cartoonNumber: cartoonNumber,
+              rangeId: rangeId,
+              rangeIndex: rangeIndex,
+              displayName: `${cartoonNumber} - Range ${rangeIndex}`,
+              allocatedQuantity,
+              availableCount: allocatedQuantity,
+              remainingInCartoon,
+              serialRange: cartoon.serialRange || `${fromSerial} - ${toSerial}`,
+              totalCount,
+              fromSerial: fromSerial,
+              toSerial: toSerial,
+              type: actualRollData?.type || cartoon.type || entry.hologramType,
+              status: actualRollData?.status || cartoon.status || 'ALLOCATED',
+              actualBalance: actualRollData?.availableCount ?? remainingInCartoon,
+              isSingleRange: false,
+              originalCartoonNumber: cartoonNumber
+            });
+          });
+        }
+      });
+      
+      console.log('✅ Final roll entries for dropdown:', separateRangeEntries.map(e => `${e.displayName} (${e.serialRange})`));
       return separateRangeEntries;
     }
     
@@ -3316,7 +3349,9 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const groups: any[] = [];
     lockedRolls.forEach((roll: any) => {
       const rollRanges = roll.issuedRanges || [];
-      const colorIndex = this.getRollColorIndex(roll.cartoonNumber);
+      // CRITICAL FIX: Use base roll number (remove brand suffix) for consistent colors
+      const baseRollNumber = roll.cartoonNumber.split('_')[0];
+      const colorIndex = this.getRollColorIndex(baseRollNumber);
       groups.push({
         rollIndex: colorIndex,
         rollName: roll.cartoonNumber,
@@ -3347,7 +3382,9 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     const groups: any[] = [];
     lockedRolls.forEach((roll: any) => {
       const rollRanges = roll.wastageRanges || [];
-      const colorIndex = this.getRollColorIndex(roll.cartoonNumber);
+      // CRITICAL FIX: Use base roll number (remove brand suffix) for consistent colors
+      const baseRollNumber = roll.cartoonNumber.split('_')[0];
+      const colorIndex = this.getRollColorIndex(baseRollNumber);
       groups.push({
         rollIndex: colorIndex,
         rollName: roll.cartoonNumber,
@@ -3360,6 +3397,56 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
     });
 
     return groups;
+  }
+
+  /**
+   * Calculate the total liquid quantity in ml for a brand based on assigned holograms
+   * Formula: hologram_quantity * bottle_size_in_ml
+   */
+  getTotalLiquidQuantityInMl(entry: HologramDailyEntry): number {
+    const hologramQty = this.getTotalHologramQty(entry);
+    const bottleSize = this.getEntryMetadata(entry).bottleSize;
+    
+    // Extract numeric value from bottle size (e.g., "750ml" -> 750)
+    const bottleSizeInMl = this.extractBottleSizeInMl(bottleSize);
+    
+    return hologramQty * bottleSizeInMl;
+  }
+
+  /**
+   * Extract bottle size in ml from bottle size string
+   * Examples: "750ml" -> 750, "375 ml" -> 375, "180ML" -> 180
+   */
+  private extractBottleSizeInMl(bottleSize: string): number {
+    if (!bottleSize) return 750; // Default to 750ml
+    
+    // Remove spaces and convert to lowercase
+    const sizeStr = bottleSize.replace(/\s+/g, '').toLowerCase();
+    
+    // Extract numeric part
+    const match = sizeStr.match(/(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    
+    return 750; // Default fallback
+  }
+
+  /**
+   * Format liquid quantity for display with proper units
+   * Examples: 750000 -> "750 L", 1500 -> "1.5 L", 500 -> "500 ml"
+   */
+  formatLiquidQuantity(quantityInMl: number): string {
+    if (quantityInMl >= 1000) {
+      const liters = quantityInMl / 1000;
+      if (liters % 1 === 0) {
+        return `${liters} L`;
+      } else {
+        return `${liters.toFixed(1)} L`;
+      }
+    } else {
+      return `${quantityInMl} ml`;
+    }
   }
 
   /**
@@ -3911,5 +3998,129 @@ ${roll.status === (roll.availableCount === 0 ? 'COMPLETED' : 'AVAILABLE') ? '✅
       console.error('Error loading hologram allocation:', error);
       return null;
     }
+  }
+
+  /**
+   * Get the original assigned roll information for display in ROLL/RANGE column
+   * This ensures only the originally assigned roll is shown, not brand-specific variations
+   */
+  getOriginalAssignedRoll(entry: any): { cartoonNumber: string; serialRange: string; brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> } | null {
+    // For saved entries, get from allocatedRanges (original assignment)
+    if (entry.isFixed && entry.allocatedRanges && entry.allocatedRanges.length > 0) {
+      const firstRange = entry.allocatedRanges[0];
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: firstRange.cartoonNumber,
+        serialRange: `${firstRange.fromSerial} - ${firstRange.toSerial}`,
+        brands: brands
+      };
+    }
+
+    // For unsaved entries, get from locked rolls or current selection
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.length > 0) {
+      const firstRoll = lockedRolls[0];
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: firstRoll.cartoonNumber.split('_')[0], // Remove brand suffix
+        serialRange: firstRoll.serialRange || `${firstRoll.fromSerial} - ${firstRoll.toSerial}`,
+        brands: brands
+      };
+    }
+
+    // Fallback to current selected roll
+    const currentRoll = this.getCurrentRollInput(entry);
+    if (currentRoll) {
+      const brands = this.getBrandsFromSameRoll(entry);
+      return {
+        cartoonNumber: (this.getCurrentSelectedRoll(entry) || '').split('_')[0],
+        serialRange: currentRoll.serialRange || '',
+        brands: brands
+      };
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if multiple brands are being used from the same roll
+   */
+  hasMultipleBrandsFromSameRoll(entry: any): boolean {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    if (lockedRolls.length <= 1) return false;
+
+    // Check if multiple rolls have the same base carton number (before _BRAND_ suffix)
+    const baseCartoonNumbers = lockedRolls.map((roll: any) => roll.cartoonNumber.split('_')[0]);
+    const uniqueBaseNumbers = [...new Set(baseCartoonNumbers)];
+    
+    return uniqueBaseNumbers.length < baseCartoonNumbers.length;
+  }
+
+  /**
+   * Get brands information from the same roll with consistent color coding and quantities
+   */
+  getBrandsFromSameRoll(entry: any): Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> {
+    const lockedRolls = this.getLockedRollsForEntry(entry);
+    const brands: Array<{name: string, index: number, color: string, issuedQty: number, wastageQty: number}> = [];
+    
+    if (lockedRolls.length === 0) return brands;
+
+    // Group rolls by base carton number
+    const rollsByCarton = new Map<string, any[]>();
+    lockedRolls.forEach((roll: any) => {
+      const baseCarton = roll.cartoonNumber.split('_')[0];
+      if (!rollsByCarton.has(baseCarton)) {
+        rollsByCarton.set(baseCarton, []);
+      }
+      rollsByCarton.get(baseCarton)!.push(roll);
+    });
+
+    // For each carton, create brand entries with consistent colors
+    rollsByCarton.forEach((rolls, baseCarton) => {
+      // CRITICAL: Use the same color for all brands from the same roll
+      const rollColor = this.getRollColor(baseCarton);
+      
+      if (rolls.length > 1) {
+        // Multiple brands from same roll - all get the SAME color
+        rolls.forEach((roll: any, index: number) => {
+          const brandName = roll.brandDetails || roll.brand_details || `Brand ${index + 1}`;
+          brands.push({
+            name: brandName,
+            index: index + 1,
+            color: rollColor, // Same color for all brands from same roll
+            issuedQty: roll.issuedQty || 0,
+            wastageQty: roll.wastageQty || 0
+          });
+        });
+      } else {
+        // Single brand from roll
+        const roll = rolls[0];
+        const brandName = roll.brandDetails || roll.brand_details || 'Brand 1';
+        brands.push({
+          name: brandName,
+          index: 1,
+          color: rollColor,
+          issuedQty: roll.issuedQty || 0,
+          wastageQty: roll.wastageQty || 0
+        });
+      }
+    });
+
+    return brands;
+  }
+
+  /**
+   * Get enhanced brand details for display in BRAND DETAILS column
+   */
+  getEnhancedBrandDetails(entry: any): Array<{brandLabel: string, brandName: string, color: string, issuedQty: number, wastageQty: number}> {
+    const brands = this.getBrandsFromSameRoll(entry);
+    
+    return brands.map(brand => ({
+      brandLabel: `Brand ${brand.index}`,
+      brandName: brand.name,
+      color: brand.color,
+      issuedQty: brand.issuedQty,
+      wastageQty: brand.wastageQty
+    }));
   }
 }

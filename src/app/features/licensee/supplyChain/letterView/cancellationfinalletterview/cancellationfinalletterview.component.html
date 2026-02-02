@@ -1,0 +1,123 @@
+<div class="cancellation-final-letter-view">
+  <!-- Header Section -->
+  <div class="header-section no-print">
+    <div class="header-content">
+      <div class="left-section">
+        <button class="btn btn-outline-secondary" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i>{{ getBackButtonText() }}
+        </button>
+      </div>
+      <div class="right-section">
+        <h1 class="page-title">Cancellation Final Letter</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- Letter Content -->
+  <div class="letter-container">
+    <!-- Loading State -->
+    @if (isLoading) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading cancellation final letter...</p>
+      </div>
+    }
+    
+    <!-- Error State -->
+    @else if (errorMessage) {
+      <div class="alert alert-warning text-center">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        {{ errorMessage }}
+        <div class="mt-3">
+          <button class="btn btn-outline-primary me-2" (click)="goBack()">
+            <i class="bi bi-arrow-left me-1"></i>Go Back
+          </button>
+          <button class="btn btn-primary" (click)="ngOnInit()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Retry
+          </button>
+        </div>
+      </div>
+    }
+    
+    <!-- Final Letter Content -->
+    @else if (cancellationLetterData) {
+      <div id="cancellationFinalLetterPrintSection" class="final-letter-container">
+        <!-- Official Letter Header -->
+        <div class="letter-header">
+          <!-- Government Seal -->
+          <div class="seal-container">
+            <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Government Seal" class="govt-seal" />
+          </div>
+          
+          <!-- Department Title -->
+          <div class="dept-title">GOVERNMENT OF SIKKIM</div>
+          <div class="dept-subtitle">SIKKIM EXCISE DEPARTMENT</div>
+          <div class="dept-address">MG MARG, GANGTOK-737101</div>
+          <div class="dept-contact">
+            <div>Website: www.excise.sikkim.gov.in</div>
+            <div>E-mail: excise.dept&#64;sikkim.gov.in</div>
+          </div>
+        </div>
+
+        <!-- Letter Number and Date -->
+        <div class="letter-meta">
+          <div class="letter-number">
+            <strong>No. {{ cancellationLetterData.letterNumber }}</strong>
+          </div>
+          <div class="letter-date">
+            <strong>Dated: {{ cancellationLetterData.letterDate | date: 'dd/MM/yyyy' }}</strong>
+          </div>
+        </div>
+
+        <!-- Addressee -->
+        <div class="addressee-section">
+          <div class="to-line"><strong>To,</strong></div>
+          <div class="addressee-details">
+            <div class="addressee-name"><strong>{{ cancellationLetterData.exciseOfficerName }},</strong></div>
+            <div class="company-name"><strong>{{ cancellationLetterData.distilleryName }},</strong></div>
+            <div class="company-address">{{ cancellationLetterData.distilleryAddress }}.</div>
+          </div>
+        </div>
+
+        <!-- Subject Line -->
+        <div class="subject-section">
+          <div class="subject-line">
+            <strong>Sub: Cancellation of Import Permit nos. {{ getFormattedPermitNumbers() }}, both dated {{ cancellationLetterData.originalPermitDate | date: 'dd.MM.yyyy' }}.</strong>
+          </div>
+        </div>
+
+        <!-- Letter Body -->
+        <div class="letter-body">
+          <p class="body-text">
+            Reference your letter dated <strong>{{ cancellationLetterData.referenceDate | date: 'dd.MM.yyyy' }}</strong> on the subject cited above, I have been directed to inform you that the aforementioned permits stand cancelled.
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="no-print action-buttons-section">
+        <div class="d-flex justify-content-center gap-3 mt-4">
+          <button class="btn btn-primary btn-lg" (click)="printFinalLetter()">
+            <i class="bi bi-printer me-2"></i>Print Final Letter
+          </button>
+          <button class="btn btn-success btn-lg" (click)="downloadFinalLetter()">
+            <i class="bi bi-download me-2"></i>Download PDF
+          </button>
+          <button class="btn btn-outline-secondary btn-lg" (click)="goBack()">
+            <i class="bi bi-arrow-left me-2"></i>{{ getBackButtonText() }}
+          </button>
+        </div>
+      </div>
+    } @else {
+      <div class="alert alert-warning text-center">
+        <h4>No Data Found</h4>
+        <p>The requested cancellation final letter could not be generated.</p>
+        <button class="btn btn-primary" (click)="goBack()">
+          Return to Dashboard
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -22,21 +22,12 @@ export class PrintApplicationComponent {
     @Inject(MAT_DIALOG_DATA) public data: any
   ) {
     this.application = data.application;
-    console.log('🖨️ Print component initialized');
-    console.log('📦 Full application object:', JSON.stringify(this.application, null, 2));
-    console.log('🆔 Application ID:', this.getApplicationId());
-    console.log('📦 Application Type:', this.getApplicationType());
-    console.log('🎯 Current Stage:', this.application?.current_stage);
-    console.log('🎯 CurrentStage (camel):', this.application?.currentStage);
-    console.log('✅ Is Approved:', this.application?.is_approved);
-    console.log('✅ IsApproved (camel):', this.application?.isApproved);
-    console.log('✅ Can Print Result:', this.canPrint());
   }
 
   getApplicationId(): string {
-    return this.application?.application_id || 
-           this.application?.applicationId || 
-           this.application?.id || '';
+    return this.application?.application_id ||
+      this.application?.applicationId ||
+      this.application?.id || '';
   }
 
   getApplicationType(): string {
@@ -44,58 +35,49 @@ export class PrintApplicationComponent {
   }
 
   getPrintCount(): number {
-    return this.application?.print_count ?? 
-           this.application?.printCount ?? 
-           0;
+    return this.application?.print_count ??
+      this.application?.printCount ??
+      0;
   }
 
   canPrint(): boolean {
-    // ✅ NUCLEAR OPTION: Just return true always in approved table
-    // The backend will validate if printing is actually allowed
     return true;
   }
 
   onPrint(): void {
     const appId = this.getApplicationId();
     const appType = this.getApplicationType();
-    
+
     if (!appId) {
-      console.error('❌ No application ID found');
+      console.error('No application ID found');
       Swal.fire('Error', 'Application ID not found', 'error');
       return;
     }
 
-    console.log('🖨️ Printing license for application:', appId);
-    console.log('📦 Application type:', appType);
-    console.log('📊 Table type:', this.data?.tableType);
-    console.log('✅ Print Count:', this.getPrintCount());
-    
     let printObservable;
-    
-    // ✅ Route to correct print endpoint based on application type
+
+    // Route to correct print endpoint based on application type
     switch (appType) {
       case 'salesman-barman':
-        console.log('📋 Using printRegistration endpoint');
+        
         printObservable = this.salesmanBarmanService.printRegistration(appId);
         break;
-        
+
       case 'new-license':
-        console.log('📋 Using printNewLicense endpoint');
+        
         printObservable = this.licenseApplicationService.printNewLicense(appId);
         break;
-        
+
       case 'license-renewal':
       default:
-        console.log('📋 Using printLicense endpoint');
+        
         printObservable = this.licenseApplicationService.printLicense(appId);
         break;
     }
-    
+
     printObservable.subscribe({
       next: (res: any) => {
-        console.log('✅ Print API response:', res);
-        
-        // Update print count
+       // Update print count
         if (res.print_count !== undefined) {
           this.application.print_count = res.print_count;
         } else if (res.printCount !== undefined) {
@@ -104,15 +86,15 @@ export class PrintApplicationComponent {
 
         // Trigger browser print dialog
         this.triggerPrint();
-        
+
         Swal.fire('Printed', 'License printed successfully.', 'success');
       },
       error: (err: any) => {
-        console.error('❌ Print API error:', err);
-        const errorMsg = err?.error?.detail || 
-                        err?.error?.error || 
-                        err?.error?.message || 
-                        'Failed to print license.';
+        console.error('Print API error:', err);
+        const errorMsg = err?.error?.detail ||
+          err?.error?.error ||
+          err?.error?.message ||
+          'Failed to print license.';
         Swal.fire('Error', errorMsg, 'error');
       }
     });
@@ -242,13 +224,13 @@ export class PrintApplicationComponent {
     const appId = this.getApplicationId();
 
     if (!printContents) {
-      console.error('❌ Print content not found');
+      console.error('Print content not found');
       Swal.fire('Error', 'Print template not found', 'error');
       return;
     }
 
     const popupWin = window.open('', '_blank', 'width=800,height=600');
-    
+
     if (!popupWin) {
       Swal.fire('Error', 'Please allow pop-ups for printing', 'error');
       return;

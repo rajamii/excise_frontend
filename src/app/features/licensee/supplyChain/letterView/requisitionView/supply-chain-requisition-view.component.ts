@@ -55,8 +55,33 @@ export class SupplyChainRequisitionViewComponent implements OnInit {
   }
 
   private loadRequisitionData(refNo: string): void {
-    // First check localStorage for import permit requests
+    // First check localStorage for requisition requests
     if (this.isBrowser) {
+      const requisitionRequests = JSON.parse(localStorage.getItem('requisitionRequests') || '[]');
+      const requisitionData = requisitionRequests.find((req: any) => req.refNo === refNo || req.referenceNo === refNo);
+      
+      if (requisitionData) {
+        // Convert requisition data to the expected format
+        this.requisitionData = {
+          id: requisitionData.refNo || requisitionData.referenceNo,
+          referenceNo: requisitionData.refNo || requisitionData.referenceNo,
+          submissionDate: new Date(requisitionData.date || requisitionData.submissionDate),
+          distilleryName: requisitionData.distilleryName || 'Unknown Distillery',
+          status: requisitionData.status || 'THE PERMIT HAS BEEN GENERATED AND WILL BE MAILED TO THE CONCERNED AUTHORITY.',
+          brAmount: parseFloat(requisitionData.brAmount || requisitionData.amount || '0'),
+          quantity: requisitionData.quantity,
+          numberOfPermits: requisitionData.numberOfPermits,
+          bulkSpiritType: requisitionData.bulkSpiritType,
+          strengthTo: requisitionData.strengthTo,
+          liftedFrom: requisitionData.liftedFrom,
+          viaRoute: requisitionData.viaRoute,
+          checkpostEntry: requisitionData.checkpostEntry,
+          purpose: requisitionData.purpose
+        };
+        return;
+      }
+      
+      // Fallback: check import permit requests for backward compatibility
       const importPermitRequests = JSON.parse(localStorage.getItem('importPermitRequests') || '[]');
       const importPermitData = importPermitRequests.find((permit: any) => permit.refNo === refNo);
       
@@ -319,26 +344,53 @@ export class SupplyChainRequisitionViewComponent implements OnInit {
   }
 
   goBack(): void {
-    // Check if we came from permit section, commissioner dashboard, or supply chain
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Going back from URL:', currentUrl); // Debug log
+    console.log('Going back from URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      this.router.navigate(['/dev-commissioner-dashboard']);
+      return;
+    } else if (source === 'permit-section') {
+      this.router.navigate(['/app-permit-section']);
+      return;
+    } else if (source === 'licensee-dashboard') {
+      this.router.navigate(['/dev-supply-chain']);
+      return;
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       this.router.navigate(['/app-permit-section']);
-    } else if (currentUrl.includes('dev-requisition-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       this.router.navigate(['/dev-commissioner-dashboard']);
     } else {
+      // Default: go back to supply chain
       this.router.navigate(['/dev-supply-chain']);
     }
   }
 
   getBackButtonText(): string {
+    // Check source parameter first, then fall back to URL-based detection
+    const source = this.route.snapshot.queryParamMap.get('source');
     const currentUrl = this.router.url;
-    console.log('Current URL:', currentUrl); // Debug log
+    console.log('Current URL:', currentUrl, 'Source:', source); // Debug log
     
+    // Priority 1: Check source query parameter
+    if (source === 'commissioner-dashboard') {
+      return 'Back to Commissioner Dashboard';
+    } else if (source === 'permit-section') {
+      return 'Back to Permit Section';
+    } else if (source === 'licensee-dashboard') {
+      return 'Back to Supply Chain';
+    }
+    
+    // Priority 2: Check URL patterns for backward compatibility
     if (currentUrl.includes('/app-permit-section/')) {
       return 'Back to Permit Section';
-    } else if (currentUrl.includes('dev-requisition-letter-view')) {
+    } else if (currentUrl.includes('commissioner')) {
       return 'Back to Commissioner Dashboard';
     } else {
       return 'Back to Supply Chain';

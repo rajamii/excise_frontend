@@ -1,0 +1,846 @@
+<!-- Brand Warehouse Management -->
+<div class="warehouse-container">
+  <!-- Header Section -->
+  <div class="warehouse-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="warehouse-title">
+          <i class="bi bi-house-gear"></i>
+          Sikkim Distillery - Brand Warehouse
+        </h1>
+        <p class="warehouse-subtitle">Monitor and manage all Sikkim brand inventory (Distilleries and Breweries)</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-outline" (click)="refreshData()" [disabled]="isLoading">
+          <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i>
+          Refresh
+        </button>
+        <button class="btn btn-primary" (click)="exportToExcel()">
+          <i class="bi bi-file-earmark-excel"></i>
+          Export Excel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Dashboard -->
+  <div class="overview-dashboard">
+    <div class="overview-grid">
+      <!-- Total Brands -->
+      <div class="overview-card brands-card">
+        <div class="card-icon">
+          <i class="bi bi-tags"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalBrands }}</h3>
+          <p>Total Brands</p>
+        </div>
+      </div>
+
+      <!-- Total Capacity -->
+      <div class="overview-card capacity-card">
+        <div class="card-icon">
+          <i class="bi bi-cup-straw"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCapacity | number }}</h3>
+          <p>Total Capacity (Bottles)</p>
+        </div>
+      </div>
+
+      <!-- Current Stock -->
+      <div class="overview-card stock-card">
+        <div class="card-icon">
+          <i class="bi bi-boxes"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.totalCurrentStock | number }}</h3>
+          <p>Current Stock (Units)</p>
+        </div>
+      </div>
+
+      <!-- Today's Production -->
+      <div class="overview-card production-card">
+        <div class="card-icon">
+          <i class="bi bi-plus-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.todayProduction | number }}</h3>
+          <p>Today's Production</p>
+        </div>
+      </div>
+
+      <!-- Today's Consumption -->
+      <div class="overview-card consumption-card">
+        <div class="card-icon">
+          <i class="bi bi-dash-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.todayConsumption | number }}</h3>
+          <p>Today's Consumption</p>
+        </div>
+      </div>
+
+      <!-- Low Stock Alerts -->
+      <div class="overview-card alert-card low-stock">
+        <div class="card-icon">
+          <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.lowStockAlerts }}</h3>
+          <p>Low Stock Alerts</p>
+        </div>
+      </div>
+
+      <!-- Out of Stock -->
+      <div class="overview-card alert-card out-stock">
+        <div class="card-icon">
+          <i class="bi bi-x-circle"></i>
+        </div>
+        <div class="card-content">
+          <h3>{{ warehouseOverview.outOfStockAlerts }}</h3>
+          <p>Out of Stock</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-header">
+      <h3><i class="bi bi-funnel"></i> Filters & Search</h3>
+      <button class="btn btn-outline btn-sm" (click)="clearFilters()">
+        <i class="bi bi-x"></i>
+        Clear All
+      </button>
+    </div>
+
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label>Brand Name</label>
+        <input type="text" class="form-control" placeholder="Search brand name..." [(ngModel)]="filters.brandName"
+          (input)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label>Liquor Type</label>
+        <select class="form-control" [(ngModel)]="filters.liquorType" (change)="applyFilters()">
+          <option value="">All Types</option>
+          <option value="Whisky">Whisky</option>
+          <option value="Rum">Rum</option>
+          <option value="Vodka">Vodka</option>
+          <option value="Gin">Gin</option>
+          <option value="Beer">Beer</option>
+          <option value="Wine">Wine</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Stock Status</label>
+        <select class="form-control" [(ngModel)]="filters.status" (change)="applyFilters()">
+          <option value="">All Status</option>
+          <option value="IN_STOCK">In Stock</option>
+          <option value="LOW_STOCK">Low Stock</option>
+          <option value="OUT_OF_STOCK">Out of Stock</option>
+          <option value="OVERSTOCKED">Overstocked</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Stock Level</label>
+        <select class="form-control" [(ngModel)]="filters.stockLevel" (change)="applyFilters()">
+          <option value="">All Levels</option>
+          <option value="HIGH">High (80%+)</option>
+          <option value="MEDIUM">Medium (40-80%)</option>
+          <option value="LOW">Low (<40%)< /option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Date From</label>
+        <input type="date" class="form-control" [(ngModel)]="filters.dateFrom" (change)="applyFilters()">
+      </div>
+
+      <div class="filter-group">
+        <label>Date To</label>
+        <input type="date" class="form-control" [(ngModel)]="filters.dateTo" (change)="applyFilters()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="results-summary">
+    <div class="summary-info">
+      <span class="results-count">
+        Showing {{ paginatedStocks.length }} of {{ filteredStocks.length }} brands
+      </span>
+      <span class="total-stock">
+        Total Stock: {{ getTotalStock() | number }} units
+      </span>
+    </div>
+  </div>
+
+  <!-- Warehouse Table -->
+  <div class="warehouse-table-container">
+    <div class="table-wrapper" *ngIf="!isLoading; else loadingTemplate">
+      <table class="warehouse-table">
+        <thead>
+          <tr class="table-header">
+            <th>Brand Details</th>
+            <th>Pack Sizes & Stock</th>
+            <th>Total Utilized</th>
+            <th>Total Stock</th>
+            <th>Overall Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let brand of paginatedStocks; let i = index" class="table-row"
+            [class.low-stock-row]="brand.overallStatus === 'LOW_STOCK'"
+            [class.out-stock-row]="brand.overallStatus === 'OUT_OF_STOCK'"
+            [class.over-stock-row]="brand.overallStatus === 'OVERSTOCKED'">
+
+            <!-- Brand Details -->
+            <td class="brand-details-cell">
+              <div class="brand-info">
+                <div class="brand-name">{{ brand.brandName }}</div>
+                <div class="brand-meta">
+                  <span class="distillery-name">{{ brand.distilleryName }}</span>
+                  <span class="separator">•</span>
+                  <span class="liquor-type">{{ brand.brandType }}</span>
+                </div>
+              </div>
+            </td>
+
+            <!-- Pack Sizes & Stock -->
+            <td class="pack-sizes-cell">
+              <div class="pack-sizes-grid">
+                <div *ngFor="let packSize of getPackSizeKeys(brand.packSizes)" class="pack-size-item"
+                  [class.in-stock]="brand.packSizes[packSize].status === 'IN_STOCK'"
+                  [class.low-stock]="brand.packSizes[packSize].status === 'LOW_STOCK'"
+                  [class.out-of-stock]="brand.packSizes[packSize].status === 'OUT_OF_STOCK'">
+                  <div class="pack-size-header">
+                    <span class="size-label">{{ packSize }}ml</span>
+                    <span class="status-indicator"
+                      [class]="'status-' + brand.packSizes[packSize].status.toLowerCase()"></span>
+                  </div>
+                  <div class="stock-info">
+                    <span class="stock-number">{{ brand.packSizes[packSize].currentStock | number }}</span>
+                    <span class="stock-label">units</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Total Utilized -->
+            <td class="utilized-cell">
+              <div class="utilized-info">
+                <div class="utilized-number">{{ brand.totalUtilized | number }}</div>
+                <div class="utilized-label">units utilized</div>
+              </div>
+            </td>
+
+            <!-- Total Stock -->
+            <td class="total-stock-cell">
+              <div class="total-info">
+                <div class="total-number">{{ brand.totalStock | number }}</div>
+                <div class="total-label">total units</div>
+                <div class="capacity-info">
+                  <small>of {{ brand.totalCapacity | number }} capacity</small>
+                </div>
+              </div>
+            </td>
+
+            <!-- Overall Status -->
+            <td class="status-cell">
+              <span class="status-badge" [class]="'badge-' + getStatusColor(brand.overallStatus)">
+                <i class="bi" [class.bi-check-circle]="brand.overallStatus === 'IN_STOCK'"
+                  [class.bi-exclamation-triangle]="brand.overallStatus === 'LOW_STOCK'"
+                  [class.bi-x-circle]="brand.overallStatus === 'OUT_OF_STOCK'"
+                  [class.bi-arrow-up]="brand.overallStatus === 'OVERSTOCKED'"></i>
+                {{ brand.overallStatus.replace('_', ' ') }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-cell">
+              <div class="action-buttons">
+                <button class="btn btn-sm btn-outline" (click)="viewBrandDetails(brand)" title="View Details">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-outline" (click)="viewTransitPermits(brand)" title="View Utilization">
+                  <i class="bi bi-truck"></i>
+                </button>
+                <button class="btn btn-sm btn-outline" (click)="viewLastEntries(brand)" title="Recent Entries">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <button class="btn btn-sm btn-success" (click)="viewProduction(brand)" title="Production Details">
+                  <i class="bi bi-gear-fill"></i>
+                  Production
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Loading Template -->
+    <ng-template #loadingTemplate>
+      <div class="loading-container">
+        <div class="loading-spinner">
+          <i class="bi bi-arrow-repeat spin"></i>
+        </div>
+        <p>Loading warehouse data...</p>
+      </div>
+    </ng-template>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!isLoading && filteredStocks.length === 0">
+      <div class="empty-icon">
+        <i class="bi bi-search"></i>
+      </div>
+      <h3>No brands found</h3>
+      <p>Try adjusting your filters or search criteria</p>
+      <button class="btn btn-primary" (click)="clearFilters()">Clear Filters</button>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="totalPages > 1">
+    <div class="pagination-info">
+      Page {{ currentPage }} of {{ totalPages }}
+    </div>
+    <div class="pagination-controls">
+      <button class="btn btn-outline btn-sm" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">
+        <i class="bi bi-chevron-left"></i>
+        Previous
+      </button>
+
+      <div class="page-numbers">
+        <button *ngFor="let page of getPageNumbers(); let i = index" class="btn btn-sm"
+          [class.btn-primary]="currentPage === i + 1" [class.btn-outline]="currentPage !== i + 1"
+          (click)="changePage(i + 1)">
+          {{ i + 1 }}
+        </button>
+      </div>
+
+      <button class="btn btn-outline btn-sm" (click)="changePage(currentPage + 1)"
+        [disabled]="currentPage === totalPages">
+        Next
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Brand Details Modal -->
+<div class="modal-overlay" *ngIf="showDetailsModal" (click)="showDetailsModal = false">
+  <div class="modal-content brand-details-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-info-circle"></i>
+        Brand Details
+      </h2>
+      <button class="modal-close" (click)="showDetailsModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedBrand">
+      <div class="brand-details-grid">
+        <!-- Basic Information -->
+        <div class="details-section">
+          <h3>Basic Information</h3>
+          <div class="details-row">
+            <span class="label">Brand Name:</span>
+            <span class="value">{{ selectedBrand.brandName }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Distillery:</span>
+            <span class="value">{{ selectedBrand.distilleryName }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Liquor Type:</span>
+            <span class="value">{{ selectedBrand.brandType }}</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Last Updated:</span>
+            <span class="value">{{ selectedBrand.lastUpdated | date:'medium' }}</span>
+          </div>
+        </div>
+
+        <!-- Stock Information -->
+        <div class="details-section">
+          <h3>Stock Information</h3>
+          <div class="details-row">
+            <span class="label">Total Stock:</span>
+            <span class="value highlight">{{ selectedBrand.totalStock | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Total Capacity:</span>
+            <span class="value">{{ selectedBrand.totalCapacity | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Total Utilized:</span>
+            <span class="value">{{ selectedBrand.totalUtilized | number }} units</span>
+          </div>
+          <div class="details-row">
+            <span class="label">Overall Status:</span>
+            <span class="value">
+              <span class="status-badge" [class]="'badge-' + getStatusColor(selectedBrand.overallStatus)">
+                {{ selectedBrand.overallStatus.replace('_', ' ') }}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Pack Sizes Details -->
+        <div class="details-section full-width">
+          <h3>Pack Sizes Details</h3>
+          <div class="pack-sizes-details">
+            <div *ngFor="let packSize of getPackSizeKeys(selectedBrand.packSizes)" class="pack-size-detail">
+              <div class="pack-size-header">
+                <h4>{{ packSize }}ml</h4>
+                <span class="status-badge"
+                  [class]="'badge-' + getStatusColor(selectedBrand.packSizes[packSize].status)">
+                  {{ selectedBrand.packSizes[packSize].status.replace('_', ' ') }}
+                </span>
+              </div>
+              <div class="pack-size-info">
+                <div class="info-row">
+                  <span class="label">Current Stock:</span>
+                  <span class="value">{{ selectedBrand.packSizes[packSize].currentStock | number }} units</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Max Capacity:</span>
+                  <span class="value">{{ selectedBrand.packSizes[packSize].maxCapacity | number }} units</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Reorder Level:</span>
+                  <span class="value">{{ selectedBrand.packSizes[packSize].reorderLevel | number }} units</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Utilization:</span>
+                  <span class="value">{{ selectedBrand.packSizes[packSize].utilizationPercentage | number:'1.1-1'
+                    }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stock Adjustment Modal -->
+<div class="modal-overlay" *ngIf="showAdjustmentModal" (click)="showAdjustmentModal = false">
+  <div class="modal-content adjustment-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-pencil"></i>
+        Stock Adjustment
+      </h2>
+      <button class="modal-close" (click)="showAdjustmentModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedBrand && selectedPackSize">
+      <div class="adjustment-form">
+        <div class="current-stock-info">
+          <h3>{{ selectedBrand.brandName }}</h3>
+          <p>Pack Size: <strong>{{ selectedPackSize.capacitySize }}ml</strong></p>
+          <p>Current Stock: <strong>{{ selectedPackSize.currentStock | number }} units</strong></p>
+        </div>
+
+        <div class="form-group">
+          <label>Adjustment Type</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" [(ngModel)]="adjustmentType" value="ADD">
+              <span class="radio-label">
+                <i class="bi bi-plus"></i>
+                Add Stock
+              </span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" [(ngModel)]="adjustmentType" value="SUBTRACT">
+              <span class="radio-label">
+                <i class="bi bi-dash"></i>
+                Subtract Stock
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" class="form-control" [(ngModel)]="adjustmentQuantity" min="1"
+            placeholder="Enter quantity">
+        </div>
+
+        <div class="form-group">
+          <label>Reason</label>
+          <textarea class="form-control" [(ngModel)]="adjustmentReason" rows="3"
+            placeholder="Enter reason for adjustment..."></textarea>
+        </div>
+
+        <div class="adjustment-preview" *ngIf="adjustmentQuantity > 0">
+          <h4>Preview</h4>
+          <div class="preview-calculation">
+            <span class="current">{{ selectedPackSize.currentStock | number }}</span>
+            <span class="operator">{{ adjustmentType === 'ADD' ? '+' : '-' }}</span>
+            <span class="adjustment">{{ adjustmentQuantity | number }}</span>
+            <span class="equals">=</span>
+            <span class="result"
+              [class.negative]="adjustmentType === 'SUBTRACT' && adjustmentQuantity > selectedPackSize.currentStock">
+              {{ getAdjustmentResult() | number }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-outline" (click)="showAdjustmentModal = false">
+        Cancel
+      </button>
+      <button class="btn btn-primary" (click)="submitStockAdjustment()"
+        [disabled]="adjustmentQuantity <= 0 || !adjustmentReason.trim()">
+        <i class="bi bi-floppy"></i>
+        Save Adjustment
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Transit Permits Modal -->
+<div class="modal-overlay" *ngIf="showTransitPermitsModal" (click)="showTransitPermitsModal = false">
+  <div class="modal-content transit-permits-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-truck"></i>
+        Transit Permits - {{ selectedBrand?.brandName }}
+      </h2>
+      <button class="modal-close" (click)="showTransitPermitsModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="permits-summary">
+        <div class="summary-card">
+          <h3>Total Utilized: {{ selectedBrand?.totalUtilized | number }} units</h3>
+          <p>Through {{ selectedTransitPermits.length }} transit permits</p>
+        </div>
+      </div>
+
+      <div class="permits-table-container">
+        <table class="permits-table">
+          <thead>
+            <tr>
+              <th>Permit No</th>
+              <th>Date</th>
+              <th>Distributor</th>
+              <th>Depot Address</th>
+              <th>Vehicle</th>
+              <th>Quantity</th>
+              <th>Status</th>
+              <th>Approved By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let permit of selectedTransitPermits" class="permit-row">
+              <td class="permit-no">{{ permit.permitNo }}</td>
+              <td class="permit-date">{{ permit.date | date:'dd/MM/yyyy' }}</td>
+              <td class="distributor-name">{{ permit.distributorName }}</td>
+              <td class="depot-address">{{ permit.depotAddress }}</td>
+              <td class="vehicle-number">{{ permit.vehicleNumber }}</td>
+              <td class="quantity">
+                <div class="quantity-details">
+                  <span class="cases">{{ permit.cases }} cases</span>
+                  <span class="bottles">{{ permit.totalBottles }} bottles</span>
+                </div>
+              </td>
+              <td class="permit-status">
+                <span class="status-badge" [class.badge-success]="permit.status === 'DELIVERED'"
+                  [class.badge-info]="permit.status === 'IN_TRANSIT'"
+                  [class.badge-warning]="permit.status === 'APPROVED'"
+                  [class.badge-secondary]="permit.status === 'PENDING'"
+                  [class.badge-danger]="permit.status === 'CANCELLED'">
+                  {{ permit.status.replace('_', ' ') }}
+                </span>
+              </td>
+              <td class="approved-by">
+                <div class="approval-info">
+                  <span class="approver">{{ permit.approvedBy }}</span>
+                  <span class="approval-date" *ngIf="permit.approvalDate">
+                    {{ permit.approvalDate | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="selectedTransitPermits.length === 0">
+        <div class="empty-icon">
+          <i class="bi bi-truck"></i>
+        </div>
+        <h3>No Transit Permits</h3>
+        <p>No transit permits found for this brand</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Last Entries Modal -->
+<div class="modal-overlay" *ngIf="showLastEntriesModal" (click)="showLastEntriesModal = false">
+  <div class="modal-content last-entries-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-clock-history"></i>
+        Recent Entries - {{ selectedBrand?.brandName }}
+      </h2>
+      <button class="modal-close" (click)="showLastEntriesModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="entries-summary">
+        <div class="summary-card">
+          <h3>{{ selectedLastEntries.length }} Recent Entries</h3>
+          <p>Latest stock movements and transactions</p>
+        </div>
+      </div>
+
+      <div class="entries-timeline">
+        <div *ngFor="let entry of selectedLastEntries; let i = index" class="timeline-item"
+          [class.timeline-production]="entry.type === 'PRODUCTION'"
+          [class.timeline-consumption]="entry.type === 'CONSUMPTION'"
+          [class.timeline-adjustment]="entry.type === 'ADJUSTMENT'"
+          [class.timeline-transit]="entry.type === 'TRANSIT_PERMIT'">
+
+          <div class="timeline-marker">
+            <i class="fas" [class.fa-plus]="entry.type === 'PRODUCTION'" [class.fa-minus]="entry.type === 'CONSUMPTION'"
+              [class.fa-edit]="entry.type === 'ADJUSTMENT'" [class.fa-truck]="entry.type === 'TRANSIT_PERMIT'"></i>
+          </div>
+
+          <div class="timeline-content">
+            <div class="entry-header">
+              <div class="entry-type-badge" [class]="'badge-' + entry.type.toLowerCase()">
+                {{ entry.type.replace('_', ' ') }}
+              </div>
+              <div class="entry-date">{{ entry.date | date:'dd/MM/yyyy HH:mm' }}</div>
+            </div>
+
+            <div class="entry-details">
+              <h4>{{ entry.description }}</h4>
+              <div class="entry-meta">
+                <div class="pack-size" *ngIf="entry.packSize">
+                  <span class="label">Pack Size:</span>
+                  <span class="value pack-size-badge">{{ entry.packSize }}ml</span>
+                </div>
+                <div class="quantity-change">
+                  <span class="label">Quantity:</span>
+                  <span class="value" [class.positive]="entry.type === 'PRODUCTION'"
+                    [class.negative]="entry.type === 'CONSUMPTION' || entry.type === 'TRANSIT_PERMIT'">
+                    {{ entry.type === 'PRODUCTION' ? '+' : '-' }}{{ entry.quantity | number }}
+                  </span>
+                </div>
+                <div class="stock-change">
+                  <span class="label">Stock:</span>
+                  <span class="value">
+                    {{ entry.previousStock | number }} → {{ entry.newStock | number }}
+                  </span>
+                </div>
+                <div class="reference">
+                  <span class="label">Reference:</span>
+                  <span class="value">{{ entry.referenceNo }}</span>
+                </div>
+                <div class="officer" *ngIf="entry.officerName">
+                  <span class="label">Officer:</span>
+                  <span class="value">{{ entry.officerName }}</span>
+                </div>
+                <div class="transit-permit" *ngIf="entry.transitPermitNo">
+                  <span class="label">Transit Permit:</span>
+                  <span class="value">{{ entry.transitPermitNo }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="selectedLastEntries.length === 0">
+        <div class="empty-icon">
+          <i class="bi bi-clock-history"></i>
+        </div>
+        <h3>No Recent Entries</h3>
+        <p>No recent entries found for this brand</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Production Modal -->
+<div class="modal-overlay" *ngIf="showProductionModal" (click)="showProductionModal = false">
+  <div class="modal-content production-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <i class="bi bi-gear-fill"></i>
+        Production Details - {{ selectedBrand?.brandName }}
+        <span class="pack-size-indicator" *ngIf="getCurrentPackSize()">
+          ({{ getCurrentPackSize() }})
+        </span>
+      </h2>
+      <button class="modal-close" (click)="showProductionModal = false">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedBrand">
+      <!-- Pack Sizes Info -->
+      <div class="pack-sizes-info">
+        <div class="info-label">
+          <i class="bi bi-box-seam"></i>
+          Available Pack Sizes:
+        </div>
+        <div class="pack-sizes-list">
+          <span *ngFor="let packSizeKey of getPackSizeKeys(selectedBrand.packSizes)" 
+                class="pack-size-badge"
+                [class.active]="selectedBrand.packSizes[packSizeKey].id === getCurrentPackSizeId()"
+                (click)="switchPackSize(selectedBrand.packSizes[packSizeKey].id)">
+            {{ selectedBrand.packSizes[packSizeKey].capacitySize }}ml
+            <small>({{ selectedBrand.packSizes[packSizeKey].currentStock }} units)</small>
+          </span>
+        </div>
+      </div>
+
+      <!-- Production Summary Card -->
+      <div class="production-summary-card">
+        <div class="production-header">
+          <div class="production-badge">
+            <i class="bi bi-gear-fill"></i>
+            <span>PRODUCTION</span>
+          </div>
+          <div class="production-date">
+            <ng-container *ngIf="productionSummary.productionDate && productionSummary.productionTime">
+              {{ productionSummary.productionDate | date:'dd/MM/yyyy' }} {{ productionSummary.productionTime }}
+            </ng-container>
+            <ng-container *ngIf="!productionSummary.productionDate || !productionSummary.productionTime">
+              {{ getCurrentDate() | date:'dd/MM/yyyy HH:mm' }}
+            </ng-container>
+          </div>
+        </div>
+
+        <div class="production-title">
+          <h3>Daily production batch</h3>
+        </div>
+
+        <div class="production-details">
+          <div class="production-row">
+            <div class="production-item">
+              <span class="label">QUANTITY:</span>
+              <span class="value quantity-value">{{ productionSummary.todayProduction | number }}</span>
+            </div>
+
+            <!-- Show Range if there is history -->
+            <div class="production-item" *ngIf="productionHistory && productionHistory.length > 0">
+              <span class="label">STOCK CHANGE:</span>
+              <span class="value stock-range">
+                {{ productionSummary.stockBefore | number }} — {{ productionSummary.stockAfter | number }}
+              </span>
+            </div>
+
+            <!-- Show Single Value if no history -->
+            <div class="production-item" *ngIf="!productionHistory || productionHistory.length === 0">
+              <span class="label">CURRENT STOCK:</span>
+              <span class="value stock-range">
+                {{ productionSummary.stockAfter | number }}
+              </span>
+            </div>
+
+            <div class="production-item">
+              <span class="label">REFERENCE:</span>
+              <span class="value reference-value">{{ productionSummary.latestReference }}</span>
+            </div>
+          </div>
+
+          <div class="production-officer">
+            <span class="label">OFFICER:</span>
+            <span class="value officer-name">{{ productionSummary.productionManager }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Production History -->
+      <div class="production-history" *ngIf="productionHistory && productionHistory.length > 0">
+        <h4>Recent Production History</h4>
+        <div class="history-table-container">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>Quantity</th>
+                <th>Stock Change</th>
+                <th>Manager</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let batch of productionHistory" class="history-row">
+                <td class="batch-date">
+                  {{ batch.productionDate | date:'dd/MM/yyyy' }}
+                  <small>{{ batch.productionTime }}</small>
+                </td>
+                <td class="batch-reference">{{ batch.sourceReference || batch.batchReference }}</td>
+                <td class="batch-quantity">
+                  <span class="quantity-badge positive">
+                    +{{ batch.quantityProduced | number }}
+                  </span>
+                </td>
+                <td class="stock-change">
+                  <span class="stock-before">{{ batch.stockBefore | number }}</span>
+                  <i class="bi bi-arrow-right"></i>
+                  <span class="stock-after">{{ batch.stockAfter | number }}</span>
+                </td>
+                <td class="batch-manager">{{ batch.productionManager }}</td>
+                <td class="batch-status">
+                  <span class="status-badge" [class.badge-success]="batch.status === 'COMPLETED'"
+                    [class.badge-warning]="batch.status === 'IN_PROGRESS'"
+                    [class.badge-info]="batch.status === 'PENDING'" [class.badge-danger]="batch.status === 'CANCELLED'">
+                    {{ batch.status }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="(!productionHistory || productionHistory.length === 0) && !isLoadingProduction">
+        <div class="empty-icon">
+          <i class="bi bi-gear"></i>
+        </div>
+        <h3>No Production History</h3>
+        <p>No production batches found for this brand</p>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoadingProduction">
+        <div class="loading-spinner">
+          <i class="bi bi-arrow-repeat spin"></i>
+        </div>
+        <p>Loading production data...</p>
+      </div>
+    </div>
+  </div>
+</div>
