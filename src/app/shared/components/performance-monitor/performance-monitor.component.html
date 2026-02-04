@@ -1,0 +1,94 @@
+<div 
+  class="performance-monitor" 
+  [ngClass]="[position, { minimized: minimized }]"
+  *ngIf="isVisible">
+  
+  <!-- Header -->
+  <div class="monitor-header" (click)="toggleMinimized()">
+    <div class="header-content">
+      <mat-icon class="monitor-icon">speed</mat-icon>
+      <span class="monitor-title">Performance</span>
+      <div class="performance-score" [style.color]="getScoreColor()">
+        {{ getPerformanceScore() }}
+      </div>
+    </div>
+    <mat-icon class="toggle-icon">
+      {{ minimized ? 'expand_less' : 'expand_more' }}
+    </mat-icon>
+  </div>
+
+  <!-- Content -->
+  <div class="monitor-content" *ngIf="!minimized">
+    
+    <!-- Performance Score -->
+    <div class="score-section">
+      <div class="score-circle" [style.border-color]="getScoreColor()">
+        <div class="score-value" [style.color]="getScoreColor()">
+          {{ getPerformanceScore() }}
+        </div>
+        <div class="score-label">{{ getScoreLabel() }}</div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics-section">
+      <div 
+        class="metric-item" 
+        *ngFor="let metric of ['loadTime', 'renderTime', 'apiResponseTime', 'memoryUsage', 'networkRequests']">
+        <div class="metric-label">{{ getMetricLabel(metric) }}</div>
+        <div 
+          class="metric-value" 
+          [style.color]="getMetricColor(metric, metrics[metric])">
+          {{ formatMetricValue(metric, metrics[metric]) }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations-section" *ngIf="recommendations.length > 0">
+      <div class="section-title">
+        <mat-icon>lightbulb</mat-icon>
+        Recommendations
+      </div>
+      <div class="recommendation-list">
+        <div 
+          class="recommendation-item" 
+          *ngFor="let recommendation of recommendations.slice(0, 3)">
+          <mat-icon class="recommendation-icon">arrow_right</mat-icon>
+          <span>{{ recommendation }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-section">
+      <button 
+        mat-stroked-button 
+        class="action-btn" 
+        (click)="resetMetrics()"
+        matTooltip="Reset all metrics">
+        <mat-icon>refresh</mat-icon>
+        Reset
+      </button>
+      
+      <button 
+        mat-stroked-button 
+        class="action-btn" 
+        (click)="analyzeBundleSize()"
+        matTooltip="Analyze bundle size in console">
+        <mat-icon>analytics</mat-icon>
+        Analyze
+      </button>
+      
+      <button 
+        mat-stroked-button 
+        class="action-btn" 
+        (click)="exportMetrics()"
+        matTooltip="Export metrics as JSON">
+        <mat-icon>download</mat-icon>
+        Export
+      </button>
+    </div>
+
+  </div>
+</div>

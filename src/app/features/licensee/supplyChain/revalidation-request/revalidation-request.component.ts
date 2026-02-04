@@ -36,6 +36,8 @@ export class RevalidationRequestComponent implements OnInit {
     expiryDate: new Date(),
   };
 
+  isViewMode: boolean = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -45,11 +47,14 @@ export class RevalidationRequestComponent implements OnInit {
   ngOnInit() {
     this.route.queryParams.subscribe((params) => {
       const id = params['id'];
+      this.isViewMode = params['mode'] === 'view';
 
       if (id) {
         this.loadRevalidationData(id);
       } else {
-        // Handle missing ID, maybe redirect back or show error
+        // Only if NOT viewing (creating new) do we care about missing ID differently?
+        // Actually for request we usually need ID unless it's a completely new blank form?
+        // Let's keep existing logic.
         this.showMessage('No Revalidation ID provided.', 'danger');
         setTimeout(() => this.goBack(), 2000);
       }
@@ -115,7 +120,7 @@ export class RevalidationRequestComponent implements OnInit {
       next: (response) => {
         // Success
         this.showMessage('Revalidation request submitted successfully!', 'success');
-        
+
         // Navigate back to the list after a short delay
         setTimeout(() => {
           this.router.navigate(['/licensee/supply-chain'], { queryParams: { tab: 'revalidation' } });
@@ -132,6 +137,7 @@ export class RevalidationRequestComponent implements OnInit {
   goBack() {
     this.router.navigate(['/dev-supply-chain'], { queryParams: { tab: 'revalidation' } });
   }
+
 
   private showMessage(msg: string, type: string) {
     this.message = msg;

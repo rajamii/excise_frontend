@@ -1,0 +1,242 @@
+// IT Cell Component - Clean Professional Design
+
+// Summary Cards
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: white;
+  }
+
+  .card-content {
+    flex: 1;
+
+    .card-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .card-label {
+      font-size: 0.9rem;
+      color: #6b7280;
+      margin: 0.25rem 0 0 0;
+      font-weight: 500;
+    }
+  }
+
+  &.total-requests {
+    .card-icon {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .card-value {
+      color: #3b82f6;
+    }
+  }
+
+  &.pending-requests {
+    .card-icon {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .card-value {
+      color: #f59e0b;
+    }
+  }
+
+  &.approved-requests {
+    .card-icon {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .card-value {
+      color: #10b981;
+    }
+  }
+
+  &.total-quantity {
+    .card-icon {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .card-value {
+      color: #8b5cf6;
+    }
+  }
+}
+
+// Register Table
+.hologram-register-table {
+  .register-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+
+    .register-header-bar {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .register-table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 0;
+
+        i {
+          color: #3b82f6;
+        }
+      }
+
+      .register-info {
+        .entries-count {
+          background: #dbeafe;
+          color: #1e40af;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .table-responsive {
+      .register-table {
+        margin: 0;
+
+        thead {
+          background: #f9fafb;
+
+          th {
+            border-bottom: 2px solid #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+          }
+        }
+
+        tbody {
+          tr {
+            border-bottom: 1px solid #f3f4f6;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+              background-color: #f9fafb;
+            }
+
+            td {
+              padding: 1rem;
+              vertical-align: middle;
+
+              .status-badge {
+                padding: 0.375rem 0.75rem;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+              }
+
+              .ref-text {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+                color: #1f2937;
+              }
+
+              .qty-number {
+                font-weight: 600;
+                color: #059669;
+              }
+
+              .qty-display {
+                text-align: center;
+              }
+
+              .action-buttons {
+                .btn {
+                  font-size: 0.75rem;
+                  padding: 0.25rem 0.5rem;
+                  border-radius: 4px;
+                  
+                  i {
+                    font-size: 0.75rem;
+                  }
+                }
+              }
+
+              .badge {
+                font-size: 0.65rem;
+                padding: 0.25rem 0.5rem;
+                border-radius: 12px;
+                font-weight: 500;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+
+      .empty-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+      }
+
+      .empty-title {
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .empty-message {
+        color: #6b7280;
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .summary-card {
+    text-align: center;
+    flex-direction: column;
+    
+    .card-icon {
+      margin: 0 auto 1rem;
+    }
+  }
+}

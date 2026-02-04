@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, inject } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,6 +7,8 @@ import { HttpClient } from '@angular/common/http';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { environment } from '../../../../../../environments/environment';
 import { AccountService } from '../../../../../core/services/account.service';
+import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 
 interface TableData {
   id: string;
@@ -23,7 +25,7 @@ interface TableData {
 @Component({
   selector: 'app-revalidation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedActionButtonsComponent],
   templateUrl: './revalidation.component.html',
   styleUrl: './revalidation.component.scss'
 })
@@ -45,6 +47,9 @@ export class RevalidationComponent implements OnInit {
   pageSizeOptions: number[] = [5, 10, 15];
   pageSize: number = 5;
   currentPage: number = 1;
+
+  // Services
+  private unifiedActionsService = inject(UnifiedActionsService);
 
   constructor(
     private router: Router,
@@ -243,24 +248,80 @@ export class RevalidationComponent implements OnInit {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     // Determine the source based on user type
     const userType = this.getUserType();
     let source = 'licensee-dashboard';
-    
+
     if (userType === 'commissioner') {
       source = 'commissioner-dashboard';
     } else if (userType === 'permit-section') {
       source = 'permit-section';
     }
-    
+
     const refNo = item.referenceNo;
-    this.router.navigate(["/dev-supply-chain-revalidation-view"], {
-      queryParams: { 
+
+    if (item.status && item.status.toLowerCase() === 'approvedrevalidationbycommissioner') {
+      this.router.navigate(["/dev-revalidation-permit-slip"], {
+        queryParams: {
+          id: item.id,
+          ref: refNo,
+          source: source
+        },
+      });
+      return;
+    }
+
+    this.router.navigate(["/dev-supply-chain-revalidation-request"], {
+      queryParams: {
+        id: item.id,
         ref: refNo,
-        source: source
+        source: source,
+        mode: 'view'
       },
     });
+  }
+
+  // Unified action handler
+  onUnifiedAction(event: { action: string, item: any }): void {
+    const context = this.getUserContext();
+
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'revalidation',
+      context
+    ).subscribe({
+      next: (result: any) => {
+        if (result.success) {
+          if (result.message) {
+            alert(result.message);
+          }
+          // Reload data if it was a backend action
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'EXTEND'].includes(event.action)) {
+            this.loadRevalidationData();
+          }
+        } else {
+          alert(`Action failed: ${result.message}`);
+        }
+      },
+      error: (error: any) => {
+        console.error('Action failed:', error);
+        alert(`Action failed: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Get current user context for actions
+  getUserContext(): 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
+  }
+
+  // Load revalidation data
+  loadRevalidationData(): void {
+    this.fetchRevalidationData();
   }
 
   requestRevlidation(item: TableData): void {
@@ -388,4 +449,5 @@ export class RevalidationComponent implements OnInit {
     console.log(`[ID: ${item.id}] ✗ REJECT button HIDDEN`);
     return false;
   }
+
 }

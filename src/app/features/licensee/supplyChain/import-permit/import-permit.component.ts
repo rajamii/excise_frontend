@@ -164,7 +164,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     // Set today's date as default
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
-    
+
     // Fetch and display the next reference number
     this.generateRefNumber();
   }
@@ -375,7 +375,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
             confirmButtonText: 'OK',
           }).then((result) => {
             if (result.isConfirmed) {
-              this.router.navigate(['/dev-supply-chain']);
+              this.router.navigate(['/dashboard']);
             }
           });
         },
@@ -383,9 +383,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
           this.isLoading = false;
           Swal.fire({
             title: 'Error!',
-            text: `Error submitting form: ${
-              error.message || 'Please check the console for details'
-            }`,
+            text: `Error submitting form: ${error.message || 'Please check the console for details'
+              }`,
             icon: 'error',
             confirmButtonText: 'OK',
           });
@@ -433,7 +432,8 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    // Navigate back to the dashboard with the 'requisition' section selected
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'requisition' } });
   }
 
   getStatusId(code: string): string {

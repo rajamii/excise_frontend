@@ -41,20 +41,80 @@ export const routes: Routes = [
     component: LoginComponent,
   },
 
-  // Development routes - bypasses authentication
+  // UNIFIED DASHBOARD ROUTE - Works for ALL roles
   {
-    path: "dev-supply-chain",
-    loadComponent: () =>
-      import("./features/licensee/supplyChain/supplychaincomponents/supply-chain.component").then(
-        (m) => m.SupplyChainComponent,
-      ),
+    path: "dashboard",
+    canActivate: [UserRouteAccessService],
+    data: {
+      authorities: [
+        // Admin roles
+        Authority.SITE_ADMIN,
+        Authority.LEVEL_1,
+        Authority.LEVEL_2,
+        Authority.LEVEL_3,
+        Authority.LEVEL_4,
+        Authority.LEVEL_5,
+        // Officer roles
+        Authority.COMMISSIONER,
+        Authority.IT_CELL,
+        Authority.PERMIT_SECTION,
+        Authority.OFFICER_IN_CHARGE,
+        // Licensee roles
+        Authority.LICENSEE,
+        Authority.SUPPLY_CHAIN
+      ],
+    },
+    loadChildren: () => import("./features/dashboard/dashboard.module").then(m => m.DashboardModule),
   },
+
+  // UNIFIED OFFICER DASHBOARDS - SPA with sidebar navigation
+  {
+    path: "officer-dashboard/oic",
+    canActivate: [UserRouteAccessService],
+    data: {
+      authorities: [Authority.OFFICER_IN_CHARGE],
+    },
+    loadComponent: () => import("./features/admin/officer-in-charge/officer-in-charge.component").then(m => m.OfficerInChargeComponent),
+  },
+  {
+    path: "officer-dashboard/commissioner",
+    canActivate: [UserRouteAccessService],
+    data: {
+      authorities: [Authority.COMMISSIONER],
+    },
+    loadComponent: () => import("./features/admin/commissioner/commissioner-dashboard/commissioner-dashboard.component").then(m => m.CommissionerDashboardComponent),
+  },
+  {
+    path: "officer-dashboard/itcell",
+    canActivate: [UserRouteAccessService],
+    data: {
+      authorities: [Authority.IT_CELL],
+    },
+    loadComponent: () => import("./features/admin/it-cell/itcell.component").then(m => m.ITCELLComponent),
+  },
+  {
+    path: "officer-dashboard/permit-section",
+    canActivate: [UserRouteAccessService],
+    data: {
+      authorities: [Authority.PERMIT_SECTION],
+    },
+    loadComponent: () => import("./features/admin/permit-section/permit-section.component").then(m => m.PermitSectionComponent),
+  },
+
+
   {
     path: "dev-payment-confirmation",
     loadComponent: () =>
       import(
         "./features/licensee/supplyChain/payments/paymentconformationpage/payment-confirmation.component"
       ).then((m) => m.PaymentConfirmationComponent),
+  },
+  {
+    path: "supply-chain-view",
+    loadComponent: () =>
+      import(
+        "./shared/components/unified-supply-chain-view/unified-supply-chain-view.component"
+      ).then((m) => m.UnifiedSupplyChainViewComponent),
   },
   {
     path: "dev-local-sales-register",
@@ -77,20 +137,7 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/import-permit/import-permit.component"
       ).then((m) => m.ImportPermitComponent),
   },
-  {
-    path: "dev-supply-chain-application-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
-      ).then((m) => m.SupplyChainRequisitionViewComponent),
-  },
-  {
-    path: "dev-supply-chain-revalidation-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
-      ).then((m) => m.SupplyChainRevalidationViewComponent),
-  },
+
   {
     path: "dev-supply-chain-revalidation-request",
     loadComponent: () =>
@@ -98,43 +145,6 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/revalidation-request/revalidation-request.component"
       ).then((m) => m.RevalidationRequestComponent),
   },
-  {
-    path: "dev-supply-chain-cancellation-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
-      ).then((m) => m.SupplyChainCancellationViewComponent),
-  },
-  {
-    path: "dev-supply-chain-transit-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/transitView/supply-chain-transit-view.component"
-      ).then((m) => m.SupplyChainTransitViewComponent),
-  },
-  {
-    path: "dev-supply-chain-transit-view-level1",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
-      ).then((m) => m.Transitviewlevel1Component),
-  },
-  {
-    path: "dev-supply-chain-transit-view-level2",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
-      ).then((m) => m.Transitviewlevel1Component),
-  },
-
-  {
-    path: "dev-supply-chain-hologram-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/hologramView/supply-chain-hologram-view.component"
-      ).then((m) => m.SupplyChainHologramViewComponent),
-  },
-
   {
     path: "dev-transit-permit",
     loadComponent: () =>
@@ -195,124 +205,33 @@ export const routes: Routes = [
     path: "app-permit-section",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/permit-section/permit-section.component"
+        "./features/admin/permit-section/permit-section.component"
       ).then((m) => m.PermitSectionComponent),
     children: [
-      {
-        path: "requisition/:ref",
-        loadComponent: () =>
-          import(
-            "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
-          ).then((m) => m.SupplyChainRequisitionViewComponent),
-      },
-      {
-        path: "revalidation/:ref",
-        loadComponent: () =>
-          import(
-            "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
-          ).then((m) => m.SupplyChainRevalidationViewComponent),
-      },
-      {
-        path: "cancellation/:ref",
-        loadComponent: () =>
-          import(
-            "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
-          ).then((m) => m.SupplyChainCancellationViewComponent),
-      },
-      {
-        path: "transit/:ref",
-        loadComponent: () =>
-          import(
-            "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
-          ).then((m) => m.Transitviewlevel1Component),
-      },
     ],
   },
   {
     path: "dev-commissioner-dashboard",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/commissioner/commissioner-dashboard/commissioner-dashboard.component"
+        "./features/admin/commissioner/commissioner-dashboard/commissioner-dashboard.component"
       ).then((m) => m.CommissionerDashboardComponent),
-  },
-
-  {
-    path: "dev-requisition-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/requisitionView/supply-chain-requisition-view.component"
-      ).then((m) => m.SupplyChainRequisitionViewComponent),
-  },
-  {
-    path: "dev-revalidation-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/revalidationView/supply-chain-revalidation-view.component"
-      ).then((m) => m.SupplyChainRevalidationViewComponent),
-  },
-  {
-    path: "dev-cancellation-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/cancellationView/supply-chain-cancellation-view.component"
-      ).then((m) => m.SupplyChainCancellationViewComponent),
-  },
-  {
-    path: "dev-cancellation-final-letter-view/:id",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/cancellationfinalletterview/cancellationfinalletterview.component"
-      ).then((m) => m.CancellationfinalletterviewComponent),
-  },
-  {
-    path: "dev-cancellation-final-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/cancellationfinalletterview/cancellationfinalletterview.component"
-      ).then((m) => m.CancellationfinalletterviewComponent),
-  },
-  {
-    path: "dev-transit-permit-letter-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/transitviewlevel1/transitviewlevel1.component"
-      ).then((m) => m.Transitviewlevel1Component),
-  },
-  {
-    path: "dev-final-transit-permit-view",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/finaltransitpermit/finaltransitpermit.component"
-      ).then((m) => m.FinaltransitpermitComponent),
-  },
-  {
-    path: "dev-final-requisition-letters",
-    loadComponent: () =>
-      import(
-        "./features/licensee/supplyChain/letterView/finalrequistionletters/finalrequistionletters.component"
-      ).then((m) => m.FinalrequistionlettersComponent),
   },
   {
     path: "dev-officer-in-charge",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/officer-in-charge/officer-in-charge.component"
+        "./features/admin/officer-in-charge/officer-in-charge.component"
       ).then((m) => m.OfficerInChargeComponent),
   },
   {
     path: "dev-itcell",
     loadComponent: () =>
-      import("./features/licensee/supplyChain/itcell/itcell.component").then(
+      import("./features/admin/it-cell/itcell.component").then(
         (m) => m.ITCELLComponent,
       ),
   },
-  {
-    path: "dev-payslip",
-    loadComponent: () =>
-      import("./features/licensee/supplyChain/letterView/payslip/payslip.component").then(
-        (m) => m.PayslipComponent,
-      ),
-  },
+
   {
     path: "dev-hologram-monthly-report",
     loadComponent: () =>
@@ -320,12 +239,13 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
       ).then((m) => m.HologramMonthlyReportComponent),
   },
+
   {
-    path: "dev-hologram-daily-register",
+    path: "dev-hologram-daily-register-oic",
     loadComponent: () =>
       import(
-        "./features/licensee/supplyChain/registers/hologram-daily-register/hologram-daily-register.component"
-      ).then((m) => m.HologramDailyRegisterComponent),
+        "./features/licensee/supplyChain/HoloGram/hologram-dailyregisteroic/hologram-dailyregisteroic.component"
+      ).then((m) => m.HologramDailyregisteroicComponent),
   },
 
   {
@@ -342,6 +262,41 @@ export const routes: Routes = [
         "./features/licensee/supplyChain/registers/hologram-monthly-report/hologram-monthly-report.component"
       ).then((m) => m.HologramMonthlyReportComponent),
   },
+  {
+    path: "dev-oic-transit-permit",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/supplychaincomponents/oic-transit-permit/oic-transit-permit.component"
+      ).then((m) => m.OicTransitPermitComponent),
+  },
+  {
+    path: "dev-hologram-details",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/HoloGram/hologramdetails/hologramdetails.component"
+      ).then((m) => m.HologramdetailsComponent),
+  },
+  {
+    path: "dev-oic-daily-hologram-register",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/oicdailyhologramregister/oicdailyhologramregister.component"
+      ).then((m) => m.OicdailyhologramregisterComponent),
+  },
+  {
+    path: "dev-brand-warehouse",
+    loadComponent: () =>
+      import(
+        "./features/licensee/supplyChain/registers/brandwarehouse/brandwarehouse.component"
+      ).then((m) => m.BrandwarehouseComponent),
+  },
+  {
+    path: "dev-admin-officer-in-charge",
+    loadComponent: () =>
+      import(
+        "./features/admin/officer-in-charge/officer-in-charge.component"
+      ).then((m) => m.OfficerInChargeComponent),
+  },
 
   // Role Protected modules
   {
@@ -355,6 +310,10 @@ export const routes: Routes = [
         Authority.LEVEL_3,
         Authority.LEVEL_4,
         Authority.LEVEL_5,
+        Authority.COMMISSIONER,
+        Authority.IT_CELL,
+        Authority.PERMIT_SECTION,
+        Authority.OFFICER_IN_CHARGE,
       ],
     },
     loadChildren: () => import("./features/admin/admin.routes"),

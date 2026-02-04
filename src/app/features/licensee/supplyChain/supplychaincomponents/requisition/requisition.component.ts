@@ -6,6 +6,8 @@ import { AccountService } from '../../../../../core/services/account.service';
 import { EnaRequisitionService } from '../../../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../services/supplychain.service';
 import { CancellationRequestComponent } from '../../cancellation-request/cancellation-request.component';
+import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 
 interface TableData {
   id?: number;
@@ -17,8 +19,7 @@ interface TableData {
   commissionerStatus?: string;
   forwardedToCommissioner?: boolean;
   canCancel?: boolean;
-  allowedActions?: string[]; // Dynamic actions from backend
-  // Extended properties for view
+  allowedActions?: string[];
   quantity?: number;
   numberOfPermits?: number;
   bulkSpiritType?: string;
@@ -32,7 +33,7 @@ interface TableData {
 @Component({
   selector: 'app-requisition',
   standalone: true,
-  imports: [CommonModule, FormsModule, CancellationRequestComponent],
+  imports: [CommonModule, FormsModule, CancellationRequestComponent, UnifiedActionButtonsComponent],
   templateUrl: './requisition.component.html',
   styleUrls: ['./requisition.component.scss']
 })
@@ -45,8 +46,9 @@ export class RequisitionComponent implements OnInit {
   private router = inject(Router);
   private enaRequisitionService = inject(EnaRequisitionService);
   private supplyChainService = inject(SupplyChainService);
+  private unifiedActionsService = inject(UnifiedActionsService);
 
-  // Data
+  // Data properties
   requisitionData: TableData[] = [];
   filteredRequisitionData: TableData[] = [];
 
@@ -56,362 +58,169 @@ export class RequisitionComponent implements OnInit {
   requisitionYearFilter: string = '';
   requisitionStatusFilter: string = '';
 
-  // Cancellation Modal State
+  // Modal properties
   isCancellationModalOpen: boolean = false;
+  selectedRequisition: TableData | null = null;
   selectedRequisitionRef: string = '';
 
   // Pagination
-  pageSizeOptions: number[] = [5, 10, 15];
-  pageSize: number = 5;
   currentPage: number = 1;
+  pageSize: number = 10;
+  pageSizeOptions: number[] = [5, 10, 25, 50];
 
-  constructor(
-    @Inject(PLATFORM_ID) platformId: Object
-  ) {
+  constructor(@Inject(PLATFORM_ID) platformId: Object) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
   ngOnInit(): void {
-    this.loadRequisitionData();
+    this.loadData();
   }
 
-  navigateTo(route: string) {
-    this.router.navigate(["/dev-import-permit"]);
-  }
+  // Unified action handler
+  onUnifiedAction(event: { action: string, item: any }): void {
+    const context = this.getUserContext();
 
-  private loadRequisitionData(): void {
-    if (!this.isBrowser) {
-      return;
-    }
-
-    this.enaRequisitionService.getRequisitions().subscribe({
-      next: (data: any[]) => {
-        console.log('Raw backend data:', data); // Debug log
-
-        // Sort by submission time (newest first)
-        data.sort((a: any, b: any) => {
-          const dateA = new Date(a.requisitionDate || a.requisition_date || a.createdAt || a.created_at).getTime();
-          const dateB = new Date(b.requisitionDate || b.requisition_date || b.createdAt || b.created_at).getTime();
-          return dateB - dateA;
-        });
-
-        // Map backend data to TableData
-        const mappedData: TableData[] = data.map((item: any) => {
-          const refNo = item.ourRefNo || item.our_ref_no || 'N/A';
-          const reqDate = item.requisitionDate || item.requisition_date;
-          const distilleryName = item.liftedFromDistilleryName || item.lifted_from_distillery_name ||
-            item.liftedFrom || item.lifted_from || 'Unknown';
-          const status = item.status || 'Pending';
-          const amount = item.totalbl || item.totalBl || item.brAmount || item.br_amount || '0.00';
-
-          // Map allowed actions from backend
-          const allowedActions = item.allowedActions || item.allowed_actions || [];
-
-          return {
-            id: item.id,
-            referenceNo: refNo,
-            submissionDate: reqDate ? new Date(reqDate).toLocaleDateString('en-GB') : 'Invalid Date',
-            distilleryName: distilleryName,
-            status: status,
-            amount: typeof amount === 'number' ? amount.toString() : amount,
-            commissionerStatus: status,
-            forwardedToCommissioner: true,
-            allowedActions: allowedActions,
-            canCancel: (status.toUpperCase() === 'APPROVED') || item.canInitiateCancellation || item.can_initiate_cancellation || false,
-            // Extended properties mapping
-            quantity: item.totalbl || item.quantity,
-            numberOfPermits: item.numberOfPermits || item.number_of_permits || 1,
-            bulkSpiritType: item.bulkSpiritType || item.bulk_spirit_type || 'N/A',
-            strengthTo: item.strength || item.strengthTo || 'N/A',
-            liftedFrom: item.liftedFrom || item.lifted_from,
-            viaRoute: item.viaRoute || item.via_route || 'N/A',
-            checkpostEntry: item.checkpostEntry || item.checkpost_entry || 'N/A',
-            purpose: item.purpose || 'N/A'
-          };
-        });
-
-        this.requisitionData = mappedData;
-        this.applyRequisitionFilters();
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'requisition',
+      context
+    ).subscribe({
+      next: (result: any) => {
+        if (result.success) {
+          if (result.message) {
+            alert(result.message);
+          }
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(event.action)) {
+            this.loadData();
+          }
+        } else {
+          alert(`Action failed: ${result.message}`);
+        }
       },
-      error: (error) => {
-        console.error('Error fetching requisitions:', error);
+      error: (error: any) => {
+        console.error('Action failed:', error);
+        alert(`Action failed: ${error.message || 'Unknown error'}`);
       }
     });
   }
 
-  private getDistilleryDisplayName(value: string): string {
-    const map: { [key: string]: string } = {
-      'sikkim-distilleries': 'Sikkim Distilleries Ltd',
-      'mountain-spirits': 'Mountain Spirits Pvt Ltd',
-      'highland-breweries': 'Highland Breweries',
-      'gangtok': 'Gangtok Depot',
-      'namchi': 'Namchi Depot',
-      'gyalshing': 'Gyalshing Depot',
-      'mangan': 'Mangan Depot'
-    };
-    return map[value] || value || 'Unknown Distillery';
-  }
-
-  // Summary methods
-  getTotalRequisitionAmount(): number {
-    return this.filteredRequisitionData.reduce((total, item) => total + parseFloat(item.amount || '0'), 0);
-  }
-
-  getRequisitionStatusCount(status: string): number {
-    const targetStatus = status.toUpperCase();
-
-    // Strict check for APPROVED to avoid counting 'ApprovedByCommissioner'
-    if (targetStatus === 'APPROVED') {
-      return this.filteredRequisitionData.filter(item =>
-        item.status.toUpperCase() === 'APPROVED'
-      ).length;
-    }
-
-    if (targetStatus === 'PENDING' || targetStatus === 'REJECTED') {
-      return this.filteredRequisitionData.filter(item =>
-        item.status.toUpperCase() === targetStatus
-      ).length;
-    }
-
-    return this.filteredRequisitionData.filter(item =>
-      item.status.toLowerCase().includes(status.toLowerCase())
-    ).length;
-  }
-
-  getPriority(item: TableData): string {
-    const submissionDate = new Date(item.submissionDate.split('/').reverse().join('-'));
-    const daysSinceSubmission = Math.floor((new Date().getTime() - submissionDate.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (item.status.toUpperCase() === 'PENDING' && daysSinceSubmission > 7) {
-      return 'urgent';
-    } else if (item.status.toUpperCase() === 'PENDING' && daysSinceSubmission > 3) {
-      return 'high';
-    }
-    return 'normal';
-  }
-
-  // Filter methods
-  applyRequisitionFilters(): void {
-    this.filteredRequisitionData = this.requisitionData.filter(item => {
-      let matchesDate = true;
-      let matchesMonth = true;
-      let matchesYear = true;
-      let matchesStatus = true;
-
-      const dateParts = item.submissionDate.split('/');
-      if (dateParts.length === 3) {
-        const day = parseInt(dateParts[0]);
-        const month = parseInt(dateParts[1]);
-        const year = parseInt(dateParts[2]);
-        const itemDate = new Date(year, month - 1, day);
-
-        if (this.requisitionDateFilter) {
-          const filterDate = new Date(this.requisitionDateFilter);
-          matchesDate = itemDate.getFullYear() === filterDate.getFullYear() &&
-            itemDate.getMonth() === filterDate.getMonth() &&
-            itemDate.getDate() === filterDate.getDate();
-        }
-
-        if (this.requisitionMonthFilter) {
-          const filterDate = new Date(this.requisitionMonthFilter + '-01');
-          matchesMonth = itemDate.getFullYear() === filterDate.getFullYear() &&
-            itemDate.getMonth() === filterDate.getMonth();
-        }
-
-        if (this.requisitionYearFilter) {
-          const filterYear = parseInt(this.requisitionYearFilter);
-          matchesYear = itemDate.getFullYear() === filterYear;
-        }
-      }
-
-      if (this.requisitionStatusFilter) {
-        matchesStatus = item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
-      }
-
-      return matchesDate && matchesMonth && matchesYear && matchesStatus;
-    });
-
-    this.currentPage = 1;
-  }
-
-  clearRequisitionFilters(): void {
-    this.requisitionDateFilter = '';
-    this.requisitionMonthFilter = '';
-    this.requisitionYearFilter = '';
-    this.requisitionStatusFilter = '';
-    this.filteredRequisitionData = [...this.requisitionData];
-    this.currentPage = 1;
-  }
-
-  onRequisitionDateFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionMonthFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionYearFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  onRequisitionStatusFilterChange(): void {
-    this.applyRequisitionFilters();
-  }
-
-  // Pagination methods
-  getTotalPages(): number {
-    return Math.max(1, Math.ceil(this.filteredRequisitionData.length / this.pageSize));
-  }
-
-  getPaged(): TableData[] {
-    const start = (this.currentPage - 1) * this.pageSize;
-    return this.filteredRequisitionData.slice(start, start + this.pageSize);
-  }
-
-  goToPage(page: number): void {
-    const total = this.getTotalPages();
-    if (page < 1 || page > total) return;
-    this.currentPage = page;
-  }
-
-  changePageSize(size: string | number): void {
-    const s = typeof size === "string" ? parseInt(size, 10) : size;
-    if (!s) return;
-    this.pageSize = s;
-    this.currentPage = 1;
-  }
-
-  // Navigation methods
-  viewRequisitionApplication(item: TableData): void {
-    // Save requisition data to localStorage for the letter view to access
-    if (this.isBrowser) {
-      const requisitionList: any[] = JSON.parse(localStorage.getItem('requisitionRequests') || '[]');
-
-      // Check if this requisition already exists in localStorage
-      const existingIndex = requisitionList.findIndex((r: any) => r.refNo === item.referenceNo);
-
-      // Prepare the requisition data
-      const requisitionData = {
-        refNo: item.referenceNo,
-        referenceNo: item.referenceNo,
-        date: item.submissionDate,
-        submissionDate: item.submissionDate,
-        distilleryName: item.distilleryName,
-        status: item.status,
-        brAmount: parseFloat(item.amount || '0'),
-        amount: parseFloat(item.amount || '0'),
-        // Pass extended properties
-        quantity: item.quantity,
-        numberOfPermits: item.numberOfPermits,
-        bulkSpiritType: item.bulkSpiritType,
-        strengthTo: item.strengthTo,
-        liftedFrom: item.liftedFrom,
-        viaRoute: item.viaRoute,
-        checkpostEntry: item.checkpostEntry,
-        purpose: item.purpose
-      };
-
-      if (existingIndex >= 0) {
-        // Update existing entry
-        requisitionList[existingIndex] = requisitionData;
-      } else {
-        // Add new entry
-        requisitionList.push(requisitionData);
-      }
-
-      // Save back to localStorage
-      localStorage.setItem('requisitionRequests', JSON.stringify(requisitionList));
-    }
-
-    // Determine the source based on user type
-    const userType = this.getUserType();
-    let source = 'licensee-dashboard';
-
-    if (userType === 'commissioner') {
-      source = 'commissioner-dashboard';
-    } else if (userType === 'permit-section') {
-      source = 'permit-section';
-    }
-
-    // Navigate to requisition letter view
-    this.router.navigate(["/dev-requisition-letter-view"], {
-      queryParams: {
-        ref: item.referenceNo,
-        source: source
-      }
-    });
-  }
-
-  viewSlip(item: TableData): void {
-    // Determine source based on current route
-    const currentUrl = this.isBrowser ? window.location.pathname : '';
-    let source = 'permit-section'; // default
-    
-    if (currentUrl.includes('commissioner') || this.isCommissioner()) {
-      source = 'commissioner';
-    }
-    
-    this.router.navigate(["/dev-final-requisition-letters"], {
-      queryParams: {
-        ref: item.referenceNo,
-        source: source
-      },
-    });
-  }
-
-  // Role detection methods
-  isCommissioner(): boolean {
-    const hasRole = this.accountService.hasAnyRole(['level_1', 'level_2', 'level_3', 'level_4', 'level_5', 'site_admin']);
-    const isCommissionerRoute = this.isBrowser && window.location.pathname.includes('commissioner');
-    return hasRole || isCommissionerRoute;
-  }
-
-  isPermitSection(): boolean {
-    return this.isBrowser && (window.location.pathname.includes('permit-section') || window.location.pathname.includes('app-permit-section'));
-  }
-
-  getUserType(): 'commissioner' | 'permit-section' | 'licensee' {
+  getUserContext(): 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' {
     if (this.isCommissioner()) return 'commissioner';
     if (this.isPermitSection()) return 'permit-section';
     return 'licensee';
   }
 
-  // Workflow actions
-  approveRequisition(item: TableData): void {
-    if (!(item as any).id) {
-      console.error('Requisition ID not found');
-      return;
-    }
+  // Load data based on user type
+  loadData(): void {
+    console.log('DEBUG: Loading requisition data...');
 
-    this.enaRequisitionService.performAction((item as any).id, 'APPROVE').subscribe({
-      next: (response) => {
-        alert(`Action successful! Status updated to: ${response.data.status}`);
-        // Update local item
-        this.updateLocalItem(response.data);
+    this.enaRequisitionService.getRequisitions().subscribe({
+      next: (response: any) => {
+        console.log('DEBUG: Raw requisition response:', response);
+
+        // Handle both array response and paginated response
+        let data = response;
+        if (response && !Array.isArray(response) && response.results) {
+          data = response.results;
+        }
+
+        this.requisitionData = (data || []).map((item: any) => {
+          // Format date properly
+          const dateVal = item.submissionDate || item.submission_date || item.date;
+          let formattedDate = '';
+          try {
+            formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            }).replace(/ /g, '-') : '';
+          } catch (e) {
+            formattedDate = dateVal || '';
+          }
+
+          return {
+            id: item.id,
+            referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || item.ref_no || `REQ-${item.id}`,
+            submissionDate: formattedDate,
+            distilleryName: item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
+            status: item.status || 'PENDING',
+            amount: item.amount || item.totalAmount || item.total_amount || '0.00',
+            commissionerStatus: item.commissionerStatus || item.commissioner_status,
+            forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
+            canCancel: item.canCancel || item.can_cancel || false,
+            allowedActions: item.allowedActions || item.allowed_actions || [],
+            // Additional properties that might be needed
+            quantity: item.quantity || item.totalQuantity || item.total_quantity,
+            numberOfPermits: item.numberOfPermits || item.number_of_permits || 1,
+            bulkSpiritType: item.bulkSpiritType || item.bulk_spirit_type,
+            strengthTo: item.strengthTo || item.strength_to,
+            liftedFrom: item.liftedFrom || item.lifted_from,
+            viaRoute: item.viaRoute || item.via_route,
+            checkpostEntry: item.checkpostEntry || item.checkpost_entry,
+            purpose: item.purpose
+          };
+        });
+
+        console.log('DEBUG: Processed requisition data:', this.requisitionData);
+        console.log('DEBUG: Each item allowedActions:');
+        this.requisitionData.forEach(item => {
+          console.log(`  ID ${item.id}: allowedActions =`, item.allowedActions, `(length: ${item.allowedActions?.length || 0})`);
+        });
+
+        this.applyFilters();
       },
       error: (error) => {
-        console.error('Error performing action:', error);
-        alert('Failed to perform action. ' + (error.error?.message || ''));
+        console.error('Error loading requisitions:', error);
+        // Show empty state or error message
+        this.requisitionData = [];
+        this.filteredRequisitionData = [];
       }
     });
   }
 
-  rejectRequisition(item: TableData): void {
-    if (!(item as any).id) {
-      console.error('Requisition ID not found');
+  applyFilters(): void {
+    this.filteredRequisitionData = this.requisitionData.filter(item => {
+      let matches = true;
+
+      if (this.requisitionDateFilter) {
+        matches = matches && item.submissionDate.includes(this.requisitionDateFilter);
+      }
+
+      if (this.requisitionStatusFilter) {
+        matches = matches && item.status.toLowerCase().includes(this.requisitionStatusFilter.toLowerCase());
+      }
+
+      return matches;
+    });
+  }
+
+  isCommissioner(): boolean {
+    return this.accountService.hasAnyRole('commissioner');
+  }
+
+  isPermitSection(): boolean {
+    return this.accountService.hasAnyRole('permit-section');
+  }
+
+  approveRequisition(item: TableData): void {
+    if (!item.id) {
+      alert('Item ID is required');
       return;
     }
 
-    this.enaRequisitionService.performAction((item as any).id, 'REJECT').subscribe({
+    if (!confirm('Are you sure you want to approve this requisition?')) {
+      return;
+    }
+
+    this.enaRequisitionService.performAction(item.id, 'APPROVE').subscribe({
       next: (response) => {
-        alert(`Action successful! Status updated to: ${response.data.status}`);
-        // Update local item
-        this.updateLocalItem(response.data);
+        alert('Requisition approved successfully');
+        this.loadData();
       },
       error: (error) => {
-        console.error('Error performing action:', error);
-        alert('Failed to perform action. ' + (error.error?.message || ''));
+        console.error('Error approving requisition:', error);
+        alert('Failed to approve requisition. ' + (error.error?.message || ''));
       }
     });
   }
@@ -426,8 +235,6 @@ export class RequisitionComponent implements OnInit {
   }
 
   canPerformAction(item: TableData): boolean {
-    // Fully dynamic check!
-    // We just check if 'APPROVE' is in the allowed actions list returned by backend.
     if (item.allowedActions && item.allowedActions.includes('APPROVE')) {
       return true;
     }
@@ -435,112 +242,175 @@ export class RequisitionComponent implements OnInit {
   }
 
   canReject(item: TableData): boolean {
-    // Check if 'REJECT' is in the allowed actions list
     if (item.allowedActions && item.allowedActions.includes('REJECT')) {
       return true;
     }
     return false;
   }
 
-  // Deprecated: Use canPerformAction instead
-  isPendingCommissionerApproval(item: TableData): boolean {
-    return this.canPerformAction(item);
-  }
-
-  shouldShowPermitSlip(item: TableData): boolean {
-    const status = item.status ? item.status.toUpperCase() : '';
-    console.log('Checking Permit Slip Visibility for:', item.referenceNo, 'Status:', status);
-
-    // 1. Licensee should NEVER see the permit slip in this view (per user request)
-    // It should only be shown in Commissioner Dashboard (and potentially Permit Section)
-    if (!this.isCommissioner() && !this.isPermitSection()) {
-      return false;
-    }
-
-    // 2. Explicitly BLOCK "Approved By Commissioner" or "Commissioner" related statuses
-    if (status.includes('COMMISSIONER') || status.includes('APPROVEDBY')) {
-      return false;
-    }
-
-    // 3. Allow Final "APPROVED" status
-    if (status.includes('APPROVED')) {
-      return true;
-    }
-
-    // 4. Allow explicit final statuses
-    return status.includes('ISSUED') || status.includes('GENERATED') || status.includes('COMPLETED');
-  }
-
-  payForRequisition(item: TableData): void {
-    if (!(item as any).id) {
-      console.error('Requisition ID not found');
-      return;
-    }
-
-    // For licensee, "Pay" button means they're submitting payment slip
-    // This triggers the transition from ApprovedByCommissioner -> ForwardedPaySLipToPermitSection
-    this.enaRequisitionService.performAction((item as any).id, 'APPROVE').subscribe({
-      next: (response) => {
-        alert(`Payment slip submitted successfully! Status updated to: ${response.data.status}`);
-        this.loadRequisitionData(); // Reload data
-      },
-      error: (error) => {
-        console.error('Error submitting payment slip:', error);
-        alert('Failed to submit payment slip. ' + (error.error?.message || ''));
+  viewRequisitionApplication(item: TableData): void {
+    this.router.navigate(['/supply-chain-view'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        type: 'requisition',
+        source: 'licensee'
       }
     });
   }
 
-  clearAllRequisitionData(): void {
-    alert('Clear data functionality is disabled for backend data.');
-  }
-
-  requestCancellation(item: TableData): void {
-    if (!item.referenceNo) return;
-    this.openCancellationModal(item);
-  }
-
-  openCancellationModal(item: TableData) {
-    console.log('Opening Cancellation Modal for:', item.referenceNo);
+  openCancellationModal(item: TableData): void {
+    this.selectedRequisition = item;
     this.selectedRequisitionRef = item.referenceNo;
     this.isCancellationModalOpen = true;
   }
 
-  closeCancellationModal() {
+  closeCancellationModal(): void {
     this.isCancellationModalOpen = false;
+    this.selectedRequisition = null;
     this.selectedRequisitionRef = '';
-    // Refresh data in case cancellation was submitted
-    this.loadRequisitionData();
   }
 
-  private updateLocalItem(updatedItem: any) {
-    if (!updatedItem) return;
+  clearFilters(): void {
+    this.requisitionDateFilter = '';
+    this.requisitionMonthFilter = '';
+    this.requisitionYearFilter = '';
+    this.requisitionStatusFilter = '';
+    this.applyFilters();
+  }
 
-    // Find item by ID
-    const index = this.requisitionData.findIndex(item => item.id === updatedItem.id);
-    if (index !== -1) {
-      // Map backend response to TableData
-      // We reuse the mapping logic roughly
-      const mappedItem: TableData = {
-        id: updatedItem.id,
-        referenceNo: updatedItem.ourRefNo || updatedItem.our_ref_no || this.requisitionData[index].referenceNo,
-        submissionDate: this.requisitionData[index].submissionDate, // Keep original or re-parse updatedItem.created_at
-        distilleryName: this.requisitionData[index].distilleryName, // Keep original
-        status: updatedItem.status || this.requisitionData[index].status,
-        amount: this.requisitionData[index].amount, // Keep original
-        commissionerStatus: updatedItem.status,
-        forwardedToCommissioner: true,
-        allowedActions: updatedItem.allowedActions || updatedItem.allowed_actions || [],
-        canCancel: (updatedItem.status.toUpperCase() === 'APPROVED')
-      };
+  clearRequisitionFilters(): void {
+    this.clearFilters();
+  }
 
-      // Update list
-      this.requisitionData[index] = mappedItem;
+  onRequisitionStatusFilterChange(): void {
+    this.applyFilters();
+  }
 
-      // Re-apply filters to update view
-      this.applyRequisitionFilters();
+  onRequisitionYearFilterChange(): void {
+    this.applyFilters();
+  }
 
-      console.log('Updated local item:', mappedItem);
+  onRequisitionMonthFilterChange(): void {
+    this.applyFilters();
+  }
+
+  onRequisitionDateFilterChange(): void {
+    this.applyFilters();
+  }
+
+  getRequisitionStatusCount(status: string): number {
+    return this.filteredRequisitionData.filter(item =>
+      item.status.toLowerCase().includes(status.toLowerCase())
+    ).length;
+  }
+
+  shouldShowPermitSlip(item: TableData): boolean {
+    return item.status.toLowerCase().includes('approved') ||
+      item.status.toLowerCase().includes('issued');
+  }
+
+  viewSlip(item: TableData): void {
+    this.router.navigate(['/dev-requisition-permit-slip'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo
+      }
+    });
+  }
+
+  getCurrentPage(): number {
+    return this.currentPage;
+  }
+
+  getPageSize(): number {
+    return this.pageSize;
+  }
+
+  getTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredRequisitionData.length / this.pageSize));
+  }
+
+  getPaged(): TableData[] {
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    return this.filteredRequisitionData.slice(startIndex, endIndex);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.getTotalPages()) {
+      this.currentPage = page;
     }
+  }
+
+  nextPage(): void {
+    if (this.currentPage < this.getTotalPages()) {
+      this.currentPage++;
+    }
+  }
+
+  previousPage(): void {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+    }
+  }
+
+  changePageSize(newSize: number): void {
+    this.pageSize = newSize;
+    this.currentPage = 1;
+  }
+
+  navigateTo(route: string): void {
+    this.router.navigate([`/${route}`]);
+  }
+
+  getTotalRequisitionAmount(): number {
+    return this.filteredRequisitionData.reduce((total, item) => {
+      return total + (parseFloat(item.amount) || 0);
+    }, 0);
+  }
+
+  getPriority(item: TableData): string {
+    // Return priority based on status or other criteria
+    if (item.status.toLowerCase().includes('urgent')) {
+      return 'high';
+    } else if (item.status.toLowerCase().includes('pending')) {
+      return 'medium';
+    }
+    return 'normal';
+  }
+
+  // Dashboard statistics methods
+  getDashboardStatistics() {
+    return {
+      applied: this.getRequisitionStatusCount('APPLIED') + this.getRequisitionStatusCount('SUBMITTED'),
+      pending: this.getRequisitionStatusCount('PENDING') + this.getRequisitionStatusCount('UNDER_REVIEW'),
+      approved: this.getRequisitionStatusCount('APPROVED') + this.getRequisitionStatusCount('APPROVED_BY_COMMISSIONER'),
+      rejected: this.getRequisitionStatusCount('REJECTED') + this.getRequisitionStatusCount('REJECTED_BY_COMMISSIONER')
+    };
+  }
+
+  getFilterOptions() {
+    return [
+      { value: 'all', label: 'All Applications' },
+      { value: 'requisition', label: 'Requisitions' },
+      { value: 'pending', label: 'Pending Applications' },
+      { value: 'approved', label: 'Approved Applications' },
+      { value: 'rejected', label: 'Rejected Applications' }
+    ];
+  }
+
+  onDashboardFilterChange(filterValue: string): void {
+    // Handle dashboard filter changes
+    if (filterValue === 'all') {
+      this.requisitionStatusFilter = '';
+    } else if (filterValue === 'pending') {
+      this.requisitionStatusFilter = 'PENDING';
+    } else if (filterValue === 'approved') {
+      this.requisitionStatusFilter = 'APPROVED';
+    } else if (filterValue === 'rejected') {
+      this.requisitionStatusFilter = 'REJECTED';
+    }
+    this.applyFilters();
   }
 }

@@ -1,0 +1,335 @@
+<div class="unified-supply-chain-view">
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="right-section">
+                <h1 class="page-title">{{ getPageTitle() }}</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Content -->
+    <div class="application-container">
+        <!-- Loading State -->
+        @if (isLoading) {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading application details...</p>
+        </div>
+        }
+
+        <!-- Error State -->
+        @else if (errorMessage) {
+        <div class="alert alert-warning text-center">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ errorMessage }}
+            <div class="mt-3">
+                <button class="btn btn-outline-primary me-2" (click)="goBack()">
+                    <i class="bi bi-arrow-left me-1"></i>Go Back
+                </button>
+                <button class="btn btn-primary" (click)="ngOnInit()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Retry
+                </button>
+            </div>
+        </div>
+        }
+
+        <!-- Application Data -->
+        @else if (applicationData) {
+        <div id="applicationPrintSection" class="card shadow-sm border-0 printable-content">
+            <div class="application-header text-center fw-bold mb-3 fs-5">
+                <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+                    <img src="assets/images/header/Seal_of_Sikkim_greyscale.png" alt="Department Seal"
+                        style="height: 60px; width: auto" />
+                    <span>GOVERNMENT OF SIKKIM - EXCISE DEPARTMENT</span>
+                </div>
+                <div class="text-primary fs-4 mt-2">{{ getApplicationTitle() }}</div>
+            </div>
+
+            <div class="application-content p-4">
+                <!-- Common Information Section (All Types) -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h6 class="text-primary mb-2">Application Details</h6>
+                            <p><strong>Reference No:</strong> {{ applicationData.referenceNo }}</p>
+                            <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
+                                }}</p>
+                            <p><strong>Distillery:</strong> {{ applicationData.distilleryName }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h6 class="text-primary mb-2">Status Information</h6>
+                            <p><strong>Current Status:</strong></p>
+                            <span [ngClass]="getStatusBadgeClass(applicationData.status)" class="d-block mt-1">
+                                {{ getFormattedStatus(applicationData.status) }}
+                            </span>
+                            <p class="mt-2"><strong>BR Amount:</strong> ₹{{ applicationData.brAmount }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== REQUISITION DETAILS SECTION ========== -->
+                @if (isRequisition()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Requisition Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
+                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Quantity</td>
+                                    <td>{{ applicationData.quantity }} BL</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Number of Permits</td>
+                                    <td>{{ applicationData.numberOfPermits }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Strength</td>
+                                    <td>{{ applicationData.strengthTo }}°</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Lifted From</td>
+                                    <td>{{ getDistilleryName(applicationData.liftedFrom || '') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Via Route</td>
+                                    <td>{{ applicationData.viaRoute }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Checkpost Entry</td>
+                                    <td>{{ getCheckpostName(applicationData.checkpostEntry || '') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Purpose</td>
+                                    <td>{{ getPurposeName(applicationData.purpose || '') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <!-- ========== REVALIDATION DETAILS SECTION ========== -->
+                @if (isRevalidation()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Revalidation Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
+                                    <td>{{ applicationData.originalPermitNo }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Original Permit Date</td>
+                                    <td>{{ applicationData.originalPermitDate | date: "dd-MM-yyyy" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Expiry Date</td>
+                                    <td>{{ applicationData.expiryDate | date: "dd-MM-yyyy" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Reason for Revalidation</td>
+                                    <td>{{ applicationData.reasonForRevalidation }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Revalidation Amount</td>
+                                    <td>₹{{ applicationData.revalidationAmount }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Bulk Spirit Type</td>
+                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Quantity</td>
+                                    <td>{{ applicationData.quantity }} BL</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Strength</td>
+                                    <td>{{ applicationData.strengthTo }}°</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Checkpost Entry</td>
+                                    <td>{{ getCheckpostName(applicationData.checkpostEntry || '') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <!-- ========== CANCELLATION DETAILS SECTION ========== -->
+                @if (isCancellation()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Cancellation Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Cancellation Reason</td>
+                                    <td>{{ applicationData.cancellationReason }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Cancellation Amount</td>
+                                    <td>₹{{ applicationData.cancellationAmount }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Refund Amount</td>
+                                    <td>₹{{ applicationData.refundAmount }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Refund Status</td>
+                                    <td>
+                                        <span [ngClass]="getRefundStatusBadgeClass(applicationData.refundStatus || '')">
+                                            {{ applicationData.refundStatus }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Bulk Spirit Type</td>
+                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Quantity</td>
+                                    <td>{{ applicationData.quantity }} BL</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <!-- ========== TRANSIT DETAILS SECTION ========== -->
+                @if (isTransit()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Transit Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Permit Type</td>
+                                    <td>{{ applicationData.permitType }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Vehicle Number</td>
+                                    <td>{{ applicationData.vehicleNumber }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Driver Name</td>
+                                    <td>{{ applicationData.driverName }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Driver License</td>
+                                    <td>{{ applicationData.driverLicense }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">From Location</td>
+                                    <td>{{ applicationData.fromLocation }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">To Location</td>
+                                    <td>{{ applicationData.toLocation }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Goods Description</td>
+                                    <td>{{ applicationData.goodsDescription }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Quantity</td>
+                                    <td>{{ applicationData.quantity }} {{ applicationData.unit || 'BL' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Route Details</td>
+                                    <td>{{ applicationData.routeDetails }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Checkpost Entry</td>
+                                    <td>{{ applicationData.checkpostEntry }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Checkpost Exit</td>
+                                    <td>{{ applicationData.checkpostExit }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Validity Period</td>
+                                    <td>{{ applicationData.validityPeriod }} days</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Transporter</td>
+                                    <td>{{ applicationData.transporterName }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Estimated Travel Time</td>
+                                    <td>{{ applicationData.estimatedTravelTime }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <!-- ========== HOLOGRAM DETAILS SECTION ========== -->
+                @if (isHologram()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Hologram Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Hologram Type</td>
+                                    <td>{{ applicationData.hologramType }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Quantity Requested</td>
+                                    <td>{{ applicationData.hologramQuantity }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Series Start</td>
+                                    <td>{{ applicationData.hologramSeriesStart }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Series End</td>
+                                    <td>{{ applicationData.hologramSeriesEnd }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-center mt-4 mb-3" *ngIf="hasAvailableActions()">
+                    <app-unified-action-buttons 
+                        *ngIf="applicationData"
+                        [item]="applicationData" 
+                        [itemType]="applicationType"
+                        [context]="getUserContext()" 
+                        [displayMode]="'detailed'" 
+                        (actionClicked)="onActionButtonClick($event)">
+                    </app-unified-action-buttons>
+                </div>
+
+                <!-- Print Button -->
+                <div class="no-print d-flex justify-content-center mt-2">
+                    <button class="btn btn-primary btn-lg" (click)="printApplication()">
+                        <i class="bi bi-printer me-2"></i>Print Application
+                    </button>
+                </div>
+            </div>
+        </div>
+        } @else {
+        <div class="alert alert-warning text-center">
+            <h4>No Data Found</h4>
+            <p>The requested application could not be found.</p>
+        </div>
+        }
+    </div>
+</div>

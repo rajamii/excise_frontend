@@ -1,18 +1,8 @@
 <!-- Cancellation Register Header -->
 <div class="cancellation-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-info">
-      <h4 class="register-title">
-        <i class="bi bi-x-circle me-2"></i>
-        Cancellation Applications Review
-      </h4>
-      <p class="register-subtitle">Review and process license cancellation requests from licensees</p>
-    </div>
     <div class="header-actions">
-      <button class="btn btn-success">
-        <i class="bi bi-download me-2"></i>
-        Export Report
-      </button>
+
     </div>
   </div>
 
@@ -188,30 +178,10 @@
               </span>
             </td>
             <td class="actions">
-              <div class="action-buttons" [attr.data-item-id]="item.id">
-                <button class="btn btn-outline-primary btn-sm" (click)="reviewCancellation(item)"
-                  title="Review Application" data-bs-toggle="tooltip" data-bs-placement="top">
-                  <i class="bi bi-eye"></i>
-                </button>
-                <button class="btn btn-outline-success btn-sm" (click)="approveCancellation(item)"
-                  title="Approve Cancellation" data-bs-toggle="tooltip" data-bs-placement="top"
-                  *ngIf="canApprove(item)">
-                  <i class="bi bi-check-circle"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectCancellation(item)"
-                  title="Reject Cancellation" data-bs-toggle="tooltip" data-bs-placement="top" *ngIf="canReject(item)">
-                  <i class="bi bi-x-circle"></i>
-                </button>
-                <button class="btn btn-outline-info btn-sm" (click)="generateFinalLetter(item)"
-                  title="Generate Final Letter" data-bs-toggle="tooltip" data-bs-placement="top"
-                  *ngIf="canGenerateFinalLetter(item)">
-                  <i class="bi bi-file-earmark-text"></i>
-                </button>
-                <button class="btn btn-outline-warning btn-sm" (click)="navigateToPayment(item)"
-                  title="Pay Cancellation Fee" data-bs-toggle="tooltip" data-bs-placement="top" *ngIf="canPay(item)">
-                  <i class="bi bi-credit-card"></i>
-                </button>
-              </div>
+              <!-- Unified Action Buttons Component -->
+              <app-unified-action-buttons [item]="item" [itemType]="'cancellation'" [context]="getUserContext()"
+                (actionClicked)="onUnifiedAction($event)">
+              </app-unified-action-buttons>
             </td>
           </tr>
           }

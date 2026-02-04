@@ -9,5 +9,7 @@ export enum Authority {
   SUPPLY_CHAIN = 'Supply_Chain',
   PERMIT_SECTION = 'Permit Section',
   COMMISSIONER = 'commissioner',
+  IT_CELL = 'it-cell',
+  OFFICER_IN_CHARGE = 'officer-incharge',
 }
   

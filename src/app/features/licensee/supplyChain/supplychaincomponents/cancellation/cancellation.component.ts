@@ -1,9 +1,11 @@
-import { Component, Inject, PLATFORM_ID, OnInit } from "@angular/core";
+import { Component, Inject, PLATFORM_ID, OnInit, inject } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
 import { AccountService } from "../../../../../core/services/account.service";
+import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
 
 interface TableData {
   id?: string | number;
@@ -22,7 +24,7 @@ interface TableData {
 @Component({
   selector: 'app-cancellation',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedActionButtonsComponent],
   templateUrl: './cancellation.component.html',
   styleUrl: './cancellation.component.scss'
 })
@@ -112,6 +114,9 @@ export class CancellationComponent implements OnInit {
     }
   ];
 
+  // Services
+  private unifiedActionsService = inject(UnifiedActionsService);
+
   constructor(
     private router: Router,
     @Inject(PLATFORM_ID) platformId: Object,
@@ -187,6 +192,43 @@ export class CancellationComponent implements OnInit {
         this.loadSampleCancellationData();
       }
     });
+  }
+
+  // Unified action handler
+  onUnifiedAction(event: { action: string, item: any }): void {
+    const context = this.getUserContext();
+
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'cancellation',
+      context
+    ).subscribe({
+      next: (result: any) => {
+        if (result.success) {
+          if (result.message) {
+            alert(result.message);
+          }
+          // Reload data if it was a backend action
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY'].includes(event.action)) {
+            this.loadCancellationData();
+          }
+        } else {
+          alert(`Action failed: ${result.message}`);
+        }
+      },
+      error: (error: any) => {
+        console.error('Action failed:', error);
+        alert(`Action failed: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Get current user context for actions
+  getUserContext(): 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    return 'licensee';
   }
 
   private determinePriority(item: any): string {
@@ -850,6 +892,40 @@ export class CancellationComponent implements OnInit {
     if (!s) return;
     this.pageSize = s;
     this.currentPage = 1;
+  }
+
+  // Dashboard statistics methods
+  getDashboardStatistics() {
+    return {
+      applied: this.getCancellationStatusCount('APPLIED') + this.getCancellationStatusCount('SUBMITTED'),
+      pending: this.getCancellationStatusCount('PENDING') + this.getCancellationStatusCount('CANCELLATION_PENDING'),
+      approved: this.getCancellationStatusCount('APPROVED') + this.getCancellationStatusCount('CANCELLATION_APPROVED'),
+      rejected: this.getCancellationStatusCount('REJECTED') + this.getCancellationStatusCount('CANCELLATION_REJECTED')
+    };
+  }
+
+  getFilterOptions() {
+    return [
+      { value: 'all', label: 'All Applications' },
+      { value: 'cancellation', label: 'Cancellations' },
+      { value: 'pending', label: 'Pending Applications' },
+      { value: 'approved', label: 'Approved Applications' },
+      { value: 'rejected', label: 'Rejected Applications' }
+    ];
+  }
+
+  onDashboardFilterChange(filterValue: string): void {
+    // Handle dashboard filter changes
+    if (filterValue === 'all') {
+      this.cancellationStatusFilter = '';
+    } else if (filterValue === 'pending') {
+      this.cancellationStatusFilter = 'PENDING';
+    } else if (filterValue === 'approved') {
+      this.cancellationStatusFilter = 'APPROVED';
+    } else if (filterValue === 'rejected') {
+      this.cancellationStatusFilter = 'REJECTED';
+    }
+    this.applyCancellationFilters();
   }
 
   // Persistence methods for approved cancellations

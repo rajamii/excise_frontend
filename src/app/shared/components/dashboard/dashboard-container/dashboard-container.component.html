@@ -1,0 +1,109 @@
+<div class="dashboard-container" [attr.data-layout]="config.layout">
+  
+  <!-- Dashboard Header -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <h1 class="dashboard-title">
+        <mat-icon>dashboard</mat-icon>
+        {{ config.roleName }} Dashboard
+      </h1>
+      
+      <!-- Application Type Filter (for admin roles) -->
+      <div class="filter-container" *ngIf="roleService.isAdminRole(user.roleId)">
+        <mat-form-field appearance="outline" class="application-type-filter">
+          <mat-icon matPrefix class="filter-icon">filter_list</mat-icon>
+          <mat-label>Application Type</mat-label>
+          <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
+            <mat-option *ngFor="let type of applicationTypes" [value]="type.value">
+              {{ type.label }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div class="dashboard-content">
+    
+    <!-- Widgets Grid -->
+    <div class="widgets-grid" [attr.data-layout]="config.layout">
+      
+      <div 
+        *ngFor="let widget of getVisibleWidgets(); trackBy: trackByWidget"
+        class="widget-container"
+        [ngClass]="getWidgetGridClass(widget)"
+        [attr.data-widget-id]="widget.id">
+        
+        <!-- Stats Overview Widget -->
+        <div *ngIf="isStatsWidget(widget)" class="widget-wrapper">
+          <app-stats-overview
+            [data]="widgetData[widget.id]"
+            [loading]="widgetLoading[widget.id]"
+            [title]="widget.title"
+            [showTitle]="widget.config?.showHeader !== false"
+            [cardClickable]="true"
+            (statClicked)="onStatClicked(widget, $event)"
+            (refreshRequested)="onWidgetRefresh(widget)">
+          </app-stats-overview>
+        </div>
+
+        <!-- Application Stats Widget -->
+        <div *ngIf="isApplicationStatsWidget(widget)" class="widget-wrapper">
+          <app-application-stats
+            [data]="widgetData[widget.id]"
+            [loading]="widgetLoading[widget.id]"
+            [title]="widget.title"
+            [showTitle]="widget.config?.showHeader !== false"
+            [showTrends]="true"
+            [showPercentages]="true"
+            (statClicked)="onApplicationStatClicked(widget, $event)"
+            (refreshRequested)="onWidgetRefresh(widget)">
+          </app-application-stats>
+        </div>
+
+        <!-- Chart Widget -->
+        <div *ngIf="isChartWidget(widget)" class="widget-wrapper">
+          <app-chart-widget
+            [data]="widgetData[widget.id]"
+            [loading]="widgetLoading[widget.id]"
+            [title]="widget.title"
+            [subtitle]="widget.subtitle"
+            [chartType]="'bar'"
+            [showTitle]="widget.config?.showHeader !== false"
+            [showLegend]="true"
+            [height]="'300px'"
+            (refreshRequested)="onWidgetRefresh(widget)"
+            (fullscreenRequested)="onWidgetFullscreen(widget)">
+          </app-chart-widget>
+        </div>
+
+        <!-- Table Widget -->
+        <div *ngIf="isTableWidget(widget)" class="widget-wrapper">
+          <app-table-widget
+            [data]="widgetData[widget.id]"
+            [loading]="widgetLoading[widget.id]"
+            [title]="widget.title"
+            [subtitle]="widget.subtitle"
+            [showTitle]="widget.config?.showHeader !== false"
+            [showPagination]="true"
+            [pageSize]="10"
+            [maxHeight]="'400px'"
+            (refreshRequested)="onWidgetRefresh(widget)"
+            (exportRequested)="onWidgetExport(widget)"
+            (rowClicked)="onTableRowClick(widget, $event)">
+          </app-table-widget>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="dashboard-empty" *ngIf="getVisibleWidgets().length === 0">
+      <mat-icon>dashboard</mat-icon>
+      <h3>No Dashboard Widgets Available</h3>
+      <p>You don't have permission to view any dashboard widgets, or no widgets are configured for your role.</p>
+    </div>
+
+  </div>
+</div>

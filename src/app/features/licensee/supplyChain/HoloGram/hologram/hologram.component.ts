@@ -28,7 +28,7 @@ export class HologramComponent {
   submittedData?: HologramFormData;
   isSubmitted = false;
   showSuccessMessage = false;
-  
+
   // Modal control properties
   showConfirmationModal = false;
   showSuccessModal = false;
@@ -57,7 +57,7 @@ export class HologramComponent {
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
     this.generateRefNumber();
-    
+
     // If a ref is provided, load and show its preview
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
@@ -117,7 +117,7 @@ export class HologramComponent {
     this.submittedData = undefined;
     this.isSubmitted = false;
     this.showSuccessMessage = false;
-    
+
     // Reset modal states
     this.showConfirmationModal = false;
     this.showSuccessModal = false;
@@ -140,10 +140,11 @@ export class HologramComponent {
     if (!this.submittedData) return;
 
     // Navigate to unified hologram view
-    this.router.navigate(['/dev-supply-chain-hologram-view'], {
+    this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         ref: this.submittedData.refNo,
-        from: 'supplychain'
+        type: 'hologram',
+        source: 'supplychain'
       }
     });
   }
@@ -184,17 +185,17 @@ export class HologramComponent {
       this.errorMessage = 'Please enter company name';
       return false;
     }
-    
+
     // Check if at least one quantity is greater than 0
     const localQty = Number(this.formData.localQtyLakh) || 0;
     const exportQty = Number(this.formData.exportQtyLakh) || 0;
     const defenceQty = Number(this.formData.defenceQtyLakh) || 0;
-    
+
     if (localQty <= 0 && exportQty <= 0 && defenceQty <= 0) {
       this.errorMessage = 'Enter at least one quantity greater than 0';
       return false;
     }
-    
+
     this.errorMessage = '';
     return true;
   }
@@ -256,7 +257,7 @@ export class HologramComponent {
 
   closeSuccessModal(): void {
     this.showSuccessModal = false;
-    
+
     // Scroll to government form after closing success modal
     setTimeout(() => {
       document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -614,7 +615,7 @@ export class HologramComponent {
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
   }
 
   // Payment calculation methods

@@ -1,0 +1,266 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+interface StatisticsData {
+  applied: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+interface FilterOption {
+  value: string;
+  label: string;
+}
+
+@Component({
+  selector: 'app-dashboard-statistics',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div class="dashboard-statistics">
+      <!-- Filter Dropdown -->
+      <div class="filter-section">
+        <div class="filter-container">
+          <label class="filter-label">Filter by Application Type</label>
+          <select 
+            class="form-select filter-dropdown" 
+            [(ngModel)]="selectedFilter"
+            (ngModelChange)="onFilterChange($event)">
+            <option *ngFor="let option of filterOptions" [value]="option.value">
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="statistics-cards">
+        <div class="stat-card applied">
+          <div class="stat-icon">
+            <i class="bi bi-arrow-right-circle"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.applied }}</div>
+            <div class="stat-label">APPLIED</div>
+          </div>
+        </div>
+
+        <div class="stat-card pending">
+          <div class="stat-icon">
+            <i class="bi bi-clock"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.pending }}</div>
+            <div class="stat-label">PENDING</div>
+          </div>
+        </div>
+
+        <div class="stat-card approved">
+          <div class="stat-icon">
+            <i class="bi bi-check-circle"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.approved }}</div>
+            <div class="stat-label">APPROVED</div>
+          </div>
+        </div>
+
+        <div class="stat-card rejected">
+          <div class="stat-icon">
+            <i class="bi bi-x-circle"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-number">{{ statistics.rejected }}</div>
+            <div class="stat-label">REJECTED</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Header -->
+      <div class="statistics-header">
+        <h3>Statistics</h3>
+      </div>
+
+      <!-- Message when no category selected -->
+      <div class="selection-message" *ngIf="showSelectionMessage">
+        <p>Select a category above to view applications</p>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .dashboard-statistics {
+      margin-bottom: 2rem;
+    }
+
+    .filter-section {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .filter-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .filter-label {
+      font-size: 0.875rem;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+    }
+
+    .filter-dropdown {
+      min-width: 200px;
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .statistics-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: white;
+    }
+
+    .stat-card.applied .stat-icon {
+      background: #3b82f6; /* Blue */
+    }
+
+    .stat-card.pending .stat-icon {
+      background: #f59e0b; /* Orange */
+    }
+
+    .stat-card.approved .stat-icon {
+      background: #10b981; /* Green */
+    }
+
+    .stat-card.rejected .stat-icon {
+      background: #ef4444; /* Red */
+    }
+
+    .stat-content {
+      flex: 1;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #1f2937;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #6b7280;
+      margin-top: 0.25rem;
+      letter-spacing: 0.05em;
+    }
+
+    .statistics-header {
+      background: #3b4cb8;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .statistics-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .selection-message {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #6b7280;
+      font-size: 1.125rem;
+    }
+
+    @media (max-width: 768px) {
+      .statistics-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .stat-card {
+        padding: 1rem;
+      }
+
+      .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+      }
+
+      .stat-number {
+        font-size: 1.5rem;
+      }
+
+      .filter-section {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .statistics-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+  `]
+})
+export class DashboardStatisticsComponent {
+  @Input() statistics: StatisticsData = {
+    applied: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0
+  };
+
+  @Input() filterOptions: FilterOption[] = [
+    { value: 'all', label: 'All Applications' }
+  ];
+
+  @Input() showSelectionMessage: boolean = false;
+
+  @Output() filterChange = new EventEmitter<string>();
+
+  selectedFilter: string = 'all';
+
+  onFilterChange(value: string): void {
+    this.filterChange.emit(value);
+  }
+}

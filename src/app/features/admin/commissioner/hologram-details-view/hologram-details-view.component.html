@@ -1,0 +1,181 @@
+<!-- Hologram Details Modal -->
+<div class="modal-overlay" *ngIf="isVisible" (click)="onClose()">
+  <div class="modal-dialog" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-qr-code me-2"></i>
+          Hologram Application Details
+        </h5>
+        <button type="button" class="btn-close" (click)="onClose()"></button>
+      </div>
+      
+      <div class="modal-body" *ngIf="application">
+        <div class="hologram-details-container">
+          <!-- Application Info -->
+          <div class="application-info mb-4">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="info-badge ref-badge">
+                  <small class="text-muted">Reference No</small>
+                  <div class="fw-bold">{{ application.referenceNo }}</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-badge date-badge">
+                  <small class="text-muted">Submission Date</small>
+                  <div class="fw-bold">{{ application.submissionDate }}</div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="info-badge company-badge">
+                  <small class="text-muted">Company</small>
+                  <div class="fw-bold">{{ application.distilleryName }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quantity Breakdown -->
+          <div class="quantity-breakdown mb-4">
+            <h6 class="mb-3">
+              <i class="bi bi-bar-chart me-2"></i>
+              Hologram Quantity Breakdown
+            </h6>
+            
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th class="series-header">Series Type</th>
+                    <th class="quantity-header text-center">Quantity (Pieces)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="series-name">Local Series</td>
+                    <td class="quantity-value text-center" [class.edited-cell]="isEditingQuantity">
+                      <ng-container *ngIf="isEditingQuantity; else localView">
+                        <input type="number" class="form-control form-control-sm text-center" 
+                               [(ngModel)]="editedLocalQty" min="0">
+                      </ng-container>
+                      <ng-template #localView>
+                        {{ application.localQtyLakh | number:'1.0-0' }}
+                      </ng-template>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="series-name">Export Series</td>
+                    <td class="quantity-value text-center" [class.edited-cell]="isEditingQuantity">
+                      <ng-container *ngIf="isEditingQuantity; else exportView">
+                        <input type="number" class="form-control form-control-sm text-center" 
+                               [(ngModel)]="editedExportQty" min="0">
+                      </ng-container>
+                      <ng-template #exportView>
+                        {{ application.exportQtyLakh | number:'1.0-0' }}
+                      </ng-template>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="series-name">Defence Series</td>
+                    <td class="quantity-value text-center" [class.edited-cell]="isEditingQuantity">
+                      <ng-container *ngIf="isEditingQuantity; else defenceView">
+                        <input type="number" class="form-control form-control-sm text-center" 
+                               [(ngModel)]="editedDefenceQty" min="0">
+                      </ng-container>
+                      <ng-template #defenceView>
+                        {{ application.defenceQtyLakh | number:'1.0-0' }}
+                      </ng-template>
+                    </td>
+                  </tr>
+                  <tr class="table-primary">
+                    <td class="series-name"><strong>Total Holograms</strong></td>
+                    <td class="quantity-value text-center">
+                      <strong>
+                        <ng-container *ngIf="isEditingQuantity; else totalView">
+                          {{ (editedLocalQty + editedExportQty + editedDefenceQty) | number:'1.0-0' }}
+                        </ng-container>
+                        <ng-template #totalView>
+                          {{ application.totalQtyLakh | number:'1.0-0' }}
+                        </ng-template>
+                      </strong>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Payment Information -->
+          <div class="payment-info mb-4">
+            <h6 class="mb-3">
+              <i class="bi bi-currency-rupee me-2"></i>
+              Payment Information
+            </h6>
+            <div class="alert alert-info">
+              <div class="row">
+                <div class="col-md-6">
+                  <strong>Payment Amount:</strong> 
+                  <span class="text-success">₹{{ application.amount | number:'1.2-2' }}</span>
+                </div>
+                <div class="col-md-6">
+                  <strong>Rate:</strong> ₹0.15 per hologram piece
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edit History (if available) -->
+          <div class="edit-history mb-4" *ngIf="application && application.editHistory">
+            <h6 class="mb-3">
+              <i class="bi bi-clock-history me-2"></i>
+              Edit History
+            </h6>
+            <div class="alert alert-warning">
+              <p class="mb-2"><strong>Last Modified:</strong> {{ application.editHistory.editedDate }}</p>
+              <p class="mb-2"><strong>Modified By:</strong> {{ application.editHistory.editedBy }}</p>
+              <div class="row">
+                <div class="col-md-6">
+                  <small><strong>Original Total:</strong> {{ application.editHistory.originalQuantities.total | number:'1.0-0' }}</small>
+                </div>
+                <div class="col-md-6">
+                  <small><strong>Updated Total:</strong> {{ application.editHistory.updatedQuantities.total | number:'1.0-0' }}</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <!-- Edit Mode Controls -->
+        <div class="d-flex gap-2 w-100" *ngIf="isEditingQuantity">
+          <button type="button" class="btn btn-success" (click)="saveQuantityEdit()">
+            <i class="bi bi-check-lg me-1"></i>
+            Save Changes
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="cancelQuantityEdit()">
+            <i class="bi bi-x-lg me-1"></i>
+            Cancel
+          </button>
+        </div>
+        
+        <!-- Normal Mode Controls -->
+        <div class="d-flex gap-2 w-100" *ngIf="!isEditingQuantity">
+          <button type="button" class="btn btn-outline-primary" (click)="enableQuantityEdit()">
+            <i class="bi bi-pencil me-1"></i>
+            Edit Quantities
+          </button>
+          <button type="button" class="btn btn-success" (click)="onApprove()" 
+                  *ngIf="application && application.allowedActions?.includes('approve')">
+            <i class="bi bi-check-circle me-1"></i>
+            Approve
+          </button>
+          <button type="button" class="btn btn-secondary" (click)="onClose()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

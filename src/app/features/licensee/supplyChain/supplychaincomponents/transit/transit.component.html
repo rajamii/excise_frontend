@@ -1,22 +1,7 @@
 <!-- Transit Register Header -->
 <div class="transit-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-info">
-      <h4 class="register-title">
-        <i class="bi bi-truck me-2"></i>
-        Transit Permit Applications Review
-      </h4>
-      <p class="register-subtitle">Review and process transit permit applications from licensees</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary btn-sm me-2" (click)="navigateTo('transit-permit')" *ngIf="userRole !== 'commissioner'">
-        <i class="bi bi-truck me-1"></i> Apply Transit
-      </button>
-      <button class="btn btn-success">
-        <i class="bi bi-download me-2"></i>
-        Export Report
-      </button>
-    </div>
+
   </div>
 
   <!-- Summary Cards -->
@@ -178,9 +163,8 @@
               <span class="amount-text">₹{{ item.amount }}</span>
             </td>
             <td class="brand-details">
-              <button class="btn btn-outline-info btn-sm" 
-                      (click)="openBrandDetailsModal(item.referenceNo)" 
-                      title="View Brand Details">
+              <button class="btn btn-outline-info btn-sm" (click)="openBrandDetailsModal(item.referenceNo)"
+                title="View Brand Details">
                 <i class="bi bi-list-ul me-1"></i>
                 <span class="badge bg-primary">{{ getBrandCount(item.referenceNo) }}</span>
                 <i class="bi bi-eye"></i>
@@ -195,27 +179,10 @@
               </div>
             </td>
             <td class="actions">
-              <div class="action-buttons">
-                <!-- View Button - Always visible -->
-                <button class="btn btn-outline-primary btn-sm" (click)="reviewTransit(item)" title="View Application">
-                  <i class="bi bi-eye"></i>
-                </button>
-                <!-- Pay Button - Only for Licensee when status is Ready for Payment -->
-                <button class="btn btn-success btn-sm" (click)="payTransit(item)" title="Pay Now"
-                  *ngIf="canShowPayButton(item)">
-                  <i class="bi bi-credit-card me-1"></i>Pay
-                </button>
-                <!-- Approve Button - Only for Officers when application is forwarded to their stage -->
-                <button class="btn btn-outline-success btn-sm" (click)="approveTransit(item)" title="Approve"
-                  *ngIf="canShowApproveRejectButtons(item)">
-                  <i class="bi bi-check"></i>
-                </button>
-                <!-- Reject Button - Only for Officers when application is forwarded to their stage -->
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectTransit(item)" title="Reject"
-                  *ngIf="canShowApproveRejectButtons(item)">
-                  <i class="bi bi-x"></i>
-                </button>
-              </div>
+              <!-- Unified Action Buttons Component -->
+              <app-unified-action-buttons [item]="item" [itemType]="'transit'" [context]="getUserContext()"
+                (actionClicked)="onUnifiedAction($event)">
+              </app-unified-action-buttons>
             </td>
           </tr>
           }
@@ -229,8 +196,8 @@
         <!-- Pagination Info -->
         <div class="pagination-info">
           <span class="info-text">
-            Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }} to 
-            {{ Math.min(getCurrentPage() * getPageSize(), filteredTransitData.length) }} 
+            Showing {{ (getCurrentPage() - 1) * getPageSize() + 1 }} to
+            {{ Math.min(getCurrentPage() * getPageSize(), filteredTransitData.length) }}
             of {{ filteredTransitData.length }} applications
           </span>
         </div>
@@ -242,11 +209,10 @@
             <span class="selector-label">
               <i class="bi bi-grid-3x3-gap me-1"></i>Show:
             </span>
-            <select class="form-select form-select-sm" 
-                    [value]="getPageSize()" 
-                    (change)="onPageSizeChange($event)">
+            <select class="form-select form-select-sm" [value]="getPageSize()" (change)="onPageSizeChange($event)">
               <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
-              <option [value]="filteredTransitData.length" *ngIf="filteredTransitData.length > 50">All ({{ filteredTransitData.length }})</option>
+              <option [value]="filteredTransitData.length" *ngIf="filteredTransitData.length > 50">All ({{
+                filteredTransitData.length }})</option>
             </select>
             <span class="selector-label">per page</span>
           </div>
@@ -254,30 +220,23 @@
           <!-- Pagination Buttons -->
           <div class="pagination-buttons d-flex align-items-center gap-1">
             <!-- First Page -->
-            <button class="btn btn-outline-secondary btn-sm" 
-                    [disabled]="getCurrentPage() === 1"
-                    (click)="goToPage(1)"
-                    title="First Page">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="getCurrentPage() === 1" (click)="goToPage(1)"
+              title="First Page">
               <i class="bi bi-chevron-double-left"></i>
             </button>
 
             <!-- Previous Page -->
-            <button class="btn btn-outline-secondary btn-sm" 
-                    [disabled]="getCurrentPage() === 1"
-                    (click)="goToPage(getCurrentPage() - 1)"
-                    title="Previous Page">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="getCurrentPage() === 1"
+              (click)="goToPage(getCurrentPage() - 1)" title="Previous Page">
               <i class="bi bi-chevron-left"></i>
             </button>
 
             <!-- Page Numbers -->
             <div class="page-numbers d-flex align-items-center gap-1">
               <ng-container *ngFor="let page of getPageNumbers(); let i = index">
-                <button *ngIf="page !== '...'" 
-                        class="btn btn-sm"
-                        [class.btn-primary]="page === getCurrentPage()"
-                        [class.btn-outline-secondary]="page !== getCurrentPage()"
-                        (click)="goToPage(+page)"
-                        [title]="'Go to page ' + page">
+                <button *ngIf="page !== '...'" class="btn btn-sm" [class.btn-primary]="page === getCurrentPage()"
+                  [class.btn-outline-secondary]="page !== getCurrentPage()" (click)="goToPage(+page)"
+                  [title]="'Go to page ' + page">
                   {{ page }}
                 </button>
                 <span *ngIf="page === '...'" class="pagination-ellipsis" title="More pages">⋯</span>
@@ -285,18 +244,14 @@
             </div>
 
             <!-- Next Page -->
-            <button class="btn btn-outline-secondary btn-sm" 
-                    [disabled]="getCurrentPage() === getTotalPages()"
-                    (click)="goToPage(getCurrentPage() + 1)"
-                    title="Next Page">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="getCurrentPage() === getTotalPages()"
+              (click)="goToPage(getCurrentPage() + 1)" title="Next Page">
               <i class="bi bi-chevron-right"></i>
             </button>
 
             <!-- Last Page -->
-            <button class="btn btn-outline-secondary btn-sm" 
-                    [disabled]="getCurrentPage() === getTotalPages()"
-                    (click)="goToPage(getTotalPages())"
-                    title="Last Page">
+            <button class="btn btn-outline-secondary btn-sm" [disabled]="getCurrentPage() === getTotalPages()"
+              (click)="goToPage(getTotalPages())" title="Last Page">
               <i class="bi bi-chevron-double-right"></i>
             </button>
           </div>

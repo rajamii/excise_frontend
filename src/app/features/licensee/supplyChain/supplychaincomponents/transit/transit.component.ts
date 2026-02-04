@@ -1,11 +1,15 @@
-import { Component, Inject, PLATFORM_ID, OnInit, Input } from "@angular/core";
+import { Component, Inject, PLATFORM_ID, OnInit, Input, inject } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { SupplyChainProfileService } from "../../../../../core/services/supply-chain-profile.service";
 import { Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
+import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface TableData {
+  id?: number;
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
@@ -17,6 +21,7 @@ interface TableData {
   transportMode?: string;
   vehicleNumber?: string;
   permitValidUntil?: string;
+  allowedActions?: string[]; // Dynamic actions from backend
 }
 
 interface ProductDetail {
@@ -32,7 +37,7 @@ interface ProductDetail {
 @Component({
   selector: 'app-transit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedActionButtonsComponent],
   templateUrl: './transit.component.html',
   styleUrl: './transit.component.scss'
 })
@@ -70,6 +75,10 @@ export class TransitComponent implements OnInit {
 
   // Sample data for transit permit applications
   transitData: TableData[] = [];
+
+  // Services
+  public accountService = inject(AccountService);
+  private unifiedActionsService = inject(UnifiedActionsService);
 
   constructor(
     private router: Router,
@@ -143,6 +152,7 @@ export class TransitComponent implements OnInit {
 
           if (billNo && !grouped.has(billNo)) {
             grouped.set(billNo, {
+              id: item.id, // Add ID for actions
               referenceNo: billNo,
               submissionDate: date,
               distilleryName: distributorName,
@@ -153,7 +163,8 @@ export class TransitComponent implements OnInit {
               depotAddress: destination, // Store depot address separately
               transportMode: 'Road',
               vehicleNumber: vehicleNumber,
-              permitValidUntil: ''
+              permitValidUntil: '',
+              allowedActions: item.allowedActions || item.allowed_actions || [] // Add allowed actions
             });
           } else if (billNo) {
             // Accumulate amount for existing bill
@@ -176,6 +187,57 @@ export class TransitComponent implements OnInit {
         this.applyTransitFilters();
       }
     });
+  }
+
+  // Unified action handler
+  onUnifiedAction(event: { action: string, item: any }): void {
+    const context = this.getUserContext();
+
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'transit',
+      context
+    ).subscribe({
+      next: (result: any) => {
+        if (result.success) {
+          if (result.message) {
+            alert(result.message);
+          }
+          // Reload data if it was a backend action
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(event.action)) {
+            this.loadTransitData();
+          }
+        } else {
+          alert(`Action failed: ${result.message}`);
+        }
+      },
+      error: (error: any) => {
+        console.error('Action failed:', error);
+        alert(`Action failed: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Get current user context for actions
+  getUserContext(): 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    if (this.isOfficerInCharge()) return 'officer-in-charge';
+    return 'licensee';
+  }
+
+  // User role checks
+  isCommissioner(): boolean {
+    return this.accountService.hasAnyRole('commissioner');
+  }
+
+  isPermitSection(): boolean {
+    return this.accountService.hasAnyRole('permit-section');
+  }
+
+  isOfficerInCharge(): boolean {
+    return this.accountService.hasAnyRole('officer-in-charge');
   }
 
   // Filter methods
@@ -386,7 +448,10 @@ export class TransitComponent implements OnInit {
 
   navigateTo(route: string) {
     if (route === 'transit-permit') {
-      this.router.navigate(['/licensee/supply-chain/transit-permit']);
+      // Navigate within SPA to the transit permit application form
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'transit-permit' }
+      });
     } else {
       this.router.navigate([route]);
     }
@@ -433,6 +498,40 @@ export class TransitComponent implements OnInit {
     if (!s || isNaN(s)) return;
     this.pageSize = s;
     this.currentPage = 1;
+  }
+
+  // Dashboard statistics methods
+  getDashboardStatistics() {
+    return {
+      applied: this.getTransitStatusCount('APPLIED') + this.getTransitStatusCount('SUBMITTED'),
+      pending: this.getTransitStatusCount('PENDING') + this.getTransitStatusCount('UNDER_REVIEW'),
+      approved: this.getTransitStatusCount('APPROVED') + this.getTransitStatusCount('APPROVED_BY_COMMISSIONER'),
+      rejected: this.getTransitStatusCount('REJECTED') + this.getTransitStatusCount('REJECTED_BY_COMMISSIONER')
+    };
+  }
+
+  getFilterOptions() {
+    return [
+      { value: 'all', label: 'All Applications' },
+      { value: 'transit', label: 'Transit Permits' },
+      { value: 'pending', label: 'Pending Applications' },
+      { value: 'approved', label: 'Approved Applications' },
+      { value: 'rejected', label: 'Rejected Applications' }
+    ];
+  }
+
+  onDashboardFilterChange(filterValue: string): void {
+    // Handle dashboard filter changes
+    if (filterValue === 'all') {
+      this.transitStatusFilter = '';
+    } else if (filterValue === 'pending') {
+      this.transitStatusFilter = 'PENDING';
+    } else if (filterValue === 'approved') {
+      this.transitStatusFilter = 'APPROVED';
+    } else if (filterValue === 'rejected') {
+      this.transitStatusFilter = 'REJECTED';
+    }
+    this.applyTransitFilters();
   }
 
   showAllData(): void {
@@ -542,7 +641,7 @@ export class TransitComponent implements OnInit {
     };
 
     const lowerName = distilleryName.toLowerCase().trim();
-    
+
     // Check for exact matches first
     if (companyNameMap[lowerName]) {
       return companyNameMap[lowerName];

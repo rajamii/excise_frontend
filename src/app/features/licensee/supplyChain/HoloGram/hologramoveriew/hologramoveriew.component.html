@@ -1210,9 +1210,7 @@
         <button type="button" class="btn btn-secondary" (click)="closeUsageDetailsModal()">
           <i class="bi bi-x-lg me-1"></i>Close
         </button>
-        <button type="button" class="btn btn-primary">
-          <i class="bi bi-download me-1"></i>Export Report
-        </button>
+
         <button type="button" class="btn btn-success">
           <i class="bi bi-printer me-1"></i>Print
         </button>
@@ -1439,7 +1437,8 @@
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.brandDetails }}</span></small>
                             </div>
-                            } @else if (range.productionLine && range.productionLine !== 'N/A' && !range.productionLine.startsWith('LINE-')) {
+                            } @else if (range.productionLine && range.productionLine !== 'N/A' &&
+                            !range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-tag text-success me-1"></i>
                               <small><span class="fw-bold text-success">Brand: {{ range.productionLine }}</span></small>
@@ -1447,7 +1446,8 @@
                             } @else if (range.referenceNo && range.referenceNo !== 'N/A') {
                             <div class="detail-item">
                               <i class="bi bi-tag text-warning me-1"></i>
-                              <small><span class="fw-bold text-warning">Brand: Check Request {{ range.referenceNo }}</span></small>
+                              <small><span class="fw-bold text-warning">Brand: Check Request {{ range.referenceNo
+                                  }}</span></small>
                             </div>
                             }
                             @if (range.bottleSize) {
@@ -1456,7 +1456,8 @@
                               <small>Bottle Size: {{ range.bottleSize }}</small>
                             </div>
                             }
-                            @if (range.productionLine && range.productionLine !== 'N/A' && !range.productionLine.startsWith('LINE-')) {
+                            @if (range.productionLine && range.productionLine !== 'N/A' &&
+                            !range.productionLine.startsWith('LINE-')) {
                             <div class="detail-item">
                               <i class="bi bi-gear text-secondary me-1"></i>
                               <small>{{ range.productionLine }}</small>

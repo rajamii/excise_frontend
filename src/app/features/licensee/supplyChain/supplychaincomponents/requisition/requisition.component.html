@@ -1,52 +1,8 @@
 <!-- Requisition Register Header -->
 <div class="requisition-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-info">
-      <h4 class="register-title">
-        <i class="bi bi-file-text me-2"></i>
-        @if (isCommissioner()) {
-        Requisition Applications Review
-        } @else if (isPermitSection()) {
-        Requisition Register
-        } @else {
-        Requisition Register
-        }
-      </h4>
-      <p class="register-subtitle">
-        @if (isCommissioner()) {
-        Review and approve requisition applications from licensees
-        } @else if (isPermitSection()) {
-        Track and manage all requisition applications
-        } @else {
-        Track and manage all requisition applications
-        }
-      </p>
-    </div>
-    <div class="header-actions">
-      <!-- Commissioner-only Export button -->
-      <button *ngIf="isCommissioner()" class="btn btn-success">
-        <i class="bi bi-download me-2"></i>
-        Export Report
-      </button>
-      <!-- Permit Section buttons -->
-      <ng-container *ngIf="isPermitSection()">
-        <button class="btn btn-success">
-          <i class="bi bi-plus-circle me-2"></i>
-          New Requisition
-        </button>
-      </ng-container>
-      <!-- Licensee-only buttons (Supply Chain) -->
-      <ng-container *ngIf="!isCommissioner() && !isPermitSection()">
-        <button class="btn btn-danger me-2" (click)="clearAllRequisitionData()" *ngIf="requisitionData.length > 0">
-          <i class="bi bi-trash me-2"></i>
-          Clear All Data
-        </button>
-        <button class="btn btn-success" (click)="navigateTo('import-permit')">
-          <i class="bi bi-plus-circle me-2"></i>
-          New Requisition
-        </button>
-      </ng-container>
-    </div>
+
+
   </div>
 
   <!-- Summary Cards -->
@@ -249,64 +205,10 @@
               </span>
             </td>
             <td class="actions">
-              <div class="action-buttons">
-                <button class="btn btn-outline-primary btn-sm" (click)="viewRequisitionApplication(item)"
-                  title="View Application">
-                  <i class="bi bi-eye"></i>
-                </button>
-                <button class="btn btn-outline-warning btn-sm" (click)="viewSlip(item)" title="Permit Slip"
-                  *ngIf="shouldShowPermitSlip(item)">
-                  <!-- Permit Slip Button -->
-                  <i class="bi bi-file-earmark-text"></i>
-                </button>
-
-                <!-- Permit Section: Approve/Reject buttons (dynamic based on workflow rules) -->
-                @if (isPermitSection() && canPerformAction(item)) {
-                <button class="btn btn-outline-success btn-sm" (click)="approveRequisition(item)"
-                  title="Approve Requisition">
-                  <i class="bi bi-check-circle"></i>
-                </button>
-                }
-                @if (isPermitSection() && canReject(item)) {
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectRequisition(item)"
-                  title="Reject Requisition">
-                  <i class="bi bi-x-circle"></i>
-                </button>
-                }
-
-                <!-- Commissioner: Approve/Reject buttons (dynamic based on workflow rules) -->
-                @if (isCommissioner() && canPerformAction(item)) {
-                <button class="btn btn-outline-success btn-sm" (click)="approveRequisition(item)"
-                  title="Approve Requisition">
-                  <i class="bi bi-check-circle"></i>
-                </button>
-                }
-                @if (isCommissioner() && canReject(item)) {
-                <button class="btn btn-outline-danger btn-sm" (click)="rejectRequisition(item)"
-                  title="Reject Requisition">
-                  <i class="bi bi-x-circle"></i>
-                </button>
-                }
-
-                <!-- Licensee: Cancellation button (Approved only) -->
-                @if (!isCommissioner() && !isPermitSection() && item.canCancel) {
-                <button class="btn btn-outline-danger btn-sm" (click)="requestCancellation(item)"
-                  title="Request Cancellation">
-                  <i class="bi bi-x-circle"></i>
-                  Cancel
-                </button>
-                }
-
-
-                <!-- Licensee: Pay button (when approved by commissioner and can perform action) -->
-                @if (!isCommissioner() && !isPermitSection() && canPerformAction(item)) {
-                <button class="btn btn-outline-success btn-sm" (click)="payForRequisition(item)"
-                  title="Submit Payment Slip">
-                  <i class="bi bi-credit-card"></i>
-                  Pay
-                </button>
-                }
-              </div>
+              <!-- Unified Action Buttons Component -->
+              <app-unified-action-buttons [item]="item" [itemType]="'requisition'" [context]="getUserContext()"
+                (actionClicked)="onUnifiedAction($event)">
+              </app-unified-action-buttons>
             </td>
           </tr>
           }
