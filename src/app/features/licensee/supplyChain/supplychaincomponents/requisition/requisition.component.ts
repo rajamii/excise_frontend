@@ -200,12 +200,12 @@ export class RequisitionComponent implements OnInit {
   }
 
   isPermitSection(): boolean {
-    return this.accountService.hasAnyRole('permit-section');
+    return this.accountService.hasAnyRole(['permit-section', 'permit section', 'permit_section', 'Permit Section']);
   }
 
   approveRequisition(item: TableData): void {
     if (!item.id) {
-      alert('Item ID is required');
+      alert(' Item ID is required');
       return;
     }
 
@@ -254,7 +254,7 @@ export class RequisitionComponent implements OnInit {
         id: item.id,
         ref: item.referenceNo,
         type: 'requisition',
-        source: 'licensee'
+        source: this.getUserContext()
       }
     });
   }

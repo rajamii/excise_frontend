@@ -10,6 +10,7 @@ export interface ActionItem {
   referenceNo: string;
   status: string;
   allowedActions?: string[];
+  allowedActionConfigs?: ActionButtonConfig[]; // Dynamic configs from backend
   canCancel?: boolean;
   [key: string]: any; // Allow additional properties
 }
@@ -60,9 +61,9 @@ export interface ActionButtonConfig {
         </button>
       </ng-container>
 
-      <!-- Licensee: Payment button -->
+      <!-- Licensee: Payment button (Legacy fallback if not coming from backend) -->
       <button 
-        *ngIf="isLicensee() && canPay()"
+        *ngIf="isLegacyPaymentMode() && isLicensee() && canPay()"
         [attr.mat-raised-button]="displayMode === 'detailed' ? '' : null"
         [attr.mat-icon-button]="displayMode === 'table' ? '' : null"
         color="primary"
@@ -73,9 +74,9 @@ export interface ActionButtonConfig {
         <span *ngIf="displayMode === 'detailed'">Submit Payment</span>
       </button>
 
-      <!-- Permit Slip button (for officers) - Always icon button -->
+      <!-- Permit Slip button (Legacy fallback) -->
       <button 
-        *ngIf="canViewPermitSlip()"
+        *ngIf="isLegacyPaymentMode() && canViewPermitSlip()"
         mat-icon-button 
         color="accent"
         matTooltip="View Permit Slip"
@@ -83,9 +84,9 @@ export interface ActionButtonConfig {
         <mat-icon>description</mat-icon>
       </button>
 
-      <!-- View Button - Only available in table mode -->
+      <!-- View Button - Only available in table mode and if not already in list -->
       <button 
-        *ngIf="displayMode === 'table'"
+        *ngIf="displayMode === 'table' && !hasViewAction()"
         mat-icon-button 
         color="primary"
         [matTooltip]="'View ' + getItemType()"
@@ -252,18 +253,26 @@ export class UnifiedActionButtonsComponent implements OnInit {
   ngOnInit(): void {
     this.accountService.getAuthenticationState().subscribe(user => {
       this.currentUser = user;
-      console.log('UnifiedActionButtons - Current user:', user);
-      console.log('UnifiedActionButtons - Item:', this.item);
-      console.log('UnifiedActionButtons - Context:', this.context);
-      console.log('UnifiedActionButtons - Display mode:', this.displayMode);
-      console.log('UnifiedActionButtons - Available actions:', this.getAvailableButtons());
-      console.log('UnifiedActionButtons - Primary actions:', this.getPrimaryActionButtons());
-      console.log('UnifiedActionButtons - Is licensee:', this.isLicensee());
-      console.log('UnifiedActionButtons - Item allowed actions:', this.item?.allowedActions);
     });
   }
 
+  isLegacyPaymentMode(): boolean {
+    // Only use legacy mode if no dynamic configs are present
+    return !this.item.allowedActionConfigs || this.item.allowedActionConfigs.length === 0;
+  }
+
+  hasViewAction(): boolean {
+    const buttons = this.getAvailableButtons();
+    return buttons.some(b => b.action === 'VIEW');
+  }
+
   getAvailableButtons(): ActionButtonConfig[] {
+    // 1. Priority: Dynamic configs from backend
+    if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
+      return this.item.allowedActionConfigs;
+    }
+
+    // 2. Fallback: Legacy local mapping
     if (!this.item.allowedActions) {
       return [];
     }
@@ -274,21 +283,47 @@ export class UnifiedActionButtonsComponent implements OnInit {
   }
 
   getDisplayButtons(): ActionButtonConfig[] {
+    // Priority: Dynamic configs from backend
+    if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
+      // Detailed mode: Show secondary actions (everything NOT primary)
+      if (this.displayMode === 'detailed') {
+        return this.getSecondaryActionButtons();
+      }
+      // Table mode: Show "VIEW" and other secondary actions suitable for table
+      else {
+        const availableButtons = this.item.allowedActionConfigs;
+        // In table, we usually hide big primary actions like Approve/Reject unless specifically asked
+        // But for now, let's keep it simple: Show VIEW + others. 
+        // Logic: Filter out explicit primary ones if we only want icons?
+        // Actually, backend config might have 'icon' so we can show them.
+        // Let's stick to showing View + others defined in nonPrimary.
+        const nonPrimaryActions = ['VIEW', 'DOWNLOAD', 'EDIT', 'FORWARD', 'VERIFY', 'ISSUE', 'EXTEND', 'TERMINATE'];
+        // Trust backend, but maybe filter for space in table
+        return availableButtons.filter(b => nonPrimaryActions.includes(b.action));
+      }
+    }
+
     if (this.displayMode === 'detailed') {
       // In detailed mode, show secondary actions as icons (excluding VIEW since we're already viewing)
       return this.getSecondaryActionButtons().filter(button => button.action !== 'VIEW');
     } else {
       // In table mode, show ONLY VIEW and other non-primary actions (NO approve/reject)
       const nonPrimaryActions = ['VIEW', 'DOWNLOAD', 'EDIT', 'FORWARD', 'VERIFY', 'ISSUE', 'EXTEND', 'TERMINATE'];
-      return this.getAvailableButtons().filter(button => 
+      return this.getAvailableButtons().filter(button =>
         nonPrimaryActions.includes(button.action) && this.shouldShowButton(button)
       );
     }
   }
 
   getPrimaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION'];
-    
+    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'PAY', 'SUBMIT'];
+
+    // 1. Dynamic Configs (Backend Driven) - TRUST BACKEND
+    if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
+      return this.item.allowedActionConfigs.filter(config => primaryActions.includes(config.action));
+    }
+
+    // 2. Legacy Fallback
     if (!this.item.allowedActions) {
       return [];
     }
@@ -300,8 +335,14 @@ export class UnifiedActionButtonsComponent implements OnInit {
   }
 
   getSecondaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION'];
-    
+    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'PAY', 'SUBMIT'];
+
+    // 1. Dynamic Configs (Backend Driven) - TRUST BACKEND
+    if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
+      return this.item.allowedActionConfigs.filter(config => !primaryActions.includes(config.action));
+    }
+
+    // 2. Legacy Fallback
     if (!this.item.allowedActions) {
       return [];
     }
