@@ -516,3 +516,287 @@
         }
     }
 }
+
+/* Professional Snackbar Styles */
+::ng-deep .success-snackbar {
+    .mat-mdc-snack-bar-container {
+        background-color: #28a745 !important;
+        color: white !important;
+        
+        .mat-mdc-snack-bar-label {
+            color: white !important;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .mat-mdc-snack-bar-action {
+            .mat-mdc-button {
+                color: white !important;
+                font-weight: 600;
+            }
+        }
+    }
+}
+
+::ng-deep .error-snackbar {
+    .mat-mdc-snack-bar-container {
+        background-color: #dc3545 !important;
+        color: white !important;
+        
+        .mat-mdc-snack-bar-label {
+            color: white !important;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .mat-mdc-snack-bar-action {
+            .mat-mdc-button {
+                color: white !important;
+                font-weight: 600;
+            }
+        }
+    }
+}
+
+/* Enhanced snackbar positioning and animation */
+::ng-deep .mat-mdc-snack-bar-container {
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    min-width: 350px !important;
+    max-width: 500px !important;
+}
+
+/* Professional SweetAlert2 Styling */
+:host ::ng-deep {
+  /* Payment Confirmation Popup */
+  .payment-confirmation-popup {
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .payment-confirmation-content {
+    text-align: left;
+    
+    .payment-details {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      
+      h4 {
+        color: #1C2B78;
+        font-weight: 600;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+      }
+      
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        
+        .label {
+          font-weight: 500;
+          color: #666;
+        }
+        
+        .value {
+          font-weight: 600;
+          color: #333;
+          
+          &.amount {
+            color: #28a745;
+            font-size: 1.1rem;
+          }
+        }
+      }
+    }
+    
+    .payment-note {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(23, 162, 184, 0.1);
+      border-left: 4px solid #17a2b8;
+      border-radius: 4px;
+      
+      i {
+        color: #17a2b8;
+        font-size: 1.2rem;
+      }
+      
+      span {
+        color: #0c5460;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  /* Payment Success Popup */
+  .payment-success-popup {
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .payment-success-content {
+    text-align: center;
+    
+    .success-icon {
+      font-size: 4rem;
+      color: #28a745;
+      margin-bottom: 20px;
+      
+      i {
+        animation: successPulse 1.5s ease-in-out;
+      }
+    }
+    
+    .success-details {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: left;
+      
+      h4 {
+        color: #155724;
+        font-weight: 600;
+        margin-bottom: 15px;
+        font-size: 1.1rem;
+        text-align: center;
+      }
+      
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        
+        .label {
+          font-weight: 500;
+          color: #155724;
+        }
+        
+        .value {
+          font-weight: 600;
+          color: #155724;
+          
+          &.amount {
+            color: #28a745;
+            font-size: 1.1rem;
+          }
+          
+          &.status-success {
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+    
+    .success-note {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(40, 167, 69, 0.1);
+      border-left: 4px solid #28a745;
+      border-radius: 4px;
+      
+      i {
+        color: #28a745;
+        font-size: 1.2rem;
+      }
+      
+      span {
+        color: #155724;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  /* Workflow Success Popup */
+  .workflow-success-popup {
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Error Popup */
+  .error-popup {
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Button Styling */
+  .payment-confirm-btn,
+  .success-confirm-btn {
+    border-radius: 8px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s ease !important;
+    
+    &:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+  }
+
+  .payment-cancel-btn,
+  .error-confirm-btn {
+    border-radius: 8px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    transition: all 0.3s ease !important;
+    
+    &:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+  }
+
+  /* Animation Keyframes */
+  @keyframes successPulse {
+    0% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* SweetAlert2 Icon Styling */
+  .swal2-icon.swal2-success {
+    border-color: #28a745 !important;
+    color: #28a745 !important;
+  }
+
+  .swal2-icon.swal2-error {
+    border-color: #dc3545 !important;
+    color: #dc3545 !important;
+  }
+
+  .swal2-icon.swal2-question {
+    border-color: #17a2b8 !important;
+    color: #17a2b8 !important;
+  }
+
+  /* Loading Animation */
+  .swal2-loading {
+    .swal2-loader {
+      border-color: #28a745 transparent #28a745 transparent !important;
+    }
+  }
+}

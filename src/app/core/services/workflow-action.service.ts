@@ -4,6 +4,7 @@ import { Observable, of, forkJoin } from 'rxjs';
 import { map, switchMap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { AccountService } from './account.service';  // Assuming same directory based on imports seen
+import { WorkflowService } from './workflow.service'; // Add workflow service
 import { EnaRequisitionService } from './ena-requisition.service'; // Assuming same directory
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service'; // Correct path verified
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service'; // Correct path verified
@@ -39,6 +40,7 @@ export class WorkflowActionService {
   constructor(
     private http: HttpClient,
     private accountService: AccountService,
+    private workflowService: WorkflowService, // Add workflow service
     private supplyChainService: SupplyChainService,
     private requisitionService: EnaRequisitionService,
     private hologramService: HologramDataService
@@ -46,15 +48,98 @@ export class WorkflowActionService {
 
   /**
    * Get available actions for a specific application/stage
+   * PRODUCTION READY: Fetches actions dynamically from workflow transitions
    */
   getAvailableActions(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
+    console.log('🔧 WORKFLOW ACTION SERVICE: getAvailableActions called with:', data);
+    
     // 1. If actions are already provided (passed from UnifiedSupplyChainView), use them
     if (data.allowedActionConfigs && data.allowedActionConfigs.length > 0) {
+      console.log('🔧 WORKFLOW ACTION SERVICE: Using provided action configs:', data.allowedActionConfigs);
       return of(data.allowedActionConfigs);
     }
 
-    // 2. Otherwise, fetch the entity from backend
-    return this.fetchActionsFromBackend(data);
+    // 2. Get current user role to filter transitions
+    return this.accountService.getAuthenticationState().pipe(
+      switchMap(user => {
+        console.log('🔧 WORKFLOW ACTION SERVICE: Current user:', user);
+        
+        if (!user) {
+          console.log('🔧 WORKFLOW ACTION SERVICE: No user found, returning empty actions');
+          return of([]);
+        }
+
+        // Determine user role from authentication
+        const userRole = this.getUserRole(user);
+        console.log('🔧 WORKFLOW ACTION SERVICE: Determined user role:', userRole);
+        
+        // If we have workflow and stage information, use dynamic transitions
+        if (data.workflowId && data.currentStage) {
+          const currentStageId = typeof data.currentStage === 'number' ? data.currentStage : data.currentStage.id;
+          
+          console.log('🔧 WORKFLOW ACTION SERVICE: Fetching transitions for:', {
+            workflowId: data.workflowId,
+            currentStageId: currentStageId,
+            userRole: userRole
+          });
+          
+          return this.workflowService.getAvailableActionsForStage(
+            data.workflowId,
+            currentStageId,
+            userRole
+          );
+        }
+
+        console.log('🔧 WORKFLOW ACTION SERVICE: Missing workflowId or currentStage, falling back to backend fetch');
+        // Fallback: Try to fetch from backend entity
+        return this.fetchActionsFromBackend(data);
+      }),
+      catchError(error => {
+        console.error('🔧 WORKFLOW ACTION SERVICE: Error getting available actions:', error);
+        return of([]);
+      })
+    );
+  }
+
+  /**
+   * Get user role from authentication state
+   */
+  private getUserRole(user: any): string {
+    if (!user) return 'licensee';
+
+    const authorities = user.authorities || user.roles || [];
+    
+    // Map user authorities to workflow roles
+    const roleMapping: { [key: string]: string } = {
+      'licensee': 'licensee',
+      'permit_section': 'permit-section',
+      'permit-section': 'permit-section',
+      'level_1': 'commissioner',
+      'level_2': 'commissioner', 
+      'level_3': 'commissioner',
+      'level_4': 'commissioner',
+      'level_5': 'commissioner',
+      'site_admin': 'commissioner',
+      'commissioner': 'commissioner',
+      'it_cell': 'it_cell',
+      'it-cell': 'it_cell',
+      'officer_in_charge': 'officer_in_charge',
+      'officer-in-charge': 'officer_in_charge',
+      'officer-incharge': 'officer_in_charge'
+    };
+
+    // Find the first matching role
+    for (const authority of authorities) {
+      const roleName = typeof authority === 'string' ? authority : authority.name;
+      const normalizedRole = roleName.toLowerCase().replace(/-/g, '_').replace(/ /g, '_');
+      
+      if (roleMapping[normalizedRole]) {
+        return roleMapping[normalizedRole];
+      }
+    }
+
+    // Default to licensee if no specific role found
+    return 'licensee';
   }
 
   private fetchActionsFromBackend(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
@@ -74,12 +159,12 @@ export class WorkflowActionService {
         );
 
       case 'revalidation':
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidation/${id}/`).pipe(
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${id}/`).pipe(
           map((res: any) => res.allowed_action_configs || []),
           catchError(() => of([]))
         );
       case 'cancellation':
-        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation/${id}/`).pipe(
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`).pipe(
           map((res: any) => res.allowed_action_configs || []),
           catchError(() => of([]))
         );
@@ -119,23 +204,35 @@ export class WorkflowActionService {
 
     switch (data.type) {
       case 'requisition':
-        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisition/${data.id}/perform_action/`;
+        // Requisition uses APIView with hyphen
+        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-requisitions/${data.id}/perform-action/`;
         break;
       case 'revalidation':
-        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidation/${data.id}/perform_action/`;
+        // Revalidation uses ViewSet with underscore
+        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-revalidations/${data.id}/perform_action/`;
         break;
       case 'cancellation':
-        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation/${data.id}/perform_action/`;
+        // Cancellation uses ViewSet with underscore
+        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${data.id}/perform_action/`;
         break;
       case 'transit':
-        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/${data.id}/perform_action/`;
+        // Transit permits use APIView with action/<id>/ pattern
+        endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/action/${data.id}/`;
         break;
       case 'hologram':
       case 'hologram-procurement':
-        // Assuming procurement 
+        // Hologram uses ViewSet with underscore - procurement endpoint
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
     }
+
+    console.log('🔧 WORKFLOW ACTION SERVICE: Executing action:', {
+      type: data.type,
+      id: data.id,
+      action: actionName,
+      endpoint: endpoint,
+      payload: payload
+    });
 
     return this.http.post(endpoint, payload);
   }

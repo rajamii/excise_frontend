@@ -1,12 +1,59 @@
 <!-- Professional Unified Dashboard Template -->
 <div class="dashboard-container">
 
+  <!-- Dashboard Header -->
+  <div class="dashboard-header" *ngIf="!selectedSupplyChainSection">
+    <div class="header-content">
+      <div class="header-left">
+        <div class="dashboard-title">
+          <mat-icon>dashboard</mat-icon>
+          <span>{{ getDashboardTitle() }}</span>
+        </div>
+        <div class="user-info">
+          <span class="welcome-text">Welcome back, {{ currentUser?.fullName || 'User' }}</span>
+          <span class="role-badge">{{ currentUser?.role?.displayName || 'User' }}</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-actions">
+          <button mat-icon-button class="notification-btn" [matBadge]="getNotificationCount()" matBadgeColor="warn" [matBadgeHidden]="getNotificationCount() === 0">
+            <mat-icon>notifications</mat-icon>
+          </button>
+          <button mat-icon-button (click)="onDashboardRefresh()" class="refresh-btn">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          <div class="user-avatar">
+            <mat-icon>account_circle</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Dashboard Content Wrapper -->
   <div class="dashboard-content">
 
+    <!-- Quick Actions Bar (for specific roles) -->
+    <div class="quick-actions-bar" *ngIf="getQuickActions().length > 0 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <div class="quick-actions-title">
+        <mat-icon>flash_on</mat-icon>
+        <span>Quick Actions</span>
+      </div>
+      <div class="quick-actions-grid">
+        <button mat-raised-button 
+                *ngFor="let action of getQuickActions()" 
+                [color]="action.color"
+                (click)="executeQuickAction(action)"
+                class="quick-action-btn">
+          <mat-icon>{{ action.icon }}</mat-icon>
+          <span>{{ action.label }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Filter Container: Application Type Filter (for roles that need it) -->
     <div class="filter-container"
-      *ngIf="(currentUser?.roleId === 19 || currentUser?.roleId === 8) && !selectedSupplyChainSection">
+      *ngIf="(currentUser?.roleId === 19 || currentUser?.roleId === 8) && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <mat-form-field appearance="outline" class="application-type-filter">
         <mat-label>Filter by Application Type</mat-label>
         <mat-icon matPrefix>filter_list</mat-icon>
@@ -159,45 +206,187 @@
     <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
     <div class="stats-container" [class.loading]="isLoading"
       *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
-      <!-- Applied Stat Card -->
-      <mat-card class="stat-card applied" (click)="showTable('applied')">
-        <div class="circle-icon blue-bg">
-          <mat-icon>send</mat-icon>
-        </div>
-        <div class="value">{{ dashboardCounts.applied }}</div>
-        <div class="label">Applied</div>
-      </mat-card>
+      
+      <!-- Dynamic Stats Cards based on role -->
+      <div class="stats-grid">
+        <!-- Applied Stat Card -->
+        <mat-card class="stat-card applied" (click)="showTable('applied')" *ngIf="shouldShowStatCard('applied')">
+          <div class="card-header">
+            <div class="circle-icon blue-bg">
+              <mat-icon>send</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('applied') > 0" [class.negative]="getStatTrend('applied') < 0">
+              <mat-icon>{{ getStatTrend('applied') > 0 ? 'trending_up' : getStatTrend('applied') < 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+              <span>{{ Math.abs(getStatTrend('applied')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.applied }}</div>
+            <div class="label">Applied</div>
+            <div class="sub-info">{{ getStatSubInfo('applied') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
 
-      <!-- Pending Stat Card - Includes awaiting payment -->
-      <mat-card class="stat-card pending" (click)="showTable('pending')">
-        <div class="circle-icon yellow-bg">
-          <mat-icon>schedule</mat-icon>
-        </div>
-        <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
-        <div class="label">Pending</div>
-        <!-- Show breakdown if there are awaiting payment items -->
-        <div class="sub-label" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
-          <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
-        </div>
-      </mat-card>
+        <!-- Pending Stat Card - Includes awaiting payment -->
+        <mat-card class="stat-card pending" (click)="showTable('pending')" *ngIf="shouldShowStatCard('pending')">
+          <div class="card-header">
+            <div class="circle-icon yellow-bg">
+              <mat-icon>schedule</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('pending') > 0" [class.negative]="getStatTrend('pending') < 0">
+              <mat-icon>{{ getStatTrend('pending') > 0 ? 'trending_up' : getStatTrend('pending') < 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+              <span>{{ Math.abs(getStatTrend('pending')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+            <div class="label">Pending</div>
+            <div class="sub-info" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+              <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+            </div>
+            <div class="sub-info" *ngIf="!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0">
+              {{ getStatSubInfo('pending') }}
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
 
-      <!-- Approved Stat Card -->
-      <mat-card class="stat-card approved" (click)="showTable('approved')">
-        <div class="circle-icon green-bg">
-          <mat-icon>check_circle</mat-icon>
-        </div>
-        <div class="value">{{ dashboardCounts.approved }}</div>
-        <div class="label">Approved</div>
-      </mat-card>
+        <!-- Approved Stat Card -->
+        <mat-card class="stat-card approved" (click)="showTable('approved')" *ngIf="shouldShowStatCard('approved')">
+          <div class="card-header">
+            <div class="circle-icon green-bg">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_up</mat-icon>
+              <span>{{ getStatTrend('approved') }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.approved }}</div>
+            <div class="label">Approved</div>
+            <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
 
-      <!-- Rejected Stat Card -->
-      <mat-card class="stat-card rejected" (click)="showTable('rejected')">
-        <div class="circle-icon red-bg">
-          <mat-icon>cancel</mat-icon>
+        <!-- Rejected Stat Card -->
+        <mat-card class="stat-card rejected" (click)="showTable('rejected')" *ngIf="shouldShowStatCard('rejected')">
+          <div class="card-header">
+            <div class="circle-icon red-bg">
+              <mat-icon>cancel</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('rejected') < 0" [class.negative]="getStatTrend('rejected') > 0">
+              <mat-icon>{{ getStatTrend('rejected') > 0 ? 'trending_up' : getStatTrend('rejected') < 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+              <span>{{ Math.abs(getStatTrend('rejected')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.rejected }}</div>
+            <div class="label">Rejected</div>
+            <div class="sub-info">{{ getStatSubInfo('rejected') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Role-specific additional cards -->
+        <mat-card class="stat-card custom" *ngFor="let customStat of getCustomStats()" (click)="handleCustomStatClick(customStat)">
+          <div class="card-header">
+            <div class="circle-icon" [ngClass]="customStat.colorClass">
+              <mat-icon>{{ customStat.icon }}</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="customStat.trend > 0" [class.negative]="customStat.trend < 0">
+              <mat-icon>{{ customStat.trend > 0 ? 'trending_up' : customStat.trend < 0 ? 'trending_down' : 'trending_flat' }}</mat-icon>
+              <span>{{ Math.abs(customStat.trend) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ customStat.value }}</div>
+            <div class="label">{{ customStat.label }}</div>
+            <div class="sub-info">{{ customStat.subInfo }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">{{ customStat.actionText }} →</span>
+          </div>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Performance Metrics Section (for admin roles) -->
+    <div class="performance-metrics" *ngIf="shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <div class="metrics-header">
+        <h3>
+          <mat-icon>analytics</mat-icon>
+          Performance Overview
+        </h3>
+        <div class="metrics-period">
+          <mat-form-field appearance="outline">
+            <mat-select [(value)]="selectedMetricsPeriod" (selectionChange)="onMetricsPeriodChange()">
+              <mat-option value="today">Today</mat-option>
+              <mat-option value="week">This Week</mat-option>
+              <mat-option value="month">This Month</mat-option>
+              <mat-option value="quarter">This Quarter</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
-        <div class="value">{{ dashboardCounts.rejected }}</div>
-        <div class="label">Rejected</div>
-      </mat-card>
+      </div>
+      
+      <div class="metrics-grid">
+        <div class="metric-card" *ngFor="let metric of getPerformanceMetrics()">
+          <div class="metric-icon">
+            <mat-icon [style.color]="metric.color">{{ metric.icon }}</mat-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metric.value }}</div>
+            <div class="metric-label">{{ metric.label }}</div>
+            <div class="metric-change" [class.positive]="metric.change > 0" [class.negative]="metric.change < 0">
+              <mat-icon>{{ metric.change > 0 ? 'arrow_upward' : metric.change < 0 ? 'arrow_downward' : 'remove' }}</mat-icon>
+              <span>{{ Math.abs(metric.change) }}% from last {{ selectedMetricsPeriod }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity Feed (for all roles) -->
+    <div class="recent-activity" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
+      <div class="activity-header">
+        <h3>
+          <mat-icon>history</mat-icon>
+          Recent Activity
+        </h3>
+        <button mat-button color="primary" (click)="viewAllActivities()">View All</button>
+      </div>
+      
+      <div class="activity-list">
+        <div class="activity-item" *ngFor="let activity of getRecentActivities().slice(0, 5)">
+          <div class="activity-icon" [ngClass]="activity.type">
+            <mat-icon>{{ activity.icon }}</mat-icon>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">{{ activity.title }}</div>
+            <div class="activity-description">{{ activity.description }}</div>
+            <div class="activity-meta">
+              <span class="activity-time">{{ activity.timestamp | date:'short' }}</span>
+              <span class="activity-user" *ngIf="activity.user">by {{ activity.user }}</span>
+            </div>
+          </div>
+          <div class="activity-actions" *ngIf="activity.actions">
+            <button mat-icon-button *ngFor="let action of activity.actions" (click)="executeActivityAction(action, activity)">
+              <mat-icon>{{ action.icon }}</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Loading State -->

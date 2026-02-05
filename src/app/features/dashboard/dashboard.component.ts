@@ -6,6 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil, forkJoin, finalize } from 'rxjs';
 
@@ -59,6 +61,8 @@ import { OfficerInChargeDashboardComponent } from './role-components/officer-in-
     MatSelectModule,
     MatFormFieldModule,
     MatTabsModule,
+    MatBadgeModule,
+    MatProgressSpinnerModule,
     ApplicationTableComponent,
     // Supply Chain Components
     RequisitionComponent,
@@ -92,7 +96,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   dashboardConfig!: DashboardConfig;
-  currentUser!: User;
+  currentUser: User | null = null;
   dashboardData: any = {};
   isLoading = true;
   error: string | null = null;
@@ -107,6 +111,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
 
   selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'all';
+  selectedMetricsPeriod: 'today' | 'week' | 'month' | 'quarter' = 'week';
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
   pendingDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -118,6 +123,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
+
+  // Professional dashboard enhancements
+  previousCounts: DashboardCount = { applied: 0, pending: 0, approved: 0, rejected: 0 };
+  recentActivities: any[] = [];
+  performanceMetrics: any[] = [];
+  customStats: any[] = [];
+  quickActions: any[] = [];
 
   constructor(
     private roleService: RoleService,
@@ -132,6 +144,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.initializeDashboard();
     this.handleQueryParams();
+    this.initializeProfessionalFeatures();
+  }
+
+  private initializeProfessionalFeatures(): void {
+    // Initialize quick actions based on role
+    this.initializeQuickActions();
+    
+    // Initialize custom stats based on role
+    this.initializeCustomStats();
+    
+    // Load recent activities
+    this.loadRecentActivities();
+    
+    // Load performance metrics for admin roles
+    if (this.shouldShowPerformanceMetrics()) {
+      this.loadPerformanceMetrics();
+    }
   }
 
   ngOnDestroy() {
@@ -154,7 +183,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private initializeDashboard() {
     // Get current user from role service
-    this.currentUser = this.roleService.getCurrentUser()!;
+    this.currentUser = this.roleService.getCurrentUser();
 
     // If no current user in role service, try to get from account service
     if (!this.currentUser) {
@@ -327,7 +356,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return [9, 10, 12, 18].includes(roleId);
+    return roleId ? [9, 10, 12, 18].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {
@@ -473,9 +502,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     };
 
-    const titleFromRoleId = roleNames[this.currentUser.roleId];
+    const titleFromRoleId = roleNames[this.currentUser?.roleId || 0];
     if (titleFromRoleId) {
-      console.log('✅ Dashboard title from roleId:', this.currentUser.roleId, '→', titleFromRoleId);
+      console.log('✅ Dashboard title from roleId:', this.currentUser?.roleId, '→', titleFromRoleId);
       return titleFromRoleId;
     }
 
@@ -604,4 +633,439 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Remove the fallback method since we're using existing component
   // private showBasicWalletInfo(): void { ... }
+
+  // ========================================
+  // PROFESSIONAL DASHBOARD ENHANCEMENTS
+  // ========================================
+
+  // Notification system
+  getNotificationCount(): number {
+    const roleId = this.currentUser?.roleId;
+    if (!roleId) return 0;
+
+    // Calculate notifications based on role and pending items
+    let count = 0;
+    
+    // For admin roles, count items requiring attention
+    if (roleId && [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(roleId)) {
+      count += this.dashboardCounts.pending || 0;
+      count += this.dashboardCounts.awaitingPayment || 0;
+    }
+    
+    // For licensee roles, count rejected items and payment due
+    if (roleId && [8, 19].includes(roleId)) {
+      count += this.dashboardCounts.rejected || 0;
+      count += this.dashboardCounts.awaitingPayment || 0;
+    }
+
+    return Math.min(count, 99); // Cap at 99
+  }
+
+  // Quick Actions based on role
+  initializeQuickActions(): void {
+    const roleId = this.currentUser?.roleId;
+    this.quickActions = [];
+
+    switch (roleId) {
+      case 8: // Supply Chain
+      case 19: // Licensee
+        this.quickActions = [
+          { id: 'new-requisition', label: 'New Requisition', icon: 'add_circle', color: 'primary', action: () => this.navigateToSection('import-permit') },
+          { id: 'transit-permit', label: 'Transit Permit', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit-permit') },
+          { id: 'hologram-request', label: 'Hologram Request', icon: 'security', color: 'warn', action: () => this.navigateToSection('hologram-request-form') },
+          { id: 'payment-wallet', label: 'Payment & Wallet', icon: 'account_balance_wallet', color: 'primary', action: () => this.openWallet() }
+        ];
+        break;
+      
+      case 9: // Permit Section
+        this.quickActions = [
+          { id: 'review-permits', label: 'Review Permits', icon: 'assignment', color: 'primary', action: () => this.navigateToSection('requisition') },
+          { id: 'approve-transit', label: 'Transit Approvals', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit') },
+          { id: 'generate-report', label: 'Generate Report', icon: 'assessment', color: 'warn', action: () => this.generateReport() }
+        ];
+        break;
+      
+      case 10: // Commissioner
+        this.quickActions = [
+          { id: 'final-approvals', label: 'Final Approvals', icon: 'verified', color: 'primary', action: () => this.showTable('pending') },
+          { id: 'hologram-management', label: 'Hologram Management', icon: 'security', color: 'accent', action: () => this.navigateToSection('hologram') },
+          { id: 'system-reports', label: 'System Reports', icon: 'analytics', color: 'warn', action: () => this.generateSystemReport() }
+        ];
+        break;
+      
+      case 18: // Officer in Charge
+        this.quickActions = [
+          { id: 'hologram-register', label: 'Hologram Register', icon: 'book', color: 'primary', action: () => this.navigateToSection('hologram-register') },
+          { id: 'daily-entry', label: 'Daily Entry', icon: 'today', color: 'accent', action: () => this.navigateToSection('hologram-daily-entry') },
+          { id: 'stock-check', label: 'Stock Inventory', icon: 'inventory', color: 'warn', action: () => this.navigateToSection('stock-inventory') }
+        ];
+        break;
+      
+      case 12: // IT Cell
+        this.quickActions = [
+          { id: 'system-monitor', label: 'System Monitor', icon: 'monitor', color: 'primary', action: () => this.navigateToSection('system-monitoring') },
+          { id: 'user-management', label: 'User Management', icon: 'people', color: 'accent', action: () => this.manageUsers() },
+          { id: 'backup-system', label: 'System Backup', icon: 'backup', color: 'warn', action: () => this.initiateBackup() }
+        ];
+        break;
+    }
+  }
+
+  getQuickActions(): any[] {
+    return this.quickActions;
+  }
+
+  executeQuickAction(action: any): void {
+    if (action.action && typeof action.action === 'function') {
+      action.action();
+    }
+  }
+
+  // Custom Statistics based on role
+  initializeCustomStats(): void {
+    const roleId = this.currentUser?.roleId;
+    this.customStats = [];
+
+    switch (roleId) {
+      case 8: // Supply Chain
+      case 19: // Licensee
+        this.customStats = [
+          {
+            id: 'wallet-balance',
+            label: 'Wallet Balance',
+            value: '₹25,000',
+            icon: 'account_balance_wallet',
+            colorClass: 'purple-bg',
+            trend: 5,
+            subInfo: 'Available for payments',
+            actionText: 'Recharge'
+          },
+          {
+            id: 'active-permits',
+            label: 'Active Permits',
+            value: '12',
+            icon: 'verified',
+            colorClass: 'indigo-bg',
+            trend: 8,
+            subInfo: 'Valid permits',
+            actionText: 'View Details'
+          }
+        ];
+        break;
+      
+      case 9: // Permit Section
+        this.customStats = [
+          {
+            id: 'processing-time',
+            label: 'Avg Processing Time',
+            value: '3.2 days',
+            icon: 'schedule',
+            colorClass: 'orange-bg',
+            trend: -12,
+            subInfo: 'Improved efficiency',
+            actionText: 'View Metrics'
+          }
+        ];
+        break;
+      
+      case 10: // Commissioner
+        this.customStats = [
+          {
+            id: 'revenue-generated',
+            label: 'Revenue Generated',
+            value: '₹2.5M',
+            icon: 'monetization_on',
+            colorClass: 'green-bg',
+            trend: 15,
+            subInfo: 'This month',
+            actionText: 'View Report'
+          },
+          {
+            id: 'compliance-rate',
+            label: 'Compliance Rate',
+            value: '94.5%',
+            icon: 'verified_user',
+            colorClass: 'blue-bg',
+            trend: 3,
+            subInfo: 'System wide',
+            actionText: 'View Details'
+          }
+        ];
+        break;
+      
+      case 18: // Officer in Charge
+        this.customStats = [
+          {
+            id: 'hologram-stock',
+            label: 'Hologram Stock',
+            value: '1,250',
+            icon: 'inventory_2',
+            colorClass: 'teal-bg',
+            trend: -5,
+            subInfo: 'Units available',
+            actionText: 'Manage Stock'
+          }
+        ];
+        break;
+    }
+  }
+
+  getCustomStats(): any[] {
+    return this.customStats;
+  }
+
+  handleCustomStatClick(stat: any): void {
+    switch (stat.id) {
+      case 'wallet-balance':
+        this.openWallet();
+        break;
+      case 'active-permits':
+        this.showTable('approved');
+        break;
+      case 'processing-time':
+        this.generateReport();
+        break;
+      case 'revenue-generated':
+        this.generateSystemReport();
+        break;
+      case 'compliance-rate':
+        this.viewComplianceDetails();
+        break;
+      case 'hologram-stock':
+        this.navigateToSection('stock-inventory');
+        break;
+      default:
+        console.log('Custom stat clicked:', stat);
+    }
+  }
+
+  // Statistics display logic
+  shouldShowStatCard(type: string): boolean {
+    const roleId = this.currentUser?.roleId;
+    
+    // All roles can see basic stats
+    if (['applied', 'pending', 'approved', 'rejected'].includes(type)) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  getStatTrend(type: string): number {
+    // Mock trend data - in real app, this would come from backend
+    const trends: { [key: string]: number } = {
+      applied: 12,
+      pending: -8,
+      approved: 15,
+      rejected: -5
+    };
+    
+    return trends[type] || 0;
+  }
+
+  getStatSubInfo(type: string): string {
+    const roleId = this.currentUser?.roleId;
+    
+    switch (type) {
+      case 'applied':
+        return 'New submissions';
+      case 'pending':
+        return roleId === 10 ? 'Awaiting your review' : 'Under review';
+      case 'approved':
+        return 'Successfully processed';
+      case 'rejected':
+        return 'Require attention';
+      default:
+        return '';
+    }
+  }
+
+  // Performance Metrics
+  shouldShowPerformanceMetrics(): boolean {
+    const roleId = this.currentUser?.roleId;
+    // Show for admin roles
+    return roleId ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(roleId) : false;
+  }
+
+  loadPerformanceMetrics(): void {
+    // Mock performance data - in real app, this would come from backend
+    const roleId = this.currentUser?.roleId;
+    
+    this.performanceMetrics = [
+      {
+        label: 'Applications Processed',
+        value: '156',
+        icon: 'assignment_turned_in',
+        color: '#4CAF50',
+        change: 12
+      },
+      {
+        label: 'Average Processing Time',
+        value: '2.3 days',
+        icon: 'schedule',
+        color: '#FF9800',
+        change: -8
+      },
+      {
+        label: 'Success Rate',
+        value: '94.2%',
+        icon: 'trending_up',
+        color: '#2196F3',
+        change: 3
+      },
+      {
+        label: 'User Satisfaction',
+        value: '4.7/5',
+        icon: 'star',
+        color: '#9C27B0',
+        change: 5
+      }
+    ];
+
+    // Customize based on role
+    if (roleId === 10) { // Commissioner
+      this.performanceMetrics.push({
+        label: 'Revenue Generated',
+        value: '₹2.5M',
+        icon: 'monetization_on',
+        color: '#4CAF50',
+        change: 18
+      });
+    }
+  }
+
+  getPerformanceMetrics(): any[] {
+    return this.performanceMetrics;
+  }
+
+  onMetricsPeriodChange(): void {
+    this.loadPerformanceMetrics();
+  }
+
+  // Recent Activities
+  loadRecentActivities(): void {
+    // Mock activity data - in real app, this would come from backend
+    const roleId = this.currentUser?.roleId;
+    
+    this.recentActivities = [
+      {
+        id: 1,
+        type: 'approval',
+        icon: 'check_circle',
+        title: 'Application Approved',
+        description: 'Transit permit TP001/2024 has been approved',
+        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+        user: 'Commissioner Office',
+        actions: [
+          { id: 'view', icon: 'visibility', label: 'View' }
+        ]
+      },
+      {
+        id: 2,
+        type: 'submission',
+        icon: 'send',
+        title: 'New Application Submitted',
+        description: 'Requisition REQ003/2024 submitted for review',
+        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+        user: 'ABC Distillery',
+        actions: [
+          { id: 'review', icon: 'rate_review', label: 'Review' }
+        ]
+      },
+      {
+        id: 3,
+        type: 'payment',
+        icon: 'payment',
+        title: 'Payment Received',
+        description: 'Payment of ₹15,000 received for application NL002/2024',
+        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+        user: 'XYZ Licensee'
+      },
+      {
+        id: 4,
+        type: 'rejection',
+        icon: 'cancel',
+        title: 'Application Rejected',
+        description: 'Hologram request HR001/2024 rejected due to incomplete documents',
+        timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8 hours ago
+        user: 'Permit Section',
+        actions: [
+          { id: 'details', icon: 'info', label: 'Details' }
+        ]
+      }
+    ];
+
+    // Filter activities based on role permissions
+    if (roleId && [8, 19].includes(roleId)) { // Licensee roles
+      this.recentActivities = this.recentActivities.filter(activity => 
+        ['approval', 'rejection', 'payment'].includes(activity.type)
+      );
+    }
+  }
+
+  getRecentActivities(): any[] {
+    return this.recentActivities;
+  }
+
+  executeActivityAction(action: any, activity: any): void {
+    switch (action.id) {
+      case 'view':
+      case 'details':
+        this.viewActivityDetails(activity);
+        break;
+      case 'review':
+        this.reviewApplication(activity);
+        break;
+      default:
+        console.log('Activity action:', action, activity);
+    }
+  }
+
+  viewAllActivities(): void {
+    // Navigate to full activity log
+    console.log('Navigate to full activity log');
+  }
+
+  // Helper methods for actions
+  private navigateToSection(section: string): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section } });
+  }
+
+  private generateReport(): void {
+    console.log('Generate report functionality');
+    // Implement report generation
+  }
+
+  private generateSystemReport(): void {
+    console.log('Generate system report functionality');
+    // Implement system report generation
+  }
+
+  private manageUsers(): void {
+    console.log('User management functionality');
+    // Navigate to user management
+  }
+
+  private initiateBackup(): void {
+    console.log('System backup functionality');
+    // Implement backup functionality
+  }
+
+  private viewComplianceDetails(): void {
+    console.log('View compliance details');
+    // Navigate to compliance dashboard
+  }
+
+  private viewActivityDetails(activity: any): void {
+    console.log('View activity details:', activity);
+    // Show activity details modal or navigate
+  }
+
+  private reviewApplication(activity: any): void {
+    console.log('Review application:', activity);
+    // Navigate to application review
+  }
+
+  // Add Math to component for template access
+  Math = Math;
 }

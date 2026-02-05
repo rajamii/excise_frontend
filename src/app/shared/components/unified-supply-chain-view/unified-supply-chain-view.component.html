@@ -54,10 +54,14 @@
                     <div class="col-md-6">
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Application Details</h6>
-                            <p><strong>Reference No:</strong> {{ applicationData.referenceNo && applicationData.referenceNo.trim() ? applicationData.referenceNo : 'Not available' }}</p>
+                            <p><strong>Reference No:</strong> {{ applicationData.referenceNo &&
+                                applicationData.referenceNo.trim() ? applicationData.referenceNo : 'Not available' }}
+                            </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
-                            <p><strong>Distillery:</strong> {{ applicationData.distilleryName && applicationData.distilleryName.trim() ? applicationData.distilleryName : 'Not specified' }}</p>
+                            <p><strong>Distillery:</strong> {{ applicationData.distilleryName &&
+                                applicationData.distilleryName.trim() ? applicationData.distilleryName : 'Not specified'
+                                }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -81,7 +85,7 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
-                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                    <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Quantity per Permit</td>
@@ -101,7 +105,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Purpose</td>
-                                    <td>{{ getPurposeName(applicationData.purpose || '') }}</td>
+                                    <td>{{ applicationData.purpose || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Amount Paid</td>
@@ -119,15 +123,18 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
-                                    <td>{{ applicationData.liftedFrom && applicationData.liftedFrom.trim() ? applicationData.liftedFrom : 'Not specified' }}</td>
+                                    <td>{{ applicationData.liftedFrom && applicationData.liftedFrom.trim() ?
+                                        applicationData.liftedFrom : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Via Route</td>
-                                    <td>{{ applicationData.viaRoute && applicationData.viaRoute.trim() ? applicationData.viaRoute : 'Not specified' }}</td>
+                                    <td>{{ applicationData.viaRoute && applicationData.viaRoute.trim() ?
+                                        applicationData.viaRoute : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Checkpost Entry</td>
-                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ? applicationData.checkpostEntry : 'Not specified' }}</td>
+                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ?
+                                        applicationData.checkpostEntry : 'Not specified' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -196,7 +203,7 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
-                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                    <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Original Quantity</td>
@@ -212,7 +219,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Lifted From</td>
-                                    <td>{{ getDistilleryName(applicationData.liftedFrom || '') }}</td>
+                                    <td>{{ applicationData.liftedFrom || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Via Route</td>
@@ -220,11 +227,11 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Checkpost Entry</td>
-                                    <td>{{ getCheckpostName(applicationData.checkpostEntry || '') }}</td>
+                                    <td>{{ applicationData.checkpostEntry || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Original Purpose</td>
-                                    <td>{{ getPurposeName(applicationData.purpose || '') }}</td>
+                                    <td>{{ applicationData.purpose || 'Not specified' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -241,7 +248,7 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Original Permit No</td>
-                                    <td>{{ applicationData.referenceNo }}</td>
+                                    <td>{{ applicationData.originalPermitNo }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Original Issue Date</td>
@@ -305,7 +312,7 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Bulk Spirit Type</td>
-                                    <td>{{ getBulkSpiritTypeName(applicationData.bulkSpiritType || '') }}</td>
+                                    <td>{{ applicationData.bulkSpiritType || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Quantity</td>
@@ -321,7 +328,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Lifted From</td>
-                                    <td>{{ getDistilleryName(applicationData.liftedFrom || '') }}</td>
+                                    <td>{{ applicationData.liftedFrom || 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Via Route</td>
@@ -329,7 +336,7 @@
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Purpose</td>
-                                    <td>{{ getPurposeName(applicationData.purpose || '') }}</td>
+                                    <td>{{ applicationData.purpose || 'Not specified' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -382,39 +389,48 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">From Location</td>
-                                    <td>{{ applicationData.fromLocation && applicationData.fromLocation.trim() ? applicationData.fromLocation : 'Not specified' }}</td>
+                                    <td>{{ applicationData.fromLocation && applicationData.fromLocation.trim() ?
+                                        applicationData.fromLocation : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">To Location</td>
-                                    <td>{{ applicationData.toLocation && applicationData.toLocation.trim() ? applicationData.toLocation : 'Not specified' }}</td>
+                                    <td>{{ applicationData.toLocation && applicationData.toLocation.trim() ?
+                                        applicationData.toLocation : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Route Details</td>
-                                    <td>{{ applicationData.routeDetails && applicationData.routeDetails.trim() ? applicationData.routeDetails : 'Not specified' }}</td>
+                                    <td>{{ applicationData.routeDetails && applicationData.routeDetails.trim() ?
+                                        applicationData.routeDetails : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Entry Checkpost</td>
-                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ? applicationData.checkpostEntry : 'Not specified' }}</td>
+                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ?
+                                        applicationData.checkpostEntry : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Exit Checkpost</td>
-                                    <td>{{ applicationData.checkpostExit && applicationData.checkpostExit.trim() ? applicationData.checkpostExit : 'Not specified' }}</td>
+                                    <td>{{ applicationData.checkpostExit && applicationData.checkpostExit.trim() ?
+                                        applicationData.checkpostExit : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Vehicle Number</td>
-                                    <td>{{ applicationData.vehicleNumber && applicationData.vehicleNumber.trim() ? applicationData.vehicleNumber : 'Not specified' }}</td>
+                                    <td>{{ applicationData.vehicleNumber && applicationData.vehicleNumber.trim() ?
+                                        applicationData.vehicleNumber : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Driver Name</td>
-                                    <td>{{ applicationData.driverName && applicationData.driverName.trim() ? applicationData.driverName : 'Not specified' }}</td>
+                                    <td>{{ applicationData.driverName && applicationData.driverName.trim() ?
+                                        applicationData.driverName : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Driver License</td>
-                                    <td>{{ applicationData.driverLicense && applicationData.driverLicense.trim() ? applicationData.driverLicense : 'Not specified' }}</td>
+                                    <td>{{ applicationData.driverLicense && applicationData.driverLicense.trim() ?
+                                        applicationData.driverLicense : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Transporter Name</td>
-                                    <td>{{ applicationData.transporterName && applicationData.transporterName.trim() ? applicationData.transporterName : 'Not specified' }}</td>
+                                    <td>{{ applicationData.transporterName && applicationData.transporterName.trim() ?
+                                        applicationData.transporterName : 'Not specified' }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -443,21 +459,21 @@
                             </thead>
                             <tbody>
                                 @if (applicationData.transitProducts && applicationData.transitProducts.length > 0) {
-                                    @for (product of applicationData.transitProducts; track product.id) {
-                                    <tr>
-                                        <td>{{ product.brand }}</td>
-                                        <td>{{ product.sizeML }}ml</td>
-                                        <td>{{ product.bottleType }}</td>
-                                        <td>{{ product.liquorType }}</td>
-                                        <td>{{ product.brandOwner }}</td>
-                                        <td>{{ product.manufacturingUnit }}</td>
-                                        <td>{{ product.cases }}</td>
-                                        <td>₹{{ product.educationCess }}</td>
-                                        <td>₹{{ product.exciseDuty }}</td>
-                                        <td>₹{{ product.additionalExcise }}</td>
-                                        <td class="fw-bold">₹{{ product.totalAmount }}</td>
-                                    </tr>
-                                    }
+                                @for (product of applicationData.transitProducts; track product.id) {
+                                <tr>
+                                    <td>{{ product.brand }}</td>
+                                    <td>{{ product.sizeML }}ml</td>
+                                    <td>{{ product.bottleType }}</td>
+                                    <td>{{ product.liquorType }}</td>
+                                    <td>{{ product.brandOwner }}</td>
+                                    <td>{{ product.manufacturingUnit }}</td>
+                                    <td>{{ product.cases }}</td>
+                                    <td>₹{{ product.educationCess }}</td>
+                                    <td>₹{{ product.exciseDuty }}</td>
+                                    <td>₹{{ product.additionalExcise }}</td>
+                                    <td class="fw-bold">₹{{ product.totalAmount }}</td>
+                                </tr>
+                                }
                                 } @else {
                                 <!-- Fallback for single product display -->
                                 <tr>
@@ -481,22 +497,27 @@
                     <!-- Summary Totals -->
                     <div class="row mt-3">
                         <div class="col-md-3">
-                            <p><strong>Total Cases:</strong> <span class="text-info">{{ applicationData.quantity }}</span></p>
+                            <p><strong>Total Cases:</strong> <span class="text-info">{{ applicationData.quantity
+                                    }}</span></p>
                         </div>
                         <div class="col-md-3">
-                            <p><strong>Education Cess Total:</strong> <span class="text-info">₹{{ applicationData.educationCess }}</span></p>
+                            <p><strong>Education Cess Total:</strong> <span class="text-info">₹{{
+                                    applicationData.educationCess }}</span></p>
                         </div>
                         <div class="col-md-3">
-                            <p><strong>Excise Duty Total:</strong> <span class="text-warning">₹{{ applicationData.exciseDuty }}</span></p>
+                            <p><strong>Excise Duty Total:</strong> <span class="text-warning">₹{{
+                                    applicationData.exciseDuty }}</span></p>
                         </div>
                         <div class="col-md-3">
-                            <p><strong>Additional Excise Total:</strong> <span class="text-danger">₹{{ applicationData.additionalExcise }}</span></p>
+                            <p><strong>Additional Excise Total:</strong> <span class="text-danger">₹{{
+                                    applicationData.additionalExcise }}</span></p>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-12 text-center">
-                            <h5><strong>Grand Total: <span class="text-success">₹{{ applicationData.brAmount }}</span></strong></h5>
+                            <h5><strong>Grand Total: <span class="text-success">₹{{ applicationData.brAmount
+                                        }}</span></strong></h5>
                         </div>
                     </div>
                 </div>
@@ -608,14 +629,6 @@
                 </div>
                 }
                 }
-
-                <!-- Action Buttons -->
-                <div class="d-flex justify-content-center mt-4 mb-3" *ngIf="hasAvailableActions()">
-                    <app-unified-action-buttons *ngIf="applicationData" [item]="applicationData"
-                        [itemType]="applicationType" [context]="getUserContext()" [displayMode]="'detailed'"
-                        (actionClicked)="onActionButtonClick($event)">
-                    </app-unified-action-buttons>
-                </div>
 
                 <!-- Print Button -->
                 <div class="no-print d-flex justify-content-center mt-2">
