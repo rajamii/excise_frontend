@@ -1,11 +1,12 @@
-// licensee-dashboard.component.ts
-import { Component, OnInit } from '@angular/core';
+// licensee-dashboard.component.ts - FIXED VERSION
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { DashboardCount } from '../../../core/models/dashboard.model';
 import { ApplicationTableComponent } from './application-table/application-table.component';
-import { forkJoin } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { forkJoin, Subscription } from 'rxjs';
+import { finalize, filter } from 'rxjs/operators';
 import { UnifiedDashboardService } from '../../../core/services/unified-dashboard.service';
 import { UnifiedApplication } from '../../../core/models/unified-application.model';
 import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
@@ -21,7 +22,7 @@ import Swal from 'sweetalert2';
   templateUrl: './licensee-dashboard.component.html',
   styleUrl: './licensee-dashboard.component.scss'
 })
-export class LicenseeDashboardComponent implements OnInit {
+export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   dashboardCounts: DashboardCount & { awaitingPayment?: number } = {
     applied: 0,
     pending: 0,
@@ -41,9 +42,12 @@ export class LicenseeDashboardComponent implements OnInit {
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
   activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
 
+  private routerSubscription?: Subscription;
+
   constructor(
     private salesmanBarmanService: SalesmanBarmanRegistrationService,
     private unifiedDashboardService: UnifiedDashboardService,
+    private router: Router
   ) { }
 
   showTable(table: 'applied' | 'pending' | 'approved' | 'rejected') {
@@ -55,7 +59,26 @@ export class LicenseeDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // ✅ Load data initially
     this.loadDashboardData();
+
+    // ✅ Subscribe to route changes to auto-refresh when navigating back to dashboard
+    this.routerSubscription = this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      // If we're on the dashboard route, reload the data
+      if (event.url.includes('/dashboard')) {
+        console.log('🔄 Dashboard: Auto-refreshing after navigation');
+        this.loadDashboardData();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    // ✅ Clean up subscription
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
   }
 
   onApplicationTypeChange(): void {
@@ -74,16 +97,16 @@ export class LicenseeDashboardComponent implements OnInit {
       .subscribe({
         next: (result) => {
 
+          // ✅ DEDUPLICATE ALL APPLICATIONS FIRST
           let filteredApplications = {
-            applied: result.applications.applied || [],
-            pending: result.applications.pending || [],
-            awaitingPayment: result.applications.awaitingPayment || [],
-            approved: result.applications.approved || [],
-            rejected: result.applications.rejected || []
+            applied: this.deduplicateApplications(result.applications.applied || []),
+            pending: this.deduplicateApplications(result.applications.pending || []),
+            awaitingPayment: this.deduplicateApplications(result.applications.awaitingPayment || []),
+            approved: this.deduplicateApplications(result.applications.approved || []),
+            rejected: this.deduplicateApplications(result.applications.rejected || [])
           };
 
           if (this.selectedApplicationType !== 'all') {
-
             filteredApplications = {
               applied: filteredApplications.applied.filter(app => app.type === this.selectedApplicationType),
               pending: filteredApplications.pending.filter(app => app.type === this.selectedApplicationType),
@@ -93,22 +116,38 @@ export class LicenseeDashboardComponent implements OnInit {
             };
           }
 
+          // ✅ FILTER OUT APPROVED LICENSES THAT HAVE ACTIVE RENEWALS
+          const renewedLicenseIds = this.getRenewedLicenseIds(
+            filteredApplications.applied,
+            filteredApplications.pending,
+            filteredApplications.awaitingPayment
+          );
+
+          const activeApproved = filteredApplications.approved.filter(app => {
+            const licenseId = this.extractLicenseId(app);
+            const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            if (isRenewed) {
+              console.log(`🔄 Dashboard: Hiding approved license ${licenseId} - has active renewal`);
+            }
+            return !isRenewed;
+          });
 
           // Store counts separately but combine pending display
           this.dashboardCounts = {
             applied: filteredApplications.applied.length,
             pending: filteredApplications.pending.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
-            approved: filteredApplications.approved.length,
+            approved: activeApproved.length, // ✅ Use filtered count
             rejected: filteredApplications.rejected.length
           };
 
+          console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied}, Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
 
           // Combine pending and awaiting payment into one datasource
           this.updateDataSources({
             applied: filteredApplications.applied,
             pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
-            approved: filteredApplications.approved,
+            approved: activeApproved, // ✅ Use filtered approved
             rejected: filteredApplications.rejected
           });
         },
@@ -118,6 +157,111 @@ export class LicenseeDashboardComponent implements OnInit {
           this.clearDataSources();
         }
       });
+  }
+
+  /**
+   * ✅ Deduplicate applications by applicationId
+   */
+  private deduplicateApplications(applications: UnifiedApplication[]): UnifiedApplication[] {
+    const seen = new Map<string, UnifiedApplication>();
+    
+    applications.forEach(app => {
+      const appId = app.applicationId || app.raw?.application_id || app.raw?.applicationId;
+      
+      if (appId && !seen.has(appId)) {
+        seen.set(appId, app);
+      } else if (appId) {
+        console.warn(`⚠️ Dashboard: Duplicate application removed: ${appId}`);
+      }
+    });
+    
+    return Array.from(seen.values());
+  }
+
+  /**
+   * ✅ Extract license ID from application
+   */
+  private extractLicenseId(app: UnifiedApplication): string | null {
+    const raw = app.raw || {};
+    
+    const possibleFields = [
+      raw.license_id,
+      raw.licenseId,
+      raw.license?.id,
+      raw.license?.license_id,
+      raw.issued_license_id,
+      raw.issuedLicenseId
+    ];
+    
+    for (const field of possibleFields) {
+      if (field && typeof field === 'string' && this.isValidLicenseId(field)) {
+        return field;
+      } else if (field && typeof field === 'object' && (field as any).id) {
+        const licenseId = (field as any).id;
+        if (this.isValidLicenseId(licenseId)) {
+          return licenseId;
+        }
+      }
+    }
+    
+    // Fallback: derive from application ID
+    const appId = app.applicationId;
+    if (appId) {
+      if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
+      if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
+      if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+    }
+    
+    return null;
+  }
+
+  /**
+   * ✅ Validate license ID format
+   */
+  private isValidLicenseId(licenseId: string): boolean {
+    if (!licenseId || typeof licenseId !== 'string') return false;
+    const trimmed = licenseId.trim();
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/'];
+    const hasValidPrefix = validPrefixes.some(prefix => trimmed.startsWith(prefix));
+    if (!hasValidPrefix) return false;
+    const parts = trimmed.split('/');
+    return parts.length >= 3 && trimmed.length >= 10;
+  }
+
+  /**
+   * ✅ Get renewed license IDs from applied/pending applications
+   */
+  private getRenewedLicenseIds(
+    applied: UnifiedApplication[], 
+    pending: UnifiedApplication[], 
+    awaitingPayment: UnifiedApplication[]
+  ): Set<string> {
+    const renewedIds = new Set<string>();
+    
+    [...applied, ...pending, ...awaitingPayment].forEach(app => {
+      const raw = app.raw || {};
+      
+      const renewedLicenseId = 
+        raw.renewalOf || 
+        raw.renewal_of || 
+        raw.renewalOfLicenseId || 
+        raw.renewal_of_license_id ||
+        raw.license ||
+        raw.license_id;
+      
+      if (renewedLicenseId) {
+        const licenseIdStr = typeof renewedLicenseId === 'string' 
+          ? renewedLicenseId 
+          : (renewedLicenseId.license_id || renewedLicenseId.id || String(renewedLicenseId));
+        
+        if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+          console.log(`🔄 Dashboard: Found renewed license ID: ${licenseIdStr}`);
+        }
+      }
+    });
+    
+    return renewedIds;
   }
 
   // Modified signature to accept combined pending data

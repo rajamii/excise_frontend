@@ -31,7 +31,7 @@ export interface FieldDisplay {
 })
 export class ViewApplicationComponent extends BaseComponent implements OnInit {
   resolveObjectionForm!: FormGroup;
-  application: any;
+  application: any = null;
   unifiedApp!: UnifiedApplication;
   tableType: string = '';
 
@@ -456,12 +456,13 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
   }
 
   fetchObjections() {
-    if (!this.application || !this.application.application_id) {
+    const appId = this.getApplicationId();
+    if (!this.application || !appId) {
       console.warn('Application not loaded yet, skipping objection fetch');
       return;
     }
 
-    this.unifiedService.getObjections(this.application.application_id).subscribe({
+    this.unifiedService.getObjections(appId).subscribe({
       next: (data) => {
         this.objections = data;
         this.initializeResolveForm();
@@ -539,7 +540,8 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
   }
 
   submitResolvedData() {
-    if (!this.application || !this.application.application_id) {
+    const appId = this.getApplicationId();
+    if (!this.application || !appId) {
       Swal.fire('Error', 'Application data not loaded yet.', 'error');
       return;
     }
@@ -579,7 +581,7 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
 
         const formData = FormDataUtil.buildFormData(transformed);
 
-        this.unifiedService.resolveObjections(this.application.application_id, this.application.type, formData).subscribe({
+        this.unifiedService.resolveObjections(appId, this.application.type, formData).subscribe({
           next: () => {
             Swal.fire('Success', 'Objections resolved and data updated.', 'success').then(() => {
               this.dialogRef.close(true);
@@ -592,12 +594,12 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
   }
 
   payLicenseFee() {
-    if (!this.application || !this.application.application_id) {
+    const appId = this.getApplicationId();
+    if (!this.application || !appId) {
       Swal.fire('Error', 'Application not loaded.', 'error');
       return;
     }
 
-    const appId = this.application.application_id;
     const appType = this.application.type;
 
     Swal.fire({
@@ -704,5 +706,64 @@ export class ViewApplicationComponent extends BaseComponent implements OnInit {
     } else if (this.application.type === 'salesman-barman') {
       Swal.fire('Info', 'Edit functionality for Salesman/Barman is coming soon.', 'info');
     }
+  
+}
+  /**
+   * Check if the field is a document/file field
+   */
+  /**
+   * Get application ID handling both snake_case and camelCase
+   */
+  getApplicationId(): string | null {
+    if (!this.application) return null;
+    return this.application.application_id || 
+           this.application.applicationId || 
+           null;
+  }
+
+    isDocumentField(fieldName: string, value: any): boolean {
+    if (!value) return false;
+    
+    const valueStr = value.toString().toLowerCase();
+    const fieldNameLower = fieldName.toLowerCase();
+    
+    // List of document-related keywords
+    const documentKeywords = [
+      'card', 'certificate', 'proof', 'noc', 'pan', 'aadhaar', 
+      'aadhar', 'cin', 'document', 'pdf', 'residential', 'passphoto', 'passport', 'photo'
+    ];
+    
+    // Check if field name contains document keywords
+    const isDocumentFieldName = documentKeywords.some(keyword => 
+      fieldNameLower.includes(keyword)
+    );
+    
+    // Check if value is a file path (contains /media/ or ends with common document extensions)
+    const isFilePath = valueStr.includes('/media/') || 
+                       valueStr.endsWith('.pdf') || 
+                       valueStr.endsWith('.jpg') || 
+                       valueStr.endsWith('.jpeg') || 
+                       valueStr.endsWith('.png') ||
+                       valueStr.endsWith('.doc') ||
+                       valueStr.endsWith('.docx');
+    
+    return isDocumentFieldName && isFilePath;
+  }
+
+  /**
+   * Get full URL for document
+   */
+  getDocumentUrl(value: any): string {
+    if (!value) return '#';
+    
+    const valueStr = value.toString();
+    
+    // If already a full URL, return as is
+    if (valueStr.startsWith('http://') || valueStr.startsWith('https://')) {
+      return valueStr;
+    }
+    
+    // Otherwise, prepend API base URL
+    return `${environment.apiBaseUrl}/${valueStr}`;
   }
 }

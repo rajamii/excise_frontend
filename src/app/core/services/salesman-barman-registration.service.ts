@@ -127,4 +127,14 @@ export class SalesmanBarmanRegistrationService {
   }> {
     return this.http.get<any>(`${this.baseUrl}/list-by-status/`);
   }
+
+  // ✅ RENEWAL METHOD
+  
+  /**
+   * Renew a salesman/barman license
+   */
+  renewLicense(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(licenseId);
+    return this.http.post(`${this.baseUrl}/renew/${encodedId}/`, {});
+  }
 }

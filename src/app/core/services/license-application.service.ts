@@ -762,4 +762,22 @@ export class LicenseApplicationService {
   getNewLicenseApplicationStats(): Observable<any> {
     return this.http.get(`${this.newLicenseUrl}/statistics/`);
   }
+
+  // ✅ RENEWAL METHODS
+  
+  /**
+   * Renew an old license application (license-renewal type)
+   */
+  renewLicense(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(licenseId);
+    return this.http.post(`${this.oldLicenseUrl}/renew/${encodedId}/`, {});
+  }
+
+  /**
+   * Renew a new license application (new-license type)
+   */
+  renewNewLicense(licenseId: string): Observable<any> {
+    const encodedId = encodeURIComponent(licenseId);
+    return this.http.post(`${this.newLicenseUrl}/renew/${encodedId}/`, {});
+  }
 }

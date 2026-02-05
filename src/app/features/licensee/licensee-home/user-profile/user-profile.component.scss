@@ -1,24 +1,165 @@
-mat-card{
+// user-profile.component.scss
+// Light theme version with full-width header
+
+// Global dialog styles - applies to this component's dialog
+:host ::ng-deep {
+  .mat-mdc-dialog-container {
+    padding: 0 !important;
+    
+    .mdc-dialog__surface {
+      padding: 0 !important;
+    }
+  }
+}
+
+mat-card {
+  max-width: 600px;
+  margin: 0;
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  padding: 0;
+
+  mat-card-header {
+    background-color: #1C2B78;
+    color: white;
+    padding: 1rem 1.5rem;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    mat-card-header{
-        background-color: #1C2B78;
-        color: #ffffff;
-        width: 100%;
-        padding: 8px;
-        font-size: 22px;
-        font-weight: 500;
-        align-items: center;
-        justify-content: space-between; 
+    font-size: 1.25rem;
+    font-weight: 500;
+    border-radius: 0;
+    width: 100%;
+
+    button {
+      color: white;
+
+      mat-icon {
+        font-size: 24px;
+      }
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
     }
-    mat-card-content{
-        padding: 20px;
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: 10px;
-        table{
-            td{
-                padding: 6px;
-            }
+  }
+
+  mat-card-content {
+    padding: 1.5rem;
+    background-color: #ffffff;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+
+      tr {
+        border-bottom: 1px solid #e5e7eb;
+
+        &:last-child {
+          border-bottom: none;
         }
+
+        td {
+          padding: 0.75rem 0.5rem;
+          vertical-align: top;
+
+          &:first-child {
+            width: 40%;
+            color: #4b5563;
+            font-weight: 500;
+          }
+
+          &:last-child {
+            width: 60%;
+            color: #1f2937;
+          }
+        }
+      }
     }
+
+    // Action buttons section
+    .action-buttons {
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #e5e7eb;
+      display: flex;
+      justify-content: center;
+
+      .my-licenses-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: #1C2B78;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(28, 43, 120, 0.3);
+        transition: all 0.3s ease;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+
+        &:hover {
+          background-color: #15206b;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 14px rgba(28, 43, 120, 0.4);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  mat-card {
+    mat-card-header {
+      font-size: 1.1rem;
+      padding: 0.75rem 1rem;
+    }
+
+    mat-card-content {
+      padding: 1rem;
+
+      table {
+        tr {
+          td {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.9rem;
+
+            &:first-child {
+              width: 45%;
+            }
+
+            &:last-child {
+              width: 55%;
+            }
+          }
+        }
+      }
+
+      .action-buttons {
+        margin-top: 1rem;
+        padding-top: 1rem;
+
+        .my-licenses-btn {
+          width: 100%;
+          padding: 0.75rem 1rem;
+          font-size: 0.95rem;
+        }
+      }
+    }
+  }
 }

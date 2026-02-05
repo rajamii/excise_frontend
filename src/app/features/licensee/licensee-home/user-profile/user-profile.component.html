@@ -1,3 +1,4 @@
+<!-- user-profile.component.html -->
 <!-- Only show card if component is loaded -->
 @if (loaded) {
   <mat-card>
@@ -58,6 +59,18 @@
             <td>{{ user.createdBy }}</td>
           </tr>
         </table>
+
+        <!-- My Licenses Button -->
+        <div class="action-buttons">
+          <button 
+            mat-raised-button 
+            color="primary" 
+            (click)="openMyLicenses()"
+            class="my-licenses-btn">
+            <mat-icon>workspace_premium</mat-icon>
+            My Licenses
+          </button>
+        </div>
       </mat-card-content>
     }
   </mat-card>

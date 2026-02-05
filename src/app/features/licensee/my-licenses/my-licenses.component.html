@@ -1,0 +1,130 @@
+<!-- my-licenses.component.html -->
+<mat-card class="licenses-dialog">
+  <!-- Card header with title and close button -->
+  <mat-card-header>
+    <div class="header-content">
+      <div class="title-section">
+        <mat-icon class="header-icon">workspace_premium</mat-icon>
+        <h2>My Licenses</h2>
+      </div>
+      <button mat-icon-button (click)="closeDialog()" class="close-btn">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Loading State -->
+    @if (isLoading) {
+      <div class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Loading your licenses...</p>
+      </div>
+    }
+
+    <!-- Empty State -->
+    @if (!isLoading && !hasData()) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">article</mat-icon>
+        <h3>No Approved Licenses</h3>
+        <p>You don't have any approved licenses yet.</p>
+      </div>
+    }
+
+    <!-- Licenses Table -->
+    @if (!isLoading && hasData()) {
+      <div class="table-container">
+        <mat-table [dataSource]="dataSource" class="licenses-table">
+          
+          <!-- Serial Number Column -->
+          <ng-container matColumnDef="slNo">
+            <mat-header-cell *matHeaderCellDef class="sl-no-col">Sl No</mat-header-cell>
+            <mat-cell *matCellDef="let element; let i = index" class="sl-no-col">
+              {{ i + 1 }}
+            </mat-cell>
+          </ng-container>
+
+          <!-- Application ID Column -->
+          <ng-container matColumnDef="applicationId">
+            <mat-header-cell *matHeaderCellDef class="app-id-col">License ID</mat-header-cell>
+            <mat-cell *matCellDef="let element" class="app-id-col">
+              <div class="application-id">
+                <mat-icon class="id-icon">badge</mat-icon>
+                {{ element.applicationId }}
+              </div>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Type Column -->
+          <ng-container matColumnDef="type">
+            <mat-header-cell *matHeaderCellDef>Type</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              <mat-chip class="type-chip">
+                {{ getTypeLabel(element.type) }}
+              </mat-chip>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Establishment/Name Column -->
+          <ng-container matColumnDef="establishmentName">
+            <mat-header-cell *matHeaderCellDef>Name</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              {{ getDisplayName(element) }}
+            </mat-cell>
+          </ng-container>
+
+          <!-- Approval Date Column -->
+          <ng-container matColumnDef="approvalDate">
+            <mat-header-cell *matHeaderCellDef>Approved On</mat-header-cell>
+            <mat-cell *matCellDef="let element">
+              <div class="date-cell">
+                <mat-icon class="date-icon">event</mat-icon>
+                {{ formatApprovalDate(element) }}
+              </div>
+            </mat-cell>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <mat-header-cell *matHeaderCellDef class="actions-col">Actions</mat-header-cell>
+            <mat-cell *matCellDef="let element" class="actions-col">
+              
+              <!-- View Button -->
+              <button 
+                mat-icon-button 
+                color="primary"
+                (click)="viewApplication(element)"
+                matTooltip="View Details"
+                class="action-btn view-btn">
+                <mat-icon>visibility</mat-icon>
+              </button>
+
+              <!-- Print Button -->
+              <button 
+                mat-icon-button 
+                class="action-btn print-btn"
+                (click)="printLicense(element)"
+                matTooltip="Print License">
+                <mat-icon>print</mat-icon>
+              </button>
+
+              <!-- ✅ Renew Button -->
+              <button 
+                mat-icon-button 
+                color="accent"
+                class="action-btn renew-btn"
+                (click)="renewLicense(element)"
+                matTooltip="Renew License">
+                <mat-icon>autorenew</mat-icon>
+              </button>
+
+            </mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+      </div>
+    }
+  </mat-card-content>
+</mat-card>
