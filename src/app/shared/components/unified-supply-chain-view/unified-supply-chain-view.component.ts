@@ -9,8 +9,9 @@ import Swal from 'sweetalert2';
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
-import { WorkflowService } from '../../../core/services/workflow.service';
-import { ActionConfigService, ActionButtonConfig } from '../../../core/services/action-config.service';
+import { ActionButtonConfig } from '../../../core/services/action-config.service';
+import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../services/unified-actions.service';
 
 // Constants
 import { 
@@ -178,7 +179,7 @@ interface FieldMapping {
 @Component({
     selector: 'app-unified-supply-chain-view',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, UnifiedActionButtonsComponent],
     templateUrl: './unified-supply-chain-view.component.html',
     styleUrls: ['./unified-supply-chain-view.component.scss']
 })
@@ -196,8 +197,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private enaRequisitionService: EnaRequisitionService,
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
-        private workflowService: WorkflowService,
-        private actionConfigService: ActionConfigService,
+        private unifiedActionsService: UnifiedActionsService,
         private snackBar: MatSnackBar,
         @Inject(PLATFORM_ID) platformId: Object
     ) {
@@ -350,7 +350,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     referenceNo: ['refNo', 'ref_no', 'referenceNo', 'reference_no'],
                     submissionDate: ['date', 'created_at', 'submission_date'],
                     status: ['status'],
-                    currentStage: ['currentStage', 'current_stage', 'stageId'],
+                    currentStage: ['currentStage', 'current_stage', 'stageId', 'stage_id'],
                     currentStageName: ['current_stage_name', 'currentStageName'],
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
                     distilleryName: ['manufacturingUnit', 'manufacturing_unit', 'licenseeName', 'licensee_name'],
@@ -450,16 +450,27 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             return;
         }
 
+        const rawCurrentStage = this.extractFieldValue(apiData, config.fieldMappings.currentStage || [])
+            ?? apiData.stage_id
+            ?? apiData.stageId;
+
+        const rawWorkflowId = this.extractFieldValue(apiData, config.fieldMappings.workflowId || [])
+            ?? apiData.workflow_id
+            ?? apiData.workflow;
+
+        const allowedActions = this.extractAllowedActions(apiData);
+        const allowedActionConfigs = this.extractAllowedActionConfigs(apiData);
+
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
             referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo) || '',
             submissionDate: this.parseDate(this.extractFieldValue(apiData, config.fieldMappings.submissionDate)),
             status: this.extractFieldValue(apiData, config.fieldMappings.status) || 'PENDING',
-            currentStage: this.extractFieldValue(apiData, config.fieldMappings.currentStage || []),
+            currentStage: this.parseId(rawCurrentStage),
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
-            workflowId: this.extractFieldValue(apiData, config.fieldMappings.workflowId || []) || config.workflowId,
-            allowedActions: [],
-            allowedActionConfigs: []
+            workflowId: this.parseId(rawWorkflowId) || config.workflowId,
+            allowedActions,
+            allowedActionConfigs
         };
 
         Object.keys(apiData).forEach(key => {
@@ -748,6 +759,29 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         return isNaN(parsed) ? defaultValue : parsed;
     }
 
+    private parseId(value: any): number | undefined {
+        if (value === null || value === undefined || value === '') return undefined;
+        if (typeof value === 'object' && value !== null) {
+            const maybeId = (value as any).id;
+            if (maybeId !== undefined && maybeId !== null && maybeId !== '') {
+                return this.parseId(maybeId);
+            }
+        }
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    private extractAllowedActions(apiData: any): string[] {
+        const actions = apiData?.allowedActions ?? apiData?.allowed_actions ?? [];
+        if (!Array.isArray(actions)) return [];
+        return actions.map((action: any) => String(action).toUpperCase());
+    }
+
+    private extractAllowedActionConfigs(apiData: any): ActionButtonConfig[] {
+        const configs = apiData?.allowedActionConfigs ?? apiData?.allowed_action_configs ?? [];
+        return Array.isArray(configs) ? configs : [];
+    }
+
     /**
      * Load workflow actions from backend
      * Prepare the data for unified-action-buttons component
@@ -755,8 +789,18 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     private loadWorkflowActions(): void {
         if (!this.applicationData) return;
 
-        this.applicationData.workflowId = this.applicationData.workflowId || this.currentServiceConfig.workflowId;
-        this.applicationData.currentStage = this.applicationData.currentStage || 1;
+        const currentStage = this.parseId(this.applicationData.currentStage ?? (this.applicationData as any).stage_id);
+        const workflowId = this.parseId((this.applicationData as any).workflow_id ?? (this.applicationData as any).workflow ?? this.applicationData.workflowId);
+
+        this.applicationData.workflowId = workflowId || this.currentServiceConfig.workflowId;
+        this.applicationData.currentStage = currentStage || 1;
+
+        if (!this.applicationData.allowedActionConfigs || this.applicationData.allowedActionConfigs.length === 0) {
+            const fallbackConfigs = this.extractAllowedActionConfigs(this.applicationData);
+            if (fallbackConfigs.length > 0) {
+                this.applicationData.allowedActionConfigs = fallbackConfigs;
+            }
+        }
     }
     
     getUserContext(): UserContext {
@@ -784,6 +828,36 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         if (currentUrl.includes('dashboard') && currentUrl.includes('section=')) return USER_CONTEXTS.LICENSEE;
         
         return USER_CONTEXTS.LICENSEE; // Default context
+    }
+
+    onUnifiedAction(event: { action: string, item: any }): void {
+        const context = this.getUserContext();
+        const action = (event.action || '').toUpperCase();
+
+        this.unifiedActionsService.executeAction(action, event.item, this.applicationType, context).subscribe({
+            next: (result: any) => {
+                if (result.success) {
+                    if (result.message) {
+                        this.snackBar.open(result.message, 'Close', { duration: 3000 });
+                    }
+                    if ([
+                        'APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'ISSUE',
+                        'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
+                        'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'
+                    ].includes(action)) {
+                        const currentId = this.applicationData?.id?.toString() || '';
+                        const currentRef = this.applicationData?.referenceNo || '';
+                        this.loadApplicationData(currentRef, currentId);
+                    }
+                } else {
+                    this.snackBar.open(result.message || 'Action failed', 'Close', { duration: 4000 });
+                }
+            },
+            error: (error: any) => {
+                console.error('Action failed:', error);
+                this.snackBar.open(error?.message || 'Action failed', 'Close', { duration: 4000 });
+            }
+        });
     }
 
     // Type check methods for template

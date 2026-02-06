@@ -16,12 +16,15 @@ interface TableData {
   status: string;
   backendStatus?: string; // Original backend status for role-based logic
   amount: string;
+  workflowId?: number;
+  currentStage?: number;
   destination?: string;
   depotAddress?: string; // Add separate depot address field
   transportMode?: string;
   vehicleNumber?: string;
   permitValidUntil?: string;
   allowedActions?: string[]; // Dynamic actions from backend
+  allowedActionConfigs?: any[];
 }
 
 interface ProductDetail {
@@ -159,12 +162,15 @@ export class TransitComponent implements OnInit {
               status: displayStatus, // Use status from database with proper mapping
               backendStatus: backendStatus, // Store original backend status for role-based logic
               amount: rowTotal,
+              workflowId: item.workflow || item.workflow_id || item.workflowId,
+              currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
               destination: destination, // This should be the actual destination
               depotAddress: destination, // Store depot address separately
               transportMode: 'Road',
               vehicleNumber: vehicleNumber,
               permitValidUntil: '',
-              allowedActions: item.allowedActions || item.allowed_actions || [] // Add allowed actions
+              allowedActions: item.allowedActions || item.allowed_actions || [], // Add allowed actions
+              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
             });
           } else if (billNo) {
             // Accumulate amount for existing bill

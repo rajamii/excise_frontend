@@ -186,66 +186,32 @@ getAvailableActionsForStage(workflowId: number, currentStageId: number, userRole
 /**
  * Check if a transition condition matches the current user role
  */
-private matchesCondition(condition: any, userRole: string): boolean {
-  if (!condition || Object.keys(condition).length === 0) {
-    return true; // No condition means available to all
-  }
+  private matchesCondition(condition: any, userRole: string): boolean {
+    if (!condition || Object.keys(condition).length === 0) {
+      return true; // No condition means available to all
+    }
 
-  // Check if role matches
-  if (condition['role']) {
-    const conditionRole = condition['role'].toLowerCase().replace(/-/g, '_').replace(/ /g, '_');
-    const normalizedUserRole = userRole.toLowerCase().replace(/-/g, '_').replace(/ /g, '_');
-    return conditionRole === normalizedUserRole;
-  }
+    // Check if role matches
+    if (condition['role']) {
+      const conditionRole = this.normalizeRole(condition['role']);
+      const normalizedUserRole = this.normalizeRole(userRole);
+      return conditionRole === normalizedUserRole;
+    }
 
-  return true;
-}
+    return true;
+  }
 
 /**
  * Convert a workflow transition to an action button configuration
  */
 private transitionToActionConfig(transition: WorkflowTransition): any {
   const condition = transition.condition || {};
-  const action = condition['action'] || 'FORWARD';
+  const rawAction = condition['action'] || 'FORWARD';
+  const actionKey = this.normalizeActionKey(rawAction);
+  const actionUpper = this.normalizeActionUpper(rawAction);
   
   // Map action names to button configurations
   const actionConfigs: any = {
-    'APPROVE': {
-      action: 'APPROVE',
-      label: 'Approve',
-      icon: 'check_circle',
-      color: 'accent',
-      tooltip: 'Approve Application',
-      requiresConfirmation: true,
-      confirmationMessage: 'Are you sure you want to approve this application?'
-    },
-    'REJECT': {
-      action: 'REJECT',
-      label: 'Reject',
-      icon: 'cancel',
-      color: 'warn',
-      tooltip: 'Reject Application',
-      requiresConfirmation: true,
-      confirmationMessage: 'Are you sure you want to reject this application?'
-    },
-    'FORWARD': {
-      action: 'FORWARD',
-      label: 'Forward',
-      icon: 'forward',
-      color: 'primary',
-      tooltip: 'Forward to Next Level',
-      requiresConfirmation: true,
-      confirmationMessage: 'Are you sure you want to forward this application?'
-    },
-    'verify': {
-      action: 'VERIFY',
-      label: 'Verify',
-      icon: 'verified',
-      color: 'info',
-      tooltip: 'Verify Application',
-      requiresConfirmation: true,
-      confirmationMessage: 'Are you sure you want to verify this application?'
-    },
     'approve': {
       action: 'APPROVE',
       label: 'Approve',
@@ -264,6 +230,24 @@ private transitionToActionConfig(transition: WorkflowTransition): any {
       requiresConfirmation: true,
       confirmationMessage: 'Are you sure you want to reject this application?'
     },
+    'forward': {
+      action: 'FORWARD',
+      label: 'Forward',
+      icon: 'forward',
+      color: 'primary',
+      tooltip: 'Forward to Next Level',
+      requiresConfirmation: true,
+      confirmationMessage: 'Are you sure you want to forward this application?'
+    },
+    'verify': {
+      action: 'VERIFY',
+      label: 'Verify',
+      icon: 'verified',
+      color: 'info',
+      tooltip: 'Verify Application',
+      requiresConfirmation: true,
+      confirmationMessage: 'Are you sure you want to verify this application?'
+    },
     'issue': {
       action: 'ISSUE',
       label: 'Issue',
@@ -274,14 +258,6 @@ private transitionToActionConfig(transition: WorkflowTransition): any {
       confirmationMessage: 'Are you sure you want to issue this permit?'
     },
     'pay': {
-      action: 'PAY',
-      label: 'Pay',
-      icon: 'payment',
-      color: 'primary',
-      tooltip: 'Submit Payment',
-      requiresConfirmation: false
-    },
-    'PAY': {
       action: 'PAY',
       label: 'Pay',
       icon: 'payment',
@@ -306,17 +282,44 @@ private transitionToActionConfig(transition: WorkflowTransition): any {
       tooltip: 'Mark as Complete',
       requiresConfirmation: true,
       confirmationMessage: 'Are you sure you want to mark this as complete?'
+    },
+    'submitpayslip': {
+      action: 'SUBMITPAYSLIP',
+      label: 'Submit Pay Slip',
+      icon: 'receipt_long',
+      color: 'primary',
+      tooltip: 'Submit Payment Slip',
+      requiresConfirmation: true,
+      confirmationMessage: 'Are you sure you want to submit the pay slip?'
+    },
+    'approvepayslip': {
+      action: 'APPROVEPAYSLIP',
+      label: 'Approve Pay Slip',
+      icon: 'check_circle',
+      color: 'accent',
+      tooltip: 'Approve Payment Slip',
+      requiresConfirmation: true,
+      confirmationMessage: 'Are you sure you want to approve the pay slip?'
+    },
+    'rejectpayslip': {
+      action: 'REJECTPAYSLIP',
+      label: 'Reject Pay Slip',
+      icon: 'cancel',
+      color: 'warn',
+      tooltip: 'Reject Payment Slip',
+      requiresConfirmation: true,
+      confirmationMessage: 'Are you sure you want to reject the pay slip?'
     }
   };
 
-  const config = actionConfigs[action] || {
-    action: action.toUpperCase(),
-    label: action.charAt(0).toUpperCase() + action.slice(1),
+  const config = actionConfigs[actionKey] || {
+    action: actionUpper,
+    label: this.toTitleCase(actionUpper),
     icon: 'arrow_forward',
     color: 'primary',
-    tooltip: `${action.charAt(0).toUpperCase() + action.slice(1)} Application`,
+    tooltip: `${this.toTitleCase(actionUpper)} Application`,
     requiresConfirmation: true,
-    confirmationMessage: `Are you sure you want to ${action.toLowerCase()} this application?`
+    confirmationMessage: `Are you sure you want to ${String(rawAction).toLowerCase()} this application?`
   };
 
   // Add transition metadata
@@ -324,5 +327,30 @@ private transitionToActionConfig(transition: WorkflowTransition): any {
   config.toStageId = typeof transition.to_stage === 'number' ? transition.to_stage : transition.to_stage.id;
 
   return config;
+}
+
+private normalizeRole(role: string): string {
+  if (!role) return '';
+  const normalized = String(role).toLowerCase().replace(/-/g, '_').replace(/ /g, '_');
+  if (normalized === 'officer_in_charge' || normalized === 'oic' || normalized === 'officer') {
+    return 'officer';
+  }
+  return normalized;
+}
+
+private normalizeActionKey(action: string): string {
+  return String(action || '').toLowerCase().replace(/[\s-]/g, '');
+}
+
+private normalizeActionUpper(action: string): string {
+  return String(action || '').toUpperCase().replace(/[\s-]/g, '');
+}
+
+private toTitleCase(value: string): string {
+  if (!value) return '';
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase());
 }
 }

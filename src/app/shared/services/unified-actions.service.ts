@@ -35,9 +35,10 @@ export class UnifiedActionsService {
     context?: string
   ): Observable<ActionResult> {
 
-    console.log(`Executing action: ${action} on ${itemType} with ID: ${item.id}`);
+    const normalizedAction = (action || '').toString().trim().toUpperCase();
+    console.log(`Executing action: ${normalizedAction} on ${itemType} with ID: ${item.id}`);
 
-    switch (action) {
+    switch (normalizedAction) {
       case 'VIEW':
         return this.handleViewAction(item, itemType, context);
 
@@ -65,6 +66,27 @@ export class UnifiedActionsService {
       case 'PAY':
         return this.handlePayAction(item, itemType);
 
+      case 'REQUEST_REVALIDATION':
+        return this.handleRequestRevalidationAction(item, itemType, context);
+
+      case 'REQUEST_CANCELLATION':
+        return this.handleRequestCancellationAction(item, itemType);
+
+      case 'SUBMITPAYSLIP':
+        return this.handleSubmitPaySlipAction(item, itemType);
+
+      case 'APPROVEPAYSLIP':
+        return this.handleApprovePaySlipAction(item, itemType);
+
+      case 'REJECTPAYSLIP':
+        return this.handleRejectPaySlipAction(item, itemType);
+
+      case 'ASSIGN_CARTONS':
+        return this.handleAssignCartonsAction(item, itemType);
+
+      case 'COMPLETE':
+        return this.handleCompleteAction(item, itemType);
+
       case 'CANCEL':
         return this.handleCancelAction(item, itemType);
 
@@ -86,6 +108,20 @@ export class UnifiedActionsService {
   }
 
   private handleViewAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
+    const ref =
+      item?.referenceNo ??
+      item?.refNo ??
+      item?.ourRefNo ??
+      item?.our_ref_no ??
+      item?.billNo ??
+      item?.bill_no ??
+      '';
+
+    const id =
+      item?.id ??
+      item?.pk ??
+      '';
+
     // Special handling for OIC context
     if (context === 'officer-in-charge') {
       if (itemType === 'hologram') {
@@ -100,7 +136,7 @@ export class UnifiedActionsService {
         this.router.navigate(['/dashboard'], {
           queryParams: {
             section: section,
-            ref: item.referenceNo,
+            ref: ref,
             source: context
           }
         });
@@ -112,20 +148,41 @@ export class UnifiedActionsService {
       }
     }
 
+    const queryParams: any = {
+      id: id || undefined,
+      ref: ref || undefined,
+      type: itemType,
+      source: context || 'licensee'
+    };
+
     // Use unified supply chain view for all types
-    this.router.navigate(['/supply-chain-view'], {
-      queryParams: {
-        id: item.id,
-        ref: item.referenceNo,
-        type: itemType,
-        source: context || 'licensee'
-      }
-    });
+    this.router.navigate(['/supply-chain-view'], { queryParams })
+      .then((ok) => {
+        if (!ok) {
+          this.forceNavigateToSupplyChainView(queryParams);
+        }
+      })
+      .catch(() => {
+        this.forceNavigateToSupplyChainView(queryParams);
+      });
 
     return of({
       success: true,
       message: `Navigated to ${itemType} view`
     });
+  }
+
+  private forceNavigateToSupplyChainView(queryParams: any): void {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams();
+    Object.entries(queryParams || {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+    const query = params.toString();
+    const url = query ? `/supply-chain-view?${query}` : '/supply-chain-view';
+    window.location.href = url;
   }
 
   private handleApproveAction(item: any, itemType: string): Observable<ActionResult> {
@@ -150,7 +207,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'APPROVE', 'Approved');
 
       case 'hologram':
-        return this.hologramService.performAction('procurement', Number(item.id), 'approve', 'Approved');
+        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'approve', 'Approved');
 
       default:
         return of({
@@ -184,7 +241,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'REJECT', reason);
 
       case 'hologram':
-        return this.hologramService.performAction('procurement', Number(item.id), 'reject', reason);
+        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'reject', reason);
 
       default:
         return of({
@@ -195,6 +252,14 @@ export class UnifiedActionsService {
   }
 
   private handleForwardAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required for forward' });
+    }
+
+    if (itemType === 'hologram') {
+      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'forward', 'Forwarded');
+    }
+
     // Forward is typically the same as approve for most workflows
     return this.handleApproveAction(item, itemType);
   }
@@ -209,7 +274,7 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'hologram':
-        return this.hologramService.performAction('procurement', Number(item.id), 'verify', 'Verified by IT Cell');
+        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'verify', 'Verified by IT Cell');
 
       default:
         return of({
@@ -229,7 +294,7 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'hologram':
-        return this.hologramService.performAction('procurement', Number(item.id), 'issue', 'Issued');
+        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'issue', 'Issued');
 
       default:
         return of({
@@ -305,7 +370,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'PAY', 'Payment submitted');
 
       case 'hologram':
-        return this.hologramService.performAction('procurement', Number(item.id), 'pay', 'Payment completed');
+        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'pay', 'Payment completed');
 
       default:
         // Navigate to payment page within SPA
@@ -323,6 +388,88 @@ export class UnifiedActionsService {
           message: 'Navigated to payment page within SPA'
         });
     }
+  }
+
+  private handleRequestRevalidationAction(item: any, itemType: string, context?: string): Observable<ActionResult> {
+    // Navigate to revalidation request form within SPA
+    this.router.navigate(['/dev-supply-chain-revalidation-request'], {
+      queryParams: {
+        id: item.id,
+        ref: item.referenceNo,
+        source: context || 'licensee-dashboard',
+        mode: 'edit'
+      }
+    });
+
+    return of({
+      success: true,
+      message: 'Navigated to revalidation request'
+    });
+  }
+
+  private handleRequestCancellationAction(item: any, itemType: string): Observable<ActionResult> {
+    // Reuse cancellation navigation
+    return this.handleCancelAction(item, itemType);
+  }
+
+  private handleSubmitPaySlipAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required for pay slip submission' });
+    }
+
+    if (itemType === 'cancellation') {
+      return this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee');
+    }
+
+    return of({ success: false, message: `Submit pay slip not implemented for ${itemType}` });
+  }
+
+  private handleApprovePaySlipAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required for pay slip approval' });
+    }
+
+    if (itemType === 'cancellation') {
+      return this.supplyChainService.performCancellationAction(item.id, 'ApprovePayslip', 'commissioner');
+    }
+
+    return of({ success: false, message: `Approve pay slip not implemented for ${itemType}` });
+  }
+
+  private handleRejectPaySlipAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required for pay slip rejection' });
+    }
+
+    if (itemType === 'cancellation') {
+      return this.supplyChainService.performCancellationAction(item.id, 'RejectPayslip', 'commissioner');
+    }
+
+    return of({ success: false, message: `Reject pay slip not implemented for ${itemType}` });
+  }
+
+  private handleAssignCartonsAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required for carton assignment' });
+    }
+
+    if (itemType === 'hologram') {
+      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'assign_cartons', 'Cartons assigned');
+    }
+
+    return of({ success: false, message: `Assign cartons not implemented for ${itemType}` });
+  }
+
+  private handleCompleteAction(item: any, itemType: string): Observable<ActionResult> {
+    if (!item.id) {
+      return of({ success: false, message: 'Item ID is required to complete' });
+    }
+
+    if (itemType === 'hologram') {
+      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'complete', 'Completed');
+    }
+
+    return of({ success: false, message: `Complete action not implemented for ${itemType}` });
   }
 
   private handleCancelAction(item: any, itemType: string): Observable<ActionResult> {
@@ -408,5 +555,10 @@ export class UnifiedActionsService {
       success: false,
       message: `Edit not available for ${itemType}`
     });
+  }
+
+  private getHologramEndpoint(item: any): 'procurement' | 'request' {
+    const workflowId = item?.workflowId || item?.workflow_id || item?.workflow;
+    return workflowId === 7 ? 'request' : 'procurement';
   }
 }

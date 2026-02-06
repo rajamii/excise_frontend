@@ -17,6 +17,9 @@ interface OfficerData {
   amount: string;
   type: 'transit';
   allowedActions?: string[];
+  allowedActionConfigs?: any[];
+  workflowId?: number;
+  currentStage?: number;
 }
 
 @Component({
@@ -72,6 +75,7 @@ interface OfficerData {
                     [item]="application"
                     [itemType]="application.type"
                     [context]="'officer-in-charge'"
+                    [includeActions]="['VIEW','PAY']"
                     (actionClicked)="onUnifiedAction($event)">
                   </app-unified-action-buttons>
                 </td>
@@ -206,7 +210,10 @@ export class OfficerInChargeDashboardComponent implements OnInit {
             status: item.status || 'PENDING',
             amount: item.totalAmount || item.total_amount || '0.00',
             type: 'transit',
-            allowedActions: item.allowedActions || item.allowed_actions || []
+            allowedActions: item.allowedActions || item.allowed_actions || [],
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
           }));
         
         this.allApplications = transits;

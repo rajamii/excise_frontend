@@ -3,15 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { AccountService } from '../../../core/services/account.service';
-import { WorkflowService } from '../../../core/services/workflow.service';
-import { ActionConfigService } from '../../../core/services/action-config.service';
-import { 
-    USER_CONTEXTS, 
-    UserContext, 
-    WORKFLOW_ROLE_MAPPING,
-    INVALID_STATUS_KEYWORDS
-} from '../../constants/application.constants';
+import { WorkflowActionService } from '../../../core/services/workflow-action.service';
+import { UnifiedActionsService } from '../../services/unified-actions.service';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -53,6 +46,7 @@ export interface ActionButtonConfig {
         <ng-container *ngFor="let button of getPrimaryActionButtons()">
           <button 
             mat-raised-button 
+            type="button"
             [color]="button.color"
             class="action-btn"
             (click)="onActionClick(button)">
@@ -64,8 +58,18 @@ export interface ActionButtonConfig {
 
       <!-- TABLE MODE: All buttons as icons OR DETAILED MODE: Secondary Action Buttons -->
       <ng-container *ngFor="let button of getDisplayButtons()">
+        <a
+          *ngIf="button.action === 'VIEW'"
+          class="action-icon-link"
+          [ngClass]="'action-color-' + button.color"
+          [attr.href]="getViewHref()"
+          [attr.title]="button.tooltip">
+          <mat-icon>{{ button.icon }}</mat-icon>
+        </a>
         <button 
+          *ngIf="button.action !== 'VIEW'"
           mat-icon-button 
+          type="button"
           [color]="button.color"
           [matTooltip]="button.tooltip"
           (click)="onActionClick(button)">
@@ -73,38 +77,6 @@ export interface ActionButtonConfig {
         </button>
       </ng-container>
 
-      <!-- Licensee: Payment button (Legacy fallback if not coming from backend) -->
-      <button 
-        *ngIf="isLegacyPaymentMode() && isLicensee() && canPay()"
-        [attr.mat-raised-button]="displayMode === 'detailed' ? '' : null"
-        [attr.mat-icon-button]="displayMode === 'table' ? '' : null"
-        color="primary"
-        [class.action-btn]="displayMode === 'detailed'"
-        [matTooltip]="displayMode === 'table' ? 'Submit Payment' : ''"
-        (click)="onAction('PAY')">
-        <mat-icon>payment</mat-icon>
-        <span *ngIf="displayMode === 'detailed'">Submit Payment</span>
-      </button>
-
-      <!-- Permit Slip button (Legacy fallback) -->
-      <button 
-        *ngIf="isLegacyPaymentMode() && canViewPermitSlip()"
-        mat-icon-button 
-        color="accent"
-        matTooltip="View Permit Slip"
-        (click)="onAction('VIEW_SLIP')">
-        <mat-icon>description</mat-icon>
-      </button>
-
-      <!-- View Button - Only available in table mode and if not already in list -->
-      <button 
-        *ngIf="displayMode === 'table' && !hasViewAction()"
-        mat-icon-button 
-        color="primary"
-        [matTooltip]="'View ' + getItemType()"
-        (click)="onAction('VIEW')">
-        <mat-icon>visibility</mat-icon>
-      </button>
     </div>
   `,
   styles: [`
@@ -141,6 +113,31 @@ export interface ActionButtonConfig {
       }
     }
 
+    .action-icon-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      text-decoration: none;
+      cursor: pointer;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .action-color-primary { color: #1976d2; }
+    .action-color-success { color: #28a745; }
+    .action-color-warning { color: #f59e0b; }
+    .action-color-danger { color: #dc3545; }
+    .action-color-info { color: #17a2b8; }
+    .action-color-warn { color: #dc3545; }
+    .action-color-accent { color: #7c3aed; }
+
     /* Color overrides for better visibility */
     .mat-mdc-raised-button.mat-success {
       background-color: #28a745;
@@ -158,24 +155,20 @@ export class UnifiedActionButtonsComponent implements OnInit {
   @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' = 'requisition';
   @Input() context: 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' = 'licensee';
   @Input() displayMode: 'table' | 'detailed' = 'table';
+  @Input() includeActions: string[] | null = null;
+  @Input() excludeActions: string[] | null = null;
 
   @Output() actionClicked = new EventEmitter<{ action: string, item: ActionItem }>();
 
-  private currentUser: any;
   private availableActionConfigs: ActionButtonConfig[] = [];
   private isLoading = false;
 
   constructor(
-    private accountService: AccountService,
-    private workflowService: WorkflowService,
-    private actionConfigService: ActionConfigService
+    private workflowActionService: WorkflowActionService,
+    private unifiedActionsService: UnifiedActionsService
   ) { }
 
   ngOnInit(): void {
-    this.accountService.getAuthenticationState().subscribe(user => {
-      this.currentUser = user;
-    });
-
     // Load all button logic here
     this.loadAllActionConfigs();
   }
@@ -188,164 +181,71 @@ export class UnifiedActionButtonsComponent implements OnInit {
     if (this.isLoading) return;
     this.isLoading = true;
 
-    console.log('🔧 UNIFIED BUTTONS: Loading action configs for item:', this.item);
+    console.log('?? UNIFIED BUTTONS: Loading action configs for item:', this.item);
 
     // Step 1: If item already has configs from parent, use them
     if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
-      this.availableActionConfigs = this.item.allowedActionConfigs;
+      this.availableActionConfigs = this.normalizeActionConfigs(this.item.allowedActionConfigs);
       this.isLoading = false;
-      console.log('🔧 UNIFIED BUTTONS: Using pre-loaded configs from parent:', this.availableActionConfigs);
+      console.log('?? UNIFIED BUTTONS: Using pre-loaded configs from parent:', this.availableActionConfigs);
       return;
     }
 
-    // Step 2: Load workflow actions if we have workflow info
-    if (this.item.workflowId && this.item.currentStage) {
-      this.loadWorkflowActions();
-    } else {
-      // Step 3: Load contextual actions only
-      this.loadContextualActions();
-    }
+    // Step 2: Fetch from backend (no frontend hardcoding)
+    this.loadActionsFromBackend();
   }
 
-  /**
-   * Load workflow-based actions from backend
-   */
-  private loadWorkflowActions(): void {
-    const userRole = this.getUserRoleForWorkflow();
-    
-    this.workflowService.getAvailableActionsForStage(
-      this.item.workflowId!,
-      this.item.currentStage!,
-      userRole
-    ).subscribe({
-      next: (workflowActions: any[]) => {
-        console.log('🔧 UNIFIED BUTTONS: Loaded workflow actions:', workflowActions);
-        
-        // Combine with contextual actions
-        this.loadContextualActions(workflowActions);
-      },
-      error: (error) => {
-        console.error('🔧 UNIFIED BUTTONS: Error loading workflow actions:', error);
-        this.loadContextualActions();
-      }
-    });
-  }
-
-  /**
-   * Load contextual actions (VIEW, PAY, PRINT, etc.)
-   */
-  private loadContextualActions(workflowActions: ActionButtonConfig[] = []): void {
-    const contextualActionNames = this.getContextualActionNames();
-    
-    if (contextualActionNames.length === 0) {
-      this.availableActionConfigs = workflowActions;
-      this.isLoading = false;
-      return;
-    }
-
-    this.actionConfigService.getActionConfigsForActions(contextualActionNames).subscribe({
-      next: (contextualConfigs) => {
-        console.log('🔧 UNIFIED BUTTONS: Loaded contextual actions:', contextualConfigs);
-        
-        // Combine workflow and contextual actions
-        this.availableActionConfigs = [...workflowActions, ...contextualConfigs];
-        this.isLoading = false;
-        
-        console.log('🔧 UNIFIED BUTTONS: Final available actions:', this.availableActionConfigs);
-      },
-      error: (error) => {
-        console.error('🔧 UNIFIED BUTTONS: Error loading contextual actions:', error);
-        this.availableActionConfigs = workflowActions;
-        this.isLoading = false;
-      }
-    });
-  }
-
-  /**
-   * Determine which contextual actions to show based on status and context
-   */
-  private getContextualActionNames(): string[] {
-    const contextualActions: string[] = [];
-    const status = this.item.status?.toUpperCase() || '';
-    
-    // Always show VIEW in table mode
-    if (this.displayMode === 'table') {
-      contextualActions.push('VIEW');
-    }
-    
-    // Show PAY for licensee when payment is needed
-    if (this.context === 'licensee' && this.shouldShowPaymentAction(status)) {
-      contextualActions.push('PAY');
-    }
-    
-    // REMOVED: PRINT action - no longer needed in action buttons
-    // contextualActions.push('PRINT');
-    
-    // Show REQUEST_CANCELLATION for invalid status
-    if (this.isInvalidStatus(status) && this.context === 'licensee') {
-      contextualActions.push('REQUEST_CANCELLATION');
-    }
-    
-    return contextualActions;
-  }
-
-  private shouldShowPaymentAction(status: string): boolean {
-    return status.includes('APPROVED') || status.includes('PAYMENT_PENDING');
-  }
-
-  private isInvalidStatus(status: string): boolean {
-    return INVALID_STATUS_KEYWORDS.some(keyword => status.includes(keyword));
-  }
-
-  private getUserRoleForWorkflow(): string {
-    const contextMap: { [key: string]: UserContext } = {
-      'licensee': USER_CONTEXTS.LICENSEE,
-      'permit-section': USER_CONTEXTS.PERMIT_SECTION,
-      'commissioner': USER_CONTEXTS.COMMISSIONER,
-      'officer-in-charge': USER_CONTEXTS.OFFICER_IN_CHARGE,
-      'itcell': USER_CONTEXTS.IT_CELL
+  private loadActionsFromBackend(): void {
+    const requestData = {
+      id: this.item.id,
+      workflowId: this.item.workflowId,
+      currentStage: this.item.currentStage,
+      type: this.itemType,
+      status: this.item.status,
+      referenceNo: this.item.referenceNo,
+      allowedActionConfigs: this.item.allowedActionConfigs
     };
-    
-    const userContext = contextMap[this.context] || USER_CONTEXTS.LICENSEE;
-    return WORKFLOW_ROLE_MAPPING[userContext] || 'licensee';
-  }
 
-  // Template helper methods - SIMPLIFIED
-  isLegacyPaymentMode(): boolean {
-    return false; // We handle everything dynamically now
-  }
-
-  hasViewAction(): boolean {
-    return this.availableActionConfigs.some(config => config.action === 'VIEW');
+    this.workflowActionService.getAvailableActions(requestData).subscribe({
+      next: (configs) => {
+        this.availableActionConfigs = this.normalizeActionConfigs(configs || []);
+        this.isLoading = false;
+        console.log('?? UNIFIED BUTTONS: Loaded backend configs:', this.availableActionConfigs);
+      },
+      error: (error) => {
+        console.error('?? UNIFIED BUTTONS: Error loading backend configs:', error);
+        this.availableActionConfigs = [];
+        this.isLoading = false;
+      }
+    });
   }
 
   getAvailableButtons(): ActionButtonConfig[] {
-    return this.availableActionConfigs;
+    return this.getFilteredConfigs();
   }
 
   getDisplayButtons(): ActionButtonConfig[] {
+    const filtered = this.getFilteredConfigs();
     if (this.displayMode === 'detailed') {
       // In detailed mode, show secondary actions as icons (excluding PRINT)
-      return this.getSecondaryActionButtons().filter(config => config.action !== 'PRINT');
-    } else {
-      // In table mode, show non-primary actions (excluding PRINT)
-      const nonPrimaryActions = ['VIEW', 'DOWNLOAD', 'EDIT'];
-      return this.availableActionConfigs.filter(config => 
-        nonPrimaryActions.includes(config.action)
-      );
+      return filtered
+        .filter(config => config.action !== 'PRINT')
+        .filter(config => !this.getPrimaryActionButtons().some(primary => primary.action === config.action));
     }
+    // In table mode, show all available actions as icons (excluding PRINT)
+    return filtered.filter(config => config.action !== 'PRINT');
   }
 
   getPrimaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'PAY', 'SUBMIT'];
-    return this.availableActionConfigs.filter(config => 
+    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'REQUEST_REVALIDATION', 'PAY', 'SUBMIT'];
+    return this.getFilteredConfigs().filter(config =>
       primaryActions.includes(config.action)
     );
   }
 
   getSecondaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'PAY', 'SUBMIT'];
-    return this.availableActionConfigs.filter(config => 
+    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'REQUEST_REVALIDATION', 'PAY', 'SUBMIT'];
+    return this.getFilteredConfigs().filter(config =>
       !primaryActions.includes(config.action)
     );
   }
@@ -354,13 +254,15 @@ export class UnifiedActionButtonsComponent implements OnInit {
    * MAIN ACTION HANDLER - All button logic centralized here
    */
   onActionClick(button: ActionButtonConfig): void {
-    console.log('🔧 UNIFIED BUTTONS: Action clicked:', button.action);
+    const normalizedAction = (button?.action || '').toString().trim().toUpperCase();
+    const normalizedButton: ActionButtonConfig = { ...button, action: normalizedAction };
+    console.log('🔧 UNIFIED BUTTONS: Action clicked:', normalizedButton.action);
 
     // Handle confirmation if required
-    if (button.requiresConfirmation) {
-      this.showConfirmationDialog(button);
+    if (normalizedButton.requiresConfirmation) {
+      this.showConfirmationDialog(normalizedButton);
     } else {
-      this.executeAction(button);
+      this.executeAction(normalizedButton);
     }
   }
 
@@ -395,19 +297,23 @@ export class UnifiedActionButtonsComponent implements OnInit {
       case 'ASSIGN_CARTONS':
         this.handleWorkflowAction(button);
         break;
-        
+
       case 'PAY':
         this.handlePaymentAction();
         break;
-        
+
       case 'REQUEST_CANCELLATION':
         this.handleCancellationRequest();
         break;
-        
+
+      case 'REQUEST_REVALIDATION':
+        this.handleRevalidationRequest();
+        break;
+
       case 'VIEW':
         this.handleViewAction();
         break;
-        
+
       default:
         this.handleGenericAction(button);
     }
@@ -415,7 +321,7 @@ export class UnifiedActionButtonsComponent implements OnInit {
 
   private handleWorkflowAction(button: ActionButtonConfig): void {
     console.log(`🔧 UNIFIED BUTTONS: Executing workflow action: ${button.action}`);
-    
+
     // Call backend service to execute workflow action
     // For now, show success message
     Swal.fire({
@@ -481,8 +387,72 @@ export class UnifiedActionButtonsComponent implements OnInit {
     });
   }
 
+  private handleRevalidationRequest(): void {
+    Swal.fire({
+      title: 'Request Revalidation',
+      text: 'The permit has been extended for 45 days. Do you want to proceed with the revalidation request?',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Request Revalidation',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#1976d2', // Primary blue
+      cancelButtonColor: '#6c757d'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Just emit the event, parent component will handle navigation or API call
+        // The user says "trigger which will automatically copy code", so maybe we just need to navigate
+        console.log('🔧 UNIFIED BUTTONS: Emitting REQUEST_REVALIDATION event');
+        this.actionClicked.emit({ action: 'REQUEST_REVALIDATION', item: this.item });
+      }
+    });
+  }
+
   private handleViewAction(): void {
-    this.actionClicked.emit({ action: 'VIEW', item: this.item });
+    // Handle VIEW directly so it works across all roles/pages
+    this.unifiedActionsService.executeAction('VIEW', this.item, this.itemType, this.context).subscribe({
+      error: (error: any) => {
+        console.error('VIEW action failed:', error);
+      }
+    });
+  }
+
+  public getViewHref(): string {
+    const ref =
+      this.item?.referenceNo ??
+      this.item?.['refNo'] ??
+      this.item?.['ourRefNo'] ??
+      this.item?.['our_ref_no'] ??
+      this.item?.['billNo'] ??
+      this.item?.['bill_no'] ??
+      '';
+
+    const id =
+      this.item?.id ??
+      this.item?.['pk'] ??
+      '';
+
+    if (this.context === 'officer-in-charge' && this.itemType === 'hologram') {
+      const hologramSections: { [key: string]: string } = {
+        'monthly-statement': 'monthly-hologram-statement',
+        'daily-register': 'daily-hologram-register',
+        'stock-inventory': 'hologram-overview'
+      };
+      const section = hologramSections[this.item?.['subType']] || 'hologram-register';
+      const params = new URLSearchParams({
+        section,
+        ref: ref || '',
+        source: this.context
+      });
+      return `/dashboard?${params.toString()}`;
+    }
+
+    const params = new URLSearchParams();
+    if (id !== undefined && id !== null && id !== '') params.set('id', String(id));
+    if (ref) params.set('ref', String(ref));
+    params.set('type', this.itemType);
+    params.set('source', this.context || 'licensee');
+
+    return `/supply-chain-view?${params.toString()}`;
   }
 
   private handleGenericAction(button: ActionButtonConfig): void {
@@ -490,55 +460,80 @@ export class UnifiedActionButtonsComponent implements OnInit {
     this.actionClicked.emit({ action: button.action, item: this.item });
   }
 
-  onAction(action: string): void {
-    // Legacy support - find the config and execute
-    const config = this.availableActionConfigs.find(c => c.action === action);
-    if (config) {
-      this.onActionClick(config);
-    } else {
-      console.warn('🔧 UNIFIED BUTTONS: Action config not found for:', action);
-      this.actionClicked.emit({ action, item: this.item });
+
+
+  private normalizeActionConfigs(configs: any[] | null | undefined): ActionButtonConfig[] {
+    if (!Array.isArray(configs)) return [];
+    return configs
+      .map(config => this.normalizeActionConfig(config))
+      .filter(config => !!config.action);
+  }
+
+  private normalizeActionList(list: string[] | null | undefined): string[] {
+    if (!Array.isArray(list)) return [];
+    return list
+      .map(action => String(action).toUpperCase().trim())
+      .filter(action => !!action);
+  }
+
+  private getFilteredConfigs(): ActionButtonConfig[] {
+    const include = this.normalizeActionList(this.includeActions);
+    const exclude = this.normalizeActionList(this.excludeActions);
+
+    let result = [...this.availableActionConfigs];
+
+    // If includeActions specifies VIEW but backend didn't return it, add a safe fallback.
+    if (include.includes('VIEW') && !result.some(config => config.action === 'VIEW')) {
+      result.push({
+        action: 'VIEW',
+        label: 'View',
+        icon: 'visibility',
+        color: 'primary',
+        tooltip: 'View Details'
+      });
     }
+
+    if (include.length) {
+      result = result.filter(config => include.includes(config.action));
+    }
+
+    if (exclude.length) {
+      result = result.filter(config => !exclude.includes(config.action));
+    }
+
+    return result;
   }
 
-  // Helper methods for role detection - SIMPLIFIED
-  isLicensee(): boolean {
-    return this.context === 'licensee';
-  }
+  private normalizeActionConfig(config: any): ActionButtonConfig {
+    const rawAction = config?.action ?? config?.Action ?? config?.action_name ?? config?.actionName;
+    const action = rawAction ? String(rawAction).toUpperCase().trim() : '';
+    const label = config?.label ?? config?.Label ?? this.toTitleCase(action);
+    const icon = config?.icon ?? config?.Icon ?? 'arrow_forward';
+    const color = config?.color ?? config?.Color ?? 'primary';
+    const tooltip = config?.tooltip ?? config?.Tooltip ?? (label ? `${label} Application` : 'Perform Action');
+    const requiresConfirmation = config?.requiresConfirmation ?? config?.requires_confirmation ?? false;
+    const confirmationMessage = config?.confirmationMessage ?? config?.confirmation_message;
+    const transitionId = config?.transitionId ?? config?.transition_id;
+    const toStageId = config?.toStageId ?? config?.to_stage_id ?? config?.targetStage ?? config?.target_stage;
 
-  isPermitSection(): boolean {
-    return this.context === 'permit-section';
-  }
-
-  isCommissioner(): boolean {
-    return this.context === 'commissioner';
-  }
-
-  isITCell(): boolean {
-    return this.context === 'itcell';
-  }
-
-  isOfficerInCharge(): boolean {
-    return this.context === 'officer-in-charge';
-  }
-
-  // Business logic methods - SIMPLIFIED
-  canPay(): boolean {
-    return false; // Handled by dynamic action loading
-  }
-
-  canViewPermitSlip(): boolean {
-    return false; // Handled by dynamic action loading
-  }
-
-  getItemType(): string {
-    const types: { [key: string]: string } = {
-      'requisition': 'Requisition',
-      'revalidation': 'Revalidation',
-      'cancellation': 'Cancellation',
-      'transit': 'Transit Permit',
-      'hologram': 'Hologram Application'
+    return {
+      action,
+      label,
+      icon,
+      color,
+      tooltip,
+      requiresConfirmation,
+      confirmationMessage,
+      transitionId,
+      toStageId
     };
-    return types[this.itemType] || 'Application';
+  }
+
+  private toTitleCase(value: string): string {
+    if (!value) return '';
+    return value
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, char => char.toUpperCase());
   }
 }

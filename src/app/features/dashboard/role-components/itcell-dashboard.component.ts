@@ -17,6 +17,9 @@ interface ITCellData {
   amount: string;
   type: 'hologram';
   allowedActions?: string[];
+  allowedActionConfigs?: any[];
+  workflowId?: number;
+  currentStage?: number;
   localQtyLakh?: number;
   exportQtyLakh?: number;
   defenceQtyLakh?: number;
@@ -75,6 +78,7 @@ interface ITCellData {
                     [item]="application"
                     [itemType]="'hologram'"
                     [context]="'itcell'"
+                    [includeActions]="['VIEW','PAY']"
                     (actionClicked)="onUnifiedAction($event)">
                   </app-unified-action-buttons>
                 </td>
@@ -209,6 +213,9 @@ export class ITCellDashboardComponent implements OnInit {
             amount: '0.00', // Holograms might not have amount
             type: 'hologram',
             allowedActions: item.allowedActions || item.allowed_actions || [],
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             localQtyLakh: Number(item.localQty || 0),
             exportQtyLakh: Number(item.exportQty || 0),
             defenceQtyLakh: Number(item.defenceQty || 0)

@@ -20,6 +20,9 @@ interface TableData {
   isLive?: boolean;
   isInvalid?: boolean;
   allowedActions?: string[]; // Dynamic actions from backend
+  workflowId?: number;
+  currentStage?: number;
+  allowedActionConfigs?: any[];
 }
 
 @Component({
@@ -107,7 +110,10 @@ export class RevalidationComponent implements OnInit {
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
           isLive: !item.status?.includes('INVALID') && !item.status?.includes('EXPIRED'),
           isInvalid: item.status?.includes('INVALID') || item.status?.includes('EXPIRED'),
-          allowedActions: item.allowedActions || item.allowed_actions || []
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
         }
       });
 

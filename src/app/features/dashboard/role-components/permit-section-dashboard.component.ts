@@ -18,6 +18,9 @@ interface PermitData {
   amount: string;
   type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram';
   allowedActions?: string[];
+  allowedActionConfigs?: any[];
+  workflowId?: number;
+  currentStage?: number;
 }
 
 @Component({
@@ -73,6 +76,7 @@ interface PermitData {
                     [item]="permit"
                     [itemType]="permit.type"
                     [context]="'permit-section'"
+                    [includeActions]="['VIEW','PAY']"
                     (actionClicked)="onUnifiedAction($event)">
                   </app-unified-action-buttons>
                 </td>
@@ -215,7 +219,10 @@ export class PermitSectionDashboardComponent implements OnInit {
           status: item.status || 'PENDING',
           amount: item.amount || '0.00',
           type: 'requisition',
-          allowedActions: item.allowedActions || item.allowed_actions || []
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
         }));
         
         this.updatePermits('requisition', requisitions);
@@ -235,7 +242,10 @@ export class PermitSectionDashboardComponent implements OnInit {
           status: item.status || 'PENDING',
           amount: item.revalidationBrAmount || item.revalidation_br_amount || '0.00',
           type: 'revalidation',
-          allowedActions: item.allowedActions || item.allowed_actions || []
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
         }));
         
         this.updatePermits('revalidation', revalidations);
@@ -255,7 +265,10 @@ export class PermitSectionDashboardComponent implements OnInit {
           status: item.status || 'PENDING',
           amount: item.totalCancellationAmount || item.total_cancellation_amount || '0.00',
           type: 'cancellation',
-          allowedActions: item.allowedActions || item.allowed_actions || []
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
         }));
         
         this.updatePermits('cancellation', cancellations);
@@ -275,7 +288,10 @@ export class PermitSectionDashboardComponent implements OnInit {
           status: item.status || 'PENDING',
           amount: item.totalAmount || item.total_amount || '0.00',
           type: 'transit',
-          allowedActions: item.allowedActions || item.allowed_actions || []
+          allowedActions: item.allowedActions || item.allowed_actions || [],
+          allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
+          workflowId: item.workflow || item.workflow_id || item.workflowId,
+          currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId
         }));
         
         this.updatePermits('transit', transits);

@@ -180,7 +180,11 @@
             </td>
             <td class="actions">
               <!-- Unified Action Buttons Component -->
-              <app-unified-action-buttons [item]="item" [itemType]="'transit'" [context]="getUserContext()"
+              <app-unified-action-buttons
+                [item]="item"
+                [itemType]="'transit'"
+                [context]="getUserContext()"
+                [includeActions]="['VIEW','PAY']"
                 (actionClicked)="onUnifiedAction($event)">
               </app-unified-action-buttons>
             </td>

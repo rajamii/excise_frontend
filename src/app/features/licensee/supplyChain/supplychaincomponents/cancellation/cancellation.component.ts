@@ -14,11 +14,14 @@ interface TableData {
   distilleryName: string;
   status: string;
   amount: string;
+  workflowId?: number;
+  currentStage?: number;
   priority?: string;
   cancellationReason?: string;
   requestDate?: string;
   licenseType?: string;
   allowedActions?: string[];
+  allowedActionConfigs?: any[];
 }
 
 @Component({
@@ -155,10 +158,13 @@ export class CancellationComponent implements OnInit {
             distilleryName: item.branchName || item.branch_name || item.distilleryName || item.distillery_name || 'N/A',
             status: item.status || 'CancellationPending',
             amount: (item.totalCancellationAmount || item.total_cancellation_amount || item.cancellationBrAmount || item.cancellation_br_amount || '0.00').toString(),
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             priority: this.determinePriority(item),
             cancellationReason: item.reasonForCancellation || item.reason_for_cancellation || 'Cancellation Request',
             licenseType: item.licenseType || item.license_type || 'Import Permit',
-            allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status)
+            allowedActions: item.allowedActions || item.allowed_actions || this.getDefaultActions(item.status),
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
           };
 
           // Check if this cancellation was approved locally and override status

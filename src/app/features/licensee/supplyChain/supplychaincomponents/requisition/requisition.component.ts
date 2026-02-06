@@ -16,10 +16,13 @@ interface TableData {
   distilleryName: string;
   status: string;
   amount: string;
+  workflowId?: number;
+  currentStage?: number;
   commissionerStatus?: string;
   forwardedToCommissioner?: boolean;
   canCancel?: boolean;
   allowedActions?: string[];
+  allowedActionConfigs?: any[];
   quantity?: number;
   numberOfPermits?: number;
   bulkSpiritType?: string;
@@ -146,10 +149,13 @@ export class RequisitionComponent implements OnInit {
             distilleryName: item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
             status: item.status || 'PENDING',
             amount: item.amount || item.totalAmount || item.total_amount || '0.00',
+            workflowId: item.workflow || item.workflow_id || item.workflowId,
+            currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             commissionerStatus: item.commissionerStatus || item.commissioner_status,
             forwardedToCommissioner: item.forwardedToCommissioner || item.forwarded_to_commissioner || false,
             canCancel: item.canCancel || item.can_cancel || false,
             allowedActions: item.allowedActions || item.allowed_actions || [],
+            allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || [],
             // Additional properties that might be needed
             quantity: item.quantity || item.totalQuantity || item.total_quantity,
             numberOfPermits: item.numberOfPermits || item.number_of_permits || 1,

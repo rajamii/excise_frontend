@@ -9,6 +9,8 @@
     </div>
 
     <!-- Application Content -->
+
+
     <div class="application-container">
         <!-- Loading State -->
         @if (isLoading) {
@@ -75,7 +77,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- ========== REQUISITION DETAILS SECTION ========== -->
                 @if (isRequisition()) {
                 <div class="section-card mb-4">
@@ -630,14 +631,28 @@
                 }
                 }
 
-                <!-- Print Button -->
+               
+            </div>
+                <div class="no-print d-flex justify-content-center mb-4" *ngIf="applicationData">
+        
+    </div>
+    
+        </div>
+         <!-- Print Button -->
                 <div class="no-print d-flex justify-content-center mt-2">
                     <button class="btn btn-primary btn-lg" (click)="printApplication()">
                         <i class="bi bi-printer me-2"></i>Print Application
                     </button>
                 </div>
-            </div>
-        </div>
+        <app-unified-action-buttons
+            [item]="applicationData"
+            [itemType]="applicationType"
+            [context]="getUserContext()"
+            [excludeActions]="['PAY','VIEW']"
+            [displayMode]="'detailed'"
+            (actionClicked)="onUnifiedAction($event)">
+        </app-unified-action-buttons>
+        
         } @else {
         <div class="alert alert-warning text-center">
             <h4>No Data Found</h4>
@@ -645,4 +660,5 @@
         </div>
         }
     </div>
+    
 </div>

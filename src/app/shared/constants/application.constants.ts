@@ -31,11 +31,12 @@ export type UserContext = typeof USER_CONTEXTS[keyof typeof USER_CONTEXTS];
  * These should come from backend workflow system
  */
 export const WORKFLOW_IDS = {
-    [APPLICATION_TYPES.REQUISITION]: 1,
-    [APPLICATION_TYPES.REVALIDATION]: 2,
-    [APPLICATION_TYPES.CANCELLATION]: 3,
-    [APPLICATION_TYPES.TRANSIT]: 4,
-    [APPLICATION_TYPES.HOLOGRAM]: 5
+    // From DB: workflow_workflow table
+    [APPLICATION_TYPES.REQUISITION]: 3,  // Supply Chain
+    [APPLICATION_TYPES.REVALIDATION]: 4, // ENA Revalidation
+    [APPLICATION_TYPES.CANCELLATION]: 5, // ENA Cancellation
+    [APPLICATION_TYPES.TRANSIT]: 8,      // Transit Permit
+    [APPLICATION_TYPES.HOLOGRAM]: 7      // Hologram Request
 } as const;
 
 /**
