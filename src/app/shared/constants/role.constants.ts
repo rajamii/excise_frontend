@@ -1,11 +1,12 @@
 export const ADMIN_ROLES = [
-  'level_1',
-  'level_2',
-  'level_3',
-  'level_4',
-  'level_5',
-  'site_admin',
-  'supply_chain',
-  'dev',
-  'single_window'
+  1, // Site Admin
+  3, // Single Window
+  4, // District User
+  5, // Permit Section
+  6, // IT Cell
+  7, // Officer in Charge
+  8, // Sub Enquiry Officer
+  9, // Joint Commissioner
+  10, // Commissioner
+  11 // Secretary
 ];

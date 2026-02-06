@@ -13,7 +13,7 @@ export class Account {
   subdivision?: Subdivision;
   address!: string;
   role?: Role;
-  createdBy?: string;
+  createdBy?: number;
   isActive?: boolean;
   hasActiveLicense?: boolean;
   password?: string;

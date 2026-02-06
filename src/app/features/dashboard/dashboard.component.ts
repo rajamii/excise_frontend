@@ -205,53 +205,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private mapAccountUserToUnifiedUser(accountUser: any): User {
-    // Extract role information
-    let rawRoles = accountUser?.authorities ?? accountUser?.roles ?? accountUser?.role ?? [];
-
-    if (rawRoles && typeof rawRoles === 'object' && !Array.isArray(rawRoles)) {
-      if (rawRoles.name) {
-        rawRoles = [rawRoles.name];
-      } else {
-        rawRoles = [];
-      }
-    } else if (Array.isArray(rawRoles)) {
-      rawRoles = rawRoles.map((r: any) => {
-        if (typeof r === 'string') return r;
-        if (r && r.name) return r.name;
-        if (r && r.roleName) return r.roleName;
-        return r;
-      }).filter(Boolean);
-    }
-
-    // Map legacy role names to role IDs
-    const roleMapping: { [key: string]: number } = {
-      'site_admin': 2,
-      'supply_chain': 8,
-      'Supply_Chain': 8,
-      'permit_section': 9,
-      'Permit Section': 9,
-      'commissioner': 10,
-      'level_1': 11,
-      'it_cell': 12,
-      'it-cell': 12,
-      'level_2': 13,
-      'level_3': 14,
-      'level_4': 15,
-      'level_5': 16,
-      'single_window': 17,
-      'officer_in_charge': 18,
-      'officer-incharge': 18,
-      'licensee': 19
-    };
-
-    // Find the role ID
-    let roleId = 2; // Default to site admin
-    for (const role of rawRoles) {
-      if (roleMapping[role]) {
-        roleId = roleMapping[role];
-        break;
-      }
-    }
+    // Use backend role id directly (no name-based mapping)
+    const roleId = Number(accountUser?.role?.id) || 1;
 
     return {
       id: accountUser.id || 1,
@@ -356,11 +311,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     // Roles that have their own full dashboard component (SPA-like)
-    return roleId ? [9, 10, 12, 18].includes(roleId) : false;
+    return roleId ? [5, 6, 7, 10].includes(roleId) : false;
   }
 
   isLicenseeUser(): boolean {
-    return this.currentUser?.roleId === 19 || this.currentUser?.roleId === 8;
+    return this.currentUser?.roleId === 2;
   }
 
   // Supply Chain Section Handlers
@@ -487,19 +442,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // First try role ID mapping
     const roleNames: { [key: number]: string } = {
-      2: 'Site Administrator Dashboard',
-      8: 'Supply Chain Dashboard',
-      9: 'Permit Section Dashboard',
+      1: 'Site Administrator Dashboard',
+      2: 'Licensee Dashboard',
+      3: 'Single Window Dashboard',
+      4: 'District User Dashboard',
+      5: 'Permit Section Dashboard',
+      6: 'IT Cell Dashboard',
+      7: 'Officer in Charge Dashboard',
+      8: 'Sub Enquiry Officer Dashboard',
+      9: 'Joint Commissioner Dashboard',
       10: 'Commissioner Dashboard',
-      11: 'Level 1 Officer Dashboard',
-      12: 'IT Cell Dashboard',
-      13: 'Level 2 Officer Dashboard',
-      14: 'Level 3 Officer Dashboard',
-      15: 'Level 4 Officer Dashboard',
-      16: 'Level 5 Officer Dashboard',
-      17: 'Single Window Dashboard',
-      18: 'Officer in Charge Dashboard',
-
+      11: 'Secretary Dashboard',
     };
 
     const titleFromRoleId = roleNames[this.currentUser?.roleId || 0];
@@ -511,8 +464,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // Fallback: try to get from account service
     this.accountService.identity().subscribe(user => {
       if (user && (user as any).role) {
-        const legacyRole = (user as any).role.name || (user as any).role;
-        console.log('⚠️ Fallback dashboard title from account service:', legacyRole);
+        console.log('⚠️ Fallback dashboard title from account service role id:', (user as any).role.id);
       }
     });
 
@@ -560,7 +512,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showHeaderAction(): boolean {
     if (!this.selectedSupplyChainSection) return false;
 
-    // Strict check: Only Licensee users (Role 19 or 8) can see the "Create" buttons
+    // Strict check: Only Licensee users (Role ID 2) can see the "Create" buttons
     // Officers (OIC, Commissioner, Permit Section, etc.) should only see the list/tables
     if (!this.isLicenseeUser()) {
       return false;
@@ -647,13 +599,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     let count = 0;
     
     // For admin roles, count items requiring attention
-    if (roleId && [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(roleId)) {
+    if (roleId && [1, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(roleId)) {
       count += this.dashboardCounts.pending || 0;
       count += this.dashboardCounts.awaitingPayment || 0;
     }
     
     // For licensee roles, count rejected items and payment due
-    if (roleId && [8, 19].includes(roleId)) {
+    if (roleId && [2].includes(roleId)) {
       count += this.dashboardCounts.rejected || 0;
       count += this.dashboardCounts.awaitingPayment || 0;
     }
@@ -667,8 +619,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.quickActions = [];
 
     switch (roleId) {
-      case 8: // Supply Chain
-      case 19: // Licensee
+      case 2: // Licensee
         this.quickActions = [
           { id: 'new-requisition', label: 'New Requisition', icon: 'add_circle', color: 'primary', action: () => this.navigateToSection('import-permit') },
           { id: 'transit-permit', label: 'Transit Permit', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit-permit') },
@@ -677,7 +628,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
         break;
       
-      case 9: // Permit Section
+      case 5: // Permit Section
         this.quickActions = [
           { id: 'review-permits', label: 'Review Permits', icon: 'assignment', color: 'primary', action: () => this.navigateToSection('requisition') },
           { id: 'approve-transit', label: 'Transit Approvals', icon: 'local_shipping', color: 'accent', action: () => this.navigateToSection('transit') },
@@ -693,7 +644,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
         break;
       
-      case 18: // Officer in Charge
+      case 7: // Officer in Charge
         this.quickActions = [
           { id: 'hologram-register', label: 'Hologram Register', icon: 'book', color: 'primary', action: () => this.navigateToSection('hologram-register') },
           { id: 'daily-entry', label: 'Daily Entry', icon: 'today', color: 'accent', action: () => this.navigateToSection('hologram-daily-entry') },
@@ -701,7 +652,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
         break;
       
-      case 12: // IT Cell
+      case 6: // IT Cell
         this.quickActions = [
           { id: 'system-monitor', label: 'System Monitor', icon: 'monitor', color: 'primary', action: () => this.navigateToSection('system-monitoring') },
           { id: 'user-management', label: 'User Management', icon: 'people', color: 'accent', action: () => this.manageUsers() },
@@ -727,8 +678,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.customStats = [];
 
     switch (roleId) {
-      case 8: // Supply Chain
-      case 19: // Licensee
+      case 2: // Licensee
         this.customStats = [
           {
             id: 'wallet-balance',
@@ -753,7 +703,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
         break;
       
-      case 9: // Permit Section
+      case 5: // Permit Section
         this.customStats = [
           {
             id: 'processing-time',
@@ -793,7 +743,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         ];
         break;
       
-      case 18: // Officer in Charge
+      case 7: // Officer in Charge
         this.customStats = [
           {
             id: 'hologram-stock',
@@ -884,7 +834,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   shouldShowPerformanceMetrics(): boolean {
     const roleId = this.currentUser?.roleId;
     // Show for admin roles
-    return roleId ? [9, 10, 11, 12, 13, 14, 15, 16, 17, 18].includes(roleId) : false;
+    return roleId ? [1, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(roleId) : false;
   }
 
   loadPerformanceMetrics(): void {
@@ -996,7 +946,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     ];
 
     // Filter activities based on role permissions
-    if (roleId && [8, 19].includes(roleId)) { // Licensee roles
+    if (roleId && [2].includes(roleId)) { // Licensee role
       this.recentActivities = this.recentActivities.filter(activity => 
         ['approval', 'rejection', 'payment'].includes(activity.type)
       );

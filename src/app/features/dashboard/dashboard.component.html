@@ -6,7 +6,7 @@
 
     <!-- Filter Container: Application Type Filter (for roles that need it) -->
     <div class="filter-container"
-      *ngIf="(currentUser?.roleId === 19 || currentUser?.roleId === 8) && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      *ngIf="currentUser?.roleId === 2 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <mat-form-field appearance="outline" class="application-type-filter">
         <mat-label>Filter by Application Type</mat-label>
         <mat-icon matPrefix>filter_list</mat-icon>
@@ -22,16 +22,16 @@
     <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
     <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
       <!-- Permit Section Dashboard -->
-      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 9"></app-permit-section-dashboard>
+      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"></app-permit-section-dashboard>
 
       <!-- Commissioner Dashboard -->
       <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"></app-commissioner-dashboard>
 
       <!-- IT Cell Dashboard -->
-      <app-itcell-dashboard *ngIf="currentUser?.roleId === 12"></app-itcell-dashboard>
+      <app-itcell-dashboard *ngIf="currentUser?.roleId === 6"></app-itcell-dashboard>
 
       <!-- Officer in Charge Dashboard -->
-      <app-officer-in-charge-dashboard *ngIf="currentUser?.roleId === 18"></app-officer-in-charge-dashboard>
+      <app-officer-in-charge-dashboard *ngIf="currentUser?.roleId === 7"></app-officer-in-charge-dashboard>
     </div>
 
     <!-- Supply Chain Section Content -->

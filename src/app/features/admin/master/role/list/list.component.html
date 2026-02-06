@@ -11,10 +11,10 @@
       <div class="table-container">
         <mat-table [dataSource]="roles">
 
-          <!-- Role Name -->
+          <!-- Role ID -->
           <ng-container matColumnDef="name">
-            <mat-header-cell *matHeaderCellDef class="small-column"> Name </mat-header-cell>
-            <mat-cell *matCellDef="let role" class="small-column"> {{ role.name }} </mat-cell>
+            <mat-header-cell *matHeaderCellDef class="small-column"> Role ID </mat-header-cell>
+            <mat-cell *matCellDef="let role" class="small-column"> {{ role.id }} </mat-cell>
           </ng-container>
 
           <!-- Role Precedence -->

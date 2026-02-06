@@ -471,7 +471,7 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
-            this.redirectBasedOnRole(user.role!.name);
+            this.redirectBasedOnRole(user.role?.id);
           } else {
             alert('Failed to fetch user details. Please log in again.');
           }
@@ -487,27 +487,20 @@ export class LoginComponent extends BaseComponent {
     }
   }
 
-  private redirectBasedOnRole(role: string): void {
-    // ALL ROLES now use the unified dashboard - production ready approach
-    if (ADMIN_ROLES.includes(role)) {
-      this.router.navigate(['/dashboard']); // Unified dashboard for all admin roles
-    } else if (role === 'licensee') {
-      this.router.navigate(['/dashboard']); // Unified dashboard for licensees
-    } else if (role === 'Supply_Chain') {
-      this.router.navigate(['/dashboard']); // Unified dashboard for supply chain
-    } else if (role === 'Permit Section' || role === 'permit_section' || role === Authority.PERMIT_SECTION) {
-      this.router.navigate(['/dashboard']); // Unified dashboard for permit section
-    } else if (role === 'commissioner' || role === Authority.COMMISSIONER) {
-      this.router.navigate(['/dashboard']); // Unified dashboard for commissioner
-    } else if (role === 'officer-incharge' || role === 'officer_in_charge' || role === Authority.OFFICER_IN_CHARGE) {
-      this.router.navigate(['/dashboard']); // Unified dashboard for OIC
-    } else if (role === 'it-cell' || role === 'it_cell' || role === Authority.IT_CELL) {
-      this.router.navigate(['/dashboard']); // Unified dashboard for IT Cell
-    } else {
-      console.warn('Unknown role:', role);
-      // Default to unified dashboard for unknown roles
+  private redirectBasedOnRole(roleId?: number): void {
+    // ID-based role routing only
+    if (!roleId) {
       this.router.navigate(['/dashboard']);
+      return;
     }
+
+    if (ADMIN_ROLES.includes(roleId) || roleId === Authority.LICENSEE) {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    console.warn('Unknown role id:', roleId);
+    this.router.navigate(['/dashboard']);
   }
 
   resetPhoneNumber(): void {

@@ -49,11 +49,11 @@ export const routes: Routes = [
       authorities: [
         // Admin roles
         Authority.SITE_ADMIN,
-        Authority.LEVEL_1,
-        Authority.LEVEL_2,
-        Authority.LEVEL_3,
-        Authority.LEVEL_4,
-        Authority.LEVEL_5,
+        Authority.SINGLE_WINDOW,
+        Authority.DISTRICT_USER,
+        Authority.JOINT_COMMISSIONER,
+        Authority.SECRETARY,
+        Authority.SUB_ENQUIRY_OFFICER,
         // Officer roles
         Authority.COMMISSIONER,
         Authority.IT_CELL,
@@ -305,11 +305,11 @@ export const routes: Routes = [
     data: {
       authorities: [
         Authority.SITE_ADMIN,
-        Authority.LEVEL_1,
-        Authority.LEVEL_2,
-        Authority.LEVEL_3,
-        Authority.LEVEL_4,
-        Authority.LEVEL_5,
+        Authority.SINGLE_WINDOW,
+        Authority.DISTRICT_USER,
+        Authority.JOINT_COMMISSIONER,
+        Authority.SECRETARY,
+        Authority.SUB_ENQUIRY_OFFICER,
         Authority.COMMISSIONER,
         Authority.IT_CELL,
         Authority.PERMIT_SECTION,

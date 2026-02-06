@@ -4,7 +4,6 @@ import { MaterialModule } from '../../../../../shared/material.module';
 import { Account } from '../../../../../core/models/account.model';
 import { ManageComponent } from '../manage/manage.component';
 import Swal from 'sweetalert2';
-import { StringUtil } from '../../../../../shared/utils/string.util';
 import { UserService } from '../../../../../core/services/user.service';
 import { AdminService } from '../../../admin.service';
 
@@ -16,9 +15,6 @@ import { AdminService } from '../../../admin.service';
   styleUrls: ['./list.component.scss']
 })
 export class ListComponent implements OnInit {
-  // Utility class to format strings (like toTitleCase)
-  stringUtil = StringUtil;
-
   displayedColumns: string[] = [
     'firstName',
     'middleName',

@@ -120,56 +120,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   private updateRoleServiceWithActualUser(accountUser: any) {
-    // Extract role information from account user
-    let rawRoles = accountUser?.authorities
-      ?? accountUser?.roles
-      ?? accountUser?.role
-      ?? [];
-
-    if (rawRoles && typeof rawRoles === 'object' && !Array.isArray(rawRoles)) {
-      if (rawRoles.name) {
-        rawRoles = [rawRoles.name];
-      } else {
-        rawRoles = [];
-      }
-    } else if (Array.isArray(rawRoles)) {
-      rawRoles = rawRoles.map((r: any) => {
-        if (typeof r === 'string') return r;
-        if (r && r.name) return r.name;
-        if (r && r.roleName) return r.roleName;
-        return r;
-      }).filter(Boolean);
-    }
-
-    // Map legacy role names to role IDs
-    const roleMapping: { [key: string]: number } = {
-      'site_admin': 2,
-      'supply_chain': 8,
-      'Supply_Chain': 8,
-      'permit_section': 9,
-      'Permit Section': 9,
-      'commissioner': 10,
-      'level_1': 11,
-      'it_cell': 12,
-      'it-cell': 12,
-      'level_2': 13,
-      'level_3': 14,
-      'level_4': 15,
-      'level_5': 16,
-      'single_window': 17,
-      'officer_in_charge': 18,
-      'officer-incharge': 18,
-      'licensee': 19
-    };
-
-    // Find the role ID
-    let roleId = 2; // Default to site admin
-    for (const role of rawRoles) {
-      if (roleMapping[role]) {
-        roleId = roleMapping[role];
-        break;
-      }
-    }
+    // Use backend role id directly (no name-based mapping)
+    const roleId = Number(accountUser?.role?.id) || 1;
 
     // Create the unified user object
     const unifiedUser: User = {
@@ -190,7 +142,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
     console.log('✅ Updated role service with actual user:', {
       roleId: roleId,
-      roleName: rawRoles[0],
+      roleIdFromAccount: accountUser?.role?.id,
       displayName: unifiedUser.role?.displayName
     });
   }
@@ -445,7 +397,11 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
-    return !!(this.currentUser && (this.currentUser.roleId === 19 || this.currentUser.roleId === 8));
+    return this.currentUser?.roleId === 2;
+  }
+
+  isSiteAdminUser(): boolean {
+    return this.currentUser?.roleId === 1;
   }
 
   // Check if user has active license
@@ -455,60 +411,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Get role display name for header
   getRoleDisplayName(): string {
-    // First try to get from currentUser (unified role service)
-    if (this.currentUser && this.currentUser.roleId) {
-      const roleNames: { [key: number]: string } = {
-        2: 'Site Administrator',
-        8: 'Supply Chain User',
-        9: 'Permit Section',
-        10: 'Commissioner',
-        11: 'Level 1 Officer',
-        12: 'IT Cell',
-        13: 'Level 2 Officer',
-        14: 'Level 3 Officer',
-        15: 'Level 4 Officer',
-        16: 'Level 5 Officer',
-        17: 'Single Window',
-        18: 'Officer in Charge',
-        19: 'License User'
-      };
-
-      const roleName = roleNames[this.currentUser.roleId];
-      if (roleName) {
-        console.log('✅ Role detected from currentUser:', this.currentUser.roleId, '→', roleName);
-        return roleName;
-      }
-    }
-
-    // Fallback: try to detect from account service user
-    if (this.user && this.user.role) {
-      const legacyRoleName = this.user.role.name || this.user.role;
-      console.log('⚠️ Fallback role detection from account service:', legacyRoleName);
-      
-      // Map legacy role names to display names
-      const legacyRoleMap: { [key: string]: string } = {
-        'site_admin': 'Site Administrator',
-        'Supply_Chain': 'Supply Chain User',
-        'Permit Section': 'Permit Section',
-        'permit_section': 'Permit Section',
-        'commissioner': 'Commissioner',
-        'level_1': 'Level 1 Officer',
-        'it-cell': 'IT Cell',
-        'it_cell': 'IT Cell',
-        'level_2': 'Level 2 Officer',
-        'level_3': 'Level 3 Officer',
-        'level_4': 'Level 4 Officer',
-        'level_5': 'Level 5 Officer',
-        'single_window': 'Single Window',
-        'officer-incharge': 'Officer in Charge',
-        'officer_in_charge': 'Officer in Charge',
-        'licensee': 'License User'
-      };
-
-      return legacyRoleMap[legacyRoleName] || legacyRoleName || 'User';
-    }
-
-    console.warn('❌ No role found, defaulting to User');
-    return 'User';
+    const roleId = this.currentUser?.roleId ?? this.user?.role?.id;
+    return roleId ? `Role ID: ${roleId}` : 'Role ID: -';
   }
 }

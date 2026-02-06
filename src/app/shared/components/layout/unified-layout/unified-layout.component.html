@@ -188,7 +188,7 @@
             <!-- Role-specific sections -->
 
             <!-- Permit Section Navigation -->
-            <div *ngIf="currentUser?.roleId === 9">
+            <div *ngIf="currentUser?.roleId === 5">
               <button class="nav-item" (click)="navigateToSection('requisition')">
                 <mat-icon class="nav-icon">description</mat-icon>
                 <span class="nav-text">Requisition</span>
@@ -232,7 +232,7 @@
             </div>
 
             <!-- IT Cell Navigation -->
-            <div *ngIf="currentUser?.roleId === 12">
+            <div *ngIf="currentUser?.roleId === 6">
               <button class="nav-item" (click)="navigateToSection('itcell-hologram')">
                 <mat-icon class="nav-icon">qr_code</mat-icon>
                 <span class="nav-text">Hologram Procurement</span>
@@ -240,7 +240,7 @@
             </div>
 
             <!-- Officer in Charge Navigation -->
-            <div *ngIf="currentUser?.roleId === 18">
+            <div *ngIf="currentUser?.roleId === 7">
               <button class="nav-item" (click)="navigateToSection('transit-applications')">
                 <mat-icon class="nav-icon">local_shipping</mat-icon>
                 <span class="nav-text">Transit Applications</span>
@@ -271,10 +271,48 @@
               </button>
             </div>
 
-            <!-- General Admin Navigation - Applications and Reports removed -->
-            <div
-              *ngIf="currentUser?.roleId === 2 || (currentUser && currentUser.roleId >= 11 && currentUser.roleId <= 17)">
-              <!-- Applications and Reports sections removed as requested -->
+            <!-- Site Admin master navigation -->
+            <div *ngIf="isSiteAdminUser()">
+              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">people</mat-icon>
+                <span class="nav-text">User</span>
+              </a>
+              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
+                <span class="nav-text">Role</span>
+              </a>
+              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">map</mat-icon>
+                <span class="nav-text">District</span>
+              </a>
+              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">account_tree</mat-icon>
+                <span class="nav-text">Sub Division</span>
+              </a>
+              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">local_police</mat-icon>
+                <span class="nav-text">Police Station</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">category</mat-icon>
+                <span class="nav-text">License Type</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">view_list</mat-icon>
+                <span class="nav-text">License Category</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">badge</mat-icon>
+                <span class="nav-text">License Title</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">layers</mat-icon>
+                <span class="nav-text">License Subcategory</span>
+              </a>
+              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">route</mat-icon>
+                <span class="nav-text">Road</span>
+              </a>
             </div>
           </div>
         </div>

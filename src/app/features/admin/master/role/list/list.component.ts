@@ -82,7 +82,7 @@ export class ListComponent implements OnInit {
   onDelete(role: Role): void {
     Swal.fire({
       title: 'Are you sure?',
-      text: `Delete role "${role.name}"?`,
+      text: `Delete role id "${role.id}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete',

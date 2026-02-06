@@ -11,19 +11,17 @@ export class RoleService {
 
   // Role ID mappings based on your database
   private readonly ROLE_MAPPINGS = {
-    2: { name: 'site_admin', displayName: 'Site Administrator', hierarchy: 1 },
-    8: { name: 'supply_chain', displayName: 'Supply Chain', hierarchy: 8 },
-    9: { name: 'permit_section', displayName: 'Permit Section', hierarchy: 6 },
-    10: { name: 'commissioner', displayName: 'Commissioner', hierarchy: 2 },
-    11: { name: 'level_1', displayName: 'Level 1 Officer', hierarchy: 3 },
-    12: { name: 'it_cell', displayName: 'IT Cell', hierarchy: 4 },
-    13: { name: 'level_2', displayName: 'Level 2 Officer', hierarchy: 4 },
-    14: { name: 'level_3', displayName: 'Level 3 Officer', hierarchy: 5 },
-    15: { name: 'level_4', displayName: 'Level 4 Officer', hierarchy: 6 },
-    16: { name: 'level_5', displayName: 'Level 5 Officer', hierarchy: 7 },
-    17: { name: 'single_window', displayName: 'Single Window', hierarchy: 5 },
-    18: { name: 'officer_in_charge', displayName: 'Officer in Charge', hierarchy: 6 },
-    19: { name: 'licensee', displayName: 'Licensee', hierarchy: 9 }
+    1: { name: 'site_admin', displayName: 'Role ID: 1', hierarchy: 1 },
+    2: { name: 'licensee', displayName: 'Role ID: 2', hierarchy: 11 },
+    3: { name: 'single_window', displayName: 'Role ID: 3', hierarchy: 6 },
+    4: { name: 'district_user', displayName: 'Role ID: 4', hierarchy: 7 },
+    5: { name: 'permit_section', displayName: 'Role ID: 5', hierarchy: 8 },
+    6: { name: 'it_cell', displayName: 'Role ID: 6', hierarchy: 9 },
+    7: { name: 'officer_in_charge', displayName: 'Role ID: 7', hierarchy: 10 },
+    8: { name: 'sub_enquiry_officer', displayName: 'Role ID: 8', hierarchy: 5 },
+    9: { name: 'joint_commissioner', displayName: 'Role ID: 9', hierarchy: 4 },
+    10: { name: 'commissioner', displayName: 'Role ID: 10', hierarchy: 3 },
+    11: { name: 'secretary', displayName: 'Role ID: 11', hierarchy: 2 }
   };
 
   constructor() {
@@ -66,9 +64,9 @@ export class RoleService {
       username: 'admin',
       email: 'admin@excise.gov',
       fullName: 'System Administrator',
-      roleId: 2,
-      role: this.getRoleById(2)!,
-      permissions: this.getPermissionsByRoleId(2),
+      roleId: 1,
+      role: this.getRoleById(1)!,
+      permissions: this.getPermissionsByRoleId(1),
       isActive: true,
       lastLogin: new Date()
     };
@@ -140,8 +138,7 @@ export class RoleService {
     const checkRoleId = roleId || this.getCurrentUser()?.roleId;
     if (!checkRoleId) return false;
 
-    // Admin roles: site_admin, commissioner, level_1, level_2, level_3, level_4, level_5, single_window, it_cell, permit_section, officer_in_charge
-    const adminRoles = [2, 10, 11, 12, 13, 14, 15, 16, 17, 9, 18];
+    const adminRoles = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11];
     return adminRoles.includes(checkRoleId);
   }
 
@@ -149,8 +146,7 @@ export class RoleService {
     const checkRoleId = roleId || this.getCurrentUser()?.roleId;
     if (!checkRoleId) return false;
 
-    // Licensee roles: supply_chain, licensee
-    const licenseeRoles = [8, 19];
+    const licenseeRoles = [2];
     return licenseeRoles.includes(checkRoleId);
   }
 
@@ -163,10 +159,16 @@ export class RoleService {
     // Define permissions based on role
     const permissionMap: { [key: number]: string[] } = {
       // Site Admin - Full access
-      2: [
+      1: [
         'dashboard.view', 'applications.view', 'applications.create', 'applications.update', 'applications.delete',
         'applications.approve', 'applications.reject', 'users.view', 'users.create', 'users.update', 'users.delete',
         'reports.view', 'reports.generate', 'system.view', 'system.configure', 'master.view', 'master.update'
+      ],
+
+      // Licensee
+      2: [
+        'dashboard.view', 'licensee.applications.view', 'licensee.applications.create',
+        'licensee.profile.view', 'licensee.profile.update'
       ],
       
       // Commissioner - High level admin access
@@ -175,50 +177,36 @@ export class RoleService {
         'reports.view', 'reports.generate', 'master.view', 'hologram.manage', 'payment.manage'
       ],
       
-      // Level Officers - Application processing
-      11: ['dashboard.view', 'applications.view', 'applications.process', 'applications.approve', 'reports.view'],
-      13: ['dashboard.view', 'applications.view', 'applications.process', 'applications.approve', 'reports.view'],
-      14: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
-      15: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
-      16: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
-      
       // IT Cell - System management
-      12: [
+      6: [
         'dashboard.view', 'system.view', 'system.monitor', 'users.view', 'users.create', 'users.update',
         'logs.view', 'reports.view'
       ],
       
       // Single Window - Application management
-      17: [
+      3: [
         'dashboard.view', 'applications.view', 'applications.create', 'applications.update',
         'applications.process', 'reports.view'
       ],
       
       // Permit Section - Permit management
-      9: [
+      5: [
         'dashboard.view', 'permits.view', 'permits.create', 'permits.update', 'permits.approve',
         'requisition.view', 'requisition.process', 'revalidation.view', 'revalidation.process',
         'cancellation.view', 'cancellation.process', 'transit.view', 'transit.process'
       ],
       
       // Officer in Charge - Hologram management
-      18: [
+      7: [
         'dashboard.view', 'hologram.view', 'hologram.request', 'hologram.approve',
         'applications.view', 'reports.view'
       ],
-      
-      // Supply Chain - Licensee operations
-      8: [
-        'dashboard.view', 'licensee.applications.view', 'licensee.applications.create',
-        'supply_chain.view', 'supply_chain.manage', 'requisition.create', 'revalidation.create',
-        'transit.create', 'hologram.request', 'payments.view'
-      ],
-      
-      // Licensee - Basic licensee operations
-      19: [
-        'dashboard.view', 'licensee.applications.view', 'licensee.applications.create',
-        'licensee.profile.view', 'licensee.profile.update'
-      ]
+
+      // District User / Sub Enquiry Officer / Joint Commissioner / Secretary
+      4: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
+      8: ['dashboard.view', 'applications.view', 'applications.process', 'reports.view'],
+      9: ['dashboard.view', 'applications.view', 'applications.approve', 'reports.view'],
+      11: ['dashboard.view', 'applications.view', 'applications.approve', 'reports.view']
     };
 
     return permissionMap[roleId] || [];
