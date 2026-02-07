@@ -21,6 +21,7 @@ export class ListComponent implements OnInit {
   // Table columns
   displayedColumns: string[] = [
     'name',
+    'roleName',
     'rolePrecedence',
     'canView',
     'canAdd',
@@ -42,7 +43,9 @@ export class ListComponent implements OnInit {
   // Fetch all roles from API
   loadRoles(): void {
     this.userService.getRoles().subscribe({
-      next: (data) => this.roles = data,
+      next: (data) => {
+        this.roles = [...data].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+      },
       error: () => Swal.fire('Error', 'Failed to load roles.', 'error')
     });
   }

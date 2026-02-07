@@ -1,13 +1,14 @@
 import { Component, EventEmitter, OnDestroy, Output } from '@angular/core';
-import { MaterialModule } from '../../../../../../../shared/material.module';
-import { Company, CompanyDocuments } from '../../../../../../../core/models/company.model';
+import { MaterialModule } from '../../../../../../../../shared/material.module';
+import { Company, CompanyDocuments } from '../../../../../../../../core/models/company.model';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
-import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { CompanyRegistrationService } from '../../../../../../../../core/services/company-registration.service';
 
 @Component({
   selector: 'app-submit-application',
+  standalone: true,
   imports: [MaterialModule, FormsModule],
   templateUrl: './submit-application.component.html',
   styleUrl: './submit-application.component.scss'
@@ -55,9 +56,9 @@ export class SubmitApplicationComponent implements OnDestroy {
   @Output() back = new EventEmitter<void>();
 
   constructor(
-    private companyRegistrationService: CompanyRegistrationService, 
+    private companyRegistrationService: CompanyRegistrationService,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnDestroy(): void {
     this.fileUrls.forEach(url => URL.revokeObjectURL(url));
@@ -87,7 +88,7 @@ export class SubmitApplicationComponent implements OnDestroy {
 
     const docs = this.companyRegistrationService.getCompanyDocuments();
     this.fileUrls = [];
-  
+
     this.cachedDocuments = Object.entries(docs).map(([key, file]) => {
       const url = URL.createObjectURL(file!);
       this.fileUrls.push(url);
@@ -104,34 +105,34 @@ export class SubmitApplicationComponent implements OnDestroy {
   // Get summary data for the application summary section
   getSummaryData(): { key: string; value: any }[] {
     const summary: { key: string; value: any }[] = [];
-    
+
     // Add key company details
     const appYearData = this.companyDetails.find(item => item.key === 'Application Year');
     if (appYearData) summary.push({ key: 'Application Year', value: appYearData.value });
-    
+
     const brandTypeData = this.companyDetails.find(item => item.key === 'Brand Type');
     if (brandTypeData) summary.push({ key: 'Brand Type', value: brandTypeData.value });
-    
+
     const companyNameData = this.companyDetails.find(item => item.key === 'Company Name');
     if (companyNameData) summary.push({ key: 'Company Name', value: companyNameData.value });
-    
+
     const panData = this.companyDetails.find(item => item.key === 'PAN');
     if (panData) summary.push({ key: 'PAN', value: panData.value });
-    
+
     // Add key member details
     const memberNameData = this.memberDetails.find(item => item.key === 'Member Name');
     if (memberNameData) summary.push({ key: 'Member Name', value: memberNameData.value });
-    
+
     const memberMobileData = this.memberDetails.find(item => item.key === 'Member Mobile Number');
     if (memberMobileData) summary.push({ key: 'Contact Number', value: memberMobileData.value });
-    
+
     // Add payment amount
     const paymentAmountData = this.paymentDetails.find(item => item.key === 'Payment Amount');
     if (paymentAmountData) summary.push({ key: 'Payment Amount', value: `₹${paymentAmountData.value}` });
-    
+
     // Add application date
     summary.push({ key: 'Application Date', value: new Date().toLocaleDateString('en-GB') });
-    
+
     return summary;
   }
 
@@ -158,7 +159,7 @@ export class SubmitApplicationComponent implements OnDestroy {
   // View file in new tab - FIXED VERSION
   viewFile(doc: { key: keyof CompanyDocuments; file: File; fileUrl: string }) {
     console.log('Attempting to view file:', doc);
-    
+
     if (!doc) {
       console.error('No document provided');
       Swal.fire('Error', 'Document not found.', 'error');
@@ -169,7 +170,7 @@ export class SubmitApplicationComponent implements OnDestroy {
     if (doc.fileUrl) {
       console.log('Opening fileUrl:', doc.fileUrl);
       const newWindow = window.open(doc.fileUrl, '_blank');
-      
+
       if (!newWindow) {
         Swal.fire('Error', 'Pop-up blocked. Please allow pop-ups for this site.', 'warning');
       }
@@ -182,11 +183,11 @@ export class SubmitApplicationComponent implements OnDestroy {
       try {
         const url = URL.createObjectURL(doc.file);
         const newWindow = window.open(url, '_blank');
-        
+
         if (!newWindow) {
           Swal.fire('Error', 'Pop-up blocked. Please allow pop-ups for this site.', 'warning');
         }
-        
+
         // Clean up after a delay
         setTimeout(() => URL.revokeObjectURL(url), 10000);
       } catch (error) {
@@ -260,7 +261,7 @@ export class SubmitApplicationComponent implements OnDestroy {
         next: () => {
           // Generate application ID
           this.applicationId = this.generateApplicationId();
-          
+
           Swal.fire({
             title: 'Success!',
             text: `Application submitted successfully! Your application ID is ${this.applicationId}`,
@@ -290,14 +291,14 @@ export class SubmitApplicationComponent implements OnDestroy {
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const day = String(currentDate.getDate()).padStart(2, '0');
     const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    
+
     return `COMP/${year}${month}${day}/${randomNum}`;
   }
 
   goToDashboard() {
     // Clear all session data
     sessionStorage.clear();
-    
+
     // Navigate to dashboard
     this.router.navigate(['/site-admin/dashboard']);
   }

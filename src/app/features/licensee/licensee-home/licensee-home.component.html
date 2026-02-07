@@ -100,8 +100,7 @@
                             Company Registration
                         </mat-expansion-panel-header>
                         <div class="button-column">
-                            <button mat-menu-item routerLink="company/prepare-application"
-                                routerLinkActive="active-link">
+                            <button mat-menu-item (click)="navigateToDashboardSection('company-registration')">
                                 Prepare Application
                             </button>
                             <button mat-menu-item routerLink="company/application-action"
@@ -121,8 +120,7 @@
                             Salesman/Barman Registration
                         </mat-expansion-panel-header>
                         <div class="button-column">
-                            <button mat-menu-item routerLink="salesman-barman/prepare-application"
-                                routerLinkActive="active-link">
+                            <button mat-menu-item (click)="navigateToDashboardSection('salesman-barman-registration')">
                                 Prepare Application
                             </button>
                             <button mat-menu-item routerLink="salesman-barman/application-action"

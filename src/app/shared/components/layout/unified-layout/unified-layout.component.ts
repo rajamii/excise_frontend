@@ -122,6 +122,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   private updateRoleServiceWithActualUser(accountUser: any) {
     // Use backend role id directly (no name-based mapping)
     const roleId = Number(accountUser?.role?.id) || 1;
+    const baseRole = this.roleService.getRoleById(roleId);
+    const backendRoleName = accountUser?.role?.name || accountUser?.role?.displayName;
 
     // Create the unified user object
     const unifiedUser: User = {
@@ -130,8 +132,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       email: accountUser.email || 'user@excise.gov',
       fullName: `${accountUser.firstName || ''} ${accountUser.lastName || ''}`.trim() || 'User',
       roleId: roleId,
-      role: this.roleService.getRoleById(roleId)!,
-      permissions: this.roleService.getRoleById(roleId)?.permissions || [],
+      role: {
+        id: roleId,
+        name: backendRoleName || baseRole?.name || 'user',
+        displayName: backendRoleName || 'User',
+        permissions: baseRole?.permissions || [],
+        hierarchy: baseRole?.hierarchy || 999
+      },
+      permissions: baseRole?.permissions || [],
       isActive: true,
       lastLogin: new Date()
     };
@@ -259,6 +267,17 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   navigateToSupplyChain(section: string): void {
     this.router.navigate(['/dashboard'], { 
       queryParams: { section: section } 
+    });
+  }
+
+  navigateToLicenseeRegistration(type: 'company' | 'salesman-barman'): void {
+    const section =
+      type === 'company'
+        ? 'company-registration'
+        : 'salesman-barman-registration';
+
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section }
     });
   }
 
@@ -411,7 +430,14 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Get role display name for header
   getRoleDisplayName(): string {
-    const roleId = this.currentUser?.roleId ?? this.user?.role?.id;
-    return roleId ? `Role ID: ${roleId}` : 'Role ID: -';
+    const candidates = [
+      this.user?.role?.name,
+      this.user?.role?.displayName,
+      this.currentUser?.role?.name,
+      this.currentUser?.role?.displayName
+    ];
+
+    const roleName = candidates.find((v) => !!v && !String(v).startsWith('Role ID:'));
+    return roleName || 'User';
   }
 }

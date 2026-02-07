@@ -49,6 +49,8 @@ import { PermitSectionDashboardComponent } from './role-components/permit-sectio
 import { CommissionerDashboardComponent as CommissionerDashboard } from './role-components/commissioner-dashboard.component';
 import { ITCellDashboardComponent } from './role-components/itcell-dashboard.component';
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
+import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
+import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -87,7 +89,9 @@ import { OfficerInChargeDashboardComponent } from './role-components/officer-in-
     PermitSectionDashboardComponent,
     CommissionerDashboard,
     ITCellDashboardComponent,
-    OfficerInChargeDashboardComponent
+    OfficerInChargeDashboardComponent,
+    CompanyPrepareApplicationComponent,
+    SalesmanPrepareApplicationComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -481,6 +485,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit': 'Transit Management',
       'hologram': 'Hologram Procurement',
       'hologram-request': 'Hologram Request',
+      'company-registration': 'Company Registration',
+      'salesman-barman-registration': 'Salesman/Barman Registration',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',

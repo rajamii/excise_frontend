@@ -2,13 +2,14 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { MaterialModule } from '../../../../../../../shared/material.module';
-import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
-import { FormUtils } from '../../../../../../../shared/utils/capitalize.util';
-import { Company } from '../../../../../../../core/models/company.model';
+import { MaterialModule } from '../../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../../shared/constants/pattern.constants';
+import { FormUtils } from '../../../../../../../../shared/utils/capitalize.util';
+import { Company } from '../../../../../../../../core/models/company.model';
 
 @Component({
   selector: 'app-company-details',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './company-details.component.html',
   styleUrl: './company-details.component.scss',
@@ -22,14 +23,14 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   applicationYears: string[] = ['2025-2026'];
   countries: string[] = ['India', 'Nepal', 'Bhutan', 'China'];
   states: string[] = ['Sikkim', 'West Bengal', 'Bihar', 'Assam'];
-  
+
   // Output events for step navigation
   @Output() readonly next = new EventEmitter<void>();
   @Output() readonly back = new EventEmitter<void>();
 
   // Used to unsubscribe from observables
   private destroy$ = new Subject<void>();
-  
+
   // Error messages for each form control, using Angular's signal for reactivity
   errorMessages = {
     brandType: signal(''),
@@ -47,7 +48,7 @@ export class CompanyDetailsComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
   ) {
     // Load stored form values from sessionStorage
     const storedValues = this.getFromSessionStorage();

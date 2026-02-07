@@ -13,6 +13,13 @@ import { LicenseSubcategory } from '../../core/models/license-subcategory.model'
 import { LicenseTitle } from '../../core/models/license-title.model';
 import { Road } from '../../core/models/road.model';
 
+export type UserPayload = Omit<Partial<Account>, 'district' | 'subdivision' | 'role'> & {
+  district?: number;
+  subdivision?: number;
+  role?: number;
+  confirmPassword?: string;
+};
+
 @Injectable({ providedIn: 'root' })
 
 export class AdminService {
@@ -25,7 +32,7 @@ export class AdminService {
   // ========================== USER MANAGEMENT ==========================
 
   // Add a new user
-  addUser(user: Account): Observable<any> {
+  addUser(user: UserPayload): Observable<any> {
     console.log('Adding user:', user);
     return this.http.post(`${this.usersUrl}/users/register/`, user).pipe(
       catchError(err => {
@@ -36,7 +43,7 @@ export class AdminService {
   }
 
   // Update user by id
-  updateUser(id: number, changes: Partial<Account>): Observable<any> {
+  updateUser(id: number, changes: UserPayload): Observable<any> {
     return this.http.put<Account>(
       `${this.usersUrl}/users/${id}/update/`,
       changes
@@ -60,7 +67,6 @@ export class AdminService {
       can_update: role.canUpdate,
       can_delete: role.canDelete,
       precedence: role.rolePrecedence,
-      // Include other fields if necessary
     };
     return this.http.post(`${this.usersUrl}/roles/create/`, payload);
   }
@@ -80,6 +86,7 @@ export class AdminService {
     delete payload.canUpdate;
     delete payload.canDelete;
     delete payload.rolePrecedence;
+    delete payload.id;
 
     return this.http.put<Role>(`${this.usersUrl}/roles/${id}/update/`, payload);
   }

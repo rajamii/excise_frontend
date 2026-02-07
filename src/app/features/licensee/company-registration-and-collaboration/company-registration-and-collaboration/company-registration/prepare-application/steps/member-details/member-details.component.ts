@@ -2,12 +2,13 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { MaterialModule } from '../../../../../../../shared/material.module';
-import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
-import { Company } from '../../../../../../../core/models/company.model';
+import { MaterialModule } from '../../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../../shared/constants/pattern.constants';
+import { Company } from '../../../../../../../../core/models/company.model';
 
 @Component({
   selector: 'app-member-details',
+  standalone: true,
   imports: [MaterialModule],
   templateUrl: './member-details.component.html',
   styleUrl: './member-details.component.scss'
@@ -71,7 +72,7 @@ export class MemberDetailsComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngOnInit() {}
+  ngOnInit() { }
 
   ngOnDestroy() {
     // Complete the destroy$ subject to avoid memory leaks

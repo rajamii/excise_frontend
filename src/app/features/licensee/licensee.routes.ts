@@ -54,6 +54,16 @@ export const licenseeRoutes: Routes = [
         loadComponent: () => import('./supplyChain/HoloGram/hologram/hologram.component').then(m => m.HologramComponent)
       }
     ]
+  },
+  {
+    path: 'company/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'company-registration' }
+  },
+  {
+    path: 'salesman-barman/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'salesman-barman-registration' }
   }
 ];
 

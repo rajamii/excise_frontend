@@ -17,6 +17,12 @@
             <mat-cell *matCellDef="let role" class="small-column"> {{ role.id }} </mat-cell>
           </ng-container>
 
+          <!-- Role Name -->
+          <ng-container matColumnDef="roleName">
+            <mat-header-cell *matHeaderCellDef> Role Name </mat-header-cell>
+            <mat-cell *matCellDef="let role"> {{ toTitleCase(role.name || '-') }} </mat-cell>
+          </ng-container>
+
           <!-- Role Precedence -->
           <ng-container matColumnDef="rolePrecedence">
             <mat-header-cell *matHeaderCellDef class="small-column"> Precedence </mat-header-cell>

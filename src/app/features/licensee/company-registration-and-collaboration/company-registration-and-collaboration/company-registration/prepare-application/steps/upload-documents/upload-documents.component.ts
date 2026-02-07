@@ -2,21 +2,22 @@ import { Component, EventEmitter, Output, OnDestroy, signal, inject } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
-import { MaterialModule } from '../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../../shared/constants/pattern.constants';
+import { MaterialModule } from '../../../../../../../../shared/material.module';
 import { DatePipe } from '@angular/common';
-import { Company, CompanyDocuments } from '../../../../../../../core/models/company.model';
-import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { Company, CompanyDocuments } from '../../../../../../../../core/models/company.model';
+import { CompanyRegistrationService } from '../../../../../../../../core/services/company-registration.service';
 
 @Component({
-  selector: 'app-upload-documents', 
+  selector: 'app-upload-documents',
+  standalone: true,
   imports: [MaterialModule], // Importing Material UI module for the component
-  templateUrl: './upload-documents.component.html', 
-  styleUrl: './upload-documents.component.scss', 
+  templateUrl: './upload-documents.component.html',
+  styleUrl: './upload-documents.component.scss',
   providers: [DatePipe] // Provides DatePipe to format dates
 })
 export class UploadDocumentsComponent implements OnDestroy {
-  
+
   uploadDocumentsForm: FormGroup; // Form group for the document upload form
 
   @Output() readonly next = new EventEmitter<void>(); // Event emitter for next step
@@ -30,28 +31,28 @@ export class UploadDocumentsComponent implements OnDestroy {
     paymentAmount: signal(''),
     paymentRemarks: signal('')
   };
-  
+
   displayedColumns: string[] = ['serialNo', 'docType', 'upload', 'view']; // Columns for the displayed document table
   documents = [ // List of documents to be uploaded
-    { 
-      key: 'undertaking', 
-      name: 'An Undertaking stating that they shall abide by the condition of the Certificate or registration and the provision of Sikkim Excise Act 1992 and rules, regulations and orders made there-under.', 
-      format: 'pdf, png, jpg', 
-      accept: '.pdf,.png,.jpg', 
-      required: true, 
+    {
+      key: 'undertaking',
+      name: 'An Undertaking stating that they shall abide by the condition of the Certificate or registration and the provision of Sikkim Excise Act 1992 and rules, regulations and orders made there-under.',
+      format: 'pdf, png, jpg',
+      accept: '.pdf,.png,.jpg',
+      required: true,
       file: null,
       fileUrl: '',
-      requiredAtStart: true  
+      requiredAtStart: true
     },
   ];
 
   constructor(
-    private fb: FormBuilder, 
-    private companyRegistrationService: CompanyRegistrationService, 
+    private fb: FormBuilder,
+    private companyRegistrationService: CompanyRegistrationService,
     private datePipe: DatePipe
   ) {
     const storedValues = this.getFromSessionStorage(); // Retrieve stored form data from sessionStorage
-    
+
     this.uploadDocumentsForm = this.fb.group({
       paymentId: new FormControl(storedValues.paymentId, [Validators.required, Validators.pattern(PatternConstants.NUMBER)]), // Form control for payment ID
       paymentDate: new FormControl(storedValues.paymentDate, Validators.required), // Form control for payment date

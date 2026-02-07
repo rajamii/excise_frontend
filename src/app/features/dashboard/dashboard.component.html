@@ -72,6 +72,9 @@
         <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
         <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
         <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
+        <app-prepare-application *ngIf="selectedSupplyChainSection === 'company-registration'"></app-prepare-application>
+        <app-salesman-registration
+          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration'"></app-salesman-registration>
 
         <!-- IT Cell specific sections -->
         <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>
