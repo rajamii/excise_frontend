@@ -23,7 +23,7 @@ export interface ApplicationWorkflowData {
   workflowId?: number;
   currentStage?: number | any;
   currentStageName?: string;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'hologram-procurement'; // Changed to type to match component
+  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'hologram-procurement' | 'new-license'; // Changed to type to match component
   status: string;
   referenceNo?: string;
   allowedActionConfigs?: WorkflowActionConfig[];
@@ -148,6 +148,12 @@ export class WorkflowActionService {
         // Hologram uses ViewSet with underscore - procurement endpoint
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
+      case 'new-license':
+        return of({ success: false, message: 'Workflow actions are not configured for new-license' });
+    }
+
+    if (!endpoint) {
+      return of({ success: false, message: `No workflow endpoint configured for ${data.type}` });
     }
 
     console.log('🔧 WORKFLOW ACTION SERVICE: Executing action:', {

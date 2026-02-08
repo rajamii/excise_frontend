@@ -31,7 +31,7 @@ export class UnifiedActionsService {
   executeAction(
     action: string,
     item: any,
-    itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram',
+    itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license',
     context?: string
   ): Observable<ActionResult> {
 

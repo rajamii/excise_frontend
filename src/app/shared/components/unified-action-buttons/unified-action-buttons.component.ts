@@ -152,7 +152,7 @@ export interface ActionButtonConfig {
 })
 export class UnifiedActionButtonsComponent implements OnInit {
   @Input() item!: ActionItem;
-  @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' = 'requisition';
+  @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license' = 'requisition';
   @Input() context: 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' = 'licensee';
   @Input() displayMode: 'table' | 'detailed' = 'table';
   @Input() includeActions: string[] | null = null;

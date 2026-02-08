@@ -7,7 +7,8 @@ export const APPLICATION_TYPES = {
     REVALIDATION: 'revalidation', 
     CANCELLATION: 'cancellation',
     TRANSIT: 'transit',
-    HOLOGRAM: 'hologram'
+    HOLOGRAM: 'hologram',
+    NEW_LICENSE: 'new-license'
 } as const;
 
 export type ApplicationType = typeof APPLICATION_TYPES[keyof typeof APPLICATION_TYPES];
@@ -36,7 +37,8 @@ export const WORKFLOW_IDS = {
     [APPLICATION_TYPES.REVALIDATION]: 4, // ENA Revalidation
     [APPLICATION_TYPES.CANCELLATION]: 5, // ENA Cancellation
     [APPLICATION_TYPES.TRANSIT]: 8,      // Transit Permit
-    [APPLICATION_TYPES.HOLOGRAM]: 7      // Hologram Request
+    [APPLICATION_TYPES.HOLOGRAM]: 7,     // Hologram Request
+    [APPLICATION_TYPES.NEW_LICENSE]: 0   // New License workflow id not required for view-only flow
 } as const;
 
 /**
@@ -48,7 +50,8 @@ export const APPLICATION_TITLES = {
     [APPLICATION_TYPES.REVALIDATION]: 'REVALIDATION APPLICATION', 
     [APPLICATION_TYPES.CANCELLATION]: 'CANCELLATION APPLICATION',
     [APPLICATION_TYPES.TRANSIT]: 'TRANSIT PERMIT APPLICATION',
-    [APPLICATION_TYPES.HOLOGRAM]: 'HOLOGRAM REQUEST'
+    [APPLICATION_TYPES.HOLOGRAM]: 'HOLOGRAM REQUEST',
+    [APPLICATION_TYPES.NEW_LICENSE]: 'NEW LICENSE APPLICATION'
 } as const;
 
 /**
@@ -60,7 +63,8 @@ export const PAGE_TITLES = {
     [APPLICATION_TYPES.REVALIDATION]: 'Revalidation Application Details',
     [APPLICATION_TYPES.CANCELLATION]: 'Cancellation Application Details', 
     [APPLICATION_TYPES.TRANSIT]: 'Transit Permit Details',
-    [APPLICATION_TYPES.HOLOGRAM]: 'Hologram Request Details'
+    [APPLICATION_TYPES.HOLOGRAM]: 'Hologram Request Details',
+    [APPLICATION_TYPES.NEW_LICENSE]: 'New License Application Details'
 } as const;
 
 /**

@@ -3,6 +3,7 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import Swal from 'sweetalert2';
 
 // Services
@@ -28,6 +29,7 @@ import {
     WARNING_STATUS_KEYWORDS,
     DANGER_STATUS_KEYWORDS
 } from '../../constants/application.constants';
+import { environment } from '../../../../environments/environment';
 
 // Components and interfaces
 
@@ -80,6 +82,33 @@ export interface UnifiedApplicationData {
     paymentAmount?: number;
     hologramType?: string;
     permitType?: string;
+
+    // New license specific fields (explicitly declared for strict template type-checking)
+    applicant_name?: string;
+    applicantName?: string;
+    establishment_name?: string;
+    establishmentName?: string;
+    father_husband_name?: string;
+    fatherHusbandName?: string;
+    email?: string;
+    mobile_number?: string;
+    mobileNumber?: string;
+    license_type_name?: string;
+    licenseTypeName?: string;
+    license_type?: string;
+    license_category_name?: string;
+    licenseCategoryName?: string;
+    license_category?: string;
+    license_sub_category_name?: string;
+    licenseSubCategoryName?: string;
+    site_district_name?: string;
+    siteDistrictName?: string;
+    site_subdivision_name?: string;
+    siteSubdivisionName?: string;
+    police_station_name?: string;
+    policeStationName?: string;
+    yearly_license_fee?: string | number;
+    yearlyLicenseFee?: string | number;
     
     // Transit permit specific fields
     routeDetails?: string;
@@ -194,6 +223,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     constructor(
         private route: ActivatedRoute,
         private router: Router,
+        private http: HttpClient,
         private enaRequisitionService: EnaRequisitionService,
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
@@ -357,6 +387,23 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     brAmount: ['paymentAmount', 'payment_amount', 'total_amount', 'totalAmount'],
                     quantity: ['localQty', 'exportQty', 'defenceQty', 'total_requested_quantity']
                 }
+            },
+            'new-license': {
+                service: this,
+                listMethod: 'getNewLicenseApplications',
+                detailMethod: 'getNewLicenseApplicationById',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.NEW_LICENSE],
+                fieldMappings: {
+                    id: ['application_id', 'id'],
+                    referenceNo: ['application_id', 'referenceNo', 'reference_no'],
+                    submissionDate: ['created_at', 'createdAt', 'updated_at', 'updatedAt'],
+                    status: ['current_stage_name', 'currentStageName', 'current_stage', 'status'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow', 'workflow_id', 'workflowId'],
+                    distilleryName: ['establishment_name', 'establishmentName', 'applicant_name', 'applicantName'],
+                    brAmount: ['yearly_license_fee']
+                }
             }
         };
     }
@@ -396,6 +443,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         } else {
             this.loadByReference(config, refNo);
         }
+    }
+
+    // New license adapters used by serviceConfigs
+    private getNewLicenseApplications(): Observable<any> {
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/list/`);
+    }
+
+    private getNewLicenseApplicationById(id: string): Observable<any> {
+        const encodedId = encodeURIComponent(id);
+        return this.http.get<any>(`${environment.apiBaseUrl}/transactional/new_license_application/detail/${encodedId}/`);
     }
 
     private loadByIdWithFallback(config: ServiceConfig, id: string, refNo: string): void {
@@ -693,6 +750,15 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 mappedData['totalQty'] = (mappedData['localQty'] || 0) + (mappedData['exportQty'] || 0) + (mappedData['defenceQty'] || 0);
                 mappedData['paymentAmount'] = this.parseNumericValue(this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount']));
                 break;
+            case 'new-license':
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['establishment_name', 'establishmentName']) ||
+                    this.extractFieldValue(apiData, ['applicant_name', 'applicantName']) ||
+                    'Not specified';
+                mappedData['brAmount'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['yearly_license_fee', 'yearlyLicenseFee'])
+                );
+                break;
         }
     }
 
@@ -866,6 +932,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isCancellation(): boolean { return this.applicationType === 'cancellation'; }
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
+    isNewLicense(): boolean { return this.applicationType === 'new-license'; }
 
     getApplicationTitle(): string {
         return APPLICATION_TITLES[this.applicationType] || 'APPLICATION';

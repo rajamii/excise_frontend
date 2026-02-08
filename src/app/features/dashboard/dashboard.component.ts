@@ -34,6 +34,7 @@ import { TransitPermitComponent } from '../licensee/supplyChain/transit-permit/t
 import { ImportPermitComponent } from '../licensee/supplyChain/import-permit/import-permit.component';
 import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component';
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
+import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
 
 // Officer-specific Components
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
@@ -51,6 +52,7 @@ import { ITCellDashboardComponent } from './role-components/itcell-dashboard.com
 import { OfficerInChargeDashboardComponent } from './role-components/officer-in-charge-dashboard.component';
 import { PrepareApplicationComponent as CompanyPrepareApplicationComponent } from '../licensee/company-registration-and-collaboration/company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component';
 import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } from '../licensee/salesman-registration/prepare-application.component';
+import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-new-license.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -77,6 +79,7 @@ import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } fr
     ImportPermitComponent,
     Hologramrequestlevel1Component,
     HologramComponent,
+    NewLicenseDashboardComponent,
     // Officer-specific Components
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
@@ -91,7 +94,8 @@ import { PrepareApplicationComponent as SalesmanPrepareApplicationComponent } fr
     ITCellDashboardComponent,
     OfficerInChargeDashboardComponent,
     CompanyPrepareApplicationComponent,
-    SalesmanPrepareApplicationComponent
+    SalesmanPrepareApplicationComponent,
+    ApplyNewLicenseComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
@@ -487,6 +491,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
+      'new-license': 'New License Management',
+      'new-license-apply': 'Apply New License',
 
       // SPA Forms
       'transit-permit': 'Apply Transit Permit',
@@ -531,7 +537,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'requisition',
       'transit',
       'hologram',
-      'hologram-request'
+      'hologram-request',
+      'new-license'
     ];
 
     return sectionsWithActions.includes(section);
@@ -545,6 +552,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'transit': return 'Apply Transit';
       case 'hologram': return 'New Hologram';
       case 'hologram-request': return 'New Request';
+      case 'new-license': return 'Apply New License';
       default: return 'Create New';
     }
   }
@@ -557,6 +565,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'transit': return 'local_shipping';
       case 'hologram': return 'add_circle';
       case 'hologram-request': return 'add_circle';
+      case 'new-license': return 'add_circle';
       default: return 'add';
     }
   }
@@ -573,6 +582,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-new' } });
     } else if (section === 'hologram-request') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request-form' } });
+    } else if (section === 'new-license') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
     }
   }
 

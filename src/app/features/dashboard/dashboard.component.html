@@ -75,6 +75,8 @@
         <app-prepare-application *ngIf="selectedSupplyChainSection === 'company-registration'"></app-prepare-application>
         <app-salesman-registration
           *ngIf="selectedSupplyChainSection === 'salesman-barman-registration'"></app-salesman-registration>
+        <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
+        <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
 
         <!-- IT Cell specific sections -->
         <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>

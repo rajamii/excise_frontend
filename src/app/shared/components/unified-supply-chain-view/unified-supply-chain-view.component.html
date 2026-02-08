@@ -631,6 +631,80 @@
                 }
                 }
 
+                @if (isNewLicense()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Applicant Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td>{{ applicationData.referenceNo || applicationData.id }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Name</td>
+                                    <td>{{ applicationData.applicant_name || applicationData.applicantName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Establishment Name</td>
+                                    <td>{{ applicationData.establishment_name || applicationData.establishmentName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Father/Husband Name</td>
+                                    <td>{{ applicationData.father_husband_name || applicationData.fatherHusbandName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Email</td>
+                                    <td>{{ applicationData.email || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mobile Number</td>
+                                    <td>{{ applicationData.mobile_number || applicationData.mobileNumber || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">License & Site Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">License Type</td>
+                                    <td>{{ applicationData.license_type_name || applicationData.licenseTypeName || applicationData.license_type || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Category</td>
+                                    <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || applicationData.license_category || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Subcategory</td>
+                                    <td>{{ applicationData.license_sub_category_name || applicationData.licenseSubCategoryName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site District</td>
+                                    <td>{{ applicationData.site_district_name || applicationData.siteDistrictName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Site Subdivision</td>
+                                    <td>{{ applicationData.site_subdivision_name || applicationData.siteSubdivisionName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Police Station</td>
+                                    <td>{{ applicationData.police_station_name || applicationData.policeStationName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Yearly License Fee</td>
+                                    <td class="text-success fw-bold">Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
                
             </div>
                 <div class="no-print d-flex justify-content-center mb-4" *ngIf="applicationData">
