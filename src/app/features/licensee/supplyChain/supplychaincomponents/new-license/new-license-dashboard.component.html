@@ -86,6 +86,7 @@
         <option value="objection">Objection</option>
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
+        <option *ngFor="let stage of stageFilterOptions" [value]="stage.toLowerCase()">{{ stage }}</option>
       </select>
     </div>
 
@@ -117,7 +118,6 @@
             <th>Applicant</th>
             <th>Establishment</th>
             <th>Current Stage</th>
-            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -129,9 +129,6 @@
             <td>{{ row.applicantName }}</td>
             <td>{{ row.establishmentName }}</td>
             <td>{{ row.currentStage }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="row.statusGroup">{{ row.statusGroup | titlecase }}</span>
-            </td>
             <td>
               <button class="btn btn-link p-0 action-eye" title="View Details" (click)="viewApplication(row)">
                 <i class="bi bi-eye-fill"></i>

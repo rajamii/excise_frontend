@@ -124,10 +124,10 @@ export class WorkflowActionService {
 
     return stages.map((stage: any): WorkflowActionConfig => {
       const stageName = String(stage?.name || '').toLowerCase();
-      let action = 'FORWARD';
-      let label = 'Forward';
-      let icon = 'forward';
-      let color: WorkflowActionConfig['color'] = 'primary';
+      let action = 'APPROVE';
+      let label = 'Approve';
+      let icon = 'check_circle';
+      let color: WorkflowActionConfig['color'] = 'accent';
       let tooltip = `Move to ${stage?.name || 'next stage'}`;
       let requiresConfirmation = false;
 

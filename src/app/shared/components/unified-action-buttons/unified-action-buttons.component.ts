@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -150,7 +150,7 @@ export interface ActionButtonConfig {
     }
   `]
 })
-export class UnifiedActionButtonsComponent implements OnInit {
+export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   @Input() item!: ActionItem;
   @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license' = 'requisition';
   @Input() context: 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' = 'licensee';
@@ -173,6 +173,14 @@ export class UnifiedActionButtonsComponent implements OnInit {
     this.loadAllActionConfigs();
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['item'] || changes['itemType']) {
+      this.availableActionConfigs = [];
+      this.isLoading = false;
+      this.loadAllActionConfigs();
+    }
+  }
+
   /**
    * MAIN LOGIC: Load all action configurations based on workflow and context
    * This is where ALL button logic should be centralized
@@ -182,6 +190,13 @@ export class UnifiedActionButtonsComponent implements OnInit {
     this.isLoading = true;
 
     console.log('?? UNIFIED BUTTONS: Loading action configs for item:', this.item);
+
+    // For new-license, always resolve actions from backend current-stage permissions.
+    // This avoids showing stale actions after an officer has already forwarded/approved.
+    if (this.itemType === 'new-license') {
+      this.loadActionsFromBackend();
+      return;
+    }
 
     // Step 1: If item already has configs from parent, use them
     if (this.item.allowedActionConfigs && this.item.allowedActionConfigs.length > 0) {
@@ -237,14 +252,32 @@ export class UnifiedActionButtonsComponent implements OnInit {
   }
 
   getPrimaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'REQUEST_REVALIDATION', 'PAY', 'SUBMIT'];
+    const primaryActions = [
+      'APPROVE',
+      'FORWARD',
+      'RAISE_OBJECTION',
+      'REJECT',
+      'REQUEST_CANCELLATION',
+      'REQUEST_REVALIDATION',
+      'PAY',
+      'SUBMIT'
+    ];
     return this.getFilteredConfigs().filter(config =>
       primaryActions.includes(config.action)
     );
   }
 
   getSecondaryActionButtons(): ActionButtonConfig[] {
-    const primaryActions = ['APPROVE', 'REJECT', 'REQUEST_CANCELLATION', 'REQUEST_REVALIDATION', 'PAY', 'SUBMIT'];
+    const primaryActions = [
+      'APPROVE',
+      'FORWARD',
+      'RAISE_OBJECTION',
+      'REJECT',
+      'REQUEST_CANCELLATION',
+      'REQUEST_REVALIDATION',
+      'PAY',
+      'SUBMIT'
+    ];
     return this.getFilteredConfigs().filter(config =>
       !primaryActions.includes(config.action)
     );
@@ -501,7 +534,18 @@ export class UnifiedActionButtonsComponent implements OnInit {
       result = result.filter(config => !exclude.includes(config.action));
     }
 
-    return result;
+    // Deduplicate by action so multiple transitions mapped to same action
+    // (e.g., two "approve-like" paths) don't render duplicate buttons.
+    const seen = new Set<string>();
+    const deduped: ActionButtonConfig[] = [];
+    for (const config of result) {
+      const key = (config.action || '').toUpperCase().trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(config);
+    }
+
+    return deduped;
   }
 
   private normalizeActionConfig(config: any): ActionButtonConfig {

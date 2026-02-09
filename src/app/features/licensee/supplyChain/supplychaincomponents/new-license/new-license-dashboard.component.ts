@@ -23,6 +23,7 @@ interface NewLicenseItem {
   establishmentName: string;
   submittedOn: string;
   currentStage: string;
+  currentStageRaw: string;
   statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
 }
 
@@ -59,6 +60,7 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   allRows: NewLicenseItem[] = [];
   filteredRows: NewLicenseItem[] = [];
+  stageFilterOptions: string[] = [];
   statusFilter = '';
   searchFilter = '';
 
@@ -87,6 +89,7 @@ export class NewLicenseDashboardComponent implements OnInit {
           rejected: Number(counts?.rejected || 0)
         };
         this.allRows = this.flattenGroupedData(grouped);
+        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
         this.applyFilters();
         if (this.allRows.length === 0) {
           this.error = null;
@@ -102,7 +105,17 @@ export class NewLicenseDashboardComponent implements OnInit {
 
   applyFilters(): void {
     this.filteredRows = this.allRows.filter((row) => {
-      const matchesStatus = !this.statusFilter || row.statusGroup === this.statusFilter;
+      const selected = (this.statusFilter || '').trim().toLowerCase();
+      const stageRaw = (row.currentStageRaw || '').toLowerCase();
+      const stageText = (row.currentStage || '').toLowerCase();
+
+      const matchesStatus =
+        !selected
+        || row.statusGroup === selected
+        || stageRaw === selected
+        || stageRaw.includes(selected)
+        || stageText === selected
+        || stageText.includes(selected);
       const q = this.searchFilter.trim().toLowerCase();
       const matchesSearch = !q
         || row.applicationId.toLowerCase().includes(q)
@@ -139,12 +152,15 @@ export class NewLicenseDashboardComponent implements OnInit {
       }
 
       return items.map((item: any) => ({
-        id: String(item?.application_id || item?.id || 'N/A'),
+        id: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
         applicationId: String(item?.application_id || item?.applicationId || item?.id || 'N/A'),
         applicantName: this.getApplicantName(item),
         establishmentName: String(item?.establishment_name || item?.establishmentName || 'N/A'),
         submittedOn: this.formatDate(item?.created_at || item?.createdAt || item?.submitted_on),
-        currentStage: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup),
+        currentStageRaw: String(item?.current_stage_name || item?.currentStageName || item?.current_stage || ''),
+        currentStage: this.formatStageName(
+          item?.current_stage_name || item?.currentStageName || item?.current_stage || statusGroup
+        ),
         statusGroup
       }));
     };
@@ -177,5 +193,25 @@ export class NewLicenseDashboardComponent implements OnInit {
       month: 'short',
       year: 'numeric'
     }).replace(/ /g, '-');
+  }
+
+  private formatStageName(stageValue: any): string {
+    const raw = String(stageValue ?? '').trim();
+    if (!raw) return 'Not available';
+    return raw
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private getStageFilterOptions(rows: NewLicenseItem[]): string[] {
+    const values = Array.from(
+      new Set(
+        rows
+          .map((row) => (row.currentStage || '').trim())
+          .filter((v) => !!v)
+      )
+    );
+    values.sort((a, b) => a.localeCompare(b));
+    return values;
   }
 }

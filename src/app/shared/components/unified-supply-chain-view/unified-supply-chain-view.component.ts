@@ -394,10 +394,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                 detailMethod: 'getNewLicenseApplicationById',
                 workflowId: WORKFLOW_IDS[APPLICATION_TYPES.NEW_LICENSE],
                 fieldMappings: {
-                    id: ['application_id', 'id'],
-                    referenceNo: ['application_id', 'referenceNo', 'reference_no'],
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'referenceNo', 'reference_no'],
                     submissionDate: ['created_at', 'createdAt', 'updated_at', 'updatedAt'],
-                    status: ['current_stage_name', 'currentStageName', 'current_stage', 'status'],
+                    status: ['current_stage_name', 'currentStageName', 'status'],
                     currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
                     currentStageName: ['current_stage_name', 'currentStageName'],
                     workflowId: ['workflow', 'workflow_id', 'workflowId'],
@@ -907,7 +907,7 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                         this.snackBar.open(result.message, 'Close', { duration: 3000 });
                     }
                     if ([
-                        'APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'ISSUE',
+                        'APPROVE', 'REJECT', 'FORWARD', 'RAISE_OBJECTION', 'VERIFY', 'ISSUE',
                         'COMPLETE', 'ASSIGN_CARTONS', 'PAY',
                         'SUBMITPAYSLIP', 'APPROVEPAYSLIP', 'REJECTPAYSLIP'
                     ].includes(action)) {
