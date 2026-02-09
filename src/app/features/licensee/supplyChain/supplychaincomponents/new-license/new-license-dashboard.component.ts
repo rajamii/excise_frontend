@@ -11,6 +11,7 @@ import { environment } from '../../../../../../environments/environment';
 interface NewLicenseCounts {
   applied: number;
   pending: number;
+  objection: number;
   approved: number;
   rejected: number;
 }
@@ -22,12 +23,13 @@ interface NewLicenseItem {
   establishmentName: string;
   submittedOn: string;
   currentStage: string;
-  statusGroup: 'applied' | 'pending' | 'approved' | 'rejected';
+  statusGroup: 'applied' | 'pending' | 'objection' | 'approved' | 'rejected';
 }
 
 interface GroupedNewLicenseResponse {
   applied: any[];
   pending: any[];
+  objection: any[];
   approved: any[];
   rejected: any[];
 }
@@ -50,6 +52,7 @@ export class NewLicenseDashboardComponent implements OnInit {
   counts: NewLicenseCounts = {
     applied: 0,
     pending: 0,
+    objection: 0,
     approved: 0,
     rejected: 0
   };
@@ -69,16 +72,17 @@ export class NewLicenseDashboardComponent implements OnInit {
 
     forkJoin({
       counts: this.http.get<NewLicenseCounts>(`${this.apiBase}/dashboard-counts/`).pipe(
-        catchError(() => of({ applied: 0, pending: 0, approved: 0, rejected: 0 }))
+        catchError(() => of({ applied: 0, pending: 0, objection: 0, approved: 0, rejected: 0 }))
       ),
       grouped: this.http.get<GroupedNewLicenseResponse>(`${this.apiBase}/list-by-status/`).pipe(
-        catchError(() => of({ applied: [], pending: [], approved: [], rejected: [] }))
+        catchError(() => of({ applied: [], pending: [], objection: [], approved: [], rejected: [] }))
       )
     }).subscribe({
       next: ({ counts, grouped }) => {
         this.counts = {
           applied: Number(counts?.applied || 0),
           pending: Number(counts?.pending || 0),
+          objection: Number((counts as any)?.objection || 0),
           approved: Number(counts?.approved || 0),
           rejected: Number(counts?.rejected || 0)
         };
@@ -148,6 +152,7 @@ export class NewLicenseDashboardComponent implements OnInit {
     return [
       ...mapGroup(grouped?.applied, 'applied'),
       ...mapGroup(grouped?.pending, 'pending'),
+      ...mapGroup(grouped?.objection, 'objection'),
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected')
     ];

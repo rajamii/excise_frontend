@@ -1,16 +1,19 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+
 import { RoleService } from '../services/role.service';
+import { AccountService } from '../services/account.service';
+import { User } from '../models/role.models';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RoleDashboardGuard implements CanActivate {
-
   constructor(
     private roleService: RoleService,
+    private accountService: AccountService,
     private router: Router
   ) {}
 
@@ -18,27 +21,54 @@ export class RoleDashboardGuard implements CanActivate {
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
-    
     const currentUser = this.roleService.getCurrentUser();
-    
-    if (!currentUser) {
-      console.warn('No current user found, redirecting to login');
-      this.router.navigate(['/login']);
-      return false;
+    if (currentUser) {
+      return this.validateDashboardAccess(currentUser);
     }
 
-    // Check if user has permission to access dashboard
-    const hasPermission = this.roleService.hasPermission('dashboard.view');
-    
-    if (!hasPermission) {
-      console.warn(`User ${currentUser.username} does not have dashboard.view permission`);
+    return this.accountService.identity().pipe(
+      map(accountUser => {
+        if (!accountUser) {
+          this.router.navigate(['/login']);
+          return false;
+        }
+
+        const roleId = Number(accountUser?.role?.id) || 0;
+        const role = this.roleService.getRoleById(roleId);
+        if (!role) {
+          this.router.navigate(['/unauthorized']);
+          return false;
+        }
+
+        const mappedUser: User = {
+          id: accountUser.id || 0,
+          username: accountUser.username || 'user',
+          email: accountUser.email || '',
+          fullName: `${accountUser.firstName || ''} ${accountUser.lastName || ''}`.trim() || 'User',
+          roleId,
+          role,
+          permissions: role.permissions || [],
+          isActive: true,
+          lastLogin: new Date()
+        };
+
+        this.roleService.setCurrentUser(mappedUser);
+        return this.validateDashboardAccess(mappedUser);
+      }),
+      catchError(() => {
+        this.router.navigate(['/login']);
+        return of(false);
+      })
+    );
+  }
+
+  private validateDashboardAccess(currentUser: User): boolean {
+    if (!this.roleService.hasPermission('dashboard.view')) {
       this.router.navigate(['/unauthorized']);
       return false;
     }
 
-    // Log dashboard access for debugging
-    console.log(`✅ Dashboard access granted for user: ${currentUser.username} (Role: ${currentUser.role.displayName})`);
-    
+    console.log(`Dashboard access granted for user: ${currentUser.username} (Role ID: ${currentUser.roleId})`);
     return true;
   }
 }

@@ -127,6 +127,10 @@
               <mat-icon class="nav-icon">dashboard</mat-icon>
               <span class="nav-text">Dashboard</span>
             </a>
+            <button class="nav-item" *ngIf="!isSiteAdminUser()" (click)="navigateToSection('new-license')">
+              <mat-icon class="nav-icon">add_business</mat-icon>
+              <span class="nav-text">New License</span>
+            </button>
 
             <!-- Role-specific sections -->
 

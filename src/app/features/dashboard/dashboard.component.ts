@@ -150,8 +150,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ) { }
 
   ngOnInit() {
-    this.initializeDashboard();
     this.handleQueryParams();
+    this.initializeDashboard();
     this.initializeProfessionalFeatures();
   }
 
@@ -178,14 +178,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Handle query parameters for supply chain section navigation
   private handleQueryParams(): void {
+    const initialSection = this.route.snapshot.queryParamMap.get('section');
+    this.selectedSupplyChainSection = initialSection || null;
+
     // Subscribe to query parameter changes
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         const section = params['section'];
-        if (section) {
-          this.selectedSupplyChainSection = section;
-        }
+        this.selectedSupplyChainSection = section || null;
       });
   }
 

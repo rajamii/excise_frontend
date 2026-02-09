@@ -27,11 +27,6 @@ export class RoleService {
   constructor() {
     // Try to restore user from session storage first
     this.restoreUserFromStorage();
-    
-    // If no user found, initialize with mock user for development
-    if (!this.getCurrentUser()) {
-      this.initializeCurrentUser();
-    }
   }
 
   private restoreUserFromStorage(): void {

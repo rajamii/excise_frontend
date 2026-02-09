@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { DashboardComponent } from './dashboard.component';
-import { RoleDashboardGuard } from '../../core/guards/role-dashboard.guard';
+import { RoleDashboardGuard } from '../../core/guards';
 import { UnifiedLayoutComponent } from '../../shared/components/layout/unified-layout/unified-layout.component';
 import { UserRouteAccessService } from '../../core/config/user-route-access.service';
 import { Authority } from '../../shared/constants/authority.enum';

@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 // Import existing services
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
@@ -17,9 +20,11 @@ export interface ActionResult {
   providedIn: 'root'
 })
 export class UnifiedActionsService {
+  private workflowBaseUrl = `${environment.apiBaseUrl}/auth`;
 
   constructor(
     private router: Router,
+    private http: HttpClient,
     private enaRequisitionService: EnaRequisitionService,
     private supplyChainService: SupplyChainService,
     private hologramService: HologramDataService
@@ -98,6 +103,8 @@ export class UnifiedActionsService {
 
       case 'EDIT':
         return this.handleEditAction(item, itemType);
+      case 'RAISE_OBJECTION':
+        return this.handleRaiseObjectionAction(item, itemType);
 
       default:
         return of({
@@ -208,6 +215,8 @@ export class UnifiedActionsService {
 
       case 'hologram':
         return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'approve', 'Approved');
+      case 'new-license':
+        return this.executeNewLicenseAdvance(item, 'approve', 'Approved');
 
       default:
         return of({
@@ -242,6 +251,8 @@ export class UnifiedActionsService {
 
       case 'hologram':
         return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'reject', reason);
+      case 'new-license':
+        return this.executeNewLicenseAdvance(item, 'reject', reason);
 
       default:
         return of({
@@ -258,6 +269,9 @@ export class UnifiedActionsService {
 
     if (itemType === 'hologram') {
       return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'forward', 'Forwarded');
+    }
+    if (itemType === 'new-license') {
+      return this.executeNewLicenseAdvance(item, 'forward', 'Forwarded');
     }
 
     // Forward is typically the same as approve for most workflows
@@ -371,6 +385,16 @@ export class UnifiedActionsService {
 
       case 'hologram':
         return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'pay', 'Payment completed');
+      case 'new-license': {
+        const applicationId = this.getWorkflowApplicationId(item);
+        if (!applicationId) {
+          return of({ success: false, message: 'Application ID is required for payment' });
+        }
+        return this.http.post<any>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/pay-license-fee/`, {}).pipe(
+          map(() => ({ success: true, message: 'Payment completed successfully' })),
+          catchError((error) => of({ success: false, message: error?.error?.detail || error?.error?.error || 'Payment failed' }))
+        );
+      }
 
       default:
         // Navigate to payment page within SPA
@@ -555,6 +579,132 @@ export class UnifiedActionsService {
       success: false,
       message: `Edit not available for ${itemType}`
     });
+  }
+
+  private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
+    if (itemType !== 'new-license') {
+      return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
+    }
+
+    const reason = prompt('Enter objection remarks (required):');
+    if (!reason || !reason.trim()) {
+      return of({ success: false, message: 'Objection remarks are required' });
+    }
+
+    return this.executeNewLicenseObjection(item, reason.trim());
+  }
+
+  private executeNewLicenseAdvance(
+    item: any,
+    mode: 'approve' | 'reject' | 'forward',
+    remarks: string
+  ): Observable<ActionResult> {
+    const applicationId = this.getWorkflowApplicationId(item);
+    if (!applicationId) {
+      return of({ success: false, message: 'Application ID is missing for workflow action' });
+    }
+
+    return this.fetchNewLicenseNextStages(applicationId).pipe(
+      switchMap((stages: any[]) => {
+        const target = this.pickNewLicenseStage(stages, mode);
+        if (!target?.id) {
+          return of({ success: false, message: `No valid target stage found for ${mode}` });
+        }
+
+        return this.http.post<any>(
+          `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/advance/${target.id}/`,
+          { remarks }
+        ).pipe(
+          map(() => ({ success: true, message: `${mode.toUpperCase()} action completed successfully` })),
+          catchError((error) => of({
+            success: false,
+            message: error?.error?.detail || `Failed to ${mode} application`
+          }))
+        );
+      }),
+      catchError((error) => of({
+        success: false,
+        message: error?.error?.detail || 'Failed to fetch next stages'
+      }))
+    );
+  }
+
+  private executeNewLicenseObjection(item: any, remarks: string): Observable<ActionResult> {
+    const applicationId = this.getWorkflowApplicationId(item);
+    if (!applicationId) {
+      return of({ success: false, message: 'Application ID is missing for objection' });
+    }
+
+    return this.fetchNewLicenseNextStages(applicationId).pipe(
+      switchMap((stages: any[]) => {
+        const target = this.pickNewLicenseStage(stages, 'objection');
+        if (!target?.id) {
+          return of({ success: false, message: 'No objection stage available from current stage' });
+        }
+
+        return this.http.post<any>(
+          `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/raise-objection/`,
+          {
+            target_stage_id: target.id,
+            objections: [{
+              field_name: 'general',
+              remarks
+            }],
+            remarks
+          }
+        ).pipe(
+          map(() => ({ success: true, message: 'Objection raised successfully' })),
+          catchError((error) => of({
+            success: false,
+            message: error?.error?.detail || 'Failed to raise objection'
+          }))
+        );
+      }),
+      catchError((error) => of({
+        success: false,
+        message: error?.error?.detail || 'Failed to fetch next stages'
+      }))
+    );
+  }
+
+  private fetchNewLicenseNextStages(applicationId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`).pipe(
+      map((res: any) => Array.isArray(res) ? res : []),
+      catchError(() => of([]))
+    );
+  }
+
+  private pickNewLicenseStage(
+    stages: any[],
+    mode: 'approve' | 'reject' | 'forward' | 'objection'
+  ): any | null {
+    if (!Array.isArray(stages) || stages.length === 0) return null;
+
+    const byName = (keyword: string) =>
+      stages.find((s: any) => String(s?.name || '').toLowerCase().includes(keyword));
+
+    if (mode === 'objection') {
+      return byName('objection');
+    }
+
+    if (mode === 'reject') {
+      return byName('reject');
+    }
+
+    if (mode === 'approve') {
+      return byName('approved') || byName('payment') || stages[0];
+    }
+
+    return stages.find((s: any) => {
+      const name = String(s?.name || '').toLowerCase();
+      return !name.includes('reject') && !name.includes('objection');
+    }) || stages[0];
+  }
+
+  private getWorkflowApplicationId(item: any): string {
+    return String(
+      item?.application_id ?? item?.applicationId ?? item?.referenceNo ?? item?.refNo ?? item?.id ?? ''
+    ).trim();
   }
 
   private getHologramEndpoint(item: any): 'procurement' | 'request' {

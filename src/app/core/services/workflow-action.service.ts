@@ -34,6 +34,7 @@ export interface ApplicationWorkflowData {
 })
 export class WorkflowActionService {
   private apiUrl = `${environment.apiBaseUrl}/workflow`;
+  private workflowBaseUrl = `${environment.apiBaseUrl}/auth`;
 
   constructor(
     private http: HttpClient,
@@ -68,6 +69,7 @@ export class WorkflowActionService {
 
   private fetchActionsFromBackend(data: ApplicationWorkflowData): Observable<WorkflowActionConfig[]> {
     const id = data.id;
+    const workflowApplicationId = this.getWorkflowApplicationId(data);
 
     switch (data.type) {
       case 'transit':
@@ -99,10 +101,76 @@ export class WorkflowActionService {
           map((res: any) => res.allowed_action_configs || []),
           catchError(() => of([]))
         );
+      case 'new-license':
+        if (!workflowApplicationId) {
+          return of([]);
+        }
+        return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/next-stages/`).pipe(
+          map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
+          catchError(() => of([]))
+        );
 
       default:
         return of([]);
     }
+  }
+
+  private getWorkflowApplicationId(data: ApplicationWorkflowData): string {
+    return String(data.referenceNo || data.id || '').trim();
+  }
+
+  private mapNextStagesToActionConfigs(stages: any[]): WorkflowActionConfig[] {
+    if (!Array.isArray(stages)) return [];
+
+    return stages.map((stage: any): WorkflowActionConfig => {
+      const stageName = String(stage?.name || '').toLowerCase();
+      let action = 'FORWARD';
+      let label = 'Forward';
+      let icon = 'forward';
+      let color: WorkflowActionConfig['color'] = 'primary';
+      let tooltip = `Move to ${stage?.name || 'next stage'}`;
+      let requiresConfirmation = false;
+
+      if (stageName.includes('objection')) {
+        action = 'RAISE_OBJECTION';
+        label = 'Raise Objection';
+        icon = 'report_problem';
+        color = 'warning';
+        tooltip = 'Raise objection and send back to applicant';
+        requiresConfirmation = true;
+      } else if (stageName.includes('reject')) {
+        action = 'REJECT';
+        label = 'Reject';
+        icon = 'cancel';
+        color = 'danger';
+        tooltip = 'Reject this application';
+        requiresConfirmation = true;
+      } else if (stageName.includes('approved') || stageName === 'approved') {
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = 'Approve this application';
+        requiresConfirmation = true;
+      } else if (stageName.includes('payment')) {
+        action = 'FORWARD';
+        label = 'Forward';
+        icon = 'arrow_forward';
+        color = 'primary';
+        tooltip = 'Forward for payment';
+        requiresConfirmation = true;
+      }
+
+      return {
+        action,
+        label,
+        icon,
+        color,
+        tooltip,
+        requiresConfirmation,
+        targetStage: stage?.id ? Number(stage.id) : undefined
+      };
+    });
   }
 
   /**
@@ -149,7 +217,31 @@ export class WorkflowActionService {
         endpoint = `${environment.apiBaseUrl}/transactional/supply_chain/hologram/procurement/${data.id}/perform_action/`;
         break;
       case 'new-license':
-        return of({ success: false, message: 'Workflow actions are not configured for new-license' });
+        const workflowApplicationId = this.getWorkflowApplicationId(data);
+        const targetStage = typeof actionConfig === 'string' ? undefined : actionConfig.targetStage;
+
+        if (!workflowApplicationId || !targetStage) {
+          return of({ success: false, message: 'Missing application id or target stage for new-license action' });
+        }
+
+        if (actionName === 'RAISE_OBJECTION') {
+          return this.http.post(
+            `${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/raise-objection/`,
+            {
+              target_stage_id: targetStage,
+              objections: [{
+                field_name: 'general',
+                remarks: comments || 'Objection raised'
+              }],
+              remarks: comments || 'Objection raised'
+            }
+          );
+        }
+
+        return this.http.post(
+          `${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/advance/${targetStage}/`,
+          { remarks: comments || `${actionName} from unified action` }
+        );
     }
 
     if (!endpoint) {

@@ -4,7 +4,7 @@
       <div class="summary-card total-requests">
         <div class="card-icon"><i class="bi bi-list-ul"></i></div>
         <div class="card-content">
-          <h3 class="card-value">{{ counts.applied + counts.pending + counts.approved + counts.rejected }}</h3>
+          <h3 class="card-value">{{ counts.applied + counts.pending + counts.objection + counts.approved + counts.rejected }}</h3>
           <p class="card-label">Total Applications</p>
         </div>
       </div>
@@ -24,6 +24,15 @@
         <div class="card-content">
           <h3 class="card-value">{{ counts.pending }}</h3>
           <p class="card-label">Pending</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="summary-card objection-requests">
+        <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ counts.objection }}</h3>
+          <p class="card-label">Objection</p>
         </div>
       </div>
     </div>
@@ -74,6 +83,7 @@
         <option value="">All Status</option>
         <option value="applied">Applied</option>
         <option value="pending">Pending</option>
+        <option value="objection">Objection</option>
         <option value="approved">Approved</option>
         <option value="rejected">Rejected</option>
       </select>

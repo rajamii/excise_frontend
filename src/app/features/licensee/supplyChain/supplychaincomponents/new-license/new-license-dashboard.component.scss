@@ -47,6 +47,9 @@
 .pending-requests .card-icon {
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
+.objection-requests .card-icon {
+  background: linear-gradient(135deg, #f97316, #c2410c);
+}
 .approved-requests .card-icon {
   background: linear-gradient(135deg, #22c55e, #15803d);
 }
@@ -132,6 +135,10 @@ table {
 .status-badge.pending {
   background: #fff7ed;
   color: #b45309;
+}
+.status-badge.objection {
+  background: #ffedd5;
+  color: #9a3412;
 }
 .status-badge.approved {
   background: #dcfce7;
