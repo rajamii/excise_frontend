@@ -1,49 +1,78 @@
-  import { inject, isDevMode } from '@angular/core';
-  import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
-  import { map } from 'rxjs/operators';
-  import { AccountService } from '../services/account.service';
-  import { StateStorageService } from './state-storage.service';
+import { inject, isDevMode, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { ActivatedRouteSnapshot, CanActivateFn, Router, RouterStateSnapshot } from '@angular/router';
+import { map } from 'rxjs';
+import { AccountService } from '../services/account.service';
+import { StateStorageService } from './state-storage.service';
 
-  /**
-   * Route guard to control access based on user authentication and role/authority.
-   * It verifies if the user is logged in and has required permissions before allowing route activation.
-   */
-  export const UserRouteAccessService: CanActivateFn = (
-    next: ActivatedRouteSnapshot,
-    state: RouterStateSnapshot
-  ) => {
-    // Inject required services
-    const accountService = inject(AccountService);
-    const router = inject(Router);
-    const stateStorageService = inject(StateStorageService);
+/**
+ * Route guard to control access based on user authentication and role/authority.
+ * SSR-compatible: allows navigation on server, checks authentication in browser.
+ */
+export const UserRouteAccessService: CanActivateFn = (
+  next: ActivatedRouteSnapshot,
+  state: RouterStateSnapshot
+) => {
+  const platformId = inject(PLATFORM_ID);
+  const accountService = inject(AccountService);
+  const router = inject(Router);
+  const stateStorageService = inject(StateStorageService);
 
-    // Attempt to get the current user's account
-    return accountService.identity().pipe(
-      map(account => {
-        if (account) {
-          // Get the list of required authorities from route data
-          const authorities = next.data['authorities'];
+  // If running on server (SSR), allow navigation - will check in browser
+  if (!isPlatformBrowser(platformId)) {
+    return true;
+  }
 
-          // Allow access if no authorities are required or if user has the required role
-          if (!authorities || authorities.length === 0 || accountService.hasAnyRole(authorities)
-          ) {
-            return true;
-          }
+  // Check localStorage for tokens (browser only)
+  const hasAccessToken = localStorage.getItem('access');
+  const hasRefreshToken = localStorage.getItem('refresh');
 
-          // If in development mode, log an error when user lacks permission
-          if (isDevMode()) {
-            console.error('User does not have any of the required authorities: ', authorities);
-          }
+  if (!hasAccessToken || !hasRefreshToken) {
+    stateStorageService.storeUrl(state.url);
+    router.navigate(['/login']);
+    return false;
+  }
 
-          // Redirect to access denied page if user lacks required role
-          router.navigate(['accessdenied']);
-          return false;
+  // Check for cached identity
+  const cachedIdentity = accountService.getUserProfileSync();
+
+  if (cachedIdentity) {
+    const authorities = next.data['authorities'];
+
+    if (!authorities || authorities.length === 0 || accountService.hasAnyRole(authorities)) {
+      return true;
+    }
+
+    if (isDevMode()) {
+      console.error('User does not have required authorities:', authorities);
+    }
+
+    router.navigate(['accessdenied']);
+    return false;
+  }
+
+  // No cached identity, fetch from API
+  return accountService.identity().pipe(
+    map(account => {
+      if (account) {
+        const authorities = next.data['authorities'];
+
+        if (!authorities || authorities.length === 0 || accountService.hasAnyRole(authorities)) {
+          return true;
         }
 
-        // If user is not logged in, store the attempted URL and redirect to login page
-        stateStorageService.storeUrl(state.url);
-        router.navigate(['/login']);
+        if (isDevMode()) {
+          console.error('User does not have required authorities:', authorities);
+        }
+
+        router.navigate(['accessdenied']);
         return false;
-      }),
-    );
-  };
+      }
+
+      // API returned null
+      stateStorageService.storeUrl(state.url);
+      router.navigate(['/login'], { queryParams: { sessionExpired: true } });
+      return false;
+    })
+  );
+};

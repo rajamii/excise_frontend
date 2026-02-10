@@ -155,7 +155,7 @@ export class SubmitApplicationComponent implements OnDestroy {
     }
   }
 
-  // View file in new tab - FIXED VERSION
+  // View file in new tab
   viewFile(doc: { key: keyof CompanyDocuments; file: File; fileUrl: string }) {
     console.log('Attempting to view file:', doc);
     
@@ -242,24 +242,26 @@ export class SubmitApplicationComponent implements OnDestroy {
       const formData = new FormData();
       const combinedDetails = { ...companyDetails, ...memberDetails, ...paymentDetails };
 
-      // Append form fields to FormData
+      // Append form fields to FormData (convert camelCase to snake_case)
       Object.entries(combinedDetails).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          formData.append(key, value.toString());
+          const snakeCaseKey = this.camelToSnake(key);
+          formData.append(snakeCaseKey, value.toString());
         }
       });
 
+      // Append document files to FormData
       for (const [key, file] of Object.entries(companyRegistrationDocuments)) {
         if (file instanceof File) {
           formData.append(key, file);
         }
       }
 
-      // Make API call to submit form
-      this.companyRegistrationService.createCompany(formData).subscribe({
-        next: () => {
-          // Generate application ID
-          this.applicationId = this.generateApplicationId();
+      // Make API call to submit form using the correct method
+      this.companyRegistrationService.applyCompanyRegistration(formData).subscribe({
+        next: (response) => {
+          // Extract application ID from response
+          this.applicationId = response.applicationId || response.application_id;
           
           Swal.fire({
             title: 'Success!',
@@ -267,11 +269,13 @@ export class SubmitApplicationComponent implements OnDestroy {
             icon: 'success',
             confirmButtonColor: '#1C2B78'
           });
+
+          this.isSubmitting = false;
         },
         error: (err) => {
           // On failure: show error message
-          console.error('Submission failed:', err.error);
-          const message = err?.error?.detail || 'Failed to submit application.';
+          console.error('Submission failed:', err);
+          const message = err?.error?.detail || err?.error?.message || 'Failed to submit application.';
           Swal.fire('Error', message, 'error');
           this.isSubmitting = false;
         }
@@ -284,19 +288,12 @@ export class SubmitApplicationComponent implements OnDestroy {
     }
   }
 
-  private generateApplicationId(): string {
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const day = String(currentDate.getDate()).padStart(2, '0');
-    const randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    
-    return `COMP/${year}${month}${day}/${randomNum}`;
-  }
-
   goToDashboard() {
     // Clear all session data
     sessionStorage.clear();
+    
+    // Clear documents from service
+    this.companyRegistrationService.clearCompanyDocuments();
     
     // Navigate to dashboard
     this.router.navigate(['/site-admin/dashboard']);
@@ -305,5 +302,10 @@ export class SubmitApplicationComponent implements OnDestroy {
   // Emit "back" event to previous step
   goBack() {
     this.back.emit();
+  }
+
+  // Utility: Convert camelCase to snake_case for backend API
+  private camelToSnake(str: string): string {
+    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
   }
 }

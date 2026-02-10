@@ -21,11 +21,18 @@ export class HeaderComponent implements OnInit {
     private router: Router, 
     private accountService: AccountService,
     private authService: AuthService,
-  ){}
+  ){
+    console.log('🎨 HeaderComponent constructor called');
+  }
 
   ngOnInit(): void {
+    console.log('🎨 HeaderComponent ngOnInit called');
+    console.log('🎨 Initial isLoggedIn:', this.isLoggedIn);
+    
     this.accountService.getAuthenticationState().subscribe((user) => {
+      console.log('🎨 HeaderComponent received auth state:', user);
       this.isLoggedIn = !!user;
+      console.log('🎨 Updated isLoggedIn to:', this.isLoggedIn);
     });
   }
 
@@ -46,7 +53,6 @@ export class HeaderComponent implements OnInit {
       if (result.isConfirmed) {
         this.authService.logout().subscribe({
           next: () => {
-            console.log('Logout successful');
             this.router.navigate(['/login']);
           },
           error: (error) => {

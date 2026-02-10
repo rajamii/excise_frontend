@@ -59,14 +59,11 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // ✅ Load data initially
     this.loadDashboardData();
 
-    // ✅ Subscribe to route changes to auto-refresh when navigating back to dashboard
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe((event: any) => {
-      // If we're on the dashboard route, reload the data
       if (event.url.includes('/dashboard')) {
         console.log('🔄 Dashboard: Auto-refreshing after navigation');
         this.loadDashboardData();
@@ -75,7 +72,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // ✅ Clean up subscription
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
@@ -96,7 +92,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       .pipe(finalize(() => { this.isLoading = false; }))
       .subscribe({
         next: (result) => {
-
           // ✅ DEDUPLICATE ALL APPLICATIONS FIRST
           let filteredApplications = {
             applied: this.deduplicateApplications(result.applications.applied || []),
@@ -108,46 +103,62 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
 
           if (this.selectedApplicationType !== 'all') {
             filteredApplications = {
-              applied: filteredApplications.applied.filter(app => app.type === this.selectedApplicationType),
-              pending: filteredApplications.pending.filter(app => app.type === this.selectedApplicationType),
-              awaitingPayment: filteredApplications.awaitingPayment.filter(app => app.type === this.selectedApplicationType),
-              approved: filteredApplications.approved.filter(app => app.type === this.selectedApplicationType),
-              rejected: filteredApplications.rejected.filter(app => app.type === this.selectedApplicationType)
+              applied: filteredApplications.applied.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
+              pending: filteredApplications.pending.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
+              awaitingPayment: filteredApplications.awaitingPayment.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
+              approved: filteredApplications.approved.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType),
+              rejected: filteredApplications.rejected.filter((app: UnifiedApplication) => app.type === this.selectedApplicationType)
             };
           }
 
-          // ✅ FILTER OUT APPROVED LICENSES THAT HAVE ACTIVE RENEWALS
+          // ✅ MOVE APPROVED LICENSES WITH ACTIVE RENEWALS TO APPLIED
           const renewedLicenseIds = this.getRenewedLicenseIds(
             filteredApplications.applied,
             filteredApplications.pending,
             filteredApplications.awaitingPayment
           );
 
-          const activeApproved = filteredApplications.approved.filter(app => {
+          // Separate approved licenses into those with renewals and those without
+          const approvedWithRenewal: UnifiedApplication[] = [];
+          const approvedWithoutRenewal: UnifiedApplication[] = [];
+
+          filteredApplications.approved.forEach((app: UnifiedApplication) => {
             const licenseId = this.extractLicenseId(app);
             const isRenewed = licenseId && renewedLicenseIds.has(licenseId);
+            
             if (isRenewed) {
-              console.log(`🔄 Dashboard: Hiding approved license ${licenseId} - has active renewal`);
+              console.log(`🔄 Dashboard: Moving approved license ${licenseId} to Applied - has active renewal`);
+              // Mark the license as "being renewed"
+              const renewedApp = {
+                ...app,
+                currentStage: 'renewal_in_progress',
+                currentStageName: 'Renewal In Progress'
+              };
+              approvedWithRenewal.push(renewedApp);
+            } else {
+              approvedWithoutRenewal.push(app);
             }
-            return !isRenewed;
           });
 
-          // Store counts separately but combine pending display
+          // Combine applied with approved licenses that are being renewed
+          const allApplied = [...filteredApplications.applied, ...approvedWithRenewal];
+
+          // Store counts
           this.dashboardCounts = {
-            applied: filteredApplications.applied.length,
+            applied: allApplied.length, // ✅ Includes renewed licenses
             pending: filteredApplications.pending.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
-            approved: activeApproved.length, // ✅ Use filtered count
+            approved: approvedWithoutRenewal.length, // ✅ Only licenses without active renewals
             rejected: filteredApplications.rejected.length
           };
 
-          console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied}, Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
+          console.log(`📊 Dashboard Counts - Applied: ${this.dashboardCounts.applied} (${approvedWithRenewal.length} renewals), Pending: ${this.dashboardCounts.pending}, Awaiting Payment: ${this.dashboardCounts.awaitingPayment}, Approved: ${this.dashboardCounts.approved}, Rejected: ${this.dashboardCounts.rejected}`);
 
-          // Combine pending and awaiting payment into one datasource
+          // Update datasources
           this.updateDataSources({
-            applied: filteredApplications.applied,
+            applied: allApplied, // ✅ Includes renewed licenses
             pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
-            approved: activeApproved, // ✅ Use filtered approved
+            approved: approvedWithoutRenewal, // ✅ Only licenses without renewals
             rejected: filteredApplications.rejected
           });
         },
@@ -159,9 +170,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       });
   }
 
-  /**
-   * ✅ Deduplicate applications by applicationId
-   */
   private deduplicateApplications(applications: UnifiedApplication[]): UnifiedApplication[] {
     const seen = new Map<string, UnifiedApplication>();
     
@@ -178,9 +186,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     return Array.from(seen.values());
   }
 
-  /**
-   * ✅ Extract license ID from application
-   */
   private extractLicenseId(app: UnifiedApplication): string | null {
     const raw = app.raw || {};
     
@@ -215,9 +220,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  /**
-   * ✅ Validate license ID format
-   */
   private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
@@ -228,9 +230,6 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     return parts.length >= 3 && trimmed.length >= 10;
   }
 
-  /**
-   * ✅ Get renewed license IDs from applied/pending applications
-   */
   private getRenewedLicenseIds(
     applied: UnifiedApplication[], 
     pending: UnifiedApplication[], 
@@ -241,30 +240,71 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     [...applied, ...pending, ...awaitingPayment].forEach(app => {
       const raw = app.raw || {};
       
-      const renewedLicenseId = 
-        raw.renewalOf || 
-        raw.renewal_of || 
-        raw.renewalOfLicenseId || 
-        raw.renewal_of_license_id ||
-        raw.license ||
-        raw.license_id;
+      // PRIORITY 1: Check renewalOf fields
+      const renewalOfValue = raw.renewalOf || raw.renewal_of || raw.renewalOfLicenseId || raw.renewal_of_license_id;
       
-      if (renewedLicenseId) {
-        const licenseIdStr = typeof renewedLicenseId === 'string' 
-          ? renewedLicenseId 
-          : (renewedLicenseId.license_id || renewedLicenseId.id || String(renewedLicenseId));
+      if (renewalOfValue) {
+        let licenseIdStr = '';
+        
+        if (typeof renewalOfValue === 'string') {
+          licenseIdStr = renewalOfValue;
+        } else if (typeof renewalOfValue === 'object' && renewalOfValue !== null) {
+          licenseIdStr = renewalOfValue.license_id || renewalOfValue.id || String(renewalOfValue);
+        } else {
+          licenseIdStr = String(renewalOfValue);
+        }
         
         if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
           renewedIds.add(licenseIdStr);
-          console.log(`🔄 Dashboard: Found renewed license ID: ${licenseIdStr}`);
+          console.log(`🔄 Dashboard: Found renewed license ID from renewalOf: ${licenseIdStr} (App: ${app.applicationId})`);
+          return;
+        }
+      }
+      
+      // PRIORITY 2: Check license fields
+      const licenseValue = raw.license || raw.license_id;
+      
+      if (licenseValue) {
+        let licenseIdStr = '';
+        
+        if (typeof licenseValue === 'string') {
+          licenseIdStr = licenseValue;
+        } else if (typeof licenseValue === 'object' && licenseValue !== null) {
+          licenseIdStr = licenseValue.license_id || licenseValue.id || String(licenseValue);
+        } else {
+          licenseIdStr = String(licenseValue);
+        }
+        
+        if (licenseIdStr && this.isValidLicenseId(licenseIdStr)) {
+          renewedIds.add(licenseIdStr);
+          console.log(`🔄 Dashboard: Found renewed license ID from license field: ${licenseIdStr} (App: ${app.applicationId})`);
+        }
+      }
+      
+      // PRIORITY 3: Derive from application ID
+      const appId = app.applicationId;
+      if (appId) {
+        let derivedLicenseId = null;
+        
+        if (appId.startsWith('LIC/')) {
+          derivedLicenseId = appId.replace('LIC/', 'LA/');
+        } else if (appId.startsWith('NLI/')) {
+          derivedLicenseId = appId.replace('NLI/', 'NA/');
+        } else if (appId.startsWith('SBM/')) {
+          derivedLicenseId = appId.replace('SBM/', 'SB/');
+        }
+        
+        if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
+          renewedIds.add(derivedLicenseId);
+          console.log(`🔄 Dashboard: Derived license ID from app ID: ${derivedLicenseId} (App: ${appId})`);
         }
       }
     });
     
+    console.log(`🔄 Dashboard: Total renewed license IDs to hide: ${renewedIds.size}`, Array.from(renewedIds));
     return renewedIds;
   }
 
-  // Modified signature to accept combined pending data
   private updateDataSources(result: {
     applied: UnifiedApplication[];
     pending: UnifiedApplication[];
@@ -272,7 +312,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     rejected: UnifiedApplication[];
   }): void {
     this.appliedDataSource.data = result.applied || [];
-    this.pendingDataSource.data = result.pending || []; // ✅ Now contains both pending + awaiting payment
+    this.pendingDataSource.data = result.pending || [];
     this.approvedDataSource.data = result.approved || [];
     this.rejectedDataSource.data = result.rejected || [];
   }
@@ -306,10 +346,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       didOpen: () => { Swal.showLoading(); }
     });
 
-    // Use salesmanBarmanService for ALL types since they all use same workflow endpoint
     this.salesmanBarmanService.getNextStages(application.applicationId).subscribe({
       next: (stages: any[]) => {
-        // Find the approved stage
         const approvalStage = stages.find(s => {
           const stageName = (s.name || s.stage_name || '').toLowerCase();
           const stageId = s.id || s.stage_id;
