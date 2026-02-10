@@ -2,14 +2,28 @@
   display: block;
 }
 
+.new-license-register-header {
+  .stats-row {
+    margin-bottom: 1.25rem !important;
+  }
+}
+
 .summary-card {
-  background: #fff;
-  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
   display: flex;
   align-items: center;
   gap: 0.85rem;
+  min-height: 84px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.11);
+  }
 
   .card-icon {
     width: 44px;
@@ -34,13 +48,11 @@
       margin: 0;
       font-size: 0.82rem;
       color: #6c757d;
+      font-weight: 500;
     }
   }
 }
 
-.total-requests .card-icon {
-  background: linear-gradient(135deg, #5b7cfa, #3546b8);
-}
 .applied-requests .card-icon {
   background: linear-gradient(135deg, #7b6dff, #4b3db7);
 }
@@ -58,10 +70,20 @@
 }
 
 .compact-filter-section {
-  background: #fff;
+  background: #f8fafc;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 0.75rem;
+  border-radius: 12px;
+  padding: 0.8rem;
+
+  .filter-label-text {
+    font-weight: 500;
+    color: #64748b;
+  }
+
+  .form-control-sm,
+  .form-select-sm {
+    border-radius: 8px;
+  }
 }
 
 .compact-filter {
@@ -70,14 +92,15 @@
 }
 
 .register-table .register-container {
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border: 1px solid #dbe2ea;
+  border-radius: 14px;
   background: #fff;
   overflow: hidden;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 
 .register-header-bar {
-  background: #0b0b0d;
+  background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
   color: #fff;
   display: flex;
   justify-content: space-between;
@@ -111,11 +134,17 @@ table {
     font-weight: 700;
     font-size: 0.82rem;
     white-space: nowrap;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   tbody td {
     font-size: 0.86rem;
     vertical-align: middle;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  tbody tr:hover {
+    background: #f8fbff;
   }
 }
 
@@ -164,4 +193,10 @@ table {
 
 .error-state {
   color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .compact-filter {
+    min-width: 100%;
+  }
 }

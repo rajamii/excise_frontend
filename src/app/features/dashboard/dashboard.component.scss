@@ -811,7 +811,7 @@
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    overflow: visible;
     margin-top: 32px;
 
     .section-header {
@@ -850,9 +850,8 @@
 }
 
 // ========================================
-// LOADING & ERROR STATES
+// ERROR STATE
 // ========================================
-.loading-container,
 .error-container {
     display: flex;
     flex-direction: column;
@@ -865,15 +864,6 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
     margin: 32px 0;
     border: 1px solid rgba(28, 43, 120, 0.1);
-
-    .loading-spinner {
-        font-size: 56px;
-        width: 56px;
-        height: 56px;
-        color: #1C2B78;
-        margin-bottom: 24px;
-        animation: spin 1s linear infinite;
-    }
 
     mat-icon {
         font-size: 56px;
@@ -905,16 +895,6 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(28, 43, 120, 0.3);
         }
-    }
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
     }
 }
 
@@ -1355,7 +1335,31 @@ mat-card-content {
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         overflow: hidden;
     }
+
+    &.hologram-overview-wrapper {
+        overflow: visible;
+    }
+
+    // Hologram overview should follow normal page scroll like stock inventory (no nested scroll region).
+    .section-content.hologram-overview-content {
+        overflow-y: auto;
+        overflow-x: visible;
+        max-height: calc(100vh - 140px);
+        height: auto;
+        min-height: auto;
+    }
+
+    .section-content.hologram-overview-content app-hologramoveriew {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+
+    .section-content.hologram-overview-content ::ng-deep app-hologramoveriew .hologram-overview-container {
+        min-height: auto;
+    }
 }
+
 
 // ========================================
 // RESPONSIVE DESIGN FOR SUPPLY CHAIN

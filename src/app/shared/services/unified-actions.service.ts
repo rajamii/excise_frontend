@@ -214,7 +214,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'APPROVE', 'Approved');
 
       case 'hologram':
-        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'approve', 'Approved');
+        return this.performHologramWorkflowAction(item, 'approve', 'Approved', 'Approved');
       case 'new-license':
         return this.executeNewLicenseAdvance(item, 'approve', 'Approved');
 
@@ -250,7 +250,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'REJECT', reason);
 
       case 'hologram':
-        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'reject', reason);
+        return this.performHologramWorkflowAction(item, 'reject', reason, 'Rejected');
       case 'new-license':
         return this.executeNewLicenseAdvance(item, 'reject', reason);
 
@@ -268,7 +268,7 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'hologram') {
-      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'forward', 'Forwarded');
+      return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
     if (itemType === 'new-license') {
       return this.executeNewLicenseAdvance(item, 'forward', 'Forwarded');
@@ -288,7 +288,7 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'hologram':
-        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'verify', 'Verified by IT Cell');
+        return this.performHologramWorkflowAction(item, 'verify', 'Verified by IT Cell', 'Verified');
 
       default:
         return of({
@@ -308,7 +308,7 @@ export class UnifiedActionsService {
 
     switch (itemType) {
       case 'hologram':
-        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'issue', 'Issued');
+        return this.performHologramWorkflowAction(item, 'issue', 'Issued', 'Issued');
 
       default:
         return of({
@@ -384,7 +384,7 @@ export class UnifiedActionsService {
         return this.supplyChainService.performTransitPermitAction(item.id, 'PAY', 'Payment submitted');
 
       case 'hologram':
-        return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'pay', 'Payment completed');
+        return this.performHologramWorkflowAction(item, 'pay', 'Payment completed', 'Payment completed');
       case 'new-license': {
         const applicationId = this.getWorkflowApplicationId(item);
         if (!applicationId) {
@@ -478,7 +478,7 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'hologram') {
-      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'assign_cartons', 'Cartons assigned');
+      return this.performHologramWorkflowAction(item, 'assign_cartons', 'Cartons assigned', 'Cartons assigned');
     }
 
     return of({ success: false, message: `Assign cartons not implemented for ${itemType}` });
@@ -490,7 +490,7 @@ export class UnifiedActionsService {
     }
 
     if (itemType === 'hologram') {
-      return this.hologramService.performAction(this.getHologramEndpoint(item), Number(item.id), 'complete', 'Completed');
+      return this.performHologramWorkflowAction(item, 'complete', 'Completed', 'Completed');
     }
 
     return of({ success: false, message: `Complete action not implemented for ${itemType}` });
@@ -710,5 +710,29 @@ export class UnifiedActionsService {
   private getHologramEndpoint(item: any): 'procurement' | 'request' {
     const workflowId = item?.workflowId || item?.workflow_id || item?.workflow;
     return workflowId === 7 ? 'request' : 'procurement';
+  }
+
+  private performHologramWorkflowAction(
+    item: any,
+    action: string,
+    remarks: string,
+    successMessage: string
+  ): Observable<ActionResult> {
+    return this.hologramService.performAction(
+      this.getHologramEndpoint(item),
+      Number(item.id),
+      action,
+      remarks
+    ).pipe(
+      map((res: any) => ({
+        success: res?.success !== false,
+        message: res?.message || res?.detail || successMessage,
+        data: res
+      })),
+      catchError((error: any) => of({
+        success: false,
+        message: error?.error?.detail || error?.error?.message || `Failed to ${action}`
+      }))
+    );
   }
 }

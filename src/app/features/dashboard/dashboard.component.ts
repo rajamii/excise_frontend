@@ -106,7 +106,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   dashboardConfig!: DashboardConfig;
   currentUser: User | null = null;
   dashboardData: any = {};
-  isLoading = true;
+  isLoading = false;
   error: string | null = null;
 
   // Professional dashboard properties (from licensee dashboard)
@@ -248,6 +248,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardData() {
+    // Officer dashboards are full-page components and should render directly
+    // without waiting for unified stats/table data.
+    if (this.shouldShowRoleSpecificDashboard()) {
+      this.isLoading = false;
+      return;
+    }
+
     // If no specific section is selected, load dashboard stats
     if (!this.selectedSupplyChainSection) {
       this.loadDashboardStats();
@@ -257,8 +264,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadDashboardStats() {
-    this.isLoading = true;
-
     // Use the unified dashboard service for all roles
     forkJoin({
       counts: this.unifiedDashboardService.getUnifiedDashboardCounts(),
@@ -440,7 +445,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Method to handle dashboard refresh
   onDashboardRefresh() {
-    this.isLoading = true;
     this.error = null;
     this.initializeDashboard();
   }
@@ -992,6 +996,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   viewAllActivities(): void {
     // Navigate to full activity log
     console.log('Navigate to full activity log');
+  }
+
+  openDashboardSection(section: string): void {
+    this.router.navigate(['/dashboard'], { queryParams: { section } });
   }
 
   // Helper methods for actions

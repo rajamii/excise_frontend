@@ -320,10 +320,15 @@ export class OfficerInChargeComponent implements OnInit {
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit() {
-    // Check for tab query parameter
+    // Check for tab and view query parameters
     const tab = this.route.snapshot.queryParamMap.get('tab');
+    const view = this.route.snapshot.queryParamMap.get('view');
     if (tab) {
       this.activeTab = tab;
+    }
+
+    if (tab === 'hologram-register' && view === 'hologram-requests') {
+      this.showHologramRequests = true;
     }
     
     this.filteredData = [...this.allData];

@@ -35,7 +35,10 @@
     </div>
 
     <!-- Supply Chain Section Content -->
-    <div *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()" class="supply-chain-content">
+    <div
+      *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()"
+      class="supply-chain-content"
+      [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
       <!-- Top Action Bar for Payment & Wallet Button -->
       <div class="top-action-bar" *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'requisition'">
         <div class="action-bar-content">
@@ -64,7 +67,7 @@
         </div>
       </div>
 
-      <div class="section-content">
+      <div class="section-content" [class.hologram-overview-content]="selectedSupplyChainSection === 'hologram-overview'">
         <!-- Common sections -->
         <app-requisition *ngIf="selectedSupplyChainSection === 'requisition'"></app-requisition>
         <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
@@ -89,7 +92,11 @@
         <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>
         <app-hologram-monthly-report
           *ngIf="selectedSupplyChainSection === 'monthly-hologram-statement'"></app-hologram-monthly-report>
-        <app-hologramdetails *ngIf="selectedSupplyChainSection === 'hologram-register'"></app-hologramdetails>
+        <app-hologramdetails
+          *ngIf="selectedSupplyChainSection === 'hologram-register'"
+          (hologramRequestsClicked)="openDashboardSection('hologram-request')"
+          (hologramOverviewClicked)="openDashboardSection('hologram-overview')">
+        </app-hologramdetails>
         <app-oicdailyhologramregister
           *ngIf="selectedSupplyChainSection === 'hologram-daily-entry'"></app-oicdailyhologramregister>
         <app-brandwarehouse *ngIf="selectedSupplyChainSection === 'stock-inventory'"></app-brandwarehouse>
@@ -162,8 +169,7 @@
     </div>
 
     <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
-    <div class="stats-container" [class.loading]="isLoading"
-      *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+    <div class="stats-container" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
 
       <!-- Dynamic Stats Cards based on role -->
       <div class="stats-grid">
@@ -359,14 +365,8 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div *ngIf="isLoading" class="loading-container">
-      <mat-icon class="loading-spinner">refresh</mat-icon>
-      <p>Loading dashboard data...</p>
-    </div>
-
     <!-- Error State -->
-    <div *ngIf="error && !isLoading" class="error-container">
+    <div *ngIf="error" class="error-container">
       <mat-icon>error</mat-icon>
       <p>{{ error }}</p>
       <button mat-raised-button color="primary" (click)="onDashboardRefresh()">
@@ -376,7 +376,7 @@
     </div>
 
     <!-- Dashboard Tables Section - Show when no supply chain section selected and not role-specific dashboard -->
-    <ng-container *ngIf="!isLoading && !error && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+    <ng-container *ngIf="!error && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <!-- Default Table Card -->
       <mat-card *ngIf="activeTable === 'default'">
         <mat-card-header>

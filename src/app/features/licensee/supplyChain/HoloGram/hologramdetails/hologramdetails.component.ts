@@ -31,6 +31,7 @@ export interface HologramRecord {
 })
 export class HologramdetailsComponent implements OnInit {
   @Output() hologramRequestsClicked = new EventEmitter<void>();
+  @Output() hologramOverviewClicked = new EventEmitter<void>();
 
   hologramRecords: HologramRecord[] = [];
   filteredRecords: HologramRecord[] = [];
@@ -1076,11 +1077,10 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   openHologramRequests(): void {
-    this.hologramRequestsClicked.emit();
+    this.router.navigate(['/dev-hologram-request-list']);
   }
 
   openHologramOverview(): void {
-    // Navigate to hologram overview page in the same tab
     this.router.navigate(['/dev-hologram-overview']);
   }
 
@@ -1351,3 +1351,4 @@ export class HologramdetailsComponent implements OnInit {
 
 
 }
+

@@ -1,42 +1,6 @@
 <div class="new-license-register-header">
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="summary-card total-requests">
-        <div class="card-icon"><i class="bi bi-list-ul"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.applied + counts.pending + counts.objection + counts.approved + counts.rejected }}</h3>
-          <p class="card-label">Total Applications</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="summary-card applied-requests">
-        <div class="card-icon"><i class="bi bi-send-check"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.applied }}</h3>
-          <p class="card-label">Applied</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="summary-card pending-requests">
-        <div class="card-icon"><i class="bi bi-clock-history"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.pending }}</h3>
-          <p class="card-label">Pending</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
-      <div class="summary-card objection-requests">
-        <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
-        <div class="card-content">
-          <h3 class="card-value">{{ counts.objection }}</h3>
-          <p class="card-label">Objection</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-2">
+  <div class="row g-3 mb-4 stats-row">
+    <div class="col-xl-3 col-lg-6 col-md-6">
       <div class="summary-card approved-requests">
         <div class="card-icon"><i class="bi bi-check-circle"></i></div>
         <div class="card-content">
@@ -45,7 +9,25 @@
         </div>
       </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="summary-card pending-requests">
+        <div class="card-icon"><i class="bi bi-clock-history"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ counts.pending }}</h3>
+          <p class="card-label">Pending</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
+      <div class="summary-card objection-requests">
+        <div class="card-icon"><i class="bi bi-exclamation-circle"></i></div>
+        <div class="card-content">
+          <h3 class="card-value">{{ counts.objection }}</h3>
+          <p class="card-label">Objection</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-3 col-lg-6 col-md-6">
       <div class="summary-card rejected-requests">
         <div class="card-icon"><i class="bi bi-x-circle"></i></div>
         <div class="card-content">

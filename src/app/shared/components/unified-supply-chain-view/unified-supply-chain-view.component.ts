@@ -902,7 +902,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         this.unifiedActionsService.executeAction(action, event.item, this.applicationType, context).subscribe({
             next: (result: any) => {
-                if (result.success) {
+                const isSuccess = result?.success !== false;
+                if (isSuccess) {
                     if (result.message) {
                         this.snackBar.open(result.message, 'Close', { duration: 3000 });
                     }
