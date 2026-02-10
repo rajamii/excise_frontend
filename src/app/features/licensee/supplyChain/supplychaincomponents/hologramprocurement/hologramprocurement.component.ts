@@ -17,6 +17,8 @@ type HologramRow = HologramProcurement & {
   editedByCommissioner?: boolean;
   companyName?: string;
   status: string; // Ensure status is mandatory string for UI
+  allowed_actions?: string[];
+  allowedActions?: string[];
 };
 
 @Component({
@@ -338,7 +340,7 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   navigateToPaymentPage(hologram: HologramRow): void {
-    if (hologram.status !== 'Approved by Commissioner') {
+    if (!this.isPaymentEnabled(hologram)) {
       alert('Payment is pending Commissioner approval.');
       return;
     }
@@ -365,6 +367,11 @@ export class HologramprocurementComponent implements OnInit {
 
   // Payment methods
   isPaymentEnabled(item: HologramRow): boolean {
+    const actions = (item.allowed_actions || item.allowedActions || []).map(a => String(a).toLowerCase());
+    if (actions.includes('pay')) {
+      return true;
+    }
+    // Backward compatibility fallback
     return item.status === 'Approved by Commissioner';
   }
 
