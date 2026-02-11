@@ -9,12 +9,14 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
+import { HttpClient } from '@angular/common/http';
 import { Subject } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { RoleService } from '../../../../core/services/role.service';
 import { User } from '../../../../core/models/dashboard.models';
 import { AccountService } from '../../../../core/services/account.service';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-unified-layout',
@@ -37,18 +39,21 @@ import { AccountService } from '../../../../core/services/account.service';
 })
 export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
   
   currentUser: User | null = null;
   userName = '';
   isSidenavOpen = false;
   loaded = true;
   user: any;
+  showSupplyChainMenus = false;
 
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private http: HttpClient
   ) {}
 
   ngOnInit() {
@@ -76,6 +81,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       console.log('✅ Found cached user in role service:', cachedUser);
       this.currentUser = cachedUser;
       this.setupInitialSidebarState();
+      this.loadLicenseeMenuAccess();
       this.loaded = true;
     }
 
@@ -97,6 +103,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         // IMPORTANT: Update the role service with the actual logged-in user
         this.updateRoleServiceWithActualUser(acc);
         this.setupInitialSidebarState();
+        this.loadLicenseeMenuAccess();
         
         // Mark component as fully loaded
         this.loaded = true;
@@ -417,6 +424,50 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
     return this.currentUser?.roleId === 2;
+  }
+
+  private loadLicenseeMenuAccess(): void {
+    // This visibility rule is only for licensee menus.
+    if (!this.isLicenseeUser()) {
+      this.showSupplyChainMenus = false;
+      return;
+    }
+
+    // Default for new users: keep only base menu options visible.
+    this.showSupplyChainMenus = false;
+
+    this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).subscribe({
+      next: (response) => {
+        const approvedApplications = Array.isArray(response?.approved) ? response.approved : [];
+        this.showSupplyChainMenus = approvedApplications.some((item: any) =>
+          this.isManufacturingApplication(item)
+        );
+      },
+      error: (error) => {
+        console.error('Failed to evaluate licensee menu access:', error);
+        this.showSupplyChainMenus = false;
+      }
+    });
+  }
+
+  private isManufacturingApplication(item: any): boolean {
+    const possibleFields = [
+      item?.license_category_name,
+      item?.licenseCategoryName,
+      item?.license_type_name,
+      item?.licenseTypeName,
+      item?.license_category,
+      item?.licenseCategory,
+      item?.license_type,
+      item?.licenseType
+    ];
+
+    return possibleFields.some((value) => {
+      if (value === null || value === undefined) {
+        return false;
+      }
+      return String(value).toLowerCase().includes('manufactur');
+    });
   }
 
   isSiteAdminUser(): boolean {
