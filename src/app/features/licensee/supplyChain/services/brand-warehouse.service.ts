@@ -439,8 +439,8 @@ export class BrandWarehouseService {
 
                 // Filter by brandWarehouseId if specified and not already filtered by backend
                 if (brandWarehouseId && utilizations.length > 0) {
-                    utilizations = utilizations.filter((util: any) => 
-                        util.brand_warehouse === brandWarehouseId || 
+                    utilizations = utilizations.filter((util: any) =>
+                        util.brand_warehouse === brandWarehouseId ||
                         util.brand_warehouse_id === brandWarehouseId ||
                         util.brandWarehouse === brandWarehouseId
                     );
@@ -501,6 +501,19 @@ export class BrandWarehouseService {
             map((response: any) => response?.arrivals || response || []),
             catchError((error) => {
                 console.error('getArrivals error:', error);
+                return of([]);
+            })
+        );
+    }
+
+    /**
+     * Get cancelled permits for a brand warehouse
+     */
+    getCancellations(brandWarehouseId: number): Observable<any[]> {
+        return this.http.get<any>(`${this.baseUrl}/${brandWarehouseId}/canceled-permits/`).pipe(
+            map((response: any) => response?.cancellations || []),
+            catchError((error) => {
+                console.error('getCancellations error:', error);
                 return of([]);
             })
         );

@@ -13,7 +13,7 @@ export class Transaction {
   id!: number;
   licenseApplication!: string | NewLicenseApplication;
   performedBy!: Account | null;
-  forwardedBy!: number;
+  forwardedBy!: Role | null;
   forwardedTo!: Role | null;
   stage!: number;
   remarks?: string | null;

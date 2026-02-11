@@ -1,22 +1,30 @@
-import { Component, Inject, PLATFORM_ID, OnInit, Input } from "@angular/core";
+import { Component, Inject, PLATFORM_ID, OnInit, Input, inject } from "@angular/core";
 import { CommonModule, isPlatformBrowser } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { SupplyChainProfileService } from "../../../../../core/services/supply-chain-profile.service";
 import { Router } from "@angular/router";
 import { SupplyChainService } from "../../services/supplychain.service";
+import { UnifiedActionButtonsComponent } from '../../../../../shared/components/unified-action-buttons/unified-action-buttons.component';
+import { UnifiedActionsService } from '../../../../../shared/services/unified-actions.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 interface TableData {
+  id?: number;
   referenceNo: string;
   submissionDate: string;
   distilleryName: string;
   status: string;
   backendStatus?: string; // Original backend status for role-based logic
   amount: string;
+  workflowId?: number;
+  currentStage?: number;
   destination?: string;
   depotAddress?: string; // Add separate depot address field
   transportMode?: string;
   vehicleNumber?: string;
   permitValidUntil?: string;
+  allowedActions?: string[]; // Dynamic actions from backend
+  allowedActionConfigs?: any[];
 }
 
 interface ProductDetail {
@@ -32,7 +40,7 @@ interface ProductDetail {
 @Component({
   selector: 'app-transit',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UnifiedActionButtonsComponent],
   templateUrl: './transit.component.html',
   styleUrl: './transit.component.scss'
 })
@@ -60,209 +68,20 @@ export class TransitComponent implements OnInit {
   pageSize: number = 5;
 
   filteredTransitData: TableData[] = [];
-  
+
   // Store raw backend data for brand details
   rawTransitData: any[] = [];
-  
+
   // Modal data
   selectedPermitRef: string = '';
   selectedBrandDetails: ProductDetail[] = [];
 
   // Sample data for transit permit applications
-  transitData: TableData[] = [
-    {
-      referenceNo: "TRN/BF801",
-      submissionDate: "22-Sep-2025",
-      distilleryName: "Sikkim Distilleries Ltd",
-      status: "PENDING",
-      amount: "2500.00",
-      destination: "Delhi",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "SK01AB1234",
-      permitValidUntil: "30-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF802",
-      submissionDate: "21-Sep-2025",
-      distilleryName: "Himalayan Distilleries Pvt Ltd",
-      status: "APPROVED",
-      amount: "3200.00",
-      destination: "Mumbai",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MH12CD5678",
-      permitValidUntil: "28-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF803",
-      submissionDate: "20-Sep-2025",
-      distilleryName: "Royal Sikkim Brewery",
-      status: "ISSUED",
-      amount: "1800.00",
-      destination: "Kolkata",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "WB03EF9012",
-      permitValidUntil: "25-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF804",
-      submissionDate: "19-Sep-2025",
-      distilleryName: "Mountain View Distilleries",
-      status: "PROCESSING",
-      amount: "2100.00",
-      destination: "Bangalore",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "KA05GH3456",
-      permitValidUntil: "27-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF805",
-      submissionDate: "18-Sep-2025",
-      distilleryName: "Eastern Himalaya Distillery",
-      status: "PENDING",
-      amount: "2800.00",
-      destination: "Chennai",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "TN09IJ7890",
-      permitValidUntil: "26-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF806",
-      submissionDate: "17-Sep-2025",
-      distilleryName: "Gangtok Premium Spirits",
-      status: "REJECTED",
-      amount: "1500.00",
-      destination: "Guwahati",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "AS01KL2345",
-      permitValidUntil: "24-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF807",
-      submissionDate: "16-Sep-2025",
-      distilleryName: "Sikkim Highland Distillery",
-      status: "PENDING",
-      amount: "2200.00",
-      destination: "Pune",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MH14PQ6789",
-      permitValidUntil: "23-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF808",
-      submissionDate: "15-Sep-2025",
-      distilleryName: "Himalayan Peak Spirits",
-      status: "APPROVED",
-      amount: "2900.00",
-      destination: "Hyderabad",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "TS07RS1234",
-      permitValidUntil: "22-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF809",
-      submissionDate: "14-Sep-2025",
-      distilleryName: "Eastern Spirits Ltd",
-      status: "ISSUED",
-      amount: "3100.00",
-      destination: "Ahmedabad",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "GJ01TU5678",
-      permitValidUntil: "21-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF810",
-      submissionDate: "13-Sep-2025",
-      distilleryName: "Mountain Brew Company",
-      status: "PROCESSING",
-      amount: "2600.00",
-      destination: "Jaipur",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "RJ14VW9012",
-      permitValidUntil: "20-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF811",
-      submissionDate: "12-Sep-2025",
-      distilleryName: "Sikkim Valley Distillery",
-      status: "PENDING",
-      amount: "2400.00",
-      destination: "Lucknow",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "UP32XY3456",
-      permitValidUntil: "19-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF812",
-      submissionDate: "11-Sep-2025",
-      distilleryName: "Royal Mountain Spirits",
-      status: "APPROVED",
-      amount: "2700.00",
-      destination: "Bhopal",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "MP09ZA7890",
-      permitValidUntil: "18-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF813",
-      submissionDate: "10-Sep-2025",
-      distilleryName: "Himalayan Gold Distillery",
-      status: "ISSUED",
-      amount: "3300.00",
-      destination: "Chandigarh",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "CH01BC1234",
-      permitValidUntil: "17-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF814",
-      submissionDate: "09-Sep-2025",
-      distilleryName: "Eastern Crown Spirits",
-      status: "PROCESSING",
-      amount: "2000.00",
-      destination: "Patna",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "BR01DE5678",
-      permitValidUntil: "16-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF815",
-      submissionDate: "08-Sep-2025",
-      distilleryName: "Sikkim Premium Distillery",
-      status: "PENDING",
-      amount: "2800.00",
-      destination: "Raipur",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "CG04FG9012",
-      permitValidUntil: "15-Sep-2025"
-    },
-    {
-      referenceNo: "TRN/BF816",
-      submissionDate: "07-Sep-2025",
-      distilleryName: "Mountain Crest Spirits",
-      status: "REJECTED",
-      amount: "1900.00",
-      destination: "Bhubaneswar",
-      depotAddress: "Gangtok",
-      transportMode: "Road",
-      vehicleNumber: "OD05HI3456",
-      permitValidUntil: "14-Sep-2025"
-    }
-  ];
+  transitData: TableData[] = [];
+
+  // Services
+  public accountService = inject(AccountService);
+  private unifiedActionsService = inject(UnifiedActionsService);
 
   constructor(
     private router: Router,
@@ -276,7 +95,7 @@ export class TransitComponent implements OnInit {
   ngOnInit(): void {
     // Initialize with sample data first
     this.filteredTransitData = [...this.transitData];
-    
+
     if (this.isBrowser) {
       this.loadTransitData();
     } else {
@@ -299,7 +118,7 @@ export class TransitComponent implements OnInit {
       next: (data) => {
         // Store raw data for brand details
         this.rawTransitData = data;
-        
+
         if (!data || data.length === 0) {
           this.applyTransitFilters();
           return;
@@ -336,17 +155,22 @@ export class TransitComponent implements OnInit {
 
           if (billNo && !grouped.has(billNo)) {
             grouped.set(billNo, {
+              id: item.id, // Add ID for actions
               referenceNo: billNo,
               submissionDate: date,
               distilleryName: distributorName,
               status: displayStatus, // Use status from database with proper mapping
               backendStatus: backendStatus, // Store original backend status for role-based logic
               amount: rowTotal,
+              workflowId: item.workflow || item.workflow_id || item.workflowId,
+              currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
               destination: destination, // This should be the actual destination
               depotAddress: destination, // Store depot address separately
               transportMode: 'Road',
               vehicleNumber: vehicleNumber,
-              permitValidUntil: ''
+              permitValidUntil: '',
+              allowedActions: item.allowedActions || item.allowed_actions || [], // Add allowed actions
+              allowedActionConfigs: item.allowedActionConfigs || item.allowed_action_configs || []
             });
           } else if (billNo) {
             // Accumulate amount for existing bill
@@ -369,6 +193,57 @@ export class TransitComponent implements OnInit {
         this.applyTransitFilters();
       }
     });
+  }
+
+  // Unified action handler
+  onUnifiedAction(event: { action: string, item: any }): void {
+    const context = this.getUserContext();
+
+    this.unifiedActionsService.executeAction(
+      event.action,
+      event.item,
+      'transit',
+      context
+    ).subscribe({
+      next: (result: any) => {
+        if (result.success) {
+          if (result.message) {
+            alert(result.message);
+          }
+          // Reload data if it was a backend action
+          if (['APPROVE', 'REJECT', 'FORWARD', 'VERIFY', 'TERMINATE'].includes(event.action)) {
+            this.loadTransitData();
+          }
+        } else {
+          alert(`Action failed: ${result.message}`);
+        }
+      },
+      error: (error: any) => {
+        console.error('Action failed:', error);
+        alert(`Action failed: ${error.message || 'Unknown error'}`);
+      }
+    });
+  }
+
+  // Get current user context for actions
+  getUserContext(): 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' {
+    if (this.isCommissioner()) return 'commissioner';
+    if (this.isPermitSection()) return 'permit-section';
+    if (this.isOfficerInCharge()) return 'officer-in-charge';
+    return 'licensee';
+  }
+
+  // User role checks
+  isCommissioner(): boolean {
+    return this.accountService.hasAnyRole('commissioner');
+  }
+
+  isPermitSection(): boolean {
+    return this.accountService.hasAnyRole('permit-section');
+  }
+
+  isOfficerInCharge(): boolean {
+    return this.accountService.hasAnyRole('officer-in-charge');
   }
 
   // Filter methods
@@ -579,7 +454,10 @@ export class TransitComponent implements OnInit {
 
   navigateTo(route: string) {
     if (route === 'transit-permit') {
-      this.router.navigate(['/licensee/supply-chain/transit-permit']);
+      // Navigate within SPA to the transit permit application form
+      this.router.navigate(['/dashboard'], {
+        queryParams: { section: 'transit-permit' }
+      });
     } else {
       this.router.navigate([route]);
     }
@@ -628,6 +506,40 @@ export class TransitComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  // Dashboard statistics methods
+  getDashboardStatistics() {
+    return {
+      applied: this.getTransitStatusCount('APPLIED') + this.getTransitStatusCount('SUBMITTED'),
+      pending: this.getTransitStatusCount('PENDING') + this.getTransitStatusCount('UNDER_REVIEW'),
+      approved: this.getTransitStatusCount('APPROVED') + this.getTransitStatusCount('APPROVED_BY_COMMISSIONER'),
+      rejected: this.getTransitStatusCount('REJECTED') + this.getTransitStatusCount('REJECTED_BY_COMMISSIONER')
+    };
+  }
+
+  getFilterOptions() {
+    return [
+      { value: 'all', label: 'All Applications' },
+      { value: 'transit', label: 'Transit Permits' },
+      { value: 'pending', label: 'Pending Applications' },
+      { value: 'approved', label: 'Approved Applications' },
+      { value: 'rejected', label: 'Rejected Applications' }
+    ];
+  }
+
+  onDashboardFilterChange(filterValue: string): void {
+    // Handle dashboard filter changes
+    if (filterValue === 'all') {
+      this.transitStatusFilter = '';
+    } else if (filterValue === 'pending') {
+      this.transitStatusFilter = 'PENDING';
+    } else if (filterValue === 'approved') {
+      this.transitStatusFilter = 'APPROVED';
+    } else if (filterValue === 'rejected') {
+      this.transitStatusFilter = 'REJECTED';
+    }
+    this.applyTransitFilters();
+  }
+
   showAllData(): void {
     this.pageSize = this.filteredTransitData.length || 50;
     this.currentPage = 1;
@@ -674,21 +586,22 @@ export class TransitComponent implements OnInit {
     return pages;
   }
 
+  // Brand Details Panel
+  showBrandDetailsPanel: boolean = false;
+
   // Brand Details Methods
   openBrandDetailsModal(referenceNo: string): void {
     this.selectedPermitRef = referenceNo;
     this.selectedBrandDetails = this.getBrandDetailsForPermit(referenceNo);
-    
-    // Open the modal using Bootstrap
-    const modalElement = document.getElementById('brandDetailsModal');
-    if (modalElement) {
-      const modal = new (window as any).bootstrap.Modal(modalElement);
-      modal.show();
-    }
+    this.showBrandDetailsPanel = true;
+  }
+
+  closeBrandDetailsPanel(): void {
+    this.showBrandDetailsPanel = false;
   }
 
   getBrandCount(referenceNo: string): number {
-    return this.rawTransitData.filter(item => 
+    return this.rawTransitData.filter(item =>
       (item.billNo || item.bill_no) === referenceNo
     ).length;
   }
@@ -709,6 +622,49 @@ export class TransitComponent implements OnInit {
 
   getTotalCases(): number {
     return this.selectedBrandDetails.reduce((total, product) => total + (product.cases || 0), 0);
+  }
+
+  /**
+   * Formats distributor names to show proper company names
+   * Shows full company names like "Sikkim Distilleries Ltd" for all user roles
+   */
+  getFormattedDistributorName(distilleryName: string): string {
+    if (!distilleryName) return 'N/A';
+
+    // Map common distillery names to their full company names
+    const companyNameMap: { [key: string]: string } = {
+      'sikkim': 'Sikkim Distilleries Ltd',
+      'sikkim distillery': 'Sikkim Distilleries Ltd',
+      'sikkim distilleries': 'Sikkim Distilleries Ltd',
+      'himalayan': 'Himalayan Distilleries Pvt Ltd',
+      'himalayan distillery': 'Himalayan Distilleries Pvt Ltd',
+      'royal': 'Royal Distilleries & Breweries Ltd',
+      'royal distillery': 'Royal Distilleries & Breweries Ltd',
+      'united': 'United Breweries Ltd',
+      'united breweries': 'United Breweries Ltd',
+      'mcleod': 'McLeod Russel India Ltd',
+      'mcleod russel': 'McLeod Russel India Ltd'
+    };
+
+    const lowerName = distilleryName.toLowerCase().trim();
+
+    // Check for exact matches first
+    if (companyNameMap[lowerName]) {
+      return companyNameMap[lowerName];
+    }
+
+    // Check for partial matches
+    for (const key in companyNameMap) {
+      if (lowerName.includes(key)) {
+        return companyNameMap[key];
+      }
+    }
+
+    // If no mapping found, format the existing name to look more professional
+    return distilleryName
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ') + (distilleryName.toLowerCase().includes('ltd') || distilleryName.toLowerCase().includes('pvt') ? '' : ' Ltd');
   }
 
   exportBrandDetails(): void {

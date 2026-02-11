@@ -57,12 +57,12 @@
           <!-- Role & creator (with formatting) -->
           <ng-container matColumnDef="role">
             <mat-header-cell *matHeaderCellDef> Role </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ stringUtil.toTitleCase(u.role?.name) }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.role?.id ?? '-' }} </mat-cell>
           </ng-container>
 
           <ng-container matColumnDef="createdBy">
             <mat-header-cell *matHeaderCellDef> Created By </mat-header-cell>
-            <mat-cell *matCellDef="let u"> {{ stringUtil.toTitleCase(u.createdBy) || "-" }} </mat-cell>
+            <mat-cell *matCellDef="let u"> {{ u.createdBy ?? "-" }} </mat-cell>
           </ng-container>
 
           <!-- Action buttons (edit/delete) -->

@@ -110,8 +110,8 @@ export class OicTransitPermitService {
   /**
    * Perform action on transit permit (PAY, APPROVE, REJECT)
    */
-  performAction(permitId: number, action: 'PAY' | 'APPROVE' | 'REJECT'): Observable<any> {
-    return this.http.post(`${this.apiUrl}/action/${permitId}/`, { action });
+  performAction(permitId: number, action: 'PAY' | 'APPROVE' | 'REJECT', remarks?: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/action/${permitId}/`, { action, remarks });
   }
 
   /**

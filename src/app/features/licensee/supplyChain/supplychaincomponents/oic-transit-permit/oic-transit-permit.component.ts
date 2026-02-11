@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, AfterViewInit, Inject, Optional } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule } from '@angular/forms';
 import { MatDialog, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
@@ -262,20 +262,41 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
   }
 
   onReject(element: GroupedTransitPermit): void {
-    if (confirm(`Are you sure you want to reject transit permit ${element.bill_no}?`)) {
-      // Get the first brand's ID to perform action
-      const permitId = element.brands[0].id;
-      this.transitPermitService.performAction(permitId, 'REJECT').subscribe({
-        next: (response) => {
-          this.snackBar.open('Transit permit rejected successfully', 'Close', { duration: 3000 });
-          this.loadTransitPermits();
-        },
-        error: (error) => {
-          console.error('Error rejecting transit permit:', error);
-          this.snackBar.open('Error rejecting transit permit', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    const dialogRef = this.dialog.open(RejectionConfirmationDialogComponent, {
+      width: '500px',
+      data: { billNo: element.bill_no }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result && result.confirmed) {
+        // Get the first brand's ID to perform action (assuming rejection applies to whole permit group)
+        // In backend, rejection of one permit in group currently refunds everything?
+        // Actually backend logic takes `permit` object which is a single `EnaTransitPermitDetail`.
+        // But the group logic implies there are multiple "brands" with same bill_no.
+        // If we reject one ID, do we reject all?
+        // The backend `_handle_rejection` uses `permit.bill_no` to find `BrandWarehouseUtilization`.
+        // Utilization is linked to `permit_no`.
+        // If multiple rows share `bill_no`, they might share utilization record?
+        // Assuming rejecting one record with the bill_no is enough to trigger the bill-level rejection or 
+        // we should loop? 
+        // The current `performAction` takes one ID. The backend finds `permit` by that ID.
+        // `_handle_rejection` uses `permit.bill_no`.
+        // So submitting any valid ID from the group should work if the backend uses bill_no for the heavy lifting.
+        const permitId = element.brands[0].id;
+        const remarks = result.remarks;
+
+        this.transitPermitService.performAction(permitId, 'REJECT', remarks).subscribe({
+          next: (response) => {
+            this.snackBar.open('Transit permit rejected successfully', 'Close', { duration: 3000 });
+            this.loadTransitPermits();
+          },
+          error: (error) => {
+            console.error('Error rejecting transit permit:', error);
+            this.snackBar.open('Error rejecting transit permit: ' + (error.error?.message || error.message), 'Close', { duration: 5000 });
+          }
+        });
+      }
+    });
   }
 
   onShowBrandDetails(element: GroupedTransitPermit): void {
@@ -842,7 +863,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 
-                &.whisky {
+                &.type-whisky {
                   background: linear-gradient(135deg, #fff3e0, #ffe0b2);
                   color: #f57c00;
                   border: 1px solid #ff9800;
@@ -854,10 +875,34 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
                   border: 1px solid #e91e63;
                 }
                 
-                &.rum {
+                &.type-rum {
                   background: linear-gradient(135deg, #efebe9, #d7ccc8);
                   color: #5d4037;
                   border: 1px solid #795548;
+                }
+                
+                &.type-beer {
+                  background: linear-gradient(135deg, #fffde7, #fff9c4);
+                  color: #fbc02d;
+                  border: 1px solid #fdd835;
+                }
+                
+                &.type-vodka {
+                  background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+                  color: #7b1fa2;
+                  border: 1px solid #8e24aa;
+                }
+                
+                &.type-wine {
+                  background: linear-gradient(135deg, #ffebee, #ffcdd2);
+                  color: #c62828;
+                  border: 1px solid #e57373;
+                }
+                
+                &.type-generic {
+                  background: linear-gradient(135deg, #e0e0e0, #bdbdbd);
+                  color: #616161;
+                  border: 1px solid #9e9e9e;
                 }
               }
             }
@@ -881,7 +926,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
           gap: 8px;
           color: #666;
           font-size: 13px;
-          
+
           mat-icon {
             font-size: 16px;
             width: 16px;
@@ -905,7 +950,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
             &:hover {
               transform: translateY(-2px);
             }
-            
+
             mat-icon {
               font-size: 18px;
               width: 18px;
@@ -923,7 +968,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
         }
       }
     }
-    
+
     @keyframes pulse {
       0% {
         transform: scale(1);
@@ -935,7 +980,7 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
         transform: scale(1);
       }
     }
-    
+
     @keyframes fadeInUp {
       0% {
         opacity: 0;
@@ -946,17 +991,21 @@ export class OicTransitPermitComponent implements OnInit, AfterViewInit {
         transform: translateY(0);
       }
     }
-    
+
     @media (max-width: 768px) {
       .brand-details-dialog {
-        .dialog-body .dialog-stats {
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
-        
-        .table-container .table-wrapper {
-          .brand-table {
-            min-width: 900px;
+        .dialog-body {
+          .dialog-stats {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          
+          .table-container {
+            .table-wrapper {
+              .brand-table {
+                min-width: 900px;
+              }
+            }
           }
         }
         
@@ -982,6 +1031,85 @@ export class BrandDetailsDialogComponent {
   ) { }
 
   getLiquorTypeClass(liquorType: string): string {
-    return liquorType.toLowerCase().replace(/\s+/g, '-');
+    if (!liquorType) return 'type-generic';
+    const lower = liquorType.toLowerCase();
+    if (lower.includes('whisky')) return 'type-whisky';
+    if (lower.includes('beer')) return 'type-beer';
+    if (lower.includes('rum')) return 'type-rum';
+    if (lower.includes('vodka')) return 'type-vodka';
+    if (lower.includes('wine')) return 'type-wine';
+    return 'type-generic';
   }
+}
+
+// Rejection Confirmation Dialog
+@Component({
+  selector: 'app-rejection-confirmation-dialog',
+  standalone: true,
+  imports: [MaterialModule, CommonModule, FormsModule],
+  template: `
+    <div class="rejection-dialog">
+      <h2 mat-dialog-title class="dialog-title">
+        <mat-icon color="warn">warning</mat-icon> Confirm Rejection
+      </h2>
+      <div mat-dialog-content>
+        <div class="alert-message">
+          <p><strong>Warning:</strong> You are about to reject Transit Permit <strong>{{data.billNo}}</strong>.</p>
+          <p>Please note that:</p>
+          <ul>
+            <li>The deducted wallet amount will be <strong>refunded</strong> to the licensee.</li>
+            <li>The utilized stock (bottles/cases) will be <strong>restored</strong> to the Brand Warehouse.</li>
+          </ul>
+        </div>
+        
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Reason for Rejection</mat-label>
+          <textarea matInput [(ngModel)]="remarks" placeholder="Enter remarks..." rows="3" required></textarea>
+        </mat-form-field>
+      </div>
+      <div mat-dialog-actions align="end">
+        <button mat-button mat-dialog-close>Cancel</button>
+        <button mat-raised-button color="warn" [mat-dialog-close]="{confirmed: true, remarks: remarks}" [disabled]="!remarks">
+          I Agree and Confirm
+        </button>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .rejection-dialog {
+      padding: 0;
+      max-width: 500px;
+    }
+    .dialog-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      padding: 16px 24px;
+      background-color: #ffebee;
+      color: #c62828;
+      border-bottom: 1px solid #ffcdd2;
+    }
+    .alert-message {
+      background-color: #fff8e1;
+      color: #f57f17;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px solid #ffecb3;
+      
+      p { margin: 8px 0; }
+      ul {
+        margin-top: 8px;
+        padding-left: 20px;
+      }
+    }
+    .full-width {
+      width: 100%;
+    }
+  `]
+})
+export class RejectionConfirmationDialogComponent {
+  remarks: string = '';
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { billNo: string }) { }
 }

@@ -1,24 +1,8 @@
 <!-- Header Section -->
 <div class="hologram-request-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-info">
-      <h4 class="register-title">
-        <i class="bi bi-journal-plus me-2"></i>
-        Hologram Request Register
-      </h4>
-      <p class="register-subtitle">Track and manage all hologram requestss</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-success" (click)="navigateToHologramRequest()">
-        <i class="bi bi-plus-circle me-2"></i>
-        New Request
-      </button>
-      <!-- Temporary test button - remove after payment integration -->
-      <button class="btn btn-warning" (click)="markPaymentCompleted('YB/9/BREW/25')" title="Test: Mark payment as completed">
-        <i class="bi bi-check-circle me-2"></i>
-        Test Payment Complete
-      </button>
-    </div>
+
+
   </div>
 
   <!-- Summary Cards -->
@@ -81,8 +65,8 @@
 
     <!-- Date Filter -->
     <div class="compact-filter">
-      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFilter"
-        (change)="onDateFilterChange()" placeholder="Date" title="Filter by date">
+      <input type="date" class="form-control form-control-sm" [(ngModel)]="dateFilter" (change)="onDateFilterChange()"
+        placeholder="Date" title="Filter by date">
     </div>
 
     <!-- Month Filter -->
@@ -93,8 +77,8 @@
 
     <!-- Status Filter -->
     <div class="compact-filter">
-      <select class="form-select form-select-sm" [(ngModel)]="statusFilter"
-        (change)="onStatusFilterChange()" title="Filter by status">
+      <select class="form-select form-select-sm" [(ngModel)]="statusFilter" (change)="onStatusFilterChange()"
+        title="Filter by status">
         <option value="">All Status</option>
         <option value="PENDING">Pending</option>
         <option value="APPROVED">Approved</option>
@@ -181,8 +165,7 @@
               </div>
             </td>
             <td class="type">
-              <span class="badge" 
-                [class.bg-success]="request.hologramType === 'LOCAL' || !request.hologramType"
+              <span class="badge" [class.bg-success]="request.hologramType === 'LOCAL' || !request.hologramType"
                 [class.bg-primary]="request.hologramType === 'EXPORT'"
                 [class.bg-warning]="request.hologramType === 'DEFENCE'"
                 [class.text-white]="request.hologramType === 'LOCAL' || request.hologramType === 'EXPORT' || !request.hologramType"
@@ -198,15 +181,15 @@
             </td>
             <td class="rolls-assigned">
               @if (hasRollsAssigned(request)) {
-                <button class="btn-details" (click)="viewRollsAssigned(request)" title="View Rolls Assigned">
-                  <i class="bi bi-box-seam me-1"></i>
-                  Details
-                </button>
+              <button class="btn-details" (click)="viewRollsAssigned(request)" title="View Rolls Assigned">
+                <i class="bi bi-box-seam me-1"></i>
+                Details
+              </button>
               } @else {
-                <span class="text-muted small">
-                  <i class="bi bi-dash-circle me-1"></i>
-                  Not Assigned
-                </span>
+              <span class="text-muted small">
+                <i class="bi bi-dash-circle me-1"></i>
+                Not Assigned
+              </span>
               }
             </td>
             <td class="status">
@@ -287,14 +270,12 @@
         <div class="pagination-controls">
           <div class="d-flex align-items-center gap-2">
             <label class="page-size-label">Rows:</label>
-            <select class="form-select form-select-sm page-size-select"
-              [ngModel]="getPageSize()"
+            <select class="form-select form-select-sm page-size-select" [ngModel]="getPageSize()"
               (ngModelChange)="changePageSize($event)">
               <option *ngFor="let opt of pageSizeOptions" [value]="opt">{{ opt }}</option>
             </select>
             <div class="btn-group btn-group-sm pagination-buttons">
-              <button class="btn btn-outline-secondary"
-                (click)="goToPage(1, filteredHologramRequestList)"
+              <button class="btn btn-outline-secondary" (click)="goToPage(1, filteredHologramRequestList)"
                 [disabled]="getCurrentPage() === 1">
                 «
               </button>
@@ -417,8 +398,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-success me-2"
-          (click)="downloadRequestApplication(selectedRequest)">
+        <button type="button" class="btn btn-success me-2" (click)="downloadRequestApplication(selectedRequest)">
           <i class="bi bi-download me-2"></i>
           Download Application
         </button>
@@ -442,8 +422,7 @@
           <i class="bi bi-box-seam me-2"></i>
           Rolls Assigned Details
         </h5>
-        <button type="button" class="btn-close btn-close-white" aria-label="Close"
-          (click)="closeRollsModal()"></button>
+        <button type="button" class="btn-close btn-close-white" aria-label="Close" (click)="closeRollsModal()"></button>
       </div>
       <div class="modal-body">
         <div class="rolls-details-container" *ngIf="selectedRequestForRolls">
@@ -483,54 +462,55 @@
             </h6>
 
             @if (getRollsAssigned(selectedRequestForRolls).length > 0) {
-              <div class="table-responsive">
-                <table class="table table-bordered table-hover rolls-table">
-                  <thead class="table-light">
-                    <tr>
-                      <th class="text-center" style="width: 80px;">Sl. No.</th>
-                      <th>Carton Number</th>
-                      <th>From Serial</th>
-                      <th>To Serial</th>
-                      <th class="text-end">Quantity</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (roll of getRollsAssigned(selectedRequestForRolls); track roll.cartoonNumber; let i = $index) {
-                      <tr>
-                        <td class="text-center">{{ i + 1 }}</td>
-                        <td>
-                          <div class="carton-display">
-                            <i class="bi bi-box-seam me-2 text-primary"></i>
-                            <strong>{{ roll.cartoonNumber }}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          <span class="serial-badge from-serial">{{ roll.fromSerial }}</span>
-                        </td>
-                        <td>
-                          <span class="serial-badge to-serial">{{ roll.toSerial }}</span>
-                        </td>
-                        <td class="text-end">
-                          <span class="qty-badge">{{ roll.quantity | number }}</span>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                  <tfoot class="table-light">
-                    <tr>
-                      <td colspan="4" class="text-end"><strong>Total Quantity:</strong></td>
-                      <td class="text-end">
-                        <strong class="text-primary">{{ getTotalRollsQuantity(selectedRequestForRolls) | number }}</strong>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+            <div class="table-responsive">
+              <table class="table table-bordered table-hover rolls-table">
+                <thead class="table-light">
+                  <tr>
+                    <th class="text-center" style="width: 80px;">Sl. No.</th>
+                    <th>Carton Number</th>
+                    <th>From Serial</th>
+                    <th>To Serial</th>
+                    <th class="text-end">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (roll of getRollsAssigned(selectedRequestForRolls); track roll.cartoonNumber; let i = $index) {
+                  <tr>
+                    <td class="text-center">{{ i + 1 }}</td>
+                    <td>
+                      <div class="carton-display">
+                        <i class="bi bi-box-seam me-2 text-primary"></i>
+                        <strong>{{ roll.cartoonNumber }}</strong>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="serial-badge from-serial">{{ roll.fromSerial }}</span>
+                    </td>
+                    <td>
+                      <span class="serial-badge to-serial">{{ roll.toSerial }}</span>
+                    </td>
+                    <td class="text-end">
+                      <span class="qty-badge">{{ roll.quantity | number }}</span>
+                    </td>
+                  </tr>
+                  }
+                </tbody>
+                <tfoot class="table-light">
+                  <tr>
+                    <td colspan="4" class="text-end"><strong>Total Quantity:</strong></td>
+                    <td class="text-end">
+                      <strong class="text-primary">{{ getTotalRollsQuantity(selectedRequestForRolls) | number
+                        }}</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
             } @else {
-              <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                No rolls have been assigned to this request yet.
-              </div>
+            <div class="alert alert-info">
+              <i class="bi bi-info-circle me-2"></i>
+              No rolls have been assigned to this request yet.
+            </div>
             }
           </div>
         </div>

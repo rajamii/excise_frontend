@@ -4,27 +4,8 @@
 <!-- Hologram Register Header -->
 <div class="hologram-register-header">
   <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="header-info">
-      <h4 class="register-title">
-        <i class="bi bi-qr-code me-2"></i>
-        Hologram Register
-      </h4>
-      <p class="register-subtitle">Track and manage all hologram applications</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-success me-2" (click)="navigateTo('hologram')">
-        <i class="bi bi-plus-circle me-2"></i>
-        New Hologram
-      </button>
-      <button class="btn btn-warning me-2" (click)="clearPaymentSlipData()" title="Clear payment slip data for testing">
-        <i class="bi bi-file-earmark-x me-2"></i>
-        Clear Slips
-      </button>
-      <button class="btn btn-danger" (click)="clearHologramData()" title="Clear all hologram data for testing">
-        <i class="bi bi-trash me-2"></i>
-        Clear Data
-      </button>
-    </div>
+
+
   </div>
 
   <!-- Summary Cards -->
@@ -155,7 +136,15 @@
       </div>
     </div>
 
-    <div class="table-responsive" *ngIf="filteredHologramData.length > 0">
+    <!-- Loading State -->
+    <div class="loading-state text-center py-5" *ngIf="isLoading">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-3 text-muted">Loading hologram data...</p>
+    </div>
+
+    <div class="table-responsive" *ngIf="!isLoading && filteredHologramData.length > 0">
       <table class="table register-table">
         <thead>
           <tr>
@@ -269,7 +258,7 @@
     </div>
 
     <!-- Empty State -->
-    <div class="empty-state" *ngIf="filteredHologramData.length === 0">
+    <div class="empty-state" *ngIf="!isLoading && filteredHologramData.length === 0">
       <div class="empty-icon">
         <i class="bi bi-journal-x"></i>
       </div>
@@ -292,7 +281,7 @@
     </div>
 
     <!-- Register Summary Footer -->
-    <div class="register-footer" *ngIf="filteredHologramData.length > 0">
+    <div class="register-footer" *ngIf="!isLoading && filteredHologramData.length > 0">
       <div class="summary-row">
         <div class="summary-item">
           <span class="summary-label">Total Holograms:</span>
@@ -399,7 +388,7 @@
               <thead class="table-light">
                 <tr>
                   <th style="width: 60%;">Series</th>
-                  <th class="text-end" style="width: 40%;">Quantity (Lakh)</th>
+                  <th class="text-end" style="width: 40%;">Quantity</th>
                 </tr>
               </thead>
               <tbody>
@@ -435,7 +424,8 @@
         </div>
 
         <!-- Edit History Section (if edited by Commissioner) -->
-        <div class="card border-warning shadow-sm mb-4" style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);"
+        <div class="card border-warning shadow-sm mb-4"
+          style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);"
           *ngIf="selectedHologram.editedByCommissioner && selectedHologram.editHistory">
           <div class="card-header bg-warning text-dark border-0">
             <h6 class="mb-0 fw-bold">
@@ -468,23 +458,31 @@
                 <tbody>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.local || 0) > 0">
                     <td><strong>Local</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.local | number:'1.0-0' }} pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ selectedHologram.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.local | number:'1.0-0' }}
+                      pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
+                      selectedHologram.editHistory.updatedQuantities.local | number:'1.0-0' }} pieces</td>
                   </tr>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.export || 0) > 0">
                     <td><strong>Export</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.export | number:'1.0-0' }} pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ selectedHologram.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.export | number:'1.0-0' }}
+                      pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
+                      selectedHologram.editHistory.updatedQuantities.export | number:'1.0-0' }} pieces</td>
                   </tr>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.defence || 0) > 0">
                     <td><strong>Defence</strong></td>
-                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.defence | number:'1.0-0' }} pieces</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{ selectedHologram.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
+                    <td class="text-end">{{ selectedHologram.editHistory.originalQuantities.defence | number:'1.0-0' }}
+                      pieces</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">{{
+                      selectedHologram.editHistory.updatedQuantities.defence | number:'1.0-0' }} pieces</td>
                   </tr>
                   <tr class="table-active">
                     <td><strong>Total:</strong></td>
-                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.total | number:'1.0-0' }} pieces</td>
-                    <td class="text-end fw-bold text-success" style="background: #d4edda;">{{ selectedHologram.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td>
+                    <td class="text-end fw-bold">{{ selectedHologram.editHistory.originalQuantities.total |
+                      number:'1.0-0' }} pieces</td>
+                    <td class="text-end fw-bold text-success" style="background: #d4edda;">{{
+                      selectedHologram.editHistory.updatedQuantities.total | number:'1.0-0' }} pieces</td>
                   </tr>
                 </tbody>
               </table>
@@ -509,23 +507,31 @@
                 <tbody>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.local || 0) > 0">
                     <td><strong>Local</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((selectedHologram.editHistory.updatedQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.local || 0) * 0.15) |
+                      number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
+                      ((selectedHologram.editHistory.updatedQuantities.local || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.export || 0) > 0">
                     <td><strong>Export</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((selectedHologram.editHistory.updatedQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.export || 0) * 0.15) |
+                      number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
+                      ((selectedHologram.editHistory.updatedQuantities.export || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                   <tr *ngIf="(selectedHologram.editHistory.originalQuantities?.defence || 0) > 0">
                     <td><strong>Defence</strong></td>
-                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
-                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{ ((selectedHologram.editHistory.updatedQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end">₹{{ ((selectedHologram.editHistory.originalQuantities.defence || 0) * 0.15) |
+                      number:'1.2-2' }}</td>
+                    <td class="text-end text-success fw-bold" style="background: #d4edda;">₹{{
+                      ((selectedHologram.editHistory.updatedQuantities.defence || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                   <tr class="table-active">
                     <td><strong>Total:</strong></td>
-                    <td class="text-end fw-bold">₹{{ ((selectedHologram.editHistory.originalQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
-                    <td class="text-end fw-bold text-success" style="background: #d4edda;">₹{{ ((selectedHologram.editHistory.updatedQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold">₹{{ ((selectedHologram.editHistory.originalQuantities.total || 0) *
+                      0.15) | number:'1.2-2' }}</td>
+                    <td class="text-end fw-bold text-success" style="background: #d4edda;">₹{{
+                      ((selectedHologram.editHistory.updatedQuantities.total || 0) * 0.15) | number:'1.2-2' }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -534,7 +540,8 @@
             <div class="mt-3 pt-3 border-top">
               <small class="text-muted">
                 <i class="bi bi-person-badge me-1"></i>
-                <strong>Edited by:</strong> {{ selectedHologram.editHistory.editedBy }} on {{ selectedHologram.editHistory.editedDate | date:'dd-MMM-yyyy' }}
+                <strong>Edited by:</strong> {{ selectedHologram.editHistory.editedBy }} on {{
+                selectedHologram.editHistory.editedDate | date:'dd-MMM-yyyy' }}
               </small>
             </div>
           </div>

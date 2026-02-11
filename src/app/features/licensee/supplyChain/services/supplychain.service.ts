@@ -229,13 +229,50 @@ export class SupplyChainService {
     );
   }
 
-  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT', role: string = 'permit-section'): Observable<any> {
+  getCancellationData(): Observable<any[]> {
+    return this.getCancellations();
+  }
+
+  getCancellationDetail(id: string): Observable<any> {
+    return this.getCancellationById(id);
+  }
+
+  getCancellationById(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/`).pipe(
+      catchError((error) => {
+        console.error('getCancellationById error', error);
+        throw error;
+      })
+    );
+  }
+
+  getCancellationLetterData(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/generate_final_letter/`).pipe(
+      catchError((error) => {
+        console.error('getCancellationLetterData error', error);
+        throw error;
+      })
+    );
+  }
+
+  performCancellationAction(id: number | string, action: 'APPROVE' | 'REJECT' | 'SubmitPayslip' | 'ApprovePayslip' | 'RejectPayslip', role: string = 'permit-section'): Observable<any> {
     return this.http.post<any>(
       `${environment.apiBaseUrl}/transactional/supply_chain/ena-cancellation-details/${id}/perform_action/`,
       { action, role }
     ).pipe(
       catchError((error) => {
         console.error('performCancellationAction error', error);
+        throw error;
+      })
+    );
+  }
+
+
+
+  getTransitPermitById(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiBaseUrl}/transactional/supply_chain/transit-permits/${id}/`).pipe(
+      catchError((error) => {
+        console.error('getTransitPermitById error', error);
         throw error;
       })
     );
@@ -298,6 +335,18 @@ export class SupplyChainService {
           { ml: 375, pieces_in_case: 24 },
           { ml: 180, pieces_in_case: 48 }
         ]);
+      })
+    );
+  }
+
+  updateBrandMlInCases(id: number, piecesInCase: number): Observable<any> {
+    return this.http.patch<any>(
+      `${environment.apiBaseUrl}/masters/supply_chain/transit-permit/brand-ml-in-cases/${id}/`,
+      { pieces_in_case: piecesInCase }
+    ).pipe(
+      catchError((error) => {
+        console.error('updateBrandMlInCases error', error);
+        throw error;
       })
     );
   }

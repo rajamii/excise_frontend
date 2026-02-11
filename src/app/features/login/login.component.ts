@@ -337,9 +337,9 @@ export class LoginComponent extends BaseComponent {
         if (res.success) {
           this.registrationComplete = true;
 
-          // Auto redirect to licensee dashboard
+          // Auto redirect to unified dashboard
           setTimeout(() => {
-            this.router.navigate(['/licensee/dashboard']);
+            this.router.navigate(['/dashboard']);
           }, 2000);
         }
       },
@@ -471,7 +471,7 @@ export class LoginComponent extends BaseComponent {
       this.accountService.identity(true).subscribe({
         next: (user) => {
           if (user) {
-            this.redirectBasedOnRole(user.role!.name);
+            this.redirectBasedOnRole(user.role?.id);
           } else {
             alert('Failed to fetch user details. Please log in again.');
           }
@@ -487,24 +487,20 @@ export class LoginComponent extends BaseComponent {
     }
   }
 
-  private redirectBasedOnRole(role: string): void {
-    if (ADMIN_ROLES.includes(role)) {
-      this.router.navigate(['admin/dashboard']);
-    } else if (role === 'licensee') {
-      this.router.navigate(['licensee/dashboard']);
-    } else if (role === 'Supply_Chain') {
-      this.router.navigate(['supply-chain/dashboard']);
-    } else if (role === Authority.PERMIT_SECTION) {
-      this.router.navigate(['/app-permit-section']);
-    } else if (role === Authority.COMMISSIONER) {
-      this.router.navigate(['/dev-commissioner-dashboard']);
-    } else if (role === 'officer-incharge') {
-      this.router.navigate(['/dev-officer-in-charge']);
-    } else if (role === 'it-cell') {
-      this.router.navigate(['/dev-itcell']);
-    } else {
-      console.warn('Unknown role:', role);
+  private redirectBasedOnRole(roleId?: number): void {
+    // ID-based role routing only
+    if (!roleId) {
+      this.router.navigate(['/dashboard']);
+      return;
     }
+
+    if (ADMIN_ROLES.includes(roleId) || roleId === Authority.LICENSEE) {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    console.warn('Unknown role id:', roleId);
+    this.router.navigate(['/dashboard']);
   }
 
   resetPhoneNumber(): void {

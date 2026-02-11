@@ -9,6 +9,7 @@ import { Role } from '../../../../../core/models/role.model';
 import { BaseDependency } from '../../../../../base/dependency/base.dependency';
 import { BaseComponent } from '../../../../../base/base.components';
 import { PatternConstants } from '../../../../../shared/constants/pattern.constants';
+import { UserPayload } from '../../../admin.service';
 
 @Component({
   selector: 'app-manage',
@@ -157,7 +158,7 @@ export class ManageComponent extends BaseComponent implements OnInit {
       if (!result.isConfirmed) return;
 
       // Prepare payload for registration
-      const payload = {
+      const payload: UserPayload = {
         email: this.user.email,
         password: this.user.password,
         confirmPassword: this.user.confirmPassword,
@@ -169,14 +170,14 @@ export class ManageComponent extends BaseComponent implements OnInit {
         district: this.user.district?.districtCode,
         subdivision: this.user.subdivision?.subdivisionCode,
         address: this.user.address,
-      } as Account; // Type assertion to treat payload as Account
+      };
 
       console.log('payload being sent:', payload);
 
       // Determine which API call to make based on edit mode
       // FIXED: Use this.user.id (number) instead of this.user.username (string)
       const request = this.isEditMode
-        ? this.adminService.updateUser(this.user.id!, { ...this.user })
+        ? this.adminService.updateUser(this.user.id!, payload)
         : this.adminService.addUser(payload);
 
       request.subscribe({

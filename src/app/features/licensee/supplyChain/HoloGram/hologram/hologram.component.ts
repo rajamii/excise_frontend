@@ -28,8 +28,15 @@ export class HologramComponent {
   submittedData?: HologramFormData;
   isSubmitted = false;
   showSuccessMessage = false;
-  selectedPaymentSlipFile: File | null = null;
-  paymentRemarks: string = '';
+
+  // Modal control properties
+  showConfirmationModal = false;
+  showSuccessModal = false;
+  submittedRefNo = '';
+  submittedQuantity = 0;
+  submittedAmount = '';
+  submittedTime = '';
+
 
   private hologramService = inject(HologramDataService);
 
@@ -50,6 +57,7 @@ export class HologramComponent {
     const today = new Date();
     this.formData.date = today.toISOString().split('T')[0];
     this.generateRefNumber();
+
     // If a ref is provided, load and show its preview
     if (this.isBrowser) {
       const ref = this.route.snapshot.queryParamMap.get('ref');
@@ -109,6 +117,10 @@ export class HologramComponent {
     this.submittedData = undefined;
     this.isSubmitted = false;
     this.showSuccessMessage = false;
+
+    // Reset modal states
+    this.showConfirmationModal = false;
+    this.showSuccessModal = false;
   }
 
   createNewApplication(): void {
@@ -128,10 +140,11 @@ export class HologramComponent {
     if (!this.submittedData) return;
 
     // Navigate to unified hologram view
-    this.router.navigate(['/dev-supply-chain-hologram-view'], {
+    this.router.navigate(['/supply-chain-view'], {
       queryParams: {
         ref: this.submittedData.refNo,
-        from: 'supplychain'
+        type: 'hologram',
+        source: 'supplychain'
       }
     });
   }
@@ -172,27 +185,37 @@ export class HologramComponent {
       this.errorMessage = 'Please enter company name';
       return false;
     }
-    if (!this.formData.localQtyLakh && !this.formData.exportQtyLakh && !this.formData.defenceQtyLakh) {
-      this.errorMessage = 'Enter at least one quantity';
+
+    // Check if at least one quantity is greater than 0
+    const localQty = Number(this.formData.localQtyLakh) || 0;
+    const exportQty = Number(this.formData.exportQtyLakh) || 0;
+    const defenceQty = Number(this.formData.defenceQtyLakh) || 0;
+
+    if (localQty <= 0 && exportQty <= 0 && defenceQty <= 0) {
+      this.errorMessage = 'Enter at least one quantity greater than 0';
       return false;
     }
+
     this.errorMessage = '';
     return true;
-  }
-
-  saveDraft(): void {
-    alert('Draft saved (frontend only).');
   }
 
   submitForm(): void {
     if (!this.validateForm()) {
       return;
     }
-    // Ask for confirmation / declaration before forwarding to IT Cell
-    const confirmed = window.confirm('Declaration: After you click OK, this application will be forwarded to IT Cell for verification and approval. Do you want to proceed?');
-    if (!confirmed) {
-      return;
-    }
+
+    // Directly show the confirmation modal
+    this.showConfirmationModal = true;
+  }
+
+
+  closeConfirmationModal(): void {
+    this.showConfirmationModal = false;
+  }
+
+  confirmSubmission(): void {
+    this.showConfirmationModal = false;
 
     // Prepare API Payload
     // Backend expects snake_case for fields
@@ -204,6 +227,15 @@ export class HologramComponent {
 
     this.hologramService.createProcurement(payload).subscribe({
       next: (res) => {
+        // Prepare success modal data
+        this.submittedRefNo = res.refNo || this.formData.refNo;
+        this.submittedQuantity = this.totalQtyLakh;
+        this.submittedAmount = (this.totalQtyLakh * 0.15).toFixed(2);
+        this.submittedTime = new Date().toLocaleString('en-IN');
+
+        // Show success modal
+        this.showSuccessModal = true;
+
         // Lock the submitted data for preview/print and mark as submitted
         // Use response refNo if available, or fallback
         this.submittedData = {
@@ -215,20 +247,28 @@ export class HologramComponent {
         this.showPreview = true;
 
         console.log('✅ Application submitted successfully via API:', res);
-
-        // Scroll to government form
-        setTimeout(() => {
-          document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
       },
       error: (err) => {
         console.error('Error submitting application', err);
-        alert('Failed to submit application. Please try again.');
+        alert('❌ Submission Failed\n\nThere was an error submitting your application. Please check your internet connection and try again.\n\nIf the problem persists, please contact the IT support team.');
       }
     });
+  }
 
-    // Only after successful submit, sequence logic handled by backend now
-    // But we clear form or handle sequences for UI if needed
+  closeSuccessModal(): void {
+    this.showSuccessModal = false;
+
+    // Scroll to government form after closing success modal
+    setTimeout(() => {
+      document.getElementById('hologramPrintSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
+  printApplication(): void {
+    this.closeSuccessModal();
+    setTimeout(() => {
+      this.openPrintPreview();
+    }, 300);
   }
 
   // Deprecated: No longer used in API flow
@@ -575,7 +615,7 @@ export class HologramComponent {
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram' } });
   }
 
   // Payment calculation methods
@@ -602,77 +642,5 @@ export class HologramComponent {
       (this.submittedData.defenceQtyLakh || 0);
   }
 
-  // Payment slip upload methods
-  onPaymentSlipFileSelected(event: any): void {
-    const file = event.target.files[0];
-    if (file) {
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (file.size > maxSize) {
-        alert('File size exceeds 5MB. Please select a smaller file.');
-        event.target.value = '';
-        return;
-      }
 
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      if (!allowedTypes.includes(file.type)) {
-        alert('Invalid file type. Please select a PDF, JPG, or PNG file.');
-        event.target.value = '';
-        return;
-      }
-
-      this.selectedPaymentSlipFile = file;
-    }
-  }
-
-  uploadPaymentSlip(): void {
-    if (!this.selectedPaymentSlipFile || !this.submittedData) {
-      alert('Please select a payment slip file to upload.');
-      return;
-    }
-
-    if (!this.isBrowser) {
-      return;
-    }
-
-    // Create payment record
-    const paymentRecord = {
-      hologramRefNo: this.submittedData.refNo,
-      hologramDate: this.submittedData.date,
-      companyName: this.submittedData.companyName,
-      localQtyLakh: this.submittedData.localQtyLakh || 0,
-      exportQtyLakh: this.submittedData.exportQtyLakh || 0,
-      defenceQtyLakh: this.submittedData.defenceQtyLakh || 0,
-      totalQuantity: this.getTotalQuantityLakh(),
-      paymentAmount: this.calculateTotalAmount(),
-      fileName: this.selectedPaymentSlipFile.name,
-      fileSize: this.selectedPaymentSlipFile.size,
-      fileType: this.selectedPaymentSlipFile.type,
-      remarks: this.paymentRemarks,
-      uploadDate: new Date().toISOString(),
-      status: 'Uploaded'
-    };
-
-    // Store payment record in localStorage
-    const existingPayments = JSON.parse(localStorage.getItem('hologramPayments') || '[]');
-    existingPayments.push(paymentRecord);
-    localStorage.setItem('hologramPayments', JSON.stringify(existingPayments));
-
-    // In a real application, you would upload the file to a server here
-    // For now, we'll just store the file information
-
-    // Show success message
-    alert(`Payment slip uploaded successfully!\n\nReference: ${paymentRecord.hologramRefNo}\nTotal Amount: ₹${paymentRecord.paymentAmount.toFixed(2)}\nFile: ${paymentRecord.fileName}\n\nYour payment has been recorded and will be verified by the department.`);
-
-    // Reset file input
-    this.selectedPaymentSlipFile = null;
-    this.paymentRemarks = '';
-
-    // Clear the file input
-    const fileInput = document.getElementById('paymentSlipFile') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
-  }
 }

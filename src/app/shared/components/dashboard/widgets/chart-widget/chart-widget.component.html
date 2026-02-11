@@ -1,0 +1,80 @@
+<div class="chart-widget">
+  <!-- Widget Header -->
+  <div class="widget-header" *ngIf="showTitle">
+    <div class="header-content">
+      <div class="title-section">
+        <h3 class="widget-title">{{ title }}</h3>
+        <p class="widget-subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+      </div>
+      <div class="widget-actions">
+        <button 
+          mat-icon-button 
+          class="refresh-btn" 
+          (click)="onRefresh()"
+          [disabled]="loading"
+          matTooltip="Refresh Chart">
+          <mat-icon [class.spinning]="loading">refresh</mat-icon>
+        </button>
+        <button 
+          mat-icon-button 
+          class="fullscreen-btn" 
+          (click)="onFullscreen()"
+          matTooltip="Fullscreen">
+          <mat-icon>fullscreen</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart Container -->
+  <div class="chart-container" [style.height]="height">
+    
+    <!-- Loading State -->
+    <div class="loading-overlay" *ngIf="loading">
+      <div class="simple-spinner" aria-hidden="true">
+        <svg width="40" height="40" viewBox="0 0 50 50" role="img" aria-label="Loading Chart">
+          <circle 
+            cx="25" 
+            cy="25" 
+            r="20" 
+            fill="none" 
+            stroke="#1976d2" 
+            stroke-width="4" 
+            stroke-linecap="round"
+            stroke-dasharray="31.4 31.4" 
+            transform="rotate(-90 25 25)">
+            <animateTransform 
+              attributeName="transform" 
+              type="rotate" 
+              from="0 25 25" 
+              to="360 25 25" 
+              dur="1s"
+              repeatCount="indefinite" />
+          </circle>
+        </svg>
+      </div>
+      <p class="loading-text">Loading chart...</p>
+    </div>
+
+    <!-- Chart Canvas -->
+    <div class="chart-canvas" *ngIf="!loading && hasData()">
+      <div class="chart-placeholder">
+        <mat-icon>bar_chart</mat-icon>
+        <p>Chart visualization will be implemented with your preferred charting library</p>
+        <small>Data: {{ data | json }}</small>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading && !hasData()">
+      <mat-icon>bar_chart</mat-icon>
+      <h4>No Chart Data</h4>
+      <p>No data available to display in the chart.</p>
+      <button mat-stroked-button (click)="onRefresh()">
+        <mat-icon>refresh</mat-icon>
+        Retry
+      </button>
+    </div>
+
+  </div>
+</div>

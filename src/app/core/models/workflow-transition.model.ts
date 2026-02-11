@@ -6,7 +6,7 @@ export class WorkflowTransition {
   workflow: Workflow | number; // Workflow object or ID
   from_stage: WorkflowStage | number; // Stage object or ID
   to_stage: WorkflowStage | number; // Stage object or ID
-  condition: { [key: string]: any }; // JSON object
+  condition: { [key: string]: any }; // JSON object with role and action conditions
 
   constructor(data: Partial<WorkflowTransition> = {}) {
     this.id = data.id;

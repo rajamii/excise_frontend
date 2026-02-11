@@ -20,7 +20,7 @@ import { MatRadioModule } from '@angular/material/radio';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatNativeDateModule } from '@angular/material/core';
-import { MatButtonModule } from '@angular/material/button';  
+import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -28,11 +28,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {MatStep, MatStepLabel, MatStepper, MatStepperModule} from "@angular/material/stepper";
-import { MatIcon } from '@angular/material/icon'; 
+import { MatStep, MatStepLabel, MatStepper, MatStepperModule } from "@angular/material/stepper";
+import { MatIcon } from '@angular/material/icon';
 import { MatPaginator } from '@angular/material/paginator';
-import {MatSlideToggleModule} from '@angular/material/slide-toggle';
-import {  MatTableDataSource } from '@angular/material/table';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTableDataSource } from '@angular/material/table';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 //import { FormsModule, ReactiveFormsModule, FormBuilder, Validators} from '@angular/forms';
@@ -46,16 +46,7 @@ import { RouterModule } from '@angular/router';
     FormsModule,
     ReactiveFormsModule,
     MatStepperModule,
-    MatStepper,
-    MatCard,
-    MatStepLabel,
-    MatStep,
-    FormsModule,
-    CommonModule,
-    CdkTextareaAutosize,
     MatButtonModule,
-    MatIcon,
-    MatPaginator,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -77,11 +68,9 @@ import { RouterModule } from '@angular/router';
     MatTableModule,
     MatChipsModule,
     MatTooltipModule,
-    MatStepperModule,
     MatDividerModule,
     MarkdownModule,
     RouterModule,
-    MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule
   ],
@@ -126,4 +115,4 @@ import { RouterModule } from '@angular/router';
     MatNativeDateModule,
   ],
 })
-export class MaterialModule {}
+export class MaterialModule { }

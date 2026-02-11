@@ -85,7 +85,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
   ngOnInit() {
     FormUtils.capitalize(this.detailsForm.get('pan')!, this.destroy$);
     this.loadSavedDocuments();
-    
+
     // ✅ AUTO-FILL from user profile
     this.autoFillFromUserProfile();
   }
@@ -108,8 +108,8 @@ export class DetailsComponent implements OnInit, OnDestroy {
     }
 
     // Try to get user profile from memory first
-    let userProfile = this.accountService.getUserProfileSync();
-    
+    let userProfile = this.accountService.getCurrentUser();
+
     if (!userProfile) {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
@@ -148,7 +148,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
    */
   private fillFormWithProfile(profile: any): void {
     console.log('🔍 Filling salesman/barman details form with profile data:', profile);
-    
+
     const fillData: any = {};
 
     // Map firstName
@@ -190,7 +190,7 @@ export class DetailsComponent implements OnInit, OnDestroy {
     this.detailsForm.patchValue(fillData, { emitEvent: true });
 
     console.log('✅ Salesman/Barman details auto-filled from user profile');
-    
+
     // Trigger change detection
     this.cdr.detectChanges();
   }

@@ -478,7 +478,9 @@
         }
       }
 
-      .route-section, .form-section, .products-section {
+      .route-section,
+      .form-section,
+      .products-section {
         h5 {
           color: #000;
           border-bottom: 1px solid #000;
@@ -487,7 +489,8 @@
         .table {
           border: 1px solid #000;
 
-          td, th {
+          td,
+          th {
             border-color: #000;
 
             &.bg-light {
@@ -569,7 +572,9 @@
         }
       }
 
-      .route-section, .form-section, .products-section {
+      .route-section,
+      .form-section,
+      .products-section {
         h5 {
           font-size: 1.1rem;
         }
@@ -577,7 +582,8 @@
         .table {
           font-size: 0.85rem;
 
-          td, th {
+          td,
+          th {
             padding: 8px 6px;
           }
         }
@@ -608,6 +614,7 @@
     }
   }
 }
+
 // Locked Fields Styling
 .form-control:disabled,
 .form-select:disabled,
@@ -678,7 +685,7 @@ small.text-muted {
     &:has(.input-field:disabled) {
       .form-label {
         color: #6c757d;
-        
+
         &::after {
           content: " 🔒";
           font-size: 0.8rem;
@@ -704,6 +711,7 @@ small.text-muted {
     }
   }
 }
+
 // Section Divider Styling
 .section-divider {
   border: none;
@@ -728,6 +736,7 @@ small.text-muted {
     box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
   }
 }
+
 // Custom Unlock Confirmation Modal Styling
 .custom-modal-overlay {
   position: fixed;
@@ -877,16 +886,22 @@ small.text-muted {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideIn {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(-50px) scale(0.9);
   }
-  to { 
+
+  to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
@@ -894,10 +909,13 @@ small.text-muted {
 
 // Animation for unlock icon
 @keyframes unlockPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.8;
@@ -929,6 +947,7 @@ small.text-muted {
     }
   }
 }
+
 // Success Message Styling
 .alert.position-fixed {
   animation: slideInRight 0.5s ease-out;
@@ -957,6 +976,7 @@ small.text-muted {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -1053,7 +1073,7 @@ small.text-muted {
 
   &.stock-available {
     border-color: #86efac;
-    
+
     &::before {
       background: linear-gradient(90deg, #10b981, #059669);
     }
@@ -1175,6 +1195,7 @@ small.text-muted {
     opacity: 0;
     transform: translateY(-30px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1186,6 +1207,7 @@ small.text-muted {
     opacity: 0;
     transform: translateY(20px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1193,9 +1215,12 @@ small.text-muted {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.8;
   }
@@ -1205,6 +1230,7 @@ small.text-muted {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1379,7 +1405,7 @@ small.text-muted {
 
 .text-success {
   color: #10b981 !important;
-  
+
   .bi-check-circle-fill {
     color: #10b981;
     font-size: 0.9rem;
@@ -1405,13 +1431,24 @@ small.text-muted {
 }
 
 @keyframes shake {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-5px);
   }
-  20%, 40%, 60%, 80% {
+
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(5px);
   }
 }
@@ -1438,7 +1475,7 @@ small.text-muted {
 }
 
 // ============================================
-// ML Per Case Information Sidebar - Enhanced Design
+// ML Per Case Information Sidebar - Compact & Centered Design
 // ============================================
 
 .ml-info-sidebar {
@@ -1448,26 +1485,29 @@ small.text-muted {
   transform: translateY(-50%);
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  // Ensure sidebar doesn't go off-screen
-  max-height: 90vh; // Reduced from 95vh
-  
+
+  // Ensure sidebar doesn't go off-screen and stays centered
+  max-height: 80vh;
+  display: flex;
+  align-items: center;
+
   // Dynamic positioning based on content
   .ml-info-sidebar-content {
-    max-height: 85vh; // Reduced from 90vh - Ensure it fits within viewport
+    max-height: 75vh;
   }
 }
 
 .ml-info-sidebar-content {
   position: relative;
-  width: 320px; // Reduced from 380px
+  width: 220px; // Reduced further for compact size
+
   min-height: auto;
   height: auto;
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
-  border-radius: 20px 0 0 20px;
-  box-shadow: 
-    -8px 0 32px rgba(0, 0, 0, 0.12),
-    -4px 0 16px rgba(0, 0, 0, 0.08),
+  border-radius: 16px 0 0 16px; // Slightly smaller radius
+  box-shadow:
+    -6px 0 24px rgba(0, 0, 0, 0.1),
+    -3px 0 12px rgba(0, 0, 0, 0.06),
     inset 1px 1px 0 rgba(255, 255, 255, 0.8);
   transform: translateX(100%);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1483,7 +1523,7 @@ small.text-muted {
     right: 0;
     bottom: 0;
     background: linear-gradient(145deg, #e0f2fe, #bae6fd, #e0f2fe);
-    border-radius: 20px 0 0 20px;
+    border-radius: 16px 0 0 16px;
     z-index: -1;
     margin: -2px;
   }
@@ -1496,9 +1536,10 @@ small.text-muted {
 .ml-info-sidebar-header {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
   color: white;
-  padding: 12px 16px; // Reduced from 20px 24px
+  padding: 8px 12px; // More compact padding
   position: relative;
   overflow: hidden;
+  border-radius: 16px 0 0 0;
 
   &::before {
     content: '';
@@ -1513,20 +1554,20 @@ small.text-muted {
 
   .header-icon-wrapper {
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 8px; // Reduced from 12px
-    padding: 6px; // Reduced from 8px
-    margin-right: 8px; // Reduced from 12px
+    border-radius: 6px;
+    padding: 5px;
+    margin-right: 8px;
     backdrop-filter: blur(10px);
 
     .bi-info-circle-fill {
-      font-size: 1.1rem; // Reduced from 1.4rem
+      font-size: 1rem; // Smaller icon
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
     }
   }
 
   .header-text {
     h6 {
-      font-size: 0.95rem; // Reduced from 1.1rem
+      font-size: 0.85rem; // Smaller title
       font-weight: 700;
       margin: 0;
       letter-spacing: 0.3px;
@@ -1534,7 +1575,7 @@ small.text-muted {
     }
 
     small {
-      font-size: 0.75rem; // Reduced from 0.85rem
+      font-size: 0.7rem; // Smaller subtitle
       opacity: 0.9;
       font-weight: 500;
       display: block;
@@ -1546,10 +1587,10 @@ small.text-muted {
     background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
-    font-size: 0.9rem; // Reduced from 1rem
+    font-size: 0.85rem;
     cursor: pointer;
-    padding: 6px; // Reduced from 8px
-    border-radius: 6px; // Reduced from 8px
+    padding: 5px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     backdrop-filter: blur(10px);
 
@@ -1561,14 +1602,14 @@ small.text-muted {
 }
 
 .ml-info-sidebar-body {
-  padding: 12px; // Reduced from 20px
+  padding: 8px; // More compact padding
   height: auto;
   overflow: visible;
   background: linear-gradient(145deg, #f8fafc 0%, #ffffff 50%, #f8fafc 100%);
 }
 
 .ml-info-sidebar-item {
-  margin-bottom: 10px; // Reduced from 16px
+  margin-bottom: 4px; // Tighter spacing
   animation: slideInRight 0.5s ease-out backwards;
 
   &:last-child {
@@ -1578,11 +1619,11 @@ small.text-muted {
 
 .item-card {
   background: white;
-  border-radius: 12px; // Reduced from 16px
-  padding: 12px; // Reduced from 20px
-  box-shadow: 
-    0 3px 15px rgba(0, 0, 0, 0.06), // Reduced shadow
-    0 1px 6px rgba(0, 0, 0, 0.03);
+  border-radius: 8px; // Reduced from 12px
+  padding: 4px; // Reduced from 12px
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.06), // Reduced
+    0 0 2px rgba(0, 0, 0, 0.03);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(14, 165, 233, 0.1);
   position: relative;
@@ -1590,7 +1631,7 @@ small.text-muted {
 
   &:hover {
     transform: translateY(-2px) scale(1.01); // Reduced transform
-    box-shadow: 
+    box-shadow:
       0 6px 24px rgba(14, 165, 233, 0.12), // Reduced shadow
       0 3px 12px rgba(0, 0, 0, 0.06);
     border-color: rgba(14, 165, 233, 0.3);
@@ -1600,7 +1641,7 @@ small.text-muted {
 .item-header {
   display: flex;
   justify-content: center;
-  margin-bottom: 10px; // Reduced from 16px
+  margin-bottom: 2px; // Reduced from 16px
   position: relative;
 }
 
@@ -1616,7 +1657,7 @@ small.text-muted {
     font-weight: 800;
     font-size: 0.9rem; // Reduced from 1rem
     letter-spacing: 0.5px;
-    box-shadow: 
+    box-shadow:
       0 3px 10px rgba(100, 116, 139, 0.25), // Reduced shadow
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
     position: relative;
@@ -1647,41 +1688,40 @@ small.text-muted {
 }
 
 .pieces-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 8px; // Reduced from 12px
 
   .pieces-number-sidebar {
-    font-size: 2rem; // Reduced from 2.5rem
-    font-weight: 900;
-    color: #0f172a;
-    line-height: 1;
-    display: block;
-    margin-bottom: 3px; // Reduced from 4px
+    font-size: 1.2rem; // Reduced from 1.5rem
+    font-weight: 800;
+    margin-bottom: 2px;
     background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    filter: drop-shadow(0 2px 4px rgba(14, 165, 233, 0.3));
-    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
   }
 
   .pieces-label-sidebar {
-    font-size: 0.7rem; // Reduced from 0.8rem
+    font-size: 0.6rem; // Reduced from 0.7rem
     color: #64748b;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    text-align: center;
   }
 }
 
 .calculation-info {
   background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
-  padding: 8px 12px; // Reduced from 10px 16px
-  border-radius: 10px; // Reduced from 12px
+  padding: 4px 8px; // Reduced from 8px 12px
+  border-radius: 6px; // Reduced from 10px
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px; // Reduced from 8px
-  font-size: 0.75rem; // Reduced from 0.8rem
+  gap: 4px; // Reduced
+  font-size: 0.65rem; // Reduced
   color: #475569;
   font-weight: 600;
   border: 1px solid rgba(14, 165, 233, 0.1);
@@ -1706,7 +1746,7 @@ small.text-muted {
 
 .ml-info-sidebar-footer {
   background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  padding: 12px 16px; // Reduced from 16px 24px
+  padding: 8px 12px; // Reduced from 16px 24px
   border-top: 1px solid rgba(14, 165, 233, 0.1);
   position: relative;
 
@@ -1799,9 +1839,12 @@ small.text-muted {
 
 // Animations
 @keyframes shimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(-100%) translateY(-100%) rotate(45deg);
   }
+
   50% {
     transform: translateX(100%) translateY(100%) rotate(45deg);
   }
@@ -1812,6 +1855,7 @@ small.text-muted {
     opacity: 0;
     transform: translateX(30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -1822,85 +1866,130 @@ small.text-muted {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.6;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.8;
     transform: scale(1.05);
   }
 }
 
-// Responsive Design
+// Responsive Design - Compact & Centered
 @media (max-width: 768px) {
   .ml-info-sidebar {
-    top: auto;
-    bottom: 20px;
-    right: 20px;
-    transform: none;
+    top: 50%; // Keep centered vertically
+    bottom: auto;
+    right: 0;
+    transform: translateY(-50%); // Center vertically
+    max-height: 70vh; // Smaller on mobile
   }
 
   .ml-info-sidebar-content {
-    position: fixed;
-    top: auto;
-    bottom: 80px;
-    right: 20px;
-    left: 20px;
-    width: auto;
-    height: auto; // Allow dynamic height on mobile too
-    max-height: 70vh; // Limit to 70% of viewport height on mobile
-    border-radius: 16px;
-    transform: translateY(100%);
-    overflow-y: auto; // Allow scrolling only on mobile if content is too tall
-
-    &.expanded {
-      transform: translateY(0);
-    }
+    width: 260px; // Slightly smaller on mobile
+    max-height: 65vh;
+    border-radius: 14px 0 0 14px;
 
     &::before {
-      border-radius: 16px;
+      border-radius: 14px 0 0 14px;
+    }
+  }
+
+  .ml-info-sidebar-header {
+    padding: 8px 12px; // More compact on mobile
+    border-radius: 14px 0 0 0;
+
+    .header-icon-wrapper {
+      padding: 4px;
+      margin-right: 6px;
+
+      .bi-info-circle-fill {
+        font-size: 0.9rem;
+      }
+    }
+
+    .header-text {
+      h6 {
+        font-size: 0.8rem;
+      }
+
+      small {
+        font-size: 0.65rem;
+      }
+    }
+
+    .ml-info-close-btn {
+      font-size: 0.8rem;
+      padding: 4px;
     }
   }
 
   .ml-info-sidebar-body {
-    height: auto;
-    max-height: none; // Remove height restrictions on mobile
-    overflow: visible;
+    padding: 8px;
+    max-height: calc(65vh - 60px); // Account for header and footer
+    overflow-y: auto;
+  }
+
+  .ml-info-sidebar-item {
+    margin-bottom: 6px;
   }
 
   .ml-info-toggle {
     writing-mode: horizontal-tb;
     text-orientation: mixed;
     min-height: auto;
-    padding: 12px 20px;
-    border-radius: 12px;
-    min-width: 120px;
+    padding: 10px 16px; // Smaller padding
+    border-radius: 10px;
+    min-width: 100px;
 
     .toggle-content {
       writing-mode: horizontal-tb;
       flex-direction: row;
 
       .ml-info-toggle-text {
-        font-size: 0.8rem;
-        margin-left: 8px;
+        font-size: 0.75rem;
+        margin-left: 6px;
       }
     }
   }
 
   .item-card {
-    padding: 16px;
+    padding: 12px; // More compact
   }
 
   .pieces-display {
     .pieces-number-sidebar {
-      font-size: 2rem;
+      font-size: 1.8rem; // Smaller number
+    }
+  }
+}
+
+// Extra small screens
+@media (max-width: 480px) {
+  .ml-info-sidebar-content {
+    width: 240px; // Even smaller on very small screens
+  }
+
+  .ml-info-sidebar-header {
+    .header-text {
+      h6 {
+        font-size: 0.75rem;
+      }
+
+      small {
+        font-size: 0.6rem;
+      }
     }
   }
 }

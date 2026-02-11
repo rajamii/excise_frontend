@@ -1,0 +1,1399 @@
+// Custom nav-link styling for tabs
+.nav-link {
+  border: none !important;
+  border-bottom: 3px solid transparent !important;
+  border-radius: 0 !important;
+  color: #666 !important;
+  font-weight: 500;
+
+  &:hover {
+    color: #333 !important;
+    background-color: #f5f5f5 !important;
+  }
+
+  &.active {
+    color: #0d6efd !important;
+    border-bottom-color: #0d6efd !important;
+    background-color: #f8f9fa !important;
+  }
+}
+
+// Smooth fade animation for tab content
+.table-responsive {
+  animation: fadeIn 0.3s ease-in-out;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+// Prevent horizontal scroll on main container
+.container-fluid {
+  overflow-x: hidden;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Commissioner Dashboard Register Styles
+.requisition-register-header,
+.revalidation-register-header,
+.cancellation-register-header,
+.transit-register-header,
+.hologram-register-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 2rem;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 2px solid #e2e8f0;
+
+  .header-info {
+    .register-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    .register-subtitle {
+      color: #6b7280;
+      font-size: 1.1rem;
+      margin: 0;
+    }
+  }
+
+  .header-actions {
+    .btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      color: white;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+      }
+    }
+  }
+
+  // Summary Cards
+  .summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: white;
+    }
+
+    .card-content {
+      flex: 1;
+
+      .card-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1;
+      }
+
+      .card-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin: 0.25rem 0 0 0;
+        font-weight: 500;
+      }
+    }
+
+    &.total-requests {
+      .card-icon {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      }
+
+      .card-value {
+        color: #3b82f6;
+      }
+    }
+
+    &.pending-requests {
+      .card-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      .card-value {
+        color: #f59e0b;
+      }
+    }
+
+    &.approved-requests {
+      .card-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .card-value {
+        color: #10b981;
+      }
+    }
+
+    &.rejected-requests {
+      .card-icon {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+      }
+
+      .card-value {
+        color: #ef4444;
+      }
+    }
+
+    &.urgent-requests {
+      .card-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      .card-value {
+        color: #f59e0b;
+      }
+    }
+
+    &.total-amount {
+      .card-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+      }
+
+      .card-value {
+        color: #10b981;
+      }
+    }
+
+    &.total-quantity {
+      .card-icon {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      }
+
+      .card-value {
+        color: #8b5cf6;
+      }
+    }
+  }
+}
+
+.requisition-register-table,
+.revalidation-register-table,
+.cancellation-register-table,
+.transit-register-table,
+.hologram-register-table {
+  .register-container {
+    background: white;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+
+    .register-header-bar {
+      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      .register-table-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+      }
+
+      .register-info {
+        .entries-count {
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+      }
+    }
+
+    .register-table {
+      width: 100%;
+      min-width: 900px;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      margin: 0;
+
+      thead {
+        background: #f8fafc;
+        border-bottom: 2px solid #e2e8f0;
+
+        th {
+          padding: 1rem 0.75rem;
+          text-align: left;
+          font-weight: 700;
+          color: #374151;
+          border-right: 1px solid #e5e7eb;
+          white-space: nowrap;
+          text-transform: uppercase;
+          font-size: 0.8rem;
+          letter-spacing: 0.5px;
+
+          &:last-child {
+            border-right: none;
+          }
+
+          // Column widths
+          &.sl-no {
+            width: 50px;
+            text-align: center;
+          }
+
+          &.ref-number {
+            width: 120px;
+          }
+
+          &.submission-date,
+          &.expiry-date {
+            width: 100px;
+          }
+
+          &.distillery-name,
+          &.licensee-name {
+            width: 150px;
+          }
+
+          &.status {
+            width: 100px;
+            text-align: center;
+          }
+
+          &.amount {
+            width: 90px;
+            text-align: center;
+          }
+
+          &.priority {
+            width: 80px;
+            text-align: center;
+          }
+
+          &.days-left {
+            width: 80px;
+            text-align: center;
+          }
+
+          &.license-type {
+            width: 120px;
+          }
+
+          &.cancellation-reason {
+            width: 130px;
+          }
+
+          &.destination {
+            width: 100px;
+          }
+
+          &.transport-mode {
+            width: 100px;
+          }
+
+          &.vehicle-number {
+            width: 120px;
+          }
+
+          &.hologram-type {
+            width: 110px;
+          }
+
+          &.local-qty,
+          &.export-qty,
+          &.defence-qty,
+          &.total-qty {
+            width: 80px;
+            text-align: center;
+          }
+
+          &.actions {
+            width: 150px;
+            text-align: center;
+          }
+        }
+      }
+
+      tbody {
+        .register-row {
+          border-bottom: 1px solid #e5e7eb;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background-color: #f8fafc;
+          }
+
+          &:nth-child(even) {
+            background-color: #fafbfc;
+
+            &:hover {
+              background-color: #f1f5f9;
+            }
+          }
+
+          &.urgent-row {
+            background-color: #fef3c7 !important;
+            border-left: 4px solid #f59e0b;
+
+            &:hover {
+              background-color: #fde68a !important;
+            }
+          }
+
+          td {
+            padding: 1rem 0.75rem;
+            vertical-align: middle;
+            border-right: 1px solid #f1f5f9;
+
+            &:last-child {
+              border-right: none;
+            }
+
+            &.sl-no {
+              text-align: center;
+              font-weight: 600;
+              color: #6b7280;
+            }
+
+            &.ref-number {
+              .ref-text {
+                display: block;
+                font-weight: 700;
+                color: #1d4ed8;
+                font-family: 'Courier New', monospace;
+                font-size: 0.9rem;
+              }
+            }
+
+            &.submission-date,
+            &.expiry-date {
+              .date-text {
+                display: block;
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 0.9rem;
+              }
+            }
+
+            &.distillery-name,
+            &.licensee-name {
+              .company-name {
+                display: block;
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 0.9rem;
+              }
+            }
+
+            &.amount {
+              text-align: center;
+
+              .amount-value {
+                display: block;
+                font-weight: 700;
+                color: #059669;
+                font-size: 0.9rem;
+              }
+            }
+
+            &.status {
+              text-align: center;
+
+              .status-badge {
+                padding: 0.5rem 1rem;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.25rem;
+
+                &.status-pending {
+                  background: #fef3c7;
+                  color: #92400e;
+                }
+
+                &.status-approved {
+                  background: #d1fae5;
+                  color: #065f46;
+                }
+
+                &.status-rejected {
+                  background: #fee2e2;
+                  color: #991b1b;
+                }
+
+                &.status-processing {
+                  background: #dbeafe;
+                  color: #1e40af;
+                }
+
+                &.status-expired {
+                  background: #fee2e2;
+                  color: #991b1b;
+                }
+              }
+            }
+
+            &.priority {
+              text-align: center;
+
+              .priority-badge {
+                padding: 0.4rem 0.8rem;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+
+                &.priority-urgent {
+                  background: #fee2e2;
+                  color: #991b1b;
+                }
+
+                &.priority-high {
+                  background: #fef3c7;
+                  color: #92400e;
+                }
+
+                &.priority-normal {
+                  background: #e0f2fe;
+                  color: #0c4a6e;
+                }
+              }
+            }
+
+            &.days-left {
+              text-align: center;
+
+              .days-badge {
+                font-weight: 600;
+                font-size: 0.85rem;
+              }
+            }
+
+            &.license-type {
+              .license-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #e0f2fe;
+                color: #0c4a6e;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.cancellation-reason {
+              .reason-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #f3f4f6;
+                color: #374151;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                
+                &.text-danger {
+                  background: #fee2e2;
+                  color: #991b1b;
+                }
+              }
+            }
+
+            &.destination {
+              .destination-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #dbeafe;
+                color: #1e40af;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.transport-mode {
+              .transport-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #f0fdf4;
+                color: #166534;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.vehicle-number {
+              .vehicle-text {
+                font-family: 'Courier New', monospace;
+                font-weight: 600;
+                color: #374151;
+                font-size: 0.85rem;
+              }
+            }
+
+            &.hologram-type {
+              .type-badge {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                background: #fef3c7;
+                color: #92400e;
+                border-radius: 15px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+            }
+
+            &.local-qty,
+            &.export-qty,
+            &.defence-qty,
+            &.total-qty {
+              text-align: center;
+
+              .qty-value {
+                font-weight: 600;
+                color: #374151;
+                font-size: 0.85rem;
+
+                &.total {
+                  font-weight: 700;
+                  color: #059669;
+                  font-size: 0.9rem;
+                }
+              }
+            }
+
+            &.actions {
+              text-align: center;
+
+              .action-buttons {
+                display: flex;
+                gap: 0.5rem;
+                justify-content: center;
+                flex-wrap: wrap;
+
+                .btn {
+                  width: 32px;
+                  height: 32px;
+                  border: none;
+                  border-radius: 6px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  font-size: 0.85rem;
+
+                  &.btn-outline-primary {
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    border: 1px solid #dbeafe;
+
+                    &:hover {
+                      background: #dbeafe;
+                      transform: translateY(-1px);
+                    }
+                  }
+
+                  &.btn-outline-success {
+                    background: #f0fdf4;
+                    color: #059669;
+                    border: 1px solid #dcfce7;
+
+                    &:hover {
+                      background: #dcfce7;
+                      transform: translateY(-1px);
+                    }
+                  }
+
+                  &.btn-outline-danger {
+                    background: #fef2f2;
+                    color: #dc2626;
+                    border: 1px solid #fecaca;
+
+                    &:hover {
+                      background: #fecaca;
+                      transform: translateY(-1px);
+                    }
+                  }
+
+                  &.btn-outline-warning {
+                    background: #fffbeb;
+                    color: #d97706;
+                    border: 1px solid #fed7aa;
+
+                    &:hover {
+                      background: #fed7aa;
+                      transform: translateY(-1px);
+                    }
+                  }
+
+                  &.btn-outline-info {
+                    background: #f0f9ff;
+                    color: #0369a1;
+                    border: 1px solid #bae6fd;
+
+                    &:hover {
+                      background: #bae6fd;
+                      transform: translateY(-1px);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+
+      .empty-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1.5rem;
+      }
+
+      .empty-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 1rem;
+      }
+
+      .empty-message {
+        color: #6b7280;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    }
+  }
+}
+
+// Compact Filter Section Styles
+.compact-filter-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+
+  .filter-label-text {
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+
+    i {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+
+    small {
+      font-size: 0.85rem;
+    }
+  }
+
+  .compact-filter {
+    min-width: 140px;
+
+    .form-control-sm,
+    .form-select-sm {
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      padding: 0.375rem 0.5rem;
+      transition: all 0.2s ease;
+      background-color: white;
+
+      &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        outline: none;
+      }
+
+      &:hover {
+        border-color: #9ca3af;
+      }
+    }
+
+    .form-select-sm {
+      padding-right: 1.5rem;
+    }
+  }
+
+  .btn-sm {
+    font-size: 0.8rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &.btn-outline-danger {
+      border-color: #ef4444;
+      color: #ef4444;
+
+      &:hover {
+        background-color: #ef4444;
+        color: white;
+      }
+    }
+
+    i {
+      font-size: 0.75rem;
+    }
+  }
+}
+
+// Modal Styles
+.modal-content {
+  border-radius: 20px;
+  border: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+
+  .modal-header {
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding: 1.5rem 2rem;
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+  }
+
+  .modal-body {
+    padding: 2rem;
+
+    .application-details {
+      .row {
+        margin-bottom: 1rem;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+
+      strong {
+        color: #374151;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .modal-footer {
+    border-top: none;
+    padding: 1.5rem 2rem;
+  }
+}
+
+// Transit table specific responsive design
+.transit-register-table {
+  .register-table {
+    min-width: 900px;
+    
+    // Adjust font sizes for better fit
+    thead th {
+      font-size: 0.75rem;
+      padding: 0.75rem 0.4rem;
+    }
+    
+    tbody td {
+      font-size: 0.8rem;
+      padding: 0.75rem 0.4rem;
+    }
+  }
+}
+
+// Hologram table specific responsive design
+.hologram-register-table {
+  .register-table {
+    min-width: 1100px;
+    
+    // Adjust font sizes for better fit
+    thead th {
+      font-size: 0.75rem;
+      padding: 0.75rem 0.5rem;
+    }
+    
+    tbody td {
+      font-size: 0.8rem;
+      padding: 0.75rem 0.5rem;
+    }
+  }
+}
+
+// Medium screens
+@media (max-width: 1200px) {
+  .transit-register-table {
+    .register-table {
+      min-width: 800px;
+      font-size: 0.8rem;
+      
+      thead th {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.3rem;
+      }
+      
+      tbody td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.3rem;
+      }
+    }
+  }
+  
+  .hologram-register-table {
+    .register-table {
+      min-width: 950px;
+      font-size: 0.8rem;
+      
+      thead th {
+        font-size: 0.7rem;
+        padding: 0.6rem 0.4rem;
+      }
+      
+      tbody td {
+        font-size: 0.75rem;
+        padding: 0.6rem 0.4rem;
+      }
+    }
+  }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .requisition-register-header,
+  .revalidation-register-header,
+  .cancellation-register-header,
+  .transit-register-header,
+  .hologram-register-header {
+    padding: 1rem;
+
+    .header-info .register-title {
+      font-size: 1.25rem;
+    }
+
+    .summary-card {
+      margin-bottom: 1rem;
+      
+      .card-content .card-value {
+        font-size: 1.25rem;
+      }
+      
+      .card-content .card-label {
+        font-size: 0.8rem;
+      }
+    }
+  }
+
+  .requisition-register-table,
+  .revalidation-register-table,
+  .cancellation-register-table,
+  .transit-register-table,
+  .hologram-register-table {
+    .register-container {
+      .register-table {
+        min-width: 700px;
+        font-size: 0.75rem;
+
+        thead th {
+          padding: 0.5rem 0.25rem;
+          font-size: 0.65rem;
+        }
+
+        tbody td {
+          padding: 0.5rem 0.25rem;
+
+          &.actions .action-buttons {
+            flex-direction: column;
+            gap: 0.25rem;
+            
+            .btn {
+              width: 28px;
+              height: 28px;
+              font-size: 0.75rem;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .compact-filter-section {
+    padding: 0.5rem 0.75rem;
+
+    .d-flex {
+      flex-direction: column;
+      align-items: flex-start !important;
+      gap: 0.5rem !important;
+    }
+
+    .compact-filter {
+      min-width: 120px;
+      flex: 1;
+    }
+  }
+}
+
+// Extra small screens
+@media (max-width: 576px) {
+  .hologram-register-header,
+  .transit-register-header,
+  .cancellation-register-header,
+  .revalidation-register-header,
+  .requisition-register-header {
+    .row.g-3 {
+      .col-md-3 {
+        margin-bottom: 0.75rem;
+      }
+    }
+    
+    .summary-card {
+      padding: 1rem;
+      
+      .card-content .card-value {
+        font-size: 1.1rem;
+      }
+      
+      .card-content .card-label {
+        font-size: 0.75rem;
+      }
+    }
+  }
+  
+  .register-table {
+    min-width: 600px !important;
+    font-size: 0.7rem !important;
+    
+    thead th {
+      padding: 0.4rem 0.2rem !important;
+      font-size: 0.6rem !important;
+    }
+    
+    tbody td {
+      padding: 0.4rem 0.2rem !important;
+      font-size: 0.65rem !important;
+    }
+  }
+}
+
+// Text utilities
+.text-danger {
+  color: #dc2626 !important;
+}
+
+.text-warning {
+  color: #d97706 !important;
+}
+
+.text-success {
+  color: #059669 !important;
+}
+
+.text-info {
+  color: #0ea5e9 !important;
+}
+
+.text-muted {
+  color: #6b7280 !important;
+}
+
+// Modal Overlay Styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  animation: fadeIn 0.3s ease-out;
+
+  .modal-dialog {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease-out;
+
+    .modal-content {
+      border: none;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+// Hologram Details Modal Styles
+.hologram-details-container {
+  .application-info {
+    .info-badge {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+      height: 100%;
+
+      &.ref-badge {
+        border-left: 4px solid #0d6efd;
+      }
+
+      &.date-badge {
+        border-left: 4px solid #28a745;
+      }
+
+      &.company-badge {
+        border-left: 4px solid #6f42c1;
+      }
+
+      small {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .fw-bold {
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+      }
+    }
+  }
+
+  .quantity-breakdown {
+    .table {
+      margin-bottom: 0;
+      font-size: 0.95rem;
+
+      .series-header,
+      .quantity-header {
+        background: #f8f9fa !important;
+        font-weight: 600;
+        color: #495057;
+        border-color: #dee2e6;
+        padding: 0.75rem;
+      }
+
+      .series-name {
+        font-weight: 500;
+        color: #495057;
+        padding: 0.75rem;
+      }
+
+      .quantity-value {
+        font-weight: 600;
+        color: #2c3e50;
+        padding: 0.75rem;
+        font-family: 'Courier New', monospace;
+      }
+
+      .table-primary {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+
+        .series-name,
+        .quantity-value {
+          color: #0d6efd;
+          font-weight: 700;
+        }
+      }
+
+      tbody tr {
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: rgba(13, 110, 253, 0.05);
+        }
+      }
+    }
+  }
+}
+
+// Small button styling for view details
+.btn-xs {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+  border-radius: 0.375rem;
+}
+
+// Total quantity column styling
+.total-qty {
+  .qty-value {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-right: 0.5rem;
+  }
+}
+
+// Hologram Details Modal Styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050;
+  animation: fadeInOverlay 0.3s ease-out;
+}
+
+.modal-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: slideInModal 0.3s ease-out;
+}
+
+.modal-content {
+  border: none;
+  border-radius: 8px;
+}
+
+.modal-header {
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem 1.5rem;
+  
+  .modal-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  
+  .btn-close {
+    padding: 0.5rem;
+    margin: -0.5rem -0.5rem -0.5rem auto;
+  }
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  border-top: 1px solid #dee2e6;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+// Hologram Details Specific Styles
+.hologram-details-container {
+  .application-info {
+    .info-badge {
+      text-align: center;
+      padding: 0.75rem;
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #e9ecef;
+      
+      small {
+        display: block;
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+      }
+      
+      .fw-bold {
+        font-size: 0.9rem;
+        color: #495057;
+      }
+    }
+  }
+  
+  .quantity-breakdown {
+    .table {
+      margin-bottom: 0;
+      
+      th {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        font-weight: 600;
+        font-size: 0.9rem;
+        padding: 0.75rem;
+      }
+      
+      td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        
+        &.series-name {
+          font-weight: 500;
+          color: #495057;
+        }
+        
+        &.quantity-value {
+          font-family: 'Courier New', monospace;
+          font-weight: 600;
+          color: #0d6efd;
+        }
+      }
+      
+      .table-primary td {
+        background-color: #cfe2ff;
+        border-color: #9ec5fe;
+        
+        &.quantity-value {
+          color: #084298;
+        }
+      }
+    }
+  }
+}
+
+// Animation keyframes
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInModal {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .modal-dialog {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .hologram-details-container {
+    .application-info {
+      .row > div {
+        margin-bottom: 0.75rem;
+      }
+    }
+  }
+}
+
+// Hologram table specific column widths - balanced layout
+.hologram-register-table {
+  .register-table {
+    thead th,
+    tbody td {
+      &.sl-no {
+        width: 60px !important;
+        max-width: 60px !important;
+      }
+      
+      &.ref-number {
+        width: 140px !important;
+        max-width: 140px !important;
+      }
+      
+      &.submission-date {
+        width: 110px !important;
+        max-width: 110px !important;
+      }
+      
+      &.company-name {
+        width: 180px !important;
+        max-width: 180px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        
+        .company-name {
+          display: block;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+      
+      &.total-qty {
+        width: 200px !important;
+        max-width: 200px !important;
+      }
+      
+      &.status {
+        width: 120px !important;
+        max-width: 120px !important;
+      }
+      
+      &.actions {
+        width: 180px !important;
+        max-width: 180px !important;
+      }
+    }
+  }
+}

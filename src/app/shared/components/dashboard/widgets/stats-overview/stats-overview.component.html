@@ -1,0 +1,75 @@
+<div class="stats-overview-widget">
+  <!-- Widget Header -->
+  <div class="widget-header" *ngIf="showTitle">
+    <h3 class="widget-title">{{ title }}</h3>
+    <button 
+      mat-icon-button 
+      class="refresh-btn" 
+      (click)="onRefresh()"
+      [disabled]="loading"
+      matTooltip="Refresh Data">
+      <mat-icon [class.spinning]="loading">refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="simple-spinner" aria-hidden="true">
+      <svg width="50" height="50" viewBox="0 0 50 50" role="img" aria-label="Loading">
+        <circle 
+          cx="25" 
+          cy="25" 
+          r="20" 
+          fill="none" 
+          stroke="#1C2B78" 
+          stroke-width="4" 
+          stroke-linecap="round"
+          stroke-dasharray="31.4 31.4" 
+          transform="rotate(-90 25 25)">
+          <animateTransform 
+            attributeName="transform" 
+            type="rotate" 
+            from="0 25 25" 
+            to="360 25 25" 
+            dur="1s"
+            repeatCount="indefinite" />
+        </circle>
+      </svg>
+    </div>
+    <p class="loading-text">Loading statistics...</p>
+  </div>
+
+  <!-- Stats Cards Container -->
+  <div class="stats-container" [class.loading]="loading">
+    <mat-card 
+      *ngFor="let stat of statsData; trackBy: trackByStat" 
+      class="stat-card"
+      [ngClass]="[stat.type, { 'clickable': cardClickable }]"
+      (click)="onStatClick(stat)"
+      [matTooltip]="cardClickable ? 'Click to view details' : ''"
+      matTooltipPosition="above">
+      
+      <!-- Icon Circle -->
+      <div class="circle-icon" [ngClass]="stat.colorClass">
+        <mat-icon>{{ stat.icon }}</mat-icon>
+      </div>
+      
+      <!-- Value -->
+      <div class="value" [attr.aria-label]="stat.label + ': ' + stat.value">
+        {{ formatValue(stat.value) }}
+      </div>
+      
+      <!-- Label -->
+      <div class="label">{{ stat.label }}</div>
+      
+      <!-- Click indicator -->
+      <mat-icon class="click-indicator" *ngIf="cardClickable">arrow_forward</mat-icon>
+    </mat-card>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!loading && statsData.length === 0">
+    <mat-icon>bar_chart</mat-icon>
+    <p>No statistics available</p>
+  </div>
+</div>

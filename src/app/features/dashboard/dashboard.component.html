@@ -1,0 +1,452 @@
+<!-- Professional Unified Dashboard Template -->
+<div class="dashboard-container">
+
+  <!-- Dashboard Content Wrapper -->
+  <div class="dashboard-content">
+
+    <!-- Filter Container: Application Type Filter (for roles that need it) -->
+    <div class="filter-container"
+      *ngIf="currentUser?.roleId === 2 && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <mat-form-field appearance="outline" class="application-type-filter">
+        <mat-label>Filter by Application Type</mat-label>
+        <mat-icon matPrefix>filter_list</mat-icon>
+        <mat-select [(value)]="selectedApplicationType" (selectionChange)="onApplicationTypeChange()">
+          <mat-option value="all">All Applications</mat-option>
+          <mat-option value="license-renewal">License Application</mat-option>
+          <mat-option value="new-license">New License</mat-option>
+          <mat-option value="salesman-barman">Salesman/Barman</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <!-- Role-Specific Full Dashboards (when no specific section is selected) -->
+    <div *ngIf="shouldShowRoleSpecificDashboard()" class="role-specific-dashboard">
+      <!-- Permit Section Dashboard -->
+      <app-permit-section-dashboard *ngIf="currentUser?.roleId === 5"></app-permit-section-dashboard>
+
+      <!-- Commissioner Dashboard -->
+      <app-commissioner-dashboard *ngIf="currentUser?.roleId === 10"></app-commissioner-dashboard>
+
+      <!-- IT Cell Dashboard -->
+      <app-itcell-dashboard *ngIf="currentUser?.roleId === 6"></app-itcell-dashboard>
+
+      <!-- Officer in Charge Dashboard -->
+      <app-officer-in-charge-dashboard *ngIf="currentUser?.roleId === 7"></app-officer-in-charge-dashboard>
+    </div>
+
+    <!-- Supply Chain Section Content -->
+    <div
+      *ngIf="selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()"
+      class="supply-chain-content"
+      [class.hologram-overview-wrapper]="selectedSupplyChainSection === 'hologram-overview'">
+      <!-- Top Action Bar for Payment & Wallet Button -->
+      <div class="top-action-bar" *ngIf="isLicenseeUser() && selectedSupplyChainSection === 'requisition'">
+        <div class="action-bar-content">
+          <button mat-raised-button color="primary" (click)="openWallet()" class="wallet-button">
+            <mat-icon>account_balance_wallet</mat-icon>
+            Payment & Wallet
+          </button>
+        </div>
+      </div>
+
+      <!-- Section Header -->
+      <div class="section-header">
+        <div class="header-left">
+          <button mat-icon-button (click)="clearSupplyChainSection()" class="back-button">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <h2>{{ getSupplyChainSectionTitle() }}</h2>
+        </div>
+
+        <!-- Header Right: Action Button -->
+        <div class="header-right" *ngIf="showHeaderAction()">
+          <button mat-raised-button color="accent" (click)="onHeaderAction()" class="header-action-btn">
+            <mat-icon>{{ getHeaderActionIcon() }}</mat-icon>
+            {{ getHeaderActionLabel() }}
+          </button>
+        </div>
+      </div>
+
+      <div class="section-content" [class.hologram-overview-content]="selectedSupplyChainSection === 'hologram-overview'">
+        <!-- Common sections -->
+        <app-requisition *ngIf="selectedSupplyChainSection === 'requisition'"></app-requisition>
+        <app-revalidation *ngIf="selectedSupplyChainSection === 'revalidation'"></app-revalidation>
+        <app-cancellation *ngIf="selectedSupplyChainSection === 'cancellation'"></app-cancellation>
+        <app-transit *ngIf="selectedSupplyChainSection === 'transit'"></app-transit>
+        <app-hologramprocurement *ngIf="selectedSupplyChainSection === 'hologram'"></app-hologramprocurement>
+        <app-hologramrequest *ngIf="selectedSupplyChainSection === 'hologram-request'"></app-hologramrequest>
+        <app-prepare-application *ngIf="selectedSupplyChainSection === 'company-registration'"></app-prepare-application>
+        <app-salesman-registration
+          *ngIf="selectedSupplyChainSection === 'salesman-barman-registration'"></app-salesman-registration>
+        <app-new-license-dashboard *ngIf="selectedSupplyChainSection === 'new-license'"></app-new-license-dashboard>
+        <app-apply-new-license *ngIf="selectedSupplyChainSection === 'new-license-apply'"></app-apply-new-license>
+
+        <!-- IT Cell specific sections -->
+        <app-itcell *ngIf="selectedSupplyChainSection === 'itcell-hologram'"></app-itcell>
+        <app-itcell *ngIf="selectedSupplyChainSection === 'process-flow'"></app-itcell>
+
+        <!-- Officer in Charge specific sections -->
+        <app-transit *ngIf="selectedSupplyChainSection === 'transit-applications'"></app-transit>
+
+        <!-- Import the actual components for officer sections -->
+        <app-brands-details *ngIf="selectedSupplyChainSection === 'brands'"></app-brands-details>
+        <app-hologram-monthly-report
+          *ngIf="selectedSupplyChainSection === 'monthly-hologram-statement'"></app-hologram-monthly-report>
+        <app-hologramdetails
+          *ngIf="selectedSupplyChainSection === 'hologram-register'"
+          (hologramRequestsClicked)="openDashboardSection('hologram-request')"
+          (hologramOverviewClicked)="openDashboardSection('hologram-overview')">
+        </app-hologramdetails>
+        <app-oicdailyhologramregister
+          *ngIf="selectedSupplyChainSection === 'hologram-daily-entry'"></app-oicdailyhologramregister>
+        <app-brandwarehouse *ngIf="selectedSupplyChainSection === 'stock-inventory'"></app-brandwarehouse>
+
+
+        <!-- Additional Hologram Components -->
+        <app-hologramoveriew *ngIf="selectedSupplyChainSection === 'hologram-overview'"></app-hologramoveriew>
+
+        <!-- Transit Permit Application Form -->
+        <app-transit-permit *ngIf="selectedSupplyChainSection === 'transit-permit'"></app-transit-permit>
+
+        <!-- Import Permit (Requisition) Application Form -->
+        <app-import-permit *ngIf="selectedSupplyChainSection === 'import-permit'"></app-import-permit>
+
+        <!-- Hologram Request Application Form -->
+        <app-hologramrequestlevel1
+          *ngIf="selectedSupplyChainSection === 'hologram-request-form'"></app-hologramrequestlevel1>
+
+        <!-- New Hologram Procurement Form -->
+        <app-hologram *ngIf="selectedSupplyChainSection === 'hologram-new'"></app-hologram>
+
+        <!-- Officer Activity section -->
+        <div *ngIf="selectedSupplyChainSection === 'officer-activity'" class="officer-activity-section">
+          <div class="section-header">
+            <h3>
+              <mat-icon>assignment</mat-icon>
+              Officer Activity Register
+            </h3>
+          </div>
+          <div class="activity-content">
+            <p>Officer activity tracking and register functionality.</p>
+            <div class="placeholder-content">
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <mat-icon>check_circle</mat-icon>
+                </div>
+                <div class="activity-details">
+                  <h4>Application Approved</h4>
+                  <p>Transit permit application TP001/2024 approved</p>
+                  <small>2 hours ago</small>
+                </div>
+              </div>
+              <div class="activity-item">
+                <div class="activity-icon">
+                  <mat-icon>cancel</mat-icon>
+                </div>
+                <div class="activity-details">
+                  <h4>Application Rejected</h4>
+                  <p>Requisition REQ002/2024 rejected due to incomplete documentation</p>
+                  <small>4 hours ago</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Monitoring section -->
+        <div *ngIf="selectedSupplyChainSection === 'system-monitoring'" class="system-monitoring-section">
+          <div class="section-header">
+            <h3>
+              <mat-icon>monitor</mat-icon>
+              System Monitoring
+            </h3>
+          </div>
+          <div class="monitoring-content">
+            <p>System monitoring and diagnostics functionality will be implemented here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Container: Professional stats cards - Show when no supply chain section selected and not role-specific dashboard -->
+    <div class="stats-container" *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+
+      <!-- Dynamic Stats Cards based on role -->
+      <div class="stats-grid">
+        <!-- Applied Stat Card -->
+        <mat-card class="stat-card applied" (click)="showTable('applied')" *ngIf="shouldShowStatCard('applied')">
+          <div class="card-header">
+            <div class="circle-icon blue-bg">
+              <mat-icon>send</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('applied') > 0"
+              [class.negative]="getStatTrend('applied') < 0">
+              <mat-icon>{{ getStatTrend('applied') > 0 ? 'trending_up' : getStatTrend('applied') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('applied')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.applied }}</div>
+            <div class="label">Applied</div>
+            <div class="sub-info">{{ getStatSubInfo('applied') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Pending Stat Card - Includes awaiting payment -->
+        <mat-card class="stat-card pending" (click)="showTable('pending')" *ngIf="shouldShowStatCard('pending')">
+          <div class="card-header">
+            <div class="circle-icon yellow-bg">
+              <mat-icon>schedule</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('pending') > 0"
+              [class.negative]="getStatTrend('pending') < 0">
+              <mat-icon>{{ getStatTrend('pending') > 0 ? 'trending_up' : getStatTrend('pending') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('pending')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.pending + (dashboardCounts.awaitingPayment || 0) }}</div>
+            <div class="label">Pending</div>
+            <div class="sub-info" *ngIf="dashboardCounts.awaitingPayment && dashboardCounts.awaitingPayment > 0">
+              <span class="payment-count">{{ dashboardCounts.awaitingPayment }} awaiting payment</span>
+            </div>
+            <div class="sub-info" *ngIf="!dashboardCounts.awaitingPayment || dashboardCounts.awaitingPayment === 0">
+              {{ getStatSubInfo('pending') }}
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Approved Stat Card -->
+        <mat-card class="stat-card approved" (click)="showTable('approved')" *ngIf="shouldShowStatCard('approved')">
+          <div class="card-header">
+            <div class="circle-icon green-bg">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="card-trend positive">
+              <mat-icon>trending_up</mat-icon>
+              <span>{{ getStatTrend('approved') }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.approved }}</div>
+            <div class="label">Approved</div>
+            <div class="sub-info">{{ getStatSubInfo('approved') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Rejected Stat Card -->
+        <mat-card class="stat-card rejected" (click)="showTable('rejected')" *ngIf="shouldShowStatCard('rejected')">
+          <div class="card-header">
+            <div class="circle-icon red-bg">
+              <mat-icon>cancel</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="getStatTrend('rejected') < 0"
+              [class.negative]="getStatTrend('rejected') > 0">
+              <mat-icon>{{ getStatTrend('rejected') > 0 ? 'trending_up' : getStatTrend('rejected') < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(getStatTrend('rejected')) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ dashboardCounts.rejected }}</div>
+            <div class="label">Rejected</div>
+            <div class="sub-info">{{ getStatSubInfo('rejected') }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">View All →</span>
+          </div>
+        </mat-card>
+
+        <!-- Role-specific additional cards -->
+        <mat-card class="stat-card custom" *ngFor="let customStat of getCustomStats()"
+          (click)="handleCustomStatClick(customStat)">
+          <div class="card-header">
+            <div class="circle-icon" [ngClass]="customStat.colorClass">
+              <mat-icon>{{ customStat.icon }}</mat-icon>
+            </div>
+            <div class="card-trend" [class.positive]="customStat.trend > 0" [class.negative]="customStat.trend < 0">
+              <mat-icon>{{ customStat.trend > 0 ? 'trending_up' : customStat.trend < 0 ? 'trending_down'
+                  : 'trending_flat' }}</mat-icon>
+                  <span>{{ Math.abs(customStat.trend) }}%</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="value">{{ customStat.value }}</div>
+            <div class="label">{{ customStat.label }}</div>
+            <div class="sub-info">{{ customStat.subInfo }}</div>
+          </div>
+          <div class="card-footer">
+            <span class="view-all">{{ customStat.actionText }} →</span>
+          </div>
+        </mat-card>
+      </div>
+    </div>
+
+    <!-- Performance Metrics Section (for admin roles) -->
+    <div class="performance-metrics"
+      *ngIf="shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <div class="metrics-header">
+        <h3>
+          <mat-icon>analytics</mat-icon>
+          Performance Overview
+        </h3>
+        <div class="metrics-period">
+          <mat-form-field appearance="outline">
+            <mat-select [(value)]="selectedMetricsPeriod" (selectionChange)="onMetricsPeriodChange()">
+              <mat-option value="today">Today</mat-option>
+              <mat-option value="week">This Week</mat-option>
+              <mat-option value="month">This Month</mat-option>
+              <mat-option value="quarter">This Quarter</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card" *ngFor="let metric of getPerformanceMetrics()">
+          <div class="metric-icon">
+            <mat-icon [style.color]="metric.color">{{ metric.icon }}</mat-icon>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{ metric.value }}</div>
+            <div class="metric-label">{{ metric.label }}</div>
+            <div class="metric-change" [class.positive]="metric.change > 0" [class.negative]="metric.change < 0">
+              <mat-icon>{{ metric.change > 0 ? 'arrow_upward' : metric.change < 0 ? 'arrow_downward' : 'remove'
+                  }}</mat-icon>
+                  <span>{{ Math.abs(metric.change) }}% from last {{ selectedMetricsPeriod }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Activity Feed (for all roles) -->
+    <div class="recent-activity"
+      *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
+      <div class="activity-header">
+        <h3>
+          <mat-icon>history</mat-icon>
+          Recent Activity
+        </h3>
+        <button mat-button color="primary" (click)="viewAllActivities()">View All</button>
+      </div>
+
+      <div class="activity-list">
+        <div class="activity-item" *ngFor="let activity of getRecentActivities().slice(0, 5)">
+          <div class="activity-icon" [ngClass]="activity.type">
+            <mat-icon>{{ activity.icon }}</mat-icon>
+          </div>
+          <div class="activity-content">
+            <div class="activity-title">{{ activity.title }}</div>
+            <div class="activity-description">{{ activity.description }}</div>
+            <div class="activity-meta">
+              <span class="activity-time">{{ activity.timestamp | date:'short' }}</span>
+              <span class="activity-user" *ngIf="activity.user">by {{ activity.user }}</span>
+            </div>
+          </div>
+          <div class="activity-actions" *ngIf="activity.actions">
+            <button mat-icon-button *ngFor="let action of activity.actions"
+              (click)="executeActivityAction(action, activity)">
+              <mat-icon>{{ action.icon }}</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="error" class="error-container">
+      <mat-icon>error</mat-icon>
+      <p>{{ error }}</p>
+      <button mat-raised-button color="primary" (click)="onDashboardRefresh()">
+        <mat-icon>refresh</mat-icon>
+        Retry
+      </button>
+    </div>
+
+    <!-- Dashboard Tables Section - Show when no supply chain section selected and not role-specific dashboard -->
+    <ng-container *ngIf="!error && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      <!-- Default Table Card -->
+      <mat-card *ngIf="activeTable === 'default'">
+        <mat-card-header>
+          <mat-card-title>Statistics</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="text-center text-muted p-4">Select a category above to view applications</p>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Applied Table Card -->
+      <mat-card *ngIf="activeTable === 'applied'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Applied Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="appliedDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'applied'">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Pending Table Card -->
+      <mat-card *ngIf="activeTable === 'pending'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Pending Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="pendingDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'pending'" (payment)="onPaymentConfirmed($event)">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Approved Table Card -->
+      <mat-card *ngIf="activeTable === 'approved'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Approved Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="approvedDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'approved'">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Rejected Table Card -->
+      <mat-card *ngIf="activeTable === 'rejected'">
+        <mat-card-header>
+          <button mat-icon-button (click)="goBack()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <mat-card-title>Rejected Applications</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <app-application-table [dataSource]="rejectedDataSource" [displayedColumns]="displayedColumns"
+            [tableType]="'rejected'">
+          </app-application-table>
+        </mat-card-content>
+      </mat-card>
+    </ng-container>
+
+  </div>
+</div>

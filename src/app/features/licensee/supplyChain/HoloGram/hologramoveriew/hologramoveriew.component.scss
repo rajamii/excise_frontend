@@ -1,5 +1,5 @@
 .hologram-overview-container {
-  min-height: 100vh;
+  min-height: 100%;
   background: linear-gradient(135deg, #07394a 0%, #0d5b92 100%);
   
   .header-section {
@@ -1875,6 +1875,21 @@ Details Modal Styling
     tr {
       page-break-inside: avoid;
       page-break-after: auto;
+    }
+  }
+}
+
+// Simple brand highlighting - clean and light
+.range-details {
+  .detail-item {
+    margin-bottom: 0.3rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .fw-bold {
+      font-weight: 600;
     }
   }
 }

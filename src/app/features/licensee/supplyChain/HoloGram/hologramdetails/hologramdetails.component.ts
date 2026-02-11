@@ -31,6 +31,7 @@ export interface HologramRecord {
 })
 export class HologramdetailsComponent implements OnInit {
   @Output() hologramRequestsClicked = new EventEmitter<void>();
+  @Output() hologramOverviewClicked = new EventEmitter<void>();
 
   hologramRecords: HologramRecord[] = [];
   filteredRecords: HologramRecord[] = [];
@@ -120,24 +121,22 @@ export class HologramdetailsComponent implements OnInit {
   loadHologramRecords() {
     this.hologramService.getProcurements().subscribe({
       next: (procurements) => {
-        // Filter for OIC relevant items:
-        // 1. Payment Completed (New/Pending Assignment)
-        // 2. Cartoon Assigned / Arrived (Already in register)
-
-        // We might also want to include 'Approved by Commissioner' if that implies payment is next/done?
-        // But user said "When payment is completed".
-
-        const relevantRecords = procurements.filter(p =>
-          p.status === 'Payment Completed' ||
-          p.status === 'Cartoon Assigned' ||
-          p.status === 'ARRIVED' ||
-          p.paymentStatus === 'Success' // Fallback check
-        );
+        // Backend now provides role/workflow-filtered records.
+        // Keep all returned procurements to avoid frontend stage hardcoding.
+        const relevantRecords = procurements;
 
         this.hologramRecords = relevantRecords.map(p => {
+          // Ensure we capture carton details regardless of naming variation
+          const rawDetails = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
+          if (rawDetails.length > 0) {
+            console.log(`Debug Mapping [${p.refNo}]: Found details. Length=${rawDetails.length}`, rawDetails);
+          } else {
+            console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
+          }
+
           // Determine internal status based on backend status
           let internalStatus: 'PENDING_ARRIVAL' | 'ARRIVED' = 'PENDING_ARRIVAL';
-          if (p.status === 'Cartoon Assigned' || p.status === 'ARRIVED') {
+          if ((rawDetails && rawDetails.length > 0) || p.status === 'Cartoon Assigned' || p.status === 'ARRIVED') {
             internalStatus = 'ARRIVED';
           }
 
@@ -150,14 +149,6 @@ export class HologramdetailsComponent implements OnInit {
           // Backend might send `carton_details` as a list of assigned cartons.
           // For the main table, we show summary or specific fields.
           // If status is ARRIVED, we might want to show details.
-
-          // Ensure we capture carton details regardless of naming variation
-          const rawDetails = (p as any).carton_details || (p as any).cartoon_details || (p as any).cartonDetails || [];
-          if (rawDetails.length > 0) {
-            console.log(`Debug Mapping [${p.refNo}]: Found details. Length=${rawDetails.length}`, rawDetails);
-          } else {
-            console.log(`Debug Mapping [${p.refNo}]: No details found. Keys:`, Object.keys(p));
-          }
 
           return {
             id: p.id!,
@@ -1076,12 +1067,11 @@ export class HologramdetailsComponent implements OnInit {
   }
 
   openHologramRequests(): void {
-    this.hologramRequestsClicked.emit();
+    this.router.navigate(['/dev-hologram-request-list']);
   }
 
   openHologramOverview(): void {
-    // Navigate to hologram overview page in a new tab/window for better user experience
-    window.open('/dev-hologram-overview', '_blank');
+    this.router.navigate(['/dev-hologram-overview']);
   }
 
   // Add test data for arrival testing - Simple 30 holograms for easy testing
@@ -1351,3 +1341,4 @@ export class HologramdetailsComponent implements OnInit {
 
 
 }
+

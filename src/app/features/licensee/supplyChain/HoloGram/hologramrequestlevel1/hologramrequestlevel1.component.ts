@@ -34,6 +34,7 @@ export class Hologramrequestlevel1Component implements OnInit {
 
   ngOnInit(): void {
     // No initialization needed for simplified form
+    // Trigger rebuild
   }
 
 
@@ -182,11 +183,11 @@ End of Application
 
   closeModal(): void {
     this.showSuccessModal = false;
-    // Navigate back to supply chain dashboard
-    this.router.navigate(['/dev-supply-chain'], { queryParams: { tab: 'hologram' } });
+    // Navigate back to supply chain dashboard (hologram-request tab)
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request' } });
   }
 
   goBack(): void {
-    this.router.navigate(['/dev-supply-chain']);
+    this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request' } });
   }
 }

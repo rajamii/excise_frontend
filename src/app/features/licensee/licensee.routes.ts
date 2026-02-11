@@ -1,142 +1,70 @@
 import { Routes } from '@angular/router';
-import { LicenseeDashboardComponent } from './licensee-dashboard/licensee-dashboard.component';
-import { LicenseeHomeComponent } from './licensee-home/licensee-home.component';
-import { ApplyLicenseComponent } from './apply-license/apply-license.component';
-import { ApplyNewLicenseComponent } from './apply-new-license/apply-new-license.component';
-import { UserRouteAccessService } from '../../core/config/user-route-access.service';
-import { Authority } from '../../shared/constants/authority.enum';
-import { SupplyChainComponent } from './supplyChain/supplychaincomponents/supply-chain.component';
-import { TransitPermitComponent } from './supplyChain/transit-permit/transit-permit.component';
 
 export const licenseeRoutes: Routes = [
   {
     path: '',
-    component: LicenseeHomeComponent, // Wrapper/layout component
+    redirectTo: 'home',
+    pathMatch: 'full'
+  },
+  {
+    path: 'home',
+    loadComponent: () => import('./licensee-home/licensee-home.component').then(m => m.LicenseeHomeComponent)
+  },
+  {
+    path: 'dashboard',
+    loadComponent: () => import('./licensee-dashboard/licensee-dashboard.component').then(m => m.LicenseeDashboardComponent)
+  },
+  {
+    path: 'apply-license',
+    loadComponent: () => import('./apply-license/apply-license.component').then(m => m.ApplyLicenseComponent)
+  },
+  {
+    path: 'apply-new-license',
+    loadComponent: () => import('./apply-new-license/apply-new-license.component').then(m => m.ApplyNewLicenseComponent)
+  },
+  {
+    path: 'supply-chain',
     children: [
       {
-        path: 'dashboard',
-        component: LicenseeDashboardComponent,
-        canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.LICENSEE] },
+        path: 'requisition',
+        loadComponent: () => import('./supplyChain/supplychaincomponents/requisition/requisition.component').then(m => m.RequisitionComponent)
       },
       {
-        path: 'apply-license',
-        component: ApplyLicenseComponent,
-        canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.LICENSEE] },
+        path: 'revalidation',
+        loadComponent: () => import('./supplyChain/supplychaincomponents/revalidation/revalidation.component').then(m => m.RevalidationComponent)
       },
       {
-        path: 'apply-new-license',
-        component: ApplyNewLicenseComponent,
-        canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.LICENSEE] },
+        path: 'cancellation',
+        loadComponent: () => import('./supplyChain/supplychaincomponents/cancellation/cancellation.component').then(m => m.CancellationComponent)
       },
-
-      // Company Registration Flow
       {
-        path: 'company',
-        children: [
-          {
-            path: 'prepare-application',
-            loadComponent: () => import('./company-registration-and-collaboration/company-registration/prepare-application/prepare-application.component').then(m => m.PrepareApplicationComponent),
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-          // {
-          //   path: 'application-action',
-          //   loadComponent: () => import('./company-registration/act-on-application/act-on-application.component').then(m => m.ActOnApplicationComponent),
-          //   canActivate: [UserRouteAccessService],
-          //   data: { authorities: [Authority.LICENSEE] },
-          // },
-          // {
-          //   path: 'print-certificate',
-          //   loadComponent: () => import('./company-registration/print-certificate/print-certificate.component').then(m => m.PrintCertificateComponent),
-          //   canActivate: [UserRouteAccessService],
-          //   data: { authorities: [Authority.LICENSEE] },
-          // },
-        ]
+        path: 'transit',
+        loadComponent: () => import('./supplyChain/supplychaincomponents/transit/transit.component').then(m => m.TransitComponent)
       },
-      // Salesman Registration Flow
       {
-        path: 'salesman-barman',
-        children: [
-          {
-            path: 'prepare-application',
-            loadComponent: () => import('./salesman-registration/prepare-application.component').then(m => m.PrepareApplicationComponent),
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-          // {
-          //   path: 'application-action',
-          //   loadComponent: () => import('./salesman-registration/act-on-draft-application/act-on-draft-application.component').then(m => m.ActOnDraftApplicationComponent),
-          //   canActivate: [UserRouteAccessService],
-          //   data: { authorities: [Authority.LICENSEE] },
-          // },
-          // {
-          //   path: 'print-certificate',
-          //   loadComponent: () => import('./salesman-registration/print-certificate/print-certificate.component').then(m => m.PrintCertificateComponent),
-          //   canActivate: [UserRouteAccessService],
-          //   data: { authorities: [Authority.LICENSEE] },
-          // },
-          // {
-          //   path: 'application-status',
-          //   loadComponent: () => import('./salesman-registration/application-status/application-status.component').then(m => m.ApplicationStatusComponent),
-          //   canActivate: [UserRouteAccessService],
-          //   data: { authorities: [Authority.LICENSEE] },
-          // },
-          {
-            path: 'ena-import',
-            component: SupplyChainComponent,
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-        ]
+        path: 'transit-permit',
+        loadComponent: () => import('./supplyChain/transit-permit/transit-permit.component').then(m => m.TransitPermitComponent)
       },
-
-      // Supply Chain Management
       {
-        path: 'supply-chain',
-        children: [
-          {
-            path: '',
-            loadComponent: () => import('./supplyChain/supplychaincomponents/supply-chain.component').then(m => m.SupplyChainComponent),
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-          {
-            path: 'payments',
-            loadComponent: () => import('./supplyChain/payments/paymentconformationpage/payment-confirmation.component').then(m => m.PaymentConfirmationComponent),
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-          {
-            path: 'cancellation-request',
-            loadComponent: () => import('./supplyChain/cancellation-request/cancellation-request.component').then(m => m.CancellationRequestComponent),
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          },
-          {
-            path: 'transit-permit',
-            component: TransitPermitComponent,
-            canActivate: [UserRouteAccessService],
-            data: { authorities: [Authority.LICENSEE] },
-          }
-        ]
+        path: 'import-permit',
+        loadComponent: () => import('./supplyChain/import-permit/import-permit.component').then(m => m.ImportPermitComponent)
       },
-
       {
-        path: 'supply-chain-registration',
-        loadComponent: () => import('./supply-chain-registration/supply-chain-registration.component').then(m => m.SupplyChainRegistrationComponent),
-        canActivate: [UserRouteAccessService],
-        data: { authorities: [Authority.LICENSEE] },
-      },
-
-      // Default Redirect to Dashboard
-      {
-        path: '',
-        redirectTo: 'dashboard',
-        pathMatch: 'full'
-      },
-    ],
+        path: 'hologram',
+        loadComponent: () => import('./supplyChain/HoloGram/hologram/hologram.component').then(m => m.HologramComponent)
+      }
+    ]
   },
+  {
+    path: 'company/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'company-registration' }
+  },
+  {
+    path: 'salesman-barman/prepare-application',
+    loadComponent: () => import('./registration-section-redirect/registration-section-redirect.component').then(m => m.RegistrationSectionRedirectComponent),
+    data: { section: 'salesman-barman-registration' }
+  }
 ];
+
+export default licenseeRoutes;

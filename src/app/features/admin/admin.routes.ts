@@ -9,133 +9,166 @@ const routes: Routes = [
       import('./home/home.component').then((m) => m.HomeComponent),
     canActivate: [UserRouteAccessService],
     children: [
+      // OFFICER MODULES (MOVED FROM LICENSEE)
       {
-        path: 'dashboard',
-        loadComponent: () =>
-          import('./dashboard/dashboard.component').then(
-            (m) => m.DashboardComponent
+        path: 'commissioner',
+        loadChildren: () =>
+          import('./commissioner/commissioner.module').then(
+            (m) => m.CommissionerModule
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [
-            Authority.SITE_ADMIN,
-            Authority.LEVEL_1,
-            Authority.LEVEL_2,
-            Authority.LEVEL_3,
-            Authority.LEVEL_4,
-            Authority.LEVEL_5,
-          ],
+          authorities: [Authority.COMMISSIONER],
         },
       },
       {
-        path: 'users',
-        loadComponent: () =>
-          import('./master/user/list/list.component').then(
-            (m) => m.ListComponent
+        path: 'it-cell',
+        loadChildren: () =>
+          import('./it-cell/it-cell.module').then(
+            (m) => m.ItCellModule
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.SITE_ADMIN],
+          authorities: [Authority.IT_CELL],
         },
       },
       {
-        path: 'roles',
-        loadComponent: () =>
-          import('./master/role/list/list.component').then(
-            (m) => m.ListComponent
+        path: 'officer-in-charge',
+        loadChildren: () =>
+          import('./officer-in-charge/officer-in-charge.module').then(
+            (m) => m.OfficerInChargeModule
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.SITE_ADMIN],
+          authorities: [Authority.OFFICER_IN_CHARGE],
         },
       },
       {
-        path: 'districts',
-        loadComponent: () =>
-          import('./master/district/list/list.component').then(
-            (m) => m.ListComponent
+        path: 'permit-section',
+        loadChildren: () =>
+          import('./permit-section/permit-section.module').then(
+            (m) => m.PermitSectionModule
           ),
         canActivate: [UserRouteAccessService],
         data: {
-          authorities: [Authority.SITE_ADMIN],
+          authorities: [Authority.PERMIT_SECTION],
         },
       },
+      // MASTER DATA ROUTES
       {
-        path: 'subdivisions',
-        loadComponent: () =>
-          import('./master/subdivision/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'police-stations',
-        loadComponent: () =>
-          import('./master/police-station/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'license-types',
-        loadComponent: () =>
-          import('./master/license-type/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'license-categories',
-        loadComponent: () =>
-          import('./master/license-category/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'license-titles',
-        loadComponent: () =>
-          import('./master/license-title/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'license-subcategories',
-        loadComponent: () =>
-          import('./master/license-subcategory/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
-      },
-      {
-        path: 'roads',
-        loadComponent: () =>
-          import('./master/road/list/list.component').then(
-            (m) => m.ListComponent
-          ),
-        canActivate: [UserRouteAccessService],
-        data: {
-          authorities: [Authority.SITE_ADMIN],
-        },
+        path: 'master',
+        children: [
+          {
+            path: 'users',
+            loadComponent: () =>
+              import('./master/user/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN, Authority.IT_CELL],
+            },
+          },
+          {
+            path: 'roles',
+            loadComponent: () =>
+              import('./master/role/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'districts',
+            loadComponent: () =>
+              import('./master/district/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'subdivisions',
+            loadComponent: () =>
+              import('./master/subdivision/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'police-stations',
+            loadComponent: () =>
+              import('./master/police-station/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'license-types',
+            loadComponent: () =>
+              import('./master/license-type/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'license-categories',
+            loadComponent: () =>
+              import('./master/license-category/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'license-titles',
+            loadComponent: () =>
+              import('./master/license-title/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'license-subcategories',
+            loadComponent: () =>
+              import('./master/license-subcategory/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+          {
+            path: 'roads',
+            loadComponent: () =>
+              import('./master/road/list/list.component').then(
+                (m) => m.ListComponent
+              ),
+            canActivate: [UserRouteAccessService],
+            data: {
+              authorities: [Authority.SITE_ADMIN],
+            },
+          },
+        ]
       },
     ],
   },

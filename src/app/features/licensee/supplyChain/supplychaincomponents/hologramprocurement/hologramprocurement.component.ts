@@ -17,6 +17,8 @@ type HologramRow = HologramProcurement & {
   editedByCommissioner?: boolean;
   companyName?: string;
   status: string; // Ensure status is mandatory string for UI
+  allowed_actions?: string[];
+  allowedActions?: string[];
 };
 
 @Component({
@@ -34,6 +36,7 @@ export class HologramprocurementComponent implements OnInit {
   showHologramModal = false;
   selectedHologram: HologramRow | null = null;
   currentUnitName: string | null = null;
+  isLoading = false;
 
   // Filter properties
   hologramDateFilter: string = '';
@@ -54,23 +57,42 @@ export class HologramprocurementComponent implements OnInit {
     private profileService: SupplyChainProfileService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
+    console.log('🏗️ Hologram Procurement Component constructed, isBrowser:', this.isBrowser);
   }
 
   ngOnInit(): void {
+    console.log('🚀 Hologram Procurement Component initializing...');
     if (this.isBrowser) {
-      this.profileService.getProfile().subscribe(res => {
-        if (res.data) {
-          this.currentUnitName = res.data.manufacturingUnitName;
+      this.isLoading = true;
+      this.profileService.getProfile().subscribe({
+        next: (res) => {
+          console.log('📋 Profile service response:', res);
+          if (res.data) {
+            this.currentUnitName = res.data.manufacturingUnitName;
+            console.log('✅ Current unit name:', this.currentUnitName);
+            this.loadHolograms();
+          } else {
+            console.warn('⚠️ No profile data found, loading holograms anyway');
+            this.loadHolograms();
+          }
+        },
+        error: (err) => {
+          console.error('❌ Error loading profile, loading holograms anyway:', err);
           this.loadHolograms();
         }
       });
+    } else {
+      console.log('⚠️ Not in browser environment, skipping initialization');
     }
   }
 
   private loadHolograms(): void {
+    console.log('🔄 Starting to load holograms...');
+    this.isLoading = true;
     this.hologramService.getProcurements().subscribe({
       next: (data) => {
         console.log('📦 Loading hologram data from API:', data.length, 'items');
+        this.isLoading = false;
 
         let mapped: HologramRow[] = data.map(item => {
           // FIXED: Use requested_* quantities for display (these never change)
@@ -128,7 +150,11 @@ export class HologramprocurementComponent implements OnInit {
         this.applyHologramFilters(); // Re-apply filters if any
       },
       error: (err) => {
-        console.error('Error loading procurements', err);
+        console.error('❌ Error loading procurements:', err);
+        this.isLoading = false;
+        // Set empty data so the UI shows "No Holograms Found" instead of loading forever
+        this.hologramList = [];
+        this.filteredHologramData = [];
       }
     });
   }
@@ -299,10 +325,12 @@ export class HologramprocurementComponent implements OnInit {
 
   // Navigation methods
   viewHologramApplication(item: HologramRow): void {
-    this.router.navigate(["/dev-supply-chain-hologram-view"], {
+    this.router.navigate(["/supply-chain-view"], {
       queryParams: {
         ref: item.refNo,
-        type: item.procurementType || this.getProcurementType(item)
+        id: item.id,
+        type: 'hologram',
+        source: 'licensee'
       },
     });
   }
@@ -312,7 +340,7 @@ export class HologramprocurementComponent implements OnInit {
   }
 
   navigateToPaymentPage(hologram: HologramRow): void {
-    if (hologram.status !== 'Approved by Commissioner') {
+    if (!this.isPaymentEnabled(hologram)) {
       alert('Payment is pending Commissioner approval.');
       return;
     }
@@ -339,6 +367,11 @@ export class HologramprocurementComponent implements OnInit {
 
   // Payment methods
   isPaymentEnabled(item: HologramRow): boolean {
+    const actions = (item.allowed_actions || item.allowedActions || []).map(a => String(a).toLowerCase());
+    if (actions.includes('pay')) {
+      return true;
+    }
+    // Backward compatibility fallback
     return item.status === 'Approved by Commissioner';
   }
 

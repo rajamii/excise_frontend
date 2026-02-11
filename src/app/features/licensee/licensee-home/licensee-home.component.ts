@@ -145,6 +145,13 @@ export class LicenseeHomeComponent extends BaseComponent {
         this.router.navigate(['/dev-supply-chain']);
     }
   }
+
+  navigateToDashboardSection(section: string): void {
+    this.router.navigate(['/dashboard'], {
+      queryParams: { section }
+    });
+  }
+
   openLicenseInfo(): void {
     Swal.fire({
       title: 'Apply for License',

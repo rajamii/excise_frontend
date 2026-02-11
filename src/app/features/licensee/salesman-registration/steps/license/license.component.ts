@@ -59,7 +59,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
       financialYear: [this.getCurrentFinancialYear(), Validators.required],
       district: [stored['district'], Validators.required],
       licenseCategory: [stored['licenseCategory'], Validators.required],
-      licensee: [{value: stored['licensee'], disabled: true}, Validators.required],
+      licensee: [{ value: stored['licensee'], disabled: true }, Validators.required],
       modeOfOperation: [stored['modeOfOperation'] || '', Validators.required]
     });
 
@@ -75,7 +75,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
     this.loadDropdownData();
     this.setupFormSubscriptions();
     this.loadSavedData();
-    
+
     // ✅ AUTO-FILL district from user profile
     this.autoFillFromUserProfile();
   }
@@ -97,8 +97,8 @@ export class LicenseComponent implements OnInit, OnDestroy {
     }
 
     // Try to get user profile from memory first
-    let userProfile = this.accountService.getUserProfileSync();
-    
+    let userProfile = this.accountService.getCurrentUser();
+
     if (!userProfile) {
       const storedUser = localStorage.getItem('currentUser');
       if (storedUser) {
@@ -114,7 +114,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
 
     if (userProfile) {
       console.log('✅ Auto-filling license selection with profile:', userProfile);
-      
+
       // Wait for districts to load before trying to auto-fill
       setTimeout(() => {
         this.fillFormWithProfile(userProfile);
@@ -127,7 +127,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
    */
   private fillFormWithProfile(profile: any): void {
     console.log('🔍 Filling license form with profile data:', profile);
-    
+
     const fillData: any = {};
 
     // Map district (handle both object and direct value)
@@ -167,13 +167,13 @@ export class LicenseComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.districts = data;
         console.log('🏛️ Loaded districts:', data);
-        
+
         // Try auto-fill after districts are loaded
         const storedLicense = sessionStorage.getItem('licenseDetails');
         if (!storedLicense) {
           // Give a moment for component to settle, then try auto-fill
           setTimeout(() => {
-            const profile = this.accountService.getUserProfileSync();
+            const profile = this.accountService.getCurrentUser();
             if (profile) {
               this.fillFormWithProfile(profile);
             }
@@ -240,9 +240,9 @@ export class LicenseComponent implements OnInit, OnDestroy {
         next: (data) => {
           console.log('✅ Fetched licensees:', data);
           console.log('📊 Total licensees found:', data.length);
-          
+
           this.filteredLicensees = data;
-          
+
           if (data.length > 0) {
             this.applicationForm.get('licensee')?.enable();
             console.log('✅ Licensee dropdown enabled');
@@ -250,7 +250,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
             this.applicationForm.get('licensee')?.disable();
             console.log('⚠️ No licensees found, dropdown disabled');
           }
-          
+
           const currentLicensee = this.applicationForm.get('licensee')?.value;
           if (currentLicensee && !data.some((l) => (l.licenseeId || l.id) == currentLicensee)) {
             this.applicationForm.get('licensee')?.setValue('');
@@ -311,7 +311,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
     }
 
     const form = this.applicationForm.value;
-    
+
     const selectedDistrict = this.districts.find(d => d.id === form.district);
     const districtCode = selectedDistrict?.districtCode;
 
@@ -322,7 +322,7 @@ export class LicenseComponent implements OnInit, OnDestroy {
     }
 
     const selectedLicensee = this.filteredLicensees.find(l => l.licenseeId == form.licensee);
-    
+
     if (!selectedLicensee) {
       console.error('❌ Licensee not found:', form.licensee);
       console.error('Available licensees:', this.filteredLicensees.map(l => ({ id: l.licenseeId, name: l.establishmentName })));
@@ -344,9 +344,9 @@ export class LicenseComponent implements OnInit, OnDestroy {
     };
 
     sessionStorage.setItem('licenseDetails', JSON.stringify(backendFormat));
-    
+
     console.log('✅ Stored License Details (Backend Format):', backendFormat);
-    
+
     this.next.emit();
   }
 

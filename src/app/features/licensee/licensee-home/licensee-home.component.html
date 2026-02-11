@@ -36,11 +36,11 @@
         </mat-list-item> -->
                 <!-- Apply License link with dialog trigger -->
                 <mat-list-item (click)="openNewLicenseInfo()" class="nav-header-cus">
-                    <span class="nav-header-cus">Apply New License</span>
+                    <span class="nav-header-cus">New License</span>
                 </mat-list-item>
                 @if (user?.hasActiveLicense) {
                 <mat-list-item (click)="openSupplyChain()" class="nav-header-cus">
-                    <span class="nav-header-cus">Apply Supply Chain</span>
+                    <span class="nav-header-cus">Supply Chain</span>
                 </mat-list-item>
                 <div class="accordion accordion-flush" id="sidebarAccordion">
                     <!-- Register Section -->
@@ -100,8 +100,7 @@
                             Company Registration
                         </mat-expansion-panel-header>
                         <div class="button-column">
-                            <button mat-menu-item routerLink="company/prepare-application"
-                                routerLinkActive="active-link">
+                            <button mat-menu-item (click)="navigateToDashboardSection('company-registration')">
                                 Prepare Application
                             </button>
                             <button mat-menu-item routerLink="company/application-action"
@@ -121,8 +120,7 @@
                             Salesman/Barman Registration
                         </mat-expansion-panel-header>
                         <div class="button-column">
-                            <button mat-menu-item routerLink="salesman-barman/prepare-application"
-                                routerLinkActive="active-link">
+                            <button mat-menu-item (click)="navigateToDashboardSection('salesman-barman-registration')">
                                 Prepare Application
                             </button>
                             <button mat-menu-item routerLink="salesman-barman/application-action"

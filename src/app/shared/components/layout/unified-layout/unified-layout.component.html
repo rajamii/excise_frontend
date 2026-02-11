@@ -1,0 +1,302 @@
+<!-- Clean Professional Government Portal -->
+<div *ngIf="loaded" class="unified-layout-container">
+  <mat-sidenav-container class="sidenav-container">
+    <!-- Clean Sidebar -->
+    <mat-sidenav #sidenav mode="side" [opened]="true" (openedChange)="onSidenavStateChange($event)"
+      class="clean-sidenav">
+
+      <!-- Sidebar Content -->
+      <div class="sidebar-content">
+
+        <!-- User Profile -->
+        <div class="user-profile">
+          <div class="user-info" (click)="openUserProfile()" style="cursor: pointer;">
+            <div class="user-avatar">
+              <span class="avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="user-details">
+              <h3 class="user-name">{{ userName || 'License User' }}</h3>
+            </div>
+          </div>
+
+          <button type="button" class="close-btn" (click)="snavToggle(sidenav)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Simple Navigation Menu -->
+        <div class="nav-menu">
+          <!-- Licensee Navigation -->
+          <div *ngIf="isLicenseeUser()">
+            <!-- Dashboard -->
+            <a routerLink="/dashboard" routerLinkActive="active" class="nav-item active">
+              <mat-icon class="nav-icon">dashboard</mat-icon>
+              <span class="nav-text">Dashboard</span>
+            </a>
+
+            <!-- Apply New License -->
+            <button class="nav-item" (click)="navigateToSupplyChain('new-license')">
+              <mat-icon class="nav-icon">add_business</mat-icon>
+              <span class="nav-text">New License</span>
+            </button>
+
+            <!-- Supply Chain Items -->
+            <button class="nav-item" (click)="navigateToSupplyChain('requisition')">
+              <mat-icon class="nav-icon">description</mat-icon>
+              <span class="nav-text">Requisition</span>
+            </button>
+            <button class="nav-item" (click)="navigateToSupplyChain('revalidation')">
+              <mat-icon class="nav-icon">refresh</mat-icon>
+              <span class="nav-text">Revalidation</span>
+            </button>
+            <button class="nav-item" (click)="navigateToSupplyChain('cancellation')">
+              <mat-icon class="nav-icon">cancel</mat-icon>
+              <span class="nav-text">Cancellation</span>
+            </button>
+            <button class="nav-item" (click)="navigateToSupplyChain('transit')">
+              <mat-icon class="nav-icon">local_shipping</mat-icon>
+              <span class="nav-text">Transit</span>
+            </button>
+            <button class="nav-item" (click)="navigateToSupplyChain('hologram')">
+              <mat-icon class="nav-icon">qr_code</mat-icon>
+              <span class="nav-text">Hologram</span>
+            </button>
+            <button class="nav-item" (click)="navigateToSupplyChain('hologram-request')">
+              <mat-icon class="nav-icon">add_box</mat-icon>
+              <span class="nav-text">Hologram Request</span>
+            </button>
+
+            <!-- Register - Expandable
+            <div class="nav-expandable">
+              <mat-expansion-panel class="nav-panel" hideToggle>
+                <mat-expansion-panel-header class="panel-header">
+                  <mat-panel-title class="panel-title">
+                    <mat-icon class="nav-icon">library_books</mat-icon>
+                    <span class="nav-text">Register</span>
+                    <mat-icon class="expand-icon">keyboard_arrow_down</mat-icon>
+                  </mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <div class="panel-content">
+                  <button class="sub-nav-item" (click)="navigateTo('transit-permit-register')">
+                    <mat-icon class="sub-icon">assignment</mat-icon>
+                    <span class="sub-text">Transit Permit Register</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('daily-record-register')">
+                    <mat-icon class="sub-icon">today</mat-icon>
+                    <span class="sub-text">Daily Record Register</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('daily-production-register')">
+                    <mat-icon class="sub-icon">factory</mat-icon>
+                    <span class="sub-text">Daily Production Register</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('brands-details')">
+                    <mat-icon class="sub-icon">label</mat-icon>
+                    <span class="sub-text">Brands Details</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('yuksom-local-sales-register')">
+                    <mat-icon class="sub-icon">store</mat-icon>
+                    <span class="sub-text">Yuksom Local Sales Register</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('beer-production-register')">
+                    <mat-icon class="sub-icon">local_bar</mat-icon>
+                    <span class="sub-text">Beer Production Register</span>
+                  </button>
+                  <button class="sub-nav-item" (click)="navigateTo('hologram-monthly-report')">
+                    <mat-icon class="sub-icon">analytics</mat-icon>
+                    <span class="sub-text">Hologram Monthly Report</span>
+                  </button>
+                </div>
+              </mat-expansion-panel>
+            </div> -->
+
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('company')">
+              <mat-icon class="nav-icon">apartment</mat-icon>
+              <span class="nav-text">Company Registration</span>
+            </button>
+            <button class="nav-item" (click)="navigateToLicenseeRegistration('salesman-barman')">
+              <mat-icon class="nav-icon">badge</mat-icon>
+              <span class="nav-text">Salesman/Barman Registration</span>
+            </button>
+          </div>
+
+          <!-- Admin/Officer Navigation -->
+          <div *ngIf="!isLicenseeUser()">
+            <!-- Dashboard -->
+            <a routerLink="/dashboard" routerLinkActive="active" class="nav-item active">
+              <mat-icon class="nav-icon">dashboard</mat-icon>
+              <span class="nav-text">Dashboard</span>
+            </a>
+            <button class="nav-item" *ngIf="!isSiteAdminUser()" (click)="navigateToSection('new-license')">
+              <mat-icon class="nav-icon">add_business</mat-icon>
+              <span class="nav-text">New License</span>
+            </button>
+
+            <!-- Role-specific sections -->
+
+            <!-- Permit Section Navigation -->
+            <div *ngIf="currentUser?.roleId === 5">
+              <button class="nav-item" (click)="navigateToSection('requisition')">
+                <mat-icon class="nav-icon">description</mat-icon>
+                <span class="nav-text">Requisition</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('revalidation')">
+                <mat-icon class="nav-icon">refresh</mat-icon>
+                <span class="nav-text">Revalidation</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('cancellation')">
+                <mat-icon class="nav-icon">cancel</mat-icon>
+                <span class="nav-text">Cancellation</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('transit')">
+                <mat-icon class="nav-icon">local_shipping</mat-icon>
+                <span class="nav-text">Transit</span>
+              </button>
+            </div>
+
+            <!-- Commissioner Navigation -->
+            <div *ngIf="currentUser?.roleId === 10">
+              <button class="nav-item" (click)="navigateToSection('requisition')">
+                <mat-icon class="nav-icon">description</mat-icon>
+                <span class="nav-text">Requisition</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('revalidation')">
+                <mat-icon class="nav-icon">refresh</mat-icon>
+                <span class="nav-text">Revalidation</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('cancellation')">
+                <mat-icon class="nav-icon">cancel</mat-icon>
+                <span class="nav-text">Cancellation</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('transit')">
+                <mat-icon class="nav-icon">local_shipping</mat-icon>
+                <span class="nav-text">Transit</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('hologram')">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram Procurement</span>
+              </button>
+            </div>
+
+            <!-- IT Cell Navigation -->
+            <div *ngIf="currentUser?.roleId === 6">
+              <button class="nav-item" (click)="navigateToSection('itcell-hologram')">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram Procurement</span>
+              </button>
+            </div>
+
+            <!-- Officer in Charge Navigation -->
+            <div *ngIf="currentUser?.roleId === 7">
+              <button class="nav-item" (click)="navigateToSection('transit-applications')">
+                <mat-icon class="nav-icon">local_shipping</mat-icon>
+                <span class="nav-text">Transit Applications</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('brands')">
+                <mat-icon class="nav-icon">label</mat-icon>
+                <span class="nav-text">Brands Details</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('monthly-hologram-statement')">
+                <mat-icon class="nav-icon">description</mat-icon>
+                <span class="nav-text">Monthly Hologram Statement</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('hologram-register')">
+                <mat-icon class="nav-icon">qr_code</mat-icon>
+                <span class="nav-text">Hologram Registers</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('hologram-daily-entry')">
+                <mat-icon class="nav-icon">today</mat-icon>
+                <span class="nav-text">Hologram Daily Entry</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('stock-inventory')">
+                <mat-icon class="nav-icon">inventory</mat-icon>
+                <span class="nav-text">Stock Inventory</span>
+              </button>
+              <button class="nav-item" (click)="navigateToSection('officer-activity')">
+                <mat-icon class="nav-icon">assignment</mat-icon>
+                <span class="nav-text">Officer Activity</span>
+              </button>
+            </div>
+
+            <!-- Site Admin master navigation -->
+            <div *ngIf="isSiteAdminUser()">
+              <a routerLink="/dashboard/admin/users" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">people</mat-icon>
+                <span class="nav-text">User</span>
+              </a>
+              <a routerLink="/dashboard/admin/roles" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">admin_panel_settings</mat-icon>
+                <span class="nav-text">Role</span>
+              </a>
+              <a routerLink="/dashboard/admin/districts" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">map</mat-icon>
+                <span class="nav-text">District</span>
+              </a>
+              <a routerLink="/dashboard/admin/subdivisions" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">account_tree</mat-icon>
+                <span class="nav-text">Sub Division</span>
+              </a>
+              <a routerLink="/dashboard/admin/police-stations" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">local_police</mat-icon>
+                <span class="nav-text">Police Station</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-types" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">category</mat-icon>
+                <span class="nav-text">License Type</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-categories" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">view_list</mat-icon>
+                <span class="nav-text">License Category</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-titles" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">badge</mat-icon>
+                <span class="nav-text">License Title</span>
+              </a>
+              <a routerLink="/dashboard/admin/license-subcategories" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">layers</mat-icon>
+                <span class="nav-text">License Subcategory</span>
+              </a>
+              <a routerLink="/dashboard/admin/roads" routerLinkActive="active" class="nav-item">
+                <mat-icon class="nav-icon">route</mat-icon>
+                <span class="nav-text">Road</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-sidenav>
+
+    <!-- Main Content Area -->
+    <mat-sidenav-content class="main-content">
+      <!-- Top Navigation Bar (visible when sidebar is closed) -->
+      <div class="top-nav-bar" *ngIf="!isSidenavOpen">
+        <div class="top-nav-content">
+          <!-- Left Section with Hamburger and Logo -->
+          <div class="nav-left">
+            <button mat-icon-button class="hamburger-btn" (click)="snavToggle(sidenav)">
+              <mat-icon>menu</mat-icon>
+            </button>
+
+          </div>
+
+          <!-- Right Section with User Info -->
+          <div class="nav-right">
+            <div class="top-user-info" (click)="openUserProfile()" style="cursor: pointer;">
+              <div class="top-user-avatar">
+                <span class="top-avatar-letter">{{ (userName || 'L').charAt(0).toUpperCase() }}</span>
+              </div>
+              <div class="top-user-details">
+                <span class="top-user-name">{{ userName || 'License User' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="content-wrapper" [class.with-top-nav]="!isSidenavOpen">
+        <router-outlet></router-outlet>
+      </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

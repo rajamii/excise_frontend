@@ -96,6 +96,7 @@ export class PaymentConfirmationComponent implements OnInit {
   transitItemCount = 0;
   transitBillStatus = 'Ready for Payment';
   transitId: string = '';
+  transitPaymentAgreed = false; // Added for modal agreement
 
   // Sample Data
   requisitionData: PaymentItem[] = [
@@ -221,6 +222,8 @@ export class PaymentConfirmationComponent implements OnInit {
   ngOnInit(): void {
     // Load hologram data from API
     this.loadHologramDataFromApi();
+    // Load cancellation data from API
+    this.loadCancellationDataFromApi();
 
     // Get query parameters
     this.route.queryParams.subscribe(params => {
@@ -234,30 +237,35 @@ export class PaymentConfirmationComponent implements OnInit {
       }
       // Handle hologram payment navigation
       if (params['refNo'] && params['action'] === 'makePayment') {
-        this.activeTab = 'hologram';
-        // Optionally highlight or scroll to the specific hologram item
-        setTimeout(() => {
-          // If type is provided, scroll to specific type
-          if (params['type']) {
-            const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
-            if (element) {
-              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              element.classList.add('highlight-row');
-              setTimeout(() => element.classList.remove('highlight-row'), 3000);
-            }
-          } else {
-            // If no type, find first matching refNo and scroll to it
-            const matchingItem = this.hologramData.find(h => h.referenceNo === params['refNo']);
-            if (matchingItem) {
-              const element = document.getElementById(`hologram-${matchingItem.referenceNo}-${matchingItem.procurementType}`);
+        // Only default to hologram if no tab is specified or if tab is hologram
+        if (!params['tab'] || params['tab'] === 'hologram') {
+          this.activeTab = 'hologram';
+
+          // Optionally highlight or scroll to the specific hologram item
+          setTimeout(() => {
+            // ... (existing scrolling logic)
+            // If type is provided, scroll to specific type
+            if (params['type']) {
+              const element = document.getElementById(`hologram-${params['refNo']}-${params['type']}`);
               if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 element.classList.add('highlight-row');
                 setTimeout(() => element.classList.remove('highlight-row'), 3000);
               }
+            } else {
+              // If no type, find first matching refNo and scroll to it
+              const matchingItem = this.hologramData.find(h => h.referenceNo === params['refNo']);
+              if (matchingItem) {
+                const element = document.getElementById(`hologram-${matchingItem.referenceNo}-${matchingItem.procurementType}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  element.classList.add('highlight-row');
+                  setTimeout(() => element.classList.remove('highlight-row'), 3000);
+                }
+              }
             }
-          }
-        }, 500);
+          }, 500);
+        }
       }
     });
 
@@ -279,7 +287,6 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Filter for items approved by commissioner
         // Also include items already paid if we want to show history, but usually payment page shows pending
-        // The prompt implies we want to show items ready for payment.
         // Backend "Approved by Commissioner" -> "Payment Pending" effectively
 
         this.hologramData = data
@@ -305,6 +312,39 @@ export class PaymentConfirmationComponent implements OnInit {
           });
       },
       error: (err) => console.error('Error fetching hologram payments:', err)
+    });
+  }
+
+  loadCancellationDataFromApi(): void {
+    this.supplyChainService.getCancellations().subscribe({
+      next: (data) => {
+        console.log('Fetched Cancellation Data:', data);
+        // Map backend data to PaymentItem interface
+        this.cancellationData = data.filter(item =>
+          item.status === 'ApprovedCancellationByCommissioner' ||
+          item.status === 'ForwardedCancellationPaySLipToCommissioner'
+        ).map(item => ({
+          id: item.id,
+          referenceNo: item.ourRefNo || item.our_ref_no,
+          amount: parseFloat(item.totalCancellationAmount || item.total_cancellation_amount || 0),
+          hoa: '0039-00-105-45-03', // Static HOA for cancellation
+          status: item.status
+        }));
+
+        // Check if we need to auto-select an item based on query params
+        const params = this.route.snapshot.queryParams; // Accessing snapshot for immediate check
+        if (params['tab'] === 'cancellation' && params['id']) {
+          const item = this.cancellationData.find(d => d.id == params['id']);
+          if (item && params['action'] === 'makePayment') {
+            // Optionally scroll or highlight
+            setTimeout(() => {
+              this.selectedItem = item;
+              // this.payItem(item); // Auto-open modal if desired
+            }, 500);
+          }
+        }
+      },
+      error: (err) => console.error('Error fetching cancellation data', err)
     });
   }
 
@@ -473,6 +513,20 @@ export class PaymentConfirmationComponent implements OnInit {
           alert('Payment failed API call');
         }
       });
+    } else if (this.activeTab === 'cancellation') {
+      // Cancellation Payment Logic
+      this.supplyChainService.performCancellationAction(item.id, 'SubmitPayslip', 'licensee').subscribe({
+        next: (res) => {
+          this.showSuccessMessage(`Cancellation Payment of ₹${item.amount} processed successfully!`);
+          item.status = 'ForwardedCancellationPaySLipToCommissioner'; // Update status to reflect backend change
+          // Optionally reload data if we switch to loading from API
+          this.loadCancellationDataFromApi();
+        },
+        error: (err) => {
+          console.error('Cancellation Payment failed:', err);
+          this.showErrorMessage(`Cancellation Payment failed: ${err.error?.error || err.message}`);
+        }
+      });
     } else {
       // Legacy/Other tabs logic
       item.status = 'Payment Successful';
@@ -515,7 +569,7 @@ export class PaymentConfirmationComponent implements OnInit {
 
   loadTransitData(): void {
     this.showTransitPayment = true;
-    
+
     // Fetch from backend to get the ID and current status
     this.supplyChainService.getTransitPermits(this.transitBillNo).subscribe({
       next: (permits) => {
@@ -524,35 +578,35 @@ export class PaymentConfirmationComponent implements OnInit {
 
         // Check for both snake_case and camelCase
         const found = permits.find(p => (p.bill_no === this.transitBillNo) || (p.billNo === this.transitBillNo));
-        
+
         if (found) {
-            console.log('Transit Permit Found:', found);
-            this.transitId = found.id;
-            this.transitBillStatus = found.status;
-            // Map backend fields to frontend model
-            this.transitData = [{
-              id: found.id,
-              billNumber: found.bill_no || found.billNo,
-              serialNo: found.bill_no || found.billNo, 
-              quantity: found.cases || 0, 
-              portions: 0,
-              nips: (found.size_ml || found.size) + 'ml',
-              licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
-              status: found.status,
-              paymentDate: null,
-              totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
-            }];
-            this.transitTotalAmount = parseFloat(found.total_amount || found.totalAmount || 0);
-            this.transitEducationCess = parseFloat(found.total_education_cess || found.totalEducationCess || found.educationCess || 0);
-            this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
-            this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
-            this.transitItemCount = 1; 
+          console.log('Transit Permit Found:', found);
+          this.transitId = found.id;
+          this.transitBillStatus = found.status;
+          // Map backend fields to frontend model
+          this.transitData = [{
+            id: found.id,
+            billNumber: found.bill_no || found.billNo,
+            serialNo: found.bill_no || found.billNo,
+            quantity: found.cases || 0,
+            portions: 0,
+            nips: (found.size_ml || found.size) + 'ml',
+            licenseeId: found.licensee_id || found.licenseeId || 'Unknown',
+            status: found.status,
+            paymentDate: null,
+            totalAmount: parseFloat(found.total_amount || found.totalAmount || 0)
+          }];
+          this.transitTotalAmount = parseFloat(found.total_amount || found.totalAmount || 0);
+          this.transitEducationCess = parseFloat(found.total_education_cess || found.totalEducationCess || found.educationCess || 0);
+          this.transitExciseDuty = parseFloat(found.total_excise_duty || found.totalExciseDuty || found.exciseDuty || 0);
+          this.transitAdditionalExcise = parseFloat(found.total_additional_excise || found.totalAdditionalExcise || found.additionalExcise || 0);
+          this.transitItemCount = 1;
         } else {
-             console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
-             alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
-             
-             // Fallback to sample/params if not found (e.g. before backend sync) or handle error
-             this.transitTotalAmount = 1500.00; // Default dummy
+          console.error('Transit Permit NOT found for BillNo:', this.transitBillNo);
+          alert(`Transit Permit with Bill No: ${this.transitBillNo} not found in the list. Please verify.`);
+
+          // Fallback to sample/params if not found (e.g. before backend sync) or handle error
+          this.transitTotalAmount = 1500.00; // Default dummy
         }
       },
       error: (err) => {
@@ -570,33 +624,49 @@ export class PaymentConfirmationComponent implements OnInit {
     }
 
     if (!this.transitId) {
-        // Use alert to make sure user sees it
-        alert("Transit Permit ID not found. Cannot proceed with payment.");
-        this.showErrorMessage("Transit Permit ID not found. Cannot proceed.");
-        return;
+      alert("Transit Permit ID not found. Cannot proceed with payment.");
+      this.showErrorMessage("Transit Permit ID not found. Cannot proceed.");
+      return;
+    }
+
+    // Open confirmation modal
+    this.transitPaymentAgreed = false;
+    const modal = document.getElementById('transitPaymentModal');
+    if (modal) {
+      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
+      bootstrapModal.show();
+    }
+  }
+
+  confirmTransitPayment(): void {
+    // Close modal
+    const modal = document.getElementById('transitPaymentModal');
+    if (modal) {
+      const bootstrapModal = (window as any).bootstrap.Modal.getInstance(modal);
+      bootstrapModal?.hide();
     }
 
     // Process payment via API
     this.supplyChainService.performTransitPermitAction(this.transitId, 'PAY', 'licensee').subscribe({
-        next: (response) => {
-             console.log('Payment successful', response);
-             this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
-             alert('Payment successful! Forwarded to Officer in Charge.'); // Immediate feedback
-             this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
-             
-             // Update wallet balance locally for display
-             this.educationCessBalance -= this.transitEducationCess;
-             this.exciseWalletBalance -= (this.transitExciseDuty + this.transitAdditionalExcise);
+      next: (response) => {
+        console.log('Payment successful', response);
+        this.showSuccessMessage('Payment successful! Forwarded to Officer in Charge.');
+        alert('Payment successful! Forwarded to Officer in Charge.');
+        this.transitBillStatus = 'PaymentSuccessfulandForwardedToOfficerincharge';
 
-             // Refresh data
-             this.loadTransitData();
-        },
-        error: (err) => {
-            console.error('Payment failed', err);
-            const msg = err.error?.message || err.message || 'Unknown error';
-            this.showErrorMessage(`Payment failed: ${msg}`);
-            alert(`Payment failed: ${msg}`);
-        }
+        // Update wallet balance locally
+        this.educationCessBalance -= this.transitEducationCess;
+        this.exciseWalletBalance -= (this.transitExciseDuty + this.transitAdditionalExcise);
+
+        // Refresh data
+        this.loadTransitData();
+      },
+      error: (err) => {
+        console.error('Payment failed', err);
+        const msg = err.error?.message || err.message || 'Unknown error';
+        this.showErrorMessage(`Payment failed: ${msg}`);
+        alert(`Payment failed: ${msg}`);
+      }
     });
   }
 
