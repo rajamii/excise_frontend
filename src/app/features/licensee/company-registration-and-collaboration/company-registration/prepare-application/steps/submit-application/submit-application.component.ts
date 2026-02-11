@@ -3,7 +3,6 @@ import { MaterialModule } from '../../../../../../../shared/material.module';
 import { Company, CompanyDocuments } from '../../../../../../../core/models/company.model';
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { Router } from '@angular/router';
 import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
 
 @Component({
@@ -16,7 +15,6 @@ export class SubmitApplicationComponent implements OnDestroy {
   fileUrls: string[] = [];
   acceptTerms: boolean = false;
   isSubmitting: boolean = false;
-  applicationId: string | null = null;
 
   // Cache for company documents to prevent recreating URLs
   private cachedDocuments: { key: keyof CompanyDocuments; file: File; fileUrl: string }[] = [];
@@ -53,10 +51,12 @@ export class SubmitApplicationComponent implements OnDestroy {
 
   // Output event emitter to notify parent about "back" action
   @Output() back = new EventEmitter<void>();
+  
+  // Output event emitter to notify parent about successful submission
+  @Output() submitted = new EventEmitter<string>();
 
   constructor(
-    private companyRegistrationService: CompanyRegistrationService, 
-    private router: Router
+    private companyRegistrationService: CompanyRegistrationService
   ) {}
 
   ngOnDestroy(): void {
@@ -261,16 +261,19 @@ export class SubmitApplicationComponent implements OnDestroy {
       this.companyRegistrationService.applyCompanyRegistration(formData).subscribe({
         next: (response) => {
           // Extract application ID from response
-          this.applicationId = response.applicationId || response.application_id;
+          const applicationId = response.applicationId || response.application_id;
           
           Swal.fire({
             title: 'Success!',
-            text: `Application submitted successfully! Your application ID is ${this.applicationId}`,
+            text: `Application submitted successfully! Your application ID is ${applicationId}`,
             icon: 'success',
             confirmButtonColor: '#1C2B78'
           });
 
           this.isSubmitting = false;
+          
+          // Emit the submitted event to parent with application ID
+          this.submitted.emit(applicationId);
         },
         error: (err) => {
           // On failure: show error message
@@ -286,17 +289,6 @@ export class SubmitApplicationComponent implements OnDestroy {
       Swal.fire('Error', 'An unexpected error occurred.', 'error');
       this.isSubmitting = false;
     }
-  }
-
-  goToDashboard() {
-    // Clear all session data
-    sessionStorage.clear();
-    
-    // Clear documents from service
-    this.companyRegistrationService.clearCompanyDocuments();
-    
-    // Navigate to dashboard
-    this.router.navigate(['/site-admin/dashboard']);
   }
 
   // Emit "back" event to previous step

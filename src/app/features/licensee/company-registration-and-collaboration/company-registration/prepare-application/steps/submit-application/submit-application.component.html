@@ -7,7 +7,7 @@
   </mat-card-header>
 
   <mat-card-content>
-    <!-- Application Summary Section - REMOVED Application Type card -->
+    <!-- Application Summary Section -->
     <div class="info-section" *ngIf="companyDetails.length > 0 || memberDetails.length > 0 || paymentDetails.length > 0">
       <div class="section-header">
         <mat-icon>summarize</mat-icon>
@@ -94,46 +94,17 @@
         </span>
       </mat-checkbox>
     </div>
-
-    <!-- Success Section (after submission) -->
-    @if (applicationId) {
-      <div class="success-section">
-        <div class="success-header">
-          <mat-icon>check_circle</mat-icon>
-          <h3>Application Submitted Successfully!</h3>
-        </div>
-        <div class="application-id">
-          <span class="label">Application ID:</span>
-          <span class="value">{{ applicationId }}</span>
-        </div>
-        <div class="next-steps">
-          <h4>Next Steps:</h4>
-          <ul>
-            <li>Your application will be reviewed by the licensing authority</li>
-            <li>You will receive updates via email and SMS</li>
-            <li>Processing time: 7-15 working days</li>
-            <li>Application receipt will be sent to your registered email</li>
-          </ul>
-        </div>
-      </div>
-    }
   </mat-card-content>
 
   <!-- Buttons -->
   <mat-card-actions>
-    @if (!applicationId) {
-      <button mat-stroked-button (click)="goBack()">Back</button>
-      <button 
-        mat-flat-button 
-        color="primary" 
-        (click)="submit()" 
-        [disabled]="!acceptTerms || isSubmitting">
-        {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
-      </button>
-    } @else {
-      <button mat-flat-button color="primary" (click)="goToDashboard()">
-        Go to Dashboard
-      </button>
-    }
+    <button mat-stroked-button (click)="goBack()">Back</button>
+    <button 
+      mat-flat-button 
+      color="primary" 
+      (click)="submit()" 
+      [disabled]="!acceptTerms || isSubmitting">
+      {{ isSubmitting ? 'Submitting...' : 'Submit Application' }}
+    </button>
   </mat-card-actions>
 </mat-card>

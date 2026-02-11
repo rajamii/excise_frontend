@@ -1,4 +1,4 @@
-// licensee-dashboard.component.ts - FIXED VERSION
+// licensee-dashboard.component.ts - FIXED VERSION with company-registration support
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { MaterialModule } from '../../../shared/material.module';
@@ -31,7 +31,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
     awaitingPayment: 0
   };
 
-  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' = 'all';
+  // ✅ FIXED: Added 'company-registration' option
+  selectedApplicationType: 'all' | 'license-renewal' | 'new-license' | 'salesman-barman' | 'company-registration' = 'all';
   isLoading = false;
 
   appliedDataSource = new MatTableDataSource<UnifiedApplication>();
@@ -215,6 +216,7 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
       if (appId.startsWith('LIC/')) return appId.replace('LIC/', 'LA/');
       if (appId.startsWith('NLI/')) return appId.replace('NLI/', 'NA/');
       if (appId.startsWith('SBM/')) return appId.replace('SBM/', 'SB/');
+      if (appId.startsWith('COMP/')) return appId.replace('COMP/', 'CREG/'); // ✅ ADDED: Company registration
     }
     
     return null;
@@ -223,7 +225,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
   private isValidLicenseId(licenseId: string): boolean {
     if (!licenseId || typeof licenseId !== 'string') return false;
     const trimmed = licenseId.trim();
-    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/'];
+    // ✅ ADDED: 'COMP/' and 'CREG/' prefixes for company registration
+    const validPrefixes = ['LA/', 'NA/', 'SB/', 'LIC/', 'NLI/', 'SBM/', 'COMP/', 'CREG/'];
     const hasValidPrefix = validPrefixes.some(prefix => trimmed.startsWith(prefix));
     if (!hasValidPrefix) return false;
     const parts = trimmed.split('/');
@@ -292,6 +295,8 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
           derivedLicenseId = appId.replace('NLI/', 'NA/');
         } else if (appId.startsWith('SBM/')) {
           derivedLicenseId = appId.replace('SBM/', 'SB/');
+        } else if (appId.startsWith('COMP/')) { // ✅ ADDED
+          derivedLicenseId = appId.replace('COMP/', 'CREG/');
         }
         
         if (derivedLicenseId && this.isValidLicenseId(derivedLicenseId)) {
@@ -337,6 +342,17 @@ export class LicenseeDashboardComponent implements OnInit, OnDestroy {
         this.processPayment(application);
       }
     });
+  }
+
+  // ✅ ADDED: Helper to get type label
+  getTypeLabel(type: string): string {
+    switch (type) {
+      case 'license-renewal': return 'License Renewal';
+      case 'new-license': return 'New License';
+      case 'salesman-barman': return 'Salesman/Barman';
+      case 'company-registration': return 'Company Registration';
+      default: return type;
+    }
   }
 
   private processPayment(application: UnifiedApplication): void {

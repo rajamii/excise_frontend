@@ -1,32 +1,69 @@
 <mat-horizontal-stepper [linear]="true" #stepper>
 
-    <!-- Step 1: Company Details -->
-    <mat-step label="Company Details">
-      <app-company-details (next)="stepper.next()"></app-company-details>
-    </mat-step>
-  
-    <!-- Step 2: Member Details -->
-    <mat-step label="Member Details">
-      <app-member-details 
-        (back)="stepper.previous()" 
-        (next)="stepper.next()">
-      </app-member-details>
-    </mat-step>
-  
-    <!-- Step 3: Upload Documents -->
-    <mat-step label="Upload Documents">
-      <app-upload-documents 
-        (back)="stepper.previous()" 
-        (next)="stepper.next()">
-      </app-upload-documents>
-    </mat-step>
-  
-    <!-- Step 4: Submit Application -->
-    <mat-step label="Submit Application">
-      <app-submit-application 
-        (back)="stepper.previous()">
-      </app-submit-application>
-    </mat-step>
-  
-  </mat-horizontal-stepper>
-  
+  <!-- Step 1: Company Details -->
+  <mat-step label="Company Details">
+    <app-company-details (next)="stepper.next()"></app-company-details>
+  </mat-step>
+
+  <!-- Step 2: Member Details -->
+  <mat-step label="Member Details">
+    <app-member-details 
+      (back)="stepper.previous()" 
+      (next)="stepper.next()">
+    </app-member-details>
+  </mat-step>
+
+  <!-- Step 3: Upload Documents -->
+  <mat-step label="Upload Documents">
+    <app-upload-documents 
+      (back)="stepper.previous()" 
+      (next)="stepper.next()">
+    </app-upload-documents>
+  </mat-step>
+
+  <!-- Step 4: Submit Application -->
+  <mat-step label="Submit Application">
+    <app-submit-application 
+      (back)="stepper.previous()"
+      (submitted)="onApplicationSubmitted($event)">
+    </app-submit-application>
+  </mat-step>
+
+  <!-- Step 5: Confirmation -->
+  <mat-step label="Confirmation">
+    <mat-card>
+      <mat-card-header>
+        <div class="heading">Application Confirmation</div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="success-section">
+          <div class="success-header">
+            <mat-icon>check_circle</mat-icon>
+            <h3>Application Submitted Successfully!</h3>
+          </div>
+          <div class="application-id">
+            <span class="label">Application ID:</span>
+            <span class="value">{{ applicationId }}</span>
+          </div>
+          <div class="next-steps">
+            <h4>Next Steps:</h4>
+            <ul>
+              <li>Your application will be reviewed by the licensing authority</li>
+              <li>You will receive updates via email and SMS</li>
+              <li>Processing time: 7-15 working days</li>
+              <li>Application receipt will be sent to your registered email</li>
+            </ul>
+          </div>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="goToDashboard()">
+          Go to Dashboard
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </mat-step>
+
+</mat-horizontal-stepper>
