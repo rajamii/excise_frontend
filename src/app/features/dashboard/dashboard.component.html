@@ -295,7 +295,7 @@
 
     <!-- Performance Metrics Section (for admin roles) -->
     <div class="performance-metrics"
-      *ngIf="shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
+      *ngIf="false && shouldShowPerformanceMetrics() && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard()">
       <div class="metrics-header">
         <h3>
           <mat-icon>analytics</mat-icon>
@@ -333,7 +333,7 @@
 
     <!-- Recent Activity Feed (for all roles) -->
     <div class="recent-activity"
-      *ngIf="!selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
+      *ngIf="false && !selectedSupplyChainSection && !shouldShowRoleSpecificDashboard() && getRecentActivities().length > 0">
       <div class="activity-header">
         <h3>
           <mat-icon>history</mat-icon>

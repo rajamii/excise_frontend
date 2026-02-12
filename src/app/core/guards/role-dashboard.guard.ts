@@ -1,11 +1,13 @@
 import { Injectable } from '@angular/core';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { RoleService } from '../services/role.service';
 import { AccountService } from '../services/account.service';
 import { User } from '../models/role.models';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -14,31 +16,24 @@ export class RoleDashboardGuard implements CanActivate {
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) {}
 
   canActivate(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
-    const currentUser = this.roleService.getCurrentUser();
-    if (currentUser) {
-      return this.validateDashboardAccess(currentUser);
-    }
-
+    // Always hydrate from backend identity/config to avoid stale session-role permissions.
     return this.accountService.identity().pipe(
-      map(accountUser => {
+      switchMap(accountUser => {
         if (!accountUser) {
           this.router.navigate(['/login']);
-          return false;
+          return of(false);
         }
 
         const roleId = Number(accountUser?.role?.id) || 0;
-        const role = this.roleService.getRoleById(roleId);
-        if (!role) {
-          this.router.navigate(['/unauthorized']);
-          return false;
-        }
+        const role = this.roleService.getRoleById(roleId)!;
 
         const mappedUser: User = {
           id: accountUser.id || 0,
@@ -52,8 +47,30 @@ export class RoleDashboardGuard implements CanActivate {
           lastLogin: new Date()
         };
 
-        this.roleService.setCurrentUser(mappedUser);
-        return this.validateDashboardAccess(mappedUser);
+        return this.http.get<any>(`${environment.apiBaseUrl}/auth/roles/dashboard-config/current/`).pipe(
+          map((config) => {
+            const dbPermissions = Array.isArray(config?.permissions) ? config.permissions : [];
+            const dbRoleName = config?.roleName || mappedUser.role?.displayName || 'User';
+
+            const dbBackedUser: User = {
+              ...mappedUser,
+              role: {
+                ...mappedUser.role,
+                name: dbRoleName,
+                displayName: dbRoleName,
+                permissions: dbPermissions
+              },
+              permissions: dbPermissions
+            };
+
+            this.roleService.setCurrentUser(dbBackedUser);
+            return this.validateDashboardAccess(dbBackedUser);
+          }),
+          catchError(() => {
+            this.roleService.setCurrentUser(mappedUser);
+            return of(this.validateDashboardAccess(mappedUser));
+          })
+        );
       }),
       catchError(() => {
         this.router.navigate(['/login']);
@@ -63,8 +80,8 @@ export class RoleDashboardGuard implements CanActivate {
   }
 
   private validateDashboardAccess(currentUser: User): boolean {
-    if (!this.roleService.hasPermission('dashboard.view')) {
-      this.router.navigate(['/unauthorized']);
+    if (!(currentUser.permissions || []).includes('dashboard.view')) {
+      this.router.navigate(['/accessdenied']);
       return false;
     }
 

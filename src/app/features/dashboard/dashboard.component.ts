@@ -127,7 +127,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   rejectedDataSource = new MatTableDataSource<UnifiedApplication>();
 
   displayedColumns: string[] = ['slNo', 'id', 'currentStage', 'remarks', 'performedBy', 'actions'];
-  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'default';
+  activeTable: 'default' | 'applied' | 'pending' | 'approved' | 'rejected' = 'approved';
 
   // Supply Chain Section Management
   selectedSupplyChainSection: string | null = null;
@@ -290,19 +290,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
             };
           }
 
+          // Product requirement: newly submitted applications should appear under Pending.
+          const pendingBucket = [
+            ...filteredApplications.pending,
+            ...filteredApplications.awaitingPayment,
+            ...filteredApplications.applied
+          ];
+
           // Store counts separately but combine pending display
           this.dashboardCounts = {
-            applied: filteredApplications.applied.length,
-            pending: filteredApplications.pending.length,
+            applied: 0,
+            pending: pendingBucket.length,
             awaitingPayment: filteredApplications.awaitingPayment.length,
             approved: filteredApplications.approved.length,
             rejected: filteredApplications.rejected.length
           };
 
-          // Combine pending and awaiting payment into one datasource
+          // Show submitted + pending + awaiting payment together in Pending table.
           this.updateDataSources({
-            applied: filteredApplications.applied,
-            pending: [...filteredApplications.pending, ...filteredApplications.awaitingPayment],
+            applied: [],
+            pending: pendingBucket,
             approved: filteredApplications.approved,
             rejected: filteredApplications.rejected
           });
@@ -348,11 +355,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    this.activeTable = 'default';
+    this.activeTable = 'approved';
   }
 
   onApplicationTypeChange(): void {
-    this.activeTable = 'default';
+    this.activeTable = 'approved';
     this.loadDashboardData();
   }
 
@@ -365,7 +372,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.appliedDataSource.data = result.applied || [];
     this.pendingDataSource.data = result.pending || [];
     this.approvedDataSource.data = result.approved || [];
-    this.rejectedDataSource.data = [];
+    this.rejectedDataSource.data = result.rejected || [];
   }
 
   private clearDataSources(): void {

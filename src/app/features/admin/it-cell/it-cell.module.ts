@@ -12,7 +12,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['it_cell'],
+      requiredPermission: 'officer.itcell.monitor.view',
     },
   }
 ];

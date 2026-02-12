@@ -81,7 +81,21 @@ export class RoleService {
 
   getRoleById(roleId: number): Role | null {
     const roleMapping = this.ROLE_MAPPINGS[roleId as keyof typeof this.ROLE_MAPPINGS];
-    if (!roleMapping) return null;
+    if (!roleMapping) {
+      const currentUser = this.getCurrentUser();
+      const inferredPermissions =
+        currentUser?.roleId === roleId && Array.isArray(currentUser.permissions)
+          ? currentUser.permissions
+          : [];
+
+      return {
+        id: roleId,
+        name: `role_${roleId}`,
+        displayName: `Role ${roleId}`,
+        permissions: inferredPermissions,
+        hierarchy: 999
+      };
+    }
 
     return {
       id: roleId,

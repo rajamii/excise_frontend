@@ -1,10 +1,10 @@
 import { Routes } from "@angular/router";
 import { LoginComponent } from "./features/login/login.component";
-import { Authority } from "./shared/constants/authority.enum";
 import { UserRouteAccessService } from "./core/config/user-route-access.service";
 import { HomeComponent } from "./layouts/landing/home/home.component";
 import { HomeLinksComponent } from "./layouts/landing/home/home-links/home-links.component";
 import { InfoPagesComponent } from "./layouts/info-pages/info-pages.component";
+import { AccessDeniedComponent } from "./shared/components/access-denied/access-denied.component";
 import { PageNotFoundComponent } from "./shared/components/page-not-found/page-not-found.component";
 
 export const routes: Routes = [
@@ -46,23 +46,7 @@ export const routes: Routes = [
     path: "dashboard",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [
-        // Admin roles
-        Authority.SITE_ADMIN,
-        Authority.SINGLE_WINDOW,
-        Authority.DISTRICT_USER,
-        Authority.JOINT_COMMISSIONER,
-        Authority.SECRETARY,
-        Authority.SUB_ENQUIRY_OFFICER,
-        // Officer roles
-        Authority.COMMISSIONER,
-        Authority.IT_CELL,
-        Authority.PERMIT_SECTION,
-        Authority.OFFICER_IN_CHARGE,
-        // Licensee roles
-        Authority.LICENSEE,
-        Authority.SUPPLY_CHAIN
-      ],
+      requiredPermission: 'dashboard.view',
     },
     loadChildren: () => import("./features/dashboard/dashboard.module").then(m => m.DashboardModule),
   },
@@ -72,7 +56,7 @@ export const routes: Routes = [
     path: "officer-dashboard/oic",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.OFFICER_IN_CHARGE],
+      requiredPermission: 'officer.oic.view',
     },
     loadComponent: () => import("./features/admin/officer-in-charge/officer-in-charge.component").then(m => m.OfficerInChargeComponent),
   },
@@ -80,7 +64,7 @@ export const routes: Routes = [
     path: "officer-dashboard/commissioner",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.COMMISSIONER],
+      requiredPermission: 'officer.commissioner.view',
     },
     loadComponent: () => import("./features/admin/commissioner/commissioner-dashboard/commissioner-dashboard.component").then(m => m.CommissionerDashboardComponent),
   },
@@ -88,7 +72,7 @@ export const routes: Routes = [
     path: "officer-dashboard/itcell",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.IT_CELL],
+      requiredPermission: 'officer.itcell.view',
     },
     loadComponent: () => import("./features/admin/it-cell/itcell.component").then(m => m.ITCELLComponent),
   },
@@ -96,7 +80,7 @@ export const routes: Routes = [
     path: "officer-dashboard/permit-section",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.PERMIT_SECTION],
+      requiredPermission: 'officer.permit_section.view',
     },
     loadComponent: () => import("./features/admin/permit-section/permit-section.component").then(m => m.PermitSectionComponent),
   },
@@ -310,18 +294,7 @@ export const routes: Routes = [
     path: "admin",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [
-        Authority.SITE_ADMIN,
-        Authority.SINGLE_WINDOW,
-        Authority.DISTRICT_USER,
-        Authority.JOINT_COMMISSIONER,
-        Authority.SECRETARY,
-        Authority.SUB_ENQUIRY_OFFICER,
-        Authority.COMMISSIONER,
-        Authority.IT_CELL,
-        Authority.PERMIT_SECTION,
-        Authority.OFFICER_IN_CHARGE,
-      ],
+      requiredPermission: 'admin.module.view',
     },
     loadChildren: () => import("./features/admin/admin.routes"),
   },
@@ -331,12 +304,22 @@ export const routes: Routes = [
     path: "licensee",
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: [Authority.LICENSEE],
+      requiredPermission: 'licensee.module.view',
     },
     loadChildren: () =>
       import("./features/licensee/licensee.routes").then(
         (m) => m.licenseeRoutes,
       ),
+  },
+
+  // Access denied aliases
+  {
+    path: "accessdenied",
+    component: AccessDeniedComponent,
+  },
+  {
+    path: "unauthorized",
+    component: AccessDeniedComponent,
   },
 
   // Wildcard fallback

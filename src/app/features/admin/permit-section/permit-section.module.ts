@@ -12,7 +12,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['permit_section'],
+      requiredPermission: 'permit.requisition.view',
     },
   },
   {
@@ -23,7 +23,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['permit_section'],
+      requiredPermission: 'permit.revalidation.view',
     },
   },
   {
@@ -34,7 +34,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['permit_section'],
+      requiredPermission: 'permit.cancellation.view',
     },
   },
   {
@@ -45,7 +45,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['permit_section'],
+      requiredPermission: 'permit.transit.view',
     },
   }
 ];

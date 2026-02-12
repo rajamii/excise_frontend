@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, Router, RouterModule } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -10,7 +10,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog } from '@angular/material/dialog';
 import { HttpClient } from '@angular/common/http';
-import { Subject } from 'rxjs';
+import { Subject, forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 import { RoleService } from '../../../../core/services/role.service';
@@ -39,21 +40,26 @@ import { environment } from '../../../../../environments/environment';
 })
 export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
+  private readonly licenseApiBase = `${environment.apiBaseUrl}/masters/license`;
   private readonly newLicenseApiBase = `${environment.apiBaseUrl}/transactional/new_license_application`;
+  private readonly dashboardConfigApiBase = `${environment.apiBaseUrl}/auth/roles/dashboard-config`;
   
   currentUser: User | null = null;
   userName = '';
   isSidenavOpen = false;
   loaded = true;
   user: any;
-  showSupplyChainMenus = false;
+  currentLayout: string = 'admin';
+  showDistilleryMenus = false;
+  showBreweryOrDistilleryMenus = false;
 
   constructor(
     private roleService: RoleService,
     private accountService: AccountService,
     private router: Router,
     private dialog: MatDialog,
-    private http: HttpClient
+    private http: HttpClient,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -131,6 +137,7 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     const roleId = Number(accountUser?.role?.id) || 1;
     const baseRole = this.roleService.getRoleById(roleId);
     const backendRoleName = accountUser?.role?.name || accountUser?.role?.displayName;
+    this.currentLayout = String(accountUser?.role?.layout || '').toLowerCase() || this.currentLayout;
 
     // Create the unified user object
     const unifiedUser: User = {
@@ -160,6 +167,39 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       roleIdFromAccount: accountUser?.role?.id,
       displayName: unifiedUser.role?.displayName
     });
+
+    // Hydrate permissions from DB config so new roles work without frontend code changes.
+    this.http
+      .get<any>(`${this.dashboardConfigApiBase}/current/`)
+      .pipe(
+        catchError((error) => {
+          console.warn('Could not load dashboard-config/current for role permissions:', error);
+          return of(null);
+        })
+      )
+      .subscribe((config) => {
+        if (!config) {
+          return;
+        }
+
+        const dbPermissions = Array.isArray(config?.permissions) ? config.permissions : [];
+        const dbRoleName = config?.roleName || unifiedUser.role?.displayName || 'User';
+        this.currentLayout = String(config?.layout || this.currentLayout || 'admin').toLowerCase();
+
+        const dbBackedUser: User = {
+          ...unifiedUser,
+          role: {
+            ...unifiedUser.role,
+            name: dbRoleName,
+            displayName: dbRoleName,
+            permissions: dbPermissions
+          },
+          permissions: dbPermissions
+        };
+
+        this.roleService.setCurrentUser(dbBackedUser);
+        this.currentUser = dbBackedUser;
+      });
   }
 
   // Method to toggle the sidebar (sidenav) - Fixed to properly track state
@@ -423,51 +463,153 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
-    return this.currentUser?.roleId === 2;
+    if (this.currentLayout === 'licensee') {
+      return true;
+    }
+    return (this.currentUser?.permissions || []).includes('licensee.module.view');
   }
 
   private loadLicenseeMenuAccess(): void {
     // This visibility rule is only for licensee menus.
     if (!this.isLicenseeUser()) {
-      this.showSupplyChainMenus = false;
+      this.showDistilleryMenus = false;
+      this.showBreweryOrDistilleryMenus = false;
       return;
     }
 
     // Default for new users: keep only base menu options visible.
-    this.showSupplyChainMenus = false;
+    this.showDistilleryMenus = false;
+    this.showBreweryOrDistilleryMenus = false;
 
-    this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).subscribe({
-      next: (response) => {
-        const approvedApplications = Array.isArray(response?.approved) ? response.approved : [];
-        this.showSupplyChainMenus = approvedApplications.some((item: any) =>
-          this.isManufacturingApplication(item)
-        );
+    forkJoin({
+      licenses: this.http.get<any[]>(`${this.licenseApiBase}/me/`).pipe(
+        catchError((error) => {
+          console.error('Failed to read /masters/license/me/:', error);
+          return of([]);
+        })
+      ),
+      approvedPayload: this.http.get<any>(`${this.newLicenseApiBase}/list-by-status/`).pipe(
+        catchError((error) => {
+          console.error('Failed to read /transactional/new_license_application/list-by-status/:', error);
+          return of({ approved: [] });
+        })
+      ),
+      allApplications: this.http.get<any[]>(`${this.newLicenseApiBase}/list/`).pipe(
+        catchError((error) => {
+          console.error('Failed to read /transactional/new_license_application/list/:', error);
+          return of([]);
+        })
+      )
+    }).subscribe({
+      next: ({ licenses, approvedPayload, allApplications }) => {
+        const licenseRows = Array.isArray(licenses) ? licenses : [];
+        const approvedRows = Array.isArray(approvedPayload?.approved) ? approvedPayload.approved : [];
+        const allRows = Array.isArray(allApplications) ? allApplications : [];
+        const approvedFromAll = allRows.filter((item) => this.isApprovedStage(item));
+        const combinedRows = [...licenseRows, ...approvedRows, ...approvedFromAll];
+
+        console.log('Menu data sources:', {
+          licenses: licenseRows.length,
+          approvedByStatus: approvedRows.length,
+          approvedFromList: approvedFromAll.length
+        });
+
+        this.applySubtypeMenuRules(combinedRows);
       },
       error: (error) => {
-        console.error('Failed to evaluate licensee menu access:', error);
-        this.showSupplyChainMenus = false;
+        console.error('Failed to evaluate menu access from combined sources:', error);
+        this.showDistilleryMenus = false;
+        this.showBreweryOrDistilleryMenus = false;
+        this.triggerUiRefresh();
       }
     });
   }
 
-  private isManufacturingApplication(item: any): boolean {
-    const possibleFields = [
-      item?.license_category_name,
-      item?.licenseCategoryName,
-      item?.license_type_name,
-      item?.licenseTypeName,
-      item?.license_category,
-      item?.licenseCategory,
-      item?.license_type,
-      item?.licenseType
-    ];
+  private applySubtypeMenuRules(rows: any[]): void {
+    const hasDistillery = rows.some((item) => this.isDistillery(item));
+    const hasBrewery = rows.some((item) => this.isBrewery(item));
 
-    return possibleFields.some((value) => {
-      if (value === null || value === undefined) {
-        return false;
-      }
-      return String(value).toLowerCase().includes('manufactur');
+    // Distillery: full supply-chain menu.
+    this.showDistilleryMenus = hasDistillery;
+    // Brewery OR Distillery: transit + hologram menus.
+    this.showBreweryOrDistilleryMenus = hasDistillery || hasBrewery;
+
+    console.log('Resolved menu flags:', {
+      hasDistillery,
+      hasBrewery,
+      showDistilleryMenus: this.showDistilleryMenus,
+      showBreweryOrDistilleryMenus: this.showBreweryOrDistilleryMenus
     });
+
+    if (rows.length > 0) {
+      const sample = rows[0];
+      console.log('Subtype parse sample:', {
+        sample,
+        parsedId: this.extractSubCategoryId(sample),
+        parsedName: this.extractSubCategoryName(sample)
+      });
+    }
+
+    this.triggerUiRefresh();
+  }
+
+  private isApprovedStage(item: any): boolean {
+    const stage = String(
+      item?.current_stage_name ??
+      item?.currentStageName ??
+      item?.current_stage ??
+      item?.currentStage ??
+      ''
+    ).toLowerCase();
+    return stage.includes('approved');
+  }
+
+  private isDistillery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 2) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('distiller');
+  }
+
+  private isBrewery(item: any): boolean {
+    const subCategoryId = this.extractSubCategoryId(item);
+    if (subCategoryId === 1) {
+      return true;
+    }
+    const name = this.extractSubCategoryName(item);
+    return name.includes('brew');
+  }
+
+  private extractSubCategoryId(item: any): number {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_id ??
+      item?.licenseSubCategoryId ??
+      (typeof nested === 'object' ? nested?.id : nested) ??
+      0;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private extractSubCategoryName(item: any): string {
+    const nested = item?.license_sub_category ?? item?.licenseSubCategory;
+    const raw =
+      item?.license_sub_category_name ??
+      item?.licenseSubCategoryName ??
+      (typeof nested === 'object'
+        ? (nested?.description ?? nested?.name ?? nested?.label ?? '')
+        : nested ?? '');
+    return String(raw ?? '').toLowerCase();
+  }
+
+  private triggerUiRefresh(): void {
+    try {
+      this.cdr.detectChanges();
+    } catch {
+      // no-op: avoid lifecycle timing errors
+    }
   }
 
   isSiteAdminUser(): boolean {

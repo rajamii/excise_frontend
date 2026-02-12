@@ -12,7 +12,7 @@ const routes: Routes = [
       ),
     canActivate: [UserRouteAccessService],
     data: {
-      authorities: ['officer_in_charge'],
+      requiredPermission: 'officer.oic.hologram.view',
     },
   }
 ];

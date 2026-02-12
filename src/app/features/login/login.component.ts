@@ -14,8 +14,6 @@ import { NgOtpInputModule } from 'ng-otp-input';
 import { AuthService } from '../../core/services/auth.service';
 import { FormDataUtil } from '../../shared/utils/form-data.util';
 import Swal from 'sweetalert2';
-import { ADMIN_ROLES } from '../../shared/constants/role.constants';
-import { Authority } from '../../shared/constants/authority.enum';
 import { PatternConstants } from '../../shared/constants/pattern.constants';
 import { District } from '../../core/models/district.model';
 import { Subdivision } from '../../core/models/subdivision.model';
@@ -488,18 +486,8 @@ export class LoginComponent extends BaseComponent {
   }
 
   private redirectBasedOnRole(roleId?: number): void {
-    // ID-based role routing only
-    if (!roleId) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
-    if (ADMIN_ROLES.includes(roleId) || roleId === Authority.LICENSEE) {
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
-    console.warn('Unknown role id:', roleId);
+    // DB-driven route access is enforced by guards/permissions.
+    // Post-login always enter unified dashboard and let permission checks handle access.
     this.router.navigate(['/dashboard']);
   }
 
