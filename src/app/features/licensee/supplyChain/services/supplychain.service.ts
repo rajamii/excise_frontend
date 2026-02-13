@@ -1,6 +1,6 @@
 import { catchError, map, Observable, of } from "rxjs";
 import { environment } from "../../../../../environments/environment";
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 
 import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } from "../models/supply-chain.models";
@@ -11,18 +11,50 @@ import { BulkSpiritType, Checkpost, Distillery, DistRow, LiquorRates, Purpose } 
 export class SupplyChainService {
   constructor(private http: HttpClient) { }
 
-  getBulkSpiritTypes(): Observable<BulkSpiritType[]> {
+  getBulkSpiritTypes(licenseSubCategoryId?: number): Observable<BulkSpiritType[]> {
+    let params = new HttpParams();
+    if (typeof licenseSubCategoryId === 'number') {
+      params = params.set('license_sub_category_id', String(licenseSubCategoryId));
+    }
+
     return this.http
       .get<{ success: boolean; data: BulkSpiritType[] }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`
+        `${environment.apiBaseUrl}/masters/supply_chain/bulk-spirit/bulk-spirit-types/`,
+        { params }
       )
       .pipe(map((response) => response.data || []));
   }
 
-  getDistilleries(): Observable<Distillery[]> {
+  getDistilleries(
+    licenseeIds: string[] = [],
+    establishmentNames: string[] = [],
+    licenseIds: string[] = []
+  ): Observable<Distillery[]> {
+    let params = new HttpParams();
+    const normalizedIds = (licenseeIds || [])
+      .map((id) => String(id).trim())
+      .filter((id) => !!id);
+    const normalizedNames = (establishmentNames || [])
+      .map((name) => String(name).trim())
+      .filter((name) => !!name);
+    const normalizedLicenseIds = (licenseIds || [])
+      .map((id) => String(id).trim())
+      .filter((id) => !!id);
+
+    if (normalizedIds.length > 0) {
+      params = params.set('licensee_id', normalizedIds.join(','));
+    }
+    if (normalizedNames.length > 0) {
+      params = params.set('establishment_name', normalizedNames.join(','));
+    }
+    if (normalizedLicenseIds.length > 0) {
+      params = params.set('license_id', normalizedLicenseIds.join(','));
+    }
+
     return this.http
       .get<{ success?: boolean; data?: Distillery[] }>(
-        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`
+        `${environment.apiBaseUrl}/masters/supply_chain/ena-distillery-types/`,
+        { params }
       )
       .pipe(map((response: any) => response.data || []));
   }

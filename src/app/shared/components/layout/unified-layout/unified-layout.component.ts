@@ -460,6 +460,24 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       }
     });
   }
+  private getCurrentDashboardContext(): { isBaseDashboardRoute: boolean; section: string } {
+    const urlTree = this.router.parseUrl(this.router.url);
+    const primarySegments = urlTree.root.children['primary']?.segments?.map((segment) => segment.path) ?? [];
+    const isBaseDashboardRoute = primarySegments.length === 1 && primarySegments[0] === 'dashboard';
+    const section = String(urlTree.queryParams?.['section'] ?? '').trim();
+
+    return { isBaseDashboardRoute, section };
+  }
+
+  isDashboardHomeActive(): boolean {
+    const context = this.getCurrentDashboardContext();
+    return context.isBaseDashboardRoute && !context.section;
+  }
+
+  isDashboardSectionActive(section: string): boolean {
+    const context = this.getCurrentDashboardContext();
+    return context.isBaseDashboardRoute && context.section === section;
+  }
 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
@@ -634,3 +652,4 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return roleName || 'User';
   }
 }
+
