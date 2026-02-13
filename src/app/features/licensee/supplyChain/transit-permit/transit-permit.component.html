@@ -17,8 +17,8 @@
           <select class="form-control input-field" [(ngModel)]="formData.soleDistributor"
             (change)="onDistributorChange()" [disabled]="isCommonFieldsLocked">
             <option value="" disabled>-- Select Distributor --</option>
-            <option *ngFor="let distributor of distributors" [value]="distributor.distributorName">
-              {{ distributor.distributorName }}
+            <option *ngFor="let distributorName of uniqueDistributorNames" [value]="distributorName">
+              {{ distributorName }}
             </option>
           </select>
           <small class="text-muted" *ngIf="isCommonFieldsLocked">

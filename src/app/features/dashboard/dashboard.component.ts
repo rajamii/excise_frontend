@@ -35,6 +35,7 @@ import { ImportPermitComponent } from '../licensee/supplyChain/import-permit/imp
 import { Hologramrequestlevel1Component } from '../licensee/supplyChain/HoloGram/hologramrequestlevel1/hologramrequestlevel1.component';
 import { HologramComponent } from '../licensee/supplyChain/HoloGram/hologram/hologram.component';
 import { NewLicenseDashboardComponent } from '../licensee/supplyChain/supplychaincomponents/new-license/new-license-dashboard.component';
+import { RegistrationManagementComponent } from '../licensee/supplyChain/supplychaincomponents/registration-management/registration-management.component';
 
 // Officer-specific Components
 import { BrandsDetailsComponent } from '../licensee/supplyChain/registers/brands-details/brands-details.component';
@@ -80,6 +81,7 @@ import { ApplyNewLicenseComponent } from '../licensee/apply-new-license/apply-ne
     Hologramrequestlevel1Component,
     HologramComponent,
     NewLicenseDashboardComponent,
+    RegistrationManagementComponent,
     // Officer-specific Components
     BrandsDetailsComponent,
     HologramMonthlyReportComponent,
@@ -341,6 +343,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Supply Chain Section Handlers
   clearSupplyChainSection(): void {
+    const parentSectionMap: Record<string, string> = {
+      'import-permit': 'requisition',
+      'transit-permit': 'transit',
+      'hologram-new': 'hologram',
+      'hologram-request-form': 'hologram-request',
+      'new-license-apply': 'new-license',
+      'company-registration-apply': 'company-registration',
+      'salesman-barman-registration-apply': 'salesman-barman-registration'
+    };
+
+    const current = String(this.selectedSupplyChainSection || '').trim();
+    const parent = parentSectionMap[current];
+
+    if (parent) {
+      this.selectedSupplyChainSection = parent;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { section: parent },
+        queryParamsHandling: 'merge'
+      });
+      return;
+    }
+
     this.selectedSupplyChainSection = null;
     this.router.navigate([], {
       relativeTo: this.route,
@@ -503,6 +528,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'hologram-request': 'Hologram Request',
       'company-registration': 'Company Registration',
       'salesman-barman-registration': 'Salesman/Barman Registration',
+      'company-registration-apply': 'Company Registration',
+      'salesman-barman-registration-apply': 'Salesman/Barman Registration',
       'new-license': 'New License Management',
       'new-license-apply': 'Apply New License',
 
@@ -550,7 +577,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       'transit',
       'hologram',
       'hologram-request',
-      'new-license'
+      'new-license',
+      'company-registration',
+      'salesman-barman-registration'
     ];
 
     return sectionsWithActions.includes(section);
@@ -565,6 +594,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram': return 'New Hologram';
       case 'hologram-request': return 'New Request';
       case 'new-license': return 'Apply New License';
+      case 'company-registration': return 'Apply Company';
+      case 'salesman-barman-registration': return 'Apply Salesman/Barman';
       default: return 'Create New';
     }
   }
@@ -578,6 +609,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       case 'hologram': return 'add_circle';
       case 'hologram-request': return 'add_circle';
       case 'new-license': return 'add_circle';
+      case 'company-registration': return 'add_circle';
+      case 'salesman-barman-registration': return 'add_circle';
       default: return 'add';
     }
   }
@@ -596,6 +629,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'hologram-request-form' } });
     } else if (section === 'new-license') {
       this.router.navigate(['/dashboard'], { queryParams: { section: 'new-license-apply' } });
+    } else if (section === 'company-registration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'company-registration-apply' } });
+    } else if (section === 'salesman-barman-registration') {
+      this.router.navigate(['/dashboard'], { queryParams: { section: 'salesman-barman-registration-apply' } });
     }
   }
 

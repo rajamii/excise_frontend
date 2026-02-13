@@ -72,6 +72,7 @@ export class TransitPermitComponent implements OnInit {
   showUnlockModal = false;
 
   distributors: DistRow[] = [];
+  uniqueDistributorNames: string[] = [];
   availableDepotAddresses: string[] = [];
   brandOptions: string[] = [];
   sizeOptions: string[] = [];
@@ -146,6 +147,11 @@ export class TransitPermitComponent implements OnInit {
     // Fetch Distributors
     this.supplyChainService.getDistributors().subscribe(data => {
       this.distributors = data;
+      this.uniqueDistributorNames = [...new Set(
+        data
+          .map(d => (d.distributorName || '').trim())
+          .filter(name => !!name)
+      )];
 
       // If default distributor is set, trigger change logic to load stock/depots
       if (this.formData.soleDistributor) {

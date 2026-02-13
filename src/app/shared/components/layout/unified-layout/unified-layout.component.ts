@@ -469,6 +469,24 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
     return { isBaseDashboardRoute, section };
   }
 
+  private resolveSidebarSection(section: string): string {
+    const value = String(section || '').trim();
+    const parentSectionMap: Record<string, string> = {
+      // Licensee form pages should keep their parent menu highlighted
+      'import-permit': 'requisition',
+      'transit-permit': 'transit',
+      'hologram-new': 'hologram',
+      'hologram-request-form': 'hologram-request',
+      'new-license-apply': 'new-license',
+      'company-registration-apply': 'company-registration',
+      'salesman-barman-registration-apply': 'salesman-barman-registration',
+      // Officer nested page
+      'hologram-overview': 'hologram-register'
+    };
+
+    return parentSectionMap[value] || value;
+  }
+
   isDashboardHomeActive(): boolean {
     const context = this.getCurrentDashboardContext();
     return context.isBaseDashboardRoute && !context.section;
@@ -476,7 +494,9 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   isDashboardSectionActive(section: string): boolean {
     const context = this.getCurrentDashboardContext();
-    return context.isBaseDashboardRoute && context.section === section;
+    const activeSection = this.resolveSidebarSection(context.section);
+    const targetSection = this.resolveSidebarSection(section);
+    return context.isBaseDashboardRoute && activeSection === targetSection;
   }
 
   // Check if user is licensee/supply chain
