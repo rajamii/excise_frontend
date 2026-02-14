@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { WorkflowActionService } from '../../../core/services/workflow-action.service';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
+import { ApplicationType } from '../../constants/application.constants';
 import Swal from 'sweetalert2';
 
 export interface ActionItem {
@@ -152,7 +153,7 @@ export interface ActionButtonConfig {
 })
 export class UnifiedActionButtonsComponent implements OnInit, OnChanges {
   @Input() item!: ActionItem;
-  @Input() itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license' = 'requisition';
+  @Input() itemType: ApplicationType = 'requisition';
   @Input() context: 'licensee' | 'permit-section' | 'commissioner' | 'itcell' | 'officer-in-charge' = 'licensee';
   @Input() displayMode: 'table' | 'detailed' = 'table';
   @Input() includeActions: string[] | null = null;

@@ -56,14 +56,11 @@
                     <div class="col-md-6">
                         <div class="info-card">
                             <h6 class="text-primary mb-2">Application Details</h6>
-                            <p><strong>Reference No:</strong> {{ applicationData.referenceNo &&
-                                applicationData.referenceNo.trim() ? applicationData.referenceNo : 'Not available' }}
+                            <p><strong>Reference No:</strong> {{ hasText(applicationData.referenceNo) ? applicationData.referenceNo : 'Not available' }}
                             </p>
                             <p><strong>Submission Date:</strong> {{ applicationData.submissionDate | date: "dd-MM-yyyy"
                                 }}</p>
-                            <p><strong>Distillery:</strong> {{ applicationData.distilleryName &&
-                                applicationData.distilleryName.trim() ? applicationData.distilleryName : 'Not specified'
-                                }}</p>
+                            <p><strong>Distillery:</strong> {{ hasText(applicationData.distilleryName) ? applicationData.distilleryName : 'Not specified' }}</p>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -124,17 +121,17 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">Lifted From</td>
-                                    <td>{{ applicationData.liftedFrom && applicationData.liftedFrom.trim() ?
+                                    <td>{{ hasText(applicationData.liftedFrom) ?
                                         applicationData.liftedFrom : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Via Route</td>
-                                    <td>{{ applicationData.viaRoute && applicationData.viaRoute.trim() ?
+                                    <td>{{ hasText(applicationData.viaRoute) ?
                                         applicationData.viaRoute : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Checkpost Entry</td>
-                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ?
+                                    <td>{{ hasText(applicationData.checkpostEntry) ?
                                         applicationData.checkpostEntry : 'Not specified' }}</td>
                                 </tr>
                             </tbody>
@@ -390,47 +387,47 @@
                             <tbody>
                                 <tr>
                                     <td class="fw-semibold bg-light" style="width: 30%;">From Location</td>
-                                    <td>{{ applicationData.fromLocation && applicationData.fromLocation.trim() ?
+                                    <td>{{ hasText(applicationData.fromLocation) ?
                                         applicationData.fromLocation : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">To Location</td>
-                                    <td>{{ applicationData.toLocation && applicationData.toLocation.trim() ?
+                                    <td>{{ hasText(applicationData.toLocation) ?
                                         applicationData.toLocation : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Route Details</td>
-                                    <td>{{ applicationData.routeDetails && applicationData.routeDetails.trim() ?
+                                    <td>{{ hasText(applicationData.routeDetails) ?
                                         applicationData.routeDetails : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Entry Checkpost</td>
-                                    <td>{{ applicationData.checkpostEntry && applicationData.checkpostEntry.trim() ?
+                                    <td>{{ hasText(applicationData.checkpostEntry) ?
                                         applicationData.checkpostEntry : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Exit Checkpost</td>
-                                    <td>{{ applicationData.checkpostExit && applicationData.checkpostExit.trim() ?
+                                    <td>{{ hasText(applicationData.checkpostExit) ?
                                         applicationData.checkpostExit : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Vehicle Number</td>
-                                    <td>{{ applicationData.vehicleNumber && applicationData.vehicleNumber.trim() ?
+                                    <td>{{ hasText(applicationData.vehicleNumber) ?
                                         applicationData.vehicleNumber : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Driver Name</td>
-                                    <td>{{ applicationData.driverName && applicationData.driverName.trim() ?
+                                    <td>{{ hasText(applicationData.driverName) ?
                                         applicationData.driverName : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Driver License</td>
-                                    <td>{{ applicationData.driverLicense && applicationData.driverLicense.trim() ?
+                                    <td>{{ hasText(applicationData.driverLicense) ?
                                         applicationData.driverLicense : 'Not specified' }}</td>
                                 </tr>
                                 <tr>
                                     <td class="fw-semibold bg-light">Transporter Name</td>
-                                    <td>{{ applicationData.transporterName && applicationData.transporterName.trim() ?
+                                    <td>{{ hasText(applicationData.transporterName) ?
                                         applicationData.transporterName : 'Not specified' }}</td>
                                 </tr>
                             </tbody>
@@ -698,6 +695,218 @@
                                 <tr>
                                     <td class="fw-semibold bg-light">Yearly License Fee</td>
                                     <td class="text-success fw-bold">Rs {{ applicationData.yearly_license_fee || applicationData.yearlyLicenseFee || applicationData.brAmount || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                @if (isCompanyRegistration()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Company Registration Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Brand Type</td>
+                                    <td>{{ applicationData.brandType || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License</td>
+                                    <td>{{ applicationData.license || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Application Year</td>
+                                    <td>{{ applicationData.applicationYear || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Name</td>
+                                    <td>{{ applicationData.companyName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN</td>
+                                    <td>{{ applicationData.pan || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Address & Contact Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Office Address</td>
+                                    <td>{{ applicationData.officeAddress || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Factory Address</td>
+                                    <td>{{ applicationData.factoryAddress || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Country / State</td>
+                                    <td>{{ (applicationData.country || 'NA') + ' / ' + (applicationData.state || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PIN Code</td>
+                                    <td>{{ applicationData.pinCode || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Mobile</td>
+                                    <td>{{ applicationData.companyMobileNumber || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Company Email</td>
+                                    <td>{{ applicationData.companyEmailId || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Authorized Member & Payment Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Member Name</td>
+                                    <td>{{ applicationData.memberName || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Designation</td>
+                                    <td>{{ applicationData.memberDesignation || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Member Mobile</td>
+                                    <td>{{ applicationData.memberMobileNumber || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Member Email</td>
+                                    <td>{{ applicationData.memberEmailId || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Member Address</td>
+                                    <td>{{ applicationData.memberAddress || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Payment ID</td>
+                                    <td>{{ applicationData.paymentId || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Payment Date</td>
+                                    <td>{{ applicationData.paymentDate | date: "dd-MM-yyyy" }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Payment Amount</td>
+                                    <td class="text-success fw-bold">Rs {{ applicationData.paymentAmount || applicationData.brAmount || 0 }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Payment Remarks</td>
+                                    <td>{{ applicationData.paymentRemarks || 'Not available' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+
+                @if (isSalesmanBarmanRegistration()) {
+                <div class="section-card mb-4">
+                    <h5 class="section-title">Salesman/Barman Applicant Information</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">Application ID</td>
+                                    <td>{{ applicationData.referenceNo || applicationData.id || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Applicant Name</td>
+                                    <td>
+                                        {{
+                                            ((applicationData.firstName || '') + ' ' + (applicationData.middleName || '') + ' ' + (applicationData.lastName || '')).trim() ||
+                                            applicationData.applicant_name ||
+                                            'Not available'
+                                        }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Role</td>
+                                    <td>{{ applicationData.role || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Father/Husband Name</td>
+                                    <td>{{ applicationData.fatherHusbandName || applicationData.father_husband_name || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Gender / DOB</td>
+                                    <td>{{ (applicationData.gender || 'NA') + ' / ' + ((applicationData.dob | date: "dd-MM-yyyy") || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Nationality</td>
+                                    <td>{{ applicationData.nationality || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Mobile / Email</td>
+                                    <td>{{ (applicationData.mobileNumber || 'NA') + ' / ' + (applicationData.emailId || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Address</td>
+                                    <td>{{ applicationData.address || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">PAN / Aadhaar</td>
+                                    <td>{{ (applicationData.pan || 'NA') + ' / ' + (applicationData.aadhaar || 'NA') }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Sikkim Subject</td>
+                                    <td>{{ applicationData.sikkimSubject ? 'Yes' : 'No' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="section-card mb-4">
+                    <h5 class="section-title">License & Processing Details</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td class="fw-semibold bg-light" style="width: 30%;">District</td>
+                                    <td>{{ applicationData.excise_district || applicationData.exciseDistrict || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License Category</td>
+                                    <td>{{ applicationData.license_category_name || applicationData.licenseCategoryName || applicationData.license_category || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">License</td>
+                                    <td>{{ applicationData.license || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Current Stage</td>
+                                    <td>{{ applicationData.current_stage_name || applicationData.currentStageName || applicationData.status || 'Not available' }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Approval Status</td>
+                                    <td>
+                                        <span class="badge" [ngClass]="applicationData.is_approved ? 'bg-success' : 'bg-warning'">
+                                            {{ applicationData.is_approved ? 'Approved' : 'Pending' }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-semibold bg-light">Submitted On</td>
+                                    <td>{{ applicationData.created_at | date: "dd-MM-yyyy" }}</td>
                                 </tr>
                             </tbody>
                         </table>

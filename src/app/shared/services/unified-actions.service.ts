@@ -9,6 +9,7 @@ import { environment } from '../../../environments/environment';
 import { EnaRequisitionService } from '../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../features/licensee/supplyChain/services/hologram-data.service';
+import { ApplicationType } from '../constants/application.constants';
 
 export interface ActionResult {
   success: boolean;
@@ -36,7 +37,7 @@ export class UnifiedActionsService {
   executeAction(
     action: string,
     item: any,
-    itemType: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'new-license',
+    itemType: ApplicationType,
     context?: string
   ): Observable<ActionResult> {
 

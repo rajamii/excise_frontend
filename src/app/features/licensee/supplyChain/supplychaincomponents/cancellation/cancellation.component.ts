@@ -146,7 +146,7 @@ export class CancellationComponent implements OnInit {
         this.cancellationData = data.map((item: any, index: number) => {
           const mappedItem = {
             id: item.id || item.pk || `fallback-${index}-${Date.now()}`, // Ensure unique ID
-            referenceNo: item.ourRefNo || item.our_ref_no || `CAN/${item.id || index}/2025`,
+            referenceNo: item.ourRefNo || item.our_ref_no || 'N/A',
             submissionDate: item.cancellationDate ? new Date(item.cancellationDate).toLocaleDateString('en-GB') :
               (item.cancellation_date ? new Date(item.cancellation_date).toLocaleDateString('en-GB') :
                 (item.requisitionDate ? new Date(item.requisitionDate).toLocaleDateString('en-GB') :

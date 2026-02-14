@@ -23,7 +23,16 @@ export interface ApplicationWorkflowData {
   workflowId?: number;
   currentStage?: number | any;
   currentStageName?: string;
-  type: 'requisition' | 'revalidation' | 'cancellation' | 'transit' | 'hologram' | 'hologram-procurement' | 'new-license'; // Changed to type to match component
+  type:
+    | 'requisition'
+    | 'revalidation'
+    | 'cancellation'
+    | 'transit'
+    | 'hologram'
+    | 'hologram-procurement'
+    | 'new-license'
+    | 'company-registration'
+    | 'salesman-barman-registration'; // Changed to type to match component
   status: string;
   referenceNo?: string;
   allowedActionConfigs?: WorkflowActionConfig[];

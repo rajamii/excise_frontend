@@ -90,21 +90,25 @@ export class RegistrationManagementComponent implements OnInit {
     this.applyFilters();
   }
 
-  viewApplication(row: { applicationId: string }): void {
+  viewApplication(row: { id: string; applicationId: string }): void {
     if (this.currentSection === 'salesman-barman-registration') {
-      this.router.navigate(['/dashboard'], {
+      this.router.navigate(['/supply-chain-view'], {
         queryParams: {
-          section: 'salesman-barman-registration-apply',
-          applicationId: row.applicationId
+          type: 'salesman-barman-registration',
+          id: row.id || row.applicationId,
+          ref: row.applicationId,
+          source: 'licensee'
         }
       });
       return;
     }
 
-    this.router.navigate(['/dashboard'], {
+    this.router.navigate(['/supply-chain-view'], {
       queryParams: {
-        section: 'company-registration-apply',
-        applicationId: row.applicationId
+        type: 'company-registration',
+        id: row.id || row.applicationId,
+        ref: row.applicationId,
+        source: 'licensee'
       }
     });
   }

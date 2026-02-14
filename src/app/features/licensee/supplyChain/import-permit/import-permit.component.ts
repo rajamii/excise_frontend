@@ -409,13 +409,13 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
           this.formData.refNo = response.ref_number || response.refNumber;
         } else {
           this.refNoError = 'Failed to load reference number';
-          this.formData.refNo = 'IBPS/01/EXCISE';
+          this.formData.refNo = 'REQ/01/EXCISE';
         }
       },
       error: (error) => {
         console.error('Error loading reference number:', error);
         this.refNoError = 'Error loading reference number';
-        this.formData.refNo = 'IBPS/01/EXCISE';
+        this.formData.refNo = 'REQ/01/EXCISE';
       }
     });
   }
@@ -655,6 +655,12 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     }
 
     if (this.validateForm()) {
+      const selectedLicenseeId = this.getPreferredRequisitionLicenseId();
+      if (!selectedLicenseeId) {
+        this.errorMessage = 'Unable to resolve license ID. Please ensure your active license mapping is available and try again.';
+        return;
+      }
+
       this.isLoading = true;
 
       const now = new Date().toISOString();
@@ -678,6 +684,7 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
         liftedFrom: this.getDistilleryName(this.formData.liftedFrom),
         purposeName: this.formData.purpose,
         checkPostName: this.formData.checkpostEntry,
+        licenseeId: selectedLicenseeId,
       };
 
       console.log('Submitting requisition with state:', requisitionData.state);
@@ -753,6 +760,22 @@ export class ImportPermitComponent implements OnInit, AfterViewInit {
     this.errorMessage = '';
     return true;
   }
+
+  private getSelectedDistilleryLicenseeId(): string {
+    const selected = this.distilleries.find(
+      (d) => d.id.toString() === this.formData.liftedFrom.toString()
+    );
+    return String(selected?.licenseeId || selected?.licensee_id || '').trim();
+  }
+
+  private getPreferredRequisitionLicenseId(): string {
+    const myLicenseId = String(this.currentLicenseIds?.[0] || '').trim();
+    if (myLicenseId) {
+      return myLicenseId;
+    }
+    return this.getSelectedDistilleryLicenseeId();
+  }
+
 
   goBack(): void {
     // Navigate back to the dashboard with the 'requisition' section selected

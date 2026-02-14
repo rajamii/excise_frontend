@@ -122,15 +122,19 @@ export class RequisitionComponent implements OnInit {
       next: (response: any) => {
         console.log('DEBUG: Raw requisition response:', response);
 
-        // Handle both array response and paginated response
-        let data = response;
-        if (response && !Array.isArray(response) && response.results) {
+        // Handle array, DRF paginated `{ results }`, and `{ data }` envelopes.
+        let data: any[] = [];
+        if (Array.isArray(response)) {
+          data = response;
+        } else if (response?.results && Array.isArray(response.results)) {
           data = response.results;
+        } else if (response?.data && Array.isArray(response.data)) {
+          data = response.data;
         }
 
         this.requisitionData = (data || []).map((item: any) => {
           // Format date properly
-          const dateVal = item.submissionDate || item.submission_date || item.date;
+          const dateVal = item.submissionDate || item.submission_date || item.requisitionDate || item.requisition_date || item.date || item.created_at;
           let formattedDate = '';
           try {
             formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-GB', {
@@ -144,11 +148,11 @@ export class RequisitionComponent implements OnInit {
 
           return {
             id: item.id,
-            referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || item.ref_no || `REQ-${item.id}`,
+            referenceNo: item.ourRefNo || item.our_ref_no || item.referenceNo || item.ref_no || 'N/A',
             submissionDate: formattedDate,
-            distilleryName: item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
+            distilleryName: item.liftedFromDistilleryName || item.lifted_from_distillery_name || item.distilleryName || item.distillery_name || item.manufacturingUnit || 'N/A',
             status: item.status || 'PENDING',
-            amount: item.amount || item.totalAmount || item.total_amount || '0.00',
+            amount: item.amount || item.totalAmount || item.total_amount || item.totalbl || '0.00',
             workflowId: item.workflow || item.workflow_id || item.workflowId,
             currentStage: item.current_stage || item.currentStage || item.stage_id || item.stageId,
             commissionerStatus: item.commissionerStatus || item.commissioner_status,

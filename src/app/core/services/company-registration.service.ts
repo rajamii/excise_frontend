@@ -18,6 +18,10 @@ export class CompanyRegistrationService {
     return this.http.post(`${this.baseUrl}/create/`, data);
   }
 
+  getCompanyList(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/`);
+  }
+
   getCompanyDetail(id: number): Observable<any> {
     return this.http.get(`${this.baseUrl}/${id}/`);
   }

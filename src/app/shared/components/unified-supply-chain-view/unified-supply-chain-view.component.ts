@@ -10,6 +10,8 @@ import Swal from 'sweetalert2';
 import { EnaRequisitionService } from '../../../core/services/ena-requisition.service';
 import { SupplyChainService } from '../../../features/licensee/supplyChain/services/supplychain.service';
 import { HologramDataService } from '../../../features/licensee/supplyChain/services/hologram-data.service';
+import { CompanyRegistrationService } from '../../../core/services/company-registration.service';
+import { SalesmanBarmanRegistrationService } from '../../../core/services/salesman-barman-registration.service';
 import { ActionButtonConfig } from '../../../core/services/action-config.service';
 import { UnifiedActionButtonsComponent } from '../unified-action-buttons/unified-action-buttons.component';
 import { UnifiedActionsService } from '../../services/unified-actions.service';
@@ -79,7 +81,7 @@ export interface UnifiedApplicationData {
     exportQty?: number;
     defenceQty?: number;
     totalQty?: number;
-    paymentAmount?: number;
+    paymentAmount?: string | number;
     hologramType?: string;
     permitType?: string;
 
@@ -109,6 +111,46 @@ export interface UnifiedApplicationData {
     policeStationName?: string;
     yearly_license_fee?: string | number;
     yearlyLicenseFee?: string | number;
+
+    // Company registration specific fields
+    brandType?: string;
+    license?: string;
+    applicationYear?: string;
+    companyName?: string;
+    pan?: string;
+    officeAddress?: string;
+    country?: string;
+    state?: string;
+    factoryAddress?: string;
+    pinCode?: string | number;
+    companyMobileNumber?: string | number;
+    companyEmailId?: string;
+    memberName?: string;
+    memberDesignation?: string;
+    memberMobileNumber?: string | number;
+    memberEmailId?: string;
+    memberAddress?: string;
+    paymentId?: string;
+    paymentDate?: string | Date;
+    paymentRemarks?: string;
+
+    // Salesman/Barman registration specific fields
+    role?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    gender?: string;
+    dob?: string | Date;
+    nationality?: string;
+    address?: string;
+    aadhaar?: string;
+    emailId?: string;
+    sikkimSubject?: boolean;
+    excise_district?: string;
+    exciseDistrict?: string;
+    current_stage_name?: string;
+    is_approved?: boolean;
+    created_at?: string | Date;
     
     // Transit permit specific fields
     routeDetails?: string;
@@ -227,6 +269,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
         private enaRequisitionService: EnaRequisitionService,
         private supplyChainService: SupplyChainService,
         private hologramDataService: HologramDataService,
+        private companyRegistrationService: CompanyRegistrationService,
+        private salesmanBarmanRegistrationService: SalesmanBarmanRegistrationService,
         private unifiedActionsService: UnifiedActionsService,
         private snackBar: MatSnackBar,
         @Inject(PLATFORM_ID) platformId: Object
@@ -404,6 +448,34 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     distilleryName: ['establishment_name', 'establishmentName', 'applicant_name', 'applicantName'],
                     brAmount: ['yearly_license_fee']
                 }
+            },
+            'company-registration': {
+                service: this.companyRegistrationService,
+                listMethod: 'getCompanyList',
+                detailMethod: 'getCompanyDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.COMPANY_REGISTRATION],
+                fieldMappings: {
+                    id: ['id', 'applicationId', 'application_id'],
+                    referenceNo: ['applicationId', 'application_id', 'id'],
+                    submissionDate: ['paymentDate', 'payment_date', 'created_at', 'updated_at'],
+                    status: ['current_stage_name', 'current_stage', 'status', 'application_status', 'IsActive'],
+                    distilleryName: ['companyName', 'company_name'],
+                    brAmount: ['paymentAmount', 'payment_amount']
+                }
+            },
+            'salesman-barman-registration': {
+                service: this.salesmanBarmanRegistrationService,
+                listMethod: 'getSalesmanBarmanList',
+                detailMethod: 'getSalesmanBarmanDetail',
+                workflowId: WORKFLOW_IDS[APPLICATION_TYPES.SALESMAN_BARMAN_REGISTRATION],
+                fieldMappings: {
+                    id: ['application_id', 'applicationId', 'id'],
+                    referenceNo: ['application_id', 'applicationId', 'id'],
+                    submissionDate: ['created_at', 'updated_at', 'applicationDate'],
+                    status: ['current_stage_name', 'current_stage', 'status'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    distilleryName: ['license_category_name', 'licenseCategoryName', 'license_category']
+                }
             }
         };
     }
@@ -520,9 +592,9 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
 
         const mappedData: UnifiedApplicationData = {
             id: this.extractFieldValue(apiData, config.fieldMappings.id)?.toString() || '',
-            referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo) || '',
+            referenceNo: this.extractFieldValue(apiData, config.fieldMappings.referenceNo)?.toString() || '',
             submissionDate: this.parseDate(this.extractFieldValue(apiData, config.fieldMappings.submissionDate)),
-            status: this.extractFieldValue(apiData, config.fieldMappings.status) || 'PENDING',
+            status: this.extractFieldValue(apiData, config.fieldMappings.status)?.toString() || 'PENDING',
             currentStage: this.parseId(rawCurrentStage),
             currentStageName: this.extractFieldValue(apiData, config.fieldMappings.currentStageName || []),
             workflowId: this.parseId(rawWorkflowId) || config.workflowId,
@@ -759,24 +831,38 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     this.extractFieldValue(apiData, ['yearly_license_fee', 'yearlyLicenseFee'])
                 );
                 break;
+            case 'company-registration':
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['companyName', 'company_name']) || 'Not specified';
+                mappedData['brAmount'] = this.parseNumericValue(
+                    this.extractFieldValue(apiData, ['paymentAmount', 'payment_amount'])
+                );
+                break;
+            case 'salesman-barman-registration':
+                mappedData['distilleryName'] =
+                    this.extractFieldValue(apiData, ['license_category_name', 'licenseCategoryName', 'license_category']) ||
+                    'Not specified';
+                break;
         }
     }
 
     private findItemByReference(items: any[], refNo: string, referenceFields: string[]): any {
-        const decodedRefNo = decodeURIComponent(refNo);
+        const decodedRefNo = decodeURIComponent(refNo || '');
+        const targetRef = String(refNo || '');
+        const decodedTargetRef = String(decodedRefNo || '');
         
         for (const field of referenceFields) {
             const foundItem = items.find((item: any) => 
-                item[field] === refNo || item[field] === decodedRefNo
+                String(item[field] ?? '') === targetRef || String(item[field] ?? '') === decodedTargetRef
             );
             if (foundItem) return foundItem;
         }
         
         for (const field of referenceFields) {
             const foundItem = items.find((item: any) => 
-                item[field] && (
-                    item[field].includes(refNo) || 
-                    item[field].includes(decodedRefNo)
+                String(item[field] ?? '') && (
+                    String(item[field] ?? '').includes(targetRef) || 
+                    String(item[field] ?? '').includes(decodedTargetRef)
                 )
             );
             if (foundItem) return foundItem;
@@ -934,6 +1020,8 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
     isTransit(): boolean { return this.applicationType === 'transit'; }
     isHologram(): boolean { return this.applicationType === 'hologram'; }
     isNewLicense(): boolean { return this.applicationType === 'new-license'; }
+    isCompanyRegistration(): boolean { return this.applicationType === 'company-registration'; }
+    isSalesmanBarmanRegistration(): boolean { return this.applicationType === 'salesman-barman-registration'; }
 
     getApplicationTitle(): string {
         return APPLICATION_TITLES[this.applicationType] || 'APPLICATION';
@@ -1000,6 +1088,11 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             'REJECTED': STATUS_BADGE_CLASSES.DANGER
         };
         return statusMap[status] || STATUS_BADGE_CLASSES.INFO;
+    }
+
+    hasText(value: unknown): boolean {
+        if (value === null || value === undefined) return false;
+        return String(value).trim().length > 0;
     }
 
     printApplication(): void {
