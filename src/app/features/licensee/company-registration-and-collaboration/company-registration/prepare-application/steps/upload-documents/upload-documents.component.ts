@@ -2,11 +2,11 @@ import { Component, EventEmitter, Output, OnDestroy, signal, inject } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { PatternConstants } from '../../../../../../../../shared/constants/pattern.constants';
-import { MaterialModule } from '../../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
+import { MaterialModule } from '../../../../../../../shared/material.module';
 import { DatePipe } from '@angular/common';
-import { Company, CompanyDocuments } from '../../../../../../../../core/models/company.model';
-import { CompanyRegistrationService } from '../../../../../../../../core/services/company-registration.service';
+import { Company, CompanyDocuments } from '../../../../../../../core/models/company.model';
+import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
 
 @Component({
   selector: 'app-upload-documents',

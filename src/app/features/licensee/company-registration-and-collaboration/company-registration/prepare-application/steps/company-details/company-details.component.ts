@@ -2,10 +2,10 @@ import { Component, EventEmitter, Output, OnInit, OnDestroy, signal } from '@ang
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { MaterialModule } from '../../../../../../../../shared/material.module';
-import { PatternConstants } from '../../../../../../../../shared/constants/pattern.constants';
-import { FormUtils } from '../../../../../../../../shared/utils/capitalize.util';
-import { Company } from '../../../../../../../../core/models/company.model';
+import { MaterialModule } from '../../../../../../../shared/material.module';
+import { PatternConstants } from '../../../../../../../shared/constants/pattern.constants';
+import { FormUtils } from '../../../../../../../shared/utils/capitalize.util';
+import { Company } from '../../../../../../../core/models/company.model';
 
 @Component({
   selector: 'app-company-details',
