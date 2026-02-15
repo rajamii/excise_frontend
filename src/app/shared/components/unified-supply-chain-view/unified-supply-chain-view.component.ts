@@ -458,7 +458,10 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
                     id: ['id', 'applicationId', 'application_id'],
                     referenceNo: ['applicationId', 'application_id', 'id'],
                     submissionDate: ['paymentDate', 'payment_date', 'created_at', 'updated_at'],
-                    status: ['current_stage_name', 'current_stage', 'status', 'application_status', 'IsActive'],
+                    status: ['current_stage_name', 'currentStageName', 'status', 'application_status', 'current_stage', 'currentStage'],
+                    currentStage: ['current_stage_id', 'currentStageId', 'current_stage', 'currentStage'],
+                    currentStageName: ['current_stage_name', 'currentStageName'],
+                    workflowId: ['workflow_id', 'workflowId', 'workflow'],
                     distilleryName: ['companyName', 'company_name'],
                     brAmount: ['paymentAmount', 'payment_amount']
                 }
@@ -601,6 +604,16 @@ export class UnifiedSupplyChainViewComponent implements OnInit {
             allowedActions,
             allowedActionConfigs
         };
+
+        // For workflows where backend often sends generic "PENDING",
+        // prefer explicit current stage name for user-facing status.
+        if (
+            (this.applicationType === 'salesman-barman-registration' || this.applicationType === 'company-registration') &&
+            mappedData.currentStageName &&
+            (!mappedData.status || String(mappedData.status).toUpperCase() === 'PENDING')
+        ) {
+            mappedData.status = String(mappedData.currentStageName);
+        }
 
         Object.keys(apiData).forEach(key => {
             if (!mappedData.hasOwnProperty(key)) {

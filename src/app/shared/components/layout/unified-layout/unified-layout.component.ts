@@ -52,6 +52,31 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   currentLayout: string = 'admin';
   showDistilleryMenus = false;
   showBreweryOrDistilleryMenus = false;
+  private dbNavigationRoutes = new Set<string>();
+  private dbPermissionTokens = new Set<string>();
+  readonly officerSectionItems: Array<{
+    section: string;
+    label: string;
+    icon: string;
+    hideForSiteAdmin?: boolean;
+  }> = [
+    { section: 'new-license', label: 'New License', icon: 'add_business', hideForSiteAdmin: true },
+    { section: 'requisition', label: 'Requisition', icon: 'description' },
+    { section: 'revalidation', label: 'Revalidation', icon: 'refresh' },
+    { section: 'cancellation', label: 'Cancellation', icon: 'cancel' },
+    { section: 'transit', label: 'Transit', icon: 'local_shipping' },
+    { section: 'hologram', label: 'Hologram Procurement', icon: 'qr_code' },
+    { section: 'itcell-hologram', label: 'Hologram Procurement', icon: 'qr_code' },
+    { section: 'transit-applications', label: 'Transit Applications', icon: 'local_shipping' },
+    { section: 'brands', label: 'Brands Details', icon: 'label' },
+    { section: 'monthly-hologram-statement', label: 'Monthly Hologram Statement', icon: 'description' },
+    { section: 'hologram-register', label: 'Hologram Registers', icon: 'qr_code' },
+    { section: 'hologram-daily-entry', label: 'Hologram Daily Entry', icon: 'today' },
+    { section: 'stock-inventory', label: 'Stock Inventory', icon: 'inventory' },
+    { section: 'officer-activity', label: 'Officer Activity', icon: 'assignment' },
+    { section: 'salesman-barman-registration', label: 'Salesman/Barman Registration', icon: 'badge' },
+    { section: 'company-registration', label: 'Company Registration', icon: 'apartment' },
+  ];
 
   constructor(
     private roleService: RoleService,
@@ -183,8 +208,10 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         }
 
         const dbPermissions = Array.isArray(config?.permissions) ? config.permissions : [];
+        const dbNavigation = Array.isArray(config?.navigation) ? config.navigation : [];
         const dbRoleName = config?.roleName || unifiedUser.role?.displayName || 'User';
         this.currentLayout = String(config?.layout || this.currentLayout || 'admin').toLowerCase();
+        this.hydrateDbMenuAccess(dbNavigation, dbPermissions);
 
         const dbBackedUser: User = {
           ...unifiedUser,
@@ -200,6 +227,33 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
         this.roleService.setCurrentUser(dbBackedUser);
         this.currentUser = dbBackedUser;
       });
+  }
+
+  private hydrateDbMenuAccess(navigation: any[], permissions: string[]): void {
+    this.dbNavigationRoutes.clear();
+    this.dbPermissionTokens.clear();
+
+    const collectRoutes = (items: any[]) => {
+      for (const item of items || []) {
+        const route = String(item?.route || '').trim().toLowerCase();
+        if (route) {
+          this.dbNavigationRoutes.add(route);
+        }
+        if (Array.isArray(item?.children)) {
+          collectRoutes(item.children);
+        }
+      }
+    };
+
+    collectRoutes(navigation || []);
+
+    for (const entry of permissions || []) {
+      const normalized = String(entry || '').trim().toLowerCase();
+      if (!normalized) {
+        continue;
+      }
+      this.dbPermissionTokens.add(normalized);
+    }
   }
 
   // Method to toggle the sidebar (sidenav) - Fixed to properly track state
@@ -501,10 +555,27 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
 
   // Check if user is licensee/supply chain
   isLicenseeUser(): boolean {
-    if (this.currentLayout === 'licensee') {
+    // Primary source: DB-backed dashboard layout.
+    if (String(this.currentLayout || '').toLowerCase() === 'licensee') {
       return true;
     }
-    return (this.currentUser?.permissions || []).includes('licensee.module.view');
+
+    // DB-backed permission hints.
+    const licenseeTokens = ['licensee.module.view', 'licensee', 'licensee_applications'];
+    for (const token of licenseeTokens) {
+      if (this.dbPermissionTokens.has(token)) {
+        return true;
+      }
+    }
+    for (const permission of this.dbPermissionTokens) {
+      if (permission.includes('licensee')) {
+        return true;
+      }
+    }
+
+    // Backward-compatible fallback while older role configs are being updated.
+    return (this.currentUser?.permissions || []).includes('licensee.module.view')
+      || this.currentUser?.roleId === 2;
   }
 
   private loadLicenseeMenuAccess(): void {
@@ -651,7 +722,83 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
   }
 
   isSiteAdminUser(): boolean {
+    // Primary source: DB-backed admin navigation routes.
+    const adminRoutes = [
+      '/dashboard/admin/users',
+      '/dashboard/admin/roles',
+      '/dashboard/admin/districts',
+      '/dashboard/admin/subdivisions',
+      '/dashboard/admin/police-stations',
+      '/dashboard/admin/license-types',
+      '/dashboard/admin/license-categories',
+      '/dashboard/admin/license-titles',
+      '/dashboard/admin/license-subcategories',
+      '/dashboard/admin/roads'
+    ];
+
+    const hasAdminNav = adminRoutes.some((route) =>
+      this.dbNavigationRoutes.has(route.toLowerCase())
+    );
+    if (hasAdminNav) {
+      return true;
+    }
+
+    // DB-backed permission hints.
+    for (const permission of this.dbPermissionTokens) {
+      if (permission.includes('roles') || permission.includes('users') || permission.includes('masters')) {
+        return true;
+      }
+    }
+
+    // Backward-compatible fallback while older role configs are being updated.
     return this.currentUser?.roleId === 1;
+  }
+
+  canAccessSection(section: string): boolean {
+    if (this.isLicenseeUser() || this.isSiteAdminUser()) {
+      return false;
+    }
+
+    const sectionRouteToken = String(section || '').trim().toLowerCase();
+    if (this.dbNavigationRoutes.has(sectionRouteToken)) {
+      return true;
+    }
+    if (this.dbNavigationRoutes.has(`/dashboard?section=${sectionRouteToken}`)) {
+      return true;
+    }
+    if (this.dbNavigationRoutes.has(`dashboard?section=${sectionRouteToken}`)) {
+      return true;
+    }
+
+    const tokenMap: Record<string, string[]> = {
+      'new-license': ['new_license', 'new-license', 'license_application', 'new_license_application'],
+      'requisition': ['ena_requisition', 'requisition'],
+      'revalidation': ['ena_revalidation', 'revalidation'],
+      'cancellation': ['ena_cancellation', 'cancellation'],
+      'transit': ['transit_permit', 'transit'],
+      'hologram': ['hologram_procurement', 'hologram_request', 'hologram'],
+      'itcell-hologram': ['hologram_procurement', 'itcell_hologram', 'it_cell', 'hologram'],
+      'transit-applications': ['transit_permit', 'transit'],
+      'brands': ['brand', 'brands'],
+      'monthly-hologram-statement': ['hologram_monthly', 'monthly_hologram', 'hologram_statement'],
+      'hologram-register': ['hologram_register', 'hologram'],
+      'hologram-daily-entry': ['hologram_daily', 'hologram'],
+      'stock-inventory': ['stock_inventory', 'inventory', 'brandwarehouse'],
+      'officer-activity': ['officer_activity', 'officer'],
+      'salesman-barman-registration': ['salesman_barman', 'salesman-barman', 'salesmanbarman'],
+      'company-registration': ['company_registration', 'company-registration', 'companyregistration'],
+    };
+    const matcherTokens = tokenMap[sectionRouteToken] || [sectionRouteToken];
+
+    for (const permission of this.dbPermissionTokens) {
+      for (const token of matcherTokens) {
+        if (permission.includes(token)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   // Check if user has active license

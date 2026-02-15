@@ -133,40 +133,79 @@ export class RegistrationManagementComponent implements OnInit {
   }
 
   private loadCompanyData(): void {
-    this.http
-      .get<{ count?: number; results?: any[] }>(`${this.companyApiBase}/`)
-      .pipe(
-        catchError(() => of({ count: 0, results: [] }))
-      )
-      .subscribe({
-        next: (response) => {
-          const rows = Array.isArray(response?.results) ? response.results : [];
-          this.allRows = rows.map((item: any) => {
-            const rawStage = this.resolveCompanyStage(item);
-            const normalized = this.classifyStatus(rawStage);
+    forkJoin({
+      counts: this.http
+        .get<any>(`${this.companyApiBase}/dashboard-counts/`)
+        .pipe(catchError(() => of({ approved: 0, pending: 0, rejected: 0, objection: 0 }))),
+      grouped: this.http
+        .get<any>(`${this.companyApiBase}/list-by-status/`)
+        .pipe(catchError(() => of({ applied: [], pending: [], approved: [], rejected: [], objection: [] })))
+    }).subscribe({
+      next: ({ counts, grouped }) => {
+        this.counts = {
+          approved: Number(counts?.approved || 0),
+          pending: Number(counts?.pending || 0),
+          objection: Number(counts?.objection || 0),
+          rejected: Number(counts?.rejected || 0)
+        };
 
-            return {
-              id: String(item?.id ?? item?.applicationId ?? ''),
-              applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
-              submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.paymentDate),
-              applicantName: String(item?.memberName ?? item?.member_name ?? 'N/A'),
-              establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
-              currentStage: this.formatStageName(rawStage || 'submitted'),
-              currentStageRaw: String(rawStage || 'submitted'),
-              statusGroup: normalized
-            };
-          });
+        this.allRows = this.flattenCompanyGroupedData(grouped);
+        this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
+        this.applyFilters();
+        this.isLoading = false;
+      },
+      error: () => {
+        this.error = 'Failed to load company registration entries.';
+        this.isLoading = false;
+      }
+    });
+  }
 
-          this.counts = this.calculateCounts(this.allRows);
-          this.stageFilterOptions = this.getStageFilterOptions(this.allRows);
-          this.applyFilters();
-          this.isLoading = false;
-        },
-        error: () => {
-          this.error = 'Failed to load company registration entries.';
-          this.isLoading = false;
-        }
+  private flattenCompanyGroupedData(grouped: any): Array<{
+    id: string;
+    applicationId: string;
+    submittedOn: string;
+    applicantName: string;
+    establishmentName: string;
+    currentStage: string;
+    currentStageRaw: string;
+    statusGroup: 'approved' | 'pending' | 'objection' | 'rejected';
+  }> {
+    const mapGroup = (
+      items: any[] | undefined,
+      statusGroup: 'approved' | 'pending' | 'objection' | 'rejected'
+    ) => {
+      if (!Array.isArray(items)) return [];
+      return items.map((item: any) => {
+        const rawStage = this.resolveCompanyStage(item);
+        return {
+          id: String(item?.id ?? item?.applicationId ?? item?.application_id ?? ''),
+          applicationId: String(item?.applicationId ?? item?.application_id ?? item?.id ?? 'N/A'),
+          submittedOn: this.formatDate(item?.created_at ?? item?.createdAt ?? item?.paymentDate ?? item?.payment_date),
+          applicantName: String(item?.memberName ?? item?.member_name ?? 'N/A'),
+          establishmentName: String(item?.companyName ?? item?.company_name ?? 'N/A'),
+          currentStage: this.formatStageName(rawStage || 'submitted'),
+          currentStageRaw: String(rawStage || 'submitted'),
+          statusGroup
+        };
       });
+    };
+
+    const merged = [
+      ...mapGroup(grouped?.pending, 'pending'),
+      ...mapGroup(grouped?.approved, 'approved'),
+      ...mapGroup(grouped?.rejected, 'rejected'),
+      ...mapGroup(grouped?.objection, 'objection'),
+      ...mapGroup(grouped?.applied, 'pending')
+    ];
+
+    const seen = new Set<string>();
+    return merged.filter((row) => {
+      const key = String(row.applicationId || row.id || '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   private loadSalesmanBarmanData(): void {
@@ -238,12 +277,22 @@ export class RegistrationManagementComponent implements OnInit {
       });
     };
 
-    return [
+    const merged = [
       ...mapGroup(grouped?.pending, 'pending'),
       ...mapGroup(grouped?.approved, 'approved'),
       ...mapGroup(grouped?.rejected, 'rejected'),
+      ...mapGroup(grouped?.objection, 'objection'),
       ...mapGroup(grouped?.applied, 'pending')
     ];
+
+    // Guard against backend bucket overlap by de-duplicating on application id.
+    const seen = new Set<string>();
+    return merged.filter((row) => {
+      const key = String(row.applicationId || row.id || '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   private getSalesmanApplicantName(item: any): string {

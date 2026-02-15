@@ -217,7 +217,9 @@ export class UnifiedActionsService {
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'approve', 'Approved', 'Approved');
       case 'new-license':
-        return this.executeNewLicenseAdvance(item, 'approve', 'Approved');
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        return this.executeWorkflowAdvance(item, 'approve', 'Approved');
 
       default:
         return of({
@@ -253,7 +255,9 @@ export class UnifiedActionsService {
       case 'hologram':
         return this.performHologramWorkflowAction(item, 'reject', reason, 'Rejected');
       case 'new-license':
-        return this.executeNewLicenseAdvance(item, 'reject', reason);
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        return this.executeWorkflowAdvance(item, 'reject', reason);
 
       default:
         return of({
@@ -271,8 +275,8 @@ export class UnifiedActionsService {
     if (itemType === 'hologram') {
       return this.performHologramWorkflowAction(item, 'forward', 'Forwarded', 'Forwarded');
     }
-    if (itemType === 'new-license') {
-      return this.executeNewLicenseAdvance(item, 'forward', 'Forwarded');
+    if (['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
+      return this.executeWorkflowAdvance(item, 'forward', 'Forwarded');
     }
 
     // Forward is typically the same as approve for most workflows
@@ -583,7 +587,7 @@ export class UnifiedActionsService {
   }
 
   private handleRaiseObjectionAction(item: any, itemType: string): Observable<ActionResult> {
-    if (itemType !== 'new-license') {
+    if (!['new-license', 'company-registration', 'salesman-barman-registration'].includes(itemType)) {
       return of({ success: false, message: `Raise objection not implemented for ${itemType}` });
     }
 
@@ -592,10 +596,10 @@ export class UnifiedActionsService {
       return of({ success: false, message: 'Objection remarks are required' });
     }
 
-    return this.executeNewLicenseObjection(item, reason.trim());
+    return this.executeWorkflowObjection(item, reason.trim());
   }
 
-  private executeNewLicenseAdvance(
+  private executeWorkflowAdvance(
     item: any,
     mode: 'approve' | 'reject' | 'forward',
     remarks: string
@@ -605,16 +609,21 @@ export class UnifiedActionsService {
       return of({ success: false, message: 'Application ID is missing for workflow action' });
     }
 
-    return this.fetchNewLicenseNextStages(applicationId).pipe(
+    return this.fetchWorkflowNextStages(applicationId).pipe(
       switchMap((stages: any[]) => {
-        const target = this.pickNewLicenseStage(stages, mode);
+        const target = this.pickWorkflowStage(stages, mode);
         if (!target?.id) {
           return of({ success: false, message: `No valid target stage found for ${mode}` });
         }
 
         return this.http.post<any>(
           `${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/advance/${target.id}/`,
-          { remarks }
+          {
+            remarks,
+            context_data: {
+              action: mode.toUpperCase()
+            }
+          }
         ).pipe(
           map(() => ({ success: true, message: `${mode.toUpperCase()} action completed successfully` })),
           catchError((error) => of({
@@ -630,15 +639,15 @@ export class UnifiedActionsService {
     );
   }
 
-  private executeNewLicenseObjection(item: any, remarks: string): Observable<ActionResult> {
+  private executeWorkflowObjection(item: any, remarks: string): Observable<ActionResult> {
     const applicationId = this.getWorkflowApplicationId(item);
     if (!applicationId) {
       return of({ success: false, message: 'Application ID is missing for objection' });
     }
 
-    return this.fetchNewLicenseNextStages(applicationId).pipe(
+    return this.fetchWorkflowNextStages(applicationId).pipe(
       switchMap((stages: any[]) => {
-        const target = this.pickNewLicenseStage(stages, 'objection');
+        const target = this.pickWorkflowStage(stages, 'objection');
         if (!target?.id) {
           return of({ success: false, message: 'No objection stage available from current stage' });
         }
@@ -668,33 +677,39 @@ export class UnifiedActionsService {
     );
   }
 
-  private fetchNewLicenseNextStages(applicationId: string): Observable<any[]> {
+  private fetchWorkflowNextStages(applicationId: string): Observable<any[]> {
     return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(applicationId)}/next-stages/`).pipe(
       map((res: any) => Array.isArray(res) ? res : []),
       catchError(() => of([]))
     );
   }
 
-  private pickNewLicenseStage(
+  private pickWorkflowStage(
     stages: any[],
     mode: 'approve' | 'reject' | 'forward' | 'objection'
   ): any | null {
     if (!Array.isArray(stages) || stages.length === 0) return null;
 
+    const byAction = (expected: string) =>
+      stages.find((s: any) => String(s?.action || '').toUpperCase().trim() === expected);
+
     const byName = (keyword: string) =>
       stages.find((s: any) => String(s?.name || '').toLowerCase().includes(keyword));
 
     if (mode === 'objection') {
-      return byName('objection');
+      return byAction('RAISE_OBJECTION') || byAction('OBJECTION') || byName('objection');
     }
 
     if (mode === 'reject') {
-      return byName('reject');
+      return byAction('REJECT') || byName('reject');
     }
 
     if (mode === 'approve') {
-      return byName('approved') || byName('payment') || stages[0];
+      return byAction('APPROVE') || byName('approved') || byName('payment') || stages[0];
     }
+
+    const explicitForward = byAction('FORWARD');
+    if (explicitForward) return explicitForward;
 
     return stages.find((s: any) => {
       const name = String(s?.name || '').toLowerCase();

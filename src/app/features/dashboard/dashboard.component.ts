@@ -498,6 +498,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       9: 'Joint Commissioner Dashboard',
       10: 'Commissioner Dashboard',
       11: 'Secretary Dashboard',
+      12: 'Deputy Commissioner Dashboard',
     };
 
     const titleFromRoleId = roleNames[this.currentUser?.roleId || 0];

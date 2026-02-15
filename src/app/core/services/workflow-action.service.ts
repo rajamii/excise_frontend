@@ -118,6 +118,15 @@ export class WorkflowActionService {
           map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
           catchError(() => of([]))
         );
+      case 'company-registration':
+      case 'salesman-barman-registration':
+        if (!workflowApplicationId) {
+          return of([]);
+        }
+        return this.http.get<any[]>(`${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/next-stages/`).pipe(
+          map((stages: any[]) => this.mapNextStagesToActionConfigs(stages)),
+          catchError(() => of([]))
+        );
 
       default:
         return of([]);
@@ -125,13 +134,20 @@ export class WorkflowActionService {
   }
 
   private getWorkflowApplicationId(data: ApplicationWorkflowData): string {
-    return String(data.referenceNo || data.id || '').trim();
+    return String(
+      (data as any)?.application_id ??
+      (data as any)?.applicationId ??
+      data.referenceNo ??
+      data.id ??
+      ''
+    ).trim();
   }
 
   private mapNextStagesToActionConfigs(stages: any[]): WorkflowActionConfig[] {
     if (!Array.isArray(stages)) return [];
 
     return stages.map((stage: any): WorkflowActionConfig => {
+      const explicitAction = String(stage?.action || '').toUpperCase().trim();
       const stageName = String(stage?.name || '').toLowerCase();
       let action = 'APPROVE';
       let label = 'Approve';
@@ -140,7 +156,35 @@ export class WorkflowActionService {
       let tooltip = `Move to ${stage?.name || 'next stage'}`;
       let requiresConfirmation = false;
 
-      if (stageName.includes('objection')) {
+      if (explicitAction === 'RAISE_OBJECTION' || explicitAction === 'OBJECTION') {
+        action = 'RAISE_OBJECTION';
+        label = 'Raise Objection';
+        icon = 'report_problem';
+        color = 'warning';
+        tooltip = 'Raise objection and send back to applicant';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'REJECT') {
+        action = 'REJECT';
+        label = 'Reject';
+        icon = 'cancel';
+        color = 'danger';
+        tooltip = 'Reject this application';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'FORWARD') {
+        action = 'FORWARD';
+        label = 'Forward';
+        icon = 'arrow_forward';
+        color = 'primary';
+        tooltip = 'Forward to next stage';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'APPROVE') {
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = 'Approve this application';
+        requiresConfirmation = true;
+      } else if (stageName.includes('objection')) {
         action = 'RAISE_OBJECTION';
         label = 'Raise Objection';
         icon = 'report_problem';
