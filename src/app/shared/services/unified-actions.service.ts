@@ -690,14 +690,68 @@ export class UnifiedActionsService {
   ): any | null {
     if (!Array.isArray(stages) || stages.length === 0) return null;
 
-    const byAction = (expected: string) =>
-      stages.find((s: any) => String(s?.action || '').toUpperCase().trim() === expected);
+    const normalizedStages = [...stages].sort((a: any, b: any) => {
+      const aTransitionId = Number(a?.transition_id ?? a?.transitionId);
+      const bTransitionId = Number(b?.transition_id ?? b?.transitionId);
+      if (Number.isFinite(aTransitionId) && Number.isFinite(bTransitionId) && aTransitionId !== bTransitionId) {
+        return aTransitionId - bTransitionId;
+      }
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId)) {
+        return aId - bId;
+      }
+      return 0;
+    });
 
-    const byName = (keyword: string) =>
-      stages.find((s: any) => String(s?.name || '').toLowerCase().includes(keyword));
+    const getCondition = (stage: any): Record<string, any> => {
+      const condition = stage?.condition;
+      return condition && typeof condition === 'object' ? condition : {};
+    };
+
+    const hasSpecialConditionalFlag = (stage: any) => {
+      const condition = getCondition(stage);
+      return condition?.['is_reverted'] === true
+        || condition?.['has_objections'] === true
+        || condition?.['objections_resolved'] === true;
+    };
+
+    const isRejectLike = (stage: any) => {
+      const action = String(stage?.action || '').toUpperCase().trim();
+      const name = String(stage?.name || '').toLowerCase();
+      return action === 'REJECT' || name.includes('reject');
+    };
+
+    const isObjectionLike = (stage: any) => {
+      const action = String(stage?.action || '').toUpperCase().trim();
+      const name = String(stage?.name || '').toLowerCase();
+      return action === 'RAISE_OBJECTION' || action === 'OBJECTION' || name.includes('objection');
+    };
+
+    const byAction = (expected: string) =>
+      normalizedStages.find((s: any) => String(s?.action || '').toUpperCase().trim() === expected);
+
+    const byName = (keyword: string, predicate?: (stage: any) => boolean) =>
+      normalizedStages.find((s: any) => {
+        const name = String(s?.name || '').toLowerCase();
+        return name.includes(keyword) && (!predicate || predicate(s));
+      });
+
+    const byConditionFlag = (flag: string) =>
+      normalizedStages.find((s: any) => getCondition(s)?.[flag] === true);
+
+    const firstSafeNonRejectStage = () =>
+      normalizedStages.find((s: any) => {
+        return !isRejectLike(s) && !isObjectionLike(s) && !hasSpecialConditionalFlag(s);
+      }) || null;
 
     if (mode === 'objection') {
-      return byAction('RAISE_OBJECTION') || byAction('OBJECTION') || byName('objection');
+      return (
+        byAction('RAISE_OBJECTION') ||
+        byAction('OBJECTION') ||
+        byConditionFlag('has_objections') ||
+        byName('objection')
+      );
     }
 
     if (mode === 'reject') {
@@ -705,16 +759,19 @@ export class UnifiedActionsService {
     }
 
     if (mode === 'approve') {
-      return byAction('APPROVE') || byName('approved') || byName('payment') || stages[0];
+      return (
+        byAction('APPROVE') ||
+        byAction('FORWARD') ||
+        byName('approved', (s) => !hasSpecialConditionalFlag(s)) ||
+        byName('payment', (s) => !hasSpecialConditionalFlag(s)) ||
+        firstSafeNonRejectStage()
+      );
     }
 
     const explicitForward = byAction('FORWARD');
     if (explicitForward) return explicitForward;
 
-    return stages.find((s: any) => {
-      const name = String(s?.name || '').toLowerCase();
-      return !name.includes('reject') && !name.includes('objection');
-    }) || stages[0];
+    return firstSafeNonRejectStage();
   }
 
   private getWorkflowApplicationId(item: any): string {

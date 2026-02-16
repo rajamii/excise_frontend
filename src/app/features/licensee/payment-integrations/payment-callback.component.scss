@@ -1,0 +1,39 @@
+.callback-page {
+  padding: 24px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d8e2ee;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  background: #f9fbfe;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.success {
+  background: #ecfdf3;
+  border: 1px solid #9ee6b8;
+  color: #116329;
+}
+
+.error {
+  background: #fff1f1;
+  border: 1px solid #f0acac;
+  color: #9d1f1f;
+}

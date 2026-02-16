@@ -569,7 +569,10 @@ export class LicenseApplicationService {
   // Other methods remain the same...
   advanceApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });
+    return this.http.post(`${this.oldLicenseUrl}/${encodedId}/advance/${stageId}/`, {
+      context_data: context || {},
+      remarks: context?.remarks || ''
+    });
   }
 
   raiseObjection(applicationId: string, objections: { field: string; remarks: string }[], generalRemarks?: string): Observable<any> {
@@ -672,7 +675,10 @@ export class LicenseApplicationService {
 
   advanceNewLicenseApplication(applicationId: string, stageId: number, context?: any): Observable<any> {
     const encodedId = encodeURIComponent(applicationId);
-    return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, { context: context || {} });
+    return this.http.post(`${this.newLicenseUrl}/${encodedId}/advance/${stageId}/`, {
+      context_data: context || {},
+      remarks: context?.remarks || ''
+    });
   }
 
   raiseNewLicenseObjection(applicationId: string, objections: { field: string; remarks: string }[], generalRemarks?: string): Observable<any> {

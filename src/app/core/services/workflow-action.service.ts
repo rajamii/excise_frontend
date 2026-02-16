@@ -146,14 +146,28 @@ export class WorkflowActionService {
   private mapNextStagesToActionConfigs(stages: any[]): WorkflowActionConfig[] {
     if (!Array.isArray(stages)) return [];
 
-    return stages.map((stage: any): WorkflowActionConfig => {
+    const sortedStages = [...stages].sort((a: any, b: any) => {
+      const aTransitionId = Number(a?.transition_id ?? a?.transitionId);
+      const bTransitionId = Number(b?.transition_id ?? b?.transitionId);
+      if (Number.isFinite(aTransitionId) && Number.isFinite(bTransitionId) && aTransitionId !== bTransitionId) {
+        return aTransitionId - bTransitionId;
+      }
+      const aId = Number(a?.id);
+      const bId = Number(b?.id);
+      if (Number.isFinite(aId) && Number.isFinite(bId) && aId !== bId) {
+        return aId - bId;
+      }
+      return 0;
+    });
+
+    return sortedStages.map((stage: any): WorkflowActionConfig | null => {
       const explicitAction = String(stage?.action || '').toUpperCase().trim();
       const stageName = String(stage?.name || '').toLowerCase();
-      let action = 'APPROVE';
-      let label = 'Approve';
-      let icon = 'check_circle';
+      let action = '';
+      let label = '';
+      let icon = '';
       let color: WorkflowActionConfig['color'] = 'accent';
-      let tooltip = `Move to ${stage?.name || 'next stage'}`;
+      let tooltip = '';
       let requiresConfirmation = false;
 
       if (explicitAction === 'RAISE_OBJECTION' || explicitAction === 'OBJECTION') {
@@ -184,6 +198,24 @@ export class WorkflowActionService {
         color = 'success';
         tooltip = 'Approve this application';
         requiresConfirmation = true;
+      } else if (explicitAction === 'PAY') {
+        action = 'PAY';
+        label = 'Pay';
+        icon = 'payment';
+        color = 'primary';
+        tooltip = 'Proceed to payment';
+        requiresConfirmation = true;
+      } else if (explicitAction === 'VIEW') {
+        action = 'VIEW';
+        label = 'View';
+        icon = 'visibility';
+        color = 'info';
+        tooltip = 'View details';
+        requiresConfirmation = false;
+      } else if (explicitAction) {
+        // Hide unsupported or internal transition actions from UI buttons
+        // (e.g. REVERT/RESOLVE_OBJECTION paths).
+        return null;
       } else if (stageName.includes('objection')) {
         action = 'RAISE_OBJECTION';
         label = 'Raise Objection';
@@ -212,6 +244,13 @@ export class WorkflowActionService {
         color = 'primary';
         tooltip = 'Forward for payment';
         requiresConfirmation = true;
+      } else {
+        action = 'APPROVE';
+        label = 'Approve';
+        icon = 'check_circle';
+        color = 'success';
+        tooltip = `Move to ${stage?.name || 'next stage'}`;
+        requiresConfirmation = true;
       }
 
       return {
@@ -223,7 +262,7 @@ export class WorkflowActionService {
         requiresConfirmation,
         targetStage: stage?.id ? Number(stage.id) : undefined
       };
-    });
+    }).filter((config): config is WorkflowActionConfig => !!config);
   }
 
   /**
@@ -293,7 +332,12 @@ export class WorkflowActionService {
 
         return this.http.post(
           `${this.workflowBaseUrl}/${encodeURIComponent(workflowApplicationId)}/advance/${targetStage}/`,
-          { remarks: comments || `${actionName} from unified action` }
+          {
+            remarks: comments || `${actionName} from unified action`,
+            context_data: {
+              action: String(actionName || '').toUpperCase().trim()
+            }
+          }
         );
     }
 

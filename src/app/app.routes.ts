@@ -94,6 +94,27 @@ export const routes: Routes = [
       ).then((m) => m.PaymentConfirmationComponent),
   },
   {
+    path: "dev-payment-integrations",
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-integrations.component").then(
+        (m) => m.PaymentIntegrationsComponent
+      ),
+  },
+  {
+    path: "payment/callback",
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-callback.component").then(
+        (m) => m.PaymentCallbackComponent
+      ),
+  },
+  {
+    path: "payment/cancel",
+    loadComponent: () =>
+      import("./features/licensee/payment-integrations/payment-cancel.component").then(
+        (m) => m.PaymentCancelComponent
+      ),
+  },
+  {
     path: "supply-chain-view",
     loadComponent: () =>
       import(
