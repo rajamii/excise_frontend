@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, OnInit } from '@angular/core';
 import { MaterialModule } from '../../../../../shared/material.module';
 import { CompanyDetailsComponent } from "./steps/company-details/company-details.component";
 import { MemberDetailsComponent } from './steps/member-details/member-details.component';
@@ -7,6 +7,7 @@ import { SubmitApplicationComponent } from './steps/submit-application/submit-ap
 import { MatStepper } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { CompanyRegistrationService } from '../../../../../core/services/company-registration.service';
+import { AccountService } from '../../../../../core/services/account.service';
 
 @Component({
   selector: 'app-prepare-application',
@@ -14,29 +15,40 @@ import { CompanyRegistrationService } from '../../../../../core/services/company
   templateUrl: './prepare-application.component.html',
   styleUrl: './prepare-application.component.scss'
 })
-export class PrepareApplicationComponent {
+export class PrepareApplicationComponent implements OnInit {
   @ViewChild('stepper') stepper!: MatStepper;
-  
-  applicationId: string | null = null;
 
   constructor(
     private router: Router,
-    private companyRegistrationService: CompanyRegistrationService
+    private companyRegistrationService: CompanyRegistrationService,
+    private accountService: AccountService
   ) {}
 
-  onApplicationSubmitted(applicationId: string) {
-    this.applicationId = applicationId;
-    this.stepper.next();
+  ngOnInit(): void {
+    // ✅ Ensure user profile is loaded when starting company registration
+    this.ensureUserProfileLoaded();
   }
 
-  goToDashboard() {
-    // Clear all session data
-    sessionStorage.clear();
+  /**
+   * ✅ Ensure user profile is loaded before starting the application
+   */
+  private ensureUserProfileLoaded(): void {
+    const userProfile = this.accountService.getUserProfileSync();
     
-    // Clear documents from service
-    this.companyRegistrationService.clearCompanyDocuments();
-    
-    // Navigate to dashboard
-    this.router.navigate(['/licensee/dashboard']);
+    if (!userProfile) {
+      console.log('📡 Loading user profile for company registration...');
+      this.accountService.identity(true).subscribe({
+        next: (profile) => {
+          if (profile) {
+            console.log('✅ User profile loaded successfully');
+          }
+        },
+        error: (err) => {
+          console.error('❌ Failed to load user profile:', err);
+        }
+      });
+    } else {
+      console.log('✅ User profile already loaded');
+    }
   }
 }

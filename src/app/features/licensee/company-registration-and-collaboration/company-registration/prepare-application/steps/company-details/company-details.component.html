@@ -30,8 +30,12 @@
         <mat-form-field appearance="outline">
           <mat-label>Select License</mat-label>
           <mat-select formControlName="license">
-            @for (license of licenses; track license) {
-              <mat-option [value]="license">{{ license }}</mat-option>
+            @if (isLoadingLicenses) {
+              <mat-option disabled>Loading...</mat-option>
+            } @else {
+              @for (license of licenses; track license.id) {
+                <mat-option [value]="license.licenseType">{{ license.licenseType }}</mat-option>
+              }
             }
           </mat-select>
           @if (companyDetailsForm.controls['license'].invalid) {
@@ -56,9 +60,9 @@
           }
         </mat-form-field>
 
-        <!-- Company Name -->
+        <!-- Company Name - FIXED LABEL -->
         <mat-form-field appearance="outline">
-          <mat-label>Name</mat-label>
+          <mat-label>Company Name</mat-label>
           <input matInput placeholder="Enter Company Name" type="text" formControlName="companyName"/>
           @if (companyDetailsForm.controls['companyName'].invalid) {
             <mat-error>
@@ -134,8 +138,8 @@
 
           <!-- Factory Address -->
           <mat-form-field appearance="outline">
-            <mat-label>Address</mat-label>
-            <textarea matInput placeholder="Enter Address (max 500 characters)"
+            <mat-label>Factory Address</mat-label>
+            <textarea matInput placeholder="Enter Factory Address (max 500 characters)"
               formControlName="factoryAddress"
               cdkTextareaAutosize
               #autosize="cdkTextareaAutosize"
@@ -170,7 +174,7 @@
 
           <!-- Mobile Number -->
           <mat-form-field appearance="outline">
-            <mat-label>Mobile Number</mat-label>
+            <mat-label>Company Mobile Number</mat-label>
             <input matInput placeholder="Enter Company Mobile Number" type="number" formControlName="companyMobileNumber"/>
             @if (companyDetailsForm.controls['companyMobileNumber'].invalid) {
               <mat-error>
@@ -181,7 +185,7 @@
 
           <!-- Email ID -->
           <mat-form-field appearance="outline">
-            <mat-label>Email Id</mat-label>
+            <mat-label>Company Email Id</mat-label>
             <input matInput placeholder="Enter Company Email" type="email" formControlName="companyEmailId"/>
             @if (companyDetailsForm.controls['companyEmailId'].invalid) {
               <mat-error>

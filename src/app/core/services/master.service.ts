@@ -1,93 +1,361 @@
-// src/app/core/services/master.service.ts
-import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
-import { map, switchMap, catchError, tap } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
-import { District } from '../../core/models/district.model';
-import { Subdivision } from '../../core/models/subdivision.model';
-import { PoliceStation } from '../../core/models/policestation.model';
-import { LicenseType } from '../../core/models/license-type.model';
-import { LicenseCategory } from '../../core/models/license-category.model';
-import { LicenseSubcategory } from '../models/license-subcategory.model';
-import { LicenseTitle } from '../models/license-title.model';
-import { Road } from '../models/road.model';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
-
+/**
+ * Master Service - Direct Django Connection (No Proxy)
+ * 
+ * Handles all API calls to Django backend master data endpoints
+ * 
+ * URL Structure:
+ * - Django backend: http://localhost:8000/masters/core/[endpoint]
+ * - No proxy needed - CORS handles cross-origin requests
+ * 
+ * FINAL COMPLETE VERSION - All injection token issues resolved
+ */
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class MasterService {
-  // note: this.baseUrl is used for "masters/core" endpoints
-  private readonly baseUrl = `${environment.apiBaseUrl}/masters/core`;
+  
+  // Django backend base URL
+  private readonly DJANGO_BASE = 'http://localhost:8000';
+  
+  // Base URL for all master data endpoints
+  private readonly BASE_URL = `${this.DJANGO_BASE}/masters/core`;
+  
+  // Specific endpoint URLs
+  private readonly LICENSEE_PROFILE_URL = `${this.BASE_URL}/licensee-profiles`;
+  private readonly LICENSE_CATEGORY_URL = `${this.BASE_URL}/license-categories`;
+  private readonly LICENSE_TYPE_URL = `${this.BASE_URL}/license-types`;
+  private readonly STATE_URL = `${this.BASE_URL}/states`;
+  private readonly DISTRICT_URL = `${this.BASE_URL}/districts`;
+  private readonly SUBDIVISION_URL = `${this.BASE_URL}/subdivisions`;
+  private readonly POLICE_STATION_URL = `${this.BASE_URL}/police-stations`;
+  private readonly LICENSE_SUBCATEGORY_URL = `${this.BASE_URL}/license-subcategories`;
+  private readonly LICENSE_TITLE_URL = `${this.BASE_URL}/license-titles`;
+  private readonly ROAD_URL = `${this.BASE_URL}/roads`;
+  private readonly LOCATION_URL = `${this.BASE_URL}/locations`;
+  private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
 
-  constructor(private http: HttpClient) { }
-
-  // Fetches a list of all districts
-  getDistrict(): Observable<District[]> {
-    return this.http.get<District[]>(`${this.baseUrl}/districts`);
+  constructor(private http: HttpClient) {
+    console.log('🔧 MasterService initialized (Direct Django connection)');
+    console.log('📍 Django Base:', this.DJANGO_BASE);
+    console.log('📍 Base URL:', this.BASE_URL);
   }
 
-  // Retrieves all subdivisions
-  getSubdivision(): Observable<Subdivision[]> {
-    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions`);
+  // =========================================================================
+  // LICENSEE PROFILE ENDPOINTS
+  // =========================================================================
+
+  getLicenseeProfiles(): Observable<any> {
+    return this.http.get(`${this.LICENSEE_PROFILE_URL}/`);
   }
 
-  // Gets subdivisions filtered by a specific district ID
-  getSubdivisionsByDistrict(districtCode: number): Observable<Subdivision[]> {
-    return this.http.get<Subdivision[]>(`${this.baseUrl}/subdivisions/`, {
-      params: { district_code: districtCode }
-    });
-  }
-  // Retrieves all police stations
-  getPoliceStations(): Observable<PoliceStation[]> {
-    return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations`);
+  getLicenseeProfile(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSEE_PROFILE_URL}/${id}/`);
   }
 
-  // Retrieves police stations within a specified subdivision (by code)
-  getPoliceStationBySubDivision(subdivisionCode?: number): Observable<PoliceStation[]> {
-    let params = {};
-    if (subdivisionCode) {
-      params = { subdivision_code: subdivisionCode };
+  createLicenseeProfile(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSEE_PROFILE_URL}/create/`, data);
+  }
+
+  updateLicenseeProfile(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSEE_PROFILE_URL}/${id}/update/`, data);
+  }
+
+  patchLicenseeProfile(id: number, data: any): Observable<any> {
+    return this.http.patch(`${this.LICENSEE_PROFILE_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseeProfile(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSEE_PROFILE_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LICENSE CATEGORY ENDPOINTS
+  // =========================================================================
+
+  getLicenseCategories(): Observable<any> {
+    return this.http.get(`${this.LICENSE_CATEGORY_URL}/`);
+  }
+
+  getLicenseCategory(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSE_CATEGORY_URL}/${id}/`);
+  }
+
+  createLicenseCategory(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSE_CATEGORY_URL}/create/`, data);
+  }
+
+  updateLicenseCategory(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSE_CATEGORY_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseCategory(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSE_CATEGORY_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LICENSE TYPE ENDPOINTS
+  // =========================================================================
+
+  getLicenseTypes(): Observable<any> {
+    return this.http.get(`${this.LICENSE_TYPE_URL}/`);
+  }
+
+  getLicenseType(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSE_TYPE_URL}/${id}/`);
+  }
+
+  createLicenseType(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSE_TYPE_URL}/create/`, data);
+  }
+
+  updateLicenseType(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSE_TYPE_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseType(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSE_TYPE_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // STATE ENDPOINTS
+  // =========================================================================
+
+  getStates(): Observable<any> {
+    return this.http.get(`${this.STATE_URL}/`);
+  }
+
+  getState(id: number): Observable<any> {
+    return this.http.get(`${this.STATE_URL}/${id}/`);
+  }
+
+  createState(data: any): Observable<any> {
+    return this.http.post(`${this.STATE_URL}/create/`, data);
+  }
+
+  updateState(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.STATE_URL}/${id}/update/`, data);
+  }
+
+  deleteState(id: number): Observable<any> {
+    return this.http.delete(`${this.STATE_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // DISTRICT ENDPOINTS
+  // =========================================================================
+
+  getDistricts(): Observable<any> {
+    return this.http.get(`${this.DISTRICT_URL}/`);
+  }
+
+  /**
+   * Get district(s)
+   * @param id - Optional district ID. If provided, returns single district. If omitted, returns all districts.
+   */
+  getDistrict(id?: number): Observable<any> {
+    if (id !== undefined) {
+      return this.http.get(`${this.DISTRICT_URL}/${id}/`);
     }
-    return this.http.get<PoliceStation[]>(`${this.baseUrl}/police-stations/`, { params });
+    return this.http.get(`${this.DISTRICT_URL}/`);
   }
 
-  // Fetches all available roads
-  getRoads(): Observable<Road[]> {
-    return this.http.get<Road[]>(`${this.baseUrl}/roads`);
+  createDistrict(data: any): Observable<any> {
+    return this.http.post(`${this.DISTRICT_URL}/create/`, data);
   }
 
-  // Fetches roads filtered by a specific district code
-  getRoadsByDistrict(districtCode?: number): Observable<Road[]> {
-  let params = {};
-  if (districtCode) {
-    params = { district_code: districtCode };
-  }
-  return this.http.get<Road[]>(`${this.baseUrl}/roads/`, { params });
-}
-
-  // Fetches all available license types
-  getLicenseTypes(): Observable<LicenseType[]> {
-    return this.http.get<LicenseType[]>(`${this.baseUrl}/license-types`);
+  updateDistrict(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.DISTRICT_URL}/${id}/update/`, data);
   }
 
-  // Fetches all license categories
-  getLicenseCategories(): Observable<LicenseCategory[]> {
-    return this.http.get<LicenseCategory[]>(
-      `${this.baseUrl}/license-categories`
-    );
+  deleteDistrict(id: number): Observable<any> {
+    return this.http.delete(`${this.DISTRICT_URL}/${id}/delete/`);
   }
 
-  // Fetches all license subcategories
-  getLicenseSubcategories(): Observable<LicenseSubcategory[]> {
-    return this.http.get<LicenseSubcategory[]>(
-      `${this.baseUrl}/license-subcategories`
-    );
+  // =========================================================================
+  // SUBDIVISION ENDPOINTS
+  // =========================================================================
+
+  getSubdivisions(): Observable<any> {
+    return this.http.get(`${this.SUBDIVISION_URL}/`);
   }
 
-  // Fetches all available license titles
-  getLicenseTitles(): Observable<LicenseTitle[]> {
-    return this.http.get<LicenseTitle[]>(`${this.baseUrl}/license-titles`);
+  /**
+   * Get subdivision(s)
+   * @param id - Optional subdivision ID. If provided, returns single subdivision. If omitted, returns all subdivisions.
+   */
+  getSubdivision(id?: number): Observable<any> {
+    if (id !== undefined) {
+      return this.http.get(`${this.SUBDIVISION_URL}/${id}/`);
+    }
+    return this.http.get(`${this.SUBDIVISION_URL}/`);
+  }
+
+  /**
+   * Get subdivisions filtered by district code
+   * @param districtCode - District code (can be string or number)
+   * Used for cascading dropdowns
+   */
+  getSubdivisionsByDistrict(districtCode: string | number): Observable<any> {
+    return this.http.get(`${this.SUBDIVISION_URL}/?district=${districtCode}`);
+  }
+
+  createSubdivision(data: any): Observable<any> {
+    return this.http.post(`${this.SUBDIVISION_URL}/create/`, data);
+  }
+
+  updateSubdivision(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.SUBDIVISION_URL}/${id}/update/`, data);
+  }
+
+  deleteSubdivision(id: number): Observable<any> {
+    return this.http.delete(`${this.SUBDIVISION_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // POLICE STATION ENDPOINTS
+  // =========================================================================
+
+  getPoliceStations(): Observable<any> {
+    return this.http.get(`${this.POLICE_STATION_URL}/`);
+  }
+
+  getPoliceStation(id: number): Observable<any> {
+    return this.http.get(`${this.POLICE_STATION_URL}/${id}/`);
+  }
+
+  createPoliceStation(data: any): Observable<any> {
+    return this.http.post(`${this.POLICE_STATION_URL}/create/`, data);
+  }
+
+  updatePoliceStation(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.POLICE_STATION_URL}/${id}/update/`, data);
+  }
+
+  deletePoliceStation(id: number): Observable<any> {
+    return this.http.delete(`${this.POLICE_STATION_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LICENSE SUBCATEGORY ENDPOINTS
+  // =========================================================================
+
+  getLicenseSubcategories(): Observable<any> {
+    return this.http.get(`${this.LICENSE_SUBCATEGORY_URL}/`);
+  }
+
+  getLicenseSubcategory(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSE_SUBCATEGORY_URL}/${id}/`);
+  }
+
+  createLicenseSubcategory(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSE_SUBCATEGORY_URL}/create/`, data);
+  }
+
+  updateLicenseSubcategory(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSE_SUBCATEGORY_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseSubcategory(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSE_SUBCATEGORY_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LICENSE TITLE ENDPOINTS
+  // =========================================================================
+
+  getLicenseTitles(): Observable<any> {
+    return this.http.get(`${this.LICENSE_TITLE_URL}/`);
+  }
+
+  getLicenseTitle(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSE_TITLE_URL}/${id}/`);
+  }
+
+  createLicenseTitle(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSE_TITLE_URL}/create/`, data);
+  }
+
+  updateLicenseTitle(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSE_TITLE_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseTitle(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSE_TITLE_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // ROAD ENDPOINTS
+  // =========================================================================
+
+  getRoads(): Observable<any> {
+    return this.http.get(`${this.ROAD_URL}/`);
+  }
+
+  getRoad(id: number): Observable<any> {
+    return this.http.get(`${this.ROAD_URL}/${id}/`);
+  }
+
+  createRoad(data: any): Observable<any> {
+    return this.http.post(`${this.ROAD_URL}/create/`, data);
+  }
+
+  updateRoad(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.ROAD_URL}/${id}/update/`, data);
+  }
+
+  deleteRoad(id: number): Observable<any> {
+    return this.http.delete(`${this.ROAD_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LOCATION ENDPOINTS
+  // =========================================================================
+
+  getLocations(): Observable<any> {
+    return this.http.get(`${this.LOCATION_URL}/`);
+  }
+
+  getLocation(id: number): Observable<any> {
+    return this.http.get(`${this.LOCATION_URL}/${id}/`);
+  }
+
+  createLocation(data: any): Observable<any> {
+    return this.http.post(`${this.LOCATION_URL}/create/`, data);
+  }
+
+  updateLocation(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LOCATION_URL}/${id}/update/`, data);
+  }
+
+  deleteLocation(id: number): Observable<any> {
+    return this.http.delete(`${this.LOCATION_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // LICENSE FEE ENDPOINTS
+  // =========================================================================
+
+  getLicenseFees(): Observable<any> {
+    return this.http.get(`${this.LICENSE_FEE_URL}/`);
+  }
+
+  getLicenseFee(id: number): Observable<any> {
+    return this.http.get(`${this.LICENSE_FEE_URL}/${id}/`);
+  }
+
+  createLicenseFee(data: any): Observable<any> {
+    return this.http.post(`${this.LICENSE_FEE_URL}/create/`, data);
+  }
+
+  updateLicenseFee(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LICENSE_FEE_URL}/${id}/update/`, data);
+  }
+
+  deleteLicenseFee(id: number): Observable<any> {
+    return this.http.delete(`${this.LICENSE_FEE_URL}/${id}/delete/`);
   }
 }

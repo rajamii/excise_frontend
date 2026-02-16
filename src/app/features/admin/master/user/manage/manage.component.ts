@@ -95,8 +95,8 @@ export class ManageComponent extends BaseComponent implements OnInit {
         this.subdivisions = data;
         // Filter subdivisions based on selected district
         this.filteredSubdivisions = data.filter(
-          sub => sub.districtCode === districtCode
-        );
+  (sub: Subdivision) => sub.districtCode === districtCode
+);
 
         // If initial load during edit, find and set the exact subdivision
         if (isInit && this.user.subdivision?.subdivisionCode) {

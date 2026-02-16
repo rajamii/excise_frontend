@@ -4,6 +4,7 @@ import { Company, CompanyDocuments } from '../../../../../../../core/models/comp
 import { FormsModule } from '@angular/forms';
 import Swal from 'sweetalert2';
 import { CompanyRegistrationService } from '../../../../../../../core/services/company-registration.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-submit-application',
@@ -15,6 +16,7 @@ export class SubmitApplicationComponent implements OnDestroy {
   fileUrls: string[] = [];
   acceptTerms: boolean = false;
   isSubmitting: boolean = false;
+  applicationId: string | null = null;
 
   // Cache for company documents to prevent recreating URLs
   private cachedDocuments: { key: keyof CompanyDocuments; file: File; fileUrl: string }[] = [];
@@ -51,12 +53,10 @@ export class SubmitApplicationComponent implements OnDestroy {
 
   // Output event emitter to notify parent about "back" action
   @Output() back = new EventEmitter<void>();
-  
-  // Output event emitter to notify parent about successful submission
-  @Output() submitted = new EventEmitter<string>();
 
   constructor(
-    private companyRegistrationService: CompanyRegistrationService
+    private companyRegistrationService: CompanyRegistrationService,
+    private router: Router
   ) {}
 
   ngOnDestroy(): void {
@@ -260,20 +260,18 @@ export class SubmitApplicationComponent implements OnDestroy {
       // Make API call to submit form using the correct method
       this.companyRegistrationService.applyCompanyRegistration(formData).subscribe({
         next: (response) => {
-          // Extract application ID from response
-          const applicationId = response.applicationId || response.application_id;
+          // Extract application ID from response and set it to show success view
+          this.applicationId = response.applicationId || response.application_id;
           
+          // Show SweetAlert for immediate feedback
           Swal.fire({
-            title: 'Success!',
-            text: `Application submitted successfully! Your application ID is ${applicationId}`,
             icon: 'success',
-            confirmButtonColor: '#1C2B78'
+            title: 'Success!',
+            text: `Application ID: ${this.applicationId}`,
+            confirmButtonText: 'OK'
           });
 
           this.isSubmitting = false;
-          
-          // Emit the submitted event to parent with application ID
-          this.submitted.emit(applicationId);
         },
         error: (err) => {
           // On failure: show error message
@@ -294,6 +292,18 @@ export class SubmitApplicationComponent implements OnDestroy {
   // Emit "back" event to previous step
   goBack() {
     this.back.emit();
+  }
+
+  // Navigate to dashboard and clear all application data
+  goToDashboard() {
+    // Clear all session data
+    sessionStorage.clear();
+    
+    // Clear documents from service
+    this.companyRegistrationService.clearCompanyDocuments();
+    
+    // Navigate to dashboard
+    this.router.navigate(['/dashboard']);
   }
 
   // Utility: Convert camelCase to snake_case for backend API

@@ -338,7 +338,7 @@ export class DeclarationPaymentComponent implements OnInit, OnDestroy {
 
   goToDashboard(): void {
     this.clearApplicationData();
-    this.router.navigate(['/licensee/dashboard']);
+    this.router.navigate(['/dashboard']);
   }
 
   private debugSessionStorage(): void {
