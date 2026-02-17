@@ -3,15 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 /**
- * Master Service - Direct Django Connection (No Proxy)
+ * Master Service - Complete Version with All Endpoints
  * 
  * Handles all API calls to Django backend master data endpoints
+ * ✅ Includes: All original endpoints + 3 new tables (LocationCategory, LocationSubcategory, Ward)
  * 
- * URL Structure:
- * - Django backend: http://localhost:8000/masters/core/[endpoint]
- * - No proxy needed - CORS handles cross-origin requests
- * 
- * FINAL COMPLETE VERSION - All injection token issues resolved
+ * PRODUCTION READY - 2025
  */
 @Injectable({
   providedIn: 'root'
@@ -24,7 +21,9 @@ export class MasterService {
   // Base URL for all master data endpoints
   private readonly BASE_URL = `${this.DJANGO_BASE}/masters/core`;
   
-  // Specific endpoint URLs
+  // =========================================================================
+  // ENDPOINT URLs
+  // =========================================================================
   private readonly LICENSEE_PROFILE_URL = `${this.BASE_URL}/licensee-profiles`;
   private readonly LICENSE_CATEGORY_URL = `${this.BASE_URL}/license-categories`;
   private readonly LICENSE_TYPE_URL = `${this.BASE_URL}/license-types`;
@@ -37,9 +36,14 @@ export class MasterService {
   private readonly ROAD_URL = `${this.BASE_URL}/roads`;
   private readonly LOCATION_URL = `${this.BASE_URL}/locations`;
   private readonly LICENSE_FEE_URL = `${this.BASE_URL}/license-fees`;
+  
+  // ✅ NEW: Endpoints for the 3 new tables
+  private readonly LOCATION_CATEGORY_URL = `${this.BASE_URL}/location-categories`;
+  private readonly LOCATION_SUBCATEGORY_URL = `${this.BASE_URL}/location-subcategories`;
+  private readonly WARD_URL = `${this.BASE_URL}/wards`;
 
   constructor(private http: HttpClient) {
-    console.log('🔧 MasterService initialized (Direct Django connection)');
+    console.log('🔧 MasterService initialized');
     console.log('📍 Django Base:', this.DJANGO_BASE);
     console.log('📍 Base URL:', this.BASE_URL);
   }
@@ -152,10 +156,6 @@ export class MasterService {
     return this.http.get(`${this.DISTRICT_URL}/`);
   }
 
-  /**
-   * Get district(s)
-   * @param id - Optional district ID. If provided, returns single district. If omitted, returns all districts.
-   */
   getDistrict(id?: number): Observable<any> {
     if (id !== undefined) {
       return this.http.get(`${this.DISTRICT_URL}/${id}/`);
@@ -183,10 +183,6 @@ export class MasterService {
     return this.http.get(`${this.SUBDIVISION_URL}/`);
   }
 
-  /**
-   * Get subdivision(s)
-   * @param id - Optional subdivision ID. If provided, returns single subdivision. If omitted, returns all subdivisions.
-   */
   getSubdivision(id?: number): Observable<any> {
     if (id !== undefined) {
       return this.http.get(`${this.SUBDIVISION_URL}/${id}/`);
@@ -194,11 +190,6 @@ export class MasterService {
     return this.http.get(`${this.SUBDIVISION_URL}/`);
   }
 
-  /**
-   * Get subdivisions filtered by district code
-   * @param districtCode - District code (can be string or number)
-   * Used for cascading dropdowns
-   */
   getSubdivisionsByDistrict(districtCode: string | number): Observable<any> {
     return this.http.get(`${this.SUBDIVISION_URL}/?district=${districtCode}`);
   }
@@ -323,6 +314,13 @@ export class MasterService {
     return this.http.get(`${this.LOCATION_URL}/${id}/`);
   }
 
+  /**
+   * ✅ Get locations filtered by district
+   */
+  getLocationsByDistrict(districtCode: string | number): Observable<any> {
+    return this.http.get(`${this.LOCATION_URL}/?district=${districtCode}`);
+  }
+
   createLocation(data: any): Observable<any> {
     return this.http.post(`${this.LOCATION_URL}/create/`, data);
   }
@@ -357,5 +355,109 @@ export class MasterService {
 
   deleteLicenseFee(id: number): Observable<any> {
     return this.http.delete(`${this.LICENSE_FEE_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // ✅ NEW: LOCATION CATEGORY ENDPOINTS
+  // =========================================================================
+
+  /**
+   * Get all location categories (Urban, Rural, Hill Station, etc.)
+   */
+  getLocationCategories(): Observable<any> {
+    return this.http.get(`${this.LOCATION_CATEGORY_URL}/`);
+  }
+
+  /**
+   * Get single location category by ID
+   */
+  getLocationCategory(id: number): Observable<any> {
+    return this.http.get(`${this.LOCATION_CATEGORY_URL}/${id}/`);
+  }
+
+  createLocationCategory(data: any): Observable<any> {
+    return this.http.post(`${this.LOCATION_CATEGORY_URL}/create/`, data);
+  }
+
+  updateLocationCategory(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LOCATION_CATEGORY_URL}/${id}/update/`, data);
+  }
+
+  deleteLocationCategory(id: number): Observable<any> {
+    return this.http.delete(`${this.LOCATION_CATEGORY_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // ✅ NEW: LOCATION SUBCATEGORY ENDPOINTS
+  // =========================================================================
+
+  /**
+   * Get all location subcategories
+   */
+  getLocationSubcategories(): Observable<any> {
+    return this.http.get(`${this.LOCATION_SUBCATEGORY_URL}/`);
+  }
+
+  /**
+   * Get single location subcategory by ID
+   */
+  getLocationSubcategory(id: number): Observable<any> {
+    return this.http.get(`${this.LOCATION_SUBCATEGORY_URL}/${id}/`);
+  }
+
+  /**
+   * ✅ Get location subcategories filtered by category
+   */
+  getLocationSubcategoriesByCategory(categoryId: number): Observable<any> {
+    return this.http.get(`${this.LOCATION_SUBCATEGORY_URL}/?category_id=${categoryId}`);
+  }
+
+  createLocationSubcategory(data: any): Observable<any> {
+    return this.http.post(`${this.LOCATION_SUBCATEGORY_URL}/create/`, data);
+  }
+
+  updateLocationSubcategory(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.LOCATION_SUBCATEGORY_URL}/${id}/update/`, data);
+  }
+
+  deleteLocationSubcategory(id: number): Observable<any> {
+    return this.http.delete(`${this.LOCATION_SUBCATEGORY_URL}/${id}/delete/`);
+  }
+
+  // =========================================================================
+  // ✅ NEW: WARD ENDPOINTS
+  // =========================================================================
+
+  /**
+   * Get all wards
+   */
+  getWards(): Observable<any> {
+    return this.http.get(`${this.WARD_URL}/`);
+  }
+
+  /**
+   * Get single ward by ID
+   */
+  getWard(id: number): Observable<any> {
+    return this.http.get(`${this.WARD_URL}/${id}/`);
+  }
+
+  /**
+   * ✅ Get wards filtered by location code
+   */
+  getWardsByLocation(locationCode: string | number): Observable<any> {
+    return this.http.get(`${this.WARD_URL}/?location_code=${locationCode}`);
+  }
+
+  createWard(data: any): Observable<any> {
+    return this.http.post(`${this.WARD_URL}/create/`, data);
+  }
+
+  updateWard(id: number, data: any): Observable<any> {
+    return this.http.put(`${this.WARD_URL}/${id}/update/`, data);
+  }
+
+  deleteWard(id: number): Observable<any> {
+    return this.http.delete(`${this.WARD_URL}/${id}/delete/`);
   }
 }

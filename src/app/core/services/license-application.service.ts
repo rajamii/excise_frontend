@@ -460,11 +460,17 @@ export class LicenseApplicationService {
       }
 
       if (siteDetailsData.location_category) {
-        formData.append('location_category', String(siteDetailsData.location_category));
+        formData.append('location_category', String(siteDetailsData.location_category_name || siteDetailsData.location_category));
       }
+      // ✅ FIXED: Added missing location_subcategory
+      if (siteDetailsData.location_subcategory) {
+        formData.append('location_subcategory', String(siteDetailsData.location_subcategory));
+      }
+      // ✅ FIXED: Use location_name (display name saved by site-details component)
       if (siteDetailsData.location_name) {
         formData.append('location_name', String(siteDetailsData.location_name));
       }
+      // ✅ FIXED: Use ward_name (display name saved by site-details component)
       if (siteDetailsData.ward_name) {
         formData.append('ward_name', String(siteDetailsData.ward_name));
       }
