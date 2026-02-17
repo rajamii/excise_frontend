@@ -90,6 +90,13 @@ const routes: Routes = [
         canActivate: [UserRouteAccessService],
         data: { requiredPermission: 'master.roads.view' }
       },
+      {
+        path: 'admin/oic',
+        loadComponent: () =>
+          import('../admin/master/oic/list/list.component').then((m) => m.ListComponent),
+        canActivate: [UserRouteAccessService],
+        data: { requiredPermission: 'master.users.view' }
+      },
       // Backward-compatible aliases for old paths under /dashboard/*
       { path: 'users', redirectTo: 'admin/users', pathMatch: 'full' },
       { path: 'roles', redirectTo: 'admin/roles', pathMatch: 'full' },
@@ -100,7 +107,8 @@ const routes: Routes = [
       { path: 'license-categories', redirectTo: 'admin/license-categories', pathMatch: 'full' },
       { path: 'license-titles', redirectTo: 'admin/license-titles', pathMatch: 'full' },
       { path: 'license-subcategories', redirectTo: 'admin/license-subcategories', pathMatch: 'full' },
-      { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' }
+      { path: 'roads', redirectTo: 'admin/roads', pathMatch: 'full' },
+      { path: 'oic', redirectTo: 'admin/oic', pathMatch: 'full' }
     ]
   }
 ];

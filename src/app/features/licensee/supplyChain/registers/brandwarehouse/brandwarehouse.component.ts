@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BrandWarehouseService, BrandWarehouseUtilization } from '../../services/brand-warehouse.service';
 import { ProductionService, ProductionBatch } from '../../services/production.service';
+import { SupplyChainProfileService } from '../../../../../core/services/supply-chain-profile.service';
 
 interface TransitPermitDetail {
   permitNo: string;
@@ -86,8 +87,8 @@ interface FilterOptions {
 export class BrandwarehouseComponent implements OnInit {
   Math = Math;
 
-  // Current distillery context - TODO: Make this dynamic based on logged-in user
-  private readonly CURRENT_DISTILLERY = 'Sikkim'; // This will be dynamic later
+  // Current distillery context resolved from active user profile.
+  private currentDistilleryName = '';
   private readonly EXCLUDED_BREWERIES: string[] = []; // Show all Sikkim brands including breweries
 
   // Data
@@ -160,12 +161,32 @@ export class BrandwarehouseComponent implements OnInit {
 
   constructor(
     private brandWarehouseService: BrandWarehouseService,
-    private productionService: ProductionService
+    private productionService: ProductionService,
+    private supplyChainProfileService: SupplyChainProfileService
   ) { }
 
   ngOnInit(): void {
-    this.initializeSikkimBrands();
-    this.loadWarehouseData();
+    this.resolveCurrentDistilleryAndLoad();
+  }
+
+  private resolveCurrentDistilleryAndLoad(): void {
+    this.supplyChainProfileService.getProfile().subscribe({
+      next: (profileResponse) => {
+        const profileData: any = profileResponse?.data || {};
+        this.currentDistilleryName = String(
+          profileData?.manufacturingUnitName ||
+          profileData?.manufacturing_unit_name ||
+          ''
+        ).trim();
+        this.initializeSikkimBrands();
+        this.loadWarehouseData();
+      },
+      error: () => {
+        this.currentDistilleryName = '';
+        this.initializeSikkimBrands();
+        this.loadWarehouseData();
+      }
+    });
   }
 
   /**
@@ -232,13 +253,17 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: Make this dynamic based on logged-in user's distillery
    */
   private filterByCurrentDistillery(brands: GroupedBrandStock[]): GroupedBrandStock[] {
+    if (!this.currentDistilleryName) {
+      return brands;
+    }
+
     return brands.filter(brand => {
       if (!brand.distilleryName) return false;
 
       const distilleryName = brand.distilleryName.toLowerCase();
 
       // Check if it belongs to current distillery
-      const belongsToCurrentDistillery = distilleryName.includes(this.CURRENT_DISTILLERY.toLowerCase());
+      const belongsToCurrentDistillery = distilleryName.includes(this.currentDistilleryName.toLowerCase());
 
       // Check if it's a brewery (exclude breweries from distillery dashboard)
       const isBrewery = this.EXCLUDED_BREWERIES.some(brewery =>
@@ -254,11 +279,11 @@ export class BrandwarehouseComponent implements OnInit {
    * Build API filters from component filters
    */
   private buildApiFilters(): any {
-    const filters: any = {
-      // Always filter by current distillery
-      distillery_name: this.CURRENT_DISTILLERY
-      // Show all Sikkim brands including breweries
-    };
+    const filters: any = {};
+
+    if (this.currentDistilleryName) {
+      filters.distillery_name = this.currentDistilleryName;
+    }
 
     if (this.filters.brandName) {
       filters.brand_name = this.filters.brandName;
@@ -893,7 +918,7 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: Replace with actual user session/authentication service
    */
   getCurrentDistillery(): string {
-    return this.CURRENT_DISTILLERY;
+    return this.currentDistilleryName || 'N/A';
   }
 
   /**
@@ -901,8 +926,8 @@ export class BrandwarehouseComponent implements OnInit {
    * TODO: This will be called when user authentication is implemented
    */
   setCurrentDistillery(distilleryName: string): void {
-    // TODO: Implement when making dashboard dynamic
-    console.log(`Future implementation: Set distillery to ${distilleryName}`);
+    this.currentDistilleryName = String(distilleryName || '').trim();
+    this.loadWarehouseData();
   }
 
   refreshData(): void {

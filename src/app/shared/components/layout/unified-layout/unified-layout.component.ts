@@ -757,7 +757,8 @@ export class UnifiedLayoutComponent implements OnInit, OnDestroy, AfterViewInit 
       '/dashboard/admin/license-categories',
       '/dashboard/admin/license-titles',
       '/dashboard/admin/license-subcategories',
-      '/dashboard/admin/roads'
+      '/dashboard/admin/roads',
+      '/dashboard/admin/oic'
     ];
 
     const hasAdminNav = adminRoutes.some((route) =>
